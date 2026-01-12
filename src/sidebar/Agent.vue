@@ -26,6 +26,7 @@ const lastToolUseId = ref<string | null>(null)
 const lastToolInput = ref<any>(null)
 const lastParallelActions = ref(false)
 const pendingActionsAssistantId = ref<string | null>(null)
+const lastTabContext = ref<any>(null)
 const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
 const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
@@ -225,6 +226,28 @@ const updateAssistantMessage = (assistantId: string, content: string, error?: st
   saveMessages()
 }
 
+const retryFromMessage = async (message: AgentMessage) => {
+  if (!message.content || isSending.value) return
+  const idx = messages.value.findIndex(item => item.id === message.id)
+  if (idx === -1) return
+  messages.value = messages.value.slice(0, idx + 1)
+  pendingActions.value = []
+  actionResults.value = {}
+  pendingActionsAssistantId.value = null
+  lastToolUseId.value = null
+  lastToolInput.value = null
+  lastParallelActions.value = false
+  const keptIds = new Set(messages.value.map(item => item.id))
+  const nextTimelines: Record<string, { collapsed: boolean; entries: any[] }> = {}
+  for (const [key, value] of Object.entries(timelines.value)) {
+    if (keptIds.has(key)) nextTimelines[key] = value
+  }
+  timelines.value = nextTimelines
+  saveMessages()
+  saveTimelines()
+  await sendMessageWithInput(message.content, { reuseUserMessage: true })
+}
+
 const runActionsAndContinue = async () => {
   if (!pendingActionsAssistantId.value) return
   while (pendingActions.value.length > 0 && lastToolUseId.value && lastToolInput.value) {
@@ -245,14 +268,26 @@ const runActionsAndContinue = async () => {
     if (pendingActionsAssistantId.value) {
       for (const result of results) {
         if (result.type === 'screenshot' && result.data) {
+          const promptEntryId = nanoid()
+          addTimelineEntries(pendingActionsAssistantId.value, [
+            {
+              id: promptEntryId,
+              type: 'vision_prompt',
+              text: 'working',
+              status: 'info'
+            }
+          ])
           const description = await describeScreenshot(
             result.data,
+            lastUserInput.value,
             settings.value,
-            activeSubagent.value
+            activeSubagent.value,
+            { tab: lastTabContext.value || undefined }
           )
           if (description) {
-            updateTimelineEntry(pendingActionsAssistantId.value, result.id, {
-              description
+            result.data = { dataUrl: result.data, vision: description }
+            updateTimelineEntry(pendingActionsAssistantId.value, promptEntryId, {
+              text: 'working'
             })
           }
         }
@@ -265,6 +300,7 @@ const runActionsAndContinue = async () => {
       results,
       settings.value,
       activeSubagent.value,
+      { tab: lastTabContext.value || undefined },
       {
         onUpdate: update => {
           if (!update.message) return
@@ -323,25 +359,64 @@ const resolveActiveTabId = async (): Promise<number | null> => {
   return tabs[0]?.id ?? null
 }
 
+const resolveTabContext = async (tabId: number | null) => {
+  if (!chrome?.tabs) return null
+  if (typeof tabId === 'number' && chrome.tabs.get) {
+    try {
+      const tab = await chrome.tabs.get(tabId)
+      return {
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        status: tab.status,
+        active: tab.active,
+        windowId: tab.windowId
+      }
+    } catch {
+      return null
+    }
+  }
+  if (chrome.tabs.query) {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+    const tab = tabs[0]
+    if (!tab) return null
+    return {
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+      status: tab.status,
+      active: tab.active,
+      windowId: tab.windowId
+    }
+  }
+  return null
+}
+
 const setTargetTabId = (id: number | null) => {
   targetTabId.value = id
   writeStoredTabId(id)
 }
 
-const sendMessage = async () => {
-  const content = inputValue.value.trim()
+const sendMessageWithInput = async (
+  rawInput: string,
+  options?: { reuseUserMessage?: boolean }
+) => {
+  const content = rawInput.trim()
   if (!content || isSending.value) return
   lastUserInput.value = content
 
-  const userMessage: AgentMessage = {
-    id: nanoid(),
-    role: 'user',
-    content
+  if (!options?.reuseUserMessage) {
+    const userMessage: AgentMessage = {
+      id: nanoid(),
+      role: 'user',
+      content
+    }
+    appendMessage(userMessage)
   }
-  appendMessage(userMessage)
   inputValue.value = ''
   isSending.value = true
   setTargetTabId(await resolveActiveTabId())
+  lastTabContext.value = await resolveTabContext(targetTabId.value)
 
   const assistantId = nanoid()
   appendMessage({
@@ -352,12 +427,18 @@ const sendMessage = async () => {
   ensureTimeline(assistantId)
   saveTimelines()
 
-  const result = await runAgentMessage(content, settings.value, activeSubagent.value, {
-    onUpdate: update => {
-      if (!update.message) return
-      updateAssistantMessage(assistantId, update.message)
+  const result = await runAgentMessage(
+    content,
+    settings.value,
+    activeSubagent.value,
+    { tab: lastTabContext.value || undefined },
+    {
+      onUpdate: update => {
+        if (!update.message) return
+        updateAssistantMessage(assistantId, update.message)
+      }
     }
-  })
+  )
   if (result.error) {
     updateAssistantMessage(assistantId, result.error, result.error)
     isSending.value = false
@@ -403,6 +484,21 @@ const sendMessage = async () => {
     setTimelineCollapsed(assistantId, true)
   }
   isSending.value = false
+}
+
+const getLastUserInput = () => {
+  for (let i = messages.value.length - 1; i >= 0; i -= 1) {
+    const msg = messages.value[i]
+    if (msg.role === 'user' && msg.content) return msg.content
+  }
+  return lastUserInput.value || ''
+}
+
+
+const sendMessage = async () => {
+  const content = inputValue.value.trim()
+  inputValue.value = ''
+  await sendMessageWithInput(content)
 }
 
 const clearMessages = () => {
@@ -514,6 +610,14 @@ const onBypassModeChange = (value: boolean) => {
       <div v-for="message in messages" :key="message.id" class="agent-message">
         <div class="agent-message-role" :data-role="message.role">
           {{ message.role === 'user' ? '你' : 'Claude' }}
+          <a-button
+            v-if="message.role === 'user'"
+            size="small"
+            class="ml-2"
+            @click="retryFromMessage(message)"
+          >
+            重试
+          </a-button>
         </div>
         <div
           v-if="message.role === 'assistant' && timelines[message.id]"
@@ -534,16 +638,14 @@ const onBypassModeChange = (value: boolean) => {
                   <div class="text-xs text-gray-600">
                     <span v-if="entry.type === 'thought'">思考：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'step'">步骤：{{ entry.text }}</span>
+                    <span v-else-if="entry.type === 'vision_prompt'">识图提示词：{{ entry.text }}</span>
                     <span v-else>
                       动作：{{ entry.actionType }}
                       <span v-if="entry.error" class="text-red-500">（{{ entry.error }}）</span>
                     </span>
                   </div>
                   <div v-if="entry.actionType === 'screenshot' && entry.data" class="mt-2">
-                    <a-image :src="entry.data" :width="200" />
-                  </div>
-                  <div v-if="entry.description" class="mt-2 text-xs text-gray-500">
-                    识图：{{ entry.description }}
+                    <a-image :src="entry.data.dataUrl || entry.data" :width="200" />
                   </div>
                 </a-timeline-item>
               </a-timeline>
@@ -561,40 +663,12 @@ const onBypassModeChange = (value: boolean) => {
         </div>
       </div>
 
-      <div v-if="pendingActions.length" class="agent-actions">
+      <div v-if="pendingActions.length && !bypassMode" class="agent-actions">
         <div class="agent-actions-header">
           <div class="text-xs text-gray-500 dark:text-gray-400">待执行动作</div>
           <a-button size="small" @click="runActionsAndContinue">执行全部</a-button>
         </div>
-        <div class="agent-actions-list">
-          <div v-for="action in pendingActions" :key="action.id" class="agent-action-item">
-            <div class="agent-action-text">
-              <span class="agent-action-type">{{ action.type }}</span>
-              <span class="text-gray-500">{{ action.note || '自动化操作' }}</span>
-            </div>
-            <div v-if="action.type === 'screenshot' && actionResults[action.id]?.data" class="mt-2">
-              <a-image :src="actionResults[action.id]?.data" :width="200" />
-            </div>
-            <span
-              :class="
-                actionResults[action.id]?.success
-                  ? 'text-green-500'
-                  : actionResults[action.id]?.error
-                    ? 'text-red-500'
-                    : 'text-gray-400'
-              "
-              class="text-xs"
-            >
-              {{
-                actionResults[action.id]?.success
-                  ? '已完成'
-                  : actionResults[action.id]?.error
-                    ? actionResults[action.id]?.error
-                    : '待执行'
-              }}
-            </span>
-          </div>
-        </div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">动作详情已显示在过程时间线中。</div>
       </div>
     </div>
 

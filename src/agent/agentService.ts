@@ -177,7 +177,20 @@ const toolSchema = {
   }
 }
 
-const buildSystemPrompt = (settings: AgentSettings, subagent?: SubAgentConfig): string => {
+type TabContext = {
+  id?: number
+  title?: string
+  url?: string
+  status?: string
+  active?: boolean
+  windowId?: number
+}
+
+const buildSystemPrompt = (
+  settings: AgentSettings,
+  subagent?: SubAgentConfig,
+  context?: { tab?: TabContext }
+): string => {
   const lines = [
     '你是总代理，了解并可调用可用的子代理协助完成任务。',
     '你是浏览器侧边栏自动化助手。',
@@ -197,6 +210,21 @@ const buildSystemPrompt = (settings: AgentSettings, subagent?: SubAgentConfig): 
     lines.push('允许请求深度思考，并将思考过程放在 thoughts 数组中。')
   }
   lines.push('请在 steps 数组中给出可读的步骤描述，与 actions 对应。')
+
+  if (context?.tab) {
+    const tab = context.tab
+    const parts = [
+      typeof tab.id === 'number' ? `id=${tab.id}` : null,
+      tab.title ? `title=${tab.title}` : null,
+      tab.url ? `url=${tab.url}` : null,
+      tab.status ? `status=${tab.status}` : null,
+      typeof tab.active === 'boolean' ? `active=${tab.active}` : null,
+      typeof tab.windowId === 'number' ? `windowId=${tab.windowId}` : null
+    ].filter(Boolean)
+    if (parts.length > 0) {
+      lines.push(`当前标签页：${parts.join(', ')}`)
+    }
+  }
 
   if (settings.masterSystemPrompt) {
     lines.push(settings.masterSystemPrompt)
@@ -252,8 +280,17 @@ const buildSubagentPrompt = (subagent: SubAgentConfig): string => {
   return lines.join('\n')
 }
 
-const selectTaskModel = (settings: AgentSettings, subagent?: SubAgentConfig) => {
-  if (settings.enableThoughts) {
+const shouldUseReasoning = (input: string, settings: AgentSettings) => {
+  if (!settings.enableThoughts) return false
+  return /深度思考|思考模式|think/i.test(input)
+}
+
+const selectTaskModel = (
+  settings: AgentSettings,
+  subagent?: SubAgentConfig,
+  useReasoning?: boolean
+) => {
+  if (useReasoning) {
     return subagent?.reasoningModel || settings.reasoningModel || settings.taskModel
   }
   return subagent?.taskModel || settings.taskModel
@@ -339,6 +376,7 @@ export async function runAgentMessage(
   input: string,
   settings: AgentSettings,
   subagent?: SubAgentConfig,
+  context?: { tab?: TabContext },
   options?: {
     onUpdate?: (update: { message?: string }) => void
   }
@@ -355,8 +393,12 @@ export async function runAgentMessage(
       baseURL: settings.baseUrl || undefined,
       dangerouslyAllowBrowser: true
     })
-    const modelId = selectTaskModel(settings, subagent)
-    const system = [buildSystemPrompt(settings, subagent), subagent?.systemPrompt || '']
+    const useReasoning = shouldUseReasoning(input, settings)
+    const modelId = selectTaskModel(settings, subagent, useReasoning)
+    const system = [
+      buildSystemPrompt(settings, subagent, context),
+      subagent?.systemPrompt || ''
+    ]
       .filter(Boolean)
       .join('\n')
     const firstPass = await streamClaudeTools({
@@ -396,7 +438,7 @@ export async function runAgentMessage(
           try {
             const output = await streamClaudeText({
             client,
-            model: selectTaskModel(settings, target),
+            model: selectTaskModel(settings, target, useReasoning),
             system: buildSubagentPrompt(target),
             prompt: call.prompt,
             maxTokens: settings.maxTokens || 1024
@@ -507,6 +549,7 @@ export async function runAgentFollowup(
   toolResult: unknown,
   settings: AgentSettings,
   subagent?: SubAgentConfig,
+  context?: { tab?: TabContext },
   options?: {
     onUpdate?: (update: { message?: string }) => void
   }
@@ -517,8 +560,12 @@ export async function runAgentFollowup(
       baseURL: settings.baseUrl || undefined,
       dangerouslyAllowBrowser: true
     })
-    const modelId = selectTaskModel(settings, subagent)
-    const system = [buildSystemPrompt(settings, subagent), subagent?.systemPrompt || '']
+    const useReasoning = shouldUseReasoning(input, settings)
+    const modelId = selectTaskModel(settings, subagent, useReasoning)
+    const system = [
+      buildSystemPrompt(settings, subagent, context),
+      subagent?.systemPrompt || ''
+    ]
       .filter(Boolean)
       .join('\n')
 
@@ -626,10 +673,49 @@ export async function runAgentFollowup(
   }
 }
 
+async function rewriteScreenshotPrompt(options: {
+  input: string
+  settings: AgentSettings
+  subagent?: SubAgentConfig
+  context?: { tab?: TabContext }
+}): Promise<string> {
+  try {
+    const client = new Anthropic({
+      apiKey: options.settings.apiKey,
+      baseURL: options.settings.baseUrl || undefined,
+      dangerouslyAllowBrowser: true
+    })
+    const modelId = selectTaskModel(options.settings, options.subagent, false)
+    const system = [
+      buildSystemPrompt(options.settings, options.subagent, options.context),
+      '你是任务规划助手，请基于用户需求与当前页面上下文，重写用于截图识别的提示词。',
+      '输出一句中文提示词，不要包含多余解释。'
+    ].join('\n')
+    let streamedText = ''
+    const stream = client.messages
+      .stream({
+        model: modelId,
+        max_tokens: Math.min(options.settings.maxTokens || 1024, 512),
+        system,
+        messages: [{ role: 'user', content: options.input }]
+      })
+      .on('text', text => {
+        streamedText += text
+      })
+    const finalMessage = await stream.finalMessage()
+    const rawText = streamedText || extractTextContent(finalMessage.content)
+    return rawText.trim() || '请简要描述截图内容，突出可见的关键信息与可操作元素。'
+  } catch {
+    return '请简要描述截图内容，突出可见的关键信息与可操作元素。'
+  }
+}
+
 export async function describeScreenshot(
   dataUrl: string,
+  input: string,
   settings: AgentSettings,
-  subagent?: SubAgentConfig
+  subagent?: SubAgentConfig,
+  context?: { tab?: TabContext }
 ): Promise<string> {
   try {
     const client = new Anthropic({
@@ -638,6 +724,12 @@ export async function describeScreenshot(
       dangerouslyAllowBrowser: true
     })
     const modelId = subagent?.imageModel || settings.imageModel || settings.taskModel
+    const prompt = await rewriteScreenshotPrompt({
+      input,
+      settings,
+      subagent,
+      context
+    })
     const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
     if (!match) return ''
     const mediaType = match[1]
@@ -646,13 +738,13 @@ export async function describeScreenshot(
     const stream = client.messages
       .stream({
         model: modelId,
-        max_tokens: Math.min(settings.maxTokens || 1024, 2048),
+        max_tokens: settings.maxTokens || 1024,
         messages: [
           {
             role: 'user',
             content: [
               { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-              { type: 'text', text: '请简要描述截图内容，突出可见的关键信息与可操作元素。' }
+              { type: 'text', text: prompt }
             ]
           }
         ]
