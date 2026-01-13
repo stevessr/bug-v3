@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Linux.do 工具集
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.5.0
-// @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、点赞计数器
+// @version      1.6.0
+// @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、群组管理、点赞计数器
 // @author       stevessr, ChiGamma
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
@@ -1051,6 +1051,94 @@
             document.getElementById('ld-user-check-btn').disabled = false;
         },
 
+        // ===== 群组管理功能 =====
+        async addGroupMembers() {
+            const groupId = document.getElementById('ld-group-id').value.trim();
+            const usernames = document.getElementById('ld-group-usernames').value.trim();
+            const notifyUsers = document.getElementById('ld-group-notify').checked;
+
+            if (!groupId) {
+                alert('请输入群组 ID');
+                return;
+            }
+
+            if (!usernames) {
+                alert('请输入用户名列表');
+                return;
+            }
+
+            const usernameList = usernames.split(',').map(u => u.trim()).filter(u => u);
+            if (usernameList.length === 0) {
+                alert('请输入有效的用户名');
+                return;
+            }
+
+            if (!confirm(`确定要将 ${usernameList.length} 个用户添加到群组 ${groupId} 吗？\n\n用户列表：\n${usernameList.join('\n')}`)) {
+                return;
+            }
+
+            this.clearLog('group');
+            this.log(`准备添加 ${usernameList.length} 个用户到群组 ${groupId}...`, 'group');
+
+            const btn = document.getElementById('ld-group-add-btn');
+            btn.disabled = true;
+            btn.style.backgroundColor = '#95a5a6';
+            btn.textContent = '处理中...';
+
+            try {
+                const url = `https://linux.do/groups/${groupId}/members.json`;
+                const formData = new URLSearchParams();
+                formData.append('usernames', usernameList.join(','));
+                formData.append('emails', '');
+                formData.append('notify_users', notifyUsers ? 'true' : 'false');
+
+                this.log(`发送请求到：${url}`, 'group');
+
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Accept': '*/*',
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'Discourse-Logged-In': 'true',
+                        'Discourse-Present': 'true',
+                        'X-Csrf-Token': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData.toString()
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    this.log(`✅ 成功添加成员！`, 'group');
+                    this.log(`返回数据：${JSON.stringify(data).substring(0, 200)}`, 'group');
+
+                    btn.textContent = '✅ 添加成功';
+                    btn.style.backgroundColor = '#2ecc71';
+
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.style.backgroundColor = '#27ae60';
+                        btn.textContent = '➕ 添加成员';
+                    }, 3000);
+                } else {
+                    const errorText = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${errorText}`);
+                }
+            } catch (err) {
+                console.error('添加群组成员失败：', err);
+                this.log(`❌ 添加失败：${err.message}`, 'group');
+
+                btn.textContent = '❌ 添加失败';
+                btn.style.backgroundColor = '#e74c3c';
+
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.style.backgroundColor = '#27ae60';
+                    btn.textContent = '➕ 添加成员';
+                }, 3000);
+            }
+        },
+
         init() {
             // 创建面板容器
             this.panel = createEl('div', { className: 'ld-reaction-panel' });
@@ -1108,6 +1196,7 @@
                 <div class="ld-panel-tabs">
                     <div class="ld-panel-tab active" data-tab="all">🎯 全员表情</div>
                     <div class="ld-panel-tab" data-tab="user">👤 用户表情</div>
+                    <div class="ld-panel-tab" data-tab="group">👥 群组管理</div>
                 </div>
 
                 <!-- 表情选择器 - 全局共用 -->
@@ -1145,6 +1234,27 @@
                     </div>
                     <div id="ld-log-user" class="ld-log">等待操作...</div>
                 </div>
+
+                <!-- 群组管理 Tab -->
+                <div id="ld-tab-group" class="ld-tab-content">
+                    <h4>批量添加群组成员</h4>
+                    <div class="ld-field-group">
+                        <label>群组 ID</label>
+                        <input type="number" id="ld-group-id" placeholder="如：105" value="105">
+                    </div>
+                    <div class="ld-field-group">
+                        <label>用户名列表（逗号分隔）</label>
+                        <input type="text" id="ld-group-usernames" placeholder="如：user1,user2,user3">
+                    </div>
+                    <div class="ld-field-group">
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="ld-group-notify" checked>
+                            <span>通知用户</span>
+                        </label>
+                    </div>
+                    <button id="ld-group-add-btn" style="width: 100%; background: #27ae60; margin-top: 10px;">➕ 添加成员</button>
+                    <div id="ld-log-group" class="ld-log">等待操作...</div>
+                </div>
             `;
 
             this.panel.appendChild(toggleBtn);
@@ -1165,6 +1275,9 @@
             // 绑定用户表情按钮
             document.getElementById('ld-user-check-btn').onclick = () => this.checkUserPosts();
             document.getElementById('ld-user-run-btn').onclick = () => this.runUserReaction();
+
+            // 绑定群组管理按钮
+            document.getElementById('ld-group-add-btn').onclick = () => this.addGroupMembers();
 
             // 监听用户卡片出现
             this.observeUserCard();
