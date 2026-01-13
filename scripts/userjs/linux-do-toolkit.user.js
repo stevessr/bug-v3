@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         Linux.do 工具集
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.4.0
+// @version      1.5.0
 // @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、点赞计数器
 // @author       stevessr, ChiGamma
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
 // @match        https://*.discourse.org/*
-// @match        http://localhost:5173/*
 // @match        https://idcflare.com/*
 // @exclude      https://linux.do/a/*
 // @icon         https://linux.do/uploads/default/original/4X/f/2/2/f228b317d9c333833ccf3a81fee705024a548963.png
@@ -1166,6 +1165,147 @@
             // 绑定用户表情按钮
             document.getElementById('ld-user-check-btn').onclick = () => this.checkUserPosts();
             document.getElementById('ld-user-run-btn').onclick = () => this.runUserReaction();
+
+            // 监听用户卡片出现
+            this.observeUserCard();
+        },
+
+        // ===== 用户卡片快捷点赞功能 =====
+        observeUserCard() {
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.addedNodes.length) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.nodeType === 1 && node.id === 'user-card') {
+                                this.injectUserCardButton(node);
+                            } else if (node.nodeType === 1) {
+                                const userCard = node.querySelector('#user-card');
+                                if (userCard) {
+                                    this.injectUserCardButton(userCard);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // 检查是否已存在用户卡片
+            const existingCard = document.getElementById('user-card');
+            if (existingCard) {
+                this.injectUserCardButton(existingCard);
+            }
+        },
+
+        injectUserCardButton(userCard) {
+            // 避免重复注入
+            if (userCard.querySelector('.ld-usercard-reaction-btn')) return;
+
+            const controlsList = userCard.querySelector('.usercard-controls');
+            if (!controlsList) return;
+
+            // 获取用户名
+            const usernameEl = userCard.querySelector('.names__secondary.username');
+            if (!usernameEl) return;
+            const username = usernameEl.textContent.trim();
+
+            // 创建按钮容器
+            const btnContainer = createEl('li', { className: 'ld-usercard-reaction-btn' });
+
+            // 创建按钮
+            const btn = createEl('button', {
+                className: 'btn btn-icon-text btn-default',
+                title: '快捷点赞该用户的最近帖子',
+                innerHTML: `
+                    <svg class="fa d-icon d-icon-heart svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#heart"></use></svg>
+                    <span class="d-button-label">快捷点赞</span>
+                `
+            });
+
+            // 绑定点击事件
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                await this.quickReactionFromUserCard(username, btn);
+            };
+
+            btnContainer.appendChild(btn);
+            controlsList.appendChild(btnContainer);
+        },
+
+        async quickReactionFromUserCard(username, btn) {
+            const originalHTML = btn.innerHTML;
+            const defaultCount = 10; // 默认点赞数量
+
+            try {
+                // 更新按钮状态
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <svg class="fa d-icon d-icon-spinner svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#spinner"></use></svg>
+                    <span class="d-button-label">获取中...</span>
+                `;
+
+                // 获取用户的帖子
+                const posts = await this.fetchUserActions(username, defaultCount);
+
+                if (posts.length === 0) {
+                    alert(`未找到用户 ${username} 的帖子`);
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    return;
+                }
+
+                // 确认操作
+                const reactionId = this.getSelectedReaction();
+                const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId;
+
+                if (!confirm(`确定要给 ${username} 的 ${posts.length} 个最近帖子发送 "${reactionName}" 吗？`)) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    return;
+                }
+
+                // 批量发送
+                let successCount = 0;
+                for (let i = 0; i < posts.length; i++) {
+                    const post = posts[i];
+
+                    // 更新进度
+                    btn.innerHTML = `
+                        <svg class="fa d-icon d-icon-heart svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#heart"></use></svg>
+                        <span class="d-button-label">${i + 1}/${posts.length}</span>
+                    `;
+
+                    const result = await this.sendReactionToPost(post.id, i + 1, posts.length, 'all');
+
+                    if (result === true) {
+                        successCount++;
+                    }
+
+                    if (result === 'rate_limit') {
+                        await sleep(5000);
+                    } else {
+                        await sleep(this.DELAY_MS_USER);
+                    }
+                }
+
+                // 完成
+                btn.innerHTML = `
+                    <svg class="fa d-icon d-icon-check svg-icon svg-string" xmlns="http://www.w3.org/2000/svg"><use href="#check"></use></svg>
+                    <span class="d-button-label">完成 (${successCount}/${posts.length})</span>
+                `;
+
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }, 3000);
+
+            } catch (err) {
+                console.error('快捷点赞失败', err);
+                alert(`操作失败：${err.message}`);
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
         }
     }
 

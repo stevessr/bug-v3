@@ -261,7 +261,14 @@ const repairJson = (raw: unknown): string | null => {
   const end = raw.lastIndexOf('}')
   if (start === -1 || end === -1 || end <= start) return null
   const candidate = raw.slice(start, end + 1)
-  return candidate
+  const trimmed = candidate
+    .replace(/,\s*([}\]])/g, '$1')
+    .replace(/"thoughts"\s*:\s*([},])/g, '"thoughts":[]$1')
+    .replace(/"steps"\s*:\s*([},])/g, '"steps":[]$1')
+    .replace(/"actions"\s*:\s*([},])/g, '"actions":[]$1')
+    .replace(/"subagents"\s*:\s*([},])/g, '"subagents":[]$1')
+    .replace(/"memory"\s*:\s*([},])/g, '"memory":{}$1')
+  return trimmed
 }
 
 const extractTextContent = (
