@@ -1067,7 +1067,8 @@
                 return;
             }
 
-            const usernameList = usernames.split(',').map(u => u.trim()).filter(u => u);
+            // 支持逗号或空格分隔
+            const usernameList = usernames.split(/[,\s]+/).map(u => u.trim()).filter(u => u);
             if (usernameList.length === 0) {
                 alert('请输入有效的用户名');
                 return;
@@ -1243,8 +1244,8 @@
                         <input type="number" id="ld-group-id" placeholder="如：105" value="105">
                     </div>
                     <div class="ld-field-group">
-                        <label>用户名列表（逗号分隔）</label>
-                        <input type="text" id="ld-group-usernames" placeholder="如：user1,user2,user3">
+                        <label>用户名列表（逗号或空格分隔）</label>
+                        <input type="text" id="ld-group-usernames" placeholder="如：user1 user2 user3 或 user1,user2,user3">
                     </div>
                     <div class="ld-field-group">
                         <label style="display: flex; align-items: center; gap: 5px;">
