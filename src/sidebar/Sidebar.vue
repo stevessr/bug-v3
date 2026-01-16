@@ -297,7 +297,7 @@ const handleSearch = () => {
           <template v-if="searchQuery">
             <div class="p-3">
               <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                {{ t('searchResultsFound', [searchQuery, filteredEmojis.length]) }}
+                {{ t('searchResultsFound', { query: searchQuery, count: filteredEmojis.length }) }}
               </div>
               <div v-if="filteredEmojis.length === 0" class="text-center py-8">
                 <div class="text-2xl mb-2">🔍</div>
