@@ -88,6 +88,8 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
 
   let items: any[] = []
   let inferredGroupName: string | undefined
+  const payloadGroup =
+    payload && payload.group && typeof payload.group === 'object' ? (payload.group as any) : null
 
   // 支持多种导入格式：
   // 1) 直接数组 -> 每项为 emoji
@@ -104,7 +106,68 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
 
   store.beginBatch()
   try {
-    if (targetGroupId) {
+    let forcedTargetGroupId: string | undefined
+
+    if (!targetGroupId && payloadGroup && (payloadGroup.id || payloadGroup.name)) {
+      const payloadGroupId = payloadGroup.id ? payloadGroup.id.toString() : ''
+      const payloadGroupName = (payloadGroup.name || payloadGroupId || '').toString()
+      const payloadGroupIcon = (payloadGroup.icon || '📁').toString()
+      const payloadGroupDetail = payloadGroup.detail
+      const payloadGroupOrder =
+        Number.isFinite(payloadGroup.order) && payloadGroup.order >= 0 ? payloadGroup.order : undefined
+
+      if (payloadGroupId) {
+        const existing = store.groups.find((g: EmojiGroup) => g.id === payloadGroupId)
+        if (existing) {
+          const updates: Partial<EmojiGroup> = {}
+          if (payloadGroupName && existing.name !== payloadGroupName) updates.name = payloadGroupName
+          if (payloadGroup.icon && existing.icon !== payloadGroupIcon) updates.icon = payloadGroupIcon
+          if (payloadGroupDetail !== undefined && existing.detail !== payloadGroupDetail)
+            updates.detail = payloadGroupDetail
+          if (payloadGroupOrder !== undefined && existing.order !== payloadGroupOrder)
+            updates.order = payloadGroupOrder
+          if (Object.keys(updates).length > 0) {
+            store.updateGroup(payloadGroupId, updates)
+          }
+        } else {
+          store.createGroupWithoutSave(payloadGroupName || payloadGroupId, payloadGroupIcon, payloadGroupId)
+          if (payloadGroupDetail !== undefined || payloadGroupOrder !== undefined) {
+            store.updateGroup(payloadGroupId, {
+              ...(payloadGroupDetail !== undefined && { detail: payloadGroupDetail }),
+              ...(payloadGroupOrder !== undefined && { order: payloadGroupOrder })
+            })
+          }
+        }
+        forcedTargetGroupId = payloadGroupId
+      } else if (payloadGroupName) {
+        const existing = store.groups.find((g: EmojiGroup) => g.name === payloadGroupName)
+        if (existing) {
+          const updates: Partial<EmojiGroup> = {}
+          if (payloadGroup.icon && existing.icon !== payloadGroupIcon) updates.icon = payloadGroupIcon
+          if (payloadGroupDetail !== undefined && existing.detail !== payloadGroupDetail)
+            updates.detail = payloadGroupDetail
+          if (payloadGroupOrder !== undefined && existing.order !== payloadGroupOrder)
+            updates.order = payloadGroupOrder
+          if (Object.keys(updates).length > 0) {
+            store.updateGroup(existing.id, updates)
+          }
+          forcedTargetGroupId = existing.id
+        } else {
+          const created = store.createGroupWithoutSave(payloadGroupName, payloadGroupIcon)
+          if (payloadGroupDetail !== undefined || payloadGroupOrder !== undefined) {
+            store.updateGroup(created.id, {
+              ...(payloadGroupDetail !== undefined && { detail: payloadGroupDetail }),
+              ...(payloadGroupOrder !== undefined && { order: payloadGroupOrder })
+            })
+          }
+          forcedTargetGroupId = created.id
+        }
+      }
+    }
+
+    const effectiveTargetGroupId = targetGroupId || forcedTargetGroupId
+
+    if (effectiveTargetGroupId) {
       items.forEach(emoji => {
         const emojiData = {
           packet: Number.isInteger(emoji.packet)
@@ -124,12 +187,15 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
           ...(emoji.addedAt && { addedAt: emoji.addedAt }),
           ...(emoji.referenceId && { referenceId: emoji.referenceId })
         }
-        store.addEmojiWithoutSave(targetGroupId, emojiData)
+        store.addEmojiWithoutSave(effectiveTargetGroupId, emojiData)
       })
     } else {
       const groupMap = new Map<string, string>()
       store.groups.forEach((g: EmojiGroup) => {
-        if (g && g.name && g.id) groupMap.set(g.name, g.id)
+        if (g && g.name && g.id) {
+          groupMap.set(g.name, g.id)
+          groupMap.set(g.id, g.id)
+        }
       })
 
       items.forEach(emoji => {

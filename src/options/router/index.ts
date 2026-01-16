@@ -5,6 +5,10 @@ import type { RouteRecordRaw } from 'vue-router'
 // 这可以显著减少初始 bundle 体积，加快选项页启动速度
 const routes: RouteRecordRaw[] = [
   {
+    path: '/',
+    redirect: '/groups'
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('../pages/SettingsPage.vue'),
