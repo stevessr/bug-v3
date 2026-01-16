@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
-import { exportToCloudMarket } from '@/options/utils/exportUtils'
+import { buildEmojiExportItem, exportToCloudMarket } from '@/options/utils/exportUtils'
 import type { Emoji, EmojiGroup } from '@/types/type'
 
 const emojiStore = useEmojiStore()
@@ -181,6 +181,7 @@ const exportSelectedAsJson = () => {
       name: string
       icon: string
       detail?: string
+      order: number
       emojis: Emoji[]
     }>
   } = {
@@ -201,16 +202,8 @@ const exportSelectedAsJson = () => {
       name: group.name,
       icon: group.icon,
       detail: group.detail,
-      emojis: emojis.map(e => ({
-        id: e.id,
-        packet: e.packet,
-        name: e.name,
-        url: e.url,
-        displayUrl: e.displayUrl,
-        width: e.width,
-        height: e.height,
-        groupId: group.id
-      }))
+      order: group.order,
+      emojis: emojis.map(e => buildEmojiExportItem(e, group.id))
     })
   }
 

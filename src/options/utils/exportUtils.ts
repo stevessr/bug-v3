@@ -10,6 +10,28 @@ function downloadJson(filename: string, payload: any) {
   URL.revokeObjectURL(url)
 }
 
+export function buildEmojiExportItem(emoji: any, groupId?: string): any {
+  const url = emoji?.url || emoji?.src || emoji?.icon
+  return {
+    id: emoji?.id,
+    packet: emoji?.packet,
+    name: emoji?.name,
+    url,
+    originUrl: emoji?.originUrl,
+    displayUrl: emoji?.displayUrl,
+    width: emoji?.width,
+    height: emoji?.height,
+    groupId: emoji?.groupId ?? groupId,
+    customOutput: emoji?.customOutput,
+    tags: Array.isArray(emoji?.tags) ? emoji.tags : undefined,
+    referenceId: emoji?.referenceId,
+    perceptualHash: emoji?.perceptualHash,
+    usageCount: emoji?.usageCount,
+    lastUsed: emoji?.lastUsed,
+    addedAt: emoji?.addedAt
+  }
+}
+
 export function exportConfigurationFile(store: any) {
   const config = {
     version: '1.0',
@@ -23,21 +45,21 @@ export function exportConfigurationFile(store: any) {
 
 export function exportGroupFile(group: any) {
   const groupData = {
+    version: '1.1',
+    exportDate: new Date().toISOString(),
+    group: {
+      id: group.id,
+      name: group.name,
+      icon: group.icon,
+      detail: group.detail,
+      order: group.order
+    },
     id: group.id,
     name: group.name,
     icon: group.icon,
     detail: group.detail,
     order: group.order,
-    emojis: (group.emojis || []).map((e: any) => ({
-      id: e.id,
-      packet: e.packet,
-      name: e.name,
-      url: e.url,
-      displayUrl: e.displayUrl,
-      width: e.width,
-      height: e.height,
-      groupId: group.id
-    }))
+    emojis: (group.emojis || []).map((e: any) => buildEmojiExportItem(e, group.id))
   }
   const filename = `group-${group.id}.json`
   downloadJson(filename, groupData)
@@ -532,16 +554,7 @@ export async function exportToCloudMarket(
       icon: group.icon,
       detail: group.detail,
       order: group.order,
-      emojis: (group.emojis || []).map((e: any) => ({
-        id: e.id,
-        packet: e.packet,
-        name: e.name,
-        url: e.url,
-        displayUrl: e.displayUrl,
-        width: e.width,
-        height: e.height,
-        groupId: group.id
-      }))
+      emojis: (group.emojis || []).map((e: any) => buildEmojiExportItem(e, group.id))
     }
 
     onProgress?.(i + 2, total, group.name)
