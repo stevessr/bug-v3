@@ -11,6 +11,7 @@ import { initChatMultiReactor } from './utils/chat-multi-reactor'
 import { initSubmenuInjector } from './utils/submenu-injector'
 import { initLinuxDoSeeking } from './seeking'
 import { initDiscourseRouterRefresh } from './utils/router-refresh'
+import { initUserSummarySummonButton } from './utils/user-summary-summon'
 
 export async function initDiscourse() {
   try {
@@ -124,6 +125,13 @@ export async function initDiscourse() {
       await initDiscourseRouterRefresh()
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to initialize router refresh:', e)
+    }
+
+    // 用户 summary 页面注入召唤按钮
+    try {
+      initUserSummarySummonButton()
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to initialize user summary summon button', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

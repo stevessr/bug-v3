@@ -23,24 +23,56 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     // 获取所有表情组
     const groups = await storage.getAllEmojiGroups()
 
-    // 找到未分组表情组
-    let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
-    if (!ungroupedGroup) {
-      // 如果未分组表情组不存在，创建一个
-      ungroupedGroup = {
-        id: 'ungrouped',
-        name: '未分组',
-        icon: '📦',
-        order: 999,
-        emojis: []
+    const targetGroupId =
+      emojiData && typeof emojiData.targetGroupId === 'string' ? emojiData.targetGroupId.trim() : ''
+    const targetGroupName =
+      emojiData && typeof emojiData.targetGroupName === 'string'
+        ? emojiData.targetGroupName.trim()
+        : ''
+
+    let targetGroup = null as any
+    if (targetGroupId) {
+      targetGroup = groups.find((g: any) => g.id === targetGroupId)
+    }
+    if (!targetGroup && targetGroupName) {
+      targetGroup = groups.find((g: any) => g.name === targetGroupName)
+    }
+
+    if (!targetGroup) {
+      // 找到未分组表情组
+      let ungroupedGroup = groups.find((g: any) => g.id === 'ungrouped')
+      if (!ungroupedGroup) {
+        // 如果未分组表情组不存在，创建一个
+        ungroupedGroup = {
+          id: 'ungrouped',
+          name: '未分组',
+          icon: '📦',
+          order: 999,
+          emojis: []
+        }
+        groups.push(ungroupedGroup)
       }
-      groups.push(ungroupedGroup)
+
+      // 如果指定了目标分组但不存在，创建它；否则回退到未分组
+      if (targetGroupId || targetGroupName) {
+        const createdGroup = {
+          id: targetGroupId || `group-${Date.now()}`,
+          name: targetGroupName || targetGroupId || '未分组',
+          icon: '📁',
+          order: groups.length,
+          emojis: []
+        }
+        groups.push(createdGroup)
+        targetGroup = createdGroup
+      } else {
+        targetGroup = ungroupedGroup
+      }
     }
 
     // 检查是否已存在相同 URL 的表情
-    const existingEmoji = ungroupedGroup.emojis.find((e: any) => e.url === emojiData.url)
+    const existingEmoji = targetGroup.emojis.find((e: any) => e.url === emojiData.url)
     if (existingEmoji) {
-      sendResponse({ success: false, error: '此表情已存在于未分组中' })
+      sendResponse({ success: false, error: '此表情已存在于目标分组中' })
       return
     }
 
@@ -87,11 +119,13 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       packet: Date.now(),
       name: emojiData.name,
       url: finalUrl,
-      groupId: 'ungrouped',
+      ...(emojiData.displayUrl && { displayUrl: emojiData.displayUrl }),
+      ...(emojiData.customOutput && { customOutput: emojiData.customOutput }),
+      groupId: targetGroup.id,
       addedAt: Date.now()
     }
 
-    ungroupedGroup.emojis.push(newEmoji)
+    targetGroup.emojis.push(newEmoji)
 
     // 保存到存储
     await storage.setAllEmojiGroups(groups)
@@ -104,10 +138,10 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
           payload: {
             emoji: newEmoji,
             group: {
-              id: ungroupedGroup.id,
-              name: ungroupedGroup.name,
-              icon: ungroupedGroup.icon,
-              order: ungroupedGroup.order
+              id: targetGroup.id,
+              name: targetGroup.name,
+              icon: targetGroup.icon,
+              order: targetGroup.order
             }
           }
         })
@@ -116,8 +150,8 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       console.warn('[Background] Failed to broadcast ungrouped emoji addition', broadcastError)
     }
 
-    console.log('[Background] 成功添加表情到未分组：', newEmoji.name)
-    sendResponse({ success: true, message: '表情已添加到未分组' })
+    console.log('[Background] 成功添加表情：', newEmoji.name)
+    sendResponse({ success: true, message: '表情已添加到目标分组' })
   } catch (error) {
     console.error('[Background] 添加表情失败：', error)
     sendResponse({ success: false, error: error instanceof Error ? error.message : '添加失败' })

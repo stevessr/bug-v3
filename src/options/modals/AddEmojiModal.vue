@@ -27,11 +27,14 @@ const removeParsedItem = (index: number) => {
 const name = ref('')
 const url = ref('')
 const displayUrl = ref('')
+const customOutput = ref('')
+const tagsInput = ref('')
 const showGeminiModal = ref(false)
 const inputMode = ref<'url' | 'markdown' | 'html'>('url')
 const pasteText = ref('')
 const parsedItems = ref<ImageVariant[]>([])
 const autoPreview = ref(false)
+const isAdding = ref(false)
 let previewTimer: number | null = null
 // initialize groupId from reactive props
 const groupId = ref(
@@ -65,6 +68,8 @@ watch(show, v => {
     name.value = ''
     url.value = ''
     displayUrl.value = ''
+    customOutput.value = ''
+    tagsInput.value = ''
     groupId.value = (defaultGroupId?.value as string) || (groups.value && groups.value[0]?.id) || ''
     pasteText.value = ''
     parsedItems.value = []
@@ -135,6 +140,37 @@ function handleImageError() {
 const handleParsedImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
   target.src = ''
+}
+
+const parseTagsInput = (value: string): string[] => {
+  if (!value) return []
+  const normalized = value.replace(/\s+/g, ' ')
+  return Array.from(
+    new Set(
+      normalized
+        .split(/[，,\n]/)
+        .map(item => item.trim())
+        .filter(Boolean)
+    )
+  )
+}
+
+const fetchImageSize = async (src: string): Promise<{ width: number; height: number } | null> => {
+  if (!src) return null
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      const width = (img as HTMLImageElement).naturalWidth || (img as HTMLImageElement).width
+      const height = (img as HTMLImageElement).naturalHeight || (img as HTMLImageElement).height
+      if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+        resolve({ width, height })
+      } else {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
 }
 
 const parseMarkdownImages = (text: string): ImageVariant[] => {
@@ -399,30 +435,43 @@ const close = () => {
   emits('update:show', false)
 }
 
-const add = () => {
+const add = async () => {
   // If non-url mode, use already parsed items
   if (inputMode.value !== 'url') {
     return importParsed()
   }
 
   if (!name.value.trim() || !url.value.trim()) return
-  // 允许未分组表情（groupId 为空或 'ungrouped'）
-  const targetGroupId = groupId.value || 'ungrouped'
-  const emojiData = {
-    packet: Date.now(),
-    name: name.value.trim(),
-    url: url.value.trim(),
-    tags: [] as string[],
-    ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() })
+  if (isAdding.value) return
+  isAdding.value = true
+  try {
+    // 允许未分组表情（groupId 为空或 'ungrouped'）
+    const targetGroupId = groupId.value || 'ungrouped'
+    const tags = parseTagsInput(tagsInput.value)
+    const sizeSource = (displayUrl.value || url.value).trim()
+    const sizeInfo = await fetchImageSize(sizeSource)
+    const emojiData = {
+      packet: Date.now(),
+      name: name.value.trim(),
+      url: url.value.trim(),
+      ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() }),
+      ...(customOutput.value.trim() && { customOutput: customOutput.value.trim() }),
+      ...(tags.length > 0 && { tags }),
+      ...(sizeInfo && { width: sizeInfo.width, height: sizeInfo.height })
+    }
+    emojiStore.addEmoji(targetGroupId, emojiData)
+    // IndexedDB removed: flushBuffer not needed
+    emits('added', { groupId: targetGroupId, name: emojiData.name })
+    emits('update:show', false)
+    name.value = ''
+    url.value = ''
+    displayUrl.value = ''
+    customOutput.value = ''
+    tagsInput.value = ''
+    groupId.value = groups.value?.[0]?.id || ''
+  } finally {
+    isAdding.value = false
   }
-  emojiStore.addEmoji(targetGroupId, emojiData)
-  // IndexedDB removed: flushBuffer not needed
-  emits('added', { groupId: targetGroupId, name: emojiData.name })
-  emits('update:show', false)
-  name.value = ''
-  url.value = ''
-  displayUrl.value = ''
-  groupId.value = groups.value?.[0]?.id || ''
 }
 
 const importParsed = () => {
@@ -567,6 +616,27 @@ const handleGeminiNameSelected = (selectedName: string) => {
                     placeholder="表情选择器中显示的链接，留空则使用输出链接"
                     title="表情显示链接 (可选)"
                   />
+                  <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
+                    自定义输出内容 (可选)
+                  </label>
+                  <textarea
+                    v-model="customOutput"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="点击表情时插入的自定义文本（留空使用默认格式）"
+                    title="自定义输出内容 (可选)"
+                  ></textarea>
+                  <label class="block text-sm font-medium text-gray-700 mb-1 mt-3 dark:text-white">
+                    表情标签 (可选)
+                  </label>
+                  <input
+                    v-model="tagsInput"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="标签用逗号分隔，例如：猫咪, 表情包"
+                    title="表情标签 (可选)"
+                  />
+                  <div class="text-xs text-gray-500 mt-1">点击添加时会自动解析宽度/高度（px）</div>
                 </div>
                 <div v-else>
                   <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
