@@ -66,12 +66,17 @@ const actionSchema = z.object({
   label: z.string().optional()
 })
 
+const listFromString = z.preprocess(
+  value => (typeof value === 'string' ? [value] : value),
+  z.array(z.string())
+)
+
 const responseSchema = z.object({
   message: z.string().optional(),
   actions: z.array(actionSchema).optional(),
   parallelActions: z.boolean().optional(),
-  thoughts: z.array(z.string()).optional(),
-  steps: z.array(z.string()).optional(),
+  thoughts: listFromString.optional(),
+  steps: listFromString.optional(),
   memory: z
     .object({
       set: z.record(z.string()).optional(),

@@ -38,9 +38,10 @@ const lastChecklist = ref<string[]>([])
 const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
 const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
+const SESSION_STORAGE_KEY = 'ai-agent-session-v1'
 
 const hasConnection = computed(() => {
-  return Boolean(settings.value.baseUrl && settings.value.apiKey)
+  return Boolean(settings.value.apiKey)
 })
 
 
@@ -143,6 +144,49 @@ const loadMessages = () => {
 const saveMessages = () => {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(MESSAGE_STORAGE_KEY, JSON.stringify(messages.value))
+}
+
+const saveSession = () => {
+  if (typeof localStorage === 'undefined') return
+  const session = {
+    pendingActions: pendingActions.value,
+    pendingActionsAssistantId: pendingActionsAssistantId.value,
+    lastToolUseId: lastToolUseId.value,
+    lastToolInput: lastToolInput.value,
+    lastParallelActions: lastParallelActions.value,
+    lastUserInput: lastUserInput.value,
+    lastChecklist: lastChecklist.value,
+    lastTabContext: lastTabContext.value
+  }
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+}
+
+const loadSession = () => {
+  if (typeof localStorage === 'undefined') return
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+  if (!raw) return
+  try {
+    const parsed = JSON.parse(raw)
+    pendingActions.value = Array.isArray(parsed?.pendingActions) ? parsed.pendingActions : []
+    pendingActionsAssistantId.value =
+      typeof parsed?.pendingActionsAssistantId === 'string' ? parsed.pendingActionsAssistantId : null
+    lastToolUseId.value = typeof parsed?.lastToolUseId === 'string' ? parsed.lastToolUseId : null
+    lastToolInput.value = parsed?.lastToolInput ?? null
+    lastParallelActions.value = parsed?.lastParallelActions !== false
+    lastUserInput.value = typeof parsed?.lastUserInput === 'string' ? parsed.lastUserInput : ''
+    lastChecklist.value = Array.isArray(parsed?.lastChecklist) ? parsed.lastChecklist : []
+    lastTabContext.value = parsed?.lastTabContext ?? null
+  } catch {
+    pendingActions.value = []
+    pendingActionsAssistantId.value = null
+  }
+  if (
+    pendingActionsAssistantId.value &&
+    !messages.value.find(item => item.id === pendingActionsAssistantId.value)
+  ) {
+    pendingActions.value = []
+    pendingActionsAssistantId.value = null
+  }
 }
 
 const saveTimelines = () => {
@@ -254,11 +298,16 @@ const retryFromMessage = async (message: AgentMessage) => {
   timelines.value = nextTimelines
   saveMessages()
   saveTimelines()
+  saveSession()
   await sendMessageWithInput(message.content, { reuseUserMessage: true })
 }
 
 const runActionsAndContinue = async () => {
   if (!pendingActionsAssistantId.value) return
+  if (!lastTabContext.value) {
+    lastTabContext.value = await resolveTabContext(targetTabId.value)
+    saveSession()
+  }
   while (pendingActions.value.length > 0 && lastToolUseId.value && lastToolInput.value) {
     const results = (await runActions()) || []
     if (pendingActionsAssistantId.value) {
@@ -296,7 +345,7 @@ const runActionsAndContinue = async () => {
           if (description) {
             result.data = { dataUrl: result.data, vision: description }
             updateTimelineEntry(pendingActionsAssistantId.value, promptEntryId, {
-              text: '识图中'
+              text: '识图完成'
             })
           }
         }
@@ -333,6 +382,7 @@ const runActionsAndContinue = async () => {
     lastToolUseId.value = followup.toolUseId || null
     lastToolInput.value = followup.toolInput || null
     lastParallelActions.value = followup.parallelActions !== false
+    saveSession()
     if (followup.thoughts?.length && pendingActionsAssistantId.value) {
       addTimelineEntries(
         pendingActionsAssistantId.value,
@@ -380,6 +430,7 @@ const runActionsAndContinue = async () => {
   if (pendingActionsAssistantId.value && pendingActions.value.length === 0) {
     setTimelineCollapsed(pendingActionsAssistantId.value, true)
   }
+  saveSession()
 }
 
 const resolveActiveTabId = async (): Promise<number | null> => {
@@ -433,6 +484,13 @@ const sendMessageWithInput = async (
   const content = rawInput.trim()
   if (!content || isSending.value) return
   lastUserInput.value = content
+  pendingActions.value = []
+  actionResults.value = {}
+  pendingActionsAssistantId.value = null
+  lastToolUseId.value = null
+  lastToolInput.value = null
+  lastParallelActions.value = true
+  lastChecklist.value = []
 
   if (!options?.reuseUserMessage) {
     const userMessage: AgentMessage = {
@@ -457,6 +515,7 @@ const sendMessageWithInput = async (
       set: { task_checklist: lastChecklist.value.map(item => `- ${item}`).join('\n') }
     })
   }
+  saveSession()
 
   const assistantId = nanoid()
   appendMessage({
@@ -505,6 +564,7 @@ const sendMessageWithInput = async (
   lastToolUseId.value = result.toolUseId || null
   lastToolInput.value = result.toolInput || null
   lastParallelActions.value = result.parallelActions !== false
+  saveSession()
   if (result.thoughts?.length) {
     addTimelineEntries(
       assistantId,
@@ -582,6 +642,7 @@ const clearMessages = () => {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(TIMELINE_STORAGE_KEY)
     localStorage.removeItem(MESSAGE_STORAGE_KEY)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
   }
 }
 
@@ -610,6 +671,16 @@ onMounted(() => {
 
 onMounted(() => {
   loadMessages()
+})
+
+onMounted(() => {
+  loadSession()
+})
+
+onMounted(async () => {
+  if (bypassMode.value && pendingActions.value.length > 0) {
+    await runActionsAndContinue()
+  }
 })
 
 const onBypassModeChange = (value: boolean) => {
