@@ -212,6 +212,7 @@ const buildSystemPrompt = (
     '需要子代理时，使用 subagents 数组触发；需要动作时放入 actions。',
     '尽量合并多个独立动作并并行执行，将 parallelActions 设为 true。',
     '可写入记忆：memory.set；可删除记忆：memory.remove。',
+    'MCP 服务不是子代理，不要把 MCP 服务名写进 subagents。',
     'steps 与 thoughts 必须基于可观察证据（当前页面、DOM、截图结果），不要猜测或编造。',
     '若证据不足，用“待确认”表述，不要下结论。'
   ]
@@ -518,6 +519,32 @@ export async function runAgentMessage(
     }
 
     if (firstPass.parsed.subagents && firstPass.parsed.subagents.length > 0) {
+      const mcpNames = new Set(
+        settings.enableMcp
+          ? settings.mcpServers
+              .map(server => server.id)
+              .concat(settings.mcpServers.map(server => server.name))
+          : []
+      )
+      const resolvedCount = firstPass.parsed.subagents.filter(call =>
+        Boolean(resolveSubagent(settings.subagents, call))
+      ).length
+      if (resolvedCount === 0) {
+        const hasMcpMatch = firstPass.parsed.subagents.some(call => {
+          const key = (call.id || call.name || '').trim()
+          return key ? mcpNames.has(key) : false
+        })
+        return {
+          message: {
+            id: nanoid(),
+            role: 'assistant',
+            content: hasMcpMatch
+              ? '当前 MCP 服务不是子代理，无法通过 subagents 调用。请在设置中的 MCP 配置里使用“测试该服务”，或直接用工具/动作完成任务。'
+              : '未找到可用的子代理，请检查子代理配置或更换任务。'
+          },
+          actions: []
+        }
+      }
       const sessionId = nanoid()
       createSubagentSession(sessionId, input, firstPass.parsed.subagents)
 
