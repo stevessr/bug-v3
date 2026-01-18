@@ -10,6 +10,10 @@ const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSetti
 const headerDrafts = reactive<Record<string, string>>({})
 const headerErrors = reactive<Record<string, string>>({})
 const mcpBridgeEnabled = ref(true)
+const mcpTestStatus = ref('')
+const mcpTestLoading = ref(false)
+const mcpServerStatus = reactive<Record<string, string>>({})
+const mcpServerLoading = reactive<Record<string, boolean>>({})
 const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
 
 const subagentOptions = computed(() =>
@@ -109,6 +113,56 @@ const onMcpBridgeToggle = (value: boolean) => {
   }
 }
 
+const testMcpBridgeConnection = async () => {
+  if (!chrome?.runtime?.sendMessage) {
+    mcpTestStatus.value = '无法调用扩展后台'
+    return
+  }
+  mcpTestLoading.value = true
+  mcpTestStatus.value = '测试中...'
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: 'MCP_BRIDGE_TEST' })
+    if (resp?.success && resp?.data?.ok) {
+      mcpTestStatus.value = '测试成功：已建立连接'
+    } else {
+      mcpTestStatus.value = resp?.data?.error || resp?.error || '测试失败'
+    }
+  } catch (error: any) {
+    mcpTestStatus.value = error?.message || '测试失败'
+  } finally {
+    mcpTestLoading.value = false
+  }
+}
+
+const testMcpServerConnection = async (server: McpServerConfig) => {
+  if (!chrome?.runtime?.sendMessage) {
+    mcpServerStatus[server.id] = '无法调用扩展后台'
+    return
+  }
+  mcpServerLoading[server.id] = true
+  mcpServerStatus[server.id] = '测试中...'
+  try {
+    const resp = await chrome.runtime.sendMessage({
+      type: 'MCP_SERVER_TEST',
+      options: {
+        url: server.url,
+        headers: server.headers || {},
+        transport: server.transport
+      }
+    })
+    if (resp?.success && resp?.data?.ok) {
+      const statusText = resp.data.status ? `HTTP ${resp.data.status}` : '连接成功'
+      mcpServerStatus[server.id] = `测试成功：${statusText}`
+    } else {
+      mcpServerStatus[server.id] = resp?.data?.error || resp?.error || '测试失败'
+    }
+  } catch (error: any) {
+    mcpServerStatus[server.id] = error?.message || '测试失败'
+  } finally {
+    mcpServerLoading[server.id] = false
+  }
+}
+
 onMounted(() => {
   loadMcpBridgeState()
 })
@@ -203,6 +257,14 @@ onMounted(() => {
       </div>
 
       <div v-if="settings.enableMcp" class="space-y-4">
+        <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            {{ mcpTestStatus || '点击测试，确认 MCP 桥接是否可连接。' }}
+          </div>
+          <a-button size="small" :loading="mcpTestLoading" @click="testMcpBridgeConnection">
+            测试 MCP
+          </a-button>
+        </div>
         <div
           v-for="server in settings.mcpServers"
           :key="server.id"
@@ -233,6 +295,18 @@ onMounted(() => {
             <p v-if="headerErrors[server.id]" class="text-xs text-red-500 mt-1">
               {{ headerErrors[server.id] }}
             </p>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{ mcpServerStatus[server.id] || '点击测试，验证该 MCP 服务可用性。' }}
+            </div>
+            <a-button
+              size="small"
+              :loading="mcpServerLoading[server.id]"
+              @click="testMcpServerConnection(server)"
+            >
+              测试该服务
+            </a-button>
           </div>
         </div>
 

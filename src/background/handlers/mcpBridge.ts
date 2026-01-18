@@ -59,6 +59,83 @@ export function setMcpBridgeDisabled(value: boolean) {
   }
 }
 
+export async function testMcpBridge(): Promise<{ ok: boolean; error?: string }> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.runtime?.connectNative) {
+    return { ok: false, error: 'Native Messaging 不可用' }
+  }
+  if (disabled) {
+    return { ok: false, error: 'MCP 桥接已关闭' }
+  }
+  try {
+    const testPort = chromeAPI.runtime.connectNative(HOST_NAME)
+    let finished = false
+    return await new Promise(resolve => {
+      const timer = setTimeout(() => {
+        if (finished) return
+        finished = true
+        try {
+          testPort.disconnect()
+        } catch {
+          // ignore
+        }
+        resolve({ ok: true })
+      }, 800)
+      testPort.onMessage.addListener(() => {
+        if (finished) return
+        finished = true
+        clearTimeout(timer)
+        try {
+          testPort.disconnect()
+        } catch {
+          // ignore
+        }
+        resolve({ ok: true })
+      })
+      testPort.onDisconnect.addListener(() => {
+        if (finished) return
+        finished = true
+        clearTimeout(timer)
+        const err = chromeAPI.runtime.lastError?.message
+        resolve({ ok: false, error: err || 'Native host 断开' })
+      })
+    })
+  } catch (error: any) {
+    return { ok: false, error: error?.message || '连接失败' }
+  }
+}
+
+export async function testMcpServer(options: {
+  url: string
+  headers?: Record<string, string>
+  transport?: string
+}): Promise<{ ok: boolean; error?: string; status?: number }> {
+  if (!options.url) return { ok: false, error: '缺少服务地址' }
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 4000)
+  try {
+    const headers = new Headers(options.headers || {})
+    if (options.transport === 'sse' && !headers.has('Accept')) {
+      headers.set('Accept', 'text/event-stream')
+    }
+    const resp = await fetch(options.url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+      redirect: 'follow',
+      credentials: 'omit'
+    })
+    clearTimeout(timeout)
+    if (!resp.ok) {
+      return { ok: false, status: resp.status, error: `HTTP ${resp.status}` }
+    }
+    return { ok: true, status: resp.status }
+  } catch (error: any) {
+    clearTimeout(timeout)
+    return { ok: false, error: error?.message || '连接失败' }
+  }
+}
+
 async function getActiveTabId(chromeAPI: typeof chrome): Promise<number | null> {
   if (!chromeAPI.tabs?.query) return null
   const tabs = await chromeAPI.tabs.query({ active: true, currentWindow: true })

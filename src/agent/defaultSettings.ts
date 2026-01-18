@@ -28,6 +28,22 @@ const defaultSubagents: SubAgentConfig[] = [
     permissions: { ...defaultPermissions, screenshot: true },
     enabled: true,
     isPreset: true
+  },
+  {
+    id: 'web-search',
+    name: '联网搜索',
+    description: '在 Bing 或 Google 进行检索并返回简洁总结。',
+    systemPrompt: [
+      '你是联网搜索助手，优先使用浏览器打开搜索引擎进行检索。',
+      '默认使用 Bing，必要时可切换到 Google。',
+      '先 navigate 到 https://www.bing.com 或 https://www.google.com。',
+      '使用 DOM 访问定位搜索框并输入关键词，提交搜索。',
+      '从结果页提取关键标题与摘要（优先 DOM 文本），不要只截图。',
+      '输出简洁的要点总结，必要时附带来源域名。'
+    ].join('\n'),
+    permissions: { ...defaultPermissions },
+    enabled: true,
+    isPreset: true
   }
 ]
 

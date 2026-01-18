@@ -13,7 +13,12 @@ import {
   setupPeriodicCleanup,
   handleGetEmojiSetting
 } from '../handlers/main.ts'
-import { setMcpBridgeDisabled, setupMcpBridge } from '../handlers/mcpBridge.ts'
+import {
+  setMcpBridgeDisabled,
+  setupMcpBridge,
+  testMcpBridge,
+  testMcpServer
+} from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -84,6 +89,20 @@ export function setupMessageListener() {
             case 'MCP_BRIDGE_SET_DISABLED':
               setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
               sendResponse({ success: true })
+              return true
+            case 'MCP_BRIDGE_TEST':
+              testMcpBridge()
+                .then(result => sendResponse({ success: true, data: result }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || 'MCP 测试失败' })
+                )
+              return true
+            case 'MCP_SERVER_TEST':
+              testMcpServer((typedMsg as any).options || {})
+                .then(result => sendResponse({ success: true, data: result }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || 'MCP 服务测试失败' })
+                )
               return true
 
             default:
