@@ -678,6 +678,7 @@
 
         DELAY_MS_ALL: 1500,
         DELAY_MS_USER: 2000,
+        SKIP_ALREADY_REACTED: true,
         targetPostIds: [],
         isRunning: false,
         panel: null,
@@ -688,10 +689,61 @@
         dragStartY: 0,
         panelStartLeft: 0,
         panelStartBottom: 0,
+        reactionStatusCache: new Map(),
 
         getSelectedReaction() {
             const selector = document.getElementById('ld-reaction-select');
             return selector ? selector.value : 'distorted_face';
+        },
+
+        normalizePostData(data) {
+            if (!data) return null;
+            return data.post || data;
+        },
+
+        extractCurrentReactions(postData) {
+            if (!postData) return { any: false, list: [] };
+            const list = [];
+            if (postData.current_user_reaction) list.push(postData.current_user_reaction);
+            if (Array.isArray(postData.current_user_reactions)) {
+                list.push(...postData.current_user_reactions.filter(Boolean));
+            }
+            if (postData.reactions) {
+                if (Array.isArray(postData.reactions)) {
+                    postData.reactions.forEach(r => {
+                        if (r && r.reacted && r.id) list.push(r.id);
+                    });
+                } else if (typeof postData.reactions === 'object') {
+                    Object.values(postData.reactions).forEach(r => {
+                        if (r && r.reacted && r.id) list.push(r.id);
+                    });
+                }
+            }
+            const unique = Array.from(new Set(list));
+            return { any: unique.length > 0, list: unique };
+        },
+
+        async isAlreadyReacted(postId, reactionId) {
+            const cacheKey = `${postId}:${reactionId || '*'}`;
+            if (this.reactionStatusCache.has(cacheKey)) return this.reactionStatusCache.get(cacheKey);
+
+            const url = `/posts/${postId}.json`;
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    this.reactionStatusCache.set(cacheKey, false);
+                    return false;
+                }
+                const data = await res.json();
+                const postData = this.normalizePostData(data);
+                const status = this.extractCurrentReactions(postData);
+                const matched = reactionId ? status.list.includes(reactionId) : status.any;
+                this.reactionStatusCache.set(cacheKey, matched);
+                return matched;
+            } catch (e) {
+                this.reactionStatusCache.set(cacheKey, false);
+                return false;
+            }
         },
 
         // 从 localStorage 加载位置
@@ -873,6 +925,14 @@
             const url = `https://linux.do/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`;
 
             try {
+                if (this.SKIP_ALREADY_REACTED) {
+                    const alreadyReacted = await this.isAlreadyReacted(postId, reactionId);
+                    if (alreadyReacted) {
+                        this.log(`⏭️ (${current}/${total}) ID:${postId} 已点过，跳过`, tabId);
+                        return 'skipped';
+                    }
+                }
+
                 const res = await fetch(url, {
                     method: 'PUT',
                     headers: {
