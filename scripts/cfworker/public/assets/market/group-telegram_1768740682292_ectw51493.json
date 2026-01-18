@@ -1,0 +1,538 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-01-18T12:58:04.611Z",
+  "group": {
+    "id": "telegram_1768740682292_ectw51493",
+    "name": "mafuyu_twitch_1",
+    "icon": "https://linux.do/uploads/default/original/4X/4/b/6/4b60af8f243728bde919e4821c4a815128e0c2f3.webp?v=telegram",
+    "detail": "Telegram 贴纸包：https://t.me/addstickers/mafuyu_twitch_01_LVfE",
+    "order": 75
+  },
+  "id": "telegram_1768740682292_ectw51493",
+  "name": "mafuyu_twitch_1",
+  "icon": "https://linux.do/uploads/default/original/4X/4/b/6/4b60af8f243728bde919e4821c4a815128e0c2f3.webp?v=telegram",
+  "detail": "Telegram 贴纸包：https://t.me/addstickers/mafuyu_twitch_01_LVfE",
+  "order": 75,
+  "emojis": [
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgEpx055omQFniR5LNPGZXuAALLAQACUo75VikYVmOa53gMOAQ_1768740683976_ql4691l96",
+      "packet": 0,
+      "name": "😖_1.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/3/4/534f559f446bfbb861df0be6513311f07b8ad1f0.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/3/4/534f559f446bfbb861df0be6513311f07b8ad1f0.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgQDWn22wi_68VLQofMT5FHAAJRAgACcFbwVjohrT3mZunIOAQ_1768740685914_rfybql9f4",
+      "packet": 0,
+      "name": "😘_2.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/0/1/9014abc366359931f0a63069eb07f172fc562f0b.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/0/1/9014abc366359931f0a63069eb07f172fc562f0b.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjboVOOhtZ-JN460nBB1jsIAAKIAgACYaL4VowfvkwRE8ZaOAQ_1768740688212_nqhnef577",
+      "packet": 0,
+      "name": "🙃_3.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/2/c/d2c1c5af29e753412b49b93bc804ceabea272843.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/2/c/d2c1c5af29e753412b49b93bc804ceabea272843.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziwh90vW70_BVHUUL9-xOl_AALOAQACk734Vn6P9vd4O17EOAQ_1768740689797_zy2wwsg8g",
+      "packet": 0,
+      "name": "🤩_4.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/2/e/d2e3669c5c4e2d5635874026e3860ebf2a8b7bed.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/2/e/d2e3669c5c4e2d5635874026e3860ebf2a8b7bed.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjpGnZozLcq0wZ63e9lmCobAAJTAwACyeXwVhT-6B3le6SjOAQ_1768740691743_9pjw5y83l",
+      "packet": 0,
+      "name": "❤️_5.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/f/9/2f90516bbd669ffc6267bc8a89ae6b3891a06777.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/f/9/2f90516bbd669ffc6267bc8a89ae6b3891a06777.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zir1pTueAqC7MA3M5C3psZFAAKjAgACyPf5ViiglsCUIE7sOAQ_1768740693498_gnk8r9lbs",
+      "packet": 0,
+      "name": "💔_6.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/1/3/313d1de5fedd13436c118a244a793334ada3e1a6.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/1/3/313d1de5fedd13436c118a244a793334ada3e1a6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi_Mdzhs_y_yGm3-2eeRMl2AALrAQACQDbwVu7fewtHODMkOAQ_1768740695191_t2vdu95dz",
+      "packet": 0,
+      "name": "😡_7.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/c/9/0c9e5815b863eaa0c30600819341e4d196d811a9.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/c/9/0c9e5815b863eaa0c30600819341e4d196d811a9.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhyh0NiUsaj4VGJnQmhTjzCAALnAgACnZP5VgRQhI3lB56kOAQ_1768740696788_he54lox12",
+      "packet": 0,
+      "name": "😀_8.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/3/9/2390118a6f86b4923f90e04cef1df5703f08510f.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/3/9/2390118a6f86b4923f90e04cef1df5703f08510f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjO1zqqJErbevpnYwuEo4-GAAIJAgACOdXwVubh0LdI5U34OAQ_1768740698495_j85w04j42",
+      "packet": 0,
+      "name": "🎁_9.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/8/a/98a1ee3deb59e4e67cc99e16dc3b08dce7a0d16a.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/8/a/98a1ee3deb59e4e67cc99e16dc3b08dce7a0d16a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgAAeeroi9iBz2SxAhBPHKmHAAChwEAAtKY-VYrsfsgQ7amCTgE_1768740700344_vr6zgc65c",
+      "packet": 0,
+      "name": "😄_10.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/f/c/cfc75d5bfa762afa97f3db1d0066ac689a334d02.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/f/c/cfc75d5bfa762afa97f3db1d0066ac689a334d02.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgCGn2l2QRRyCCEtgL2FBDZAAItAgACcbHxVmL6PyMEB23kOAQ_1768740744583_zr258zqcn",
+      "packet": 0,
+      "name": "❌_11.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/d/3/3d3b7d2c8c190eb69065f56694e1ea185fc2c4dd.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/d/3/3d3b7d2c8c190eb69065f56694e1ea185fc2c4dd.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgMqO5EdyYjt6HwZ3X9wq_IAAJLAgACmcb4VnW9zIwUHNRYOAQ_1768740746336_xpjx2mqje",
+      "packet": 0,
+      "name": "🥺_12.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/b/8/1b80549a5d3fd4a301439844982c69e6db45ef87.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/b/8/1b80549a5d3fd4a301439844982c69e6db45ef87.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjksYdY15G_P7q475CVWX3mAAJQAgACkpLwVv9Zhb18lZ3kOAQ_1768740749395_ghd5tg681",
+      "packet": 0,
+      "name": "🥩_13.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/b/6/4b60af8f243728bde919e4821c4a815128e0c2f3.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/b/6/4b60af8f243728bde919e4821c4a815128e0c2f3.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhcibaVrhyDCIZXuIWFH1Z9AAK0AQACr9b4VjjFPFgQdJLuOAQ_1768740751033_x6w6awbn8",
+      "packet": 0,
+      "name": "💤_14.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/e/1/ee1345311da9dfcd01f83bb4b0c5b306efa829ec.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/e/1/ee1345311da9dfcd01f83bb4b0c5b306efa829ec.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgZvgccvrDDVrW2K8ilxXU4AALIAgACzRH5VtOuIWmhHPETOAQ_1768740752672_fj9r3flb4",
+      "packet": 0,
+      "name": "😵_15.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/3/08378980235306f5fc1f6b92fd8db301dab75773.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/8/3/08378980235306f5fc1f6b92fd8db301dab75773.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjBJnCfQR5ueV0TLbo_mJu4AAJyAwACL-DwVjcFWhuy55AAATgE_1768740755518_yi53kejqf",
+      "packet": 0,
+      "name": "😶_16.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/c/9/0c91ec22d973e5c4fa450eb5e457746c321e5ef6.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/c/9/0c91ec22d973e5c4fa450eb5e457746c321e5ef6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjSFEHL4XaBoWYpurSfjMhhAAK8AQACjDD4Vi3BLgnVtG6WOAQ_1768740757446_2qbtmw5jt",
+      "packet": 0,
+      "name": "⁉️_17.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/4/b/b4bb87dc5997b1e5a93f263d1e98b6c3c0569782.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/4/b/b4bb87dc5997b1e5a93f263d1e98b6c3c0569782.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zio_prb4as8wQO_sJCokWqrAALJAgACb5rxVsYcJBMqSfgdOAQ_1768740759469_cdmlj9r99",
+      "packet": 0,
+      "name": "😰_18.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/4/2/042020dd823b3338b34bcb2b557226b8f99d0651.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/4/2/042020dd823b3338b34bcb2b557226b8f99d0651.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgiEpxsgcG6PrBSukY50IyhAAKIAgACbqn5Vr_vYKk8OrFMOAQ_1768740761476_30hkgbnzg",
+      "packet": 0,
+      "name": "🙄_19.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/1/6/616d61e048ed2bc77026984eceadceced3c52100.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/1/6/616d61e048ed2bc77026984eceadceced3c52100.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zg23hkVNzrIg1taheK5KC64AAJiAgACRbnwVsf43-xg0aNwOAQ_1768740762993_jezs3f7vs",
+      "packet": 0,
+      "name": "😊_20.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/3/b/c3bf6380cb6df47cba5e7eb3becf11e1cc86a0c7.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/3/b/c3bf6380cb6df47cba5e7eb3becf11e1cc86a0c7.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhToyooonTuJh_iISVHGG38AAK-AgACZZnxVsjYCzAsbKsCOAQ_1768740805102_pr0w38lb0",
+      "packet": 0,
+      "name": "😭_21.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/5/b/c5ba2dfc46b4af8c941edd55daaea29353c00c84.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/5/b/c5ba2dfc46b4af8c941edd55daaea29353c00c84.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zj_ZGDl_VnRTiHJJrTMZKYmAAJDAgAC3K74VswOQARDRVg4OAQ_1768740806637_67cr3h5mj",
+      "packet": 0,
+      "name": "😏_22.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/f/2/9f2eeaba7f4c3854293acad67555a2d1b36cc9da.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/f/2/9f2eeaba7f4c3854293acad67555a2d1b36cc9da.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziaV4f7DV7n0mlkEbpfjVnRAALzAQACbS75VuPl8wptA827OAQ_1768740810733_cqrcj75o3",
+      "packet": 0,
+      "name": "😍_23.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/3/2/0323fc3f965c74e3befd9b51ff7b76c2a423ee83.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/3/2/0323fc3f965c74e3befd9b51ff7b76c2a423ee83.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zg8fT2GzAloV2jfA5tQhGTQAAKRAgACgR3xVsdk6J1KpcpROAQ_1768740812474_cay3w8gx7",
+      "packet": 0,
+      "name": "😯_24.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/7/3/073779f2be56430e9aaa125c6d01e97784957286.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/7/3/073779f2be56430e9aaa125c6d01e97784957286.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjOQ42jscQm4wmxUnq3t0gwAAIXAgACdhH5VmT5P0PH11ajOAQ_1768740814113_lkxwzstbf",
+      "packet": 0,
+      "name": "🤕_25.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/4/b/e4b13bfe8846e07b0ce1e21722d3537962389064.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/4/b/e4b13bfe8846e07b0ce1e21722d3537962389064.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhizdiR53FpborLAz3-7-6PAALPAQAC1135Vp7DVyzJTaX_OAQ_1768740816060_3hqfyh06h",
+      "packet": 0,
+      "name": "😀_26.webp",
+      "url": "https://linux.do/uploads/default/original/4X/2/6/4/2642be655b58dcabf21fd30a55b32051f7039200.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/6/4/2642be655b58dcabf21fd30a55b32051f7039200.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjWXsA2uOdkdvaGrcouraCzAAIiAwACOu74Vqk6NvYd705YOAQ_1768740817830_xxmye2911",
+      "packet": 0,
+      "name": "😇_27.webp",
+      "url": "https://linux.do/uploads/default/original/4X/c/3/a/c3a3f068fe9ac589f45649a9365fe51be172dee6.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/3/a/c3a3f068fe9ac589f45649a9365fe51be172dee6.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhpTGW24c7QOGOMz851JGfBAAJLAQACIr75Voph_kfENCx2OAQ_1768740819540_f6crx9z4y",
+      "packet": 0,
+      "name": "😭_28.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/c/c/3cccaedada0ebed0dc3004e801a23bf29289f6e3.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/c/c/3cccaedada0ebed0dc3004e801a23bf29289f6e3.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zivfN3IMqrzdIYdqNjau-MoAAL2AQACXCz4VrruuFt-rYR0OAQ_1768740822509_dea2psxwx",
+      "packet": 0,
+      "name": "😃_29.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/9/7/f97221acde8b5cc5f96d1d0a1c9f12582371ecc4.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/9/7/f97221acde8b5cc5f96d1d0a1c9f12582371ecc4.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zghvzemTLyrXcuVN6WWlgL2AAK3AQACTqb5Vj98EC59llXGOAQ_1768740824044_ecd61sv2n",
+      "packet": 0,
+      "name": "😕_30.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/5/6/a56945ff87fcf9a0d38299d70f64be9759880fb7.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/5/6/a56945ff87fcf9a0d38299d70f64be9759880fb7.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjXDVGf1VLH3SNPFv5FrLn1AALJAQACZSD4VkWZ9ZzfxN5eOAQ_1768740864994_whfuz74dp",
+      "packet": 0,
+      "name": "😆_31.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/b/c/abcb5077622950523de9878104d72e8d226845e8.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/b/c/abcb5077622950523de9878104d72e8d226845e8.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi4Cjowp1gAAbavBPqDVY6NrQACSQIAAuVB-FYDOFHyNMAQCDgE_1768740866541_yrd3n9ib6",
+      "packet": 0,
+      "name": "🐱_32.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/e/d/bedddec0341f79e6c458a5346a683b47b5f1e0d0.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/e/d/bedddec0341f79e6c458a5346a683b47b5f1e0d0.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziGsr4V6jSZuVJwtCukKIMeAAIbBAACTmv4VhklAtbe8C7XOAQ_1768740871456_va4jngyrx",
+      "packet": 0,
+      "name": "😋_33.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/4/844c6bb8d17e2cbe9957ab48a0019104c2c221bd.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/4/4/844c6bb8d17e2cbe9957ab48a0019104c2c221bd.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgwA0LL900MHrjcF2dfkgu_AAIaAgACr8b4VvY8Y9gS7PENOAQ_1768740872686_fql31sb7w",
+      "packet": 0,
+      "name": "🐟_34.webp",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/b/91be67068beb8d97035785d429646a82a57118a7.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/1/b/91be67068beb8d97035785d429646a82a57118a7.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgXfBWO2l_kp56VVoegnWINAAIcBAACwpxQVSAOhnjsBZLOOAQ_1768740874529_pgjpqwhdr",
+      "packet": 0,
+      "name": "❓_35.webp",
+      "url": "https://linux.do/uploads/default/original/4X/a/d/d/addcafabb935a8dda16a71af3febc52efc30dd78.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/d/d/addcafabb935a8dda16a71af3febc52efc30dd78.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziaF7Ug5S_XCnQkVb-keLseAAKKAwACNuBRVX-Upp8REf9VOAQ_1768740876214_1cnnw05u5",
+      "packet": 0,
+      "name": "🍺_36.webp",
+      "url": "https://linux.do/uploads/default/original/4X/0/b/7/0b7475d13288e0e51416d165a38cecff85553c2b.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/b/7/0b7475d13288e0e51416d165a38cecff85553c2b.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgSKD2_wQXP8RyHt4pEhNKDAAIUAwACartQVS9FHp0OSt3BOAQ_1768740877895_nh6z9isw7",
+      "packet": 0,
+      "name": "🤪_37.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/e/6/4e68bcad87d79061d5a3f4b8195acf15fc8a8817.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/e/6/4e68bcad87d79061d5a3f4b8195acf15fc8a8817.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zjynMwMUNsBlOcSpOsnOkwnAAKWAgACO0RRVXT0wfO55zLtOAQ_1768740879666_2zvl16hjh",
+      "packet": 0,
+      "name": "🥺_38.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/7/d/b7d86b9fd059ba361ccde7e1d22c7965162dd6ef.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/7/d/b7d86b9fd059ba361ccde7e1d22c7965162dd6ef.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi5a0o66z4a4sFJ7xF9zxKWAAKqAgAC45dRVcRW6X1vzQPWOAQ_1768740882646_sg6t6jgro",
+      "packet": 0,
+      "name": "😵_39.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/1/c/e1c1fafeac00fa76d3043c44790bcee4e4431965.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/1/c/e1c1fafeac00fa76d3043c44790bcee4e4431965.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhZTsKsETyrY1H0sG78dLaEAALLAgACW9NRVZyHbDjBgzh4OAQ_1768740884342_dovz0mew2",
+      "packet": 0,
+      "name": "😂_40.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/4/0/d407ec766a18eef54a80aa35172d3f85cc9d6dc5.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/4/0/d407ec766a18eef54a80aa35172d3f85cc9d6dc5.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi0WkDJCT7MYOwPF1TCI0k5AAIcAwACr_RRVZwCFfPWmIgIOAQ_1768740925526_y9pw8cepf",
+      "packet": 0,
+      "name": "🥰_41.webp",
+      "url": "https://linux.do/uploads/default/original/4X/1/3/8/138a2938fcb734b4ab424aff88ba9a0d5e6ccbef.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/3/8/138a2938fcb734b4ab424aff88ba9a0d5e6ccbef.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgRj-0IaXksC6bYu0iJ_xx6AAJeAgACvVVQVT_gwwiLV6lcOAQ_1768740927112_dxrctq4ab",
+      "packet": 0,
+      "name": "🍩_42.webp",
+      "url": "https://linux.do/uploads/default/original/4X/e/a/a/eaaf5107c444be91e3421c868e1385380f62a258.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/a/a/eaaf5107c444be91e3421c868e1385380f62a258.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgnYqH9FjNpT3WJekbya18CAAJJAgACR-dQVcHT0_a5OIckOAQ_1768740932283_ak5vgt5y6",
+      "packet": 0,
+      "name": "😀_43.webp",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/e/3bea6c86c994bf0cf986c8453ff60b0c5caf5b53.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/b/e/3bea6c86c994bf0cf986c8453ff60b0c5caf5b53.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zgm8QJ-u3wO1fo-jBq5IBMeAALCAgACJj_4VoZbuRgIh12lOAQ_1768740934000_p0q0by4dx",
+      "packet": 0,
+      "name": "🍉_44.webp",
+      "url": "https://linux.do/uploads/default/original/4X/5/5/1/5511fbdaf4809976bd9f7c9cf8cab14a74db16f1.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/5/1/5511fbdaf4809976bd9f7c9cf8cab14a74db16f1.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zinFmWEW1isQ4BqWrAVTl79AAJ3AgAC_MD4VpIzNcxrHQNWOAQ_1768740935656_jonl5e2ns",
+      "packet": 0,
+      "name": "❗️_45.webp",
+      "url": "https://linux.do/uploads/default/original/4X/b/8/c/b8c448f911f87160ef47a24449a440e8b367f91a.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/8/c/b8c448f911f87160ef47a24449a440e8b367f91a.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziPZvVe19k8tD8TLPGZaehxAAL6AgAC6174VgfVlWnP0DvzOAQ_1768740937300_9pvvjbmgg",
+      "packet": 0,
+      "name": "😪_46.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/b/1/4b1c57a50d448979c40f8d4f1f4e249b24b9db3f.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/b/1/4b1c57a50d448979c40f8d4f1f4e249b24b9db3f.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1ziZN9aYxtF-dhZzOaS-pq6PAAJ7AwACr-PwVtsslCDFOnUfOAQ_1768740939014_plpf6ff3z",
+      "packet": 0,
+      "name": "😆_47.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/4/6/646671d385a61dd44d6c618929567d4a08769e7c.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/4/6/646671d385a61dd44d6c618929567d4a08769e7c.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zixNwUaBI2-uWkVUtNIEeKVAAKDAgACsoH5VijLvX17-WhXOAQ_1768740941141_ix77tl637",
+      "packet": 0,
+      "name": "✨_48.webp",
+      "url": "https://linux.do/uploads/default/original/4X/6/4/3/6437249dfba2f52dfa37dc4f05f0742690f96109.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/4/3/6437249dfba2f52dfa37dc4f05f0742690f96109.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi5SFB03gRGRRS3bChx6svjAALOAwACaKnwVpmntbS7hWWvOAQ_1768740942669_wtxjflkq6",
+      "packet": 0,
+      "name": "😘_49.webp",
+      "url": "https://linux.do/uploads/default/original/4X/8/c/a/8cafca0f2afd0b5ad31ec1872e3fe0543808bc8e.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/c/a/8cafca0f2afd0b5ad31ec1872e3fe0543808bc8e.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zh3jD4tyJ7W94mp5HXrl_5EAALwAgACYG3wVsiEFkKgGGfeOAQ_1768740944306_hx3xdxuw9",
+      "packet": 0,
+      "name": "😍_50.webp",
+      "url": "https://linux.do/uploads/default/original/4X/4/2/0/420047217c9a449e87cf8d6f30274024f08a2632.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/2/0/420047217c9a449e87cf8d6f30274024f08a2632.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zhtaW_rmKPRMjAD8t_mQqNsAAJpAgACZa74ViYIalryZskkOAQ_1768740986338_erw1a00c3",
+      "packet": 0,
+      "name": "🤣_51.webp",
+      "url": "https://linux.do/uploads/default/original/4X/f/5/0/f50e042f59b9b98c2c8b04965111d85bd557ffc2.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/5/0/f50e042f59b9b98c2c8b04965111d85bd557ffc2.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWls1zi_QdyicsEN65krv7eO-XvlAAIsAgAC1Z34VoYHUyu4kcs0OAQ_1768740988007_6jgc7piod",
+      "packet": 0,
+      "name": "❤️_52.webp",
+      "url": "https://linux.do/uploads/default/original/4X/d/c/c/dccf161b23b508a9d26da70f623687e79daa5290.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/c/c/dccf161b23b508a9d26da70f623687e79daa5290.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768740682292_ectw51493"
+    }
+  ]
+}
