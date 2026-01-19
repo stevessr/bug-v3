@@ -31,6 +31,7 @@ onMounted(async () => {
     telegramBotToken.value = token
   }
 
+  const tgAuto = Array.isArray(route.query.tgAuto) ? route.query.tgAuto[0] : route.query.tgAuto
   const tgInput = Array.isArray(route.query.tgInput) ? route.query.tgInput[0] : route.query.tgInput
   if (tgInput) {
     telegramInput.value = String(tgInput)
@@ -43,6 +44,22 @@ onMounted(async () => {
     importMode.value = 'update'
     await nextTick()
     selectedGroupId.value = String(tgGroupId)
+  }
+
+  if (tgAuto === '1') {
+    await nextTick()
+    if (!telegramBotToken.value) {
+      message.warning('未检测到 Telegram Bot Token，请先设置后再导入')
+      return
+    }
+    if (!telegramInput.value) {
+      message.warning('未检测到贴纸包链接或名称')
+      return
+    }
+    await previewStickerSet()
+    if (stickerSetInfo.value) {
+      await doImport()
+    }
   }
 })
 const telegramInput = ref('')

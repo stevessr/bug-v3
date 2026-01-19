@@ -54,7 +54,8 @@ const handleTelegramUpdate = (group: any) => {
     path: '/telegram-import',
     query: {
       tgGroupId: String(group.id),
-      tgInput: input || undefined
+      tgInput: input || undefined,
+      tgAuto: '1'
     }
   })
 }
