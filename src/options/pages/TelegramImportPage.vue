@@ -30,9 +30,11 @@ onMounted(async () => {
   }
 })
 const telegramInput = ref('')
+const queueInput = ref('')
 const isProcessing = ref(false)
 const progress = ref({ processed: 0, total: 0, message: '' })
 const errorMessage = ref('')
+const isQueueRunning = ref(false)
 
 // 上传服务选择
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
@@ -67,6 +69,16 @@ interface ImportingEmoji {
 const importingEmojis = ref<ImportingEmoji[]>([])
 const showImportPreview = ref(false)
 
+// 队列导入
+type QueueStatus = 'pending' | 'running' | 'done' | 'error' | 'cancelled'
+interface QueueItem {
+  id: string
+  input: string
+  status: QueueStatus
+  message?: string
+}
+const importQueue = ref<QueueItem[]>([])
+
 // 预览更新节流（减少 DOM 更新频率）
 let previewUpdateTimer: ReturnType<typeof setTimeout> | null = null
 const pendingPreviewEmojis: ImportingEmoji[] = []
@@ -90,6 +102,163 @@ const addToPreview = (emoji: ImportingEmoji) => {
     flushPreviewUpdates()
     previewUpdateTimer = null
   }, 200)
+}
+
+const parseTelegramInputs = (value: string): string[] => {
+  return value
+    .split(/[\n,，\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+
+const enqueueInputs = () => {
+  const inputs = parseTelegramInputs(queueInput.value)
+  if (inputs.length === 0) {
+    message.warning('请输入至少一个贴纸包链接或名称')
+    return
+  }
+
+  const existing = new Set(importQueue.value.map(item => item.input))
+  const newItems: QueueItem[] = []
+  inputs.forEach(input => {
+    if (existing.has(input)) return
+    newItems.push({
+      id: `queue_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      input,
+      status: 'pending'
+    })
+  })
+
+  if (newItems.length === 0) {
+    message.info('队列中已包含这些贴纸包')
+    return
+  }
+
+  importQueue.value = [...importQueue.value, ...newItems]
+  queueInput.value = ''
+  message.success(`已加入 ${newItems.length} 个贴纸包到队列`)
+}
+
+const clearQueue = () => {
+  if (isQueueRunning.value) {
+    message.warning('队列运行中，无法清空')
+    return
+  }
+  importQueue.value = []
+}
+
+const applyStickerSetDefaults = async (
+  stickerSet: TelegramStickerSet,
+  options: { forceName?: boolean } = {}
+) => {
+  // 自动设置分组名称为贴纸包标题
+  if (options.forceName || !newGroupName.value) {
+    newGroupName.value = stickerSet.title
+  }
+
+  // 检查是否已存在同名分组
+  const existingGroup = store.groups.find(g => g.name === stickerSet.title)
+  if (existingGroup) {
+    importMode.value = 'update'
+    await nextTick()
+    selectedGroupId.value = existingGroup.id
+  } else {
+    importMode.value = 'new'
+    selectedGroupId.value = ''
+  }
+}
+
+const startQueueImport = async () => {
+  if (!telegramBotToken.value) {
+    message.error('请先设置 Telegram Bot Token')
+    return
+  }
+
+  if (isProcessing.value || isQueueRunning.value) {
+    message.warning('正在处理中，请稍候')
+    return
+  }
+
+  if (importQueue.value.length === 0) {
+    const inputs = parseTelegramInputs(queueInput.value)
+    if (inputs.length > 0) {
+      queueInput.value = inputs.join('\n')
+      enqueueInputs()
+    }
+  }
+
+  if (importQueue.value.length === 0) {
+    message.warning('队列为空')
+    return
+  }
+
+  isQueueRunning.value = true
+  isCancelling.value = false
+
+  for (const item of importQueue.value) {
+    if (isCancelling.value) {
+      item.status = 'cancelled'
+      item.message = '已取消'
+      break
+    }
+    if (item.status !== 'pending' && item.status !== 'error') continue
+
+    item.status = 'running'
+    item.message = '获取贴纸包中...'
+    telegramInput.value = item.input
+
+    const setName = extractStickerSetName(item.input)
+    if (!setName) {
+      item.status = 'error'
+      item.message = '无效链接或名称'
+      continue
+    }
+
+    let stickerSet: TelegramStickerSet | null = null
+    while (!stickerSet) {
+      try {
+        progress.value = { processed: 0, total: 0, message: '正在获取贴纸包信息...' }
+        stickerSet = await getStickerSet(setName, telegramBotToken.value)
+      } catch (error: any) {
+        if (error.code === 429 && error.retryAfter) {
+          item.message = `请求过于频繁，等待 ${error.retryAfter} 秒`
+          message.warning(`请求过于频繁，正在等待 ${error.retryAfter} 秒...`)
+          await handle429Error(error.retryAfter)
+          if (isCancelling.value) {
+            item.status = 'cancelled'
+            item.message = '已取消'
+            break
+          }
+          continue
+        }
+        item.status = 'error'
+        item.message = `获取失败：${error.message}`
+        stickerSet = null
+        break
+      }
+    }
+
+    if (!stickerSet || item.status === 'cancelled') continue
+
+    stickerSetInfo.value = stickerSet
+    await applyStickerSetDefaults(stickerSet)
+
+    const success = await doImport()
+    if (isCancelling.value) {
+      item.status = 'cancelled'
+      item.message = '已取消'
+    } else if (success) {
+      item.status = 'done'
+      item.message = '导入完成'
+    } else {
+      item.status = 'error'
+      if (!item.message || item.message === '获取贴纸包中...') {
+        item.message = '导入失败'
+      }
+    }
+  }
+
+  isQueueRunning.value = false
 }
 
 // 可用分组列表
@@ -207,6 +376,10 @@ const saveBotToken = () => {
  * 预览贴纸包
  */
 const previewStickerSet = async () => {
+  if (isQueueRunning.value) {
+    message.warning('队列运行中，暂无法预览')
+    return
+  }
   if (!telegramBotToken.value) {
     message.error('请先设置 Telegram Bot Token')
     return
@@ -231,18 +404,9 @@ const previewStickerSet = async () => {
     const stickerSet = await getStickerSet(setName, telegramBotToken.value)
     stickerSetInfo.value = stickerSet
 
-    // 自动设置分组名称为贴纸包标题
-    if (!newGroupName.value) {
-      newGroupName.value = stickerSet.title
-    }
-
-    // 检查是否已存在同名分组
+    await applyStickerSetDefaults(stickerSet, { forceName: true })
     const existingGroup = store.groups.find(g => g.name === stickerSet.title)
     if (existingGroup) {
-      importMode.value = 'update'
-      // 使用 nextTick 确保 DOM 更新后再设置值
-      await nextTick()
-      selectedGroupId.value = existingGroup.id
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
       message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
@@ -269,20 +433,20 @@ const previewStickerSet = async () => {
 /**
  * 执行导入
  */
-const doImport = async () => {
+const doImport = async (): Promise<boolean> => {
   if (!stickerSetInfo.value) {
     message.error('请先预览贴纸包')
-    return
+    return false
   }
 
   if (importMode.value === 'new' && !newGroupName.value.trim()) {
     message.error('请输入分组名称')
-    return
+    return false
   }
 
   if (importMode.value === 'update' && !selectedGroupId.value) {
     message.error('请选择要更新的分组')
-    return
+    return false
   }
 
   isProcessing.value = true
@@ -298,6 +462,8 @@ const doImport = async () => {
     previewUpdateTimer = null
   }
   showImportPreview.value = true
+
+  let wasCancelled = false
 
   try {
     const stickers = stickerSetInfo.value.stickers
@@ -354,6 +520,7 @@ const doImport = async () => {
     for (let i = 0; i < validStickers.length; i++) {
       // 检查是否被取消
       if (isCancelling.value) {
+        wasCancelled = true
         break
       }
 
@@ -497,6 +664,11 @@ const doImport = async () => {
     // 结束批量操作
     await store.endBatch()
 
+    if (wasCancelled) {
+      message.warning(`已取消导入（已处理 ${addedCount} 个贴纸）`)
+      return false
+    }
+
     // 显示成功消息
     if (importMode.value === 'new') {
       message.success(`成功导入分组：${targetGroup!.name}（${addedCount} 个贴纸）`)
@@ -516,11 +688,13 @@ const doImport = async () => {
     newGroupName.value = ''
     selectedGroupId.value = ''
     importMode.value = 'new'
+    return true
   } catch (error: any) {
     console.error('导入失败：', error)
     errorMessage.value = `导入失败：${error.message}`
     message.error(`导入失败：${error.message}`)
     store.endBatch()
+    return false
   } finally {
     isProcessing.value = false
     isCancelling.value = false
@@ -595,11 +769,83 @@ const doImport = async () => {
             <a-button
               type="primary"
               @click="previewStickerSet"
-              :disabled="!telegramInput || isProcessing"
+              :disabled="!telegramInput || isProcessing || isQueueRunning"
               :loading="isProcessing"
             >
               预览
             </a-button>
+          </div>
+        </div>
+
+        <!-- 队列导入 -->
+        <div
+          class="p-4 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-md"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-medium text-gray-900 dark:text-white">3️⃣-A 批量队列导入</h4>
+            <div class="flex gap-2">
+              <a-button size="small" @click="enqueueInputs" :disabled="isProcessing || isQueueRunning">
+                加入队列
+              </a-button>
+              <a-button
+                size="small"
+                type="primary"
+                @click="startQueueImport"
+                :disabled="isProcessing || isQueueRunning"
+                :loading="isQueueRunning"
+              >
+                开始队列导入
+              </a-button>
+              <a-button size="small" danger @click="clearQueue" :disabled="isQueueRunning">
+                清空队列
+              </a-button>
+            </div>
+          </div>
+          <a-textarea
+            v-model:value="queueInput"
+            :rows="3"
+            placeholder="多行输入，每行一个贴纸包链接或名称，例如：https://t.me/addstickers/xxx"
+          />
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            队列会按顺序依次导入；同名分组会自动切换到更新模式
+          </p>
+
+          <div v-if="importQueue.length > 0" class="mt-3 space-y-2">
+            <div
+              v-for="item in importQueue"
+              :key="item.id"
+              class="flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded"
+            >
+              <div class="flex-1 truncate text-sm text-gray-800 dark:text-gray-200">
+                {{ item.input }}
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{{ item.message }}</div>
+              <a-tag
+                :color="
+                  item.status === 'done'
+                    ? 'green'
+                    : item.status === 'running'
+                      ? 'blue'
+                      : item.status === 'error'
+                        ? 'red'
+                        : item.status === 'cancelled'
+                          ? 'orange'
+                          : 'default'
+                "
+              >
+                {{
+                  item.status === 'done'
+                    ? '完成'
+                    : item.status === 'running'
+                      ? '进行中'
+                      : item.status === 'error'
+                        ? '失败'
+                        : item.status === 'cancelled'
+                          ? '已取消'
+                          : '待处理'
+                }}
+              </a-tag>
+            </div>
           </div>
         </div>
 
@@ -746,6 +992,7 @@ const doImport = async () => {
               :disabled="
                 !stickerSetInfo ||
                 isProcessing ||
+                isQueueRunning ||
                 (importMode === 'new' && !newGroupName.trim()) ||
                 (importMode === 'update' && !selectedGroupId)
               "
