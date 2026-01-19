@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 // Accept the project's Group shape when used from parent components
 type LooseGroup = Record<string, unknown>
 const props = defineProps<{ group: LooseGroup }>()
@@ -7,6 +9,7 @@ const props = defineProps<{ group: LooseGroup }>()
 // use a single emit for batch size updates (length/width)
 const emit = defineEmits([
   'edit',
+  'telegramUpdate',
   'export',
   'exportZip',
   'dedupe',
@@ -19,6 +22,7 @@ const emit = defineEmits([
 ])
 
 const onEdit = () => emit('edit', props.group)
+const onTelegramUpdate = () => emit('telegramUpdate', props.group)
 const onExport = () => emit('export', props.group)
 const onExportZip = () => emit('exportZip', props.group)
 const onDedupe = () => emit('dedupe', props.group)
@@ -28,6 +32,13 @@ const onViewDetail = () => emit('viewDetail', props.group)
 const onAIRename = () => emit('aiRename', props.group)
 const onArchive = () => emit('archive', props.group)
 const onCopyAsMarkdown = () => emit('copyAsMarkdown', props.group)
+
+const isTelegramGroup = computed(() => {
+  const group: any = props.group || {}
+  const id = String(group.id || '')
+  const detail = String(group.detail || '')
+  return id.startsWith('telegram_') || detail.includes('Telegram 贴纸包：')
+})
 </script>
 
 <template>
@@ -41,6 +52,9 @@ const onCopyAsMarkdown = () => emit('copyAsMarkdown', props.group)
       <template #overlay>
         <a-menu>
           <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>
+          <a-menu-item v-if="isTelegramGroup" @click.prevent="onTelegramUpdate">
+            更新（Telegram）
+          </a-menu-item>
           <a-menu-item @click.prevent="onViewDetail">查看详细信息</a-menu-item>
           <a-menu-item @click.prevent="onExport">导出</a-menu-item>
           <a-menu-item @click.prevent="onCopyAsMarkdown">复制为 Markdown</a-menu-item>

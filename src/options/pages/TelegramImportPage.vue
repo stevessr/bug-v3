@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import {
@@ -18,6 +19,7 @@ import GroupSelector from '@/options/components/GroupSelector.vue'
 import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
+const route = useRoute()
 
 // --- 状态 ---
 const telegramBotToken = ref('')
@@ -27,6 +29,20 @@ onMounted(async () => {
   const token = await getTelegramBotToken()
   if (token) {
     telegramBotToken.value = token
+  }
+
+  const tgInput = Array.isArray(route.query.tgInput) ? route.query.tgInput[0] : route.query.tgInput
+  if (tgInput) {
+    telegramInput.value = String(tgInput)
+  }
+
+  const tgGroupId = Array.isArray(route.query.tgGroupId)
+    ? route.query.tgGroupId[0]
+    : route.query.tgGroupId
+  if (tgGroupId) {
+    importMode.value = 'update'
+    await nextTick()
+    selectedGroupId.value = String(tgGroupId)
   }
 })
 const telegramInput = ref('')
@@ -784,7 +800,11 @@ const doImport = async (): Promise<boolean> => {
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-medium text-gray-900 dark:text-white">3️⃣-A 批量队列导入</h4>
             <div class="flex gap-2">
-              <a-button size="small" @click="enqueueInputs" :disabled="isProcessing || isQueueRunning">
+              <a-button
+                size="small"
+                @click="enqueueInputs"
+                :disabled="isProcessing || isQueueRunning"
+              >
                 加入队列
               </a-button>
               <a-button

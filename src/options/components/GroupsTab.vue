@@ -86,6 +86,7 @@ const emit = defineEmits([
   'groupDrop',
   'toggleExpand',
   'openEditGroup',
+  'telegramUpdate',
   'exportGroup',
   'exportGroupZip',
   'confirmDeleteGroup',
@@ -202,6 +203,11 @@ const onEmojiDragStartLocal = (emoji: any, groupId: string, index: number, e: Dr
 const onEdit = (group: any) => {
   closeMenu()
   emit('openEditGroup', group)
+}
+
+const onTelegramUpdate = (group: any) => {
+  closeMenu()
+  emit('telegramUpdate', group)
 }
 
 const onExport = (group: any) => {
@@ -526,6 +532,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       <GroupActionsDropdown
                         :group="group as any"
                         @edit="onEdit"
+                        @telegramUpdate="onTelegramUpdate"
                         @viewDetail="onViewDetail"
                         @export="onExport"
                         @exportZip="onExportZip"
