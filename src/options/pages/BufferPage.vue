@@ -478,7 +478,18 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
         // Convert base64 to Blob
         const response = await fetch(croppedEmoji.imageUrl)
         const blob = await response.blob()
-        const file = new File([blob], `${croppedEmoji.name}.png`, { type: 'image/png' })
+        const mimeType = blob.type || 'image/avif'
+        const ext =
+          mimeType === 'image/avif'
+            ? 'avif'
+            : mimeType === 'image/webp'
+              ? 'webp'
+              : mimeType === 'image/jpeg'
+                ? 'jpg'
+                : mimeType === 'image/png'
+                  ? 'png'
+                  : 'png'
+        const file = new File([blob], `${croppedEmoji.name}.${ext}`, { type: mimeType })
         const url = URL.createObjectURL(file)
 
         // 使用 Promise 等待图片加载

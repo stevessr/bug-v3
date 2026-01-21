@@ -97,7 +97,44 @@ export function useImageCropper(
   })
 
   // Core functions
-  const cropImage = (position: { x: number; y: number; width: number; height: number }) => {
+  const canvasToDataUrl = async (
+    canvas: HTMLCanvasElement,
+    mimeType: string,
+    quality = 0.8
+  ) => {
+    return await new Promise<string | null>(resolve => {
+      if (!canvas.toBlob) {
+        try {
+          resolve(canvas.toDataURL(mimeType, quality))
+        } catch {
+          resolve(null)
+        }
+        return
+      }
+
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            try {
+              resolve(canvas.toDataURL(mimeType, quality))
+            } catch {
+              resolve(null)
+            }
+            return
+          }
+          const reader = new FileReader()
+          reader.onloadend = () =>
+            resolve(typeof reader.result === 'string' ? reader.result : null)
+          reader.onerror = () => resolve(null)
+          reader.readAsDataURL(blob)
+        },
+        mimeType,
+        quality
+      )
+    })
+  }
+
+  const cropImage = async (position: { x: number; y: number; width: number; height: number }) => {
     if (!refs.imageElement.value || !refs.canvasRef.value) return null
 
     const canvas = refs.canvasRef.value
@@ -128,7 +165,7 @@ export function useImageCropper(
       actualHeight
     )
 
-    return tempCanvas.toDataURL('image/png')
+    return await canvasToDataUrl(tempCanvas, 'image/avif', 0.8)
   }
 
   const cropWithMask = async (
@@ -179,7 +216,7 @@ export function useImageCropper(
     finalCtx.globalCompositeOperation = 'destination-in'
     finalCtx.drawImage(maskCanvas, 0, 0)
 
-    return finalCanvas.toDataURL('image/png')
+    return await canvasToDataUrl(finalCanvas, 'image/avif', 0.8)
   }
 
   const initCanvas = async () => {
@@ -337,7 +374,7 @@ export function useImageCropper(
     if (resizingId.value) {
       const emoji = croppedEmojis.value.find(e => e.id === resizingId.value)
       if (emoji) {
-        const newImageUrl = cropImage({
+        const newImageUrl = await cropImage({
           x: emoji.x,
           y: emoji.y,
           width: emoji.width,
@@ -429,7 +466,7 @@ export function useImageCropper(
         if (emoji.width < 1 || emoji.height < 1) {
           croppedEmojis.value = croppedEmojis.value.filter(e => e.id !== resizingId.value)
         } else {
-          const newImageUrl = cropImage({
+          const newImageUrl = await cropImage({
             x: emoji.x,
             y: emoji.y,
             width: emoji.width,
@@ -500,7 +537,7 @@ export function useImageCropper(
       } else {
         const emoji = croppedEmojis.value.find(e => e.id === movingId.value)
         if (emoji) {
-          const newImageUrl = cropImage({
+          const newImageUrl = await cropImage({
             x: emoji.x,
             y: emoji.y,
             width: emoji.width,
@@ -534,7 +571,7 @@ export function useImageCropper(
         const position = gridPositions.value.find(pos => pos.id === id)
 
         if (position) {
-          const croppedImageUrl = cropImage(position)
+          const croppedImageUrl = await cropImage(position)
           if (croppedImageUrl) {
             results.push({
               id,
@@ -703,12 +740,12 @@ export function useImageCropper(
                   )) || ''
               } else {
                 croppedImageUrl =
-                  cropImage({
+                  (await cropImage({
                     x: clampedX,
                     y: clampedY,
                     width: clampedWidth,
                     height: clampedHeight
-                  }) || ''
+                  })) || ''
               }
 
               if (croppedImageUrl) {

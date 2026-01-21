@@ -1,0 +1,72 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-01-21T12:31:55.798Z",
+  "group": {
+    "id": "group-1768998692628",
+    "name": "我也要死吗",
+    "icon": "https://linux.do/uploads/default/original/4X/5/b/8/5b8dd72e5fb7ad70a5329d14e33d5b8843786af6.jpeg?v=1768998697999",
+    "detail": "",
+    "order": 91
+  },
+  "id": "group-1768998692628",
+  "name": "我也要死吗",
+  "icon": "https://linux.do/uploads/default/original/4X/5/b/8/5b8dd72e5fb7ad70a5329d14e33d5b8843786af6.jpeg?v=1768998697999",
+  "detail": "",
+  "order": 91,
+  "emojis": [
+    {
+      "id": "emoji-1768998697999-6ncyk9",
+      "packet": 1768998697999,
+      "name": "月代雪.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/5/b/8/5b8dd72e5fb7ad70a5329d14e33d5b8843786af6.jpeg",
+      "width": 1111,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    },
+    {
+      "id": "emoji-1768998698000-l65he5",
+      "packet": 1768998698000,
+      "name": "ejtxl.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/1/d/9/1d9208bc36f0c3ab0441f3501c5ad0f19058987a.jpeg",
+      "width": 1150,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    },
+    {
+      "id": "emoji-1768998698001-c92awh",
+      "packet": 1768998698001,
+      "name": "yyam.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/6/a/8/6a8b60723944a4c05f4772fe01105adf70888406.jpeg",
+      "width": 1080,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    },
+    {
+      "id": "emoji-1768998698001-sbxph6",
+      "packet": 1768998698001,
+      "name": "シトウ アリサ.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/d/1/0/d10039fbf57523d2bc15fe6728fa3defe1390b03.jpeg",
+      "width": 1192,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    },
+    {
+      "id": "emoji-1768998698001-k2hypk",
+      "packet": 1768998698001,
+      "name": "ジョウガサキ ノア.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/c/e/7/ce726797010aac507543e588c7c085a9c4bb2456.jpeg",
+      "width": 1144,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    },
+    {
+      "id": "emoji-1768998698001-9yetp9",
+      "packet": 1768998698001,
+      "name": "タチバナ シェリー.jpg",
+      "url": "https://linux.do/uploads/default/original/4X/4/f/5/4f53aa5dfb47d316418dbd92c5784c6a8f6bb0b7.jpeg",
+      "width": 1087,
+      "height": 1080,
+      "groupId": "group-1768998692628"
+    }
+  ]
+}
