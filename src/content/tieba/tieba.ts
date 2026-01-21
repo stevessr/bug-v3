@@ -11,6 +11,8 @@ const SCAN_DELAY_MS = 200
 const INIT_DELAY_MS = 200
 const FEEDBACK_DISPLAY_MS = 1500
 
+const injectedImages = new Map<string, TiebaImageItem>()
+
 function isTiebaPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -141,6 +143,11 @@ function addButtonToContainer(container: Element): void {
 
     parent.appendChild(btn)
     parent.setAttribute(INJECTED_MARK, 'true')
+
+    // Keep a cached list for the download picker.
+    if (!injectedImages.has(url)) {
+      injectedImages.set(url, { name, url })
+    }
   } catch (e) {
     console.error('[TiebaAddEmoji] addButtonToContainer failed', e)
   }
@@ -161,22 +168,7 @@ type TiebaImageItem = {
 }
 
 function getInjectedTiebaImages(): TiebaImageItem[] {
-  const results: TiebaImageItem[] = []
-  const seen = new Set<string>()
-  const buttons = Array.from(DQSA(`.${BUTTON_CLASS}`)) as HTMLElement[]
-  buttons.forEach(btn => {
-    const container =
-      btn.closest(SELECTOR) || (btn.parentElement && btn.parentElement.closest(SELECTOR))
-    if (!container) return
-    const img = container.querySelector('img') as HTMLImageElement | null
-    if (!img) return
-    const raw = img.getAttribute('data-src') || img.getAttribute('src') || img.src || ''
-    const url = normalizeUrl(raw)
-    if (!url || seen.has(url)) return
-    seen.add(url)
-    results.push({ name: extractNameFromUrl(url), url })
-  })
-  return results
+  return Array.from(injectedImages.values())
 }
 
 function ensureDownloadStyles(): void {
@@ -509,6 +501,7 @@ function ensureDownloadButton(): void {
 
 let tiebaObserver: MutationObserver | null = null
 let debounceTimer: number | null = null
+let keepAliveTimer: number | null = null
 
 function observeTieba(): void {
   if (tiebaObserver) return
@@ -534,6 +527,7 @@ function observeTieba(): void {
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = window.setTimeout(() => {
         scanTiebaImages()
+        ensureDownloadButton()
         debounceTimer = null
       }, SCAN_DELAY_MS)
     }
@@ -551,6 +545,15 @@ function observeTieba(): void {
   }
 }
 
+function startKeepAlive(): void {
+  if (keepAliveTimer) return
+  keepAliveTimer = window.setInterval(() => {
+    // Some pages dynamically destroy/recreate DOM nodes; keep re-checking.
+    ensureDownloadButton()
+    scanTiebaImages()
+  }, 2500)
+}
+
 export function initTieba(): void {
   try {
     if (!isTiebaPage()) return
@@ -558,6 +561,7 @@ export function initTieba(): void {
       scanTiebaImages()
       observeTieba()
       ensureDownloadButton()
+      startKeepAlive()
     }, INIT_DELAY_MS)
     console.log('[TiebaAddEmoji] initialized')
   } catch (e) {
