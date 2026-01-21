@@ -206,13 +206,23 @@ function ensureDownloadStyles(): void {
     }
     #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-list{
       padding:12px 14px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-      gap:10px;
+      gap:10px;flex:1;min-height:120px;
     }
     #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-item{
-      border:1px solid #e5e7eb;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;
-      cursor:pointer;user-select:none;background:#fafafa;
+      position:relative;border:1px solid #e5e7eb;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;
+      cursor:pointer;user-select:none;background:#fafafa;overflow:hidden;
     }
     #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-item:hover{border-color:#cbd5f5;background:#f8fafc;}
+    #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-item.selected{
+      border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,0.25);
+    }
+    #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-check{
+      position:absolute;inset:0;opacity:0;cursor:pointer;
+    }
+    #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-badge{
+      position:absolute;top:8px;left:8px;background:#2563eb;color:#fff;border-radius:6px;
+      padding:2px 6px;font-size:11px;line-height:1;pointer-events:none;
+    }
     #${DOWNLOAD_MODAL_ID} .tieba-emoji-download-thumb{
       width:100%;height:120px;object-fit:cover;border-radius:6px;background:#f3f4f6;
     }
@@ -271,25 +281,32 @@ function createDownloadModal(): void {
     list.appendChild(createE('div', { text: '未发现可下载图片' }))
   } else {
     items.forEach(item => {
-      const checkbox = createE('input', { type: 'checkbox' }) as HTMLInputElement
+      const checkbox = createE('input', {
+        type: 'checkbox',
+        class: 'tieba-emoji-download-check'
+      }) as HTMLInputElement
       checkbox.checked = true
+      const badge = createE('span', { class: 'tieba-emoji-download-badge', text: '已选' })
       const thumb = createE('img', { class: 'tieba-emoji-download-thumb', src: item.url, alt: item.name })
       const name = createE('span', { class: 'tieba-emoji-download-name', text: item.name })
       const meta = createE('div', { class: 'tieba-emoji-download-meta' })
-      meta.appendChild(checkbox)
       meta.appendChild(name)
       const card = createE('label', {
         class: 'tieba-emoji-download-item',
         dataset: { url: item.url, name: item.name }
       })
+      card.appendChild(checkbox)
+      card.appendChild(badge)
       card.appendChild(thumb)
       card.appendChild(meta)
-      card.addEventListener('click', e => {
-        if (e.target === checkbox) return
-        checkbox.checked = !checkbox.checked
+      const syncSelectedState = () => {
+        if (checkbox.checked) card.classList.add('selected')
+        else card.classList.remove('selected')
+        badge.style.display = checkbox.checked ? '' : 'none'
         updateSelectedCount(list, status)
-      })
-      checkbox.addEventListener('change', () => updateSelectedCount(list, status))
+      }
+      checkbox.addEventListener('change', syncSelectedState)
+      syncSelectedState()
       list.appendChild(card)
     })
     updateSelectedCount(list, status)
