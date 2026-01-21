@@ -3,7 +3,15 @@
  * 用于检测当前页面所属平台，支持按需加载对应模块
  */
 
-export type Platform = 'discourse' | 'pixiv' | 'bilibili' | 'reddit' | 'x' | 'xhs' | 'unknown'
+export type Platform =
+  | 'discourse'
+  | 'pixiv'
+  | 'bilibili'
+  | 'reddit'
+  | 'x'
+  | 'xhs'
+  | 'tieba'
+  | 'unknown'
 
 export interface PlatformInfo {
   platform: Platform
@@ -18,6 +26,7 @@ const BILIBILI_DOMAINS = ['bilibili.com', 't.bilibili.com']
 const REDDIT_DOMAINS = ['reddit.com', 'redd.it']
 const X_DOMAINS = ['twitter.com', 'x.com', 'twimg.com']
 const XHS_DOMAINS = ['xiaohongshu', 'xhs']
+const TIEBA_DOMAINS = ['tieba.baidu.com']
 
 /**
  * 检测当前页面属于哪个平台
@@ -74,6 +83,15 @@ export function detectPlatform(): PlatformInfo {
   if (XHS_DOMAINS.some(domain => hostname.includes(domain))) {
     return {
       platform: 'xhs',
+      hostname,
+      shouldLoadModule: true
+    }
+  }
+
+  // 百度贴吧 (Tieba) detection
+  if (TIEBA_DOMAINS.some(domain => hostname.includes(domain))) {
+    return {
+      platform: 'tieba',
       hostname,
       shouldLoadModule: true
     }
