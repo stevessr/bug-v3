@@ -89,6 +89,8 @@ export interface AddEmojiFromWebMessage {
     url: string
     name?: string
     groupId?: string
+    width?: number
+    height?: number
   }
 }
 

@@ -114,6 +114,19 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       void _e
     }
 
+    const width =
+      typeof emojiData?.width === 'number' &&
+      Number.isFinite(emojiData.width) &&
+      emojiData.width > 0
+        ? Math.round(emojiData.width)
+        : undefined
+    const height =
+      typeof emojiData?.height === 'number' &&
+      Number.isFinite(emojiData.height) &&
+      emojiData.height > 0
+        ? Math.round(emojiData.height)
+        : undefined
+
     const newEmoji = {
       id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       packet: Date.now(),
@@ -121,6 +134,8 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       url: finalUrl,
       ...(emojiData.displayUrl && { displayUrl: emojiData.displayUrl }),
       ...(emojiData.customOutput && { customOutput: emojiData.customOutput }),
+      ...(width ? { width } : {}),
+      ...(height ? { height } : {}),
       groupId: targetGroup.id,
       addedAt: Date.now()
     }

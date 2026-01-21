@@ -1,6 +1,8 @@
 export interface AddEmojiButtonData {
   name: string
   url: string
+  width?: number
+  height?: number
 }
 
 /** 存储所有 setTimeout ID 以便清理 */

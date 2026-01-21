@@ -697,7 +697,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Note: Favorites Management is delegated to favoritesStore
 
   // --- One-click Add Emoji from Web ---
-  const addEmojiFromWeb = (emojiData: { name: string; url: string }) => {
+  const addEmojiFromWeb = (emojiData: {
+    name: string
+    url: string
+    width?: number
+    height?: number
+  }) => {
     const ungroupedGroup = groups.value.find(g => g.id === 'ungrouped')
     if (ungroupedGroup) {
       // Ensure emojis array exists
@@ -709,6 +714,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         packet: Date.now(),
         name: emojiData.name,
         url: emojiData.url,
+        ...(typeof emojiData.width === 'number' ? { width: emojiData.width } : {}),
+        ...(typeof emojiData.height === 'number' ? { height: emojiData.height } : {}),
         groupId: 'ungrouped'
       }
       ungroupedGroup.emojis.push(newEmoji)

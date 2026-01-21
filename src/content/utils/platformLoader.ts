@@ -72,6 +72,14 @@ export async function loadPlatformModule(platform: Platform): Promise<void> {
         }
         break
 
+      case 'tieba':
+        {
+          const { initTieba } = await import('../tieba/tieba')
+          initTieba()
+          log.info('Tieba module loaded and initialized')
+        }
+        break
+
       default:
         log.warn(`Unknown platform: ${platform}`)
         return
