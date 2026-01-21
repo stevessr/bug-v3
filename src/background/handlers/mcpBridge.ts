@@ -147,11 +147,7 @@ async function getTabId(chromeAPI: typeof chrome, tabId?: number): Promise<numbe
   return getActiveTabId(chromeAPI)
 }
 
-async function sendActionToTab(
-  chromeAPI: typeof chrome,
-  tabId: number,
-  action: any
-): Promise<any> {
+async function sendActionToTab(chromeAPI: typeof chrome, tabId: number, action: any): Promise<any> {
   if (!chromeAPI.tabs?.sendMessage) {
     throw new Error('无法发送消息到内容脚本')
   }
@@ -170,11 +166,7 @@ async function sendActionToTab(
   })
 }
 
-async function sendQueryToTab(
-  chromeAPI: typeof chrome,
-  tabId: number,
-  payload: any
-): Promise<any> {
+async function sendQueryToTab(chromeAPI: typeof chrome, tabId: number, payload: any): Promise<any> {
   if (!chromeAPI.tabs?.sendMessage) {
     throw new Error('无法发送消息到内容脚本')
   }
@@ -434,7 +426,9 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
     case 'chrome.window_get': {
       if (!chromeAPI.windows?.get) throw new Error('无法获取窗口')
       if (typeof args.windowId !== 'number') throw new Error('缺少 windowId')
-      const window = await chromeAPI.windows.get(args.windowId, { populate: Boolean(args.populate) })
+      const window = await chromeAPI.windows.get(args.windowId, {
+        populate: Boolean(args.populate)
+      })
       return mapWindow(window)
     }
 

@@ -312,7 +312,10 @@ export class IncrementalSyncService {
         const emojiData = delta.changes.find(c => c.field === 'emojis')?.newValue
         if (emojiData && typeof emojiData === 'object' && 'groupId' in emojiData) {
           const groupId = (emojiData as { groupId: string }).groupId
-          store.addEmojiWithoutSave(groupId, emojiData as Parameters<typeof store.addEmojiWithoutSave>[1])
+          store.addEmojiWithoutSave(
+            groupId,
+            emojiData as Parameters<typeof store.addEmojiWithoutSave>[1]
+          )
         }
         break
       }

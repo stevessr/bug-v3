@@ -201,8 +201,8 @@ onMounted(() => {
         <div>
           2. 生成 manifest：
           <span class="font-mono">
-            node scripts/mcp-bridge/create-host-manifest.js --extension-id
-            &lt;扩展ID&gt; --host-path &quot;/绝对路径/scripts/mcp-bridge/server.js&quot;
+            node scripts/mcp-bridge/create-host-manifest.js --extension-id &lt;扩展 ID&gt;
+            --host-path &quot;/绝对路径/scripts/mcp-bridge/server.js&quot;
           </span>
         </div>
         <div>3. 将 manifest 放到系统目录：</div>
@@ -257,7 +257,9 @@ onMounted(() => {
       </div>
 
       <div v-if="settings.enableMcp" class="space-y-4">
-        <div class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
+        <div
+          class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2"
+        >
           <div class="text-xs text-gray-500 dark:text-gray-400">
             {{ mcpTestStatus || '点击测试，确认 MCP 桥接是否可连接。' }}
           </div>

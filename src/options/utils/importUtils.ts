@@ -114,14 +114,18 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
       const payloadGroupIcon = (payloadGroup.icon || '📁').toString()
       const payloadGroupDetail = payloadGroup.detail
       const payloadGroupOrder =
-        Number.isFinite(payloadGroup.order) && payloadGroup.order >= 0 ? payloadGroup.order : undefined
+        Number.isFinite(payloadGroup.order) && payloadGroup.order >= 0
+          ? payloadGroup.order
+          : undefined
 
       if (payloadGroupId) {
         const existing = store.groups.find((g: EmojiGroup) => g.id === payloadGroupId)
         if (existing) {
           const updates: Partial<EmojiGroup> = {}
-          if (payloadGroupName && existing.name !== payloadGroupName) updates.name = payloadGroupName
-          if (payloadGroup.icon && existing.icon !== payloadGroupIcon) updates.icon = payloadGroupIcon
+          if (payloadGroupName && existing.name !== payloadGroupName)
+            updates.name = payloadGroupName
+          if (payloadGroup.icon && existing.icon !== payloadGroupIcon)
+            updates.icon = payloadGroupIcon
           if (payloadGroupDetail !== undefined && existing.detail !== payloadGroupDetail)
             updates.detail = payloadGroupDetail
           if (payloadGroupOrder !== undefined && existing.order !== payloadGroupOrder)
@@ -130,7 +134,11 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             store.updateGroup(payloadGroupId, updates)
           }
         } else {
-          store.createGroupWithoutSave(payloadGroupName || payloadGroupId, payloadGroupIcon, payloadGroupId)
+          store.createGroupWithoutSave(
+            payloadGroupName || payloadGroupId,
+            payloadGroupIcon,
+            payloadGroupId
+          )
           if (payloadGroupDetail !== undefined || payloadGroupOrder !== undefined) {
             store.updateGroup(payloadGroupId, {
               ...(payloadGroupDetail !== undefined && { detail: payloadGroupDetail }),
@@ -143,7 +151,8 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
         const existing = store.groups.find((g: EmojiGroup) => g.name === payloadGroupName)
         if (existing) {
           const updates: Partial<EmojiGroup> = {}
-          if (payloadGroup.icon && existing.icon !== payloadGroupIcon) updates.icon = payloadGroupIcon
+          if (payloadGroup.icon && existing.icon !== payloadGroupIcon)
+            updates.icon = payloadGroupIcon
           if (payloadGroupDetail !== undefined && existing.detail !== payloadGroupDetail)
             updates.detail = payloadGroupDetail
           if (payloadGroupOrder !== undefined && existing.order !== payloadGroupOrder)

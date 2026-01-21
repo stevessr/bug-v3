@@ -24,9 +24,7 @@ async function captureScreenshot(
     return { id: `screenshot-${Date.now()}`, type: 'screenshot', success: false, error: '无法截图' }
   }
   return new Promise(resolve => {
-    chrome.runtime.sendMessage(
-      { type: 'CAPTURE_SCREENSHOT', format, tabId },
-      (response: any) => {
+    chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT', format, tabId }, (response: any) => {
       if (response?.success) {
         resolve({
           id: `screenshot-${Date.now()}`,
@@ -42,8 +40,7 @@ async function captureScreenshot(
           error: response?.error || '截图失败'
         })
       }
-      }
-    )
+    })
   })
 }
 

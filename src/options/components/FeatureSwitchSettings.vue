@@ -63,9 +63,7 @@ const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
 }
 
 // 云端市场域名的本地状态
-const localCloudMarketDomain = ref<string>(
-  getSetting('cloudMarketDomain', 's.pwsh.us.kg')
-)
+const localCloudMarketDomain = ref<string>(getSetting('cloudMarketDomain', 's.pwsh.us.kg'))
 const isCloudMarketDomainSaving = ref(false)
 
 // 监听 settings 变化，同步到本地状态

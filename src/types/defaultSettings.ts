@@ -11,12 +11,7 @@ export const DEFAULT_UPLOAD_MENU_ITEMS = {
     ['过盾', '🛡', 'https://linux.do/challenge', 'emoji-extension-passwall-iframe']
   ] as Array<[string, string, string, string]>,
   sides: [
-    [
-      '视频转 gif(iframe)',
-      '🎞️',
-      'https://s.pwsh.us.kg/',
-      'emoji-extension-video2gif-iframe'
-    ]
+    ['视频转 gif(iframe)', '🎞️', 'https://s.pwsh.us.kg/', 'emoji-extension-video2gif-iframe']
   ] as Array<[string, string, string, string]>
 }
 

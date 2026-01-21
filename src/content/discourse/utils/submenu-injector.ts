@@ -204,12 +204,12 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       createAndShowIframeModal(
         'https://linux.do/challenge',
         href => {
-            try {
-                const u = new URL(href)
-                return u.hostname === 'linux.do' && u.pathname === '/'
-            } catch {
-                return false
-            }
+          try {
+            const u = new URL(href)
+            return u.hostname === 'linux.do' && u.pathname === '/'
+          } catch {
+            return false
+          }
         },
         {
           title: 'Cloudflare Challenge',

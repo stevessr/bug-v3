@@ -65,7 +65,11 @@ export function updateSubagentSessionItem(
   const session = sessions.find(item => item.id === sessionId)
   if (!session) return
   const target = session.items.find(item =>
-    identifier.id ? item.id === identifier.id : identifier.name ? item.name === identifier.name : false
+    identifier.id
+      ? item.id === identifier.id
+      : identifier.name
+        ? item.name === identifier.name
+        : false
   )
   if (!target) return
   if (result.error) {

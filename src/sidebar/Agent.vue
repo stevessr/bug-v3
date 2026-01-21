@@ -44,7 +44,6 @@ const hasConnection = computed(() => {
   return Boolean(settings.value.apiKey)
 })
 
-
 const activePermissions = computed(() => {
   const agent = activeSubagent.value
   if (!agent) return []
@@ -88,7 +87,18 @@ const renderMarkdown = (input: string) => {
     })
   })
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path'],
+    ADD_TAGS: [
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mn',
+      'mo',
+      'annotation',
+      'annotation-xml',
+      'svg',
+      'path'
+    ],
     ADD_ATTR: ['class', 'style']
   })
 }
@@ -169,7 +179,9 @@ const loadSession = () => {
     const parsed = JSON.parse(raw)
     pendingActions.value = Array.isArray(parsed?.pendingActions) ? parsed.pendingActions : []
     pendingActionsAssistantId.value =
-      typeof parsed?.pendingActionsAssistantId === 'string' ? parsed.pendingActionsAssistantId : null
+      typeof parsed?.pendingActionsAssistantId === 'string'
+        ? parsed.pendingActionsAssistantId
+        : null
     lastToolUseId.value = typeof parsed?.lastToolUseId === 'string' ? parsed.lastToolUseId : null
     lastToolInput.value = parsed?.lastToolInput ?? null
     lastParallelActions.value = parsed?.lastParallelActions !== false
@@ -407,7 +419,11 @@ const runActionsAndContinue = async () => {
     }
     if (!pendingActions.value.length) break
   }
-  if (pendingActionsAssistantId.value && pendingActions.value.length === 0 && lastChecklist.value.length) {
+  if (
+    pendingActionsAssistantId.value &&
+    pendingActions.value.length === 0 &&
+    lastChecklist.value.length
+  ) {
     const finalMessage =
       messages.value.find(item => item.id === pendingActionsAssistantId.value)?.content || ''
     const review = await verifyChecklist(
@@ -477,10 +493,7 @@ const setTargetTabId = (id: number | null) => {
   writeStoredTabId(id)
 }
 
-const sendMessageWithInput = async (
-  rawInput: string,
-  options?: { reuseUserMessage?: boolean }
-) => {
+const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessage?: boolean }) => {
   const content = rawInput.trim()
   if (!content || isSending.value) return
   lastUserInput.value = content
@@ -504,12 +517,9 @@ const sendMessageWithInput = async (
   isSending.value = true
   setTargetTabId(await resolveActiveTabId())
   lastTabContext.value = await resolveTabContext(targetTabId.value)
-  lastChecklist.value = await generateChecklist(
-    content,
-    settings.value,
-    activeSubagent.value,
-    { tab: lastTabContext.value || undefined }
-  )
+  lastChecklist.value = await generateChecklist(content, settings.value, activeSubagent.value, {
+    tab: lastTabContext.value || undefined
+  })
   if (lastChecklist.value.length) {
     updateMemory({
       set: { task_checklist: lastChecklist.value.map(item => `- ${item}`).join('\n') }
@@ -623,7 +633,6 @@ const getLastUserInput = () => {
   return lastUserInput.value || ''
 }
 
-
 const sendMessage = async () => {
   const content = inputValue.value.trim()
   inputValue.value = ''
@@ -687,7 +696,6 @@ const onBypassModeChange = (value: boolean) => {
   bypassMode.value = value
   writeStoredBypassMode(value)
 }
-
 </script>
 
 <template>
@@ -718,11 +726,7 @@ const onBypassModeChange = (value: boolean) => {
         </div>
       </div>
       <div class="agent-tags">
-        <span
-          v-for="item in activePermissions"
-          :key="item.key"
-          class="agent-tag"
-        >
+        <span v-for="item in activePermissions" :key="item.key" class="agent-tag">
           {{ item.label }}
         </span>
       </div>
@@ -759,10 +763,7 @@ const onBypassModeChange = (value: boolean) => {
             重试
           </a-button>
         </div>
-        <div
-          v-if="message.role === 'assistant' && timelines[message.id]"
-          class="agent-timeline"
-        >
+        <div v-if="message.role === 'assistant' && timelines[message.id]" class="agent-timeline">
           <a-collapse
             :active-key="timelines[message.id].collapsed ? [] : ['flow']"
             @change="keys => setTimelineCollapsed(message.id, (keys as string[]).length === 0)"
@@ -773,14 +774,18 @@ const onBypassModeChange = (value: boolean) => {
                 <a-timeline-item
                   v-for="entry in timelines[message.id].entries"
                   :key="entry.id"
-                  :color="entry.status === 'error' ? 'red' : entry.status === 'success' ? 'green' : 'blue'"
+                  :color="
+                    entry.status === 'error' ? 'red' : entry.status === 'success' ? 'green' : 'blue'
+                  "
                 >
                   <div class="text-xs text-gray-600">
                     <span v-if="entry.type === 'thought'">思考：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'step'">步骤：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'checklist'">清单：{{ entry.text }}</span>
                     <span v-else-if="entry.type === 'review'">核查：{{ entry.text }}</span>
-                    <span v-else-if="entry.type === 'vision_prompt'" class="agent-working">识图中</span>
+                    <span v-else-if="entry.type === 'vision_prompt'" class="agent-working">
+                      识图中
+                    </span>
                     <span v-else>
                       动作：{{ entry.actionType }}
                       <span v-if="entry.error" class="text-red-500">（{{ entry.error }}）</span>

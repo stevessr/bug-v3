@@ -332,7 +332,11 @@ export class ConflictResolver {
    * 三方合并（带基础版本）
    * 比较 base、local、remote 三个版本，智能合并
    */
-  async threeWayMerge<T extends Record<string, DeltaValue>>(base: T, local: T, remote: T): Promise<MergeResult<T>> {
+  async threeWayMerge<T extends Record<string, DeltaValue>>(
+    base: T,
+    local: T,
+    remote: T
+  ): Promise<MergeResult<T>> {
     try {
       // 检测变更
       const localChanges = this.diff(base, local)

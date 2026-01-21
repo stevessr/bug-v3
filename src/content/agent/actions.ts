@@ -127,11 +127,7 @@ async function sleep(ms: number) {
   await new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function updateEditableValue(
-  element: HTMLElement,
-  text: string,
-  clear?: boolean
-): void {
+function updateEditableValue(element: HTMLElement, text: string, clear?: boolean): void {
   const input = element as HTMLInputElement | HTMLTextAreaElement
   if ('value' in input) {
     if (clear) input.value = ''
@@ -236,8 +232,9 @@ export async function handleAgentAction(action: AgentAction): Promise<any> {
     }
     case 'type': {
       const element =
-        (action.selector ? getElement(action.selector) : (document.activeElement as HTMLElement | null)) ||
-        null
+        (action.selector
+          ? getElement(action.selector)
+          : (document.activeElement as HTMLElement | null)) || null
       if (!element) throw new Error('未找到输入目标')
       highlightElement(element)
       element.focus()
@@ -260,17 +257,64 @@ export async function handleAgentAction(action: AgentAction): Promise<any> {
         : action.toX !== undefined && action.toY !== undefined
           ? (document.elementFromPoint(action.toX, action.toY) as HTMLElement | null)
           : null
-      const start = action.x !== undefined && action.y !== undefined ? { x: action.x, y: action.y } : getPointFromElement(source)
-      const end = target ? getPointFromElement(target) : action.toX !== undefined && action.toY !== undefined ? { x: action.toX, y: action.toY } : start
+      const start =
+        action.x !== undefined && action.y !== undefined
+          ? { x: action.x, y: action.y }
+          : getPointFromElement(source)
+      const end = target
+        ? getPointFromElement(target)
+        : action.toX !== undefined && action.toY !== undefined
+          ? { x: action.toX, y: action.toY }
+          : start
       const dataTransfer = typeof DataTransfer !== 'undefined' ? new DataTransfer() : undefined
-      source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, clientX: start.x, clientY: start.y, dataTransfer }))
+      source.dispatchEvent(
+        new DragEvent('dragstart', {
+          bubbles: true,
+          cancelable: true,
+          clientX: start.x,
+          clientY: start.y,
+          dataTransfer
+        })
+      )
       if (target) {
         highlightElement(target)
-        target.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, clientX: end.x, clientY: end.y, dataTransfer }))
-        target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: end.x, clientY: end.y, dataTransfer }))
-        target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: end.x, clientY: end.y, dataTransfer }))
+        target.dispatchEvent(
+          new DragEvent('dragenter', {
+            bubbles: true,
+            cancelable: true,
+            clientX: end.x,
+            clientY: end.y,
+            dataTransfer
+          })
+        )
+        target.dispatchEvent(
+          new DragEvent('dragover', {
+            bubbles: true,
+            cancelable: true,
+            clientX: end.x,
+            clientY: end.y,
+            dataTransfer
+          })
+        )
+        target.dispatchEvent(
+          new DragEvent('drop', {
+            bubbles: true,
+            cancelable: true,
+            clientX: end.x,
+            clientY: end.y,
+            dataTransfer
+          })
+        )
       }
-      source.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, clientX: end.x, clientY: end.y, dataTransfer }))
+      source.dispatchEvent(
+        new DragEvent('dragend', {
+          bubbles: true,
+          cancelable: true,
+          clientX: end.x,
+          clientY: end.y,
+          dataTransfer
+        })
+      )
       return { success: true }
     }
     case 'select': {
@@ -280,7 +324,9 @@ export async function handleAgentAction(action: AgentAction): Promise<any> {
       if (action.value) {
         element.value = action.value
       } else if (action.label) {
-        const option = Array.from(element.options).find(opt => opt.label === action.label || opt.text === action.label)
+        const option = Array.from(element.options).find(
+          opt => opt.label === action.label || opt.text === action.label
+        )
         if (option) element.value = option.value
       }
       element.dispatchEvent(new Event('input', { bubbles: true }))

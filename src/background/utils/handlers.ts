@@ -84,7 +84,11 @@ export function setupMessageListener() {
               }
 
             case 'CAPTURE_SCREENSHOT':
-              handleCaptureScreenshot((typedMsg as any).format, sendResponse, (typedMsg as any).tabId)
+              handleCaptureScreenshot(
+                (typedMsg as any).format,
+                sendResponse,
+                (typedMsg as any).tabId
+              )
               return true
             case 'MCP_BRIDGE_SET_DISABLED':
               setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
