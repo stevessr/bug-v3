@@ -9,6 +9,13 @@ import {
   updateSubagentSessionItem
 } from './subagentSessions'
 import { memoryToPrompt, updateMemory } from './memory'
+import {
+  discoverAllMcpTools,
+  mcpToolToAnthropicTool,
+  parseMcpToolName,
+  findServerById,
+  callMcpTool
+} from './mcpClient'
 
 interface AgentRunResult {
   message?: AgentMessage
@@ -252,10 +259,11 @@ const buildSystemPrompt = (
       return true
     })
     if (enabledServers.length > 0) {
+      // 只显示服务名称，不暴露 URL 和 API key
+      // 工具会通过 MCP 协议自动发现并作为 tool 传入
       lines.push(
-        `可用 MCP 服务：${enabledServers
-          .map(server => `${server.name}(${server.transport}:${server.url})`)
-          .join(', ')}`
+        `可用 MCP 服务：${enabledServers.map(server => server.name).join(', ')}`,
+        'MCP 工具已自动注册，可直接通过 tool 调用使用。'
       )
     }
   }
@@ -277,6 +285,83 @@ const repairJson = (raw: unknown): string | null => {
     .replace(/"subagents"\s*:\s*([},])/g, '"subagents":[]$1')
     .replace(/"memory"\s*:\s*([},])/g, '"memory":{}$1')
   return trimmed
+}
+
+/**
+ * Parse YAML-like format returned by some models (e.g. GLM-4.7-flash)
+ * Example format:
+ *   thoughts: ["..."]
+ *   steps: ["..."]
+ *   actions: [{"action": "tool", ...}]
+ */
+const parseYamlLikeFormat = (raw: unknown): string | null => {
+  if (typeof raw !== 'string') return null
+  const text = raw.trim()
+
+  // Check if it looks like YAML-like format (key: value pairs without outer braces)
+  const keyValuePattern = /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/m
+  if (!keyValuePattern.test(text)) return null
+
+  // If it already has outer braces, skip
+  if (text.startsWith('{') && text.endsWith('}')) return null
+
+  const result: Record<string, unknown> = {}
+  const lines = text.split('\n')
+
+  let currentKey = ''
+  let currentValue = ''
+  let bracketDepth = 0
+  let inValue = false
+
+  for (const line of lines) {
+    const trimmedLine = line.trim()
+    if (!trimmedLine) continue
+
+    // Check if line starts a new key
+    const keyMatch = trimmedLine.match(
+      /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:\s*(.*)$/
+    )
+    if (keyMatch && bracketDepth === 0) {
+      // Save previous key-value if exists
+      if (currentKey && currentValue) {
+        try {
+          result[currentKey] = JSON.parse(currentValue.trim())
+        } catch {
+          result[currentKey] = currentValue.trim()
+        }
+      }
+
+      currentKey = keyMatch[1]
+      currentValue = keyMatch[2]
+      inValue = true
+
+      // Count brackets to handle multi-line values
+      bracketDepth =
+        (currentValue.match(/[[{]/g) || []).length - (currentValue.match(/[}\]]/g) || []).length
+    } else if (inValue) {
+      currentValue += '\n' + trimmedLine
+      bracketDepth +=
+        (trimmedLine.match(/[[{]/g) || []).length - (trimmedLine.match(/[}\]]/g) || []).length
+    }
+  }
+
+  // Save the last key-value
+  if (currentKey && currentValue) {
+    try {
+      result[currentKey] = JSON.parse(currentValue.trim())
+    } catch {
+      result[currentKey] = currentValue.trim()
+    }
+  }
+
+  // Only return if we parsed something useful
+  if (Object.keys(result).length === 0) return null
+
+  try {
+    return JSON.stringify(result)
+  } catch {
+    return null
+  }
 }
 
 const extractTextContent = (
@@ -325,7 +410,14 @@ async function streamClaudeTools(options: {
   onUpdate?: (message: string) => void
   forceTool?: boolean
   maxTokens: number
+  mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
 }) {
+  // 合并 browser_actions 工具和 MCP 工具
+  const allTools: (typeof toolSchema)[] = [toolSchema as typeof toolSchema]
+  if (options.mcpTools && options.mcpTools.length > 0) {
+    allTools.push(...(options.mcpTools as (typeof toolSchema)[]))
+  }
+
   let streamedText = ''
   const stream = options.client.messages
     .stream({
@@ -333,7 +425,7 @@ async function streamClaudeTools(options: {
       max_tokens: options.maxTokens,
       system: options.system,
       messages: [{ role: 'user', content: options.prompt }],
-      tools: [toolSchema],
+      tools: allTools,
       tool_choice: options.forceTool ? { type: 'tool', name: toolSchema.name } : { type: 'auto' }
     })
     .on('text', text => {
@@ -343,10 +435,17 @@ async function streamClaudeTools(options: {
 
   const finalMessage = await stream.finalMessage()
   const rawText = streamedText || extractTextContent(finalMessage.content)
+
+  // 检查 browser_actions 工具调用
   const toolUse = finalMessage.content?.find(
     (block: any) => block?.type === 'tool_use' && block?.name === toolSchema.name
   ) as { id?: string; input?: any } | undefined
   const toolInput = toolUse?.input
+
+  // 检查 MCP 工具调用
+  const mcpToolUses = finalMessage.content?.filter(
+    (block: any) => block?.type === 'tool_use' && block?.name?.startsWith('mcp__')
+  ) as { id?: string; name?: string; input?: any }[] | undefined
 
   let parsed: z.infer<typeof responseSchema> | null = null
   if (toolInput) {
@@ -366,7 +465,19 @@ async function streamClaudeTools(options: {
     }
   }
 
-  return { rawText, parsed, toolUseId: toolUse?.id, toolInput }
+  // Try YAML-like format as fallback (for models like GLM-4.7-flash)
+  if (!parsed) {
+    const yamlLikeCandidate = parseYamlLikeFormat(rawText)
+    if (yamlLikeCandidate) {
+      try {
+        parsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+      } catch {
+        parsed = null
+      }
+    }
+  }
+
+  return { rawText, parsed, toolUseId: toolUse?.id, toolInput, mcpToolUses }
 }
 
 async function streamClaudeText(options: {
@@ -496,6 +607,25 @@ export async function runAgentMessage(
     const system = [buildSystemPrompt(settings, subagent, context), subagent?.systemPrompt || '']
       .filter(Boolean)
       .join('\n')
+
+    // 发现 MCP 工具
+    let mcpTools: ReturnType<typeof mcpToolToAnthropicTool>[] = []
+    if (settings.enableMcp && settings.mcpServers.length > 0) {
+      const enabledServers = settings.mcpServers.filter(server => {
+        if (!server.enabled) return false
+        const scope = subagent?.mcpServerIds
+        if (scope && scope.length > 0) return scope.includes(server.id)
+        return true
+      })
+      if (enabledServers.length > 0) {
+        options?.onUpdate?.({ message: '正在发现 MCP 工具...' })
+        const discoveredTools = await discoverAllMcpTools(enabledServers)
+        mcpTools = discoveredTools.map(({ serverId, serverName, tool }) =>
+          mcpToolToAnthropicTool(serverId, serverName, tool)
+        )
+      }
+    }
+
     const firstPass = await streamClaudeTools({
       client,
       model: modelId,
@@ -503,8 +633,145 @@ export async function runAgentMessage(
       prompt: input,
       onUpdate: message => options?.onUpdate?.({ message }),
       forceTool: true,
-      maxTokens: resolveMaxTokens(settings.maxTokens)
+      maxTokens: resolveMaxTokens(settings.maxTokens),
+      mcpTools
     })
+
+    // 处理 MCP 工具调用（并行执行）
+    if (firstPass.mcpToolUses && firstPass.mcpToolUses.length > 0) {
+      options?.onUpdate?.({ message: '正在执行 MCP 工具调用...' })
+
+      const mcpResults = await Promise.all(
+        firstPass.mcpToolUses.map(async mcpToolUse => {
+          const parsed = parseMcpToolName(mcpToolUse.name || '')
+          if (!parsed) {
+            return { toolUseId: mcpToolUse.id || '', error: '无效的 MCP 工具名称' }
+          }
+
+          const server = findServerById(settings.mcpServers, parsed.serverId)
+          if (!server) {
+            return {
+              toolUseId: mcpToolUse.id || '',
+              error: `未找到 MCP 服务: ${parsed.serverId}`
+            }
+          }
+
+          const result = await callMcpTool(server, parsed.toolName, mcpToolUse.input || {})
+          return { toolUseId: mcpToolUse.id || '', ...result }
+        })
+      )
+
+      // 构建 tool_result 消息让模型处理 MCP 结果
+      options?.onUpdate?.({ message: '正在处理 MCP 工具结果...' })
+
+      const toolResultMessages = firstPass.mcpToolUses.map((mcpToolUse, index) => {
+        const mcpResult = mcpResults[index]
+        return {
+          type: 'tool_result' as const,
+          tool_use_id: mcpToolUse.id || '',
+          content: mcpResult.error
+            ? JSON.stringify({ error: mcpResult.error })
+            : JSON.stringify(mcpResult.result)
+        }
+      })
+
+      // 继续对话，让模型处理 MCP 结果
+      let followUpText = ''
+      const followUpStream = client.messages
+        .stream({
+          model: modelId,
+          max_tokens: resolveMaxTokens(settings.maxTokens),
+          system,
+          messages: [
+            { role: 'user', content: input },
+            {
+              role: 'assistant',
+              content: firstPass.mcpToolUses.map(use => ({
+                type: 'tool_use' as const,
+                id: use.id || '',
+                name: use.name || '',
+                input: use.input || {}
+              }))
+            },
+            {
+              role: 'user',
+              content: toolResultMessages
+            }
+          ],
+          tools: [toolSchema, ...(mcpTools as (typeof toolSchema)[])],
+          tool_choice: { type: 'auto' }
+        })
+        .on('text', text => {
+          followUpText += text
+          options?.onUpdate?.({ message: followUpText })
+        })
+
+      const followUpMessage = await followUpStream.finalMessage()
+      const followUpRawText = followUpText || extractTextContent(followUpMessage.content)
+
+      // 检查是否有 browser_actions 工具调用
+      const followUpToolUse = followUpMessage.content?.find(
+        (block: { type: string; name?: string }) =>
+          block?.type === 'tool_use' && block?.name === toolSchema.name
+      ) as { id?: string; input?: unknown } | undefined
+
+      let followUpParsed: z.infer<typeof responseSchema> | null = null
+      if (followUpToolUse?.input) {
+        try {
+          followUpParsed = responseSchema.parse(followUpToolUse.input)
+        } catch {
+          followUpParsed = null
+        }
+      }
+
+      if (!followUpParsed) {
+        const candidate = repairJson(followUpRawText) || followUpRawText
+        try {
+          followUpParsed = responseSchema.parse(JSON.parse(candidate))
+        } catch {
+          followUpParsed = null
+        }
+      }
+
+      if (!followUpParsed) {
+        const yamlLikeCandidate = parseYamlLikeFormat(followUpRawText)
+        if (yamlLikeCandidate) {
+          try {
+            followUpParsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+          } catch {
+            followUpParsed = null
+          }
+        }
+      }
+
+      const content =
+        followUpParsed?.message?.trim() ||
+        followUpParsed?.steps?.[0]?.trim() ||
+        followUpRawText.trim() ||
+        '已完成 MCP 工具调用。'
+
+      if (followUpParsed?.memory) {
+        updateMemory(followUpParsed.memory)
+      }
+
+      return {
+        message: {
+          id: nanoid(),
+          role: 'assistant',
+          content
+        },
+        actions:
+          followUpParsed?.actions?.map(action => ({
+            ...action,
+            id: action.id || nanoid()
+          })) || [],
+        toolUseId: followUpToolUse?.id,
+        toolInput: followUpToolUse?.input,
+        parallelActions: followUpParsed?.parallelActions,
+        thoughts: followUpParsed?.thoughts,
+        steps: followUpParsed?.steps
+      }
+    }
 
     if (!firstPass.parsed) {
       const fallbackContent = firstPass.rawText.trim() || '已完成任务。'
@@ -749,6 +1016,18 @@ export async function runAgentFollowup(
         parsed = responseSchema.parse(JSON.parse(candidate))
       } catch {
         parsed = null
+      }
+    }
+
+    // Try YAML-like format as fallback (for models like GLM-4.7-flash)
+    if (!parsed) {
+      const yamlLikeCandidate = parseYamlLikeFormat(rawText)
+      if (yamlLikeCandidate) {
+        try {
+          parsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+        } catch {
+          parsed = null
+        }
       }
     }
 
