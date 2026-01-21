@@ -97,41 +97,63 @@ export function useImageCropper(
   })
 
   // Core functions
-  const canvasToDataUrl = async (
-    canvas: HTMLCanvasElement,
-    mimeType: string,
-    quality = 0.8
-  ) => {
+  const blobToDataUrl = async (blob: Blob) => {
     return await new Promise<string | null>(resolve => {
-      if (!canvas.toBlob) {
-        try {
-          resolve(canvas.toDataURL(mimeType, quality))
-        } catch {
-          resolve(null)
-        }
-        return
-      }
-
-      canvas.toBlob(
-        blob => {
-          if (!blob) {
-            try {
-              resolve(canvas.toDataURL(mimeType, quality))
-            } catch {
-              resolve(null)
-            }
-            return
-          }
-          const reader = new FileReader()
-          reader.onloadend = () =>
-            resolve(typeof reader.result === 'string' ? reader.result : null)
-          reader.onerror = () => resolve(null)
-          reader.readAsDataURL(blob)
-        },
-        mimeType,
-        quality
-      )
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(blob)
     })
+  }
+
+  const canvasToBlob = async (canvas: HTMLCanvasElement, mimeType: string, quality = 0.8) => {
+    if (!canvas.toBlob) return null
+    return await new Promise<Blob | null>(resolve => {
+      canvas.toBlob(blob => resolve(blob), mimeType, quality)
+    })
+  }
+
+  const encodeCanvasToAvif = async (canvas: HTMLCanvasElement, quality = 0.8) => {
+    if ('ImageEncoder' in window) {
+      try {
+        const bitmap = await createImageBitmap(canvas)
+        const encoder = new (window as any).ImageEncoder({
+          mimeType: 'image/avif',
+          width: bitmap.width,
+          height: bitmap.height,
+          quality
+        })
+        await encoder.encode(bitmap)
+        const result = await encoder.flush()
+        return new Blob([result], { type: 'image/avif' })
+      } catch (error) {
+        console.warn('[ImageCropper] WebCodecs AVIF encode failed:', error)
+      }
+    }
+
+    const blob = await canvasToBlob(canvas, 'image/avif', quality)
+    if (blob && blob.type === 'image/avif') {
+      return blob
+    }
+    return null
+  }
+
+  const canvasToOptimizedDataUrl = async (canvas: HTMLCanvasElement) => {
+    const avifBlob = await encodeCanvasToAvif(canvas, 0.8)
+    if (avifBlob) {
+      return await blobToDataUrl(avifBlob)
+    }
+
+    const webpBlob = await canvasToBlob(canvas, 'image/webp', 0.8)
+    if (webpBlob) {
+      return await blobToDataUrl(webpBlob)
+    }
+
+    try {
+      return canvas.toDataURL('image/png')
+    } catch {
+      return null
+    }
   }
 
   const cropImage = async (position: { x: number; y: number; width: number; height: number }) => {
@@ -165,7 +187,7 @@ export function useImageCropper(
       actualHeight
     )
 
-    return await canvasToDataUrl(tempCanvas, 'image/avif', 0.8)
+    return await canvasToOptimizedDataUrl(tempCanvas)
   }
 
   const cropWithMask = async (
@@ -216,7 +238,7 @@ export function useImageCropper(
     finalCtx.globalCompositeOperation = 'destination-in'
     finalCtx.drawImage(maskCanvas, 0, 0)
 
-    return await canvasToDataUrl(finalCanvas, 'image/avif', 0.8)
+    return await canvasToOptimizedDataUrl(finalCanvas)
   }
 
   const initCanvas = async () => {

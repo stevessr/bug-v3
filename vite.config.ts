@@ -61,7 +61,7 @@ export default defineConfig(({ mode }) => {
         ],
         resolvers: [
           // Auto import icons from @ant-design/icons-vue
-          (name) => {
+          name => {
             if (name.match(/^[A-Z][a-z]+([A-Z][a-z]+)*(Outlined|Filled|TwoTone)$/)) {
               return {
                 name,
@@ -76,22 +76,19 @@ export default defineConfig(({ mode }) => {
       }),
       Components({
         dts: 'src/components.d.ts',
-        resolvers: [AntDesignVueResolver({ 
-          importStyle: 'less',
-          resolveIcons: true
-        })]
+        resolvers: [
+          AntDesignVueResolver({
+            importStyle: 'less',
+            resolveIcons: true
+          })
+        ]
       })
     ],
     // 优化：预构建依赖
     optimizeDeps: {
-      include: [
-        'vue',
-        'pinia',
-        'ant-design-vue',
-        '@ant-design/icons-vue'
-      ],
+      include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue'],
       // 排除不需要预构建的模块
-      exclude: []
+      exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/oxipng', '@jsquash/webp']
     },
     build: {
       sourcemap: process.env.BUILD_SOURCEMAP === 'true',
@@ -157,7 +154,12 @@ export default defineConfig(({ mode }) => {
                 return 'vendor-ui'
               }
               // 核心框架单独打包
-              if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('@vueuse')) {
+              if (
+                id.includes('vue') ||
+                id.includes('pinia') ||
+                id.includes('vue-router') ||
+                id.includes('@vueuse')
+              ) {
                 return 'vendor-core'
               }
               // 其他第三方依赖
