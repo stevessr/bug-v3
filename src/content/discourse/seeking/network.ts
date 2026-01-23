@@ -119,9 +119,12 @@ export async function fetchUser(username: string, isInitial = false) {
       return 'SKIPPED'
     }
 
+    const actionFilter = state.actionFilter || '1,5'
     const [jsonActions, jsonReactions] = await Promise.all([
       safeFetch(
-        `${CONFIG.HOST}/user_actions.json?offset=0&limit=${CONFIG.LOG_LIMIT_PER_USER}&username=${username}&filter=1,4,5`
+        `${CONFIG.HOST}/user_actions.json?offset=0&limit=${CONFIG.LOG_LIMIT_PER_USER}&username=${username}&filter=${encodeURIComponent(
+          actionFilter
+        )}`
       ),
       safeFetch(`${CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}`)
     ])

@@ -52,6 +52,8 @@ export interface AppSettings {
   linuxDoSeekingUsers?: string[] // LinuxDo 追觅功能的监控用户列表
   enableLinuxDoSeekingDanmaku?: boolean // 启用 LinuxDo 追觅弹幕通知
   enableLinuxDoSeekingSysNotify?: boolean // 启用 LinuxDo 追觅系统通知
+  linuxDoSeekingPosition?: 'left' | 'right' | 'top' | 'bottom' // 追觅侧边栏吸附位置
+  linuxDoSeekingActionFilter?: '1' | '4' | '5' | '1,5' | '1,4,5' // 追觅动态过滤（1=互动，4=点赞，5=回复）
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
   discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000

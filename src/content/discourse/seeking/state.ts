@@ -10,6 +10,8 @@ export interface State {
   multipliers: Record<string, number>
   enableSysNotify: boolean
   enableDanmaku: boolean
+  sidebarPosition: 'left' | 'right' | 'top' | 'bottom'
+  actionFilter: '1' | '4' | '5' | '1,5' | '1,4,5'
   data: Record<string, any[]>
   isCollapsed: boolean
   isProcessing: boolean
@@ -41,6 +43,8 @@ export const state: State = {
   multipliers: {},
   enableSysNotify: true,
   enableDanmaku: true,
+  sidebarPosition: 'left',
+  actionFilter: '1,5',
   data: {},
   isCollapsed: sessionStorage.getItem('ld_is_collapsed') !== 'false',
   isProcessing: false,

@@ -12,7 +12,9 @@ const emit = defineEmits([
   'update:enableLinuxDoSeeking',
   'update:linuxDoSeekingUsers',
   'update:enableLinuxDoSeekingDanmaku',
-  'update:enableLinuxDoSeekingSysNotify'
+  'update:enableLinuxDoSeekingSysNotify',
+  'update:linuxDoSeekingPosition',
+  'update:linuxDoSeekingActionFilter'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -162,6 +164,44 @@ const handleEnter = () => {
             label="系统通知"
             description="当页面不在前台时发送系统通知"
           />
+        </div>
+      </div>
+
+      <!-- UI 设置 -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
+        <div class="space-y-4">
+          <div>
+            <h3 class="text-md font-semibold dark:text-white mb-4">UI 设置</h3>
+          </div>
+
+          <div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">侧边栏吸附位置</div>
+            <a-radio-group
+              :value="getSetting('linuxDoSeekingPosition', 'left')"
+              @change="emit('update:linuxDoSeekingPosition', $event.target.value)"
+              button-style="solid"
+            >
+              <a-radio-button value="left">左</a-radio-button>
+              <a-radio-button value="right">右</a-radio-button>
+              <a-radio-button value="top">上</a-radio-button>
+              <a-radio-button value="bottom">下</a-radio-button>
+            </a-radio-group>
+          </div>
+
+          <div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">动态过滤</div>
+            <a-radio-group
+              :value="getSetting('linuxDoSeekingActionFilter', '1,5')"
+              @change="emit('update:linuxDoSeekingActionFilter', $event.target.value)"
+              button-style="solid"
+            >
+              <a-radio-button value="5">回复 (5)</a-radio-button>
+              <a-radio-button value="4">点赞 (4)</a-radio-button>
+              <a-radio-button value="1">互动 (1)</a-radio-button>
+              <a-radio-button value="1,5">互动 + 回复 (1,5)</a-radio-button>
+              <a-radio-button value="1,4,5">互动 + 点赞 + 回复 (1,4,5)</a-radio-button>
+            </a-radio-group>
+          </div>
         </div>
       </div>
 

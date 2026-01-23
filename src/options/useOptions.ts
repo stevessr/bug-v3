@@ -364,6 +364,14 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableLinuxDoSeekingSysNotify: value })
   }
 
+  const updateLinuxDoSeekingPosition = (value: 'left' | 'right' | 'top' | 'bottom') => {
+    emojiStore.updateSettings({ linuxDoSeekingPosition: value })
+  }
+
+  const updateLinuxDoSeekingActionFilter = (value: '1' | '4' | '5' | '1,5' | '1,4,5') => {
+    emojiStore.updateSettings({ linuxDoSeekingActionFilter: value })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -808,6 +816,8 @@ export default function useOptions() {
     updateLinuxDoSeekingUsers,
     updateEnableLinuxDoSeekingDanmaku,
     updateEnableLinuxDoSeekingSysNotify,
+    updateLinuxDoSeekingPosition,
+    updateLinuxDoSeekingActionFilter,
     // drag/drop - from draggable composable
     handleDragStart: draggable.handleDragStart,
     handleDrop: draggable.handleDrop,

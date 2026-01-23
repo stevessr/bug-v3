@@ -32,6 +32,7 @@ export const css = `
         pointer-events: none;
         width: 100vw; height: 100vh;
         color: var(--primary);
+        --ld-sidebar-height: 45vh;
     }
 
     /* 侧边栏容器 */
@@ -46,6 +47,32 @@ export const css = `
         pointer-events: auto; overflow: visible;
     }
     #ld-sidebar.collapsed { transform: translateX(-${CONFIG.SIDEBAR_WIDTH}); }
+
+    :host(.pos-right) #ld-sidebar {
+        left: auto; right: 0;
+        border-right: none;
+        border-left: 1px solid var(--primary-low);
+        box-shadow: var(--shadow-menu-panel, -5px 0 25px rgba(0,0,0,0.1));
+    }
+    :host(.pos-right) #ld-sidebar.collapsed { transform: translateX(${CONFIG.SIDEBAR_WIDTH}); }
+
+    :host(.pos-top) #ld-sidebar {
+        left: 0; right: 0; top: 0;
+        width: 100vw; height: var(--ld-sidebar-height);
+        border-right: none;
+        border-bottom: 1px solid var(--primary-low);
+        box-shadow: var(--shadow-menu-panel, 0 5px 25px rgba(0,0,0,0.1));
+    }
+    :host(.pos-top) #ld-sidebar.collapsed { transform: translateY(calc(-1 * var(--ld-sidebar-height))); }
+
+    :host(.pos-bottom) #ld-sidebar {
+        left: 0; right: 0; top: auto; bottom: 0;
+        width: 100vw; height: var(--ld-sidebar-height);
+        border-right: none;
+        border-top: 1px solid var(--primary-low);
+        box-shadow: var(--shadow-menu-panel, 0 -5px 25px rgba(0,0,0,0.1));
+    }
+    :host(.pos-bottom) #ld-sidebar.collapsed { transform: translateY(var(--ld-sidebar-height)); }
 
     /* 切换按钮 */
     #ld-toggle-ball {
@@ -62,6 +89,36 @@ export const css = `
         pointer-events: auto; transition: 0.2s;
     }
     #ld-toggle-ball:hover { width: 32px; background: var(--tertiary-low); }
+
+    :host(.pos-right) #ld-toggle-ball {
+        right: auto; left: -24px;
+        border-left: 1px solid var(--primary-low);
+        border-right: none;
+        border-radius: 100px 0 0 100px;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+    }
+
+    :host(.pos-top) #ld-toggle-ball {
+        right: auto; left: 50%;
+        top: auto; bottom: -24px;
+        width: 48px; height: 24px;
+        border-left: 1px solid var(--primary-low);
+        border-top: none;
+        border-radius: 0 0 100px 100px;
+        transform: translateX(-50%);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    :host(.pos-bottom) #ld-toggle-ball {
+        right: auto; left: 50%;
+        top: -24px; bottom: auto;
+        width: 48px; height: 24px;
+        border-left: 1px solid var(--primary-low);
+        border-bottom: none;
+        border-radius: 100px 100px 0 0;
+        transform: translateX(-50%);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
 
     /* 头部 */
     .sb-header {

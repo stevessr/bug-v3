@@ -45,6 +45,8 @@ const {
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
   updateEnableLinuxDoSeekingSysNotify,
+  updateLinuxDoSeekingPosition,
+  updateLinuxDoSeekingActionFilter,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -239,6 +241,8 @@ onMounted(async () => {
               @update:linuxDoSeekingUsers="updateLinuxDoSeekingUsers"
               @update:enableLinuxDoSeekingDanmaku="updateEnableLinuxDoSeekingDanmaku"
               @update:enableLinuxDoSeekingSysNotify="updateEnableLinuxDoSeekingSysNotify"
+              @update:linuxDoSeekingPosition="updateLinuxDoSeekingPosition"
+              @update:linuxDoSeekingActionFilter="updateLinuxDoSeekingActionFilter"
             />
           </div>
         </a-tab-pane>

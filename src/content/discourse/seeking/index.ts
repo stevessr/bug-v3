@@ -564,6 +564,7 @@ function startVisualLoops() {
 function createUI() {
   const host = document.createElement('div')
   host.id = 'ld-seeking-host'
+  host.classList.add(`pos-${state.sidebarPosition}`)
   document.body.appendChild(host)
   const root = host.attachShadow({ mode: 'open' })
   setShadowRoot(root)
@@ -694,6 +695,22 @@ export async function initLinuxDoSeeking() {
     const enableSysNotify = await requestSettingFromBackground('enableLinuxDoSeekingSysNotify')
     if (typeof enableSysNotify === 'boolean') {
       state.enableSysNotify = enableSysNotify
+    }
+
+    const position = await requestSettingFromBackground('linuxDoSeekingPosition')
+    if (position === 'left' || position === 'right' || position === 'top' || position === 'bottom') {
+      state.sidebarPosition = position
+    }
+
+    const actionFilter = await requestSettingFromBackground('linuxDoSeekingActionFilter')
+    if (
+      actionFilter === '1' ||
+      actionFilter === '4' ||
+      actionFilter === '5' ||
+      actionFilter === '1,5' ||
+      actionFilter === '1,4,5'
+    ) {
+      state.actionFilter = actionFilter
     }
   } catch (e) {
     console.warn('[LinuxDoSeeking] Failed to load settings from background', e)

@@ -43,6 +43,8 @@ export const defaultSettings: AppSettings = {
   linuxDoSeekingUsers: [], // 默认空监控列表
   enableLinuxDoSeekingDanmaku: true, // 默认启用弹幕通知
   enableLinuxDoSeekingSysNotify: true, // 默认启用系统通知
+  linuxDoSeekingPosition: 'left', // 默认左侧吸附
+  linuxDoSeekingActionFilter: '1,5', // 默认互动 + 回复
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
   discourseRouterRefreshInterval: 30000 // 默认 30 秒刷新一次
