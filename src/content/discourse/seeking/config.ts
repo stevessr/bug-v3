@@ -39,7 +39,8 @@ export const categoryColors: Record<string, string> = {
   未分区: '#9e9e9e',
   积分乐园: '#fcca44',
   人工智能: '#00d4ff',
-  软件分享: '#4dabf7'
+  软件分享: '#4dabf7',
+  虫洞广场: '#ff00f7'
 }
 
 export const categoryMap = new Map<number, string>()
@@ -60,7 +61,8 @@ const category_dict: Record<string, number[]> = {
   跳蚤市场: [10, 13, 81, 82],
   运营反馈: [2, 15, 16, 27],
   扬帆起航: [46, 66, 67, 68],
-  积分乐园: [106, 107, 108, 109]
+  积分乐园: [106, 107, 108, 109],
+  虫洞广场: [110, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122]
 }
 
 for (const name in category_dict) {

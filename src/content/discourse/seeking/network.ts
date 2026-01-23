@@ -3,14 +3,82 @@ import { state } from './state'
 import { log } from './ui'
 
 // --- 网络请求 (使用 fetch 代替 GM_xmlhttpRequest) ---
+type LinuxDoAuth = { cookies: string; csrfToken: string }
+
+let cachedAuth: { data: LinuxDoAuth; fetchedAt: number } | null = null
+const AUTH_CACHE_TTL_MS = 60 * 1000
+
+function getCsrfFromPage(): string {
+  const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+  if (metaToken?.content) return metaToken.content
+
+  const match = document.cookie.match(/csrf_token=([^;]+)/)
+  if (match) return decodeURIComponent(match[1])
+
+  const hiddenInput = document.querySelector(
+    'input[name="authenticity_token"]'
+  ) as HTMLInputElement | null
+  if (hiddenInput?.value) return hiddenInput.value
+
+  return ''
+}
+
+async function getLinuxDoAuth(): Promise<LinuxDoAuth> {
+  if (cachedAuth && Date.now() - cachedAuth.fetchedAt < AUTH_CACHE_TTL_MS) {
+    return cachedAuth.data
+  }
+
+  const fallback: LinuxDoAuth = {
+    cookies: document.cookie || '',
+    csrfToken: getCsrfFromPage()
+  }
+
+  try {
+    const chromeAPI = (window as any).chrome
+    if (chromeAPI?.runtime?.sendMessage) {
+      const data = await new Promise<LinuxDoAuth>(resolve => {
+        chromeAPI.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, (resp: any) => {
+          if (resp?.success) {
+            resolve({
+              cookies: resp.cookies || '',
+              csrfToken: resp.csrfToken || ''
+            })
+          } else {
+            resolve(fallback)
+          }
+        })
+      })
+
+      cachedAuth = { data, fetchedAt: Date.now() }
+      return data
+    }
+  } catch {
+    // fall back to page-derived cookies/token
+  }
+
+  cachedAuth = { data: fallback, fetchedAt: Date.now() }
+  return fallback
+}
+
 export async function safeFetch(url: string): Promise<any> {
+  const auth = await getLinuxDoAuth()
+  const headers: Record<string, string> = {
+    Accept: 'application/json, text/javascript, */*; q=0.01',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Discourse-Logged-In': 'true',
+    'Discourse-Present': 'true',
+    'Discourse-Track-View': 'true'
+  }
+
+  if (auth.csrfToken) headers['X-Csrf-Token'] = auth.csrfToken
+  if (auth.cookies) headers['Cookie'] = auth.cookies
+  if (navigator?.language) headers['Accept-Language'] = navigator.language
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      Accept: 'application/json'
-    }
+    headers,
+    credentials: 'include',
+    referrer: document?.location?.href || undefined
   })
 
   if (response.status >= 200 && response.status < 300) {
