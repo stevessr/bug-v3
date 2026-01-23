@@ -45,6 +45,10 @@ const {
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
   updateEnableLinuxDoSeekingSysNotify,
+  updateEnableLinuxDoSeekingNtfy,
+  updateLinuxDoSeekingNtfyTopic,
+  updateLinuxDoSeekingNtfyServer,
+  updateLinuxDoSeekingRefreshInterval,
   updateLinuxDoSeekingPosition,
   updateLinuxDoSeekingActionFilter,
   updateTheme,
@@ -241,6 +245,10 @@ onMounted(async () => {
               @update:linuxDoSeekingUsers="updateLinuxDoSeekingUsers"
               @update:enableLinuxDoSeekingDanmaku="updateEnableLinuxDoSeekingDanmaku"
               @update:enableLinuxDoSeekingSysNotify="updateEnableLinuxDoSeekingSysNotify"
+              @update:enableLinuxDoSeekingNtfy="updateEnableLinuxDoSeekingNtfy"
+              @update:linuxDoSeekingNtfyTopic="updateLinuxDoSeekingNtfyTopic"
+              @update:linuxDoSeekingNtfyServer="updateLinuxDoSeekingNtfyServer"
+              @update:linuxDoSeekingRefreshInterval="updateLinuxDoSeekingRefreshInterval"
               @update:linuxDoSeekingPosition="updateLinuxDoSeekingPosition"
               @update:linuxDoSeekingActionFilter="updateLinuxDoSeekingActionFilter"
             />

@@ -3,7 +3,7 @@
   "default_locale": "zh_CN",
   "name": "__MSG_extensionName__",
   "short_name": "__MSG_extensionShortName__",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "__MSG_extensionDescription__",
   "author": "stevessr",
   "homepage_url": "https://github.com/stevessr/bug-v3",

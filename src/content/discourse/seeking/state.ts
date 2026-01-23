@@ -10,6 +10,10 @@ export interface State {
   multipliers: Record<string, number>
   enableSysNotify: boolean
   enableDanmaku: boolean
+  enableNtfy: boolean
+  ntfyTopic: string
+  ntfyServer: string
+  refreshIntervalMs: number
   sidebarPosition: 'left' | 'right' | 'top' | 'bottom'
   actionFilter: '1' | '4' | '5' | '1,5' | '1,4,5'
   data: Record<string, any[]>
@@ -43,6 +47,10 @@ export const state: State = {
   multipliers: {},
   enableSysNotify: true,
   enableDanmaku: true,
+  enableNtfy: false,
+  ntfyTopic: '',
+  ntfyServer: 'https://ntfy.sh',
+  refreshIntervalMs: 60 * 1000,
   sidebarPosition: 'left',
   actionFilter: '1,5',
   data: {},

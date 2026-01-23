@@ -43,6 +43,10 @@ export const defaultSettings: AppSettings = {
   linuxDoSeekingUsers: [], // 默认空监控列表
   enableLinuxDoSeekingDanmaku: true, // 默认启用弹幕通知
   enableLinuxDoSeekingSysNotify: true, // 默认启用系统通知
+  enableLinuxDoSeekingNtfy: false, // 默认禁用 ntfy 推送
+  linuxDoSeekingNtfyTopic: '', // 默认空主题
+  linuxDoSeekingNtfyServer: 'https://ntfy.sh', // 默认 ntfy 公共服务
+  linuxDoSeekingRefreshIntervalMs: 60000, // 默认 60 秒轮询
   linuxDoSeekingPosition: 'left', // 默认左侧吸附
   linuxDoSeekingActionFilter: '1,5', // 默认互动 + 回复
   // Discourse 路由刷新功能

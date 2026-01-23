@@ -13,6 +13,10 @@ const emit = defineEmits([
   'update:linuxDoSeekingUsers',
   'update:enableLinuxDoSeekingDanmaku',
   'update:enableLinuxDoSeekingSysNotify',
+  'update:enableLinuxDoSeekingNtfy',
+  'update:linuxDoSeekingNtfyTopic',
+  'update:linuxDoSeekingNtfyServer',
+  'update:linuxDoSeekingRefreshInterval',
   'update:linuxDoSeekingPosition',
   'update:linuxDoSeekingActionFilter'
 ])
@@ -164,6 +168,31 @@ const handleEnter = () => {
             label="系统通知"
             description="当页面不在前台时发送系统通知"
           />
+
+          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <SettingSwitch
+              :model-value="getSetting('enableLinuxDoSeekingNtfy', false)"
+              @update:model-value="emit('update:enableLinuxDoSeekingNtfy', $event)"
+              label="ntfy 推送"
+              description="将动态推送到 ntfy 主题"
+            />
+
+            <div class="mt-3 space-y-3">
+              <a-input
+                :value="getSetting('linuxDoSeekingNtfyServer', 'https://ntfy.sh')"
+                placeholder="ntfy 服务器，例如 https://ntfy.sh"
+                @change="emit('update:linuxDoSeekingNtfyServer', $event.target.value)"
+              />
+              <a-input
+                :value="getSetting('linuxDoSeekingNtfyTopic', '')"
+                placeholder="ntfy 主题，例如 linuxdo-seeking"
+                @change="emit('update:linuxDoSeekingNtfyTopic', $event.target.value)"
+              />
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                仅 Leader 标签页会发送 ntfy 推送，避免多标签重复
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -172,6 +201,23 @@ const handleEnter = () => {
         <div class="space-y-4">
           <div>
             <h3 class="text-md font-semibold dark:text-white mb-4">UI 设置</h3>
+          </div>
+
+          <div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">轮询间隔</div>
+            <div class="flex items-center gap-2">
+              <a-input-number
+                :value="getSetting('linuxDoSeekingRefreshIntervalMs', 60000)"
+                :min="10000"
+                :max="300000"
+                :step="5000"
+                class="w-32"
+                :formatter="(value: string | number) => `${Math.round(Number(value) / 1000)}s`"
+                :parser="(value: string) => Number(value.replace('s', '')) * 1000"
+                @change="emit('update:linuxDoSeekingRefreshInterval', $event)"
+              />
+              <span class="text-xs text-gray-500 dark:text-gray-400">最小 10 秒</span>
+            </div>
           </div>
 
           <div>

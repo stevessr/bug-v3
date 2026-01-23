@@ -25,12 +25,41 @@ let visualUpdateInterval: ReturnType<typeof setInterval> | null = null
 const pushedIds = new Set<string>()
 let leaderCheckTimeout: number | null = null
 let shadowRoot: ShadowRoot | null = null
+let ntfyBusy = false
+
+async function sendNtfyNotification(action: any, link: string, excerpt: string) {
+  if (!state.enableNtfy || !state.isLeader) return
+  const topic = state.ntfyTopic?.trim()
+  if (!topic) return
+
+  const server = (state.ntfyServer || 'https://ntfy.sh').trim().replace(/\/+$/, '')
+  const endpoint = `${server}/${encodeURIComponent(topic)}`
+  const body = `${action.username}: ${action.title}\n${excerpt}`.trim()
+
+  if (ntfyBusy) return
+  ntfyBusy = true
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Title: `Linux.do · ${action.username}`,
+        Click: link,
+        Tags: String(action.action_type || '')
+      },
+      body
+    })
+  } catch (error) {
+    console.warn('[LinuxDoSeeking] ntfy push failed:', error)
+  } finally {
+    ntfyBusy = false
+  }
+}
 
 // --- 核心逻辑 ---
 
 function getUserCycleDuration(username: string): number {
   const mult = state.multipliers[username] || 1
-  return CONFIG.REFRESH_INTERVAL_MS * mult
+  return state.refreshIntervalMs * mult
 }
 
 function getUniqueId(action: any): string {
@@ -103,6 +132,8 @@ function sendNotification(action: any) {
   if (action.avatar_template) avatar = CONFIG.HOST + action.avatar_template.replace('{size}', '64')
   const excerpt = cleanHtml(action.excerpt)
   const link = `${CONFIG.HOST}/t/${action.topic_id}/${action.post_number}`
+
+  void sendNtfyNotification(action, link, excerpt.substring(0, 120))
 
   if (state.enableDanmaku && shadowRoot) {
     const layer = shadowRoot.getElementById('dm-container')
@@ -666,11 +697,18 @@ function createUI() {
 }
 
 // 导出初始化函数
+let seekingInitialized = false
+
 export async function initLinuxDoSeeking() {
   // 检查是否在 linux.do 域名
   if (!window.location.hostname.includes('linux.do')) {
     return
   }
+  if (seekingInitialized || document.getElementById('ld-seeking-host')) {
+    console.warn('[LinuxDoSeeking] Already initialized, skip')
+    return
+  }
+  seekingInitialized = true
 
   // 从设置加载配置
   const saved = await loadConfig()
@@ -697,8 +735,33 @@ export async function initLinuxDoSeeking() {
       state.enableSysNotify = enableSysNotify
     }
 
+    const enableNtfy = await requestSettingFromBackground('enableLinuxDoSeekingNtfy')
+    if (typeof enableNtfy === 'boolean') {
+      state.enableNtfy = enableNtfy
+    }
+
+    const ntfyTopic = await requestSettingFromBackground('linuxDoSeekingNtfyTopic')
+    if (typeof ntfyTopic === 'string') {
+      state.ntfyTopic = ntfyTopic
+    }
+
+    const ntfyServer = await requestSettingFromBackground('linuxDoSeekingNtfyServer')
+    if (typeof ntfyServer === 'string') {
+      state.ntfyServer = ntfyServer
+    }
+
+    const refreshInterval = await requestSettingFromBackground('linuxDoSeekingRefreshIntervalMs')
+    if (typeof refreshInterval === 'number' && refreshInterval >= 10000) {
+      state.refreshIntervalMs = refreshInterval
+    }
+
     const position = await requestSettingFromBackground('linuxDoSeekingPosition')
-    if (position === 'left' || position === 'right' || position === 'top' || position === 'bottom') {
+    if (
+      position === 'left' ||
+      position === 'right' ||
+      position === 'top' ||
+      position === 'bottom'
+    ) {
       state.sidebarPosition = position
     }
 

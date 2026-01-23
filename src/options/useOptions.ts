@@ -364,6 +364,22 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableLinuxDoSeekingSysNotify: value })
   }
 
+  const updateEnableLinuxDoSeekingNtfy = (value: boolean) => {
+    emojiStore.updateSettings({ enableLinuxDoSeekingNtfy: value })
+  }
+
+  const updateLinuxDoSeekingNtfyTopic = (topic: string) => {
+    emojiStore.updateSettings({ linuxDoSeekingNtfyTopic: topic })
+  }
+
+  const updateLinuxDoSeekingNtfyServer = (server: string) => {
+    emojiStore.updateSettings({ linuxDoSeekingNtfyServer: server })
+  }
+
+  const updateLinuxDoSeekingRefreshInterval = (value: number) => {
+    emojiStore.updateSettings({ linuxDoSeekingRefreshIntervalMs: value })
+  }
+
   const updateLinuxDoSeekingPosition = (value: 'left' | 'right' | 'top' | 'bottom') => {
     emojiStore.updateSettings({ linuxDoSeekingPosition: value })
   }
@@ -816,6 +832,10 @@ export default function useOptions() {
     updateLinuxDoSeekingUsers,
     updateEnableLinuxDoSeekingDanmaku,
     updateEnableLinuxDoSeekingSysNotify,
+    updateEnableLinuxDoSeekingNtfy,
+    updateLinuxDoSeekingNtfyTopic,
+    updateLinuxDoSeekingNtfyServer,
+    updateLinuxDoSeekingRefreshInterval,
     updateLinuxDoSeekingPosition,
     updateLinuxDoSeekingActionFilter,
     // drag/drop - from draggable composable
