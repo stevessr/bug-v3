@@ -78,6 +78,57 @@ const listFromString = z.preprocess(
   z.array(z.string())
 )
 
+const normalizeAgentPayload = (payload: unknown): unknown => {
+  if (!payload || typeof payload !== 'object') return payload
+  const normalized: Record<string, unknown> = { ...(payload as Record<string, unknown>) }
+  if (Array.isArray(normalized.actions)) {
+    const flattened: unknown[] = []
+    for (const action of normalized.actions) {
+      if (!action || typeof action !== 'object') {
+        flattened.push(action)
+        continue
+      }
+      const actionRecord = action as Record<string, unknown>
+
+      if (actionRecord.type === 'browser_actions' && actionRecord.args) {
+        const args = actionRecord.args as Record<string, unknown>
+        const actionType = args.action
+        const actionArgs = args.args
+        if (typeof actionType === 'string') {
+          if (actionArgs && typeof actionArgs === 'object') {
+            flattened.push({ type: actionType, ...(actionArgs as Record<string, unknown>) })
+          } else {
+            flattened.push({ type: actionType })
+          }
+          continue
+        }
+      }
+
+      if (typeof actionRecord.action === 'string' && actionRecord.args && !actionRecord.type) {
+        const actionArgs = actionRecord.args
+        if (actionArgs && typeof actionArgs === 'object') {
+          flattened.push({ type: actionRecord.action, ...(actionArgs as Record<string, unknown>) })
+        } else {
+          flattened.push({ type: actionRecord.action })
+        }
+        continue
+      }
+
+      flattened.push(actionRecord)
+    }
+    normalized.actions = flattened
+  }
+  return normalized
+}
+
+const parseResponsePayload = (payload: unknown): z.infer<typeof responseSchema> | null => {
+  try {
+    return responseSchema.parse(normalizeAgentPayload(payload))
+  } catch {
+    return null
+  }
+}
+
 const responseSchema = z.object({
   message: z.string().optional(),
   actions: z.array(actionSchema).optional(),
@@ -299,14 +350,17 @@ const parseYamlLikeFormat = (raw: unknown): string | null => {
   const text = raw.trim()
 
   // Check if it looks like YAML-like format (key: value pairs without outer braces)
-  const keyValuePattern = /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/m
-  if (!keyValuePattern.test(text)) return null
+  const keyValuePattern = /(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/
+  const firstKey = text.match(keyValuePattern)
+  if (!firstKey || firstKey.index === undefined) return null
 
   // If it already has outer braces, skip
   if (text.startsWith('{') && text.endsWith('}')) return null
 
+  const normalizedText = text.slice(firstKey.index)
+
   const result: Record<string, unknown> = {}
-  const lines = text.split('\n')
+  const lines = normalizedText.split('\n')
 
   let currentKey = ''
   let currentValue = ''
@@ -449,17 +503,13 @@ async function streamClaudeTools(options: {
 
   let parsed: z.infer<typeof responseSchema> | null = null
   if (toolInput) {
-    try {
-      parsed = responseSchema.parse(toolInput)
-    } catch {
-      parsed = null
-    }
+    parsed = parseResponsePayload(toolInput)
   }
 
   if (!parsed) {
     const candidate = repairJson(rawText) || rawText
     try {
-      parsed = responseSchema.parse(JSON.parse(candidate))
+      parsed = parseResponsePayload(JSON.parse(candidate))
     } catch {
       parsed = null
     }
@@ -470,7 +520,7 @@ async function streamClaudeTools(options: {
     const yamlLikeCandidate = parseYamlLikeFormat(rawText)
     if (yamlLikeCandidate) {
       try {
-        parsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+        parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
       } catch {
         parsed = null
       }
@@ -505,11 +555,12 @@ async function streamClaudeText(options: {
 }
 
 const parseChecklist = (raw: string): string[] => {
-  return raw
+  const items = raw
     .split('\n')
     .map(line => line.replace(/^[-*+\d.、\s]+/, '').trim())
     .filter(Boolean)
-    .slice(0, 10)
+    .filter(line => !/^(thoughts?|steps?|actions?)\s*:/i.test(line))
+  return items.slice(0, 10)
 }
 
 export async function generateChecklist(
@@ -537,6 +588,16 @@ export async function generateChecklist(
       prompt: input,
       maxTokens: resolveMaxTokens(settings.maxTokens)
     })
+    const yamlLikeCandidate = parseYamlLikeFormat(raw)
+    if (yamlLikeCandidate) {
+      try {
+        const parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
+        if (parsed?.steps?.length) return parsed.steps.slice(0, 10)
+        if (parsed?.thoughts?.length) return parsed.thoughts.slice(0, 10)
+      } catch {
+        // fallback to plain parsing
+      }
+    }
     return parseChecklist(raw)
   } catch {
     return []
@@ -717,17 +778,13 @@ export async function runAgentMessage(
 
       let followUpParsed: z.infer<typeof responseSchema> | null = null
       if (followUpToolUse?.input) {
-        try {
-          followUpParsed = responseSchema.parse(followUpToolUse.input)
-        } catch {
-          followUpParsed = null
-        }
+        followUpParsed = parseResponsePayload(followUpToolUse.input)
       }
 
       if (!followUpParsed) {
         const candidate = repairJson(followUpRawText) || followUpRawText
         try {
-          followUpParsed = responseSchema.parse(JSON.parse(candidate))
+        followUpParsed = parseResponsePayload(JSON.parse(candidate))
         } catch {
           followUpParsed = null
         }
@@ -737,7 +794,7 @@ export async function runAgentMessage(
         const yamlLikeCandidate = parseYamlLikeFormat(followUpRawText)
         if (yamlLikeCandidate) {
           try {
-            followUpParsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+            followUpParsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
           } catch {
             followUpParsed = null
           }
@@ -1003,17 +1060,13 @@ export async function runAgentFollowup(
 
     let parsed: z.infer<typeof responseSchema> | null = null
     if (toolInputNext) {
-      try {
-        parsed = responseSchema.parse(toolInputNext)
-      } catch {
-        parsed = null
-      }
+      parsed = parseResponsePayload(toolInputNext)
     }
 
     if (!parsed) {
       const candidate = repairJson(rawText) || rawText
       try {
-        parsed = responseSchema.parse(JSON.parse(candidate))
+      parsed = parseResponsePayload(JSON.parse(candidate))
       } catch {
         parsed = null
       }
@@ -1024,7 +1077,7 @@ export async function runAgentFollowup(
       const yamlLikeCandidate = parseYamlLikeFormat(rawText)
       if (yamlLikeCandidate) {
         try {
-          parsed = responseSchema.parse(JSON.parse(yamlLikeCandidate))
+          parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
         } catch {
           parsed = null
         }

@@ -37,6 +37,7 @@ const lastTabContext = ref<any>(null)
 const lastChecklist = ref<string[]>([])
 const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
 const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
+const streamingEntries = ref<Record<string, { thoughtId?: string; stepId?: string }>>({})
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
 const SESSION_STORAGE_KEY = 'ai-agent-session-v1'
 
@@ -218,6 +219,63 @@ const addTimelineEntries = (assistantId: string, entries: any[]) => {
   saveTimelines()
 }
 
+const updateStreamingEntry = (assistantId: string, type: 'thought' | 'step', text: string) => {
+  if (!text.trim()) return
+  ensureTimeline(assistantId)
+  const entryMap = streamingEntries.value[assistantId] || {}
+  const entryId = type === 'thought' ? entryMap.thoughtId : entryMap.stepId
+  if (entryId) {
+    updateTimelineEntry(assistantId, entryId, { text })
+    return
+  }
+  const newId = nanoid()
+  if (!streamingEntries.value[assistantId]) {
+    streamingEntries.value[assistantId] = {}
+  }
+  if (type === 'thought') streamingEntries.value[assistantId].thoughtId = newId
+  if (type === 'step') streamingEntries.value[assistantId].stepId = newId
+  addTimelineEntries(assistantId, [{ id: newId, type, text, status: 'info' }])
+}
+
+const extractStreamSections = (raw: string) => {
+  const sections: { thoughts: string[]; steps: string[] } = { thoughts: [], steps: [] }
+  if (!raw) return sections
+  const matches = Array.from(raw.matchAll(/(^|\n)\s*(thoughts|steps|actions)\s*:\s*/gi))
+  if (matches.length === 0) return sections
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i]
+    const key = match[2].toLowerCase()
+    const start = (match.index ?? 0) + match[0].length
+    const end = i + 1 < matches.length ? (matches[i + 1].index ?? raw.length) : raw.length
+    const block = raw.slice(start, end)
+    const items = block
+      .split('\n')
+      .map(line => line.replace(/^[-*+\d.、\s]+/, '').trim())
+      .filter(Boolean)
+    if (key === 'thoughts') sections.thoughts = items
+    if (key === 'steps') sections.steps = items
+  }
+  return sections
+}
+
+const updateTimelineFromStream = (assistantId: string, raw: string) => {
+  const { thoughts, steps } = extractStreamSections(raw)
+  if (thoughts.length) updateStreamingEntry(assistantId, 'thought', thoughts.join(' · '))
+  if (steps.length) updateStreamingEntry(assistantId, 'step', steps.join(' · '))
+}
+
+const applyFinalTimelineEntries = (assistantId: string, thoughts?: string[], steps?: string[]) => {
+  if (thoughts?.length) {
+    updateStreamingEntry(assistantId, 'thought', thoughts.join(' · '))
+  }
+  if (steps?.length) {
+    updateStreamingEntry(assistantId, 'step', steps.join(' · '))
+  }
+  if (thoughts?.length || steps?.length) {
+    saveTimelines()
+  }
+}
+
 const updateTimelineEntry = (assistantId: string, entryId: string, patch: Record<string, any>) => {
   const timeline = timelines.value[assistantId]
   if (!timeline) return
@@ -363,7 +421,7 @@ const runActionsAndContinue = async () => {
         }
       }
     }
-    const followup = await runAgentFollowup(
+  const followup = await runAgentFollowup(
       lastUserInput.value,
       lastToolUseId.value,
       lastToolInput.value,
@@ -375,6 +433,7 @@ const runActionsAndContinue = async () => {
         onUpdate: update => {
           if (!update.message) return
           updateAssistantMessage(pendingActionsAssistantId.value as string, update.message)
+          updateTimelineFromStream(pendingActionsAssistantId.value as string, update.message)
         }
       }
     )
@@ -395,26 +454,11 @@ const runActionsAndContinue = async () => {
     lastToolInput.value = followup.toolInput || null
     lastParallelActions.value = followup.parallelActions !== false
     saveSession()
-    if (followup.thoughts?.length && pendingActionsAssistantId.value) {
-      addTimelineEntries(
+    if (pendingActionsAssistantId.value) {
+      applyFinalTimelineEntries(
         pendingActionsAssistantId.value,
-        followup.thoughts.map(text => ({
-          id: nanoid(),
-          type: 'thought',
-          text,
-          status: 'info'
-        }))
-      )
-    }
-    if (followup.steps?.length && pendingActionsAssistantId.value) {
-      addTimelineEntries(
-        pendingActionsAssistantId.value,
-        followup.steps.map(text => ({
-          id: nanoid(),
-          type: 'step',
-          text,
-          status: 'info'
-        }))
+        followup.thoughts,
+        followup.steps
       )
     }
     if (!pendingActions.value.length) break
@@ -555,6 +599,7 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
       onUpdate: update => {
         if (!update.message) return
         updateAssistantMessage(assistantId, update.message)
+        updateTimelineFromStream(assistantId, update.message)
       }
     }
   )
@@ -575,28 +620,7 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
   lastToolInput.value = result.toolInput || null
   lastParallelActions.value = result.parallelActions !== false
   saveSession()
-  if (result.thoughts?.length) {
-    addTimelineEntries(
-      assistantId,
-      result.thoughts.map(text => ({
-        id: nanoid(),
-        type: 'thought',
-        text,
-        status: 'info'
-      }))
-    )
-  }
-  if (result.steps?.length) {
-    addTimelineEntries(
-      assistantId,
-      result.steps.map(text => ({
-        id: nanoid(),
-        type: 'step',
-        text,
-        status: 'info'
-      }))
-    )
-  }
+  applyFinalTimelineEntries(assistantId, result.thoughts, result.steps)
   if (bypassMode.value && pendingActions.value.length > 0) {
     await runActionsAndContinue()
   }

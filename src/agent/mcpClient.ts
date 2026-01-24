@@ -41,12 +41,13 @@ async function sendJsonRpc(
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
       ...(server.headers || {})
     }
 
-    if (server.transport === 'sse') {
-      headers['Accept'] = 'text/event-stream'
-    }
+    // Some MCP servers require both application/json and text/event-stream
+    // Always advertise both; servers can choose the response format.
+    void server.transport
 
     const body = JSON.stringify({
       jsonrpc: '2.0',
