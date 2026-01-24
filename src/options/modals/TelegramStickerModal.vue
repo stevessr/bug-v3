@@ -22,19 +22,21 @@ import {
 import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
+import { defaultSettings } from '@/types/defaultSettings'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'imported'])
 
 const store = useEmojiStore()
+const safeSettings = computed(() => store.settings.value || defaultSettings)
 
 const allowVideoStickers = computed(() => {
-  const enabled = !!store.settings.value.telegramWebmToAvifEnabled
-  const backend = store.settings.value.telegramWebmToAvifBackend || ''
+  const enabled = !!safeSettings.value.telegramWebmToAvifEnabled
+  const backend = safeSettings.value.telegramWebmToAvifBackend || ''
   return enabled && backend.trim().length > 0
 })
 
-const webmToAvifBackend = computed(() => store.settings.value.telegramWebmToAvifBackend || '')
+const webmToAvifBackend = computed(() => safeSettings.value.telegramWebmToAvifBackend || '')
 
 // --- 状态 ---
 const telegramBotToken = ref('')

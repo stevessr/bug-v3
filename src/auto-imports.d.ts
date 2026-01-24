@@ -44,6 +44,7 @@ declare global {
   const collaborativeUpload: typeof import('./utils/collab/index')['collaborativeUpload']
   const commonMessages: typeof import('./utils/i18n')['commonMessages']
   const computed: typeof import('vue')['computed']
+  const convertWebmToAvifViaBackend: typeof import('./utils/webmToAvifBackend')['convertWebmToAvifViaBackend']
   const createApp: typeof import('vue')['createApp']
   const createDatabaseFile: typeof import('./utils/cacheExportHelpers')['createDatabaseFile']
   const createFileUrl: typeof import('./utils/telegramResolver')['createFileUrl']
@@ -297,6 +298,7 @@ declare module 'vue' {
     readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collab/index')['collaborativeUpload']>
     readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
+    readonly convertWebmToAvifViaBackend: UnwrapRef<typeof import('./utils/webmToAvifBackend')['convertWebmToAvifViaBackend']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['createDatabaseFile']>
     readonly createFileUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createFileUrl']>

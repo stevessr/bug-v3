@@ -18,6 +18,14 @@ import type { EmojiGroup, AppSettings } from '@/types/type'
 // Chrome API helper
 declare const chrome: typeof globalThis.chrome | undefined
 
+const isLocalStorageAvailable = () => {
+  try {
+    return typeof localStorage !== 'undefined'
+  } catch {
+    return false
+  }
+}
+
 function getChromeAPI(): typeof chrome | null {
   if (typeof chrome !== 'undefined' && chrome?.storage) {
     return chrome
@@ -31,6 +39,52 @@ function getChromeAPI(): typeof chrome | null {
   return null
 }
 
+let warnedNoChromeStorage = false
+const warnNoChromeStorage = () => {
+  if (!warnedNoChromeStorage) {
+    warnedNoChromeStorage = true
+    console.warn('[Storage] chrome.storage.local not available, falling back to localStorage')
+  }
+}
+
+const localStorageGet = <T = unknown>(key: string): T | null => {
+  if (!isLocalStorageAvailable()) return null
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { data?: T } | T | null
+    if (parsed && typeof parsed === 'object' && 'data' in parsed) {
+      return (parsed as { data?: T }).data ?? null
+    }
+    return parsed as T | null
+  } catch (error) {
+    console.error('[Storage] localStorage get failed:', key, error)
+    return null
+  }
+}
+
+const localStorageSet = (key: string, value: unknown) => {
+  if (!isLocalStorageAvailable()) return
+  try {
+    const wrappedValue = {
+      data: ensureSerializable(value),
+      timestamp: Date.now()
+    }
+    localStorage.setItem(key, JSON.stringify(wrappedValue))
+  } catch (error) {
+    console.error('[Storage] localStorage set failed:', key, error)
+  }
+}
+
+const localStorageRemove = (key: string) => {
+  if (!isLocalStorageAvailable()) return
+  try {
+    localStorage.removeItem(key)
+  } catch (error) {
+    console.error('[Storage] localStorage remove failed:', key, error)
+  }
+}
+
 // ========================================
 // Core Storage Functions (Pure I/O)
 // ========================================
@@ -41,8 +95,8 @@ function getChromeAPI(): typeof chrome | null {
 export async function storageGet<T = unknown>(key: string): Promise<T | null> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    console.warn('[Storage] chrome.storage.local not available')
-    return null
+    warnNoChromeStorage()
+    return localStorageGet<T>(key)
   }
 
   return new Promise(resolve => {
@@ -87,7 +141,8 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
 export async function storageSet(key: string, value: unknown): Promise<void> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    console.warn('[Storage] chrome.storage.local not available')
+    warnNoChromeStorage()
+    localStorageSet(key, value)
     return
   }
 
@@ -115,7 +170,10 @@ export async function storageSet(key: string, value: unknown): Promise<void> {
 export async function storageBatchSet(items: Record<string, unknown>): Promise<void> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    console.warn('[Storage] chrome.storage.local not available')
+    warnNoChromeStorage()
+    for (const [key, value] of Object.entries(items)) {
+      localStorageSet(key, value)
+    }
     return
   }
 
@@ -147,7 +205,8 @@ export async function storageBatchSet(items: Record<string, unknown>): Promise<v
 export async function storageRemove(key: string): Promise<void> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    console.warn('[Storage] chrome.storage.local not available')
+    warnNoChromeStorage()
+    localStorageRemove(key)
     return
   }
 
@@ -164,7 +223,8 @@ export async function storageRemove(key: string): Promise<void> {
 export async function storageBatchRemove(keys: string[]): Promise<void> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    console.warn('[Storage] chrome.storage.local not available')
+    warnNoChromeStorage()
+    keys.forEach(key => localStorageRemove(key))
     return
   }
 
@@ -182,13 +242,19 @@ export async function storageBatchRemove(keys: string[]): Promise<void> {
  */
 export async function storageBatchGet(keys: string[]): Promise<Record<string, any>> {
   return new Promise((resolve, reject) => {
-    if (typeof chrome === 'undefined' || !chrome.storage) {
-      reject(new Error('Chrome storage API not available'))
+    const api = getChromeAPI()
+    if (!api?.storage?.local) {
+      warnNoChromeStorage()
+      const unpacked: Record<string, any> = {}
+      for (const key of keys) {
+        unpacked[key] = localStorageGet(key)
+      }
+      resolve(unpacked)
       return
     }
-    chrome.storage.local.get(keys, result => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message))
+    api.storage.local.get(keys, result => {
+      if (api.runtime.lastError) {
+        reject(new Error(api.runtime.lastError.message))
       } else {
         // 解包包装格式 { data, timestamp }
         const unpacked: Record<string, any> = {}

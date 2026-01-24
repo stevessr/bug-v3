@@ -16,11 +16,13 @@ import {
 import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
+import { defaultSettings } from '@/types/defaultSettings'
 import GroupSelector from '@/options/components/GroupSelector.vue'
 import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
+const safeSettings = computed(() => store.settings.value || defaultSettings)
 
 // --- 状态 ---
 const telegramBotToken = ref('')
@@ -74,12 +76,12 @@ const isQueueRunning = ref(false)
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
 
 const webmToAvifEnabled = computed({
-  get: () => !!store.settings.value.telegramWebmToAvifEnabled,
+  get: () => !!safeSettings.value.telegramWebmToAvifEnabled,
   set: value => store.updateSettings({ telegramWebmToAvifEnabled: value })
 })
 
 const webmToAvifBackend = computed({
-  get: () => store.settings.value.telegramWebmToAvifBackend || '',
+  get: () => safeSettings.value.telegramWebmToAvifBackend || '',
   set: value => store.updateSettings({ telegramWebmToAvifBackend: value })
 })
 

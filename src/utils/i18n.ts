@@ -8,6 +8,26 @@ import { ref, onMounted, onUnmounted } from 'vue'
 const localTranslations: Record<string, Record<string, { message: string }>> = {}
 let currentLanguage = 'zh_CN'
 
+const getChromeI18n = () => {
+  const chromeAPI = (globalThis as any)?.chrome
+  return chromeAPI?.i18n || null
+}
+
+const getNavigatorLanguage = () => {
+  if (typeof navigator !== 'undefined') {
+    return navigator.language || (navigator as any).userLanguage || ''
+  }
+  return ''
+}
+
+const isLocalStorageAvailable = () => {
+  try {
+    return typeof localStorage !== 'undefined'
+  } catch {
+    return false
+  }
+}
+
 /**
  * 加载指定语言的翻译文件
  * @param language 语言代码
@@ -56,12 +76,12 @@ export function getMessage(
   }
 
   // 回退到 Chrome i18n API
-  if (Array.isArray(substitutions) || typeof substitutions === 'string') {
-    return chrome.i18n.getMessage(messageName, substitutions) || messageName
-  } else {
-    // Chrome i18n API 不支持对象格式，直接返回消息名
-    return messageName
+  const chromeI18n = getChromeI18n()
+  if (chromeI18n && (Array.isArray(substitutions) || typeof substitutions === 'string')) {
+    return chromeI18n.getMessage(messageName, substitutions) || messageName
   }
+  // Chrome i18n API 不支持对象格式，直接返回消息名
+  return messageName
 }
 
 /**
@@ -69,7 +89,9 @@ export function getMessage(
  * @returns 当前语言环境代码
  */
 export function getUILanguage(): string {
-  return chrome.i18n.getUILanguage()
+  const chromeI18n = getChromeI18n()
+  if (chromeI18n?.getUILanguage) return chromeI18n.getUILanguage()
+  return getNavigatorLanguage()
 }
 
 /**
@@ -118,7 +140,9 @@ const isReady = ref(false)
  */
 export async function initI18n(): Promise<void> {
   // 从 localStorage 获取保存的语言设置
-  const savedLanguage = localStorage.getItem('emoji-extension-language')
+  const savedLanguage = isLocalStorageAvailable()
+    ? localStorage.getItem('emoji-extension-language')
+    : null
   if (savedLanguage) {
     currentLanguage = savedLanguage
   } else {
