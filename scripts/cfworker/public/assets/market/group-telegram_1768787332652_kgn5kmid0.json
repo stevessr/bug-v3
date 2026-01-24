@@ -1,18 +1,18 @@
 {
   "version": "1.1",
-  "exportDate": "2026-01-19T03:56:16.627Z",
+  "exportDate": "2026-01-24T02:16:10.047Z",
   "group": {
     "id": "telegram_1768787332652_kgn5kmid0",
     "name": "铃口星辉 @zhaxia_cn",
     "icon": "https://linux.do/uploads/default/original/4X/7/e/d/7edeb0854282972713f961b98a5ca2fb0d36012c.webp?v=telegram",
     "detail": "Telegram 贴纸包：https://t.me/addstickers/in_IECDEC_by_NaiDrawBot",
-    "order": 85
+    "order": 78
   },
   "id": "telegram_1768787332652_kgn5kmid0",
   "name": "铃口星辉 @zhaxia_cn",
   "icon": "https://linux.do/uploads/default/original/4X/7/e/d/7edeb0854282972713f961b98a5ca2fb0d36012c.webp?v=telegram",
   "detail": "Telegram 贴纸包：https://t.me/addstickers/in_IECDEC_by_NaiDrawBot",
-  "order": 85,
+  "order": 78,
   "emojis": [
     {
       "id": "telegram_CAACAgUAAxUAAWlti7HyTiZcp3H_LegK2VBxL6FoAAI9HQAC13kYV7vR5-A7J48BOAQ_1768787334702_hbv40sb6i",
@@ -310,6 +310,16 @@
       "name": "😵_31.webp",
       "url": "https://linux.do/uploads/default/original/4X/1/9/4/194ad0317578430d2f216e5740a23f24cf4f6b11.webp",
       "displayUrl": "https://linux.do/uploads/default/original/4X/1/9/4/194ad0317578430d2f216e5740a23f24cf4f6b11.webp",
+      "width": 512,
+      "height": 512,
+      "groupId": "telegram_1768787332652_kgn5kmid0"
+    },
+    {
+      "id": "telegram_CAACAgUAAxUAAWl0K1v0lj_xlAHpnpMaXOvYOl53AAKZHQACxTIYV_LrdIowlwisOAQ_1769220957487_tor9ws8e8",
+      "packet": 0,
+      "name": "👍_22.webp",
+      "url": "https://linux.do/uploads/default/original/4X/7/3/5/7355c904a920cd49e87a557dac8eb7467fa03055.webp",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/3/5/7355c904a920cd49e87a557dac8eb7467fa03055.webp",
       "width": 512,
       "height": 512,
       "groupId": "telegram_1768787332652_kgn5kmid0"

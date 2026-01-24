@@ -1,0 +1,72 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-01-16T09:43:13.979Z",
+  "group": {
+    "id": "group-大召唤术",
+    "name": "大召唤术",
+    "icon": "📦",
+    "detail": "",
+    "order": 1
+  },
+  "id": "group-1768553733361",
+  "name": "大召唤术",
+  "icon": "📦",
+  "detail": "",
+  "order": 1,
+  "emojis": [
+    {
+      "id": "emoji-1768553853505-u9p4cg",
+      "packet": 1768553853504,
+      "name": "铎",
+      "url": "https://linux.do/user_avatar/linux.do/neuroplexus/288/917399_2.png",
+      "groupId": "group-1768553733361",
+      "customOutput": "@Neuroplexus",
+      "tags": []
+    },
+    {
+      "id": "emoji-1768554096222-am719f",
+      "packet": 1768554096221,
+      "name": "Shus",
+      "url": "https://linux.do/user_avatar/linux.do/fcanlnony/288/1387226_2.gif",
+      "groupId": "group-1768553733361",
+      "customOutput": "@fcanlnony",
+      "tags": []
+    },
+    {
+      "id": "emoji-1768554116305-g7kib3",
+      "packet": 1768554116305,
+      "name": "【失业客服喵】",
+      "url": "https://linux.do/user_avatar/linux.do/maru_sec/288/1162460_2.gif",
+      "groupId": "group-1768553733361",
+      "customOutput": "@Maru_sec",
+      "tags": []
+    },
+    {
+      "id": "emoji-1768554142078-a2oeu4",
+      "packet": 1768554142078,
+      "name": "散装江苏",
+      "url": "https://linux.do/user_avatar/linux.do/is_hp/288/836735_2.png",
+      "groupId": "group-1768553733361",
+      "customOutput": "@is_hp",
+      "tags": []
+    },
+    {
+      "id": "emoji-1768554157966-1oag6d",
+      "packet": 1768554157966,
+      "name": "玄虚",
+      "url": "https://linux.do/user_avatar/linux.do/xuanxu/288/1028522_2.png",
+      "groupId": "group-1768553733361",
+      "customOutput": "@xuanxu",
+      "tags": []
+    },
+    {
+      "id": "emoji-1768554195432-5bouhb",
+      "packet": 1768554195432,
+      "name": "ちーちゃん＠個人様ご依頼停止中",
+      "url": "https://linux.do/user_avatar/linux.do/chigamma/288/1244922_2.gif",
+      "groupId": "group-1768553733361",
+      "customOutput": "@ChiGamma",
+      "tags": []
+    }
+  ]
+}
