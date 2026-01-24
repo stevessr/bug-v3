@@ -13,6 +13,7 @@ import {
   downloadFileAsBlob,
   type TelegramStickerSet
 } from '@/utils/telegramResolver'
+import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import GroupSelector from '@/options/components/GroupSelector.vue'
@@ -71,6 +72,20 @@ const isQueueRunning = ref(false)
 
 // 上传服务选择
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
+
+const webmToAvifEnabled = computed({
+  get: () => !!store.settings.value.telegramWebmToAvifEnabled,
+  set: value => store.updateSettings({ telegramWebmToAvifEnabled: value })
+})
+
+const webmToAvifBackend = computed({
+  get: () => store.settings.value.telegramWebmToAvifBackend || '',
+  set: value => store.updateSettings({ telegramWebmToAvifBackend: value })
+})
+
+const allowVideoStickers = computed(
+  () => webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0
+)
 
 // 导入选项
 const importMode = ref<'new' | 'update'>('new')
@@ -326,7 +341,9 @@ const willAddCount = computed(() => {
   )
 
   // 计算贴纸包中有多少个非视频贴纸
-  const validStickers = stickerSetInfo.value.stickers.filter(s => !s.is_video)
+  const validStickers = stickerSetInfo.value.stickers.filter(
+    s => allowVideoStickers.value || !s.is_video
+  )
 
   // 预估将要新增的数量
   let uniqueCount = 0
@@ -500,7 +517,7 @@ const doImport = async (): Promise<boolean> => {
 
   try {
     const stickers = stickerSetInfo.value.stickers
-    const validStickers = stickers.filter(s => !s.is_video)
+    const validStickers = stickers.filter(s => allowVideoStickers.value || !s.is_video)
     const total = validStickers.length
 
     progress.value = { processed: 0, total, message: '开始处理贴纸...' }
@@ -548,6 +565,7 @@ const doImport = async (): Promise<boolean> => {
     }
 
     let skippedDuplicates = 0
+    let webmConvertFailures = 0
 
     // 处理每个贴纸
     for (let i = 0; i < validStickers.length; i++) {
@@ -580,11 +598,34 @@ const doImport = async (): Promise<boolean> => {
         const fileInfo = await getFile(sticker.file_id, telegramBotToken.value)
         if (!fileInfo.file_path) continue
 
-        const extension = fileInfo.file_path.split('.').pop()?.toLowerCase() || ''
-        if (extension === 'webm') continue // 跳过 webm
+        let extension = fileInfo.file_path.split('.').pop()?.toLowerCase() || ''
+        if (extension === 'webm' && !allowVideoStickers.value) {
+          continue
+        }
 
         // 生成文件名（与之前的逻辑一致）
-        const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+        let filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+
+        // 下载贴纸
+        progress.value.message = `下载贴纸 ${i + 1}/${total}...`
+        const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
+        let blob = await downloadFileAsBlob(proxyUrl)
+
+        if (extension === 'webm') {
+          try {
+            progress.value.message = `转换 WebM ${i + 1}/${total}...`
+            blob = await convertWebmToAvifViaBackend(blob, {
+              backendUrl: webmToAvifBackend.value,
+              signal: abortController?.signal
+            })
+            extension = 'avif'
+            filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+          } catch (convertError) {
+            webmConvertFailures++
+            console.warn('WebM 转换失败，已跳过该贴纸：', convertError)
+            continue
+          }
+        }
 
         // 二次检查（精确匹配，以防模式匹配有误）
         if (importMode.value === 'update' && existingEmojiNames.has(filename)) {
@@ -594,11 +635,6 @@ const doImport = async (): Promise<boolean> => {
           continue
         }
 
-        // 下载贴纸
-        progress.value.message = `下载贴纸 ${i + 1}/${total}...`
-        const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
-        const blob = await downloadFileAsBlob(proxyUrl)
-
         // 确定 MIME 类型
         let mimeType = blob.type
         if (!mimeType || mimeType === 'application/octet-stream') {
@@ -606,6 +642,7 @@ const doImport = async (): Promise<boolean> => {
           else if (extension === 'png') mimeType = 'image/png'
           else if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg'
           else if (extension === 'gif') mimeType = 'image/gif'
+          else if (extension === 'avif') mimeType = 'image/avif'
           else mimeType = 'image/webp' // default for stickers
         }
 
@@ -721,6 +758,9 @@ const doImport = async (): Promise<boolean> => {
     newGroupName.value = ''
     selectedGroupId.value = ''
     importMode.value = 'new'
+    if (webmConvertFailures > 0) {
+      message.warning(`WebM 转换失败 ${webmConvertFailures} 个，已跳过`)
+    }
     return true
   } catch (error: any) {
     console.error('导入失败：', error)
@@ -787,6 +827,28 @@ const doImport = async (): Promise<boolean> => {
           </a-radio-group>
           <p class="text-xs text-purple-700 dark:text-purple-300 mt-2">
             贴纸将自动上传到所选服务并保存托管链接
+          </p>
+        </div>
+
+        <!-- WebM 转 AVIF 后端 -->
+        <div
+          class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
+        >
+          <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-3">
+            2️⃣-A WebM 转 AVIF 后端
+          </h4>
+          <div class="flex items-center gap-3">
+            <a-switch v-model:checked="webmToAvifEnabled" />
+            <a-input
+              v-model:value="webmToAvifBackend"
+              placeholder="https://example.com/api/webm-to-avif"
+              class="flex-1"
+              :disabled="!webmToAvifEnabled"
+            />
+          </div>
+          <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
+            启用后，视频贴纸（webm）会通过该后端转换为 AVIF 再上传；后端需支持
+            POST 原始 webm 并返回 image/avif。
           </p>
         </div>
 

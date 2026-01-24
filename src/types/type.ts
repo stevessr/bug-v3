@@ -61,6 +61,9 @@ export interface AppSettings {
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
   discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000
+  // Telegram WebM -> AVIF conversion backend
+  telegramWebmToAvifEnabled?: boolean
+  telegramWebmToAvifBackend?: string
 }
 
 export interface EmojiGroup {

@@ -49,6 +49,8 @@ export const defaultSettings: AppSettings = {
   linuxDoSeekingRefreshIntervalMs: 60000, // 默认 60 秒轮询
   linuxDoSeekingPosition: 'left', // 默认左侧吸附
   linuxDoSeekingActionFilter: '1,5', // 默认互动 + 回复
+  telegramWebmToAvifEnabled: false,
+  telegramWebmToAvifBackend: '',
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
   discourseRouterRefreshInterval: 30000 // 默认 30 秒刷新一次
