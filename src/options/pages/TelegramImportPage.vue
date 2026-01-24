@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, isRef } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -22,7 +22,9 @@ import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
-const safeSettings = computed(() => store.settings.value || defaultSettings)
+const safeSettings = computed(() =>
+  (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
+)
 
 // --- 状态 ---
 const telegramBotToken = ref('')

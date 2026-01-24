@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, isRef } from 'vue'
 import {
   QuestionCircleOutlined,
   CloudUploadOutlined,
@@ -28,7 +28,9 @@ const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'imported'])
 
 const store = useEmojiStore()
-const safeSettings = computed(() => store.settings.value || defaultSettings)
+const safeSettings = computed(() =>
+  (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
+)
 
 const allowVideoStickers = computed(() => {
   const enabled = !!safeSettings.value.telegramWebmToAvifEnabled
