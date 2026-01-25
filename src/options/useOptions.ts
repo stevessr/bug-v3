@@ -504,7 +504,7 @@ export default function useOptions() {
       return
     }
 
-    const markdown = '>[!summary]-\n>[grid]\n>' + lines.join('\n>') + '\n>[/grid]'
+    const markdown = '>[!summary]-\n>[grid mode=carousel]\n>' + lines.join('\n>') + '\n>[/grid]'
 
     try {
       if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
