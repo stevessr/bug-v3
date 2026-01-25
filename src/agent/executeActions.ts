@@ -68,6 +68,25 @@ export async function executeAgentActions(
   const tabId = targetTabId ?? (await getActiveTabId())
 
   const executeSingle = async (action: AgentAction): Promise<ActionStatus> => {
+    const needsTarget = [
+      'click',
+      'click-dom',
+      'touch',
+      'double-click',
+      'right-click',
+      'hover',
+      'focus',
+      'blur',
+      'drag'
+    ].includes(action.type)
+    if (needsTarget && !action.selector && (action.x === undefined || action.y === undefined)) {
+      return {
+        id: action.id,
+        type: action.type,
+        success: false,
+        error: '缺少 selector 或坐标'
+      }
+    }
     const permissionKey = ACTION_TYPE_TO_PERMISSION[action.type]
     if (permissionKey && !permissions[permissionKey]) {
       return {

@@ -2,7 +2,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 
-import type { AgentAction, AgentMessage, AgentSettings, SubAgentConfig } from './types'
+import type {
+  AgentAction,
+  AgentActionResult,
+  AgentMessage,
+  AgentSettings,
+  SubAgentConfig
+} from './types'
 import {
   createSubagentSession,
   resolveSubagent,
@@ -22,6 +28,8 @@ interface AgentRunResult {
   actions?: AgentAction[]
   toolUseId?: string
   toolInput?: z.infer<typeof responseSchema>
+  toolUseIds?: string[]
+  toolInputs?: z.infer<typeof responseSchema>[]
   parallelActions?: boolean
   thoughts?: string[]
   steps?: string[]
@@ -151,6 +159,72 @@ const responseSchema = z.object({
     )
     .optional()
 })
+
+const ensureActionIds = (parsed: z.infer<typeof responseSchema>): void => {
+  if (!parsed.actions) return
+  for (const action of parsed.actions) {
+    if (!action.id) action.id = nanoid()
+  }
+}
+
+const mergeParsedPayloads = (
+  payloads: z.infer<typeof responseSchema>[]
+): z.infer<typeof responseSchema> | null => {
+  if (!payloads.length) return null
+  if (payloads.length === 1) return payloads[0]
+  const merged: z.infer<typeof responseSchema> = {}
+  for (const item of payloads) {
+    if (!merged.message && item.message) merged.message = item.message
+    if (item.actions?.length) {
+      merged.actions = [...(merged.actions || []), ...item.actions]
+    }
+    if (item.parallelActions !== undefined) {
+      merged.parallelActions = (merged.parallelActions ?? false) || item.parallelActions
+    }
+    if (item.thoughts?.length) {
+      merged.thoughts = [...(merged.thoughts || []), ...item.thoughts]
+    }
+    if (item.steps?.length) {
+      merged.steps = [...(merged.steps || []), ...item.steps]
+    }
+    if (item.subagents?.length) {
+      merged.subagents = [...(merged.subagents || []), ...item.subagents]
+    }
+    if (item.memory) {
+      merged.memory = merged.memory || {}
+      if (item.memory.set) {
+        merged.memory.set = { ...(merged.memory.set || {}), ...item.memory.set }
+      }
+      if (item.memory.remove?.length) {
+        const existing = new Set(merged.memory.remove || [])
+        for (const key of item.memory.remove) existing.add(key)
+        merged.memory.remove = Array.from(existing)
+      }
+    }
+  }
+  return merged
+}
+
+const extractBrowserToolUses = (content: Array<any> | undefined) =>
+  (content || []).filter(
+    block => block?.type === 'tool_use' && block?.name === toolSchema.name
+  ) as { id?: string; input?: unknown }[]
+
+const parseToolInputs = (
+  toolUses: { id?: string; input?: unknown }[]
+): { parsedInputs: z.infer<typeof responseSchema>[]; toolUseIds: string[] } => {
+  const parsedInputs: z.infer<typeof responseSchema>[] = []
+  const toolUseIds: string[] = []
+  for (const toolUse of toolUses) {
+    if (!toolUse?.id || !toolUse.input) continue
+    const parsed = parseResponsePayload(toolUse.input)
+    if (!parsed) continue
+    ensureActionIds(parsed)
+    parsedInputs.push(parsed)
+    toolUseIds.push(toolUse.id)
+  }
+  return { parsedInputs, toolUseIds }
+}
 
 const toolSchema = {
   name: 'browser_actions',
@@ -461,7 +535,7 @@ async function streamClaudeTools(options: {
   model: string
   system: string
   prompt: string
-  onUpdate?: (message: string) => void
+  onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
   forceTool?: boolean
   maxTokens: number
   mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
@@ -473,6 +547,23 @@ async function streamClaudeTools(options: {
   }
 
   let streamedText = ''
+  const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
+    if (!options.onUpdate) return
+    if (!payload.message && !payload.thoughts && !payload.steps) return
+    options.onUpdate(payload)
+  }
+  const extractFromSnapshot = (snapshot: unknown) => {
+    if (!snapshot || typeof snapshot !== 'object') return
+    const record = snapshot as Record<string, unknown>
+    const message = typeof record.message === 'string' ? record.message : undefined
+    const thoughts = Array.isArray(record.thoughts)
+      ? record.thoughts.filter(item => typeof item === 'string')
+      : undefined
+    const steps = Array.isArray(record.steps)
+      ? record.steps.filter(item => typeof item === 'string')
+      : undefined
+    emitUpdate({ message, thoughts, steps })
+  }
   const stream = options.client.messages
     .stream({
       model: options.model,
@@ -484,17 +575,23 @@ async function streamClaudeTools(options: {
     })
     .on('text', text => {
       streamedText += text
-      options.onUpdate?.(streamedText)
+      emitUpdate({ message: streamedText })
+    })
+    .on('thinking', (_, thinkingSnapshot) => {
+      emitUpdate({ thoughts: [thinkingSnapshot] })
+    })
+    .on('inputJson', (_partial, jsonSnapshot) => {
+      extractFromSnapshot(jsonSnapshot)
     })
 
   const finalMessage = await stream.finalMessage()
   const rawText = streamedText || extractTextContent(finalMessage.content)
 
   // 检查 browser_actions 工具调用
-  const toolUse = finalMessage.content?.find(
-    (block: any) => block?.type === 'tool_use' && block?.name === toolSchema.name
-  ) as { id?: string; input?: any } | undefined
-  const toolInput = toolUse?.input
+  const browserToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
+  const { parsedInputs, toolUseIds } = parseToolInputs(browserToolUses)
+  const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
+  const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
 
   // 检查 MCP 工具调用
   const mcpToolUses = finalMessage.content?.filter(
@@ -502,8 +599,8 @@ async function streamClaudeTools(options: {
   ) as { id?: string; name?: string; input?: any }[] | undefined
 
   let parsed: z.infer<typeof responseSchema> | null = null
-  if (toolInput) {
-    parsed = parseResponsePayload(toolInput)
+  if (parsedInputs.length > 0) {
+    parsed = mergeParsedPayloads(parsedInputs)
   }
 
   if (!parsed) {
@@ -527,7 +624,15 @@ async function streamClaudeTools(options: {
     }
   }
 
-  return { rawText, parsed, toolUseId: toolUse?.id, toolInput, mcpToolUses }
+  return {
+    rawText,
+    parsed,
+    toolUseId,
+    toolInput,
+    toolUseIds,
+    toolInputs: parsedInputs,
+    mcpToolUses
+  }
 }
 
 async function streamClaudeText(options: {
@@ -648,7 +753,7 @@ export async function runAgentMessage(
   subagent?: SubAgentConfig,
   context?: { tab?: TabContext },
   options?: {
-    onUpdate?: (update: { message?: string }) => void
+    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
   }
 ): Promise<AgentRunResult> {
   if (!settings.apiKey) {
@@ -692,8 +797,8 @@ export async function runAgentMessage(
       model: modelId,
       system,
       prompt: input,
-      onUpdate: message => options?.onUpdate?.({ message }),
-      forceTool: true,
+      onUpdate: update => options?.onUpdate?.(update),
+      forceTool: mcpTools.length === 0,
       maxTokens: resolveMaxTokens(settings.maxTokens),
       mcpTools
     })
@@ -738,6 +843,27 @@ export async function runAgentMessage(
 
       // 继续对话，让模型处理 MCP 结果
       let followUpText = ''
+      const emitFollowUp = (payload: {
+        message?: string
+        thoughts?: string[]
+        steps?: string[]
+      }) => {
+        if (!options?.onUpdate) return
+        if (!payload.message && !payload.thoughts && !payload.steps) return
+        options.onUpdate(payload)
+      }
+      const extractFollowUpSnapshot = (snapshot: unknown) => {
+        if (!snapshot || typeof snapshot !== 'object') return
+        const record = snapshot as Record<string, unknown>
+        const message = typeof record.message === 'string' ? record.message : undefined
+        const thoughts = Array.isArray(record.thoughts)
+          ? record.thoughts.filter(item => typeof item === 'string')
+          : undefined
+        const steps = Array.isArray(record.steps)
+          ? record.steps.filter(item => typeof item === 'string')
+          : undefined
+        emitFollowUp({ message, thoughts, steps })
+      }
       const followUpStream = client.messages
         .stream({
           model: modelId,
@@ -764,21 +890,24 @@ export async function runAgentMessage(
         })
         .on('text', text => {
           followUpText += text
-          options?.onUpdate?.({ message: followUpText })
+          emitFollowUp({ message: followUpText })
+        })
+        .on('thinking', (_, thinkingSnapshot) => {
+          emitFollowUp({ thoughts: [thinkingSnapshot] })
+        })
+        .on('inputJson', (_partial, jsonSnapshot) => {
+          extractFollowUpSnapshot(jsonSnapshot)
         })
 
       const followUpMessage = await followUpStream.finalMessage()
       const followUpRawText = followUpText || extractTextContent(followUpMessage.content)
 
       // 检查是否有 browser_actions 工具调用
-      const followUpToolUse = followUpMessage.content?.find(
-        (block: { type: string; name?: string }) =>
-          block?.type === 'tool_use' && block?.name === toolSchema.name
-      ) as { id?: string; input?: unknown } | undefined
-
+      const followUpToolUses = extractBrowserToolUses(followUpMessage.content as any[] | undefined)
+      const followUpParsedInputs = parseToolInputs(followUpToolUses)
       let followUpParsed: z.infer<typeof responseSchema> | null = null
-      if (followUpToolUse?.input) {
-        followUpParsed = parseResponsePayload(followUpToolUse.input)
+      if (followUpParsedInputs.parsedInputs.length > 0) {
+        followUpParsed = mergeParsedPayloads(followUpParsedInputs.parsedInputs)
       }
 
       if (!followUpParsed) {
@@ -822,8 +951,16 @@ export async function runAgentMessage(
             ...action,
             id: action.id || nanoid()
           })) || [],
-        toolUseId: followUpToolUse?.id,
-        toolInput: followUpToolUse?.input,
+        toolUseId:
+          followUpParsedInputs.toolUseIds.length === 1
+            ? followUpParsedInputs.toolUseIds[0]
+            : undefined,
+        toolInput:
+          followUpParsedInputs.parsedInputs.length === 1
+            ? followUpParsedInputs.parsedInputs[0]
+            : undefined,
+        toolUseIds: followUpParsedInputs.toolUseIds,
+        toolInputs: followUpParsedInputs.parsedInputs,
         parallelActions: followUpParsed?.parallelActions,
         thoughts: followUpParsed?.thoughts,
         steps: followUpParsed?.steps
@@ -951,6 +1088,8 @@ export async function runAgentMessage(
         actions: aggregatedActions,
         toolUseId: aggregated.toolUseId,
         toolInput: aggregated.toolInput,
+        toolUseIds: aggregated.toolUseIds,
+        toolInputs: aggregated.toolInputs,
         parallelActions: aggregated.parsed?.parallelActions,
         thoughts: aggregated.parsed?.thoughts,
         steps: aggregated.parsed?.steps
@@ -978,6 +1117,8 @@ export async function runAgentMessage(
       actions,
       toolUseId: firstPass.toolUseId,
       toolInput: firstPass.toolInput,
+      toolUseIds: firstPass.toolUseIds,
+      toolInputs: firstPass.toolInputs,
       parallelActions: firstPass.parsed.parallelActions,
       thoughts: firstPass.parsed.thoughts,
       steps: firstPass.parsed.steps
@@ -991,14 +1132,13 @@ export async function runAgentMessage(
 
 export async function runAgentFollowup(
   input: string,
-  toolUseId: string,
-  toolInput: z.infer<typeof responseSchema>,
-  toolResult: unknown,
+  toolUses: { id: string; input: z.infer<typeof responseSchema> }[],
+  toolResult: AgentActionResult[],
   settings: AgentSettings,
   subagent?: SubAgentConfig,
   context?: { tab?: TabContext },
   options?: {
-    onUpdate?: (update: { message?: string }) => void
+    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
   }
 ): Promise<AgentRunResult> {
   try {
@@ -1014,6 +1154,23 @@ export async function runAgentFollowup(
       .join('\n')
 
     let streamedText = ''
+    const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
+      if (!options?.onUpdate) return
+      if (!payload.message && !payload.thoughts && !payload.steps) return
+      options.onUpdate(payload)
+    }
+    const extractFromSnapshot = (snapshot: unknown) => {
+      if (!snapshot || typeof snapshot !== 'object') return
+      const record = snapshot as Record<string, unknown>
+      const message = typeof record.message === 'string' ? record.message : undefined
+      const thoughts = Array.isArray(record.thoughts)
+        ? record.thoughts.filter(item => typeof item === 'string')
+        : undefined
+      const steps = Array.isArray(record.steps)
+        ? record.steps.filter(item => typeof item === 'string')
+        : undefined
+      emitUpdate({ message, thoughts, steps })
+    }
     const stream = client.messages
       .stream({
         model: modelId,
@@ -1023,24 +1180,28 @@ export async function runAgentFollowup(
           { role: 'user', content: input },
           {
             role: 'assistant',
-            content: [
-              {
-                type: 'tool_use',
-                id: toolUseId,
-                name: toolSchema.name,
-                input: toolInput
-              }
-            ]
+            content: toolUses.map(use => ({
+              type: 'tool_use' as const,
+              id: use.id,
+              name: toolSchema.name,
+              input: use.input
+            }))
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: toolUseId,
-                content: JSON.stringify(toolResult ?? {})
+            content: toolUses.map(use => {
+              const actionIds = (use.input.actions || [])
+                .map(action => action.id)
+                .filter((id): id is string => typeof id === 'string')
+              const filteredResults = actionIds.length
+                ? toolResult.filter(result => actionIds.includes(result.id))
+                : []
+              return {
+                type: 'tool_result' as const,
+                tool_use_id: use.id,
+                content: JSON.stringify(filteredResults)
               }
-            ]
+            })
           }
         ],
         tools: [toolSchema],
@@ -1048,19 +1209,23 @@ export async function runAgentFollowup(
       })
       .on('text', text => {
         streamedText += text
-        options?.onUpdate?.({ message: streamedText })
+        emitUpdate({ message: streamedText })
+      })
+      .on('thinking', (_, thinkingSnapshot) => {
+        emitUpdate({ thoughts: [thinkingSnapshot] })
+      })
+      .on('inputJson', (_partial, jsonSnapshot) => {
+        extractFromSnapshot(jsonSnapshot)
       })
 
     const finalMessage = await stream.finalMessage()
     const rawText = streamedText || extractTextContent(finalMessage.content)
-    const toolUse = finalMessage.content?.find(
-      (block: any) => block?.type === 'tool_use' && block?.name === toolSchema.name
-    ) as { id?: string; input?: any } | undefined
-    const toolInputNext = toolUse?.input
+    const followUpToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
+    const followUpParsedInputs = parseToolInputs(followUpToolUses)
 
     let parsed: z.infer<typeof responseSchema> | null = null
-    if (toolInputNext) {
-      parsed = parseResponsePayload(toolInputNext)
+    if (followUpParsedInputs.parsedInputs.length > 0) {
+      parsed = mergeParsedPayloads(followUpParsedInputs.parsedInputs)
     }
 
     if (!parsed) {
@@ -1114,8 +1279,16 @@ export async function runAgentFollowup(
         content
       },
       actions,
-      toolUseId: toolUse?.id,
-      toolInput: toolInputNext,
+      toolUseId:
+        followUpParsedInputs.toolUseIds.length === 1
+          ? followUpParsedInputs.toolUseIds[0]
+          : undefined,
+      toolInput:
+        followUpParsedInputs.parsedInputs.length === 1
+          ? followUpParsedInputs.parsedInputs[0]
+          : undefined,
+      toolUseIds: followUpParsedInputs.toolUseIds,
+      toolInputs: followUpParsedInputs.parsedInputs,
       parallelActions: parsed.parallelActions,
       thoughts: parsed.thoughts,
       steps: parsed.steps

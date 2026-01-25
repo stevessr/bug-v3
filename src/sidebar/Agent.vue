@@ -29,8 +29,8 @@ const TARGET_TAB_STORAGE_KEY = 'ai-agent-target-tab-id-v1'
 const BYPASS_MODE_STORAGE_KEY = 'ai-agent-bypass-mode-v1'
 const bypassMode = ref(true)
 const lastUserInput = ref('')
-const lastToolUseId = ref<string | null>(null)
-const lastToolInput = ref<any>(null)
+const lastToolUseIds = ref<string[]>([])
+const lastToolInputs = ref<any[]>([])
 const lastParallelActions = ref(false)
 const pendingActionsAssistantId = ref<string | null>(null)
 const lastTabContext = ref<any>(null)
@@ -162,8 +162,8 @@ const saveSession = () => {
   const session = {
     pendingActions: pendingActions.value,
     pendingActionsAssistantId: pendingActionsAssistantId.value,
-    lastToolUseId: lastToolUseId.value,
-    lastToolInput: lastToolInput.value,
+    lastToolUseIds: lastToolUseIds.value,
+    lastToolInputs: lastToolInputs.value,
     lastParallelActions: lastParallelActions.value,
     lastUserInput: lastUserInput.value,
     lastChecklist: lastChecklist.value,
@@ -183,8 +183,20 @@ const loadSession = () => {
       typeof parsed?.pendingActionsAssistantId === 'string'
         ? parsed.pendingActionsAssistantId
         : null
-    lastToolUseId.value = typeof parsed?.lastToolUseId === 'string' ? parsed.lastToolUseId : null
-    lastToolInput.value = parsed?.lastToolInput ?? null
+    if (Array.isArray(parsed?.lastToolUseIds)) {
+      lastToolUseIds.value = parsed.lastToolUseIds.filter((id: unknown) => typeof id === 'string')
+    } else if (typeof parsed?.lastToolUseId === 'string') {
+      lastToolUseIds.value = [parsed.lastToolUseId]
+    } else {
+      lastToolUseIds.value = []
+    }
+    if (Array.isArray(parsed?.lastToolInputs)) {
+      lastToolInputs.value = parsed.lastToolInputs
+    } else if (parsed?.lastToolInput) {
+      lastToolInputs.value = [parsed.lastToolInput]
+    } else {
+      lastToolInputs.value = []
+    }
     lastParallelActions.value = parsed?.lastParallelActions !== false
     lastUserInput.value = typeof parsed?.lastUserInput === 'string' ? parsed.lastUserInput : ''
     lastChecklist.value = Array.isArray(parsed?.lastChecklist) ? parsed.lastChecklist : []
@@ -240,16 +252,27 @@ const updateStreamingEntry = (assistantId: string, type: 'thought' | 'step', tex
 const extractStreamSections = (raw: string) => {
   const sections: { thoughts: string[]; steps: string[] } = { thoughts: [], steps: [] }
   if (!raw) return sections
-  const matches = Array.from(raw.matchAll(/(^|\n)\s*(thoughts|steps|actions)\s*:\s*/gi))
+  const matches = Array.from(
+    raw.matchAll(/(^|\n)\s*(thoughts|steps|actions|思考|步骤|动作)\s*[:：]\s*/gi)
+  )
   if (matches.length === 0) return sections
   for (let i = 0; i < matches.length; i += 1) {
     const match = matches[i]
-    const key = match[2].toLowerCase()
+    const keyRaw = match[2].toLowerCase()
+    const key =
+      keyRaw === '思考'
+        ? 'thoughts'
+        : keyRaw === '步骤'
+          ? 'steps'
+          : keyRaw === '动作'
+            ? 'actions'
+            : keyRaw
     const start = (match.index ?? 0) + match[0].length
     const end = i + 1 < matches.length ? (matches[i + 1].index ?? raw.length) : raw.length
     const block = raw.slice(start, end)
     const items = block
       .split('\n')
+      .flatMap(line => line.split('·'))
       .map(line => line.replace(/^[-*+\d.、\s]+/, '').trim())
       .filter(Boolean)
     if (key === 'thoughts') sections.thoughts = items
@@ -262,6 +285,22 @@ const updateTimelineFromStream = (assistantId: string, raw: string) => {
   const { thoughts, steps } = extractStreamSections(raw)
   if (thoughts.length) updateStreamingEntry(assistantId, 'thought', thoughts.join(' · '))
   if (steps.length) updateStreamingEntry(assistantId, 'step', steps.join(' · '))
+}
+
+const applyStreamingUpdate = (
+  assistantId: string,
+  update: { message?: string; thoughts?: string[]; steps?: string[] }
+) => {
+  if (update.message) {
+    updateAssistantMessage(assistantId, update.message)
+    updateTimelineFromStream(assistantId, update.message)
+  }
+  if (update.thoughts?.length) {
+    updateStreamingEntry(assistantId, 'thought', update.thoughts.join(' · '))
+  }
+  if (update.steps?.length) {
+    updateStreamingEntry(assistantId, 'step', update.steps.join(' · '))
+  }
 }
 
 const applyFinalTimelineEntries = (assistantId: string, thoughts?: string[], steps?: string[]) => {
@@ -353,13 +392,13 @@ const retryFromMessage = async (message: AgentMessage) => {
   const idx = messages.value.findIndex(item => item.id === message.id)
   if (idx === -1) return
   messages.value = messages.value.slice(0, idx + 1)
-  pendingActions.value = []
-  actionResults.value = {}
-  pendingActionsAssistantId.value = null
-  lastToolUseId.value = null
-  lastToolInput.value = null
-  lastParallelActions.value = true
-  lastChecklist.value = []
+    pendingActions.value = []
+    actionResults.value = {}
+    pendingActionsAssistantId.value = null
+  lastToolUseIds.value = []
+  lastToolInputs.value = []
+    lastParallelActions.value = true
+    lastChecklist.value = []
   const keptIds = new Set(messages.value.map(item => item.id))
   const nextTimelines: Record<string, { collapsed: boolean; entries: any[] }> = {}
   for (const [key, value] of Object.entries(timelines.value)) {
@@ -378,7 +417,11 @@ const runActionsAndContinue = async () => {
     lastTabContext.value = await resolveTabContext(targetTabId.value)
     saveSession()
   }
-  while (pendingActions.value.length > 0 && lastToolUseId.value && lastToolInput.value) {
+  while (
+    pendingActions.value.length > 0 &&
+    lastToolUseIds.value.length > 0 &&
+    lastToolInputs.value.length > 0
+  ) {
     const results = (await runActions()) || []
     if (pendingActionsAssistantId.value) {
       addTimelineEntries(
@@ -421,19 +464,31 @@ const runActionsAndContinue = async () => {
         }
       }
     }
-  const followup = await runAgentFollowup(
+    const toolUses = lastToolUseIds.value
+      .map((id, index) => ({
+        id,
+        input: lastToolInputs.value[index]
+      }))
+      .filter(item => item.id && item.input)
+    if (toolUses.length === 0) {
+      updateAssistantMessage(
+        pendingActionsAssistantId.value as string,
+        '工具调用信息缺失，无法继续。',
+        '工具调用信息缺失，无法继续。'
+      )
+      break
+    }
+
+    const followup = await runAgentFollowup(
       lastUserInput.value,
-      lastToolUseId.value,
-      lastToolInput.value,
+      toolUses,
       results,
       settings.value,
       activeSubagent.value,
       { tab: lastTabContext.value || undefined },
       {
         onUpdate: update => {
-          if (!update.message) return
-          updateAssistantMessage(pendingActionsAssistantId.value as string, update.message)
-          updateTimelineFromStream(pendingActionsAssistantId.value as string, update.message)
+          applyStreamingUpdate(pendingActionsAssistantId.value as string, update)
         }
       }
     )
@@ -450,8 +505,20 @@ const runActionsAndContinue = async () => {
     }
     pendingActions.value = followup.actions || []
     actionResults.value = {}
-    lastToolUseId.value = followup.toolUseId || null
-    lastToolInput.value = followup.toolInput || null
+    if (followup.toolUseIds?.length) {
+      lastToolUseIds.value = followup.toolUseIds
+    } else if (followup.toolUseId) {
+      lastToolUseIds.value = [followup.toolUseId]
+    } else {
+      lastToolUseIds.value = []
+    }
+    if (followup.toolInputs?.length) {
+      lastToolInputs.value = followup.toolInputs
+    } else if (followup.toolInput) {
+      lastToolInputs.value = [followup.toolInput]
+    } else {
+      lastToolInputs.value = []
+    }
     lastParallelActions.value = followup.parallelActions !== false
     saveSession()
     if (pendingActionsAssistantId.value) {
@@ -544,8 +611,8 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
   pendingActions.value = []
   actionResults.value = {}
   pendingActionsAssistantId.value = null
-  lastToolUseId.value = null
-  lastToolInput.value = null
+  lastToolUseIds.value = []
+  lastToolInputs.value = []
   lastParallelActions.value = true
   lastChecklist.value = []
 
@@ -597,9 +664,7 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
     { tab: lastTabContext.value || undefined },
     {
       onUpdate: update => {
-        if (!update.message) return
-        updateAssistantMessage(assistantId, update.message)
-        updateTimelineFromStream(assistantId, update.message)
+        applyStreamingUpdate(assistantId, update)
       }
     }
   )
@@ -616,8 +681,20 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
   pendingActions.value = result.actions || []
   actionResults.value = {}
   pendingActionsAssistantId.value = assistantId
-  lastToolUseId.value = result.toolUseId || null
-  lastToolInput.value = result.toolInput || null
+  if (result.toolUseIds?.length) {
+    lastToolUseIds.value = result.toolUseIds
+  } else if (result.toolUseId) {
+    lastToolUseIds.value = [result.toolUseId]
+  } else {
+    lastToolUseIds.value = []
+  }
+  if (result.toolInputs?.length) {
+    lastToolInputs.value = result.toolInputs
+  } else if (result.toolInput) {
+    lastToolInputs.value = [result.toolInput]
+  } else {
+    lastToolInputs.value = []
+  }
   lastParallelActions.value = result.parallelActions !== false
   saveSession()
   applyFinalTimelineEntries(assistantId, result.thoughts, result.steps)
@@ -668,8 +745,8 @@ const clearMessages = () => {
   pendingActions.value = []
   actionResults.value = {}
   setTargetTabId(null)
-  lastToolUseId.value = null
-  lastToolInput.value = null
+  lastToolUseIds.value = []
+  lastToolInputs.value = []
   pendingActionsAssistantId.value = null
   timelines.value = {}
   if (typeof localStorage !== 'undefined') {

@@ -24,6 +24,7 @@ export interface McpToolsCache {
 
 // 工具缓存，避免重复请求
 const toolsCache = new Map<string, McpToolsCache>()
+const toolNameMap = new Map<string, { serverId: string; toolName: string }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 分钟缓存
 const REQUEST_TIMEOUT = 10000 // 10 秒超时
 
@@ -234,6 +235,7 @@ export function mcpToolToAnthropicTool(
   // serverId 是唯一的，避免服务名冲突
   const safeName = tool.name.replace(/[^a-zA-Z0-9_-]/g, '_')
   const prefixedName = `mcp__${serverId}__${safeName}`
+  toolNameMap.set(prefixedName, { serverId, toolName: tool.name })
 
   return {
     name: prefixedName,
@@ -252,13 +254,23 @@ export function mcpToolToAnthropicTool(
 export function parseMcpToolName(
   prefixedName: string
 ): { serverId: string; toolName: string } | null {
+  const cached = toolNameMap.get(prefixedName)
+  if (cached) return cached
+
   // 格式: mcp__serverId__toolName
-  const match = prefixedName.match(/^mcp__([^_]+)__(.+)$/)
-  if (!match) return null
+  if (!prefixedName.startsWith('mcp__')) return null
+  const rest = prefixedName.slice(5)
+  const sepIndex = rest.indexOf('__')
+  if (sepIndex <= 0) return null
+
+  const serverId = rest.slice(0, sepIndex)
+  const toolPart = rest.slice(sepIndex + 2)
+  if (!serverId || !toolPart) return null
 
   return {
-    serverId: match[1],
-    toolName: match[2].replace(/_/g, '.') // 恢复原始工具名中的点号
+    serverId,
+    // 兼容旧编码：将下划线还原为点号（可能对包含下划线的工具名不准确）
+    toolName: toolPart.replace(/_/g, '.')
   }
 }
 
@@ -278,7 +290,11 @@ export function findServerById(
 export function clearToolsCache(serverId?: string): void {
   if (serverId) {
     toolsCache.delete(serverId)
+    for (const [key, value] of toolNameMap.entries()) {
+      if (value.serverId === serverId) toolNameMap.delete(key)
+    }
   } else {
     toolsCache.clear()
+    toolNameMap.clear()
   }
 }
