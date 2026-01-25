@@ -64,6 +64,8 @@ export interface AppSettings {
   // Telegram WebM -> AVIF conversion backend
   telegramWebmToAvifEnabled?: boolean
   telegramWebmToAvifBackend?: string
+  // LinuxDo Credit 积分显示
+  enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
 }
 
 export interface EmojiGroup {

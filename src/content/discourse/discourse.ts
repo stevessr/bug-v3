@@ -12,6 +12,7 @@ import { initSubmenuInjector } from './utils/submenu-injector'
 import { initLinuxDoSeeking } from './seeking'
 import { initDiscourseRouterRefresh } from './utils/router-refresh'
 import { initUserSummarySummonButton } from './utils/user-summary-summon'
+import { initLinuxDoCredit } from './credit'
 
 export async function initDiscourse() {
   try {
@@ -132,6 +133,17 @@ export async function initDiscourse() {
       initUserSummarySummonButton()
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to initialize user summary summon button', e)
+    }
+
+    // LinuxDo Credit 积分浮窗
+    try {
+      const enableLinuxDoCredit = await requestSettingFromBackground('enableLinuxDoCredit')
+      if (enableLinuxDoCredit === true) {
+        initLinuxDoCredit()
+        console.log('[DiscourseOneClick] LinuxDo Credit widget enabled')
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableLinuxDoCredit setting', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

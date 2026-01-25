@@ -388,6 +388,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ linuxDoSeekingActionFilter: value })
   }
 
+  const updateEnableLinuxDoCredit = (value: boolean) => {
+    emojiStore.updateSettings({ enableLinuxDoCredit: value })
+  }
+
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -838,6 +842,7 @@ export default function useOptions() {
     updateLinuxDoSeekingRefreshInterval,
     updateLinuxDoSeekingPosition,
     updateLinuxDoSeekingActionFilter,
+    updateEnableLinuxDoCredit,
     // drag/drop - from draggable composable
     handleDragStart: draggable.handleDragStart,
     handleDrop: draggable.handleDrop,

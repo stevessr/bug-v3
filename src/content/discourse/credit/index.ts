@@ -1,0 +1,380 @@
+/**
+ * LinuxDo Credit 积分浮窗
+ * 显示 gamification_score 与 community_balance 的差值
+ * 基于 @Chenyme 的 credit.user.js 脚本
+ */
+
+const STORAGE_KEY = 'ldc_widget_pos'
+const REFRESH_INTERVAL = 60000
+
+interface CreditState {
+  communityBalance: number | null
+  gamificationScore: number | null
+  username: string | null
+  isDragging: boolean
+  tooltipContent: string
+}
+
+const state: CreditState = {
+  communityBalance: null,
+  gamificationScore: null,
+  username: null,
+  isDragging: false,
+  tooltipContent: '加载中...'
+}
+
+let shadowRoot: ShadowRoot | null = null
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
+const css = `
+  :host {
+    all: initial;
+  }
+  #ldc-mini {
+    position: fixed;
+    background: var(--secondary, #fff);
+    border: 1px solid var(--primary-low, #ddd);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 10px 14px;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary, #333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 36px;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    cursor: move;
+    user-select: none;
+  }
+  #ldc-mini:hover {
+    background: var(--d-hover, #f5f5f5);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+  #ldc-mini:active { transform: scale(0.98); }
+  #ldc-mini.loading {
+    min-width: 36px;
+    max-width: 36px;
+    padding: 10px 0;
+    color: var(--primary-medium, #999);
+    cursor: wait;
+    border-color: transparent;
+    background: var(--secondary, #fff);
+    opacity: 0.8;
+  }
+  #ldc-tooltip {
+    position: fixed;
+    background: var(--primary-very-high, #002B36);
+    color: var(--secondary, #FCF6E1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    z-index: 10001;
+    pointer-events: none;
+    white-space: pre;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    backdrop-filter: blur(4px);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 1px solid var(--primary-low, #ddd);
+  }
+  #ldc-mini.positive { color: var(--success, #4caf50); }
+  #ldc-mini.negative { color: var(--danger, #f44336); }
+  #ldc-mini.neutral { color: var(--primary-medium, #999); }
+`
+
+function getCsrfToken(): string {
+  const meta = document.querySelector('meta[name="csrf-token"]')
+  return meta ? (meta as HTMLMetaElement).content : ''
+}
+
+function loadPosition(): { bottom: string; right: string } {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('[LDCredit] Failed to load position', e)
+  }
+  return { bottom: '20px', right: '20px' }
+}
+
+function savePosition(pos: { bottom: string; right: string }) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pos))
+  } catch (e) {
+    console.warn('[LDCredit] Failed to save position', e)
+  }
+}
+
+async function request<T>(url: string): Promise<T> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json, text/javascript, */*; q=0.01',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+
+  const csrfToken = getCsrfToken()
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken
+  }
+
+  if (url.includes('linux.do')) {
+    headers['Referer'] = 'https://linux.do/'
+    headers['Discourse-Logged-In'] = 'true'
+  } else if (url.includes('credit.linux.do')) {
+    headers['Referer'] = 'https://credit.linux.do/home'
+  }
+
+  const isSameOrigin = url.startsWith(window.location.origin)
+
+  if (isSameOrigin) {
+    const res = await fetch(url, {
+      headers: headers,
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  }
+
+  // 跨域请求需要通过 background 或使用 no-cors（可能受限）
+  // 浏览器扩展可以通过声明 host_permissions 来直接访问
+  const res = await fetch(url, {
+    headers: headers,
+    credentials: 'include'
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+function updateDisplay() {
+  if (!shadowRoot) return
+  const widget = shadowRoot.getElementById('ldc-mini')
+  const tooltip = shadowRoot.getElementById('ldc-tooltip')
+  if (!widget) return
+
+  if (state.gamificationScore !== null && state.communityBalance !== null) {
+    const diff = state.gamificationScore - state.communityBalance
+    const sign = diff >= 0 ? '+' : ''
+    widget.textContent = `${sign}${diff.toFixed(2)}`
+    state.tooltipContent = `仅供参考，可能有误差！\n当前分：${state.gamificationScore.toFixed(2)}\n基准值：${state.communityBalance.toFixed(2)}`
+    if (tooltip && tooltip.style.opacity === '1') tooltip.textContent = state.tooltipContent
+    widget.className = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral'
+    widget.style.removeProperty('cursor')
+  } else if (state.communityBalance !== null) {
+    widget.textContent = '·'
+    widget.className = 'loading'
+    state.tooltipContent = '仅供参考，可能有误差！\n正在获取实时积分...'
+  }
+}
+
+function handleError(msg: string) {
+  if (!shadowRoot) return
+  const widget = shadowRoot.getElementById('ldc-mini')
+  if (widget) {
+    widget.textContent = '!'
+    state.tooltipContent = `出错啦！\n${msg}\n(请检查是否已登录相关站点)`
+    widget.classList.add('negative')
+    if (widget.classList.contains('loading')) widget.classList.remove('loading')
+  }
+}
+
+async function fetchGamificationByUsername() {
+  if (!state.username) return
+  try {
+    // 尝试 Card 接口
+    const cardData = await request<{ user?: { gamification_score?: number } }>(
+      `https://linux.do/u/${state.username}/card.json`
+    )
+    if (cardData?.user?.gamification_score !== undefined) {
+      state.gamificationScore = cardData.user.gamification_score
+      updateDisplay()
+      return
+    }
+    // 兜底：完整用户资料接口
+    const profileData = await request<{ user?: { gamification_score?: number } }>(
+      `https://linux.do/u/${state.username}.json`
+    )
+    if (profileData?.user?.gamification_score !== undefined) {
+      state.gamificationScore = profileData.user.gamification_score
+      updateDisplay()
+    }
+  } catch (e) {
+    console.error('[LDCredit] Fetch gamification error', e)
+  }
+}
+
+async function fetchData() {
+  try {
+    const creditData = await request<{
+      data?: {
+        'community-balance'?: string | number
+        community_balance?: string | number
+        username?: string
+        nickname?: string
+      }
+    }>('https://credit.linux.do/api/v1/oauth/user-info')
+
+    if (creditData?.data) {
+      state.communityBalance = parseFloat(
+        String(creditData.data['community-balance'] || creditData.data.community_balance || 0)
+      )
+      state.username = creditData.data.username || creditData.data.nickname || null
+      updateDisplay()
+      if (state.username) await fetchGamificationByUsername()
+    }
+  } catch (e) {
+    console.error('[LDCredit] Fetch balance error', e)
+    handleError('Credit API 异常')
+  }
+}
+
+function createWidget() {
+  // 创建 Shadow DOM host
+  const host = document.createElement('div')
+  host.id = 'ldc-credit-host'
+  document.body.appendChild(host)
+
+  shadowRoot = host.attachShadow({ mode: 'open' })
+
+  // 注入样式
+  const style = document.createElement('style')
+  style.textContent = css
+  shadowRoot.appendChild(style)
+
+  // 创建 widget
+  const widget = document.createElement('div')
+  widget.id = 'ldc-mini'
+  widget.className = 'loading'
+  widget.textContent = '···'
+
+  // 创建 tooltip
+  const tooltip = document.createElement('div')
+  tooltip.id = 'ldc-tooltip'
+
+  // 设置位置
+  const savedPos = loadPosition()
+  Object.assign(widget.style, savedPos)
+
+  shadowRoot.appendChild(widget)
+  shadowRoot.appendChild(tooltip)
+
+  // Tooltip 显示/隐藏
+  widget.addEventListener('mouseenter', () => {
+    if (state.isDragging) return
+    const rect = widget.getBoundingClientRect()
+    tooltip.textContent = state.tooltipContent
+    const tooltipHeight = 80
+    if (rect.top > tooltipHeight + 10) {
+      tooltip.style.top = 'auto'
+      tooltip.style.bottom = window.innerHeight - rect.top + 8 + 'px'
+    } else {
+      tooltip.style.bottom = 'auto'
+      tooltip.style.top = rect.bottom + 8 + 'px'
+    }
+    tooltip.style.left = 'auto'
+    tooltip.style.right = window.innerWidth - rect.right + 'px'
+    tooltip.style.opacity = '1'
+  })
+
+  widget.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0'
+  })
+
+  // 拖拽功能
+  let startX: number, startY: number, startRight: number, startBottom: number
+
+  widget.addEventListener('mousedown', e => {
+    if (e.button !== 0) return
+    state.isDragging = false
+    startX = e.clientX
+    startY = e.clientY
+    const rect = widget.getBoundingClientRect()
+    startRight = window.innerWidth - rect.right
+    startBottom = window.innerHeight - rect.bottom
+    e.preventDefault()
+    tooltip.style.opacity = '0'
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      state.isDragging = true
+      const deltaX = startX - moveEvent.clientX
+      const deltaY = startY - moveEvent.clientY
+      widget.style.right = `${Math.max(0, Math.min(window.innerWidth - rect.width, startRight + deltaX))}px`
+      widget.style.bottom = `${Math.max(0, Math.min(window.innerHeight - rect.height, startBottom + deltaY))}px`
+      widget.style.top = 'auto'
+      widget.style.left = 'auto'
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      if (state.isDragging) {
+        savePosition({ right: widget.style.right, bottom: widget.style.bottom })
+        setTimeout(() => (state.isDragging = false), 50)
+      }
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  })
+
+  // 点击刷新
+  widget.addEventListener('click', () => {
+    if (!state.isDragging) {
+      widget.className = 'loading'
+      widget.textContent = '···'
+      state.tooltipContent = '刷新中...'
+      const t = shadowRoot?.getElementById('ldc-tooltip')
+      if (t && t.style.opacity === '1') t.textContent = state.tooltipContent
+      fetchData()
+    }
+  })
+}
+
+let creditInitialized = false
+
+export async function initLinuxDoCredit() {
+  // 检查是否在 linux.do 或 credit.linux.do 域名
+  const hostname = window.location.hostname
+  if (!hostname.includes('linux.do')) {
+    return
+  }
+
+  if (creditInitialized || document.getElementById('ldc-credit-host')) {
+    console.warn('[LDCredit] Already initialized, skip')
+    return
+  }
+  creditInitialized = true
+
+  createWidget()
+
+  // 延迟首次获取
+  setTimeout(fetchData, 500)
+
+  // 定期刷新
+  refreshInterval = setInterval(fetchData, REFRESH_INTERVAL)
+
+  console.log('[LDCredit] Initialized')
+}
+
+export function destroyLinuxDoCredit() {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+  const host = document.getElementById('ldc-credit-host')
+  if (host) host.remove()
+  creditInitialized = false
+  shadowRoot = null
+  console.log('[LDCredit] Destroyed')
+}

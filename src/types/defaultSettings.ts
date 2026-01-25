@@ -53,5 +53,7 @@ export const defaultSettings: AppSettings = {
   telegramWebmToAvifBackend: '',
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
-  discourseRouterRefreshInterval: 30000 // 默认 30 秒刷新一次
+  discourseRouterRefreshInterval: 30000, // 默认 30 秒刷新一次
+  // LinuxDo Credit 积分显示
+  enableLinuxDoCredit: false // 默认禁用 LinuxDo Credit 积分浮窗
 }

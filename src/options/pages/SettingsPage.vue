@@ -51,6 +51,7 @@ const {
   updateLinuxDoSeekingRefreshInterval,
   updateLinuxDoSeekingPosition,
   updateLinuxDoSeekingActionFilter,
+  updateEnableLinuxDoCredit,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -251,6 +252,7 @@ onMounted(async () => {
               @update:linuxDoSeekingRefreshInterval="updateLinuxDoSeekingRefreshInterval"
               @update:linuxDoSeekingPosition="updateLinuxDoSeekingPosition"
               @update:linuxDoSeekingActionFilter="updateLinuxDoSeekingActionFilter"
+              @update:enableLinuxDoCredit="updateEnableLinuxDoCredit"
             />
           </div>
         </a-tab-pane>

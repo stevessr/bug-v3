@@ -18,7 +18,8 @@ const emit = defineEmits([
   'update:linuxDoSeekingNtfyServer',
   'update:linuxDoSeekingRefreshInterval',
   'update:linuxDoSeekingPosition',
-  'update:linuxDoSeekingActionFilter'
+  'update:linuxDoSeekingActionFilter',
+  'update:enableLinuxDoCredit'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -81,6 +82,15 @@ const handleEnter = () => {
         label="启用 LinuxDo 追觅"
         description="监控 Linux.do 用户活动，在侧边栏显示实时动态（仅在 linux.do 站点生效）"
       />
+
+      <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <SettingSwitch
+          :model-value="getSetting('enableLinuxDoCredit', false)"
+          @update:model-value="emit('update:enableLinuxDoCredit', $event)"
+          label="启用 LinuxDo Credit 积分浮窗"
+          description="在页面右下角显示今日积分变化（基准值来自 credit.linux.do，当前分来自 linux.do）"
+        />
+      </div>
     </div>
 
     <!-- 配置区域（仅在启用时显示） -->
