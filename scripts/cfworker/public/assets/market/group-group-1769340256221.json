@@ -1,0 +1,2326 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-01-25T11:24:23.789Z",
+  "group": {
+    "id": "group-1769340256221",
+    "name": "X 第三十八弹",
+    "icon": "https://linux.do/uploads/default/original/4X/9/f/a/9faa5b5fee7831703013d0245ce43e003272ad89.avif",
+    "order": 93
+  },
+  "id": "group-1769340256221",
+  "name": "X 第三十八弹",
+  "icon": "https://linux.do/uploads/default/original/4X/9/f/a/9faa5b5fee7831703013d0245ce43e003272ad89.avif",
+  "order": 93,
+  "emojis": [
+    {
+      "id": "emoji-1769340125093-1jyvki",
+      "packet": 0,
+      "name": "G_bse13WcAAz6er.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/2/4/224e888a6f30d9e593b4d04578ca331cf769c9b5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/2/4/224e888a6f30d9e593b4d04578ca331cf769c9b5.avif",
+      "width": 1200,
+      "height": 1523,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769340125092-0bpiqp",
+      "packet": 0,
+      "name": "G_XoFMIbUAAvtJQ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/2/d/f2d49507a1cbc50e4261d3da9b3bb037b0844a09.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/2/d/f2d49507a1cbc50e4261d3da9b3bb037b0844a09.avif",
+      "width": 1024,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769340125091-64kc6e",
+      "packet": 0,
+      "name": "G_WX9lNWwAAXxt8.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/0/fa0f3d84354768439671dd32c83b85ec4f805feb.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/a/0/fa0f3d84354768439671dd32c83b85ec4f805feb.avif",
+      "width": 1733,
+      "height": 1591,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769340125090-9khyml",
+      "packet": 0,
+      "name": "G_ZhwgyacAAAMH4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/9/f/a9f245615af0770366c4d5f8d9f051700ddc957d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/9/f/a9f245615af0770366c4d5f8d9f051700ddc957d.avif",
+      "width": 1536,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769340125089-tw5vp5",
+      "packet": 0,
+      "name": "G_ZTGgfbAAAo_Tn.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/d/4/2d40d675f549b9073bd940cc2bc2e99017e3ab2a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/d/4/2d40d675f549b9073bd940cc2bc2e99017e3ab2a.avif",
+      "width": 1500,
+      "height": 1250,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339964911-vr5xci",
+      "packet": 0,
+      "name": "G_WHdTzaUAIfu3n.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/d/0/0d006d99591f2b64a5951e3d1e99e4c827af9a00.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/d/0/0d006d99591f2b64a5951e3d1e99e4c827af9a00.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339964910-ay2f0n",
+      "packet": 0,
+      "name": "G_adXSKXYAAqmCL.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/d/3/3d392a7d68dc78af7cecaeeb392f045a52488b83.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/d/3/3d392a7d68dc78af7cecaeeb392f045a52488b83.avif",
+      "width": 1254,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339964909-ivboy8",
+      "packet": 0,
+      "name": "G_WjkiLXMAA_EhX.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/d/b/0db9d81c4e2a2da7e5c0cbaf60051a42c6ea7de2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/d/b/0db9d81c4e2a2da7e5c0cbaf60051a42c6ea7de2.avif",
+      "width": 2480,
+      "height": 3508,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339964908-7lwb9w",
+      "packet": 0,
+      "name": "G_bjKbbWkAA3GWk.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/e/d/0ed3289705b7e18c977378ec5ca313f439100f27.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/e/d/0ed3289705b7e18c977378ec5ca313f439100f27.avif",
+      "width": 4096,
+      "height": 2083,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339932083-i099lr",
+      "packet": 0,
+      "name": "G_bTcRbWUAAa4Uz.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/4/e/04eb1a4d5512d9f569f295ac70a03d17c8b6c01c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/4/e/04eb1a4d5512d9f569f295ac70a03d17c8b6c01c.avif",
+      "width": 3624,
+      "height": 2591,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339932082-qhk4na",
+      "packet": 0,
+      "name": "G_XOjD-acAAmP0F.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/0/d/40d0826b4f521769cb44af13e523500864ed54ef.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/0/d/40d0826b4f521769cb44af13e523500864ed54ef.avif",
+      "width": 4093,
+      "height": 2894,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339917860-4jm2pz",
+      "packet": 0,
+      "name": "G_bVkrmaEAAZBGw.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/8/2/f82c5c8e54ac050dc13b571641478b5104a31598.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/8/2/f82c5c8e54ac050dc13b571641478b5104a31598.avif",
+      "width": 1240,
+      "height": 1754,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339917858-dr62pe",
+      "packet": 0,
+      "name": "G_YestJbAAAAxTo.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/4/e/74ec69a02f7f0f1b321bb51213df02f71da6f3ca.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/4/e/74ec69a02f7f0f1b321bb51213df02f71da6f3ca.avif",
+      "width": 1378,
+      "height": 2039,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339911982-foju41",
+      "packet": 0,
+      "name": "G_WK1p7bsAAPUbV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/4/864be198d512854691134116a15d5f2f13299aa6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/6/4/864be198d512854691134116a15d5f2f13299aa6.avif",
+      "width": 2000,
+      "height": 1000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339906357-jgu342",
+      "packet": 0,
+      "name": "G_bXn7wWAAAVKj6.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/b/e/9be6a3ee42cd4635a81f71fcea2957f62d9b3fbe.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/b/e/9be6a3ee42cd4635a81f71fcea2957f62d9b3fbe.avif",
+      "width": 1482,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339906356-i8qtf2",
+      "packet": 0,
+      "name": "G_ee-nGaMAAtugK.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/4/d/a4db84448abf34ff588f5fb21b217ef8b2e8ae6f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/4/d/a4db84448abf34ff588f5fb21b217ef8b2e8ae6f.avif",
+      "width": 2717,
+      "height": 4006,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339906355-vhnvva",
+      "packet": 0,
+      "name": "G_bF1LPacAE-xIF.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/e/3/9e3f3e671199da846967b1d4abb4346764107b4a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/e/3/9e3f3e671199da846967b1d4abb4346764107b4a.avif",
+      "width": 1853,
+      "height": 1652,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339906354-fuim8g",
+      "packet": 0,
+      "name": "G_alRIfWQAApbOz.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/2/f/e2f40c92da9bb68bdbfb6fc0e7c60a5a3ff57990.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/2/f/e2f40c92da9bb68bdbfb6fc0e7c60a5a3ff57990.avif",
+      "width": 4096,
+      "height": 3804,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339906353-9i4cfx",
+      "packet": 0,
+      "name": "G_XvP03bAAExMv8.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/a/9/ca933252cb84167792f532f4cc5ee5dc5a72fa35.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/a/9/ca933252cb84167792f532f4cc5ee5dc5a72fa35.avif",
+      "width": 1408,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339864170-jfdz3b",
+      "packet": 0,
+      "name": "G_bG4b6bEAAOCv5.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/7/4/e74f9b3dfb91b291daf1cc97bfbffbb70abace79.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/7/4/e74f9b3dfb91b291daf1cc97bfbffbb70abace79.avif",
+      "width": 1295,
+      "height": 1812,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339864169-hhru1l",
+      "packet": 0,
+      "name": "G_anmI9bAAAp3tq.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/a/f6ac424db709cb060d7096f08cdfffa0bbe04135.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/6/a/f6ac424db709cb060d7096f08cdfffa0bbe04135.avif",
+      "width": 1416,
+      "height": 2000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339858072-2spzes",
+      "packet": 0,
+      "name": "G_a383sbsAADxsS.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/8/c/08c869fc06def8d32694780d4ea922d03458f6c1.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/8/c/08c869fc06def8d32694780d4ea922d03458f6c1.avif",
+      "width": 1000,
+      "height": 1000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339853846-zyz0j9",
+      "packet": 0,
+      "name": "G_VjalLa8AACvUU.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/e/f/defb9a58470297e13febfbb8ebf353af379e78f9.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/e/f/defb9a58470297e13febfbb8ebf353af379e78f9.avif",
+      "width": 1907,
+      "height": 2990,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339853845-09j502",
+      "packet": 0,
+      "name": "G_YbZIQbAAMuTJY.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/6/2/762d0617d48e35da6cd0461a75d6a12fd2834d53.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/6/2/762d0617d48e35da6cd0461a75d6a12fd2834d53.avif",
+      "width": 1792,
+      "height": 2304,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339842804-p5wapt",
+      "packet": 0,
+      "name": "G_atqkjXAAAdCSw.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/3/7/13749e651a06aa469cf655294c8236ae414119a7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/3/7/13749e651a06aa469cf655294c8236ae414119a7.avif",
+      "width": 1166,
+      "height": 1267,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339842803-a81zn9",
+      "packet": 0,
+      "name": "G_W_BEmbAAcTRJD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/b/3/2b3869e3182118e05fe5bc9cccb8cc8a9118f53b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/b/3/2b3869e3182118e05fe5bc9cccb8cc8a9118f53b.avif",
+      "width": 1551,
+      "height": 1874,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339842802-90hgyk",
+      "packet": 0,
+      "name": "G_fNpYMbgAAB1HB.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/1/f/61f2b4327452c8b0f0d5534b2f05c3b6315ba45b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/1/f/61f2b4327452c8b0f0d5534b2f05c3b6315ba45b.avif",
+      "width": 1200,
+      "height": 1600,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339842801-7pen51",
+      "packet": 0,
+      "name": "G_V43koWcAA5Tkt.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/9/e/29ecc4d122c7da9946ab0e0b0e5d8371947006d6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/9/e/29ecc4d122c7da9946ab0e0b0e5d8371947006d6.avif",
+      "width": 2894,
+      "height": 4093,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339842799-7tvqih",
+      "packet": 0,
+      "name": "G_boNxabEAAKIHM.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/3/4/034751308768b95040b26fed53cf0a788b0e8575.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/3/4/034751308768b95040b26fed53cf0a788b0e8575.avif",
+      "width": 2000,
+      "height": 2931,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339802903-7fecdd",
+      "packet": 0,
+      "name": "G_bLeLMbgAElhgt.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/d/b/0db9806f5f03200a8f5202c9123da0d3452b8847.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/d/b/0db9806f5f03200a8f5202c9123da0d3452b8847.avif",
+      "width": 1602,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339802902-edgleq",
+      "packet": 0,
+      "name": "G_VzbsmbAAUkwfZ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/3/d/63d5984cbbd312d33faa7ebaa70a2db6363bcea2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/3/d/63d5984cbbd312d33faa7ebaa70a2db6363bcea2.avif",
+      "width": 1200,
+      "height": 1400,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339802901-cx72tu",
+      "packet": 0,
+      "name": "G_aroMtbAAEWBM-.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/4/7/94775264cea74dd0e0e4112639d6a50b8e6cfdcc.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/4/7/94775264cea74dd0e0e4112639d6a50b8e6cfdcc.avif",
+      "width": 1423,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339792170-kgp9t0",
+      "packet": 0,
+      "name": "G_asvt3XgAEpR_r.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/0/7/307e05bd45ae5656252eba7a9179a7ab16520615.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/0/7/307e05bd45ae5656252eba7a9179a7ab16520615.avif",
+      "width": 2000,
+      "height": 2000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339792166-2k1b36",
+      "packet": 0,
+      "name": "G_WbvzfaoAAbhHW.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/5/d/05d1ca05de30901efce7dcf0600798b51747262f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/5/d/05d1ca05de30901efce7dcf0600798b51747262f.avif",
+      "width": 1322,
+      "height": 1080,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339778951-raaytw",
+      "packet": 0,
+      "name": "G_WjLjqakAADn6q.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/7/8/978bf40e901c4201be9f4710d81c5e4b2706c34e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/7/8/978bf40e901c4201be9f4710d81c5e4b2706c34e.avif",
+      "width": 900,
+      "height": 1100,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339778948-ekeeqh",
+      "packet": 0,
+      "name": "G_asMOfa0AEjPkF.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/7/0/2701a758cdaa9295d783cbb14ad99e4426b780d7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/7/0/2701a758cdaa9295d783cbb14ad99e4426b780d7.avif",
+      "width": 1704,
+      "height": 2392,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339778944-hsuvve",
+      "packet": 0,
+      "name": "G_XNeEGbAAEEqTD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/4/f/34f115129fdf128fb866d36305092e239aec064d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/4/f/34f115129fdf128fb866d36305092e239aec064d.avif",
+      "width": 2792,
+      "height": 2461,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339778940-2ebg6b",
+      "packet": 0,
+      "name": "G_W0eZTa4AAj01j.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/e/9/1e95378f90a786043797f5f272f231b7605e8a0b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/e/9/1e95378f90a786043797f5f272f231b7605e8a0b.avif",
+      "width": 2295,
+      "height": 3300,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339778934-vn0j4g",
+      "packet": 0,
+      "name": "G_WYXNRbAAAy193.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/a/a/daa871f549a2b029fed0a4a24b9e12f682826c07.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/a/a/daa871f549a2b029fed0a4a24b9e12f682826c07.avif",
+      "width": 1154,
+      "height": 1289,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339735911-thdrgq",
+      "packet": 0,
+      "name": "G_UQnoWbAAEFhVm.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/6/b/26b02113a73a927eb0c475ae21e3c85917878515.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/6/b/26b02113a73a927eb0c475ae21e3c85917878515.avif",
+      "width": 1024,
+      "height": 524,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339735910-z0i8k2",
+      "packet": 0,
+      "name": "G_XoJmBWIAA83uj.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/4/a/c4a78d105a4356865e6d52b3985226725586fec6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/4/a/c4a78d105a4356865e6d52b3985226725586fec6.avif",
+      "width": 1024,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339735909-yt641j",
+      "packet": 0,
+      "name": "G_ZMyWfbAAAe5X4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/d/1/8d1cd1a62db82b3dc7bd8d10a4bd4beefe8b33cc.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/d/1/8d1cd1a62db82b3dc7bd8d10a4bd4beefe8b33cc.avif",
+      "width": 2048,
+      "height": 2020,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339735908-ou8dxq",
+      "packet": 0,
+      "name": "G_cqUmEakAAXIyN.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/c/d/3cdbeeda4850a8a2c2c26b64a5a0816a56b8a59b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/c/d/3cdbeeda4850a8a2c2c26b64a5a0816a56b8a59b.avif",
+      "width": 3161,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339735907-zczus2",
+      "packet": 0,
+      "name": "G_YSGdibAAEgFEc.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/9/2/992ed383cd47bef0b495b5b8d54ce636ff7bd796.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/9/2/992ed383cd47bef0b495b5b8d54ce636ff7bd796.avif",
+      "width": 1766,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339715088-9sn0j8",
+      "packet": 0,
+      "name": "G_ZVB6nbAAUru2E.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/0/1/80137e6cb013ee7c2082f237fdc6924938b90cb4.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/0/1/80137e6cb013ee7c2082f237fdc6924938b90cb4.avif",
+      "width": 1561,
+      "height": 2000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339715086-a7i585",
+      "packet": 0,
+      "name": "G_eDgj7bMAA1yuV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/9/e/69e7a1db109bd08f459f171df79eba3adf4b0838.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/9/e/69e7a1db109bd08f459f171df79eba3adf4b0838.avif",
+      "width": 848,
+      "height": 1248,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339715084-py7sek",
+      "packet": 0,
+      "name": "G_bHIvcaYAAUAFV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/c/1/1c1c1dab50119383d8cfc8ef7d1b2ab584a7601d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/c/1/1c1c1dab50119383d8cfc8ef7d1b2ab584a7601d.avif",
+      "width": 1523,
+      "height": 1778,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339707165-50sd9g",
+      "packet": 0,
+      "name": "G_Zyjw9XsAEy_Pa.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/d/e/3de29f30a634883a22945249c773e64a1f07d166.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/d/e/3de29f30a634883a22945249c773e64a1f07d166.avif",
+      "width": 1508,
+      "height": 1507,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339707164-895hmo",
+      "packet": 0,
+      "name": "G_VknshaAAAKOpv.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/2/4/324137e22d272b726e5c1f0386a2dad1411ce6e3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/2/4/324137e22d272b726e5c1f0386a2dad1411ce6e3.avif",
+      "width": 1300,
+      "height": 887,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339677570-2ulycz",
+      "packet": 0,
+      "name": "G_agJmSWcAAwTjC.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/f/f/2ffc5e5782c391b229b28550191cfe96c2d3922a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/f/f/2ffc5e5782c391b229b28550191cfe96c2d3922a.avif",
+      "width": 2480,
+      "height": 3508,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339677567-8a5f63",
+      "packet": 0,
+      "name": "G_XulYAXQAAXUbp.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/1/b/61b5c834083d225a155c2d1bc7ed007e044fa901.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/1/b/61b5c834083d225a155c2d1bc7ed007e044fa901.avif",
+      "width": 1020,
+      "height": 744,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339677563-sa9h6p",
+      "packet": 0,
+      "name": "G_ZPngtXQAAK3Di.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/c/5/0c5135ddbb46605c4e64b110b9e851d8b1f248c5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/c/5/0c5135ddbb46605c4e64b110b9e851d8b1f248c5.avif",
+      "width": 1771,
+      "height": 1771,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339667629-79mvj8",
+      "packet": 0,
+      "name": "G_ad8WKXgAAWmAu.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/4/6/446e6ab8a6fb0dcead32621865571ca9683c750f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/4/6/446e6ab8a6fb0dcead32621865571ca9683c750f.avif",
+      "width": 1448,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339667625-86wnpk",
+      "packet": 0,
+      "name": "G-68tn8X0AEQ8ci.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/9/3/f937e1152035daf3f5c7b4b066e87b1913bd9a46.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/9/3/f937e1152035daf3f5c7b4b066e87b1913bd9a46.avif",
+      "width": 2407,
+      "height": 1764,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339652749-4fsa7j",
+      "packet": 0,
+      "name": "G_bBlqVXEAIEMo0.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/b/4/6b4f467146103a0aad878f5178dbe1ba856171a7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/b/4/6b4f467146103a0aad878f5178dbe1ba856171a7.avif",
+      "width": 1162,
+      "height": 1511,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339652746-yrfs8x",
+      "packet": 0,
+      "name": "G_VktKzbAAE501m.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/2/d/92df8bd4bd21bf0a2b9823c2f5bb979df2e20dab.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/2/d/92df8bd4bd21bf0a2b9823c2f5bb979df2e20dab.avif",
+      "width": 1000,
+      "height": 1700,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339652742-k2iyum",
+      "packet": 0,
+      "name": "G_XDdZLbQAAD0hm.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/5/2/e52cc45933ca37a9cd8e058aa3d2186b0bfef1b5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/5/2/e52cc45933ca37a9cd8e058aa3d2186b0bfef1b5.avif",
+      "width": 2048,
+      "height": 1288,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339645093-jff495",
+      "packet": 0,
+      "name": "G_cf8LqbAAAct_z.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/b/6/7b609302e045f7232a0584bf27dfe9d9481240eb.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/b/6/7b609302e045f7232a0584bf27dfe9d9481240eb.avif",
+      "width": 1270,
+      "height": 834,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339645091-jn8ta7",
+      "packet": 0,
+      "name": "G_RTdjNXEAAVgXN.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/6/3/963f626846a1dce023e09e3cd84548b9d7600ad6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/6/3/963f626846a1dce023e09e3cd84548b9d7600ad6.avif",
+      "width": 1980,
+      "height": 1840,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339613915-e048hy",
+      "packet": 0,
+      "name": "G_YOOFhaoAAHLjv.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/4/0/44075a4cc634816b73ff02c6d94add2744ae2888.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/4/0/44075a4cc634816b73ff02c6d94add2744ae2888.avif",
+      "width": 2300,
+      "height": 1660,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339613914-9g660s",
+      "packet": 0,
+      "name": "G_bbsc7bIAEzEUU.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/4/4/944463ef32ef1369e9964a39e2261128a182db09.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/4/4/944463ef32ef1369e9964a39e2261128a182db09.avif",
+      "width": 919,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339613912-y92mr7",
+      "packet": 0,
+      "name": "G_c1Cg8aoAAZ2ui.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/c/d/0cdccf0c6d93521ffcb2562d5d6edaec0fa38362.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/c/d/0cdccf0c6d93521ffcb2562d5d6edaec0fa38362.avif",
+      "width": 768,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339597074-pitxam",
+      "packet": 0,
+      "name": "G_YL44ea0AAZzXl.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/8/0/a80e45fce5c618ddc02d897be962f0ecb1b7a5f4.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/8/0/a80e45fce5c618ddc02d897be962f0ecb1b7a5f4.avif",
+      "width": 849,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339597072-2l7njx",
+      "packet": 0,
+      "name": "G_eqBJba4AAQiWh.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/6/9/169993fe851a102a41183fcc660dfaa7f895ffc1.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/6/9/169993fe851a102a41183fcc660dfaa7f895ffc1.avif",
+      "width": 1448,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339591564-f5osam",
+      "packet": 0,
+      "name": "G_afg_lWAAEo_q4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/f/5/2f5d7328bb3b7b5072f5f5f3c79b0bcf0aa02e90.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/f/5/2f5d7328bb3b7b5072f5f5f3c79b0bcf0aa02e90.avif",
+      "width": 949,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339591561-u6gn3u",
+      "packet": 0,
+      "name": "G_cvHWyawAErLwE.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/5/c/75c9c88598da339ea2f6242947c2c0b5a73299a0.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/5/c/75c9c88598da339ea2f6242947c2c0b5a73299a0.avif",
+      "width": 3277,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339591557-olnn6h",
+      "packet": 0,
+      "name": "G_azisIbMAAtyRT.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/2/7/027a95cb4457903625403d69c936a41a9def6e7d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/2/7/027a95cb4457903625403d69c936a41a9def6e7d.avif",
+      "width": 1052,
+      "height": 744,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339583053-vkrkap",
+      "packet": 0,
+      "name": "G_ZYWdbbAAEAMDo.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/a/0/6a01d666019a7ecabcb585a3942bf9d9ac18178f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/a/0/6a01d666019a7ecabcb585a3942bf9d9ac18178f.avif",
+      "width": 1200,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339583052-8lyw44",
+      "packet": 0,
+      "name": "G_VH0TZbAAIwsR-.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/e/b/5eba49ce150af7b8a1b778137b00c7a40aa0e77e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/e/b/5eba49ce150af7b8a1b778137b00c7a40aa0e77e.avif",
+      "width": 2000,
+      "height": 769,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339555244-kqtv14",
+      "packet": 0,
+      "name": "G_bM1MybUAAxtna.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/e/2/1e27562a528a9ff73c707d3e485fe3e307b061ff.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/e/2/1e27562a528a9ff73c707d3e485fe3e307b061ff.avif",
+      "width": 2818,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339555243-fs9814",
+      "packet": 0,
+      "name": "G_aAcmGbgAELvWc.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/4/2/942183e36a40d6d579a0f0fd21623076a3cb9f9e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/4/2/942183e36a40d6d579a0f0fd21623076a3cb9f9e.avif",
+      "width": 1627,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339555242-ylvvvh",
+      "packet": 0,
+      "name": "G_Uv9mwWgAAf6zk.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/e/e/feecddd7dee498435d3f003aa8266e467305a7cc.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/e/e/feecddd7dee498435d3f003aa8266e467305a7cc.avif",
+      "width": 1600,
+      "height": 720,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536689-sc7gzf",
+      "packet": 0,
+      "name": "G_aWKmqbAAg79de.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/0/8/0089e022f63e5ec24bec3d136e31a6b45a282610.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/0/8/0089e022f63e5ec24bec3d136e31a6b45a282610.avif",
+      "width": 2799,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536688-w108sl",
+      "packet": 0,
+      "name": "G_aEycUaYAACN98.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/f/b/5fb16d540ba487752f1759265a8d7487b00ef8fd.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/f/b/5fb16d540ba487752f1759265a8d7487b00ef8fd.avif",
+      "width": 1632,
+      "height": 2912,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536687-p9cprt",
+      "packet": 0,
+      "name": "G_VhocjbAAkmYMJ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/0/d/d0d58484042d9c9aba56113b5dd5754df9b75a8b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/0/d/d0d58484042d9c9aba56113b5dd5754df9b75a8b.avif",
+      "width": 1448,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536686-r4ahk7",
+      "packet": 0,
+      "name": "G_VzG_MWgAElVfL.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/4/a/14a66b1ef5d1d43fdba3ca4d96ac1964a08ff95c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/4/a/14a66b1ef5d1d43fdba3ca4d96ac1964a08ff95c.avif",
+      "width": 1616,
+      "height": 2038,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536685-tcn8p9",
+      "packet": 0,
+      "name": "G_a4W6wasAAAUKK.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/7/c/97c92976d1adaaf18aeecc6e14549d99bd98d359.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/7/c/97c92976d1adaaf18aeecc6e14549d99bd98d359.avif",
+      "width": 1023,
+      "height": 724,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339536684-hmhx96",
+      "packet": 0,
+      "name": "G_Y_WzGbAAIlU0b.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/c/4/5c41611f0e2b60502b034e1b939265cb6d634231.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/c/4/5c41611f0e2b60502b034e1b939265cb6d634231.avif",
+      "width": 768,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339490565-s2xnal",
+      "packet": 0,
+      "name": "G_WdJLxbAAQ_B1N.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/c/8/2c8663ca53048fc51a90a0d6702bbaf03abd31ca.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/c/8/2c8663ca53048fc51a90a0d6702bbaf03abd31ca.avif",
+      "width": 999,
+      "height": 1000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339490564-oixo2q",
+      "packet": 0,
+      "name": "G_bM5xLWQAAZ87i.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/1/b/31bdc7120248d4f0c5b779016b4285ac65b90fab.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/1/b/31bdc7120248d4f0c5b779016b4285ac65b90fab.avif",
+      "width": 1266,
+      "height": 1688,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339490563-vhyx03",
+      "packet": 0,
+      "name": "G_WNarOawAA7Hts.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/b/f/1bf11962efc45744bd749744172ca269b738cd22.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/b/f/1bf11962efc45744bd749744172ca269b738cd22.avif",
+      "width": 513,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462663-mfow4m",
+      "packet": 0,
+      "name": "G_PD821aAAAVCNB.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/d/4/8d451fc20173cb58600e5a29a19d2a5f69a60814.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/d/4/8d451fc20173cb58600e5a29a19d2a5f69a60814.avif",
+      "width": 1072,
+      "height": 1320,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462662-iicys3",
+      "packet": 0,
+      "name": "G_WwvGPbcAAOn3o.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/a/4/4a4a315d3ad9a87be6b03a3c88fc2b96c9aea2da.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/a/4/4a4a315d3ad9a87be6b03a3c88fc2b96c9aea2da.avif",
+      "width": 1916,
+      "height": 1247,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462660-chbv7g",
+      "packet": 0,
+      "name": "G_VHzOgboAArmSP.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/6/2/262e90c7c13f5b4d24132d4f31f1b96df0cda085.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/6/2/262e90c7c13f5b4d24132d4f31f1b96df0cda085.avif",
+      "width": 2000,
+      "height": 769,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462658-21u3tz",
+      "packet": 0,
+      "name": "G_aPKggXIAAdtLV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/2/fa2ac76ffa28f5a49fd08bcfef42bd4c800481b7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/a/2/fa2ac76ffa28f5a49fd08bcfef42bd4c800481b7.avif",
+      "width": 1800,
+      "height": 1400,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462656-thu7od",
+      "packet": 0,
+      "name": "G_amJ6wbIAAjWce.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/e/2/3e2b4644058174e24b50f486afba5143718183fe.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/e/2/3e2b4644058174e24b50f486afba5143718183fe.avif",
+      "width": 1500,
+      "height": 1500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339462654-8rlze0",
+      "packet": 0,
+      "name": "G_YSSphWYAAmN0H.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/5/d/55d4703bccdc33d8233e1867d84f62b76ebd6c59.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/5/d/55d4703bccdc33d8233e1867d84f62b76ebd6c59.avif",
+      "width": 2688,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339435131-54rth5",
+      "packet": 0,
+      "name": "G_Q0FyLaYAAw6Sq.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/0/2/1023e3a414892d4162598166fe0f1438f564627a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/0/2/1023e3a414892d4162598166fe0f1438f564627a.avif",
+      "width": 900,
+      "height": 1450,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339435130-ot9wol",
+      "packet": 0,
+      "name": "G_bxgUbbUAAS0sJ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/d/1/ed1e0dde156e977f83c49aa621d7ec107e6a3a5d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/d/1/ed1e0dde156e977f83c49aa621d7ec107e6a3a5d.avif",
+      "width": 816,
+      "height": 1456,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339435128-xhu2sj",
+      "packet": 0,
+      "name": "G_aseFCa0AAivSa.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/2/c/42c133b357afbd9d7f471f68b5056596d5948a14.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/2/c/42c133b357afbd9d7f471f68b5056596d5948a14.avif",
+      "width": 920,
+      "height": 1704,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339435127-yb9p2p",
+      "packet": 0,
+      "name": "G_b7117boAA9W6S.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/9/1/d9173ce7b72242f1c7f368cc69ab963090f137c3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/9/1/d9173ce7b72242f1c7f368cc69ab963090f137c3.avif",
+      "width": 2456,
+      "height": 1736,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398097-2v6vxu",
+      "packet": 0,
+      "name": "G_b2GSVagAAT832.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/0/6/706fd3d81ddf8728ffe907f7920815aef6e3c6b5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/0/6/706fd3d81ddf8728ffe907f7920815aef6e3c6b5.avif",
+      "width": 2591,
+      "height": 2555,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398095-d146la",
+      "packet": 0,
+      "name": "G_ZoTd3bAAEZEhL.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/b/7/cb7f9cbf3516fcbf2026073099aec9fa298c609c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/b/7/cb7f9cbf3516fcbf2026073099aec9fa298c609c.avif",
+      "width": 2048,
+      "height": 2500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398095-qawfum",
+      "packet": 0,
+      "name": "G_WJP76bkAAa-Cq.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/2/a/c2a7734231ca12b5f8df780872563bdd88ae9834.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/2/a/c2a7734231ca12b5f8df780872563bdd88ae9834.avif",
+      "width": 928,
+      "height": 1232,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398094-h2ni91",
+      "packet": 0,
+      "name": "G_WuDUSbAAIvJG3.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/c/3/8c32675361f24362e49c8b01465fae2fbea188ed.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/c/3/8c32675361f24362e49c8b01465fae2fbea188ed.avif",
+      "width": 1536,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398094-6ic2bd",
+      "packet": 0,
+      "name": "G_ZZQyjbAAEc032.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/7/a/77a430cfeacf3f17e1ae636fbb3b70d81a8589ab.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/7/a/77a430cfeacf3f17e1ae636fbb3b70d81a8589ab.avif",
+      "width": 768,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339398093-z7oyi6",
+      "packet": 0,
+      "name": "G_bkXhKagAAEawY.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/7/50723bfe8661a3586a0a724ffba21a777c896e9d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/0/7/50723bfe8661a3586a0a724ffba21a777c896e9d.avif",
+      "width": 2298,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339371176-y56iql",
+      "packet": 0,
+      "name": "G_XHSjPaQAAa8kt.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/3/1/c31aca651561604c81ccca09303e902d4832c92d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/3/1/c31aca651561604c81ccca09303e902d4832c92d.avif",
+      "width": 1200,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339371174-thipym",
+      "packet": 0,
+      "name": "G_bIH90bQAE4ZZD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/0/cd003f9276c4aa7da458ca512a94393c0650fe98.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/d/0/cd003f9276c4aa7da458ca512a94393c0650fe98.avif",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339371172-ukvjh3",
+      "packet": 0,
+      "name": "G_VoBnGaoAAmJu7.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/2/0/32022b2747eaccc2d392e79f6bb7c2389f7fc147.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/2/0/32022b2747eaccc2d392e79f6bb7c2389f7fc147.avif",
+      "width": 1590,
+      "height": 2746,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339371169-kipxht",
+      "packet": 0,
+      "name": "G_eqBJYbgAA01YV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/5/5/455facc8231e9e3db199311207bc35290d8d4c1e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/5/5/455facc8231e9e3db199311207bc35290d8d4c1e.avif",
+      "width": 1448,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339338602-v6xuck",
+      "packet": 0,
+      "name": "G_bjAlXacAAFOsN.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/a/4/aa4af708ee88bfebb6546ccb67d97c3a419fb25d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/a/4/aa4af708ee88bfebb6546ccb67d97c3a419fb25d.avif",
+      "width": 2508,
+      "height": 3541,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339338601-gy9bl9",
+      "packet": 0,
+      "name": "G_bM2CCXgAAHcCD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/0/3/7030606f62a8606950730115b9dc1aca41f27444.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/0/3/7030606f62a8606950730115b9dc1aca41f27444.avif",
+      "width": 2818,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339338600-5gt0t1",
+      "packet": 0,
+      "name": "G_Z8FkZbAAATSJe.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/8/d/88d556c494ea30e599c4a83205af0dce9a99f93b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/8/d/88d556c494ea30e599c4a83205af0dce9a99f93b.avif",
+      "width": 2480,
+      "height": 3508,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339338600-gc0br3",
+      "packet": 0,
+      "name": "G_bTceTasAAOb6h.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/a/3/9a37ed7c1f581ea63f087f2e2488e7b9822e84b7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/a/3/9a37ed7c1f581ea63f087f2e2488e7b9822e84b7.avif",
+      "width": 770,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339327623-grd542",
+      "packet": 0,
+      "name": "G_Zo8UvXkAAtBmz.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/8/7/e8744160cfa1eff78070ab235a32005e48f8dcac.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/8/7/e8744160cfa1eff78070ab235a32005e48f8dcac.avif",
+      "width": 1483,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308224-q6c9lx",
+      "packet": 0,
+      "name": "G_Yy7JVbAAM15ya.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/5/3/15383b9326f9700188584f86e7ea4df8e7f170e1.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/5/3/15383b9326f9700188584f86e7ea4df8e7f170e1.avif",
+      "width": 4096,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308222-1zd8su",
+      "packet": 0,
+      "name": "G_bWbegawAACOjJ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/d/7/fd7620c75f1f08779276c2c78a11da3b3202ea12.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/d/7/fd7620c75f1f08779276c2c78a11da3b3202ea12.avif",
+      "width": 2100,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308220-iz5psl",
+      "packet": 0,
+      "name": "G_WJYOvbcAAOkYf.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/c/84c3148c3b9703e1f70c59bb1021ccb71976dc2a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/4/c/84c3148c3b9703e1f70c59bb1021ccb71976dc2a.avif",
+      "width": 2508,
+      "height": 3541,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308219-27ikkp",
+      "packet": 0,
+      "name": "G_ZDh1uXkAElNT_.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/3/e/f3e8fe06a6c8f9a358387d26f85af094cec29ca4.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/3/e/f3e8fe06a6c8f9a358387d26f85af094cec29ca4.avif",
+      "width": 1600,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308217-ede2t0",
+      "packet": 0,
+      "name": "G_cuVL9W8AAY3lo.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/5/3/15385d2b6263b274bb94a124e0aa13fbde464849.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/5/3/15385d2b6263b274bb94a124e0aa13fbde464849.avif",
+      "width": 2048,
+      "height": 1257,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308215-257c6i",
+      "packet": 0,
+      "name": "G_cMIq3bIAA3rOu.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/2/b/c2ba60e18f9a5ce3057ec83d33fe58e48ee70054.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/2/b/c2ba60e18f9a5ce3057ec83d33fe58e48ee70054.avif",
+      "width": 1536,
+      "height": 1503,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308214-axfb2f",
+      "packet": 0,
+      "name": "G_W0HXEbAAEKjeS.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/9/d/a9d2949662b013bb28d3167fe830689093e2c46a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/9/d/a9d2949662b013bb28d3167fe830689093e2c46a.avif",
+      "width": 1505,
+      "height": 2065,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308212-zcbffu",
+      "packet": 0,
+      "name": "G_WNavvXwAAUyr2.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/3/3/b33f9e2290d21799a0a7b205f09423817e5e0295.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/3/3/b33f9e2290d21799a0a7b205f09423817e5e0295.avif",
+      "width": 508,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339308210-lh1jjf",
+      "packet": 0,
+      "name": "G_UQnpcXYAAF9In.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/f/d/7fd9b15d05dbbaff7cb0f0310a647395d5c03cb2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/f/d/7fd9b15d05dbbaff7cb0f0310a647395d5c03cb2.avif",
+      "width": 1024,
+      "height": 278,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339266586-w5inwt",
+      "packet": 0,
+      "name": "G_aWLTrXIAEJBnu.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/e/6/6e6788efed7ca7021cdc3ec5349e2996bd902152.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/e/6/6e6788efed7ca7021cdc3ec5349e2996bd902152.avif",
+      "width": 2354,
+      "height": 2070,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221639-la161t",
+      "packet": 0,
+      "name": "G_YcxdfXsAEEmsf.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/3/5036667fe207e102d4c3c57b8fdf467d0c34bec2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/0/3/5036667fe207e102d4c3c57b8fdf467d0c34bec2.avif",
+      "width": 1646,
+      "height": 1286,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221638-3qixua",
+      "packet": 0,
+      "name": "G_WKP-BbAAAShpy.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/d/a/0daba3b5c93bcf780697e328970503faaeef26de.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/d/a/0daba3b5c93bcf780697e328970503faaeef26de.avif",
+      "width": 2048,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221636-3vw9fz",
+      "packet": 0,
+      "name": "G_dJ6E5WAAAJtd0.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/2/7/927483e073fcddde8680782e7c9fa3facc3d48c3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/2/7/927483e073fcddde8680782e7c9fa3facc3d48c3.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221635-0b34wg",
+      "packet": 0,
+      "name": "G_dNuCWbUAAN-yK.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/0/0/a00460ff1173125026b750afb6f9bd9c143df3c5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/0/0/a00460ff1173125026b750afb6f9bd9c143df3c5.avif",
+      "width": 2000,
+      "height": 1400,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221633-48h096",
+      "packet": 0,
+      "name": "G_U-3W5WkAAeWl1.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/b/9/fb98e67adea62f496b68f240182eb9819939f4a1.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/b/9/fb98e67adea62f496b68f240182eb9819939f4a1.avif",
+      "width": 1254,
+      "height": 1771,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221631-m5y69z",
+      "packet": 0,
+      "name": "G_eMyZnbIAAxl4m.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/6/4/8646ead6d573b8a820e560c6891dd8c6f154bfec.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/6/4/8646ead6d573b8a820e560c6891dd8c6f154bfec.avif",
+      "width": 1801,
+      "height": 1322,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339221629-c6qm9e",
+      "packet": 0,
+      "name": "G_YSc3FbYAAssDr.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/e/6/ae63686a7badc25c3cf84619204a6cbfb89d6348.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/e/6/ae63686a7badc25c3cf84619204a6cbfb89d6348.avif",
+      "width": 521,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339209922-9fo6zh",
+      "packet": 0,
+      "name": "G_aiHv5WwAAR8hj.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/2/a/92a9b775990d92b5ddeb75659ab567dfcbd8dee0.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/2/a/92a9b775990d92b5ddeb75659ab567dfcbd8dee0.avif",
+      "width": 1240,
+      "height": 1754,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339209920-mz9bqv",
+      "packet": 0,
+      "name": "G_d1QDXa8AAMnjW.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/2/2/d227f3bb434378ff8dc3e91fb2ffc41935c8a5dd.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/2/2/d227f3bb434378ff8dc3e91fb2ffc41935c8a5dd.avif",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339205412-rgem4l",
+      "packet": 0,
+      "name": "G_V1EnxXcAA1l67.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/5/2/952a2a91ef3fd528e2cf24c09cd4964d18d5af94.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/5/2/952a2a91ef3fd528e2cf24c09cd4964d18d5af94.avif",
+      "width": 3887,
+      "height": 2400,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163591-yqoo3r",
+      "packet": 0,
+      "name": "G_ZVgjsbkAAJo63.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/c/d/acdbeb71b651df952c030915ba3705e21216d4db.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/c/d/acdbeb71b651df952c030915ba3705e21216d4db.avif",
+      "width": 2866,
+      "height": 4047,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163589-eloz88",
+      "packet": 0,
+      "name": "G_ag2TiW0AAoe6d.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/5/505d655337075a0da61c5ac494db221cf4c29ff9.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/0/5/505d655337075a0da61c5ac494db221cf4c29ff9.avif",
+      "width": 1536,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163587-uovo4v",
+      "packet": 0,
+      "name": "G_eMyaWXwAAb6fN.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/1/3/813c15c7f982aa691defd89c80bd4f2d1ec86edf.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/1/3/813c15c7f982aa691defd89c80bd4f2d1ec86edf.avif",
+      "width": 1801,
+      "height": 1322,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163586-f3tdng",
+      "packet": 0,
+      "name": "G_bU0a1a4AAOQce.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/a/3/ba397258bcfee18e207f2c6345eb78aedbe843ff.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/a/3/ba397258bcfee18e207f2c6345eb78aedbe843ff.avif",
+      "width": 3752,
+      "height": 2869,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163584-21ohgr",
+      "packet": 0,
+      "name": "G_aeQhKbAAImZLz.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/e/2/3e2edfedca54bf18993e1e34627227d49e51840b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/e/2/3e2edfedca54bf18993e1e34627227d49e51840b.avif",
+      "width": 1465,
+      "height": 1654,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163583-2j5ruv",
+      "packet": 0,
+      "name": "G_A7JL8W0AATejl.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/a/4/5a48700854591f45f641994eec8e4b167bcd0a8d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/a/4/5a48700854591f45f641994eec8e4b167bcd0a8d.avif",
+      "width": 1536,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163581-bsoa1v",
+      "packet": 0,
+      "name": "G_Vzm6_bAAEaAr9.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/7/847c7b347d37661bf2ad753c937164249fa5a937.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/4/7/847c7b347d37661bf2ad753c937164249fa5a937.avif",
+      "width": 3000,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163580-9cmj7p",
+      "packet": 0,
+      "name": "G_XB3eGbAAE_7zD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/6/f/c6fe137169ad927ad48770c1b262e6a3268fb208.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/6/f/c6fe137169ad927ad48770c1b262e6a3268fb208.avif",
+      "width": 2586,
+      "height": 3659,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163578-i6msqn",
+      "packet": 0,
+      "name": "G_biWWuaUAAGkS-.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/a/6/0a6262d927c38a9925d6ee8118d137b345283d04.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/a/6/0a6262d927c38a9925d6ee8118d137b345283d04.avif",
+      "width": 2048,
+      "height": 1450,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339163576-guldxf",
+      "packet": 0,
+      "name": "G_W1BrgW4AAQWH5.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/f/7/ff77e5528e34177489e071a3b092a1d327b54f15.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/f/7/ff77e5528e34177489e071a3b092a1d327b54f15.avif",
+      "width": 4096,
+      "height": 3277,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339098747-6fixxi",
+      "packet": 0,
+      "name": "G_Z8rPobsAAni1n.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/4/9/54983d4b4cf834e1da20c585017b4b297976ba28.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/4/9/54983d4b4cf834e1da20c585017b4b297976ba28.avif",
+      "width": 1024,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339098744-h2csqa",
+      "packet": 0,
+      "name": "G_amjjaWUAExU9C.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/c/e/bce5a6b74e72b93692d478d0784415267e8a217e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/c/e/bce5a6b74e72b93692d478d0784415267e8a217e.avif",
+      "width": 2522,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339090882-s5idxg",
+      "packet": 0,
+      "name": "G_WubYdbEAAWo_7.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/c/1/0c1d0c3518d7fb37e36a6f2ee157b20903d467aa.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/c/1/0c1d0c3518d7fb37e36a6f2ee157b20903d467aa.avif",
+      "width": 1280,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339090880-tkklbs",
+      "packet": 0,
+      "name": "G_Zm_1sasAARdqQ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/f/d/3fd94068bc29d4d7405d8643a28027039bf061ff.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/f/d/3fd94068bc29d4d7405d8643a28027039bf061ff.avif",
+      "width": 768,
+      "height": 1280,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339087107-si63e5",
+      "packet": 0,
+      "name": "G_VvBS1aoAAkFjM.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/0/a/f0acd22df7bef3d86f20d63edae9b9af0669021e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/0/a/f0acd22df7bef3d86f20d63edae9b9af0669021e.avif",
+      "width": 764,
+      "height": 1080,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339087106-s6a0kt",
+      "packet": 0,
+      "name": "G_aV_hYXMAAV10t.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/0/c/90c37a40751d3b31d7dbddb29258f5e17bad7d66.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/0/c/90c37a40751d3b31d7dbddb29258f5e17bad7d66.avif",
+      "width": 2500,
+      "height": 3328,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339087106-xejcmo",
+      "packet": 0,
+      "name": "G_avNo9WMAArz88.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/5/f/35f34625b95279bed4a31f0fbf70fe0bccb23ae2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/5/f/35f34625b95279bed4a31f0fbf70fe0bccb23ae2.avif",
+      "width": 2591,
+      "height": 3624,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339087105-jim7yd",
+      "packet": 0,
+      "name": "G_bCFOpaAAAtBQW.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/1/8/518937d8d203ba92caf73ff64d8eb20827998e93.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/1/8/518937d8d203ba92caf73ff64d8eb20827998e93.avif",
+      "width": 4096,
+      "height": 2892,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339087104-dlod5k",
+      "packet": 0,
+      "name": "G_Zt0hCXgAAIDP4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/6/4/c6480591703d5c8fd9ceaad3462fb3e17602ee57.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/6/4/c6480591703d5c8fd9ceaad3462fb3e17602ee57.avif",
+      "width": 2048,
+      "height": 1536,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339070641-hv538k",
+      "packet": 0,
+      "name": "G_bKAnCbMAAJWOj.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/d/8/5d8f62591f4ab644da864aa2147393b2298f230f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/d/8/5d8f62591f4ab644da864aa2147393b2298f230f.avif",
+      "width": 1424,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339039219-8f97c8",
+      "packet": 0,
+      "name": "G_WJXXCbkAA_4W4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/0/3/103bc0fdbee0ef32419a587123618312ab9b36ac.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/0/3/103bc0fdbee0ef32419a587123618312ab9b36ac.avif",
+      "width": 928,
+      "height": 1232,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339034466-kgk59q",
+      "packet": 0,
+      "name": "G_YXn-RbgAAMyrW.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/8/2/7826d7cd779438dfb06c648616792a83e722b5dc.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/8/2/7826d7cd779438dfb06c648616792a83e722b5dc.avif",
+      "width": 1194,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339030484-whz8xj",
+      "packet": 0,
+      "name": "G_X4ZM_XsAAkSi9.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/3/d/93d4a569ed8b05ec6aec44e61c23e7e770da851d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/3/d/93d4a569ed8b05ec6aec44e61c23e7e770da851d.avif",
+      "width": 855,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339030483-hqdb67",
+      "packet": 0,
+      "name": "G_YhVmVbAAIS-Pf.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/1/7/6178a2d4b3ce70b4674da9ed73b966d1ddf4c88f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/1/7/6178a2d4b3ce70b4674da9ed73b966d1ddf4c88f.avif",
+      "width": 900,
+      "height": 1450,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339024247-wqfyoo",
+      "packet": 0,
+      "name": "G_aRiVfbAAMILP4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/2/5/c25d50b10b6ae44258509f0293c12a533d3c2047.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/2/5/c25d50b10b6ae44258509f0293c12a533d3c2047.avif",
+      "width": 1500,
+      "height": 1500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339024246-p0jnu1",
+      "packet": 0,
+      "name": "G_bJW61bgAAUWM6.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/1/c/c1cbf0f559f2506fd9170a26e69b8293a0adcfa5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/1/c/c1cbf0f559f2506fd9170a26e69b8293a0adcfa5.avif",
+      "width": 1447,
+      "height": 2047,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339024244-f8w4bt",
+      "packet": 0,
+      "name": "G_XdIFOWEAAS8OK.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/3/2/3322011130887362906e00dc87b86ce225f652f3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/3/2/3322011130887362906e00dc87b86ce225f652f3.avif",
+      "width": 832,
+      "height": 1216,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339024242-9ahkxx",
+      "packet": 0,
+      "name": "G_WWXmybUAA4sZC.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/e/7/ce7fad58d9012e33405f7457dcfe5ee0d306fa4f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/e/7/ce7fad58d9012e33405f7457dcfe5ee0d306fa4f.avif",
+      "width": 1034,
+      "height": 1249,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339016345-vs8l1s",
+      "packet": 0,
+      "name": "G_dZDhmWsAAhswP.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/8/7/48745b3462b049bddfe65f0c37062a231d159fce.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/8/7/48745b3462b049bddfe65f0c37062a231d159fce.avif",
+      "width": 1500,
+      "height": 1500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769339009963-juyega",
+      "packet": 0,
+      "name": "G_bM5qBa8AEy1oc.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/8/918296e1d27d74d14cb398a5512152b012002bff.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/1/8/918296e1d27d74d14cb398a5512152b012002bff.avif",
+      "width": 1158,
+      "height": 1544,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977843-44w7f9",
+      "packet": 0,
+      "name": "G_aCZSIbAAECuAI.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/3/a/a3a987a672f729b04742bd6446dbe8e483e953f7.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/3/a/a3a987a672f729b04742bd6446dbe8e483e953f7.avif",
+      "width": 1792,
+      "height": 2304,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977842-eq00is",
+      "packet": 0,
+      "name": "G_Vzm7EaUAAlsrR.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/2/6/62612b71d34a4b36ebecdea52ef7b8fec2e152be.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/2/6/62612b71d34a4b36ebecdea52ef7b8fec2e152be.avif",
+      "width": 2082,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977841-5wixh9",
+      "packet": 0,
+      "name": "G_auh-lbkAAMwrj.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/d/5/2d5ce44328f4de06ad2cbd0cb06d25a92d6b22a9.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/d/5/2d5ce44328f4de06ad2cbd0cb06d25a92d6b22a9.avif",
+      "width": 1434,
+      "height": 1243,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977840-bactkw",
+      "packet": 0,
+      "name": "G_bM5l4a0AAki6X.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/e/4/6e42cc027b01ce0e27b7d0aee61563753998d090.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/e/4/6e42cc027b01ce0e27b7d0aee61563753998d090.avif",
+      "width": 991,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977839-iv4yhv",
+      "packet": 0,
+      "name": "G_ZY0fqbAAE1QG1.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/5/3/25313f833677ad6c827e513ce91818db45bcb35a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/5/3/25313f833677ad6c827e513ce91818db45bcb35a.avif",
+      "width": 2894,
+      "height": 4093,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977838-7a0yio",
+      "packet": 0,
+      "name": "G_bBbTGbAAEnfYe.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/5/5/d5588b40f31039204ec021f40d450f6dabd2aef2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/5/5/d5588b40f31039204ec021f40d450f6dabd2aef2.avif",
+      "width": 1800,
+      "height": 1395,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977837-pf0hlw",
+      "packet": 0,
+      "name": "G_Uv9wKXAAAFkGH.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/4/6/8468df69bbb340073783cfd0271a5895bc55f8c6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/4/6/8468df69bbb340073783cfd0271a5895bc55f8c6.avif",
+      "width": 1600,
+      "height": 720,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977836-ewberk",
+      "packet": 0,
+      "name": "G_bq2AxbUAAO2tg.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/5/f/b5f9f4effdedccaffa0dfe0cd93d89dd59f71fbc.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/5/f/b5f9f4effdedccaffa0dfe0cd93d89dd59f71fbc.avif",
+      "width": 1121,
+      "height": 1348,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338977834-8jlc8u",
+      "packet": 0,
+      "name": "G_bIykRWsAAGIve.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/d/3/7d350d7eac0c2fe71560584f176cb6aad92c1c92.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/d/3/7d350d7eac0c2fe71560584f176cb6aad92c1c92.avif",
+      "width": 1493,
+      "height": 1720,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338948553-9r3z0k",
+      "packet": 0,
+      "name": "G_YerggakAAtTJp.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/5/4/1540133c241d1c0c707c645d62c0411ed30f41d9.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/5/4/1540133c241d1c0c707c645d62c0411ed30f41d9.avif",
+      "width": 1378,
+      "height": 2039,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338906976-fgqjdi",
+      "packet": 0,
+      "name": "G_byjs4bcAANt15.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/c/c/accf669270c7e6df35fed3c28e4c55ee11a3f1db.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/c/c/accf669270c7e6df35fed3c28e4c55ee11a3f1db.avif",
+      "width": 2050,
+      "height": 1529,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338906975-ywsxjo",
+      "packet": 0,
+      "name": "G_bO90yWMAAcr5c.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/3/d/a3dff0c0f15837086630b7ea2da288f542a95050.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/3/d/a3dff0c0f15837086630b7ea2da288f542a95050.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338906974-pqpk8k",
+      "packet": 0,
+      "name": "G_bcLIobIAAe9Hl.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/0/8/2080af9e20b60f6bd496ca1fae5618efc3e73554.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/0/8/2080af9e20b60f6bd496ca1fae5618efc3e73554.avif",
+      "width": 1226,
+      "height": 1956,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900077-zg29z6",
+      "packet": 0,
+      "name": "G_WeQ9xbgAAyaKw.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/8/4/d84e9699bcd0309bf0eafb4ce0b0faa2056d748f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/8/4/d84e9699bcd0309bf0eafb4ce0b0faa2056d748f.avif",
+      "width": 900,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900076-y32olq",
+      "packet": 0,
+      "name": "Gu2qebcWYAAGl3d.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/3/6/236e04916f0c2d76b49e1646e40b11cef7f47807.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/3/6/236e04916f0c2d76b49e1646e40b11cef7f47807.avif",
+      "width": 2039,
+      "height": 2894,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900075-d38h76",
+      "packet": 0,
+      "name": "G_U_grNXgAA6g0F.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/4/b/74bdc1d654c31bd5a4306350ee62ae50436e7d56.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/4/b/74bdc1d654c31bd5a4306350ee62ae50436e7d56.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900074-4n3x92",
+      "packet": 0,
+      "name": "G_Vzm7HaEAA3MlI.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/a/cda7da2a3a2a512ed4133a468c8cca4576feaf65.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/d/a/cda7da2a3a2a512ed4133a468c8cca4576feaf65.avif",
+      "width": 2499,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900073-1po9c1",
+      "packet": 0,
+      "name": "G_cHM4ZXoAA3A5D.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/b/f6b63842a93fcbd5988da49d138d5b1afda54281.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/6/b/f6b63842a93fcbd5988da49d138d5b1afda54281.avif",
+      "width": 983,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900072-c63qd3",
+      "packet": 0,
+      "name": "G_ahkB5bEAAuLlc.avif",
+      "url": "https://linux.do/uploads/default/original/4X/c/d/a/cdab9fc78d8797ef3e2cd8f38c19019f1030e1c4.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/c/d/a/cdab9fc78d8797ef3e2cd8f38c19019f1030e1c4.avif",
+      "width": 1700,
+      "height": 1700,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338900070-37456f",
+      "packet": 0,
+      "name": "G_bLtTOXMAA0RkM.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/d/d/add07afa411cba31facc68263df9fd3247150ed2.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/d/d/add07afa411cba31facc68263df9fd3247150ed2.avif",
+      "width": 1548,
+      "height": 2100,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338845858-4mi8wn",
+      "packet": 0,
+      "name": "G_eMyZrboAAYf5p.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/0/1/301194160e3feeca16fcd793aa20c442d6777ca4.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/0/1/301194160e3feeca16fcd793aa20c442d6777ca4.avif",
+      "width": 1801,
+      "height": 1322,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338845857-qkd66b",
+      "packet": 0,
+      "name": "G_bVUWHWAAAGla_.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/5/c/55cfc6bf2ca0933c83cc5cde23fbf4bf2efd7412.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/5/c/55cfc6bf2ca0933c83cc5cde23fbf4bf2efd7412.avif",
+      "width": 1248,
+      "height": 1797,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338845856-7ikgbw",
+      "packet": 0,
+      "name": "G_aYULlbAAI6eAO.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/d/3/9d370e2d2a30f2804b28c0a4f3dbc5fd90595f1d.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/d/3/9d370e2d2a30f2804b28c0a4f3dbc5fd90595f1d.avif",
+      "width": 1905,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338845855-m1g0nw",
+      "packet": 0,
+      "name": "G_WdAGTXMAAEjq5.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/d/3/4d3eaa062c2223ef795aac2ceaa02f3b021101f3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/d/3/4d3eaa062c2223ef795aac2ceaa02f3b021101f3.avif",
+      "width": 600,
+      "height": 1077,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831911-l4ems6",
+      "packet": 0,
+      "name": "G_chx3daoAAOz0B.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/d/f/edfa0b87c8b3656b87cb2191dbb23972951f1a46.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/d/f/edfa0b87c8b3656b87cb2191dbb23972951f1a46.avif",
+      "width": 3149,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831910-sfpv9d",
+      "packet": 0,
+      "name": "G_c_PfcXcAAMLvR.avif",
+      "url": "https://linux.do/uploads/default/original/4X/a/1/6/a1687babfbc27f5788c0c3c95c65331713f6e33c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/a/1/6/a1687babfbc27f5788c0c3c95c65331713f6e33c.avif",
+      "width": 2480,
+      "height": 1241,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831909-tq59fh",
+      "packet": 0,
+      "name": "G_WwHt1bAAAsFPs.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/a/c/fac13b112d2c28692c9edd5d17210711ce064683.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/a/c/fac13b112d2c28692c9edd5d17210711ce064683.avif",
+      "width": 1200,
+      "height": 822,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831908-lh400f",
+      "packet": 0,
+      "name": "G_Y_i1hXQAAvm1w.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/e/0/0e0ef07c285c45203ad59ba7257dc12865df83ea.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/e/0/0e0ef07c285c45203ad59ba7257dc12865df83ea.avif",
+      "width": 1351,
+      "height": 1458,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831907-o26flo",
+      "packet": 0,
+      "name": "G_bMN5MbEAEjkUp.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/f/2/8f242e89f9fae4d9dccd17178e1d3f31b1ef7ae9.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/f/2/8f242e89f9fae4d9dccd17178e1d3f31b1ef7ae9.avif",
+      "width": 3602,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338831906-zly94a",
+      "packet": 0,
+      "name": "G_YSR4iXAAAWY-M.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/5/b/85bf21e860184cf7a3c0fda1c1a407a1e9485058.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/5/b/85bf21e860184cf7a3c0fda1c1a407a1e9485058.avif",
+      "width": 2688,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338784011-v5ulm6",
+      "packet": 0,
+      "name": "G_Za3NKXoAAdF1D.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/3/6/3362185e1bd71619251726a0ac336c92e422c274.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/3/6/3362185e1bd71619251726a0ac336c92e422c274.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338784010-34t5si",
+      "packet": 0,
+      "name": "G_ZE9AiXkAAVfem.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/9/8/1989e6dc21209e19c9b1392ba955c054f6c97c52.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/9/8/1989e6dc21209e19c9b1392ba955c054f6c97c52.avif",
+      "width": 1536,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338784009-lnsguh",
+      "packet": 0,
+      "name": "G_ax7Y_WcAACgKC.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/b/b/ebb4c71aeb89edb5434557078d547723978715a5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/b/b/ebb4c71aeb89edb5434557078d547723978715a5.avif",
+      "width": 2804,
+      "height": 4093,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338784008-zc4uho",
+      "packet": 0,
+      "name": "G_VhocmbAAAyg0e.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/d/11d935586c75d6f96f2049c5128c605e1a7b8f5f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/1/d/11d935586c75d6f96f2049c5128c605e1a7b8f5f.avif",
+      "width": 1448,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769226-f29kxn",
+      "packet": 0,
+      "name": "G_VvBRtbAAMXVBQ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/3/8/8381831bee37243e38fc5b40f405a5f8c1691ad5.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/3/8/8381831bee37243e38fc5b40f405a5f8c1691ad5.avif",
+      "width": 1458,
+      "height": 2127,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769225-u5efj4",
+      "packet": 0,
+      "name": "G_ZxiRjWoAEhVus.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/3/8/638b8438f422dc042e69058202e069ed44723448.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/3/8/638b8438f422dc042e69058202e069ed44723448.avif",
+      "width": 2048,
+      "height": 1706,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769224-v5rvwz",
+      "packet": 0,
+      "name": "G_bHffJb0AAJhxT.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/f/8/8f830d6625df5c90ae0639b58adaa6467b30e1f0.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/f/8/8f830d6625df5c90ae0639b58adaa6467b30e1f0.avif",
+      "width": 1032,
+      "height": 1500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769223-0qyi21",
+      "packet": 0,
+      "name": "G_VvXEWXEAEyPjb.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/8/d/18d83c5ba80d15281f0af89272213b13cb289c3c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/8/d/18d83c5ba80d15281f0af89272213b13cb289c3c.avif",
+      "width": 1451,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769223-7wjgmn",
+      "packet": 0,
+      "name": "G_XulWtWUAAU42r.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/4/e/74ec24d282c94d420af9ab5b5d301b056bc4c534.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/4/e/74ec24d282c94d420af9ab5b5d301b056bc4c534.avif",
+      "width": 1020,
+      "height": 744,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338769222-g1o908",
+      "packet": 0,
+      "name": "G_bD-fnWwAArXxV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/a/50a2f4a9eaee158ee5c47896752b9d1efd27d20e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/0/a/50a2f4a9eaee158ee5c47896752b9d1efd27d20e.avif",
+      "width": 2304,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338718512-by1kvy",
+      "packet": 0,
+      "name": "G_cOwu4WgAEaZfD.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/b/8/9b89395ac5e4f62aa97528893f279f70d9ee968e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/b/8/9b89395ac5e4f62aa97528893f279f70d9ee968e.avif",
+      "width": 3000,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338718512-21rs8c",
+      "packet": 0,
+      "name": "G_Vzm69bAAABFcu.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/3/5/b35fb0b6cfb1ff2eb12b7f57450455b89e849f68.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/3/5/b35fb0b6cfb1ff2eb12b7f57450455b89e849f68.avif",
+      "width": 1918,
+      "height": 3000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338718511-6k6o7w",
+      "packet": 0,
+      "name": "G_XAZBbbAAAuTxz.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/3/4/53415cef2164f6e16a3f26674e0d4b215e187432.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/3/4/53415cef2164f6e16a3f26674e0d4b215e187432.avif",
+      "width": 2312,
+      "height": 2731,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708871-41wcwu",
+      "packet": 0,
+      "name": "G_Yxn-TbAAUtQP9.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/9/2/e920823b60b6a7fb89c25b0322542e75fdfa676b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/9/2/e920823b60b6a7fb89c25b0322542e75fdfa676b.avif",
+      "width": 1482,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708871-s97tc2",
+      "packet": 0,
+      "name": "G_bMMV6bcAARSpx.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/0/9/909cbc8d4585f3e6a3a0b094389324338f961b0e.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/0/9/909cbc8d4585f3e6a3a0b094389324338f961b0e.avif",
+      "width": 2894,
+      "height": 4093,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708870-vdug96",
+      "packet": 0,
+      "name": "G_bPQg7WMAANXO9.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/8/0/880e46dc5fa6acace2c64521ce0da1eaa412ba05.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/8/0/880e46dc5fa6acace2c64521ce0da1eaa412ba05.avif",
+      "width": 2591,
+      "height": 3624,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708870-dxcoxe",
+      "packet": 0,
+      "name": "G_ZragCXYAAXiy-.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/c/7/4c7ee7aea93fac74afb8b8c113f71910554edc86.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/c/7/4c7ee7aea93fac74afb8b8c113f71910554edc86.avif",
+      "width": 2048,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708869-5ib0mj",
+      "packet": 0,
+      "name": "G_ZYIpjbAAIqv-4.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/7/f/37f086acf1798d2e2bf93aa347e6d3718e4a097b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/7/f/37f086acf1798d2e2bf93aa347e6d3718e4a097b.avif",
+      "width": 1883,
+      "height": 1290,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338708868-kp5cnx",
+      "packet": 0,
+      "name": "G_bEPxbboAABWz7.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/b/4/5b418d914f168c243d19c20b3940d643e0a5418b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/b/4/5b418d914f168c243d19c20b3940d643e0a5418b.avif",
+      "width": 1500,
+      "height": 1500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656517-q3232l",
+      "packet": 0,
+      "name": "G_bOIN2aIAEwpXV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/0/5/b/05bdb78554ffcdb2f9d4479dc39eb219c4b78390.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/0/5/b/05bdb78554ffcdb2f9d4479dc39eb219c4b78390.avif",
+      "width": 2048,
+      "height": 942,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656516-bmuvxa",
+      "packet": 0,
+      "name": "G_WNdd6acAAR5wU.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/0/5/405c2c0d11759018e7ae8777ca3d6f3c9f954c45.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/0/5/405c2c0d11759018e7ae8777ca3d6f3c9f954c45.avif",
+      "width": 1200,
+      "height": 1200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656516-pxwq7m",
+      "packet": 0,
+      "name": "G_TrD2LbAAAziy3.avif",
+      "url": "https://linux.do/uploads/default/original/4X/4/a/a/4aa2438a8a0ff3c83cc15e5fc678c9dd8fa89e7b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/4/a/a/4aa2438a8a0ff3c83cc15e5fc678c9dd8fa89e7b.avif",
+      "width": 1488,
+      "height": 2088,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656515-jtsiza",
+      "packet": 0,
+      "name": "G_dNrMYW0AA8Ogf.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/6/4/664fb4326293ebc8d5a04c8ca51a22b19bcd3e7b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/6/4/664fb4326293ebc8d5a04c8ca51a22b19bcd3e7b.avif",
+      "width": 3157,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656515-92nsno",
+      "packet": 0,
+      "name": "G_d8hw1a0AAj14X.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/8/f/98f3653fce0d78afef06a118272ce886d95ab58b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/8/f/98f3653fce0d78afef06a118272ce886d95ab58b.avif",
+      "width": 2048,
+      "height": 1347,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338656514-5ktghj",
+      "packet": 0,
+      "name": "G_UQnoYaUAA_mSv.avif",
+      "url": "https://linux.do/uploads/default/original/4X/3/b/2/3b26e989e0b189363abb2a5ee43b5dd9da5dcfd6.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/3/b/2/3b26e989e0b189363abb2a5ee43b5dd9da5dcfd6.avif",
+      "width": 1024,
+      "height": 567,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338642378-qr4ea6",
+      "packet": 0,
+      "name": "G_VbKe2bAAA4NCM.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/5/7/b57aeff1a73a655f90db1d598233e5d59af68919.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/5/7/b57aeff1a73a655f90db1d598233e5d59af68919.avif",
+      "width": 1024,
+      "height": 1024,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338639875-l8oh3i",
+      "packet": 0,
+      "name": "G_Z4vDqbUAAQo-L.avif",
+      "url": "https://linux.do/uploads/default/original/4X/e/7/1/e717c8315944a4f399a245a27e148e6bdacb2838.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/e/7/1/e717c8315944a4f399a245a27e148e6bdacb2838.avif",
+      "width": 2000,
+      "height": 2000,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338639874-shhlw3",
+      "packet": 0,
+      "name": "G_dk6XIaAAAA9FU.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/5/1/f51b7188da3a88c0c2de68b7a5744afac98399bf.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/5/1/f51b7188da3a88c0c2de68b7a5744afac98399bf.avif",
+      "width": 1188,
+      "height": 1431,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338595064-nfhsop",
+      "packet": 0,
+      "name": "G_b_43tagAAs38t.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/6/4/f64de4ca50f5b822f6ed6e81f78c4d39e5828923.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/6/4/f64de4ca50f5b822f6ed6e81f78c4d39e5828923.avif",
+      "width": 1200,
+      "height": 1697,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338595063-v8hcka",
+      "packet": 0,
+      "name": "G_ZpILuboAAxsMN.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/0/c/70ca4fe638204d3cd683d271aaf10a8c153a96fe.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/0/c/70ca4fe638204d3cd683d271aaf10a8c153a96fe.avif",
+      "width": 1613,
+      "height": 907,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338595063-3ln0xe",
+      "packet": 0,
+      "name": "G_V1zxHXQAAPZeV.avif",
+      "url": "https://linux.do/uploads/default/original/4X/6/0/4/6043ea9c3878dbcfad533ae82d3f434919f61efb.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/6/0/4/6043ea9c3878dbcfad533ae82d3f434919f61efb.avif",
+      "width": 2105,
+      "height": 2687,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338585707-iajzjw",
+      "packet": 0,
+      "name": "G_Yk--5bAAAs5yx.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/1/2/9123c560b6b9bcb602086505b83c65d1c07400a3.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/1/2/9123c560b6b9bcb602086505b83c65d1c07400a3.avif",
+      "width": 2612,
+      "height": 2200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338585707-jo1lzu",
+      "packet": 0,
+      "name": "G_b_HnSawAA-W7A.avif",
+      "url": "https://linux.do/uploads/default/original/4X/2/7/e/27e0b80145b40941668e8413d771a8d04063703c.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/2/7/e/27e0b80145b40941668e8413d771a8d04063703c.avif",
+      "width": 1443,
+      "height": 1163,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338576839-f0dawm",
+      "packet": 0,
+      "name": "G_B_eURW4AAom2n.avif",
+      "url": "https://linux.do/uploads/default/original/4X/7/5/4/7541c7d9f849279e0079a309f0dd6b0f3e8c2a5f.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/7/5/4/7541c7d9f849279e0079a309f0dd6b0f3e8c2a5f.avif",
+      "width": 960,
+      "height": 1020,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338576838-2wlb7a",
+      "packet": 0,
+      "name": "G_V-BJZasAA01KA.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/0/a/50a76ad86526f9d8544a1ddf92c32ff1b20a5478.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/0/a/50a76ad86526f9d8544a1ddf92c32ff1b20a5478.avif",
+      "width": 1062,
+      "height": 875,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533352-ksekqn",
+      "packet": 0,
+      "name": "G_V7ZYHWYAAzq1M.avif",
+      "url": "https://linux.do/uploads/default/original/4X/5/5/b/55bd243ad015bcf959c1e001c17d5a5a9ccf0340.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/5/5/b/55bd243ad015bcf959c1e001c17d5a5a9ccf0340.avif",
+      "width": 1200,
+      "height": 759,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533351-3jy50s",
+      "packet": 0,
+      "name": "G_VDXLfbAAEGjix.avif",
+      "url": "https://linux.do/uploads/default/original/4X/f/b/f/fbf097c805edfb694184488fefe8be15fa6a7433.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/f/b/f/fbf097c805edfb694184488fefe8be15fa6a7433.avif",
+      "width": 1384,
+      "height": 2048,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533350-n0srfe",
+      "packet": 0,
+      "name": "G_blvRFWUAAhrI9.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/7/0/9706234b000afdf0c07f57727ffd41518b04864a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/7/0/9706234b000afdf0c07f57727ffd41518b04864a.avif",
+      "width": 2172,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533350-jw58u5",
+      "packet": 0,
+      "name": "G_blvZhbMAA57WQ.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/6/e/96e8bcd2a443d6168e7e1035f20ce4e723631bcf.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/6/e/96e8bcd2a443d6168e7e1035f20ce4e723631bcf.avif",
+      "width": 3072,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533349-o7oeub",
+      "packet": 0,
+      "name": "G_Yn5yuWoAAmEV0.avif",
+      "url": "https://linux.do/uploads/default/original/4X/8/a/c/8acf527c5b68948cf1efd275d107503166d68a63.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/8/a/c/8acf527c5b68948cf1efd275d107503166d68a63.avif",
+      "width": 2591,
+      "height": 3304,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533349-ydilc7",
+      "packet": 0,
+      "name": "G_YSQ4TXYAEpgnd.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/b/8/bb8808d40053551850ba24db16095ed5fa551e03.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/b/8/bb8808d40053551850ba24db16095ed5fa551e03.avif",
+      "width": 2688,
+      "height": 4096,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533348-tk8myq",
+      "packet": 0,
+      "name": "G_as0j_W4AAc2pC.avif",
+      "url": "https://linux.do/uploads/default/original/4X/d/d/1/dd1d0d7745433f0d8abf04c6d4fa491ec5382456.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/d/d/1/dd1d0d7745433f0d8abf04c6d4fa491ec5382456.avif",
+      "width": 3000,
+      "height": 3500,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533348-zhdpv3",
+      "packet": 0,
+      "name": "G_armYZbkAAzNOS.avif",
+      "url": "https://linux.do/uploads/default/original/4X/1/1/0/110d38339f36feb804960863d831d8823e85782b.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/1/1/0/110d38339f36feb804960863d831d8823e85782b.avif",
+      "width": 1280,
+      "height": 3200,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533347-hxxi02",
+      "packet": 0,
+      "name": "G_exTIJaoAAZo2v.avif",
+      "url": "https://linux.do/uploads/default/original/4X/b/5/e/b5eed8f56aed4f508084b1c6dcd7bcba2dc15f5a.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/b/5/e/b5eed8f56aed4f508084b1c6dcd7bcba2dc15f5a.avif",
+      "width": 1841,
+      "height": 3554,
+      "groupId": "group-1769340256221"
+    },
+    {
+      "id": "emoji-1769338533345-45azie",
+      "packet": 0,
+      "name": "G_anYajasAADLue.avif",
+      "url": "https://linux.do/uploads/default/original/4X/9/f/a/9faa5b5fee7831703013d0245ce43e003272ad89.avif",
+      "displayUrl": "https://linux.do/uploads/default/original/4X/9/f/a/9faa5b5fee7831703013d0245ce43e003272ad89.avif",
+      "width": 3000,
+      "height": 4000,
+      "groupId": "group-1769340256221"
+    }
+  ]
+}
