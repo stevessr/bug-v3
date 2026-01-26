@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 
 const MARKET_DIR = path.join(__dirname, 'cfworker/public/assets/market');
 const METADATA_FILE = path.join(MARKET_DIR, 'metadata.json');
+const MARKET_INDEX_DIR = path.join(__dirname, 'cfworker/public/assets/market/index');
+const PAGE_SIZE = Number(process.env.MARKET_PAGE_SIZE || 50);
 
 // Get all JSON files in the directory except metadata.json
 const files = fs.readdirSync(MARKET_DIR).filter(file =>
@@ -92,6 +94,51 @@ const metadata = {
 
 fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
 console.log(`Generated metadata.json with ${groups.length} groups.`);
+
+// Generate paginated index files for market browsing
+try {
+    fs.mkdirSync(MARKET_INDEX_DIR, { recursive: true });
+
+    const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
+    const pages = [];
+
+    for (let page = 1; page <= totalPages; page++) {
+        const start = (page - 1) * PAGE_SIZE;
+        const end = Math.min(start + PAGE_SIZE, groups.length);
+        const pageGroups = groups.slice(start, end);
+        const fileName = `page-${page}.json`;
+        const filePath = path.join(MARKET_INDEX_DIR, fileName);
+
+        fs.writeFileSync(filePath, JSON.stringify({
+            page,
+            pageSize: PAGE_SIZE,
+            totalPages,
+            totalGroups: groups.length,
+            groups: pageGroups
+        }, null, 2));
+
+        pages.push({
+            name: fileName,
+            start: start + 1,
+            end,
+            count: pageGroups.length
+        });
+    }
+
+    const indexData = {
+        version: "1.0",
+        exportDate: metadata.exportDate,
+        totalGroups: groups.length,
+        pageSize: PAGE_SIZE,
+        totalPages,
+        pages
+    };
+
+    fs.writeFileSync(path.join(MARKET_INDEX_DIR, 'index.json'), JSON.stringify(indexData, null, 2));
+    console.log(`Generated market index with ${totalPages} pages (page size ${PAGE_SIZE}).`);
+} catch (err) {
+    console.error('Error generating market index files:', err);
+}
 
 // Update MANIFEST_GROUPS in market-random.ts (only IDs for Snippet limitation)
 const marketRandomFile = path.join(__dirname, 'cfworker/functions/api/market-random.ts');

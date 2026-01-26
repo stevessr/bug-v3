@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef, onMounted, computed } from 'vue'
+import { ref, shallowRef, onMounted, computed, watch } from 'vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -38,6 +38,13 @@ const marketMetadata = ref<{
   totalGroups: number
 } | null>(null)
 
+const currentPage = ref(1)
+const pageSize = ref(18)
+const indexPageSize = ref(50)
+const totalMarketGroups = ref(0)
+const usePagedIndex = ref(false)
+const isSearchMode = ref(false)
+
 // 优化：使用 shallowRef 减少缓存 Map 的响应式代理开销
 const groupDetailsCache = shallowRef<Map<string, EmojiGroup>>(new Map())
 
@@ -65,12 +72,61 @@ const filteredMarketGroups = computed(() => {
   )
 })
 
+const pagedMarketGroups = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredMarketGroups.value.slice(start, start + pageSize.value)
+})
+
+const displayMarketGroups = computed(() => {
+  if (usePagedIndex.value && !isSearchMode.value) return marketGroups.value
+  return pagedMarketGroups.value
+})
+
 // 详情模态框
 const showDetailModal = ref(false)
 const detailLoading = ref(false)
 const currentDetailGroup = ref<EmojiGroup | null>(null)
 
 // 加载市场数据（仅加载 metadata）
+const loadMarketIndex = async () => {
+  const baseUrl = getMarketBaseUrl()
+  const indexUrl = `${baseUrl}/assets/market/index/index.json`
+  const response = await fetch(indexUrl)
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  const data = await response.json()
+  return data
+}
+
+const loadMarketPage = async (page: number) => {
+  const baseUrl = getMarketBaseUrl()
+  const pageUrl = `${baseUrl}/assets/market/index/page-${page}.json`
+  const response = await fetch(pageUrl)
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  const data = await response.json()
+  marketGroups.value = data.groups || []
+}
+
+const loadMarketMetadata = async () => {
+  const baseUrl = getMarketBaseUrl()
+  const metadataUrl = `${baseUrl}/assets/market/metadata.json`
+  const response = await fetch(metadataUrl)
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  const data = await response.json()
+  marketMetadata.value = {
+    version: data.version,
+    exportDate: data.exportDate,
+    totalGroups: data.totalGroups
+  }
+  marketGroups.value = data.groups || []
+  totalMarketGroups.value = data.totalGroups || marketGroups.value.length
+}
+
 const loadMarketData = async () => {
   // 优化：防止重复请求（竞态条件）
   if (loading.value) return
@@ -78,24 +134,30 @@ const loadMarketData = async () => {
   try {
     loading.value = true
 
-    // 从云端加载 metadata.json
-    const baseUrl = getMarketBaseUrl()
-    const metadataUrl = `${baseUrl}/assets/market/metadata.json`
-    const response = await fetch(metadataUrl)
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    try {
+      const indexData = await loadMarketIndex()
+      usePagedIndex.value = true
+      isSearchMode.value = false
+      indexPageSize.value = indexData.pageSize || indexPageSize.value
+      pageSize.value = indexPageSize.value
+      totalMarketGroups.value = indexData.totalGroups || 0
+      marketMetadata.value = {
+        version: indexData.version || '1.0',
+        exportDate: indexData.exportDate || new Date().toISOString(),
+        totalGroups: indexData.totalGroups || 0
+      }
+      currentPage.value = 1
+      await loadMarketPage(1)
+    } catch (error) {
+      // 回退到完整 metadata.json
+      usePagedIndex.value = false
+      isSearchMode.value = false
+      await loadMarketMetadata()
     }
+    currentPage.value = 1
 
-    const data = await response.json()
-    marketMetadata.value = {
-      version: data.version,
-      exportDate: data.exportDate,
-      totalGroups: data.totalGroups
-    }
-    marketGroups.value = data.groups || []
-
-    message.success(t('loadMarketDataSuccess', { count: marketGroups.value.length }))
+    const successCount = totalMarketGroups.value || marketGroups.value.length
+    message.success(t('loadMarketDataSuccess', { count: successCount }))
   } catch (error) {
     console.error('加载市场数据失败：', error)
     message.error(t('loadMarketDataFailed'))
@@ -228,6 +290,56 @@ const installGroup = async (groupId: string) => {
   }
 }
 
+watch(
+  () => searchKeyword.value,
+  async keyword => {
+    currentPage.value = 1
+    if (usePagedIndex.value) {
+      if (keyword && keyword.trim()) {
+        isSearchMode.value = true
+        try {
+          await loadMarketMetadata()
+        } catch (error) {
+          console.error('加载市场数据失败：', error)
+        }
+      } else if (isSearchMode.value) {
+        isSearchMode.value = false
+        pageSize.value = indexPageSize.value
+        try {
+          await loadMarketPage(1)
+        } catch (error) {
+          console.error('加载市场数据失败：', error)
+        }
+      }
+    }
+  }
+)
+
+watch(
+  () => filteredMarketGroups.value.length,
+  total => {
+    if (usePagedIndex.value && !isSearchMode.value) return
+    const maxPage = Math.max(1, Math.ceil(total / pageSize.value))
+    if (currentPage.value > maxPage) currentPage.value = maxPage
+  }
+)
+
+watch(
+  () => currentPage.value,
+  async page => {
+    if (!usePagedIndex.value || isSearchMode.value) return
+    try {
+      loading.value = true
+      await loadMarketPage(page)
+    } catch (error) {
+      console.error('加载市场分页失败：', error)
+      message.error(t('loadMarketDataFailed'))
+    } finally {
+      loading.value = false
+    }
+  }
+)
+
 onMounted(() => {
   loadMarketData()
 })
@@ -272,7 +384,7 @@ onMounted(() => {
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
-          v-for="group in filteredMarketGroups"
+          v-for="group in displayMarketGroups"
           :key="group.id"
           class="border dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow"
         >
@@ -322,6 +434,24 @@ onMounted(() => {
             </a-button>
           </div>
         </div>
+      </div>
+
+      <div
+        v-if="
+          (usePagedIndex && !isSearchMode && totalMarketGroups > pageSize) ||
+          (!usePagedIndex && filteredMarketGroups.length > pageSize) ||
+          (usePagedIndex && isSearchMode && filteredMarketGroups.length > pageSize)
+        "
+        class="mt-6 flex justify-center"
+      >
+        <a-pagination
+          v-model:current="currentPage"
+          v-model:pageSize="pageSize"
+          :total="usePagedIndex && !isSearchMode ? totalMarketGroups : filteredMarketGroups.length"
+          :show-size-changer="!usePagedIndex || isSearchMode"
+          :page-size-options="['12', '18', '24', '36']"
+          show-less-items
+        />
       </div>
     </a-spin>
 
