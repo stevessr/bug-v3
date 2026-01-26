@@ -1,0 +1,208 @@
+{
+  "page": 5,
+  "pageSize": 50,
+  "totalPages": 5,
+  "totalGroups": 225,
+  "groups": [
+    {
+      "id": "group-1767431500452",
+      "name": "X 第三十弹",
+      "icon": "https://linux.do/uploads/default/original/4X/3/7/b/37b9974602d3453b6f2b0c4b3bbe71a961c24187.avif",
+      "order": 200,
+      "emojiCount": 825,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767682512237",
+      "name": "X 第三十二弹",
+      "icon": "https://linux.do/uploads/default/original/4X/e/4/c/e4c6a0795201af1d6f777ea101c2e3bc3ac02a46.avif",
+      "order": 201,
+      "emojiCount": 701,
+      "isArchived": false
+    },
+    {
+      "id": "group-1769437619842",
+      "name": "X 第三十九弹",
+      "icon": "https://linux.do/uploads/default/original/4X/6/8/d/68d43435e81fcb83f46e9c45be2dc113b1c3fc27.avif",
+      "order": 202,
+      "emojiCount": 354,
+      "isArchived": false
+    },
+    {
+      "id": "group-1768835894932",
+      "name": "X 第三十六弹",
+      "icon": "https://linux.do/uploads/default/original/4X/b/0/1/b01e06db09fa752a6fac51b523037bafe63b3176.avif#/",
+      "order": 203,
+      "emojiCount": 331,
+      "isArchived": false
+    },
+    {
+      "id": "group-1769217168177",
+      "name": "X 第三十七弹",
+      "icon": "https://linux.do/uploads/default/original/4X/5/4/d/54db1f1794beaa095c632c252a8f285bc38b28b6.avif",
+      "order": 204,
+      "emojiCount": 479,
+      "isArchived": false
+    },
+    {
+      "id": "group-1769002748394",
+      "name": "X 第三十七弾",
+      "icon": "https://linux.do/uploads/default/original/4X/f/a/f/faf9e2fc53a9e55b41523e78ac35adf27f24df13.avif#/",
+      "order": 205,
+      "emojiCount": 312,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767967939351",
+      "name": "X 第三十三弹",
+      "icon": "https://linux.do/uploads/default/original/4X/c/e/5/ce5b0b7e1a7ce26e88b1fcedb1436c28f608fb30.avif",
+      "order": 206,
+      "emojiCount": 517,
+      "isArchived": false
+    },
+    {
+      "id": "group-1768393531015",
+      "name": "X 第三十四弹",
+      "icon": "https://linux.do/uploads/default/original/4X/2/1/a/21a378190db75829c19eab4817e78aeead68be47.avif",
+      "order": 207,
+      "emojiCount": 662,
+      "isArchived": false
+    },
+    {
+      "id": "group-1768707060171",
+      "name": "X 第三十五弹",
+      "icon": "https://linux.do/uploads/default/original/4X/b/a/e/bae7cd8ae5d85cfeed26f39ea95616db73cf63e9.avif",
+      "order": 208,
+      "emojiCount": 562,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767453793359",
+      "name": "X 第三十一弹",
+      "icon": "https://linux.do/uploads/default/original/4X/8/f/3/8f394750700bf1432507ef2b3535d15e86b42fb6.avif",
+      "order": 209,
+      "emojiCount": 367,
+      "isArchived": false
+    },
+    {
+      "id": "group-1766845450023",
+      "name": "X 第十八弹",
+      "icon": "https://linux.do/uploads/default/original/4X/1/e/3/1e30ec0b55936bee6d6deaccc978158aecb1bd4e.avif",
+      "order": 210,
+      "emojiCount": 532,
+      "isArchived": true
+    },
+    {
+      "id": "group-1765008889810",
+      "name": "X 第十弹",
+      "icon": "https://linux.do/uploads/default/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
+      "order": 211,
+      "emojiCount": 1016,
+      "isArchived": true
+    },
+    {
+      "id": "group-1765806805581",
+      "name": "X 第十二弹",
+      "icon": "https://linux.do/uploads/default/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
+      "order": 212,
+      "emojiCount": 1245,
+      "isArchived": true
+    },
+    {
+      "id": "group-1766906735649",
+      "name": "X 第十九弹",
+      "icon": "https://linux.do/uploads/default/original/4X/9/8/5/985fbe2044503318b8287d97303c0b1ae839e753.avif?v=emoji-17",
+      "order": 213,
+      "emojiCount": 311,
+      "isArchived": false
+    },
+    {
+      "id": "group-1766734481816",
+      "name": "X 第十六弹",
+      "icon": "https://linux.do/uploads/default/original/4X/e/b/a/eba0c2574fae95818c2ba2436d3cbdf8c9d476f3.avif",
+      "order": 214,
+      "emojiCount": 1458,
+      "isArchived": true
+    },
+    {
+      "id": "group-1766763084048",
+      "name": "X 第十七弹",
+      "icon": "https://linux.do/uploads/default/original/4X/7/a/9/7a92a9f9abef23a4373d5ce117b3fb687cd80c45.avif",
+      "order": 215,
+      "emojiCount": 340,
+      "isArchived": true
+    },
+    {
+      "id": "group-1765977432564",
+      "name": "X 第十三弹",
+      "icon": "https://linux.do/uploads/default/original/4X/5/f/1/5f186ef099b920418391ec4792117d7adfbf8563.avif",
+      "order": 216,
+      "emojiCount": 720,
+      "isArchived": true
+    },
+    {
+      "id": "group-1766486669577",
+      "name": "X 第十四弹",
+      "icon": "https://linux.do/uploads/default/original/4X/c/4/a/c4a7756a7c660327405b1a4a54c1996cd03a73be.avif",
+      "order": 217,
+      "emojiCount": 1490,
+      "isArchived": true
+    },
+    {
+      "id": "group-1766586968469",
+      "name": "X 第十五弹",
+      "icon": "https://linux.do/uploads/default/original/4X/b/b/8/bb88f5fdfa6dd8e294f433ee1a44bd57a134a3c0.avif",
+      "order": 218,
+      "emojiCount": 920,
+      "isArchived": true
+    },
+    {
+      "id": "group-1765284902642",
+      "name": "X 第十一弹",
+      "icon": "https://linux.do/uploads/default/original/4X/c/0/6/c06f67e3d6ecdbfbd54eacc472eb605532e98f4e.avif",
+      "order": 219,
+      "emojiCount": 887,
+      "isArchived": true
+    },
+    {
+      "id": "group-1762945443494",
+      "name": "X 第四弹",
+      "icon": "https://linux.do/uploads/default/original/4X/0/f/8/0f866327f9cfd47635ae71752cb91c728d2a60d1.avif",
+      "order": 220,
+      "emojiCount": 171,
+      "isArchived": true
+    },
+    {
+      "id": "group-1763015750148",
+      "name": "X 第五弹",
+      "icon": "https://linux.do/uploads/default/original/4X/8/6/7/867afa6da4fb17099d955d4f078cf8d548f2250d.avif",
+      "order": 221,
+      "emojiCount": 120,
+      "isArchived": true
+    },
+    {
+      "id": "group-1759672893426",
+      "name": "yauyau",
+      "icon": "https://linux.do/uploads/default/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
+      "order": 222,
+      "emojiCount": 77,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761442802743",
+      "name": "あきゅー",
+      "icon": "https://linux.do/uploads/default/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
+      "order": 223,
+      "emojiCount": 11,
+      "isArchived": true
+    },
+    {
+      "id": "group-1759062077224",
+      "name": "アマカノ 3",
+      "icon": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
+      "order": 224,
+      "emojiCount": 4,
+      "isArchived": true
+    }
+  ]
+}

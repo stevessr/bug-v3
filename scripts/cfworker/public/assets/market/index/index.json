@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-01-26T14:29:20.547Z",
+  "totalGroups": 225,
+  "pageSize": 50,
+  "totalPages": 5,
+  "pages": [
+    {
+      "name": "page-1.json",
+      "start": 1,
+      "end": 50,
+      "count": 50
+    },
+    {
+      "name": "page-2.json",
+      "start": 51,
+      "end": 100,
+      "count": 50
+    },
+    {
+      "name": "page-3.json",
+      "start": 101,
+      "end": 150,
+      "count": 50
+    },
+    {
+      "name": "page-4.json",
+      "start": 151,
+      "end": 200,
+      "count": 50
+    },
+    {
+      "name": "page-5.json",
+      "start": 201,
+      "end": 225,
+      "count": 25
+    }
+  ]
+}
