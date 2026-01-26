@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Linux.do 工具集
 // @namespace    https://github.com/stevessr/bug-v3
-// @version      1.6.0
+// @version      1.6.1
 // @description  Linux.do 增强工具集：定时发送、表情助手（全员 + 用户）、群组管理、点赞计数器
 // @author       stevessr, ChiGamma
 // @match        https://linux.do/*
@@ -707,6 +707,36 @@
             { id: 'bili_057', name: '📺 Bili 057', emoji: '📺' }
         ],
 
+        // 允许的分类 ID
+        ALLOWED_CATEGORIES: new Set([
+            // 开发
+            4, 20, 31, 88,
+            // 国产
+            98, 99, 100, 101,
+            // 资源
+            14, 83, 84, 85,
+            // 文档
+            42, 75, 76, 77,
+            // 招聘
+            27, 72, 73, 74,
+            // 阅读
+            32, 69, 70, 71,
+            // 新闻
+            34, 78, 79, 80,
+            // 福利
+            36, 60, 61, 62,
+            // 日常
+            11, 35, 89, 21,
+            // 孵化
+            102, 103, 104, 105,
+            // 运营
+            2, 30, 49, 63, 64, 65
+        ]),
+
+        isCategoryAllowed(categoryId) {
+            return this.ALLOWED_CATEGORIES.has(categoryId);
+        },
+
         DELAY_MS_ALL: 1500,
         DELAY_MS_USER: 2000,
         SKIP_ALREADY_REACTED: true,
@@ -721,6 +751,8 @@
         panelStartLeft: 0,
         panelStartBottom: 0,
         reactionStatusCache: new Map(),
+        topicCategoryCache: new Map(),
+        postTopicCache: new Map(),
 
         getSelectedReaction() {
             const selector = document.getElementById('ld-reaction-select');
@@ -780,6 +812,58 @@
                 this.reactionStatusCache.set(cacheKey, false);
                 return false;
             }
+        },
+
+        async getTopicIdByPostId(postId) {
+            if (this.postTopicCache.has(postId)) return this.postTopicCache.get(postId);
+            const url = `/posts/${postId}.json`;
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    this.postTopicCache.set(postId, null);
+                    return null;
+                }
+                const data = await res.json();
+                const postData = this.normalizePostData(data);
+                const topicId = postData?.topic_id || data?.topic_id || null;
+                this.postTopicCache.set(postId, topicId);
+                return topicId;
+            } catch (e) {
+                this.postTopicCache.set(postId, null);
+                return null;
+            }
+        },
+
+        async getTopicCategoryId(topicId) {
+            if (this.topicCategoryCache.has(topicId)) return this.topicCategoryCache.get(topicId);
+            const url = `/t/topic/${topicId}.json`;
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    this.topicCategoryCache.set(topicId, null);
+                    return null;
+                }
+                const data = await res.json();
+                const categoryId = data?.category_id || null;
+                this.topicCategoryCache.set(topicId, categoryId);
+                return categoryId;
+            } catch (e) {
+                this.topicCategoryCache.set(topicId, null);
+                return null;
+            }
+        },
+
+        async getCategoryIdForAction(item) {
+            if (!item) return null;
+            const directCategoryId = item.category_id || item.categoryId || null;
+            if (directCategoryId) return directCategoryId;
+            const topicId = item.topic_id || item.topicId || null;
+            if (topicId) return await this.getTopicCategoryId(topicId);
+            const postId = item.post_id || item.postId || item.id || null;
+            if (!postId) return null;
+            const topicIdFromPost = await this.getTopicIdByPostId(postId);
+            if (!topicIdFromPost) return null;
+            return await this.getTopicCategoryId(topicIdFromPost);
         },
 
         // 从 localStorage 加载位置
@@ -964,15 +1048,18 @@
                 const data = await response.json();
 
                 if (data.post_stream && data.post_stream.stream) {
-                    return data.post_stream.stream;
+                    return {
+                        postIds: data.post_stream.stream,
+                        categoryId: data.category_id
+                    };
                 } else {
                     this.log('未找到楼层数据', 'all');
-                    return [];
+                    return null;
                 }
             } catch (e) {
                 console.error(e);
                 this.log(`获取楼层列表失败：${e.message}`, 'all');
-                return [];
+                return null;
             }
         },
 
@@ -1033,8 +1120,8 @@
             this.clearLog('all');
             this.hideProgress('all');
 
-            const postIds = await this.getAllPostIds();
-            if (!postIds || postIds.length === 0) {
+            const result = await this.getAllPostIds();
+            if (!result || !result.postIds || result.postIds.length === 0) {
                 this.isRunning = false;
                 btn.disabled = false;
                 btn.style.backgroundColor = '#e74c3c';
@@ -1042,15 +1129,27 @@
                 return;
             }
 
-            this.log(`共获取到 ${postIds.length} 个楼层，开始处理...`, 'all');
+            const { postIds, categoryId } = result;
+
+            // 检查分类是否允许
+            if (!this.isCategoryAllowed(categoryId)) {
+                this.log(`⛔ 当前分类 (ID: ${categoryId}) 不在允许列表中，已跳过`, 'all');
+                this.isRunning = false;
+                btn.disabled = false;
+                btn.style.backgroundColor = '#e74c3c';
+                btn.textContent = '🚀 开始执行';
+                return;
+            }
+
+            this.log(`共获取到 ${postIds.length} 个楼层，分类 ID: ${categoryId}，开始处理...`, 'all');
             this.updateProgress('all', 0, postIds.length);
 
             for (let i = 0; i < postIds.length; i++) {
                 const pid = postIds[i];
-                const result = await this.sendReactionToPost(pid, i + 1, postIds.length, 'all');
+                const sendResult = await this.sendReactionToPost(pid, i + 1, postIds.length, 'all');
                 this.updateProgress('all', i + 1, postIds.length);
 
-                if (result === 'rate_limit') {
+                if (sendResult === 'rate_limit') {
                     await sleep(5000);
                 } else {
                     await sleep(this.DELAY_MS_ALL);
@@ -1094,6 +1193,11 @@
 
                     for (let item of data.user_actions) {
                         if (results.length >= count) break;
+
+                        const categoryId = await this.getCategoryIdForAction(item);
+                        if (!categoryId || !this.isCategoryAllowed(categoryId)) {
+                            continue;
+                        }
 
                         if (!results.find(r => r.id === item.post_id)) {
                             results.push({
