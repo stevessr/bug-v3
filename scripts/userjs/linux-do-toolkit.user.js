@@ -253,6 +253,37 @@
         color: white;
     }
 
+    /* 进度条 */
+    .ld-progress-container {
+        width: 100%;
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+        margin: 10px 0;
+        overflow: hidden;
+        display: none;
+    }
+    .ld-progress-container.active {
+        display: block;
+    }
+    .ld-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #e74c3c, #f39c12);
+        border-radius: 3px;
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+    .ld-progress-text {
+        font-size: 11px;
+        color: #aaa;
+        text-align: center;
+        margin-top: 4px;
+        display: none;
+    }
+    .ld-progress-text.active {
+        display: block;
+    }
+
     /* 用户卡片点赞按钮 */
     .ld-usercard-reaction-btn {
         position: relative;
@@ -704,9 +735,14 @@
         extractCurrentReactions(postData) {
             if (!postData) return { any: false, list: [] };
             const list = [];
-            if (postData.current_user_reaction) list.push(postData.current_user_reaction);
+            if (postData.current_user_reaction) {
+                const r = postData.current_user_reaction;
+                list.push(typeof r === 'object' && r.id ? r.id : r);
+            }
             if (Array.isArray(postData.current_user_reactions)) {
-                list.push(...postData.current_user_reactions.filter(Boolean));
+                postData.current_user_reactions.filter(Boolean).forEach(r => {
+                    list.push(typeof r === 'object' && r.id ? r.id : r);
+                });
             }
             if (postData.reactions) {
                 if (Array.isArray(postData.reactions)) {
@@ -867,6 +903,26 @@
             if (logBox) logBox.innerHTML = '';
         },
 
+        updateProgress(tabId, current, total) {
+            const container = document.getElementById(`ld-progress-${tabId}`);
+            const bar = document.getElementById(`ld-progress-bar-${tabId}`);
+            const text = document.getElementById(`ld-progress-text-${tabId}`);
+            if (!container || !bar || !text) return;
+
+            const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+            container.classList.add('active');
+            text.classList.add('active');
+            bar.style.width = `${percent}%`;
+            text.textContent = `${current} / ${total} (${percent}%)`;
+        },
+
+        hideProgress(tabId) {
+            const container = document.getElementById(`ld-progress-${tabId}`);
+            const text = document.getElementById(`ld-progress-text-${tabId}`);
+            if (container) container.classList.remove('active');
+            if (text) text.classList.remove('active');
+        },
+
         togglePanel() {
             // 如果刚刚拖拽过，不触发展开/折叠
             if (this.isDragging) return;
@@ -975,6 +1031,7 @@
             btn.style.backgroundColor = '#95a5a6';
             btn.textContent = '处理中...';
             this.clearLog('all');
+            this.hideProgress('all');
 
             const postIds = await this.getAllPostIds();
             if (!postIds || postIds.length === 0) {
@@ -986,10 +1043,12 @@
             }
 
             this.log(`共获取到 ${postIds.length} 个楼层，开始处理...`, 'all');
+            this.updateProgress('all', 0, postIds.length);
 
             for (let i = 0; i < postIds.length; i++) {
                 const pid = postIds[i];
                 const result = await this.sendReactionToPost(pid, i + 1, postIds.length, 'all');
+                this.updateProgress('all', i + 1, postIds.length);
 
                 if (result === 'rate_limit') {
                     await sleep(5000);
@@ -1006,6 +1065,7 @@
                 btn.disabled = false;
                 btn.style.backgroundColor = '#e74c3c';
                 btn.textContent = '🚀 开始执行';
+                this.hideProgress('all');
             }, 3000);
         },
 
@@ -1092,12 +1152,15 @@
             this.isRunning = true;
             document.getElementById('ld-user-run-btn').disabled = true;
             document.getElementById('ld-user-check-btn').disabled = true;
+            this.hideProgress('user');
 
             this.log(`🚀 开始批量处理...`, 'user');
+            this.updateProgress('user', 0, this.targetPostIds.length);
 
             for (let i = 0; i < this.targetPostIds.length; i++) {
                 const item = this.targetPostIds[i];
                 const result = await this.sendReactionToPost(item.id, i + 1, this.targetPostIds.length, 'user');
+                this.updateProgress('user', i + 1, this.targetPostIds.length);
 
                 if (result === 'rate_limit') {
                     await sleep(5000);
@@ -1109,6 +1172,9 @@
             this.log(`🎉 所有操作已完成！`, 'user');
             this.isRunning = false;
             document.getElementById('ld-user-check-btn').disabled = false;
+            setTimeout(() => {
+                this.hideProgress('user');
+            }, 3000);
         },
 
         // ===== 群组管理功能 =====
@@ -1275,6 +1341,10 @@
                         注意：toggle 模式，已点过会取消
                     </p>
                     <button id="ld-all-start-btn" style="width: 100%; background: #e74c3c; margin-top: 10px;">🚀 开始执行</button>
+                    <div id="ld-progress-all" class="ld-progress-container">
+                        <div id="ld-progress-bar-all" class="ld-progress-bar"></div>
+                    </div>
+                    <div id="ld-progress-text-all" class="ld-progress-text"></div>
                     <div id="ld-log-all" class="ld-log">等待操作...</div>
                 </div>
 
@@ -1293,6 +1363,10 @@
                         <button id="ld-user-check-btn" style="flex: 1; background: #3498db;">🔍 预检</button>
                         <button id="ld-user-run-btn" style="flex: 1; background: #555; cursor: not-allowed;" disabled>🚀 执行</button>
                     </div>
+                    <div id="ld-progress-user" class="ld-progress-container">
+                        <div id="ld-progress-bar-user" class="ld-progress-bar"></div>
+                    </div>
+                    <div id="ld-progress-text-user" class="ld-progress-text"></div>
                     <div id="ld-log-user" class="ld-log">等待操作...</div>
                 </div>
 
