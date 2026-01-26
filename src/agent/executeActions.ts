@@ -124,6 +124,44 @@ export async function executeAgentActions(
       return { ...res, id: action.id }
     }
 
+    if (action.type === 'getDOM') {
+      if (tabId === null) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: '未找到目标标签页'
+        }
+      }
+      if (!chrome.tabs?.sendMessage) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: '无法发送消息到内容脚本'
+        }
+      }
+      const response = await new Promise<any>(resolve => {
+        chrome.tabs.sendMessage(
+          tabId,
+          {
+            type: 'DOM_QUERY',
+            kind: 'tree',
+            selector: action.selector,
+            options: action.options || {}
+          },
+          (resp: any) => resolve(resp)
+        )
+      })
+      return {
+        id: action.id,
+        type: action.type,
+        success: response?.success === true,
+        error: response?.error,
+        data: response?.data
+      }
+    }
+
     if (tabId === null) {
       return {
         id: action.id,

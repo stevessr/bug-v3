@@ -55,6 +55,11 @@ export interface AgentMessage {
   role: AgentRole
   content: string
   actions?: AgentAction[]
+  segments?: Array<{
+    id: string
+    content: string
+    actions?: AgentAction[]
+  }>
   error?: string
 }
 
@@ -74,6 +79,7 @@ export type AgentActionType =
   | 'drag'
   | 'select'
   | 'focus'
+  | 'getDOM'
   | 'blur'
 
 export interface AgentActionBase {
@@ -157,6 +163,17 @@ export interface SelectAction extends AgentActionBase {
   label?: string
 }
 
+export interface DomTreeAction extends AgentActionBase {
+  type: 'getDOM'
+  selector?: string
+  options?: {
+    includeMarkdown?: boolean
+    maxDepth?: number
+    maxChildren?: number
+    maxTextLength?: number
+  }
+}
+
 export type AgentAction =
   | ClickAction
   | ScrollAction
@@ -168,6 +185,7 @@ export type AgentAction =
   | TypeAction
   | DragAction
   | SelectAction
+  | DomTreeAction
 
 export interface AgentActionResult {
   id: string

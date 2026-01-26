@@ -387,18 +387,45 @@ const updateAssistantMessage = (assistantId: string, content: string, error?: st
   saveMessages()
 }
 
+const setAssistantSegments = (
+  assistantId: string,
+  segments: Array<{ id: string; content: string; actions?: AgentAction[] }> | null
+) => {
+  const idx = messages.value.findIndex(message => message.id === assistantId)
+  if (idx === -1) return
+  messages.value[idx] = {
+    ...messages.value[idx],
+    segments: segments || undefined
+  }
+  saveMessages()
+}
+
+const buildSegmentsFromToolInputs = (
+  toolInputs: Array<{ message?: string; steps?: string[]; actions?: AgentAction[] }>,
+  toolUseIds?: string[]
+) =>
+  toolInputs.map((input, index) => {
+    const content =
+      input.message?.trim() || input.steps?.filter(Boolean).join(' · ') || '已生成动作。'
+    return {
+      id: toolUseIds?.[index] || `tool-${index + 1}`,
+      content,
+      actions: input.actions
+    }
+  })
+
 const retryFromMessage = async (message: AgentMessage) => {
   if (!message.content || isSending.value) return
   const idx = messages.value.findIndex(item => item.id === message.id)
   if (idx === -1) return
   messages.value = messages.value.slice(0, idx + 1)
-    pendingActions.value = []
-    actionResults.value = {}
-    pendingActionsAssistantId.value = null
+  pendingActions.value = []
+  actionResults.value = {}
+  pendingActionsAssistantId.value = null
   lastToolUseIds.value = []
   lastToolInputs.value = []
-    lastParallelActions.value = true
-    lastChecklist.value = []
+  lastParallelActions.value = true
+  lastChecklist.value = []
   const keptIds = new Set(messages.value.map(item => item.id))
   const nextTimelines: Record<string, { collapsed: boolean; entries: any[] }> = {}
   for (const [key, value] of Object.entries(timelines.value)) {
@@ -503,6 +530,14 @@ const runActionsAndContinue = async () => {
     if (followup.message) {
       updateAssistantMessage(pendingActionsAssistantId.value as string, followup.message.content)
     }
+    if (followup.toolInputs && followup.toolInputs.length > 1) {
+      setAssistantSegments(
+        pendingActionsAssistantId.value as string,
+        buildSegmentsFromToolInputs(followup.toolInputs, followup.toolUseIds)
+      )
+    } else {
+      setAssistantSegments(pendingActionsAssistantId.value as string, null)
+    }
     pendingActions.value = followup.actions || []
     actionResults.value = {}
     if (followup.toolUseIds?.length) {
@@ -522,11 +557,7 @@ const runActionsAndContinue = async () => {
     lastParallelActions.value = followup.parallelActions !== false
     saveSession()
     if (pendingActionsAssistantId.value) {
-      applyFinalTimelineEntries(
-        pendingActionsAssistantId.value,
-        followup.thoughts,
-        followup.steps
-      )
+      applyFinalTimelineEntries(pendingActionsAssistantId.value, followup.thoughts, followup.steps)
     }
     if (!pendingActions.value.length) break
   }
@@ -676,6 +707,14 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
 
   if (result.message) {
     updateAssistantMessage(assistantId, result.message.content)
+  }
+  if (result.toolInputs && result.toolInputs.length > 1) {
+    setAssistantSegments(
+      assistantId,
+      buildSegmentsFromToolInputs(result.toolInputs, result.toolUseIds)
+    )
+  } else {
+    setAssistantSegments(assistantId, null)
   }
 
   pendingActions.value = result.actions || []
@@ -904,7 +943,19 @@ const onBypassModeChange = (value: boolean) => {
           class="agent-message-bubble"
           :class="message.role === 'user' ? 'agent-user' : 'agent-assistant'"
         >
-          <div class="agent-markdown" v-html="renderMarkdown(message.content)"></div>
+          <div v-if="message.segments && message.segments.length" class="agent-segments">
+            <div v-for="segment in message.segments" :key="segment.id" class="agent-segment">
+              <div class="agent-segment-title">Tool {{ segment.id }}</div>
+              <div class="agent-markdown" v-html="renderMarkdown(segment.content)"></div>
+              <div
+                v-if="segment.actions && segment.actions.length"
+                class="agent-action-hint agent-action-hint--segment"
+              >
+                返回 {{ segment.actions.length }} 个动作待执行
+              </div>
+            </div>
+          </div>
+          <div v-else class="agent-markdown" v-html="renderMarkdown(message.content)"></div>
           <div v-if="message.actions && message.actions.length" class="agent-action-hint">
             返回 {{ message.actions.length }} 个动作待执行
           </div>
@@ -1058,6 +1109,29 @@ const onBypassModeChange = (value: boolean) => {
   border-radius: 14px;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.agent-segments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-segment {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.agent-segment-title {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.agent-action-hint--segment {
+  margin-top: 6px;
 }
 
 .agent-markdown :deep(p) {

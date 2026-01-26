@@ -54,7 +54,8 @@ const actionSchema = z.object({
     'drag',
     'select',
     'focus',
-    'blur'
+    'blur',
+    'getDOM'
   ]),
   note: z.string().optional(),
   selector: z.string().optional(),
@@ -78,7 +79,8 @@ const actionSchema = z.object({
   toX: z.number().optional(),
   toY: z.number().optional(),
   value: z.string().optional(),
-  label: z.string().optional()
+  label: z.string().optional(),
+  options: z.record(z.any()).optional()
 })
 
 const listFromString = z.preprocess(
@@ -89,6 +91,38 @@ const listFromString = z.preprocess(
 const normalizeAgentPayload = (payload: unknown): unknown => {
   if (!payload || typeof payload !== 'object') return payload
   const normalized: Record<string, unknown> = { ...(payload as Record<string, unknown>) }
+  const actionTypes = new Set([
+    'click',
+    'scroll',
+    'touch',
+    'screenshot',
+    'navigate',
+    'click-dom',
+    'input',
+    'double-click',
+    'right-click',
+    'hover',
+    'key',
+    'type',
+    'drag',
+    'select',
+    'focus',
+    'blur',
+    'getDOM'
+  ])
+  if (normalized['memory.set'] || normalized['memory.remove']) {
+    normalized.memory =
+      normalized.memory && typeof normalized.memory === 'object' ? normalized.memory : {}
+    const memory = normalized.memory as Record<string, unknown>
+    if (normalized['memory.set'] && typeof normalized['memory.set'] === 'object') {
+      memory.set = normalized['memory.set']
+    }
+    if (Array.isArray(normalized['memory.remove'])) {
+      memory.remove = normalized['memory.remove']
+    }
+    delete normalized['memory.set']
+    delete normalized['memory.remove']
+  }
   if (Array.isArray(normalized.actions)) {
     const flattened: unknown[] = []
     for (const action of normalized.actions) {
@@ -124,7 +158,25 @@ const normalizeAgentPayload = (payload: unknown): unknown => {
 
       flattened.push(actionRecord)
     }
-    normalized.actions = flattened
+    const nextActions: Record<string, unknown>[] = []
+    const nextSubagents: Array<Record<string, unknown>> = Array.isArray(normalized.subagents)
+      ? (normalized.subagents as Array<Record<string, unknown>>)
+      : []
+    for (const item of flattened) {
+      if (!item || typeof item !== 'object') continue
+      const record = item as Record<string, unknown>
+      const type = typeof record.type === 'string' ? record.type : ''
+      if (type === 'subagents' && Array.isArray(record.subagents)) {
+        nextSubagents.push(...(record.subagents as Array<Record<string, unknown>>))
+        continue
+      }
+      if (type && !actionTypes.has(type)) {
+        continue
+      }
+      nextActions.push(record)
+    }
+    normalized.actions = nextActions
+    if (nextSubagents.length > 0) normalized.subagents = nextSubagents
   }
   return normalized
 }
@@ -258,7 +310,8 @@ const toolSchema = {
                 'key',
                 'type',
                 'drag',
-                'select'
+                'select',
+                'getDOM'
               ]
             },
             note: { type: 'string' },
@@ -283,7 +336,8 @@ const toolSchema = {
             toX: { type: 'number' },
             toY: { type: 'number' },
             value: { type: 'string' },
-            label: { type: 'string' }
+            label: { type: 'string' },
+            options: { type: 'object' }
           },
           required: ['type']
         }
@@ -422,19 +476,18 @@ const repairJson = (raw: unknown): string | null => {
 const parseYamlLikeFormat = (raw: unknown): string | null => {
   if (typeof raw !== 'string') return null
   const text = raw.trim()
+  if (!text) return null
+  if (text.includes('```')) return null
 
-  // Check if it looks like YAML-like format (key: value pairs without outer braces)
-  const keyValuePattern = /(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/
-  const firstKey = text.match(keyValuePattern)
-  if (!firstKey || firstKey.index === undefined) return null
-
-  // If it already has outer braces, skip
+  // Only accept if the first non-empty line starts with a known key
+  const lines = text.split('\n').map(line => line.trim())
+  const firstLine = lines.find(line => line.length > 0)
+  if (!firstLine) return null
+  const keyValuePattern = /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/
+  if (!keyValuePattern.test(firstLine)) return null
   if (text.startsWith('{') && text.endsWith('}')) return null
 
-  const normalizedText = text.slice(firstKey.index)
-
   const result: Record<string, unknown> = {}
-  const lines = normalizedText.split('\n')
 
   let currentKey = ''
   let currentValue = ''
@@ -492,6 +545,22 @@ const parseYamlLikeFormat = (raw: unknown): string | null => {
   }
 }
 
+const extractSingleCodeFence = (raw: string): string | null => {
+  const match = raw.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  return match ? match[1].trim() : null
+}
+
+const canParseStructured = (raw: string): { candidate: string | null } => {
+  const fenced = extractSingleCodeFence(raw)
+  if (fenced !== null) {
+    return { candidate: fenced }
+  }
+  if (raw.includes('```')) return { candidate: null }
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return { candidate: trimmed }
+  return { candidate: raw }
+}
+
 const extractTextContent = (
   content: Array<{ type: string; text?: string }> | undefined
 ): string => {
@@ -500,6 +569,68 @@ const extractTextContent = (
     .filter(block => block.type === 'text')
     .map(block => block.text || '')
     .join('')
+}
+
+const sleep = async (ms: number) => {
+  if (!ms) return
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const getHeaderValue = (headers: any, key: string): string | null => {
+  if (!headers) return null
+  const lowerKey = key.toLowerCase()
+  if (typeof headers.get === 'function') {
+    return headers.get(lowerKey) || headers.get(key) || null
+  }
+  const value = headers[key] ?? headers[lowerKey]
+  return typeof value === 'string' ? value : null
+}
+
+const getRetryDelayMs = (error: any, attempt: number): number | null => {
+  const status = error?.status ?? error?.statusCode
+  const name = typeof error?.name === 'string' ? error.name : ''
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const isRateLimit =
+    status === 429 || name === 'RateLimitError' || /429|rate limit/i.test(message)
+  const isTransientStreamError =
+    /stream ended without producing a Message with role=assistant/i.test(message) ||
+    /request ended without sending any chunks/i.test(message)
+  const isServerError = typeof status === 'number' && status >= 500
+  if (!isRateLimit && !isTransientStreamError && !isServerError) return null
+  const retryAfter = getHeaderValue(error?.headers, 'retry-after')
+  if (retryAfter) {
+    const seconds = Number(retryAfter)
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.min(seconds * 1000, 30000)
+    }
+  }
+  const base = 1000
+  const maxDelay = 8000
+  const backoff = Math.min(base * 2 ** attempt, maxDelay)
+  const jitter = Math.floor(Math.random() * 250)
+  const quick = 500 + Math.floor(Math.random() * 500)
+  return (isTransientStreamError ? quick : backoff) + jitter
+}
+
+const withRateLimitRetry = async <T>(
+  task: () => Promise<T>,
+  onRetry?: (attempt: number, delayMs: number, error: any) => void,
+  maxRetries = 2
+): Promise<T> => {
+  let attempt = 0
+  while (true) {
+    try {
+      return await task()
+    } catch (error: any) {
+      const delayMs = getRetryDelayMs(error, attempt)
+      if (delayMs === null || attempt >= maxRetries) {
+        throw error
+      }
+      onRetry?.(attempt + 1, delayMs, error)
+      await sleep(delayMs)
+      attempt += 1
+    }
+  }
 }
 
 const buildSubagentPrompt = (subagent: SubAgentConfig): string => {
@@ -546,7 +677,6 @@ async function streamClaudeTools(options: {
     allTools.push(...(options.mcpTools as (typeof toolSchema)[]))
   }
 
-  let streamedText = ''
   const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
     if (!options.onUpdate) return
     if (!payload.message && !payload.thoughts && !payload.steps) return
@@ -564,75 +694,91 @@ async function streamClaudeTools(options: {
       : undefined
     emitUpdate({ message, thoughts, steps })
   }
-  const stream = options.client.messages
-    .stream({
-      model: options.model,
-      max_tokens: options.maxTokens,
-      system: options.system,
-      messages: [{ role: 'user', content: options.prompt }],
-      tools: allTools,
-      tool_choice: options.forceTool ? { type: 'tool', name: toolSchema.name } : { type: 'auto' }
-    })
-    .on('text', text => {
-      streamedText += text
-      emitUpdate({ message: streamedText })
-    })
-    .on('thinking', (_, thinkingSnapshot) => {
-      emitUpdate({ thoughts: [thinkingSnapshot] })
-    })
-    .on('inputJson', (_partial, jsonSnapshot) => {
-      extractFromSnapshot(jsonSnapshot)
-    })
 
-  const finalMessage = await stream.finalMessage()
-  const rawText = streamedText || extractTextContent(finalMessage.content)
+  return withRateLimitRetry(
+    async () => {
+      let streamedText = ''
+      const stream = options.client.messages
+        .stream({
+          model: options.model,
+          max_tokens: options.maxTokens,
+          system: options.system,
+          messages: [{ role: 'user', content: options.prompt }],
+          tools: allTools,
+          tool_choice: options.forceTool ? { type: 'tool', name: toolSchema.name } : { type: 'auto' }
+        })
+        .on('text', text => {
+          streamedText += text
+          emitUpdate({ message: streamedText })
+        })
+        .on('thinking', (_, thinkingSnapshot) => {
+          emitUpdate({ thoughts: [thinkingSnapshot] })
+        })
+        .on('inputJson', (_partial, jsonSnapshot) => {
+          extractFromSnapshot(jsonSnapshot)
+        })
 
-  // 检查 browser_actions 工具调用
-  const browserToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
-  const { parsedInputs, toolUseIds } = parseToolInputs(browserToolUses)
-  const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
-  const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
+      const finalMessage = await stream.finalMessage()
+      const rawText = streamedText || extractTextContent(finalMessage.content)
 
-  // 检查 MCP 工具调用
-  const mcpToolUses = finalMessage.content?.filter(
-    (block: any) => block?.type === 'tool_use' && block?.name?.startsWith('mcp__')
-  ) as { id?: string; name?: string; input?: any }[] | undefined
+      // 检查 browser_actions 工具调用
+      const browserToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
+      const { parsedInputs, toolUseIds } = parseToolInputs(browserToolUses)
+      const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
+      const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
 
-  let parsed: z.infer<typeof responseSchema> | null = null
-  if (parsedInputs.length > 0) {
-    parsed = mergeParsedPayloads(parsedInputs)
-  }
+      // 检查 MCP 工具调用
+      const mcpToolUses = finalMessage.content?.filter(
+        (block: any) => block?.type === 'tool_use' && block?.name?.startsWith('mcp__')
+      ) as { id?: string; name?: string; input?: any }[] | undefined
 
-  if (!parsed) {
-    const candidate = repairJson(rawText) || rawText
-    try {
-      parsed = parseResponsePayload(JSON.parse(candidate))
-    } catch {
-      parsed = null
-    }
-  }
-
-  // Try YAML-like format as fallback (for models like GLM-4.7-flash)
-  if (!parsed) {
-    const yamlLikeCandidate = parseYamlLikeFormat(rawText)
-    if (yamlLikeCandidate) {
-      try {
-        parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
-      } catch {
-        parsed = null
+      let parsed: z.infer<typeof responseSchema> | null = null
+      if (parsedInputs.length > 0) {
+        parsed = mergeParsedPayloads(parsedInputs)
       }
-    }
-  }
 
-  return {
-    rawText,
-    parsed,
-    toolUseId,
-    toolInput,
-    toolUseIds,
-    toolInputs: parsedInputs,
-    mcpToolUses
-  }
+      if (!parsed) {
+        const { candidate } = canParseStructured(rawText)
+        if (candidate) {
+          const repaired = repairJson(candidate) || candidate
+          try {
+            parsed = parseResponsePayload(JSON.parse(repaired))
+          } catch {
+            parsed = null
+          }
+        }
+      }
+
+      // Try YAML-like format as fallback (for models like GLM-4.7-flash)
+      if (!parsed) {
+        const yamlLikeCandidate = parseYamlLikeFormat(rawText)
+        if (yamlLikeCandidate) {
+          try {
+            parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
+          } catch {
+            parsed = null
+          }
+        }
+      }
+
+      return {
+        rawText,
+        parsed,
+        toolUseId,
+        toolInput,
+        toolUseIds,
+        toolInputs: parsedInputs,
+        mcpToolUses
+      }
+    },
+    (attempt, delayMs, error) => {
+      const message =
+        error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
+          ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
+          : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
+      emitUpdate({ message })
+    }
+  )
 }
 
 async function streamClaudeText(options: {
@@ -642,21 +788,28 @@ async function streamClaudeText(options: {
   prompt: string
   maxTokens: number
 }) {
-  let streamedText = ''
-  const stream = options.client.messages
-    .stream({
-      model: options.model,
-      max_tokens: options.maxTokens,
-      system: options.system,
-      messages: [{ role: 'user', content: options.prompt }]
-    })
-    .on('text', text => {
-      streamedText += text
-    })
+  return withRateLimitRetry(
+    async () => {
+      let streamedText = ''
+      const stream = options.client.messages
+        .stream({
+          model: options.model,
+          max_tokens: options.maxTokens,
+          system: options.system,
+          messages: [{ role: 'user', content: options.prompt }]
+        })
+        .on('text', text => {
+          streamedText += text
+        })
 
-  const finalMessage = await stream.finalMessage()
-  const rawText = streamedText || extractTextContent(finalMessage.content)
-  return rawText.trim()
+      const finalMessage = await stream.finalMessage()
+      const rawText = streamedText || extractTextContent(finalMessage.content)
+      return rawText.trim()
+    },
+    () => {
+      // no-op for background tasks
+    }
+  )
 }
 
 const parseChecklist = (raw: string): string[] => {
@@ -818,7 +971,7 @@ export async function runAgentMessage(
           if (!server) {
             return {
               toolUseId: mcpToolUse.id || '',
-              error: `未找到 MCP 服务: ${parsed.serverId}`
+              error: `未找到 MCP 服务：${parsed.serverId}`
             }
           }
 
@@ -864,43 +1017,60 @@ export async function runAgentMessage(
           : undefined
         emitFollowUp({ message, thoughts, steps })
       }
-      const followUpStream = client.messages
-        .stream({
-          model: modelId,
-          max_tokens: resolveMaxTokens(settings.maxTokens),
-          system,
-          messages: [
-            { role: 'user', content: input },
-            {
-              role: 'assistant',
-              content: firstPass.mcpToolUses.map(use => ({
-                type: 'tool_use' as const,
-                id: use.id || '',
-                name: use.name || '',
-                input: use.input || {}
-              }))
-            },
-            {
-              role: 'user',
-              content: toolResultMessages
-            }
-          ],
-          tools: [toolSchema, ...(mcpTools as (typeof toolSchema)[])],
-          tool_choice: { type: 'auto' }
-        })
-        .on('text', text => {
-          followUpText += text
-          emitFollowUp({ message: followUpText })
-        })
-        .on('thinking', (_, thinkingSnapshot) => {
-          emitFollowUp({ thoughts: [thinkingSnapshot] })
-        })
-        .on('inputJson', (_partial, jsonSnapshot) => {
-          extractFollowUpSnapshot(jsonSnapshot)
-        })
+      const followUpResult = await withRateLimitRetry(
+        async () => {
+          followUpText = ''
+          const followUpStream = client.messages
+            .stream({
+              model: modelId,
+              max_tokens: resolveMaxTokens(settings.maxTokens),
+              system,
+              messages: [
+                { role: 'user', content: input },
+                {
+                  role: 'assistant',
+                  content: firstPass.mcpToolUses.map(use => ({
+                    type: 'tool_use' as const,
+                    id: use.id || '',
+                    name: use.name || '',
+                    input: use.input || {}
+                  }))
+                },
+                {
+                  role: 'user',
+                  content: toolResultMessages
+                }
+              ],
+              tools: [toolSchema, ...(mcpTools as (typeof toolSchema)[])],
+              tool_choice: { type: 'auto' }
+            })
+            .on('text', text => {
+              followUpText += text
+              emitFollowUp({ message: followUpText })
+            })
+            .on('thinking', (_, thinkingSnapshot) => {
+              emitFollowUp({ thoughts: [thinkingSnapshot] })
+            })
+            .on('inputJson', (_partial, jsonSnapshot) => {
+              extractFollowUpSnapshot(jsonSnapshot)
+            })
 
-      const followUpMessage = await followUpStream.finalMessage()
-      const followUpRawText = followUpText || extractTextContent(followUpMessage.content)
+          const followUpMessage = await followUpStream.finalMessage()
+          return {
+            followUpMessage,
+            followUpRawText: followUpText || extractTextContent(followUpMessage.content)
+          }
+        },
+        (attempt, delayMs, error) => {
+          const message =
+            error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
+              ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
+              : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
+          emitFollowUp({ message })
+        }
+      )
+      const followUpMessage = followUpResult.followUpMessage
+      const followUpRawText = followUpResult.followUpRawText
 
       // 检查是否有 browser_actions 工具调用
       const followUpToolUses = extractBrowserToolUses(followUpMessage.content as any[] | undefined)
@@ -911,11 +1081,14 @@ export async function runAgentMessage(
       }
 
       if (!followUpParsed) {
-        const candidate = repairJson(followUpRawText) || followUpRawText
-        try {
-        followUpParsed = parseResponsePayload(JSON.parse(candidate))
-        } catch {
-          followUpParsed = null
+        const { candidate } = canParseStructured(followUpRawText)
+        if (candidate) {
+          const repaired = repairJson(candidate) || candidate
+          try {
+            followUpParsed = parseResponsePayload(JSON.parse(repaired))
+          } catch {
+            followUpParsed = null
+          }
         }
       }
 
@@ -1171,55 +1344,73 @@ export async function runAgentFollowup(
         : undefined
       emitUpdate({ message, thoughts, steps })
     }
-    const stream = client.messages
-      .stream({
-        model: modelId,
-        max_tokens: resolveMaxTokens(settings.maxTokens),
-        system,
-        messages: [
-          { role: 'user', content: input },
-          {
-            role: 'assistant',
-            content: toolUses.map(use => ({
-              type: 'tool_use' as const,
-              id: use.id,
-              name: toolSchema.name,
-              input: use.input
-            }))
-          },
-          {
-            role: 'user',
-            content: toolUses.map(use => {
-              const actionIds = (use.input.actions || [])
-                .map(action => action.id)
-                .filter((id): id is string => typeof id === 'string')
-              const filteredResults = actionIds.length
-                ? toolResult.filter(result => actionIds.includes(result.id))
-                : []
-              return {
-                type: 'tool_result' as const,
-                tool_use_id: use.id,
-                content: JSON.stringify(filteredResults)
+    const followupResult = await withRateLimitRetry(
+      async () => {
+        streamedText = ''
+        const stream = client.messages
+          .stream({
+            model: modelId,
+            max_tokens: resolveMaxTokens(settings.maxTokens),
+            system,
+            messages: [
+              { role: 'user', content: input },
+              {
+                role: 'assistant',
+                content: toolUses.map(use => ({
+                  type: 'tool_use' as const,
+                  id: use.id,
+                  name: toolSchema.name,
+                  input: use.input
+                }))
+              },
+              {
+                role: 'user',
+                content: toolUses.map(use => {
+                  const actionIds = (use.input.actions || [])
+                    .map(action => action.id)
+                    .filter((id): id is string => typeof id === 'string')
+                  const filteredResults = actionIds.length
+                    ? toolResult.filter(result => actionIds.includes(result.id))
+                    : []
+                  return {
+                    type: 'tool_result' as const,
+                    tool_use_id: use.id,
+                    content: JSON.stringify(filteredResults)
+                  }
+                })
               }
-            })
-          }
-        ],
-        tools: [toolSchema],
-        tool_choice: { type: 'auto' }
-      })
-      .on('text', text => {
-        streamedText += text
-        emitUpdate({ message: streamedText })
-      })
-      .on('thinking', (_, thinkingSnapshot) => {
-        emitUpdate({ thoughts: [thinkingSnapshot] })
-      })
-      .on('inputJson', (_partial, jsonSnapshot) => {
-        extractFromSnapshot(jsonSnapshot)
-      })
+            ],
+            tools: [toolSchema],
+            tool_choice: { type: 'auto' }
+          })
+          .on('text', text => {
+            streamedText += text
+            emitUpdate({ message: streamedText })
+          })
+          .on('thinking', (_, thinkingSnapshot) => {
+            emitUpdate({ thoughts: [thinkingSnapshot] })
+          })
+          .on('inputJson', (_partial, jsonSnapshot) => {
+            extractFromSnapshot(jsonSnapshot)
+          })
 
-    const finalMessage = await stream.finalMessage()
-    const rawText = streamedText || extractTextContent(finalMessage.content)
+        const finalMessage = await stream.finalMessage()
+        return {
+          finalMessage,
+          rawText: streamedText || extractTextContent(finalMessage.content)
+        }
+      },
+      (attempt, delayMs, error) => {
+        const message =
+          error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
+            ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
+            : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
+        emitUpdate({ message })
+      }
+    )
+
+    const finalMessage = followupResult.finalMessage
+    const rawText = followupResult.rawText
     const followUpToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
     const followUpParsedInputs = parseToolInputs(followUpToolUses)
 
@@ -1229,11 +1420,14 @@ export async function runAgentFollowup(
     }
 
     if (!parsed) {
-      const candidate = repairJson(rawText) || rawText
-      try {
-      parsed = parseResponsePayload(JSON.parse(candidate))
-      } catch {
-        parsed = null
+      const { candidate } = canParseStructured(rawText)
+      if (candidate) {
+        const repaired = repairJson(candidate) || candidate
+        try {
+          parsed = parseResponsePayload(JSON.parse(repaired))
+        } catch {
+          parsed = null
+        }
       }
     }
 
