@@ -312,6 +312,23 @@ const { uploadFiles } = useUpload({
 const showImageCropper = ref(false)
 const cropImageFile = ref<File | null>(null)
 
+const clearSelectedFiles = async () => {
+  if (isUploading.value) return
+  if (!selectedFiles.value.length) return
+  const confirmed = window.confirm(`确认清空 ${selectedFiles.value.length} 个待上传文件吗？`)
+  if (!confirmed) return
+  for (const file of selectedFiles.value) {
+    try {
+      if (file.previewUrl) URL.revokeObjectURL(file.previewUrl)
+    } catch {
+      // ignore revoke errors
+    }
+  }
+  selectedFiles.value = []
+  uploadProgress.value = []
+  await clearPersistedFiles()
+}
+
 // Debug: Watch for changes
 // 优化：只监听 emojis 长度变化而非深度监听整个对象
 watch(
@@ -813,7 +830,17 @@ onBeforeUnmount(() => {
       <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">
         <a-collapse-panel key="files">
           <template #header>
-            <span class="font-medium">待上传文件 ({{ selectedFiles.length }})</span>
+            <div class="flex items-center justify-between w-full pr-2">
+              <span class="font-medium">待上传文件 ({{ selectedFiles.length }})</span>
+              <a-button
+                size="small"
+                danger
+                @click.stop="clearSelectedFiles"
+                :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
+              >
+                一键清空
+              </a-button>
+            </div>
           </template>
           <FileListDisplay
             :files="selectedFiles"
