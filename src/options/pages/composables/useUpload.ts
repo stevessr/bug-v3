@@ -5,6 +5,7 @@ import type { EmojiGroup } from '@/types/type'
 import type { useEmojiStore } from '@/stores/emojiStore'
 
 export interface UploadProgressItem {
+  id: string
   fileName: string
   percent: number
   error?: string
@@ -38,6 +39,7 @@ export function useUpload(options: UseUploadOptions) {
 
     isUploading.value = true
     uploadProgress.value = selectedFiles.value.map(item => ({
+      id: item.id,
       fileName: item.file.name,
       percent: 0
     }))
@@ -78,23 +80,55 @@ export function useUpload(options: UseUploadOptions) {
     try {
       const service = uploadServices[uploadService.value]
 
-      for (let i = 0; i < selectedFiles.value.length; i++) {
-        const { file, width, height } = selectedFiles.value[i]
+      const findProgressIndex = (id: string) =>
+        uploadProgress.value.findIndex(progress => progress.id === id)
+
+      const pruneCompletedUploads = (currentId: string) => {
+        const keepIds = new Set(
+          uploadProgress.value
+            .filter(
+              progress => progress.id === currentId || progress.error || progress.percent < 100
+            )
+            .map(progress => progress.id)
+        )
+
+        selectedFiles.value = selectedFiles.value.filter(item => keepIds.has(item.id))
+
+        const progressMap = new Map(uploadProgress.value.map(item => [item.id, item]))
+        uploadProgress.value = selectedFiles.value
+          .map(item => progressMap.get(item.id))
+          .filter(Boolean) as UploadProgressItem[]
+
+        return selectedFiles.value.findIndex(item => item.id === currentId)
+      }
+
+      let i = 0
+      while (i < selectedFiles.value.length) {
+        const currentItem = selectedFiles.value[i]
+        const { file, width, height } = currentItem
+        const currentId = currentItem.id
+        let currentIndex = i
 
         try {
           const updateProgress = (percent: number) => {
-            uploadProgress.value[i].percent = percent
-            if (uploadProgress.value[i].waitingFor) {
-              uploadProgress.value[i].waitingFor = undefined
-              uploadProgress.value[i].waitStart = undefined
+            const idx = findProgressIndex(currentId)
+            if (idx === -1) return
+            uploadProgress.value[idx].percent = percent
+            if (uploadProgress.value[idx].waitingFor) {
+              uploadProgress.value[idx].waitingFor = undefined
+              uploadProgress.value[idx].waitStart = undefined
             }
           }
 
           const onRateLimitWait = async (waitTime: number) => {
             console.log('Rate limit hit. Writing existing batch before waiting.')
             await writeNewEmojis()
-            uploadProgress.value[i].waitingFor = waitTime / 1000
-            uploadProgress.value[i].waitStart = Date.now()
+            const newIndex = pruneCompletedUploads(currentId)
+            if (newIndex !== -1) currentIndex = newIndex
+            const idx = findProgressIndex(currentId)
+            if (idx === -1) return
+            uploadProgress.value[idx].waitingFor = waitTime / 1000
+            uploadProgress.value[idx].waitStart = Date.now()
           }
 
           const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
@@ -107,11 +141,16 @@ export function useUpload(options: UseUploadOptions) {
             width,
             height
           })
-          uploadProgress.value[i].percent = 100
+          updateProgress(100)
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error)
-          uploadProgress.value[i].error = error instanceof Error ? error.message : String(error)
+          const idx = findProgressIndex(currentId)
+          if (idx !== -1) {
+            uploadProgress.value[idx].error = error instanceof Error ? error.message : String(error)
+          }
         }
+
+        i = currentIndex + 1
       }
 
       // After the loop, write any remaining emojis.

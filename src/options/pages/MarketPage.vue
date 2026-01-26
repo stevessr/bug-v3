@@ -5,6 +5,7 @@ import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import type { EmojiGroup } from '@/types/type'
+import { requestConfirmation } from '@/options/utils/confirmService'
 
 const { t } = useI18n()
 
@@ -191,10 +192,10 @@ const installGroup = async (groupId: string) => {
     // 检查是否已存在同名分组
     const existingGroup = emojiStore.groups.find(g => g.name === groupData.name)
     if (existingGroup) {
-      const confirm = await new Promise<boolean>(resolve => {
-        // 简单的确认对话框
-        resolve(window.confirm(t('confirmOverwriteGroup', { name: groupData.name })))
-      })
+      const confirm = await requestConfirmation(
+        '',
+        t('confirmOverwriteGroup', { name: groupData.name })
+      )
 
       if (!confirm) {
         installingGroupIds.value.delete(groupId)

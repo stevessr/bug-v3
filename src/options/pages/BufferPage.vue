@@ -15,6 +15,7 @@ import { useFilePersistence } from './composables/useFilePersistence'
 import { useCollaborativeUpload } from './composables/useCollaborativeUpload'
 import { useUpload } from './composables/useUpload'
 
+import { requestConfirmation } from '@/options/utils/confirmService'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import CachedImage from '@/components/CachedImage.vue'
 
@@ -315,7 +316,10 @@ const cropImageFile = ref<File | null>(null)
 const clearSelectedFiles = async () => {
   if (isUploading.value) return
   if (!selectedFiles.value.length) return
-  const confirmed = window.confirm(`确认清空 ${selectedFiles.value.length} 个待上传文件吗？`)
+  const confirmed = await requestConfirmation(
+    '确认清空待上传',
+    `确认清空 ${selectedFiles.value.length} 个待上传文件吗？`
+  )
   if (!confirmed) return
   for (const file of selectedFiles.value) {
     try {
