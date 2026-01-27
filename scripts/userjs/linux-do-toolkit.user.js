@@ -1670,13 +1670,18 @@
             SYNC_INTERVAL: 30 * 60 * 1000,
             STORAGE_KEY: 'linuxdo_likes_history',
             LIMITS: { 0: 50, 1: 50, 2: 75, 3: 100, 4: 150 },
-            MAX_STORED_ITEMS: 500
+            MAX_STORED_ITEMS: 500,
+            FETCH_TIMEOUT: 5000,
+            MAX_RETRIES: 2,
+            RETRY_DELAY: 30 * 1000
         },
 
         state: { timestamps: [], cooldownUntil: 0, lastSync: 0, matched: false },
         currentUser: null,
         uiUpdateTimer: null,
         cooldownTicker: null,
+        isSyncing: false,
+        isInitialized: false,
 
         // localStorage 替代 GM_getValue/GM_setValue
         loadState() {
@@ -1813,7 +1818,7 @@
 
             if (!picker) return;
 
-            this.cleanOldEntries();
+            this.loadState();
             const count = this.state.timestamps.length;
             const now = Date.now();
             const isCooldown = this.state.cooldownUntil > now;
@@ -1892,17 +1897,26 @@
             }
         },
 
+        async fetchWithTimeout(url, options = {}) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), this.CONFIG.FETCH_TIMEOUT);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (e) { clearTimeout(id); throw e; }
+        },
+
         async fetchUserActions(username) {
             let offset = 0, limit = 50, allItems = [], keepFetching = true, pages = 0;
             const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-
             while (keepFetching && pages < 5) {
                 try {
-                    const url = `${this.CONFIG.HOST}/user_actions.json?limit=${limit}&username=${username}&filter=1&offset=${offset}`;
-                    const res = await fetch(url).then(r => r.json());
-                    const items = res.user_actions || [];
-                    if (!items.length) break;
-
+                    const res = await this.fetchWithTimeout(`${this.CONFIG.HOST}/user_actions.json?limit=${limit}&username=${username}&filter=1&offset=${offset}`);
+                    if (!res.ok || res.status !== 200) throw new Error(`HTTP error ${res.status}`);
+                    const data = await res.json();
+                    const items = data.user_actions || [];
+                    if (!items.length) { keepFetching = false; break; }
                     let hasOld = false;
                     for (const item of items) {
                         const t = new Date(item.created_at).getTime();
@@ -1910,9 +1924,11 @@
                         else hasOld = true;
                     }
                     if (hasOld || items.length < limit) keepFetching = false;
-                    offset += limit;
-                    pages++;
-                } catch (e) { keepFetching = false; }
+                    offset += limit; pages++;
+                } catch (e) {
+                    console.warn('[LikeCounter] fetchUserActions error:', e.message);
+                    throw e;
+                }
             }
             return allItems;
         },
@@ -1920,14 +1936,13 @@
         async fetchReactions(username) {
             let beforeId = null, allItems = [], keepFetching = true, pages = 0;
             const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-
             while (keepFetching && pages < 10) {
                 try {
-                    let url = `${this.CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}`;
-                    if (beforeId) url += `&before_reaction_user_id=${beforeId}`;
-
-                    const items = await fetch(url).then(r => r.json());
-                    if (!Array.isArray(items) || !items.length) break;
+                    let url = `${this.CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}${beforeId ? `&before_reaction_user_id=${beforeId}` : ''}`;
+                    const res = await this.fetchWithTimeout(url);
+                    if (!res.ok || res.status !== 200) throw new Error(`HTTP error ${res.status}`);
+                    const items = await res.json();
+                    if (!Array.isArray(items) || !items.length) { keepFetching = false; break; }
 
                     let hasOld = false;
                     for (const item of items) {
@@ -1938,33 +1953,34 @@
                     beforeId = items[items.length - 1].id;
                     if (hasOld || items.length < 20) keepFetching = false;
                     pages++;
-                } catch (e) { keepFetching = false; }
+                } catch (e) {
+                    console.warn('[LikeCounter] fetchReactions error:', e.message);
+                    throw e;
+                }
             }
             return allItems;
         },
 
         async syncRemote() {
+            if (this.isSyncing || !this.isInitialized) return;
+            this.loadState();
+            if (Date.now() - this.state.lastSync < 30000) return;
             if (!this.currentUser) {
                 try { this.currentUser = require("discourse/models/user").default.current(); } catch(e) {}
                 if(!this.currentUser) return;
             }
+
+            this.isSyncing = true;
             const savedCooldown = this.state.cooldownUntil;
             const savedMatched = this.state.matched;
-            this.cleanOldEntries();
             const username = this.currentUser.username;
 
             try {
                 const [likes, reactions] = await Promise.all([this.fetchUserActions(username), this.fetchReactions(username)]);
-                const combined = [...likes, ...reactions];
                 const postMap = new Map();
-                for (const item of combined) {
-                    if (!postMap.has(item.post_id) || postMap.get(item.post_id) < item.timestamp) {
-                        postMap.set(item.post_id, item.timestamp);
-                    }
-                }
+                [...likes, ...reactions].forEach(item => { if (!postMap.has(item.post_id) || postMap.get(item.post_id) < item.timestamp) postMap.set(item.post_id, item.timestamp); });
                 const dedupedTimestamps = Array.from(postMap.values());
                 const maxRemote = Math.max(...dedupedTimestamps, 0);
-
                 const localNewer = this.state.timestamps.filter(ts => ts > maxRemote + 2000);
                 let placeholders = [];
                 if (savedCooldown > Date.now()) {
@@ -1974,35 +1990,26 @@
 
                 this.state.timestamps = Array.from(new Set([...dedupedTimestamps, ...localNewer, ...placeholders]));
                 this.state.lastSync = Date.now();
-
                 const limit = this.CONFIG.LIMITS[this.currentUser.trust_level] || 50;
-                const apiCount = dedupedTimestamps.length;
-                if (savedMatched) {
-                    this.state.matched = (apiCount <= limit);
-                } else {
-                    this.state.matched = (apiCount === limit);
-                }
-                if (savedCooldown > Date.now()) {
-                    this.state.cooldownUntil = savedCooldown;
-                }
-
+                this.state.matched = savedMatched ? (dedupedTimestamps.length <= limit) : (dedupedTimestamps.length === limit);
+                if (savedCooldown > Date.now()) this.state.cooldownUntil = savedCooldown;
                 this.cleanOldEntries();
                 if (this.state.timestamps.length >= limit && this.state.cooldownUntil === 0) {
-                    const oldestTs = Math.min(...this.state.timestamps);
-                    const estimatedCooldown = oldestTs + 24 * 60 * 60 * 1000;
-                    if (estimatedCooldown > Date.now()) {
-                        this.state.cooldownUntil = estimatedCooldown;
-                    }
+                    const est = Math.min(...this.state.timestamps) + 24*60*60*1000;
+                    if (est > Date.now()) this.state.cooldownUntil = est;
                 }
-
                 this.saveState();
                 this.requestUiUpdate(true);
-            } catch (e) { console.error("[LikeCounter] Sync failed", e); }
+            } catch (e) {
+                console.warn('[LikeCounter] Sync cancelled due to error, keeping current data:', e.message);
+            } finally { this.isSyncing = false; }
         },
 
         init() {
+            if (this.isInitialized) return;
             this.installInterceptors();
             this.loadState();
+            this.isInitialized = true;
 
             let observerTimer = null;
             const observer = new MutationObserver((mutations) => {

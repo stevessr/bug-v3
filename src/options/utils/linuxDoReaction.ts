@@ -100,14 +100,7 @@ async function proxyFetch<T>(
     })
   }
 
-  const res = await fetch(url, {
-    method: options?.method || 'GET',
-    headers: options?.headers,
-    body: options?.body,
-    credentials: 'include'
-  })
-  const data = (await (responseType === 'text' ? res.text() : res.json())) as T
-  return { status: res.status, ok: res.ok, data }
+  throw new Error('Proxy fetch unavailable: chrome.runtime is not accessible')
 }
 
 async function getCurrentUserInfo(): Promise<{ username: string; trustLevel?: number } | null> {

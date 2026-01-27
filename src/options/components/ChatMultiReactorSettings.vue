@@ -12,6 +12,8 @@ import {
 
 import SettingSwitch from './SettingSwitch.vue'
 
+import { requestConfirmation } from '@/options/utils/confirmService'
+
 // Discourse 表情数据结构
 interface DiscourseEmoji {
   name: string
@@ -93,12 +95,11 @@ const startReaction = async () => {
   if (isReacting.value) return
 
   const rName = REACTIONS.find(r => r.id === reactionType.value)?.name || reactionType.value
-  if (
-    !confirm(
-      `确定要给用户 ${reactionUsername.value} 的最近 ${reactionCount.value} 个帖子发送 "${rName}" 吗？`
-    )
+  const confirmed = await requestConfirmation(
+    '确认执行',
+    `确定要给用户 ${reactionUsername.value} 的最近 ${reactionCount.value} 个帖子发送 "${rName}" 吗？`
   )
-    return
+  if (!confirmed) return
 
   isReacting.value = true
   try {
