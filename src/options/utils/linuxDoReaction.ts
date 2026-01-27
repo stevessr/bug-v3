@@ -74,14 +74,12 @@ async function proxyFetch<T>(
     return await new Promise((resolve, reject) => {
       chromeAPI.runtime.sendMessage(
         {
-          type: 'PROXY_FETCH',
+          type: 'LINUX_DO_PAGE_FETCH',
           options: {
             url,
             method: options?.method || 'GET',
             headers: options?.headers,
             body: options?.body,
-            includeCookies: true,
-            cookieDomain: new URL(url).hostname,
             responseType
           }
         },

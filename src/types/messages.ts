@@ -63,6 +63,20 @@ export interface GetLinuxDoUserMessage extends BaseMessage {
 }
 
 /**
+ * LINUX_DO_PAGE_FETCH 消息
+ */
+export interface LinuxDoPageFetchMessage extends BaseMessage {
+  type: 'LINUX_DO_PAGE_FETCH'
+  options: {
+    url: string
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    responseType?: 'json' | 'text'
+  }
+}
+
+/**
  * PROXY_FETCH 消息
  */
 export interface ProxyFetchMessage extends BaseMessage {
@@ -137,6 +151,7 @@ export type TypedMessage =
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
   | GetLinuxDoUserMessage
+  | LinuxDoPageFetchMessage
   | ProxyFetchMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
