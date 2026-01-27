@@ -1,5 +1,6 @@
 export { handleAddToFavorites } from './handleAddToFavorites'
 export { handleLinuxDoAuthRequest } from './handleLinuxDoAuthRequest'
+export { handleLinuxDoUserRequest } from './handleLinuxDoUserRequest'
 export { handleProxyFetchRequest } from './handleProxyFetchRequest'
 export { setupContextMenu } from './setupContextMenu'
 export { handleSyncSettings } from './handleSyncSettings'

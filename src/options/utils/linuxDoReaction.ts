@@ -15,6 +15,7 @@ const HOST = 'https://linux.do'
 
 // Delay constants
 const DELAY_MS = 2000
+const LIMIT_CACHE_TTL_MS = 30 * 1000
 
 // Allowed categories (from userscript)
 const ALLOWED_CATEGORIES = new Set([
@@ -50,6 +51,86 @@ export interface LinuxDoPost {
   topicId?: number
 }
 
+type ProxyFetchResponse<T> = {
+  success: boolean
+  status?: number
+  ok?: boolean
+  data?: T
+  error?: string
+}
+
+let limitCache: { data: DailyLimitInfo | null; fetchedAt: number } = {
+  data: null,
+  fetchedAt: 0
+}
+
+async function proxyFetch<T>(
+  url: string,
+  options?: { method?: string; headers?: Record<string, string>; body?: string },
+  responseType: 'json' | 'text' = 'json'
+): Promise<{ status: number; ok: boolean; data: T }> {
+  const chromeAPI = (globalThis as any).chrome
+  if (chromeAPI?.runtime?.sendMessage) {
+    return await new Promise((resolve, reject) => {
+      chromeAPI.runtime.sendMessage(
+        {
+          type: 'PROXY_FETCH',
+          options: {
+            url,
+            method: options?.method || 'GET',
+            headers: options?.headers,
+            body: options?.body,
+            includeCookies: true,
+            cookieDomain: new URL(url).hostname,
+            responseType
+          }
+        },
+        (resp: ProxyFetchResponse<T>) => {
+          if (resp?.success) {
+            resolve({
+              status: resp.status || 200,
+              ok: resp.ok !== false,
+              data: resp.data as T
+            })
+            return
+          }
+          reject(new Error(resp?.error || `Proxy fetch failed: ${resp?.status || 'unknown'}`))
+        }
+      )
+    })
+  }
+
+  const res = await fetch(url, {
+    method: options?.method || 'GET',
+    headers: options?.headers,
+    body: options?.body,
+    credentials: 'include'
+  })
+  const data = (await (responseType === 'text' ? res.text() : res.json())) as T
+  return { status: res.status, ok: res.ok, data }
+}
+
+async function getCurrentUserInfo(): Promise<{ username: string; trustLevel?: number } | null> {
+  try {
+    const chromeAPI = (globalThis as any).chrome
+    if (!chromeAPI?.runtime?.sendMessage) return null
+
+    const resp = await new Promise<any>(resolve => {
+      chromeAPI.runtime.sendMessage({ type: 'GET_LINUX_DO_USER' }, resolve)
+    })
+
+    if (resp?.success && resp?.user?.username) {
+      return {
+        username: resp.user.username,
+        trustLevel: resp.user.trustLevel
+      }
+    }
+  } catch (e) {
+    return null
+  }
+  return null
+}
+
 // Get CSRF Token
 async function getCsrfToken(): Promise<string | null> {
   try {
@@ -63,10 +144,12 @@ async function getCsrfToken(): Promise<string | null> {
     }
 
     // Method 2: Fetch homepage directly
-    const res = await fetch(`${HOST}/`, {
-      headers: { 'User-Agent': navigator.userAgent }
-    })
-    const html = await res.text()
+    const res = await proxyFetch<string>(
+      `${HOST}/`,
+      { headers: { 'User-Agent': navigator.userAgent } },
+      'text'
+    )
+    const html = res.data
     const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
     return match ? match[1] : null
   } catch (e) {
@@ -91,12 +174,12 @@ export async function fetchUserActions(
     const url = `${HOST}/user_actions.json?offset=${offset}&username=${username}&filter=4,5`
 
     try {
-      const res = await fetch(url, { credentials: 'include' })
+      const res = await proxyFetch<{ user_actions?: any[] }>(url)
       if (!res.ok) {
         if (onLog) onLog(`Fetch failed: ${res.status}`)
         break
       }
-      const data = await res.json()
+      const data = res.data
 
       if (!data.user_actions || data.user_actions.length === 0) {
         if (onLog) onLog('No more data found.')
@@ -136,10 +219,10 @@ export async function fetchUserActions(
 async function isAlreadyReacted(postId: number, reactionId: string): Promise<boolean> {
   try {
     const url = `${HOST}/posts/${postId}.json`
-    const res = await fetch(url, { credentials: 'include' })
+    const res = await proxyFetch<any>(url)
     if (!res.ok) return false
 
-    const data = await res.json()
+    const data = res.data
     // Normalize logic
     const postData = data.post || data
 
@@ -191,16 +274,19 @@ export async function sendReactionToPost(
   const url = `${HOST}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
 
   try {
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'X-Csrf-Token': csrfToken,
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Discourse-Logged-In': 'true'
+    const res = await proxyFetch(
+      url,
+      {
+        method: 'PUT',
+        headers: {
+          'X-Csrf-Token': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/json',
+          'Discourse-Logged-In': 'true'
+        }
       },
-      credentials: 'include'
-    })
+      'json'
+    )
 
     if (res.status === 200) {
       return 'success'
@@ -226,14 +312,16 @@ export interface DailyLimitInfo {
 
 export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
   try {
-    // 1. Get Current User & Trust Level
-    const sessionRes = await fetch(`${HOST}/session/current.json`, { credentials: 'include' })
-    if (!sessionRes.ok) return null
-    const sessionData = await sessionRes.json()
-    const user = sessionData.current_user
-    if (!user) return null
+    const now = Date.now()
+    if (limitCache.data && now - limitCache.fetchedAt < LIMIT_CACHE_TTL_MS) {
+      return limitCache.data
+    }
 
-    const trustLevel = user.trust_level
+    // 1. Get Current User & Trust Level (from active linux.do tab)
+    const user = await getCurrentUserInfo()
+    if (!user?.username) return null
+
+    const trustLevel = user.trustLevel
     const username = user.username
 
     const LIMITS: Record<number, number> = { 0: 50, 1: 50, 2: 75, 3: 100, 4: 150 }
@@ -249,11 +337,10 @@ export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
       let offset = 0
       let count = 0
       for (let i = 0; i < 3; i++) {
-        const res = await fetch(
-          `${HOST}/user_actions.json?limit=50&username=${username}&filter=1&offset=${offset}`,
-          { credentials: 'include' }
+        const res = await proxyFetch<any>(
+          `${HOST}/user_actions.json?limit=50&username=${username}&filter=1&offset=${offset}`
         )
-        const data = await res.json()
+        const data = res.data
         const actions = data.user_actions || []
         if (!actions.length) break
 
@@ -277,8 +364,8 @@ export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
         let url = `${HOST}/discourse-reactions/posts/reactions.json?username=${username}`
         if (beforeId) url += `&before_reaction_user_id=${beforeId}`
 
-        const res = await fetch(url, { credentials: 'include' })
-        const data = await res.json()
+        const res = await proxyFetch<any>(url)
+        const data = res.data
         if (!Array.isArray(data) || !data.length) break
 
         let hasOld = false
@@ -296,12 +383,14 @@ export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
     const [likesCount, reactionsCount] = await Promise.all([fetchLikes(), fetchReactions()])
     used = likesCount + reactionsCount
 
-    return {
+    const result = {
       limit,
       used,
       remaining: Math.max(0, limit - used),
       username
     }
+    limitCache = { data: result, fetchedAt: now }
+    return result
   } catch (e) {
     console.error('Failed to check daily limit', e)
     return null

@@ -3,12 +3,6 @@ import { ref, computed, isRef, type Ref } from 'vue'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/type'
-import {
-  REACTIONS,
-  runBatchReaction,
-  checkDailyLimit,
-  type DailyLimitInfo
-} from '../utils/linuxDoReaction'
 
 import SettingSwitch from './SettingSwitch.vue'
 
@@ -75,49 +69,6 @@ const removeUser = (username: string) => {
 // 输入框回车添加
 const handleEnter = () => {
   addUser()
-}
-// Reaction Helper State
-const reactionUsername = ref('')
-const reactionCount = ref(10)
-const reactionType = ref('distorted_face')
-const dailyLimit = ref<DailyLimitInfo | null>(null)
-const reactionStatus = ref('')
-const isReacting = ref(false)
-
-const checkLimit = async () => {
-  reactionStatus.value = 'Checking limit...'
-  dailyLimit.value = await checkDailyLimit()
-  reactionStatus.value = dailyLimit.value
-    ? `Ready. Logged in as ${dailyLimit.value.username}`
-    : 'Failed to check limit (Not logged in?)'
-}
-
-const startReaction = async () => {
-  if (!reactionUsername.value) return
-  if (isReacting.value) return
-
-  const rName = REACTIONS.find(r => r.id === reactionType.value)?.name || reactionType.value
-  if (
-    !confirm(
-      `确定要给用户 ${reactionUsername.value} 的最近 ${reactionCount.value} 个帖子发送 "${rName}" 吗？`
-    )
-  )
-    return
-
-  isReacting.value = true
-  try {
-    await runBatchReaction(
-      reactionUsername.value,
-      reactionCount.value,
-      reactionType.value,
-      (current, total, status) => {
-        reactionStatus.value = status
-      }
-    )
-  } finally {
-    isReacting.value = false
-    checkLimit()
-  }
 }
 </script>
 
@@ -324,71 +275,6 @@ const startReaction = async () => {
         </ul>
       </div>
 
-      <!-- 用户点赞助手 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
-        <h3 class="text-md font-semibold dark:text-white mb-4">用户点赞助手</h3>
-
-        <div class="space-y-4">
-          <div class="flex flex-wrap gap-4 items-end">
-            <div class="flex-1 min-w-[200px]">
-              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">目标用户名</div>
-              <a-input v-model:value="reactionUsername" placeholder="Target Username" />
-            </div>
-
-            <div class="w-24">
-              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">数量</div>
-              <a-input-number v-model:value="reactionCount" :min="1" :max="100" class="w-full" />
-            </div>
-
-            <div class="w-40">
-              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">表情</div>
-              <a-select v-model:value="reactionType" class="w-full">
-                <a-select-option v-for="r in REACTIONS" :key="r.id" :value="r.id">
-                  {{ r.name }}
-                </a-select-option>
-              </a-select>
-            </div>
-
-            <a-button
-              type="primary"
-              :loading="isReacting"
-              @click="startReaction"
-              :disabled="!reactionUsername"
-            >
-              执行
-            </a-button>
-          </div>
-
-          <div
-            class="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 p-3 rounded text-sm"
-          >
-            <div class="flex items-center gap-4">
-              <a-button size="small" @click="checkLimit">检查额度</a-button>
-              <div v-if="dailyLimit">
-                <span class="text-gray-500 dark:text-gray-400">剩余额度：</span>
-                <span
-                  :class="
-                    dailyLimit.remaining > 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'
-                  "
-                >
-                  {{ dailyLimit.remaining }}
-                </span>
-                <span class="text-gray-400 mx-1">/</span>
-                <span class="text-gray-500 dark:text-gray-400">{{ dailyLimit.limit }}</span>
-                <span class="text-gray-400 text-xs ml-2">({{ dailyLimit.username }})</span>
-              </div>
-              <div v-else class="text-gray-500 dark:text-gray-400">点击检查额度以查看剩余次数</div>
-            </div>
-          </div>
-
-          <div
-            v-if="reactionStatus"
-            class="text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap"
-          >
-            > {{ reactionStatus }}
-          </div>
-        </div>
-      </div>
     </template>
   </div>
 </template>

@@ -6,6 +6,7 @@ import {
   handleSaveEmojiData,
   handleSyncSettings,
   handleLinuxDoAuthRequest,
+  handleLinuxDoUserRequest,
   handleDownloadImage,
   handleCaptureScreenshot,
   setupStorageChangeListener,
@@ -72,6 +73,9 @@ export function setupMessageListener() {
 
             case 'REQUEST_LINUX_DO_AUTH':
               handleLinuxDoAuthRequest(sendResponse)
+              return true
+            case 'GET_LINUX_DO_USER':
+              handleLinuxDoUserRequest(sendResponse)
               return true
 
             case 'downloadImage':

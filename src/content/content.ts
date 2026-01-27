@@ -119,6 +119,30 @@ if (chrome?.runtime?.onMessage) {
       }
     }
 
+    if (message?.type === 'GET_LINUX_DO_USER') {
+      try {
+        const preloaded = document.getElementById('data-preloaded') as HTMLElement | null
+        if (preloaded?.dataset?.preloaded) {
+          const data = JSON.parse(preloaded.dataset.preloaded || '{}')
+          if (data.currentUser) {
+            const user = JSON.parse(data.currentUser)
+            sendResponse({
+              success: true,
+              user: {
+                username: user?.username || '',
+                trustLevel: user?.trust_level
+              }
+            })
+            return true
+          }
+        }
+      } catch (error) {
+        console.warn('[Emoji Extension] Failed to read current user:', error)
+      }
+      sendResponse({ success: false, error: 'No current user' })
+      return true
+    }
+
     return false // 对于其他消息类型，不处理
   })
 }

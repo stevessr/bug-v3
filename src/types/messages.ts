@@ -56,6 +56,13 @@ export interface RequestLinuxDoAuthMessage extends BaseMessage {
 }
 
 /**
+ * GET_LINUX_DO_USER 消息
+ */
+export interface GetLinuxDoUserMessage extends BaseMessage {
+  type: 'GET_LINUX_DO_USER'
+}
+
+/**
  * PROXY_FETCH 消息
  */
 export interface ProxyFetchMessage extends BaseMessage {
@@ -129,6 +136,7 @@ export type TypedMessage =
   | SaveEmojiDataMessage
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
+  | GetLinuxDoUserMessage
   | ProxyFetchMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
