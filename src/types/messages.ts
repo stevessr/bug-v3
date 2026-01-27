@@ -46,6 +46,7 @@ export interface SaveEmojiDataMessage extends BaseMessage {
 export interface SyncSettingsMessage extends BaseMessage {
   type: 'SYNC_SETTINGS'
   settings: Partial<AppSettings>
+  updates?: Partial<AppSettings>
 }
 
 /**

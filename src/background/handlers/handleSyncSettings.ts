@@ -1,7 +1,8 @@
 import { getChromeAPI } from '../utils/main.ts'
 export const handleSyncSettings = async (
   settings: any,
-  _sendResponse: (_response: any) => void
+  _sendResponse: (_response: any) => void,
+  updates?: any
 ) => {
   // mark callback as referenced
   void _sendResponse
@@ -25,14 +26,19 @@ export const handleSyncSettings = async (
     const tabs = await chromeAPI.tabs.query({})
     for (const tab of tabs) {
       if (tab.id) {
-        chromeAPI.tabs
-          .sendMessage(tab.id, {
-            type: 'SETTINGS_UPDATED',
-            settings: settings
-          })
-          .catch(() => {
-            // Ignore errors for tabs that don't have content script
-          })
+        // 如果有 updates，优先发送 updates，否则发送全量 settings
+        const payload: any = {
+          type: 'SETTINGS_UPDATED',
+          settings: settings
+        }
+
+        if (updates) {
+          payload.updates = updates
+        }
+
+        chromeAPI.tabs.sendMessage(tab.id, payload).catch(() => {
+          // Ignore errors for tabs that don't have content script
+        })
       }
     }
 

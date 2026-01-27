@@ -753,7 +753,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // Don't call maybeSave() here - let the watch handle all saves with debouncing
     // This prevents duplicate saves when updating settings
     // attempt to notify background to sync to content scripts
-    void syncSettingsToBackground()
+    void syncSettingsToBackground(newSettings)
   }
 
   // Notify background to sync settings across contexts (content scripts)
@@ -773,7 +773,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     cleanupSyncSettingsTimer()
   })
 
-  const syncSettingsToBackground = () => {
+  const syncSettingsToBackground = (newSettings?: Partial<AppSettings>) => {
     // 清除之前的定时器
     if (syncSettingsTimer) {
       clearTimeout(syncSettingsTimer)
@@ -787,7 +787,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
             ? chrome
             : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
         if (chromeAPI?.runtime?.sendMessage) {
-          chromeAPI.runtime.sendMessage({ type: 'SYNC_SETTINGS', settings: settings.value })
+          const payload: any = { type: 'SYNC_SETTINGS', settings: settings.value }
+          if (newSettings) {
+            payload.updates = newSettings
+          }
+          chromeAPI.runtime.sendMessage(payload)
         }
       } catch {
         // ignore

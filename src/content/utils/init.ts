@@ -347,7 +347,8 @@ export async function initializeEmojiFeature(
         void _sendResponse
         if (message.type === 'SETTINGS_UPDATED') {
           console.log('[Emoji Extension] Settings updated from background, reloading data')
-          loadDataFromStorage()
+          // 如果有 updates，优先使用增量更新
+          loadDataFromStorage(message.updates)
           // re-apply custom css after settings updated
           try {
             applyCustomCssFromCache()

@@ -65,7 +65,11 @@ export function setupMessageListener() {
 
             case 'SYNC_SETTINGS':
               if ('settings' in typedMsg) {
-                handleSyncSettings((typedMsg as any).settings, sendResponse)
+                handleSyncSettings(
+                  (typedMsg as any).settings,
+                  sendResponse,
+                  (typedMsg as any).updates
+                )
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing settings for SYNC_SETTINGS' })

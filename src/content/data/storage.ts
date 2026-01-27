@@ -20,8 +20,17 @@ function sendMessageToBackground(message: any): Promise<any> {
   })
 }
 
-export async function loadDataFromStorage(): Promise<void> {
+export async function loadDataFromStorage(updates?: any): Promise<void> {
   try {
+    // 如果只有 updates，则只更新设置
+    if (updates) {
+      console.log('[Emoji Extension] Applying partial settings updates:', updates)
+      if (typeof updates === 'object') {
+        cachedState.settings = { ...cachedState.settings, ...updates }
+      }
+      return
+    }
+
     console.log('[Emoji Extension] Requesting emoji data from background')
     // include the current page's hostname so background can filter groups per-domain
     const resp = await sendMessageToBackground({
