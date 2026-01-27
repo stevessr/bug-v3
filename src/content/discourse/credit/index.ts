@@ -118,6 +118,50 @@ function savePosition(pos: { bottom: string; right: string }) {
   }
 }
 
+type CreditAuth = { cookies: string }
+
+let cachedCreditAuth: { data: CreditAuth; fetchedAt: number } | null = null
+const CREDIT_AUTH_CACHE_TTL_MS = 60 * 1000
+
+function getCreditCookiesFromPage(): string {
+  return window.location.hostname.includes('credit.linux.do') ? document.cookie || '' : ''
+}
+
+async function getCreditAuth(): Promise<CreditAuth> {
+  if (cachedCreditAuth && Date.now() - cachedCreditAuth.fetchedAt < CREDIT_AUTH_CACHE_TTL_MS) {
+    return cachedCreditAuth.data
+  }
+
+  const fallback: CreditAuth = {
+    cookies: getCreditCookiesFromPage()
+  }
+
+  try {
+    const chromeAPI = (window as any).chrome
+    if (chromeAPI?.runtime?.sendMessage) {
+      const data = await new Promise<CreditAuth>(resolve => {
+        chromeAPI.runtime.sendMessage({ type: 'REQUEST_CREDIT_AUTH' }, (resp: any) => {
+          if (resp?.success) {
+            resolve({
+              cookies: resp.cookies || ''
+            })
+          } else {
+            resolve(fallback)
+          }
+        })
+      })
+
+      cachedCreditAuth = { data, fetchedAt: Date.now() }
+      return data
+    }
+  } catch {
+    // fall back to page-derived cookies
+  }
+
+  cachedCreditAuth = { data: fallback, fetchedAt: Date.now() }
+  return fallback
+}
+
 async function request<T>(url: string): Promise<T> {
   const headers: Record<string, string> = {
     Accept: 'application/json, text/javascript, */*; q=0.01',
@@ -134,6 +178,8 @@ async function request<T>(url: string): Promise<T> {
     headers['Discourse-Logged-In'] = 'true'
   } else if (url.includes('credit.linux.do')) {
     headers['Referer'] = 'https://credit.linux.do/home'
+    const auth = await getCreditAuth()
+    if (auth.cookies) headers['Cookie'] = auth.cookies
   }
 
   const isSameOrigin = url.startsWith(window.location.origin)
