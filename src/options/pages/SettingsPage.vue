@@ -32,6 +32,7 @@ const {
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
   updateEnableBatchParseImages,
+  updateEnableExperimentalFeatures,
   updateEnableChatMultiReactor,
   updateChatMultiReactorEmojis,
   updateEnableHoverPreview,
@@ -140,6 +141,7 @@ onMounted(async () => {
               @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
+              @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
               @update:useIndexedDBForImages="updateUseIndexedDBForImages"
               @update:enableContentImageCache="updateEnableContentImageCache"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
@@ -228,7 +230,11 @@ onMounted(async () => {
           </div>
         </a-tab-pane>
 
-        <a-tab-pane key="chat-reactor" tab="多表情反应">
+        <a-tab-pane
+          v-if="emojiStore.settings.enableExperimentalFeatures"
+          key="chat-reactor"
+          tab="多表情反应"
+        >
           <div class="py-4">
             <ChatMultiReactorSettings
               :settings="emojiStore.settings"

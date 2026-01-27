@@ -246,6 +246,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableBatchParseImages: value })
   }
 
+  const updateEnableExperimentalFeatures = (value: boolean) => {
+    emojiStore.updateSettings({ enableExperimentalFeatures: value })
+  }
+
   const updateEnableChatMultiReactor = (value: boolean) => {
     emojiStore.updateSettings({ enableChatMultiReactor: value })
   }
@@ -810,6 +814,7 @@ export default function useOptions() {
     updateEnableXcomExtraSelectors,
     updateEnableCalloutSuggestions,
     updateEnableBatchParseImages,
+    updateEnableExperimentalFeatures,
     updateEnableChatMultiReactor,
     updateChatMultiReactorEmojis,
     updateCustomCssBlocks,

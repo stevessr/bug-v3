@@ -15,6 +15,7 @@ const emit = defineEmits([
   'update:enableXcomExtraSelectors',
   'update:enableCalloutSuggestions',
   'update:enableBatchParseImages',
+  'update:enableExperimentalFeatures',
   'update:useIndexedDBForImages',
   'update:enableContentImageCache',
   'update:enableSubmenuInjector',
@@ -165,6 +166,13 @@ const saveRouterRefreshInterval = async () => {
         @update:model-value="handleSettingUpdate('enableBatchParseImages', $event)"
         label="启用一键解析全部图片"
         description="控制前端是否注入'一键解析并添加所有图片'按钮"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('enableExperimentalFeatures', false)"
+        @update:model-value="handleSettingUpdate('enableExperimentalFeatures', $event)"
+        label="启用试验性特性"
+        description="开启后可显示与使用试验性功能 后果自负"
       />
 
       <SettingSwitch
