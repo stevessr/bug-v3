@@ -35,7 +35,7 @@ export function detectPlatform(): PlatformInfo {
   const hostname = window.location.hostname.toLowerCase()
 
   // Discourse detection
-  if (DISCOURSE_DOMAINS.some(domain => hostname.includes(domain))) {
+  if (DISCOURSE_DOMAINS.some(domain => hostname == domain)) {
     return {
       platform: 'discourse',
       hostname,
@@ -111,7 +111,7 @@ export function shouldInjectEmojiFeature(): boolean {
   const hostname = window.location.hostname.toLowerCase()
 
   // Check if it's a known Discourse domain
-  if (DISCOURSE_DOMAINS.some(domain => hostname.includes(domain))) {
+  if (DISCOURSE_DOMAINS.some(domain => hostname == domain )) {
     return true
   }
 
