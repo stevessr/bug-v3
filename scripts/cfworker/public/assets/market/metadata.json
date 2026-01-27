@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-01-27T09:09:02.611Z",
+  "exportDate": "2026-01-27T09:20:00.015Z",
   "totalGroups": 223,
   "includeArchived": true,
   "groups": [
@@ -519,7 +519,7 @@
     {
       "id": "group-1767256080865",
       "name": "X 第二十八弹",
-      "icon": "https://linux.do/uploads/default/original/4X/3/2/b/32b3b4b989dd9bde659c7a24a50033450c1d8f16.avif",
+      "icon": "https://linux.do/uploads/default/original/4X/1/e/7/1e725cb7b84791b6bab1c9b05e966b6f1da4e8dc.avif",
       "order": 64,
       "emojiCount": 514,
       "isArchived": false
