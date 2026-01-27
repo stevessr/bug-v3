@@ -125,12 +125,41 @@ const normalizeAgentPayload = (payload: unknown): unknown => {
   }
   if (Array.isArray(normalized.actions)) {
     const flattened: unknown[] = []
+    const embeddedPayloads: Record<string, unknown>[] = []
     for (const action of normalized.actions) {
       if (!action || typeof action !== 'object') {
         flattened.push(action)
         continue
       }
       const actionRecord = action as Record<string, unknown>
+
+      const toolName =
+        typeof actionRecord.name === 'string'
+          ? actionRecord.name
+          : typeof actionRecord.tool === 'string'
+            ? actionRecord.tool
+            : typeof actionRecord.type === 'string'
+              ? actionRecord.type
+              : ''
+      if (
+        toolName === 'browser_actions' &&
+        actionRecord.args &&
+        typeof actionRecord.args === 'object'
+      ) {
+        const argsRecord = actionRecord.args as Record<string, unknown>
+        const hasPayloadShape =
+          'actions' in argsRecord ||
+          'subagents' in argsRecord ||
+          'message' in argsRecord ||
+          'steps' in argsRecord ||
+          'thoughts' in argsRecord ||
+          'memory' in argsRecord ||
+          'parallelActions' in argsRecord
+        if (hasPayloadShape) {
+          embeddedPayloads.push(argsRecord)
+          continue
+        }
+      }
 
       if (actionRecord.type === 'browser_actions' && actionRecord.args) {
         const args = actionRecord.args as Record<string, unknown>
@@ -177,6 +206,125 @@ const normalizeAgentPayload = (payload: unknown): unknown => {
     }
     normalized.actions = nextActions
     if (nextSubagents.length > 0) normalized.subagents = nextSubagents
+
+    if (embeddedPayloads.length > 0) {
+      const mergedEmbedded: Record<string, unknown> = {}
+      for (const item of embeddedPayloads) {
+        const normalizedItem = normalizeAgentPayload(item)
+        if (!normalizedItem || typeof normalizedItem !== 'object') continue
+        const record = normalizedItem as Record<string, unknown>
+        if (!mergedEmbedded.message && typeof record.message === 'string') {
+          mergedEmbedded.message = record.message
+        }
+        if (Array.isArray(record.actions)) {
+          mergedEmbedded.actions = [
+            ...((mergedEmbedded.actions as unknown[]) || []),
+            ...record.actions
+          ]
+        }
+        if (record.parallelActions !== undefined) {
+          mergedEmbedded.parallelActions =
+            (mergedEmbedded.parallelActions ?? false) || Boolean(record.parallelActions)
+        }
+        if (Array.isArray(record.thoughts)) {
+          mergedEmbedded.thoughts = [
+            ...((mergedEmbedded.thoughts as unknown[]) || []),
+            ...record.thoughts
+          ]
+        }
+        if (Array.isArray(record.steps)) {
+          mergedEmbedded.steps = [...((mergedEmbedded.steps as unknown[]) || []), ...record.steps]
+        }
+        if (Array.isArray(record.subagents)) {
+          mergedEmbedded.subagents = [
+            ...((mergedEmbedded.subagents as unknown[]) || []),
+            ...record.subagents
+          ]
+        }
+        if (record.memory && typeof record.memory === 'object') {
+          mergedEmbedded.memory = mergedEmbedded.memory || {}
+          const memory = record.memory as Record<string, unknown>
+          if (memory.set && typeof memory.set === 'object') {
+            ;(mergedEmbedded.memory as Record<string, unknown>).set = {
+              ...(((mergedEmbedded.memory as Record<string, unknown>).set as Record<
+                string,
+                unknown
+              >) || {}),
+              ...(memory.set as Record<string, unknown>)
+            }
+          }
+          if (Array.isArray(memory.remove)) {
+            const existing = new Set(
+              Array.isArray((mergedEmbedded.memory as Record<string, unknown>).remove)
+                ? ((mergedEmbedded.memory as Record<string, unknown>).remove as string[])
+                : []
+            )
+            for (const key of memory.remove) {
+              if (typeof key === 'string') existing.add(key)
+            }
+            ;(mergedEmbedded.memory as Record<string, unknown>).remove = Array.from(existing)
+          }
+        }
+      }
+
+      const combined: Record<string, unknown> = {}
+      Object.assign(combined, normalized)
+      if (!combined.message && typeof mergedEmbedded.message === 'string') {
+        combined.message = mergedEmbedded.message
+      }
+      if (Array.isArray(mergedEmbedded.actions)) {
+        combined.actions = [
+          ...((combined.actions as unknown[]) || []),
+          ...(mergedEmbedded.actions as unknown[])
+        ]
+      }
+      if (mergedEmbedded.parallelActions !== undefined) {
+        combined.parallelActions =
+          (combined.parallelActions ?? false) || Boolean(mergedEmbedded.parallelActions)
+      }
+      if (Array.isArray(mergedEmbedded.thoughts)) {
+        combined.thoughts = [
+          ...((combined.thoughts as unknown[]) || []),
+          ...(mergedEmbedded.thoughts as unknown[])
+        ]
+      }
+      if (Array.isArray(mergedEmbedded.steps)) {
+        combined.steps = [
+          ...((combined.steps as unknown[]) || []),
+          ...(mergedEmbedded.steps as unknown[])
+        ]
+      }
+      if (Array.isArray(mergedEmbedded.subagents)) {
+        combined.subagents = [
+          ...((combined.subagents as unknown[]) || []),
+          ...(mergedEmbedded.subagents as unknown[])
+        ]
+      }
+      if (mergedEmbedded.memory && typeof mergedEmbedded.memory === 'object') {
+        combined.memory = combined.memory || {}
+        const mergedMemory = mergedEmbedded.memory as Record<string, unknown>
+        if (mergedMemory.set && typeof mergedMemory.set === 'object') {
+          ;(combined.memory as Record<string, unknown>).set = {
+            ...(((combined.memory as Record<string, unknown>).set as Record<string, unknown>) ||
+              {}),
+            ...(mergedMemory.set as Record<string, unknown>)
+          }
+        }
+        if (Array.isArray(mergedMemory.remove)) {
+          const existing = new Set(
+            Array.isArray((combined.memory as Record<string, unknown>).remove)
+              ? ((combined.memory as Record<string, unknown>).remove as string[])
+              : []
+          )
+          for (const key of mergedMemory.remove) {
+            if (typeof key === 'string') existing.add(key)
+          }
+          ;(combined.memory as Record<string, unknown>).remove = Array.from(existing)
+        }
+      }
+
+      return combined
+    }
   }
   return normalized
 }
@@ -590,8 +738,7 @@ const getRetryDelayMs = (error: any, attempt: number): number | null => {
   const status = error?.status ?? error?.statusCode
   const name = typeof error?.name === 'string' ? error.name : ''
   const message = typeof error?.message === 'string' ? error.message : ''
-  const isRateLimit =
-    status === 429 || name === 'RateLimitError' || /429|rate limit/i.test(message)
+  const isRateLimit = status === 429 || name === 'RateLimitError' || /429|rate limit/i.test(message)
   const isTransientStreamError =
     /stream ended without producing a Message with role=assistant/i.test(message) ||
     /request ended without sending any chunks/i.test(message)
@@ -705,7 +852,9 @@ async function streamClaudeTools(options: {
           system: options.system,
           messages: [{ role: 'user', content: options.prompt }],
           tools: allTools,
-          tool_choice: options.forceTool ? { type: 'tool', name: toolSchema.name } : { type: 'auto' }
+          tool_choice: options.forceTool
+            ? { type: 'tool', name: toolSchema.name }
+            : { type: 'auto' }
         })
         .on('text', text => {
           streamedText += text
