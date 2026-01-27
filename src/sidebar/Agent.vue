@@ -506,10 +506,23 @@ const runActionsAndContinue = async () => {
       break
     }
 
+    const sanitizedResults = results.map(result => {
+      if (result.type !== 'screenshot') return result
+      if (!result.data) return result
+      if (typeof result.data === 'string') {
+        return { ...result, data: { vision: undefined } }
+      }
+      if (typeof result.data === 'object') {
+        const vision = (result.data as { vision?: string }).vision
+        return { ...result, data: vision ? { vision } : { vision: undefined } }
+      }
+      return result
+    })
+
     const followup = await runAgentFollowup(
       lastUserInput.value,
       toolUses,
-      results,
+      sanitizedResults,
       settings.value,
       activeSubagent.value,
       { tab: lastTabContext.value || undefined },

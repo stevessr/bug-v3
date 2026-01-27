@@ -25,8 +25,19 @@ export interface McpToolsCache {
 // 工具缓存，避免重复请求
 const toolsCache = new Map<string, McpToolsCache>()
 const toolNameMap = new Map<string, { serverId: string; toolName: string }>()
+const initCache = new Map<string, number>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 分钟缓存
+const INIT_TTL = 5 * 60 * 1000
 const REQUEST_TIMEOUT = 10000 // 10 秒超时
+
+const shouldInit = (serverId: string) => {
+  const last = initCache.get(serverId)
+  return !last || Date.now() - last > INIT_TTL
+}
+
+const markInitialized = (serverId: string) => {
+  initCache.set(serverId, Date.now())
+}
 
 /**
  * 发送 JSON-RPC 请求到 MCP 服务
@@ -42,13 +53,13 @@ async function sendJsonRpc(
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Accept: 'application/json, text/event-stream',
+      Accept:
+        server.transport === 'sse' ? 'text/event-stream' : 'application/json, text/event-stream',
       ...(server.headers || {})
     }
-
-    // Some MCP servers require both application/json and text/event-stream
-    // Always advertise both; servers can choose the response format.
-    void server.transport
+    if (server.transport === 'sse') {
+      headers['Cache-Control'] = headers['Cache-Control'] || 'no-cache'
+    }
 
     const body = JSON.stringify({
       jsonrpc: '2.0',
@@ -73,15 +84,55 @@ async function sendJsonRpc(
 
     // 处理 SSE 响应
     if (contentType.includes('text/event-stream')) {
-      const text = await response.text()
-      const lines = text.split('\n')
-      for (const line of lines) {
-        if (line.startsWith('data:')) {
-          const data = line.slice(5).trim()
-          if (data) {
-            return JSON.parse(data)
+      if (!response.body) {
+        const text = await response.text()
+        const lines = text.split('\n')
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const data = line.slice(5).trim()
+            if (data) {
+              return JSON.parse(data)
+            }
           }
         }
+        throw new Error('No data in SSE response')
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let dataLines: string[] = []
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
+          const trimmed = line.trimEnd()
+          if (!trimmed) {
+            if (dataLines.length > 0) {
+              const data = dataLines.join('\n').trim()
+              dataLines = []
+              if (data) {
+                try {
+                  await reader.cancel()
+                } catch {
+                  // ignore
+                }
+                return JSON.parse(data)
+              }
+            }
+            continue
+          }
+          if (trimmed.startsWith('data:')) {
+            const payload = trimmed.slice(5).trim()
+            if (payload) dataLines.push(payload)
+          }
+        }
+      }
+      if (dataLines.length > 0) {
+        const data = dataLines.join('\n').trim()
+        if (data) return JSON.parse(data)
       }
       throw new Error('No data in SSE response')
     }
@@ -113,6 +164,7 @@ export async function initializeMcpServer(
       return { ok: false, error: response.error.message }
     }
 
+    markInitialized(server.id)
     return { ok: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -173,6 +225,13 @@ export async function callMcpTool(
   args: Record<string, unknown>
 ): Promise<{ result?: unknown; error?: string }> {
   try {
+    if (shouldInit(server.id)) {
+      const initResult = await initializeMcpServer(server)
+      if (!initResult.ok) {
+        return { error: initResult.error || 'MCP 初始化失败' }
+      }
+    }
+
     const response = await sendJsonRpc(server, 'tools/call', {
       name: toolName,
       arguments: args
@@ -293,8 +352,10 @@ export function clearToolsCache(serverId?: string): void {
     for (const [key, value] of toolNameMap.entries()) {
       if (value.serverId === serverId) toolNameMap.delete(key)
     }
+    initCache.delete(serverId)
   } else {
     toolsCache.clear()
     toolNameMap.clear()
+    initCache.clear()
   }
 }
