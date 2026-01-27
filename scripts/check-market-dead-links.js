@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename)
 
 // 市场元数据文件路径
 const MARKET_METADATA_PATH = path.join(__dirname, 'cfworker/public/assets/market/metadata.json')
-const MARKET_JSON_DIR = path.join(__dirname, 'cfworker/public/assets/json')
+const MARKET_JSON_DIR = path.join(__dirname, 'cfworker/public/assets/market')
 
 // 并发请求限制
 const CONCURRENCY_LIMIT = 50
@@ -161,7 +161,7 @@ async function main() {
 
   // 读取每个分组的 json 文件获取表情图片
   for (const group of groups) {
-    const jsonPath = path.join(MARKET_JSON_DIR, `${group.id}.json`)
+    const jsonPath = path.join(MARKET_JSON_DIR, `group-${group.id}.json`)
     if (fs.existsSync(jsonPath)) {
       try {
         const groupData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))

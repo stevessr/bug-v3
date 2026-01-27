@@ -925,6 +925,8 @@
             if (!e.target.classList.contains('ld-panel-toggle')) return;
 
             this.isDragging = true;
+            this.dragMoved = false;
+            this.dragStartedOnToggle = true;
             this.panel.classList.add('dragging');
 
             const touch = e.type.includes('touch') ? e.touches[0] : e;
@@ -945,6 +947,10 @@
             const touch = e.type.includes('touch') ? e.touches[0] : e;
             const deltaX = touch.clientX - this.dragStartX;
             const deltaY = touch.clientY - this.dragStartY;
+            const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (!this.dragMoved && moveDistance < 6) return;
+            this.dragMoved = true;
 
             // 计算新位置
             const newLeft = this.panelStartLeft + deltaX;
@@ -968,8 +974,15 @@
             this.isDragging = false;
             this.panel.classList.remove('dragging');
 
+            if (this.dragStartedOnToggle && !this.dragMoved && e.type.includes('touch')) {
+                this.lastTouchToggleAt = Date.now();
+                this.togglePanel();
+            }
+
             // 吸附到边缘
-            setTimeout(() => this.snapToEdge(), 50);
+            if (this.dragMoved) {
+                setTimeout(() => this.snapToEdge(), 50);
+            }
 
             e.preventDefault();
         },
@@ -1395,14 +1408,26 @@
             let clickStartTime = 0;
             let clickStartX = 0;
             let clickStartY = 0;
+            let clickStartTouchId = null;
 
             toggleBtn.addEventListener('mousedown', (e) => {
                 clickStartTime = Date.now();
                 clickStartX = e.clientX;
                 clickStartY = e.clientY;
             });
+            toggleBtn.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                if (!touch) return;
+                clickStartTime = Date.now();
+                clickStartX = touch.clientX;
+                clickStartY = touch.clientY;
+                clickStartTouchId = touch.identifier;
+            }, { passive: true });
 
             toggleBtn.addEventListener('click', (e) => {
+                if (this.lastTouchToggleAt && Date.now() - this.lastTouchToggleAt < 500) {
+                    return;
+                }
                 const clickDuration = Date.now() - clickStartTime;
                 const moveDistance = Math.sqrt(
                     Math.pow(e.clientX - clickStartX, 2) +
@@ -1414,6 +1439,21 @@
                     this.togglePanel();
                 }
             });
+            toggleBtn.addEventListener('touchend', (e) => {
+                const touch = Array.from(e.changedTouches || []).find(
+                    (t) => t.identifier === clickStartTouchId
+                ) || e.changedTouches[0];
+                if (!touch) return;
+                const clickDuration = Date.now() - clickStartTime;
+                const moveDistance = Math.sqrt(
+                    Math.pow(touch.clientX - clickStartX, 2) +
+                    Math.pow(touch.clientY - clickStartY, 2)
+                );
+                if (moveDistance < 8 && clickDuration < 250 && !this.dragMoved) {
+                    this.togglePanel();
+                }
+                clickStartTouchId = null;
+            }, { passive: true });
 
             // 创建面板内容
             this.panelContent = createEl('div', { className: 'ld-panel-content' });
