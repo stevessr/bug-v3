@@ -5,15 +5,14 @@ import {
   handleGetEmojiData,
   handleSaveEmojiData,
   handleSyncSettings,
-  handleCreditAuthRequest,
-  handleCreditUserInfoRequest,
   handleLinuxDoAuthRequest,
   handleDownloadImage,
   handleCaptureScreenshot,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup,
-  handleGetEmojiSetting
+  handleGetEmojiSetting,
+  handleProxyFetchRequest
 } from '../handlers/main.ts'
 import {
   setMcpBridgeDisabled,
@@ -75,14 +74,6 @@ export function setupMessageListener() {
               handleLinuxDoAuthRequest(sendResponse)
               return true
 
-            case 'REQUEST_CREDIT_AUTH':
-              handleCreditAuthRequest(sendResponse)
-              return true
-
-            case 'REQUEST_CREDIT_USER_INFO':
-              handleCreditUserInfoRequest(sendResponse)
-              return true
-
             case 'downloadImage':
             case 'DOWNLOAD_IMAGE':
               if ('url' in typedMsg) {
@@ -100,6 +91,14 @@ export function setupMessageListener() {
                 (typedMsg as any).tabId
               )
               return true
+            case 'PROXY_FETCH':
+              if ('options' in typedMsg) {
+                handleProxyFetchRequest((typedMsg as any).options, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing options for PROXY_FETCH' })
+                return false
+              }
             case 'MCP_BRIDGE_SET_DISABLED':
               setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
               sendResponse({ success: true })

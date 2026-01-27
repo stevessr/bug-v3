@@ -118,67 +118,9 @@ function savePosition(pos: { bottom: string; right: string }) {
   }
 }
 
-type CreditAuth = { cookies: string }
-
-let cachedCreditAuth: { data: CreditAuth; fetchedAt: number } | null = null
-const CREDIT_AUTH_CACHE_TTL_MS = 60 * 1000
-const CREDIT_USER_INFO_URL = 'https://credit.linux.do/api/v1/oauth/user-info'
-
-function getCreditCookiesFromPage(): string {
-  return window.location.hostname.includes('credit.linux.do') ? document.cookie || '' : ''
-}
-
-async function getCreditAuth(): Promise<CreditAuth> {
-  if (cachedCreditAuth && Date.now() - cachedCreditAuth.fetchedAt < CREDIT_AUTH_CACHE_TTL_MS) {
-    return cachedCreditAuth.data
-  }
-
-  const fallback: CreditAuth = {
-    cookies: getCreditCookiesFromPage()
-  }
-
-  try {
-    const chromeAPI = (window as any).chrome
-    if (chromeAPI?.runtime?.sendMessage) {
-      const data = await new Promise<CreditAuth>(resolve => {
-        chromeAPI.runtime.sendMessage({ type: 'REQUEST_CREDIT_AUTH' }, (resp: any) => {
-          if (resp?.success) {
-            resolve({
-              cookies: resp.cookies || ''
-            })
-          } else {
-            resolve(fallback)
-          }
-        })
-      })
-
-      cachedCreditAuth = { data, fetchedAt: Date.now() }
-      return data
-    }
-  } catch {
-    // fall back to page-derived cookies
-  }
-
-  cachedCreditAuth = { data: fallback, fetchedAt: Date.now() }
-  return fallback
-}
-
 async function request<T>(url: string): Promise<T> {
-  if (url === CREDIT_USER_INFO_URL) {
-    const chromeAPI = (window as any).chrome
-    if (chromeAPI?.runtime?.sendMessage) {
-      const data = await new Promise<T>((resolve, reject) => {
-        chromeAPI.runtime.sendMessage({ type: 'REQUEST_CREDIT_USER_INFO' }, (resp: any) => {
-          if (resp?.success) {
-            resolve(resp.data as T)
-          } else {
-            reject(new Error(resp?.error || 'Failed to fetch credit user info'))
-          }
-        })
-      })
-      return data
-    }
-  }
+  const urlObj = new URL(url, window.location.href)
+  const isSameOrigin = urlObj.origin === window.location.origin
 
   const headers: Record<string, string> = {
     Accept: 'application/json, text/javascript, */*; q=0.01',
@@ -190,16 +132,12 @@ async function request<T>(url: string): Promise<T> {
     headers['X-CSRF-Token'] = csrfToken
   }
 
-  if (url.includes('linux.do')) {
+  if (urlObj.hostname.includes('linux.do')) {
     headers['Referer'] = 'https://linux.do/'
     headers['Discourse-Logged-In'] = 'true'
-  } else if (url.includes('credit.linux.do')) {
+  } else if (urlObj.hostname.includes('credit.linux.do')) {
     headers['Referer'] = 'https://credit.linux.do/home'
-    const auth = await getCreditAuth()
-    if (auth.cookies) headers['Cookie'] = auth.cookies
   }
-
-  const isSameOrigin = url.startsWith(window.location.origin)
 
   if (isSameOrigin) {
     const res = await fetch(url, {
@@ -210,8 +148,34 @@ async function request<T>(url: string): Promise<T> {
     return res.json()
   }
 
-  // 跨域请求需要通过 background 或使用 no-cors（可能受限）
-  // 浏览器扩展可以通过声明 host_permissions 来直接访问
+  // 跨域请求通过 background 代理，避免 CORS
+  const chromeAPI = (window as any).chrome
+  if (chromeAPI?.runtime?.sendMessage) {
+    const data = await new Promise<T>((resolve, reject) => {
+      chromeAPI.runtime.sendMessage(
+        {
+          type: 'PROXY_FETCH',
+          options: {
+            url,
+            method: 'GET',
+            headers,
+            includeCookies: true,
+            cookieDomain: urlObj.hostname,
+            responseType: 'json'
+          }
+        },
+        (resp: any) => {
+          if (resp?.success && resp?.ok !== false) {
+            resolve(resp.data as T)
+          } else {
+            reject(new Error(resp?.error || `Proxy fetch failed: ${resp?.status || 'unknown'}`))
+          }
+        }
+      )
+    })
+    return data
+  }
+
   const res = await fetch(url, {
     headers: headers,
     credentials: 'include'

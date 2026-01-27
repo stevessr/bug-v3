@@ -56,17 +56,19 @@ export interface RequestLinuxDoAuthMessage extends BaseMessage {
 }
 
 /**
- * REQUEST_CREDIT_AUTH 消息
+ * PROXY_FETCH 消息
  */
-export interface RequestCreditAuthMessage extends BaseMessage {
-  type: 'REQUEST_CREDIT_AUTH'
-}
-
-/**
- * REQUEST_CREDIT_USER_INFO 消息
- */
-export interface RequestCreditUserInfoMessage extends BaseMessage {
-  type: 'REQUEST_CREDIT_USER_INFO'
+export interface ProxyFetchMessage extends BaseMessage {
+  type: 'PROXY_FETCH'
+  options: {
+    url: string
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    includeCookies?: boolean
+    cookieDomain?: string
+    responseType?: 'json' | 'text'
+  }
 }
 
 /**
@@ -127,8 +129,7 @@ export type TypedMessage =
   | SaveEmojiDataMessage
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
-  | RequestCreditAuthMessage
-  | RequestCreditUserInfoMessage
+  | ProxyFetchMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
 
