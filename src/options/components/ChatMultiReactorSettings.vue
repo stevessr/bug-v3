@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, isRef, onMounted, type Ref } from 'vue'
+import { ref, computed, isRef, onMounted, watch, type Ref } from 'vue'
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/type'
@@ -9,6 +9,13 @@ import {
   checkDailyLimit,
   type DailyLimitInfo
 } from '../utils/linuxDoReaction'
+import {
+  fetchGroupList,
+  fetchGroupDetail,
+  addGroupMembers,
+  type LinuxDoGroupSummary,
+  type LinuxDoGroupDetail
+} from '../utils/linuxDoGroup'
 
 import SettingSwitch from './SettingSwitch.vue'
 
@@ -64,6 +71,20 @@ const selectedGroup = ref<string>('all')
 const searchQuery = ref('')
 const errorMessage = ref('')
 
+// Group manager state
+const groupLoading = ref(false)
+const groupError = ref('')
+const groupList = ref<LinuxDoGroupSummary[]>([])
+const selectedGroupName = ref('')
+const manualGroupIdentifier = ref('')
+const groupDetail = ref<LinuxDoGroupDetail | null>(null)
+const groupDetailLoading = ref(false)
+const groupNotifyUsers = ref(true)
+const groupUsernames = ref('')
+const groupActionStatus = ref('')
+const isGroupRunning = ref(false)
+const groupDetailCache = new Map<string, LinuxDoGroupDetail>()
+
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
     const s = props.settings
@@ -114,6 +135,88 @@ const startReaction = async () => {
   } finally {
     isReacting.value = false
     checkLimit()
+  }
+}
+
+const loadGroups = async () => {
+  groupLoading.value = true
+  groupError.value = ''
+  try {
+    const list = await fetchGroupList()
+    groupList.value = list
+    if (!selectedGroupName.value && list.length > 0) {
+      selectedGroupName.value = list[0].name
+    }
+  } catch (e) {
+    groupError.value = `获取群组失败：${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    groupLoading.value = false
+  }
+}
+
+const loadGroupDetail = async (groupName: string) => {
+  if (!groupName) {
+    groupDetail.value = null
+    return
+  }
+  if (groupDetailCache.has(groupName)) {
+    groupDetail.value = groupDetailCache.get(groupName) || null
+    return
+  }
+  groupDetailLoading.value = true
+  try {
+    const detail = await fetchGroupDetail(groupName)
+    groupDetailCache.set(groupName, detail)
+    groupDetail.value = detail
+  } catch (e) {
+    groupDetail.value = null
+  } finally {
+    groupDetailLoading.value = false
+  }
+}
+
+const parseUsernames = (raw: string) =>
+  raw
+    .split(/[,\s]+/)
+    .map(u => u.trim())
+    .filter(Boolean)
+
+const handleAddGroupMembers = async () => {
+  if (isGroupRunning.value) return
+
+  const usernames = parseUsernames(groupUsernames.value)
+  if (!usernames.length) {
+    groupActionStatus.value = '请输入用户名列表'
+    return
+  }
+
+  const selected = groupList.value.find(g => g.name === selectedGroupName.value) || null
+  const manual = manualGroupIdentifier.value.trim()
+  const groupIdentifier = manual || (selected?.id ? String(selected.id) : selected?.name || '')
+  if (!groupIdentifier) {
+    groupActionStatus.value = '请选择群组或输入群组标识'
+    return
+  }
+
+  const confirmed = await requestConfirmation(
+    '确认添加成员',
+    `确定要将 ${usernames.length} 个用户添加到群组 ${groupIdentifier} 吗？`
+  )
+  if (!confirmed) return
+
+  isGroupRunning.value = true
+  groupActionStatus.value = '正在提交...'
+  try {
+    const result = await addGroupMembers({
+      groupIdentifier,
+      usernames,
+      notifyUsers: groupNotifyUsers.value
+    })
+    groupActionStatus.value = `✅ 添加成功：${JSON.stringify(result).slice(0, 200)}`
+  } catch (e) {
+    groupActionStatus.value = `❌ 添加失败：${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    isGroupRunning.value = false
   }
 }
 
@@ -249,6 +352,13 @@ onMounted(() => {
     fetchEmojis()
   }
 })
+
+watch(
+  () => selectedGroupName.value,
+  name => {
+    loadGroupDetail(name)
+  }
+)
 </script>
 
 <template>
@@ -326,6 +436,87 @@ onMounted(() => {
         >
           > {{ reactionStatus }}
         </div>
+      </div>
+    </div>
+
+    <!-- 群组成员管理 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-md font-semibold dark:text-white">群组成员管理</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            从 linux.do 群组列表选择并批量添加成员
+          </p>
+        </div>
+        <a-button size="small" :loading="groupLoading" @click="loadGroups">加载群组</a-button>
+      </div>
+
+      <a-alert
+        v-if="groupError"
+        :message="groupError"
+        type="error"
+        class="mb-4"
+        closable
+        @close="groupError = ''"
+      />
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">选择群组</div>
+          <a-select
+            v-model:value="selectedGroupName"
+            placeholder="选择群组"
+            class="w-full"
+            :options="
+              groupList.map(g => ({
+                value: g.name,
+                label: `${g.full_name || g.name} (${g.user_count || 0})`
+              }))
+            "
+          />
+        </div>
+
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">手动群组标识（可选）</div>
+          <a-input
+            v-model:value="manualGroupIdentifier"
+            placeholder="群组 ID 或名称（优先于选择）"
+          />
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">用户名列表</div>
+        <a-textarea
+          v-model:value="groupUsernames"
+          :rows="3"
+          placeholder="user1 user2 user3 或 user1,user2,user3"
+        />
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <a-checkbox v-model:checked="groupNotifyUsers">通知用户</a-checkbox>
+        <a-button type="primary" :loading="isGroupRunning" @click="handleAddGroupMembers">
+          添加成员
+        </a-button>
+      </div>
+
+      <div v-if="groupDetail || groupDetailLoading" class="mt-4 text-xs text-gray-500">
+        <a-spin v-if="groupDetailLoading" size="small" />
+        <span v-else>
+          群组信息：{{ groupDetail?.group?.full_name || groupDetail?.group?.name }}
+          <span class="mx-1">•</span>
+          成员数 {{ groupDetail?.group?.user_count || 0 }}
+          <span class="mx-1">•</span>
+          {{ groupDetail?.group?.is_group_owner ? '你是群主' : '非群主' }}
+        </span>
+      </div>
+
+      <div
+        v-if="groupActionStatus"
+        class="mt-3 text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap"
+      >
+        > {{ groupActionStatus }}
       </div>
     </div>
 
