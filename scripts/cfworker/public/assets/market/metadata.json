@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-01-27T08:27:49.222Z",
+  "exportDate": "2026-01-27T09:09:02.611Z",
   "totalGroups": 223,
   "includeArchived": true,
   "groups": [
@@ -857,7 +857,7 @@
       "name": "动图 2",
       "icon": "https://linux.do/uploads/default/original/4X/3/6/2/3625a45375f43ce1e32c463e51b61991db3095c1.avif#/",
       "order": 106,
-      "emojiCount": 45,
+      "emojiCount": 37,
       "isArchived": false
     },
     {
