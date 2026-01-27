@@ -895,25 +895,54 @@
         snapToEdge() {
             const rect = this.panel.getBoundingClientRect();
             const windowWidth = window.innerWidth;
-            const panelCenterX = rect.left + rect.width / 2;
+            const windowHeight = window.innerHeight;
+            const distances = {
+                left: rect.left,
+                right: windowWidth - rect.right,
+                top: rect.top,
+                bottom: windowHeight - rect.bottom
+            };
+            const nearestEdge = Object.entries(distances).reduce((min, cur) =>
+                cur[1] < min[1] ? cur : min
+            )[0];
 
-            // 保持底部位置不变
-            const bottomOffset = window.innerHeight - rect.bottom;
-            this.panel.style.bottom = Math.max(20, bottomOffset) + 'px';
+            if (nearestEdge === 'left' || nearestEdge === 'right') {
+                // 横向吸附，保持垂直位置
+                const bottomOffset = windowHeight - rect.bottom;
+                this.panel.style.bottom = Math.max(20, bottomOffset) + 'px';
+                this.panel.style.top = 'auto';
 
-            // 判断吸附到左边还是右边
-            if (panelCenterX < windowWidth / 2) {
-                // 吸附到左边
-                this.panel.style.left = '20px';
-                this.panel.style.right = '';
-                this.panelContent.style.left = '0';
-                this.panelContent.style.right = '';
+                if (nearestEdge === 'left') {
+                    this.panel.style.left = '20px';
+                    this.panel.style.right = 'auto';
+                    this.panelContent.style.left = '0';
+                    this.panelContent.style.right = 'auto';
+                } else {
+                    this.panel.style.right = '20px';
+                    this.panel.style.left = 'auto';
+                    this.panelContent.style.right = '0';
+                    this.panelContent.style.left = 'auto';
+                }
+                this.panelContent.style.top = 'auto';
+                this.panelContent.style.bottom = '60px';
             } else {
-                // 吸附到右边
-                this.panel.style.right = '20px';
-                this.panel.style.left = '';
-                this.panelContent.style.right = '0';
-                this.panelContent.style.left = '';
+                // 纵向吸附，保持水平位置
+                const leftOffset = rect.left;
+                const maxLeft = windowWidth - this.panel.offsetWidth - 10;
+                this.panel.style.left = Math.max(10, Math.min(leftOffset, maxLeft)) + 'px';
+                this.panel.style.right = 'auto';
+
+                if (nearestEdge === 'top') {
+                    this.panel.style.top = '20px';
+                    this.panel.style.bottom = 'auto';
+                    this.panelContent.style.top = '60px';
+                    this.panelContent.style.bottom = 'auto';
+                } else {
+                    this.panel.style.bottom = '20px';
+                    this.panel.style.top = 'auto';
+                    this.panelContent.style.bottom = '60px';
+                    this.panelContent.style.top = 'auto';
+                }
             }
 
             this.savePosition();
