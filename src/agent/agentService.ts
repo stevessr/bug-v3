@@ -194,7 +194,23 @@ const normalizeAgentPayload = (payload: unknown): unknown => {
     for (const item of flattened) {
       if (!item || typeof item !== 'object') continue
       const record = item as Record<string, unknown>
-      const type = typeof record.type === 'string' ? record.type : ''
+      let type = typeof record.type === 'string' ? record.type : ''
+      if (type === 'DOM' || type === 'dom') {
+        type = 'getDOM'
+        record.type = 'getDOM'
+      }
+      if (type === 'getDOM') {
+        const includeMarkdown =
+          typeof record.includeMarkdown === 'boolean'
+            ? record.includeMarkdown
+            : typeof record.getMarkdown === 'boolean'
+              ? record.getMarkdown
+              : undefined
+        if (includeMarkdown !== undefined) {
+          const options = record.options && typeof record.options === 'object' ? record.options : {}
+          record.options = { ...options, includeMarkdown }
+        }
+      }
       if (type === 'subagents' && Array.isArray(record.subagents)) {
         nextSubagents.push(...(record.subagents as Array<Record<string, unknown>>))
         continue
