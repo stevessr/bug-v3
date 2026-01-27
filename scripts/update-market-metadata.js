@@ -76,8 +76,16 @@ groups.forEach(group => {
     }
 });
 
-// Sort groups by name first, then generate order values
-groups.sort((a, b) => a.name.localeCompare(b.name));
+// Sort groups by initial letter, then by full name
+const getSortName = name => (name || '').trim();
+const getInitial = name => getSortName(name).slice(0, 1).toLowerCase();
+groups.sort((a, b) => {
+    const aInitial = getInitial(a.name);
+    const bInitial = getInitial(b.name);
+    const initialCompare = aInitial.localeCompare(bInitial, 'en', { sensitivity: 'base' });
+    if (initialCompare !== 0) return initialCompare;
+    return getSortName(a.name).localeCompare(getSortName(b.name), 'en', { sensitivity: 'base' });
+});
 
 // Generate order values based on name sorting
 for (let i = 0; i < groups.length; i++) {
