@@ -6,6 +6,36 @@
 
 const STORAGE_KEY = 'ldc_widget_pos'
 const REFRESH_INTERVAL = 60000
+const CACHE_KEY = 'ldc_user_info_cache'
+const GAMIFICATION_CACHE_KEY = 'ldc_gamification_cache'
+const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes
+
+interface CreditCache {
+  data: any
+  timestamp: number
+}
+
+function loadCache(key: string): CreditCache | null {
+  try {
+    const saved = localStorage.getItem(key)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('[LDCredit] Failed to load cache', e)
+  }
+  return null
+}
+
+function saveCache(key: string, data: any) {
+  try {
+    const cache: CreditCache = {
+      data,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(key, JSON.stringify(cache))
+  } catch (e) {
+    console.warn('[LDCredit] Failed to save cache', e)
+  }
+}
 
 interface CreditState {
   communityBalance: number | null
@@ -216,8 +246,26 @@ function handleError(msg: string) {
   }
 }
 
-async function fetchGamificationByUsername() {
+async function fetchGamificationByUsername(forceRefresh = false) {
   if (!state.username) return
+
+  // 检查缓存
+  const cache = loadCache(GAMIFICATION_CACHE_KEY)
+  const now = Date.now()
+
+  // 如果缓存有效，且非强制刷新，且缓存的用户名匹配
+  if (
+    !forceRefresh &&
+    cache &&
+    now - cache.timestamp < CACHE_DURATION &&
+    cache.data?.username === state.username &&
+    cache.data?.score !== undefined
+  ) {
+    state.gamificationScore = cache.data.score
+    updateDisplay()
+    return
+  }
+
   try {
     // 尝试 Card 接口
     const cardData = await request<{ user?: { gamification_score?: number } }>(
@@ -226,6 +274,10 @@ async function fetchGamificationByUsername() {
     if (cardData?.user?.gamification_score !== undefined) {
       state.gamificationScore = cardData.user.gamification_score
       updateDisplay()
+      saveCache(GAMIFICATION_CACHE_KEY, {
+        username: state.username,
+        score: state.gamificationScore
+      })
       return
     }
     // 兜底：完整用户资料接口
@@ -235,22 +287,48 @@ async function fetchGamificationByUsername() {
     if (profileData?.user?.gamification_score !== undefined) {
       state.gamificationScore = profileData.user.gamification_score
       updateDisplay()
+      saveCache(GAMIFICATION_CACHE_KEY, {
+        username: state.username,
+        score: state.gamificationScore
+      })
     }
   } catch (e) {
     console.error('[LDCredit] Fetch gamification error', e)
+    // 错误时尝试使用过期缓存
+    if (cache && cache.data?.username === state.username && cache.data?.score !== undefined) {
+      console.warn('[LDCredit] Gamification API failed, using expired cache')
+      state.gamificationScore = cache.data.score
+      updateDisplay()
+    }
   }
 }
 
-async function fetchData() {
+async function fetchData(forceRefresh = false) {
   try {
-    const creditData = await request<{
-      data?: {
-        'community-balance'?: string | number
-        community_balance?: string | number
-        username?: string
-        nickname?: string
+    let creditData: any
+
+    // 检查缓存
+    const cache = loadCache(CACHE_KEY)
+    const now = Date.now()
+
+    if (!forceRefresh && cache && now - cache.timestamp < CACHE_DURATION) {
+      console.log('[LDCredit] Using cached data')
+      creditData = cache.data
+    } else {
+      console.log('[LDCredit] Fetching new data')
+      creditData = await request<{
+        data?: {
+          'community-balance'?: string | number
+          community_balance?: string | number
+          username?: string
+          nickname?: string
+        }
+      }>('https://credit.linux.do/api/v1/oauth/user-info')
+
+      if (creditData?.data) {
+        saveCache(CACHE_KEY, creditData)
       }
-    }>('https://credit.linux.do/api/v1/oauth/user-info')
+    }
 
     if (creditData?.data) {
       state.communityBalance = parseFloat(
@@ -258,10 +336,25 @@ async function fetchData() {
       )
       state.username = creditData.data.username || creditData.data.nickname || null
       updateDisplay()
-      if (state.username) await fetchGamificationByUsername()
+      if (state.username) await fetchGamificationByUsername(forceRefresh)
     }
   } catch (e) {
     console.error('[LDCredit] Fetch balance error', e)
+    // 如果请求失败且有缓存，尝试使用缓存（即使过期）
+    const cache = loadCache(CACHE_KEY)
+    if (cache) {
+      console.warn('[LDCredit] API failed, using expired cache')
+      const creditData = cache.data
+      if (creditData?.data) {
+        state.communityBalance = parseFloat(
+          String(creditData.data['community-balance'] || creditData.data.community_balance || 0)
+        )
+        state.username = creditData.data.username || creditData.data.nickname || null
+        updateDisplay()
+        if (state.username) await fetchGamificationByUsername(forceRefresh)
+        return
+      }
+    }
     handleError('Credit API 异常')
   }
 }
@@ -363,7 +456,7 @@ function createWidget() {
       state.tooltipContent = '刷新中...'
       const t = shadowRoot?.getElementById('ldc-tooltip')
       if (t && t.style.opacity === '1') t.textContent = state.tooltipContent
-      fetchData()
+      fetchData(true) // 强制刷新
     }
   })
 }
