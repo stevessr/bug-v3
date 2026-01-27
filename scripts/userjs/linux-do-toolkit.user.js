@@ -702,7 +702,7 @@
             { id: 'clap', name: '👏 Clap', emoji: '👏' },
             { id: 'confetti_ball', name: '🎊 Confetti Ball', emoji: '🎊' },
             { id: 'hugs', name: '🤗 Hugs', emoji: '🤗' },
-            { id: 'distorted_face', name: '🤯 Distorted Face', emoji: '🤯' },
+            { id: 'distorted_face', name: '🫪 Distorted Face', emoji: '🫪' },
             { id: 'tieba_087', name: '🎭 Tieba 087', emoji: '🎭' },
             { id: 'bili_057', name: '📺 Bili 057', emoji: '📺' }
         ],
