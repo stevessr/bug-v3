@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { DownOutlined } from '@ant-design/icons-vue'
-import { ref, watch, isRef, type Ref } from 'vue'
+import { ref, watch, computed, isRef, type Ref } from 'vue'
 
 import type { AppSettings } from '../../types/type'
 
 import SettingSwitch from './SettingSwitch.vue'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const settings = props.settings as AppSettings | Ref<AppSettings>
-
 const emit = defineEmits([
   'update:outputFormat',
   'update:forceMobileMode',
@@ -26,8 +24,9 @@ const emit = defineEmits([
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value[key]) ?? defaultValue
-    return (settings && (settings as AppSettings)[key]) ?? defaultValue
+    if (isRef(props.settings))
+      return (props.settings.value && props.settings.value[key]) ?? defaultValue
+    return (props.settings && (props.settings as AppSettings)[key]) ?? defaultValue
   } catch {
     return defaultValue
   }
@@ -92,6 +91,9 @@ const localRouterRefreshInterval = ref<number>(
   getSetting('discourseRouterRefreshInterval', 30000) as number
 )
 const isRouterRefreshIntervalSaving = ref(false)
+const enableDiscourseRouterRefresh = computed(() =>
+  getSetting('enableDiscourseRouterRefresh', false)
+)
 
 // 监听 settings 变化，同步到本地状态
 watch(
@@ -100,6 +102,12 @@ watch(
     localRouterRefreshInterval.value = val as number
   }
 )
+
+watch(enableDiscourseRouterRefresh, enabled => {
+  if (enabled) {
+    localRouterRefreshInterval.value = getSetting('discourseRouterRefreshInterval', 30000) as number
+  }
+})
 
 // 保存路由刷新间隔
 const saveRouterRefreshInterval = async () => {
@@ -197,7 +205,7 @@ const saveRouterRefreshInterval = async () => {
       />
 
       <SettingSwitch
-        :model-value="getSetting('enableDiscourseRouterRefresh', false)"
+        :model-value="enableDiscourseRouterRefresh"
         @update:model-value="handleSettingUpdate('enableDiscourseRouterRefresh', $event)"
         label="启用 Discourse 路由刷新"
         description="周期性刷新 Discourse 路由以优化页面状态同步（仅在 Discourse 站点生效）"
@@ -205,7 +213,7 @@ const saveRouterRefreshInterval = async () => {
 
       <!-- Discourse 路由刷新间隔配置（仅在启用时显示） -->
       <div
-        v-if="getSetting('enableDiscourseRouterRefresh', false)"
+        v-if="enableDiscourseRouterRefresh"
         class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
       >
         <div class="flex items-start justify-between">
