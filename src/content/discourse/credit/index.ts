@@ -122,6 +122,7 @@ type CreditAuth = { cookies: string }
 
 let cachedCreditAuth: { data: CreditAuth; fetchedAt: number } | null = null
 const CREDIT_AUTH_CACHE_TTL_MS = 60 * 1000
+const CREDIT_USER_INFO_URL = 'https://credit.linux.do/api/v1/oauth/user-info'
 
 function getCreditCookiesFromPage(): string {
   return window.location.hostname.includes('credit.linux.do') ? document.cookie || '' : ''
@@ -163,6 +164,22 @@ async function getCreditAuth(): Promise<CreditAuth> {
 }
 
 async function request<T>(url: string): Promise<T> {
+  if (url === CREDIT_USER_INFO_URL) {
+    const chromeAPI = (window as any).chrome
+    if (chromeAPI?.runtime?.sendMessage) {
+      const data = await new Promise<T>((resolve, reject) => {
+        chromeAPI.runtime.sendMessage({ type: 'REQUEST_CREDIT_USER_INFO' }, (resp: any) => {
+          if (resp?.success) {
+            resolve(resp.data as T)
+          } else {
+            reject(new Error(resp?.error || 'Failed to fetch credit user info'))
+          }
+        })
+      })
+      return data
+    }
+  }
+
   const headers: Record<string, string> = {
     Accept: 'application/json, text/javascript, */*; q=0.01',
     'X-Requested-With': 'XMLHttpRequest'

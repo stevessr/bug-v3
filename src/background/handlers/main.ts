@@ -1,5 +1,6 @@
 export { handleAddToFavorites } from './handleAddToFavorites'
 export { handleCreditAuthRequest } from './handleCreditAuthRequest'
+export { handleCreditUserInfoRequest } from './handleCreditUserInfoRequest'
 export { handleLinuxDoAuthRequest } from './handleLinuxDoAuthRequest'
 export { setupContextMenu } from './setupContextMenu'
 export { handleSyncSettings } from './handleSyncSettings'

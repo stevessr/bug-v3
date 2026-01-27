@@ -63,6 +63,13 @@ export interface RequestCreditAuthMessage extends BaseMessage {
 }
 
 /**
+ * REQUEST_CREDIT_USER_INFO 消息
+ */
+export interface RequestCreditUserInfoMessage extends BaseMessage {
+  type: 'REQUEST_CREDIT_USER_INFO'
+}
+
+/**
  * DOWNLOAD_IMAGE 消息
  */
 export interface DownloadImageMessage extends BaseMessage {
@@ -121,6 +128,7 @@ export type TypedMessage =
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
   | RequestCreditAuthMessage
+  | RequestCreditUserInfoMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
 
