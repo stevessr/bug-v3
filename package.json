@@ -36,6 +36,7 @@
     "release:all": "node scripts/release-all.js",
     "update:wasm": "bash ./scripts/wasm/build.sh",
     "share": "node ./scripts/collaborative-upload-server/server.js",
+    "avif": "node ./scripts/webm-to-avif-backend/server.js",
     "share:stop": "kill $(lsof -t -i:9527) 2>/dev/null || echo 'Server not running'",
     "check:all": "pnpm lint && pnpm format:check && pnpm type-check"
   },
