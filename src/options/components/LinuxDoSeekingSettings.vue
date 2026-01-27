@@ -111,7 +111,7 @@ const startReaction = async () => {
       reactionCount.value,
       reactionType.value,
       (current, total, status) => {
-        reactionStatus.value = `[${current}/${total}] ${status}`
+        reactionStatus.value = status
       }
     )
   } finally {
@@ -383,7 +383,7 @@ const startReaction = async () => {
 
           <div
             v-if="reactionStatus"
-            class="text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto"
+            class="text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap"
           >
             > {{ reactionStatus }}
           </div>

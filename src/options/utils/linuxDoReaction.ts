@@ -309,6 +309,12 @@ export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
 }
 
 // Main execution function
+function formatPostStatus(post: LinuxDoPost): string {
+  const title = post.title || '(No title)'
+  const excerpt = post.excerpt || ''
+  return `${title}\n${excerpt}`
+}
+
 export async function runBatchReaction(
   username: string,
   count: number,
@@ -331,28 +337,61 @@ export async function runBatchReaction(
     return
   }
 
-  onProgress(0, posts.length, `Starting reactions...`)
+  onProgress(0, posts.length, `Pre-checking already reacted posts...`)
 
-  let successCount = 0
+  const targets: LinuxDoPost[] = []
   for (let i = 0; i < posts.length; i++) {
     const post = posts[i]
-    onProgress(i + 1, posts.length, `Processing ${i + 1}/${posts.length}: ${post.title}`)
+    try {
+      const reacted = await isAlreadyReacted(post.id, reactionId)
+      if (!reacted) {
+        targets.push(post)
+      }
+    } catch {
+      targets.push(post)
+    }
+    onProgress(0, posts.length, `Pre-check ${i + 1}/${posts.length}`)
+    await new Promise(r => setTimeout(r, 200))
+  }
+
+  if (targets.length === 0) {
+    onProgress(0, 0, 'No posts to react (already reacted).')
+    return
+  }
+
+  onProgress(0, targets.length, `Starting reactions...`)
+
+  let successCount = 0
+  let total = targets.length
+  let current = 0
+
+  for (let i = 0; i < targets.length; i++) {
+    const post = targets[i]
 
     const result = await sendReactionToPost(post.id, reactionId, csrfToken)
 
     if (result === 'success') {
+      current++
       successCount++
+      onProgress(current, total, `✅ ${current}/${total}\n${formatPostStatus(post)}`)
       await new Promise(r => setTimeout(r, DELAY_MS))
     } else if (result === 'skipped') {
-      // fast forward
+      total = Math.max(0, total - 1)
       await new Promise(r => setTimeout(r, 100))
     } else if (result === 'rate_limit') {
-      onProgress(i + 1, posts.length, `Rate limited, waiting 5s...`)
+      current++
+      onProgress(
+        current,
+        total,
+        `⏳ ${current}/${total} Rate limited, waiting 5s...\n${formatPostStatus(post)}`
+      )
       await new Promise(r => setTimeout(r, 5000))
     } else {
+      current++
+      onProgress(current, total, `⚠️ ${current}/${total} Failed\n${formatPostStatus(post)}`)
       await new Promise(r => setTimeout(r, DELAY_MS))
     }
   }
 
-  onProgress(posts.length, posts.length, `Done! Success: ${successCount}/${posts.length}`)
+  onProgress(total, total, `Done! Success: ${successCount}/${total}`)
 }
