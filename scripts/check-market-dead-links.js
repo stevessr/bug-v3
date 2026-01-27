@@ -1,7 +1,11 @@
-const fs = require('fs')
-const path = require('path')
-const https = require('https')
-const { URL } = require('url')
+import fs from 'fs'
+import path from 'path'
+import https from 'https'
+import { URL } from 'url'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // 市场元数据文件路径
 const MARKET_METADATA_PATH = path.join(__dirname, 'cfworker/public/assets/market/metadata.json')
