@@ -58,9 +58,21 @@ async function getCsrfToken(): Promise<string | null> {
       return resp.csrfToken as string
     }
   } catch {
+    // ignore
+  }
+
+  try {
+    const res = await pageFetch<string>(
+      `${HOST}/`,
+      { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+      'text'
+    )
+    if (!res.ok || !res.data) return null
+    const match = res.data.match(/<meta name="csrf-token" content="([^"]+)"/)
+    return match ? match[1] : null
+  } catch {
     return null
   }
-  return null
 }
 
 export type LinuxDoGroupSummary = {

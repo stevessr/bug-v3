@@ -351,6 +351,9 @@ onMounted(() => {
   if (getSetting('enableChatMultiReactor', false)) {
     fetchEmojis()
   }
+
+  // 自动加载 linux.do 群组列表（通过页面代理请求）
+  loadGroups()
 })
 
 watch(
