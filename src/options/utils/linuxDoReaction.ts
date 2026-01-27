@@ -1,5 +1,3 @@
-import { ref } from 'vue'
-
 export const REACTIONS = [
   { id: 'heart', name: '❤️ Heart', emoji: '❤️' },
   { id: '+1', name: '👍 +1', emoji: '👍' },
@@ -108,10 +106,6 @@ export async function fetchUserActions(
       for (const item of data.user_actions) {
         if (results.length >= count) break
 
-        // Basic category check if available in item (might need separate fetch if strict)
-        // Userscript does `getCategoryIdForAction` which fetches topic/post info.
-        // For simplicity, we skip strict category check here or implement basic one.
-        // Item usually has category_id
         if (item.category_id && !ALLOWED_CATEGORIES.has(item.category_id)) {
           continue
         }
@@ -329,7 +323,7 @@ export async function runBatchReaction(
 
   onProgress(0, count, `Fetching posts for ${username}...`)
   const posts = await fetchUserActions(username, count, msg => {
-    // simple log bridge
+    onProgress(0, count, msg)
   })
 
   if (posts.length === 0) {
