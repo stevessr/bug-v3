@@ -94,7 +94,7 @@ const allowVideoStickers = computed(
 // 导入选项
 const importMode = ref<'new' | 'update'>('new')
 const newGroupName = ref('')
-const newGroupIcon = ref('📱')
+const newGroupIcon = ref('')
 const selectedGroupId = ref<string>('')
 
 // 获取的贴纸集信息
@@ -676,6 +676,11 @@ const doImport = async (): Promise<boolean> => {
         // 添加到本地分组对象（延迟更新 store 以减少重新渲染）
         targetGroup!.emojis.push(newEmoji)
 
+        // 如果是新分组且图标为空，使用第一个表情作为图标
+        if (importMode.value === 'new' && !targetGroup!.icon && newEmojis.length === 1) {
+          targetGroup!.icon = uploadUrl
+        }
+
         // 使用节流方式添加到预览列表
         addToPreview({
           id: emojiId,
@@ -1055,7 +1060,7 @@ const doImport = async (): Promise<boolean> => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   分组图标
                 </label>
-                <a-input v-model:value="newGroupIcon" placeholder="输入 emoji 图标" />
+                <a-input v-model:value="newGroupIcon" placeholder="留空则使用第一张贴纸作为图标" />
               </div>
             </div>
 
