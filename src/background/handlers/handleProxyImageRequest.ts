@@ -2,13 +2,83 @@
  * Proxy image requests through background service worker
  * to bypass CORP (Cross-Origin-Resource-Policy) restrictions
  *
- * For linux.do images, tries to fetch via an open linux.do tab first
+ * For linux.do images, tries to fetch via an open linux.do tab first.
+ * If no tab is found, silently opens one in the background.
  */
 
 import { getChromeAPI } from '../utils/main.ts'
 
+// Track if we're currently opening a background tab to avoid duplicates
+let isOpeningBackgroundTab = false
+let backgroundTabPromise: Promise<number | null> | null = null
+
+/**
+ * Open a background tab for the specified domain and wait for it to load
+ */
+async function openBackgroundTab(domain: string): Promise<number | null> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.tabs) {
+    return null
+  }
+
+  // Avoid opening multiple tabs simultaneously
+  if (isOpeningBackgroundTab && backgroundTabPromise) {
+    return backgroundTabPromise
+  }
+
+  isOpeningBackgroundTab = true
+  backgroundTabPromise = (async () => {
+    try {
+      // Create a new tab in the background (not active)
+      const tab = await chromeAPI.tabs.create({
+        url: `https://${domain}/`,
+        active: false
+      })
+
+      if (!tab?.id) {
+        return null
+      }
+
+      const tabId = tab.id
+
+      // Wait for the tab to finish loading with timeout
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve()
+        }, 15000) // 15 second timeout
+
+        const listener = (
+          updatedTabId: number,
+          changeInfo: chrome.tabs.TabChangeInfo
+        ) => {
+          if (updatedTabId === tabId && changeInfo.status === 'complete') {
+            chromeAPI.tabs.onUpdated.removeListener(listener)
+            clearTimeout(timeout)
+            // Give the content script a moment to initialize
+            setTimeout(resolve, 500)
+          }
+        }
+
+        chromeAPI.tabs.onUpdated.addListener(listener)
+      })
+
+      console.log(`[ProxyImage] Opened background tab for ${domain}, id: ${tabId}`)
+      return tabId
+    } catch (error) {
+      console.error(`[ProxyImage] Failed to open background tab for ${domain}:`, error)
+      return null
+    } finally {
+      isOpeningBackgroundTab = false
+      backgroundTabPromise = null
+    }
+  })()
+
+  return backgroundTabPromise
+}
+
 /**
  * Try to fetch image via a content script in an open tab of the same domain
+ * If no tab exists, opens one silently in the background
  */
 async function fetchViaContentScript(
   url: string,
@@ -27,9 +97,20 @@ async function fetchViaContentScript(
 
   try {
     // Find tabs matching the domain
-    const tabs = await chromeAPI.tabs.query({ url: `https://${domain}/*` })
+    let tabs = await chromeAPI.tabs.query({ url: `https://${domain}/*` })
+
+    // If no tabs found, open one in the background
     if (!tabs || tabs.length === 0) {
-      return { success: false, error: `No ${domain} tab found` }
+      console.log(`[ProxyImage] No ${domain} tab found, opening one in background...`)
+      const newTabId = await openBackgroundTab(domain)
+      if (newTabId) {
+        // Re-query to get the new tab
+        tabs = await chromeAPI.tabs.query({ url: `https://${domain}/*` })
+      }
+    }
+
+    if (!tabs || tabs.length === 0) {
+      return { success: false, error: `Failed to open ${domain} tab` }
     }
 
     // Try each tab until one succeeds
