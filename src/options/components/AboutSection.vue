@@ -46,41 +46,16 @@ const features = ref([
 const changelog = ref([
   {
     version: version,
-    date: '2025-11-13', // Today's date
+    date: '2026-1-29', // Today's date
     notes: [
-      '新增 AI 批量重命名功能',
-      '新增 AI 批量重命名独立页面',
-      '优化 Gemini 命名功能，支持语言选择和默认设置；更新相关组件和服务',
-      '优化表情选择器，调整分组图标和名称的显示逻辑；增加图标最大宽度',
-      '优化云同步设置页面，更新路由和相关组件；优化重复检测功能，增加过滤查询',
-      '优化跨分组重复检测功能，更新相关路由和组件',
-      '修复 Options.vue 中 "computed value is readonly" 警告',
-      '修复路由 index 中 createWebHashHistory 导入问题',
-      '修复选项页面导航问题',
-      '样式：修复添加 AI 重命名标签后的 linting 问题',
-      '样式：修复 linting 问题'
+      '修复：Linux Do 网站严格同源的问题',
+      '修复：针对 LINUX DO 网站的功能修复',
+      '重构：部分功能移动到测试',
+      '重构：现在同源出错时会尝试通过页面代理获取',
+      '脚本：引入预计 Linux DO credit 获取脚本',
+      '上传：现在 Linux DO 上传走页面代理',
+      '功能：现在尝试从网页代理图片的时候会有提示'
     ]
-  },
-  {
-    version: '1.2.5',
-    date: '2025-10-07',
-    notes: [
-      '新增左右布局模态框设计',
-      '优化图片预览和错误处理',
-      '支持未分组表情管理',
-      '改进上传到 linux.do 功能',
-      '增强 UI 响应性和用户体验'
-    ]
-  },
-  {
-    version: '1.1.7',
-    date: '2025-08-12',
-    notes: ['修复用户配置保存问题', '改进外部站点兼容性', '性能优化：虚拟滚动改进']
-  },
-  {
-    version: '1.1.6',
-    date: '2025-06-01',
-    notes: ['修复若干 UI 边缘 case', '改进导出/导入流程']
   }
 ])
 
@@ -156,7 +131,7 @@ onMounted(() => {
   let acc = baseDelay
 
   sortedChangelog.value.forEach((entry, i) => {
-    const notesText = entry.notes.join('  •  ')
+    const notesText = entry.notes.join('\n  •  ')
     const estDuration = Math.max(200, notesText.length * charSpeed)
 
     const t = setTimeout(() => {
