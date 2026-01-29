@@ -169,6 +169,41 @@ if (chrome?.runtime?.onMessage) {
       return true
     }
 
+    // Handle FETCH_IMAGE - fetch image as blob and return as array buffer
+    if (message?.type === 'FETCH_IMAGE') {
+      const url = message?.url
+      if (!url) {
+        sendResponse({ success: false, error: 'Missing url' })
+        return true
+      }
+
+      fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Accept: 'image/*,*/*'
+        }
+      })
+        .then(async res => {
+          if (!res.ok) {
+            sendResponse({ success: false, error: `HTTP ${res.status}: ${res.statusText}` })
+            return
+          }
+          const blob = await res.blob()
+          const arrayBuffer = await blob.arrayBuffer()
+          sendResponse({
+            success: true,
+            data: Array.from(new Uint8Array(arrayBuffer)),
+            mimeType: blob.type,
+            size: blob.size
+          })
+        })
+        .catch((error: any) => {
+          sendResponse({ success: false, error: error?.message || 'Image fetch failed' })
+        })
+      return true
+    }
+
     return false // 对于其他消息类型，不处理
   })
 }

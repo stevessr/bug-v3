@@ -207,36 +207,31 @@ class RequestTracker {
 
 /**
  * Fetch image via background proxy to bypass CORP restrictions
- * Falls back to direct fetch if proxy is not available
+ * Falls back to direct fetch only if proxy is not available (non-extension context)
  */
 async function fetchImageViaProxy(url: string): Promise<Blob> {
   // Try to use background proxy in extension context
   if (isExtensionContext() && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-    try {
-      const response = await new Promise<any>((resolve, reject) => {
-        chrome.runtime.sendMessage({ type: 'PROXY_IMAGE', url }, (resp: any) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-          } else {
-            resolve(resp)
-          }
-        })
+    const response = await new Promise<any>((resolve, reject) => {
+      chrome.runtime.sendMessage({ type: 'PROXY_IMAGE', url }, (resp: any) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message))
+        } else {
+          resolve(resp)
+        }
       })
+    })
 
-      if (response?.success && response.data) {
-        const uint8Array = new Uint8Array(response.data)
-        return new Blob([uint8Array], { type: response.mimeType || 'image/png' })
-      }
-      // If proxy failed, fall through to direct fetch
-      if (response?.error) {
-        logCache(`Proxy fetch failed, trying direct: ${response.error}`)
-      }
-    } catch (proxyError) {
-      logCache(`Proxy not available, trying direct fetch:`, proxyError)
+    if (response?.success && response.data) {
+      const uint8Array = new Uint8Array(response.data)
+      return new Blob([uint8Array], { type: response.mimeType || 'image/png' })
     }
+
+    // Proxy returned an error, throw it
+    throw new Error(response?.error || 'Proxy fetch failed')
   }
 
-  // Direct fetch as fallback
+  // Direct fetch only for non-extension contexts
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'omit',
