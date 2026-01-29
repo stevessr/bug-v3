@@ -23,6 +23,9 @@ import {
   callMcpTool
 } from './mcpClient'
 
+// Disable Zod JIT to avoid eval/new Function in CSP-restricted contexts.
+z.config({ jitless: true })
+
 interface AgentRunResult {
   message?: AgentMessage
   actions?: AgentAction[]

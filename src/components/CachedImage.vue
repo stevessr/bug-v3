@@ -19,27 +19,72 @@ const props = defineProps<{
 const emojiStore = useEmojiStore()
 const displaySrc = ref(props.src)
 const isCached = ref(false)
+const hasTriedFallback = ref(false)
+
+const shouldUseCache = (url: string) => {
+  if (!url) return false
+  if (emojiStore.settings.useIndexedDBForImages) return true
+  // Extension pages can’t embed some cross-origin images due to CORP.
+  return isExtensionPage() && (url.startsWith('http://') || url.startsWith('https://'))
+}
 
 // 异步获取缓存的图片 URL
 const loadCachedImage = async (url: string) => {
-  if (!url || !emojiStore.settings.useIndexedDBForImages) {
+  if (!url || !shouldUseCache(url)) {
     displaySrc.value = url
     return
   }
 
   try {
-    const { getCachedImage } = await import('@/utils/imageCache')
+    const { getCachedImage, cacheImage } = await import('@/utils/imageCache')
     const cachedUrl = await getCachedImage(url)
     if (cachedUrl) {
       displaySrc.value = cachedUrl
       isCached.value = true
     } else {
-      displaySrc.value = url
-      isCached.value = false
+      const blobUrl = await cacheImage(url)
+      if (blobUrl) {
+        displaySrc.value = blobUrl
+        isCached.value = true
+      } else {
+        displaySrc.value = url
+        isCached.value = false
+      }
     }
   } catch {
     displaySrc.value = url
     isCached.value = false
+  }
+}
+
+const isExtensionPage = () =>
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'chrome-extension:' ||
+    window.location.protocol === 'moz-extension:' ||
+    window.location.protocol === 'safari-extension:')
+
+const shouldAttemptFallback = (url: string) => {
+  if (!url) return false
+  if (url.startsWith('blob:') || url.startsWith('data:')) return false
+  return isExtensionPage()
+}
+
+const handleImageError = async () => {
+  if (hasTriedFallback.value || !shouldAttemptFallback(displaySrc.value)) {
+    return
+  }
+
+  hasTriedFallback.value = true
+
+  try {
+    const { cacheImage } = await import('@/utils/imageCache')
+    const blobUrl = await cacheImage(displaySrc.value)
+    if (blobUrl) {
+      displaySrc.value = blobUrl
+      isCached.value = true
+    }
+  } catch {
+    // 保持原始 URL，避免无限重试
   }
 }
 
@@ -48,6 +93,8 @@ watch(
   () => props.src,
   newSrc => {
     if (newSrc) {
+      hasTriedFallback.value = false
+      isCached.value = false
       loadCachedImage(newSrc)
     }
   },
@@ -71,5 +118,6 @@ onMounted(() => {
     :loading="loading || 'lazy'"
     :data-original-url="src"
     :data-cached="isCached ? 'true' : undefined"
+    @error="handleImageError"
   />
 </template>
