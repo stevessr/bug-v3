@@ -34,7 +34,6 @@ const {
   currentCacheGroup,
   currentCacheEmoji,
   // shouldStopCaching, // Not used in template
-  enableAutoCleanup,
   isExporting,
   isImporting,
   isRefreshingStats,
@@ -96,7 +95,9 @@ onMounted(() => {
 
     <!-- Image Cache Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <div
+        class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"
+      >
         <div>
           <h2 class="text-lg font-semibold dark:text-white">图片缓存</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -178,15 +179,6 @@ onMounted(() => {
           </a-button>
         </div>
 
-        <!-- Auto Cleanup Option -->
-        <div class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <a-checkbox v-model:checked="enableAutoCleanup">
-            启用自动清理（仅在缓存空间严重不足时清理最旧的缓存项）
-          </a-checkbox>
-          <span class="text-xs text-blue-600 dark:text-blue-400">
-            ⚠️ 建议关闭以保护手动缓存的图片
-          </span>
-        </div>
         <!-- Cache Progress Indicator -->
         <div v-if="isCaching" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

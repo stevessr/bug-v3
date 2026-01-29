@@ -516,8 +516,8 @@ export class ImageCache {
       // 获取图片 (通过代理绕过 CORP 限制)
       const blob = await fetchImageViaProxy(url)
 
-      // 检查缓存限制
-      await this.ensureCacheLimits()
+      // 注意：不再自动清理缓存，只能通过用户手动清理
+      // 这样可以避免意外清空用户缓存的图片
 
       // 存储到 IndexedDB
       const id = this.generateId(url)
@@ -739,6 +739,7 @@ export class ImageCache {
   /**
    * Ensure cache doesn't exceed limits
    * 优化：使用 cursor 遍历，只读取元数据，避免加载大量 Blob 到内存
+   * 注意：只在超出限制 20% 时才清理，避免频繁清理
    */
   private async ensureCacheLimits(): Promise<void> {
     if (!this.db) return
@@ -767,11 +768,15 @@ export class ImageCache {
           totalCount++
           cursor.continue()
         } else {
-          // 遍历完成，检查是否需要清理
-          const needsCleanup =
-            totalCount > this.options.maxCacheEntries || totalSize > this.options.maxCacheSize
+          // 遍历完成，只在超出限制 20% 时才清理（避免频繁清理）
+          const sizeThreshold = this.options.maxCacheSize * 1.2
+          const countThreshold = this.options.maxCacheEntries * 1.2
+          const needsCleanup = totalCount > countThreshold || totalSize > sizeThreshold
 
           if (needsCleanup) {
+            logCache(
+              `Cache exceeds 120% limit (size: ${(totalSize / 1024 / 1024).toFixed(1)}MB, entries: ${totalCount}), cleaning up...`
+            )
             await this.cleanupCacheByMetadata(metadata, totalSize)
           }
           resolve()
@@ -788,6 +793,7 @@ export class ImageCache {
   /**
    * Clean up cache by removing least recently used entries (基于元数据)
    * 仅基于 LRU 策略，不考虑过期时间（S3 URL 永久有效）
+   * 保守清理：只清理到 95% 容量，最大限度保护用户缓存
    */
   private async cleanupCacheByMetadata(
     metadata: Array<{ id: string; size: number; lastAccessed: number }>,
@@ -802,9 +808,9 @@ export class ImageCache {
     let size = currentSize
     let count = metadata.length
 
-    // 目标：减少到 80% 容量
-    const targetSize = this.options.maxCacheSize * 0.8
-    const targetCount = this.options.maxCacheEntries * 0.8
+    // 目标：减少到 95% 容量（保守清理）
+    const targetSize = this.options.maxCacheSize * 0.95
+    const targetCount = this.options.maxCacheEntries * 0.95
 
     for (const entry of sortedMetadata) {
       if (count <= targetCount && size <= targetSize) {
@@ -825,7 +831,7 @@ export class ImageCache {
         this.memoryCache.delete(id)
       }
 
-      logCache(`Cleaned up ${toRemove.length} cache entries (LRU)`)
+      logCache(`Cleaned up ${toRemove.length} cache entries (LRU, conservative)`)
     }
   }
 
@@ -1115,8 +1121,8 @@ export class ImageCache {
 // Default cache instance with optimized settings
 // S3 为不同文件分配不同 URL，因此无需过期策略，仅使用 LRU 基于容量清理
 export const imageCache = new ImageCache({
-  maxCacheSize: 200 * 1024 * 1024, // 200MB IndexedDB（增大容量）
-  maxCacheEntries: 5000,
+  maxCacheSize: 10 * 1024 * 1024 * 1024, // 10GB IndexedDB（增大容量）
+  maxCacheEntries: 5 * 1000 * 1000, // 500 万条目限制（增大条目数）
   maxAge: Infinity, // 永久缓存
   memoryBudget: 30 * 1024 * 1024 // 30MB memory cache（增大内存缓存）
 })

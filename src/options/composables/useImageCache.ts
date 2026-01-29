@@ -16,7 +16,6 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
   const currentCacheGroup = ref('')
   const currentCacheEmoji = ref('')
   const shouldStopCaching = ref(false)
-  const enableAutoCleanup = ref(false)
   const isRefreshingStats = ref(false)
 
   // Progress State
@@ -165,13 +164,6 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
         message.info(`缓存已中断，已缓存 ${cachedCount.value} 个表情图片`)
       } else {
         message.success(`已缓存 ${cachedCount.value} 个表情图片`)
-
-        if (enableAutoCleanup.value) {
-          await performAutoCleanup()
-        } else {
-          console.log('[StatsPage] 用户未启用自动清理，保留所有缓存')
-          message.info('缓存完成，已保留所有现有缓存（未启用自动清理）')
-        }
       }
       await refreshCacheStats()
     } catch (error: any) {
@@ -184,34 +176,6 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
     }
   }
 
-  const performAutoCleanup = async () => {
-    console.log('[StatsPage] 用户启用自动清理，检查缓存状态...')
-    try {
-      const { imageCache } = await import('@/utils/imageCache')
-      const stats = await imageCache.getCacheStats()
-      const maxSize = 2 * 1024 * 1024 * 1024 // 2GB
-      const maxEntries = 5000
-
-      if (stats.totalSize > maxSize * 1.2 || stats.totalEntries > maxEntries * 1.2) {
-        console.log(
-          `[StatsPage] 缓存严重超出限制（大小：${(stats.totalSize / 1024 / 1024).toFixed(1)}MB, 条目：${stats.totalEntries}），进行保守清理`
-        )
-
-        const cleanedCount = await imageCache.cleanupLRU(0.95)
-        if (cleanedCount > 0) {
-          console.warn(`[StatsPage] 保守清理了 ${cleanedCount} 个最旧的缓存项`)
-          message.warning(`缓存空间不足，已清理 ${cleanedCount} 个最旧的缓存项以释放空间`)
-        }
-      } else {
-        console.log(
-          `[StatsPage] 缓存空间充足（大小：${(stats.totalSize / 1024 / 1024).toFixed(1)}MB, 条目：${stats.totalEntries}），无需清理`
-        )
-      }
-    } catch (cleanupError) {
-      console.warn('[StatsPage] 缓存检查失败：', cleanupError)
-    }
-  }
-
   return {
     isCaching,
     cacheError,
@@ -221,7 +185,6 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
     currentCacheGroup,
     currentCacheEmoji,
     shouldStopCaching,
-    enableAutoCleanup,
     isExporting,
     isImporting,
     isRefreshingStats,
