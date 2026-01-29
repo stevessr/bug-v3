@@ -249,6 +249,44 @@ const filteredEmojis = computed(() => {
   return emojis
 })
 
+// 通过页面代理获取数据
+async function pageFetch<T>(
+  url: string,
+  options?: { method?: string; headers?: Record<string, string>; body?: string },
+  responseType: 'json' | 'text' = 'json'
+): Promise<{ status: number; ok: boolean; data: T }> {
+  const chromeAPI = (globalThis as any).chrome
+  if (!chromeAPI?.runtime?.sendMessage) {
+    throw new Error('Page fetch unavailable: chrome.runtime is not accessible')
+  }
+
+  return await new Promise((resolve, reject) => {
+    chromeAPI.runtime.sendMessage(
+      {
+        type: 'LINUX_DO_PAGE_FETCH',
+        options: {
+          url,
+          method: options?.method || 'GET',
+          headers: options?.headers,
+          body: options?.body,
+          responseType
+        }
+      },
+      (resp: { success: boolean; status?: number; ok?: boolean; data?: T; error?: string }) => {
+        if (resp?.success) {
+          resolve({
+            status: resp.status || 200,
+            ok: resp.ok !== false,
+            data: resp.data as T
+          })
+          return
+        }
+        reject(new Error(resp?.error || `Page fetch failed: ${resp?.status || 'unknown'}`))
+      }
+    )
+  })
+}
+
 // 从 Discourse 获取表情
 const fetchEmojis = async () => {
   loading.value = true
@@ -256,20 +294,20 @@ const fetchEmojis = async () => {
 
   try {
     const url = `${discourseUrl.value}/emojis.json`
-    const response = await fetch(url, {
-      method: 'GET',
+
+    // 通过页面代理获取（绕过 CORS）
+    const result = await pageFetch<DiscourseEmojisResponse>(url, {
       headers: {
         Accept: 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest'
-      },
-      credentials: 'include'
+      }
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    if (!result.ok || !result.data) {
+      throw new Error(`HTTP ${result.status}: Failed to fetch emojis`)
     }
 
-    const data: DiscourseEmojisResponse = await response.json()
+    const data = result.data
 
     // 扁平化表情列表
     const allEmojis: DiscourseEmoji[] = []
