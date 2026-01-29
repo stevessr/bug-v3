@@ -1163,3 +1163,60 @@ export async function getCacheStats() {
 export async function clearCache(): Promise<void> {
   return imageCache.clearCache()
 }
+
+/**
+ * Fetch image via proxy without caching
+ * Useful for previewing images in edit/add modals when direct load fails
+ * Returns a blob URL that should be revoked after use
+ */
+export async function fetchImageForPreview(url: string): Promise<string | null> {
+  if (!url || url.startsWith('blob:') || url.startsWith('data:')) {
+    return null
+  }
+
+  try {
+    // Check if we're in extension context
+    const inExtension =
+      typeof chrome !== 'undefined' &&
+      (chrome.runtime || chrome.extension) &&
+      typeof chrome.storage !== 'undefined'
+
+    if (inExtension && chrome.runtime?.sendMessage) {
+      // Try background proxy first
+      const response = await new Promise<any>((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'PROXY_IMAGE', url }, (resp: any) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else {
+            resolve(resp)
+          }
+        })
+      })
+
+      if (response?.success && response.data) {
+        const uint8Array = new Uint8Array(response.data)
+        const blob = new Blob([uint8Array], { type: response.mimeType || 'image/png' })
+        return URL.createObjectURL(blob)
+      }
+    }
+
+    // Fallback to direct fetch (non-extension or proxy failed)
+    const response = await fetch(url, {
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        Accept: 'image/*'
+      }
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch (error) {
+    console.warn('[ImageCache] fetchImageForPreview failed:', error)
+    return null
+  }
+}

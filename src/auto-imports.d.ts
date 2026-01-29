@@ -60,6 +60,7 @@ declare global {
   const extractChanges: typeof import('./utils/typeGuards')['extractChanges']
   const extractStickerSetName: typeof import('./utils/telegramResolver')['extractStickerSetName']
   const extractTimestamp: typeof import('./utils/typeGuards')['extractTimestamp']
+  const fetchImageForPreview: typeof import('./utils/imageCache')['fetchImageForPreview']
   const formatMessage: typeof import('./utils/i18n')['formatMessage']
   const generateBatchNames: typeof import('./utils/geminiService')['generateBatchNames']
   const generateBatchNamesStreaming: typeof import('./utils/geminiService')['generateBatchNamesStreaming']
@@ -310,6 +311,7 @@ declare module 'vue' {
     readonly extractChanges: UnwrapRef<typeof import('./utils/typeGuards')['extractChanges']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
     readonly extractTimestamp: UnwrapRef<typeof import('./utils/typeGuards')['extractTimestamp']>
+    readonly fetchImageForPreview: UnwrapRef<typeof import('./utils/imageCache')['fetchImageForPreview']>
     readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>

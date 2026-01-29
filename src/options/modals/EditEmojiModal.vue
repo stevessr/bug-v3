@@ -151,13 +151,41 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
 
 // 图片加载状态
 const imageLoadError = ref(false)
+const proxyBlobUrl = ref<string | null>(null)
+const isLoadingViaProxy = ref(false)
 
 function handleImageLoad() {
   imageLoadError.value = false
 }
 
-function handleImageError() {
-  imageLoadError.value = true
+async function handleImageError() {
+  // 如果已经在加载代理或者已经有代理 URL，不再处理
+  if (isLoadingViaProxy.value || proxyBlobUrl.value) {
+    return
+  }
+
+  const srcUrl = localEmoji.value.displayUrl || localEmoji.value.url
+  if (!srcUrl) {
+    imageLoadError.value = true
+    return
+  }
+
+  // 尝试通过代理获取图片（不创建缓存）
+  isLoadingViaProxy.value = true
+  try {
+    const { fetchImageForPreview } = await import('@/utils/imageCache')
+    const blobUrl = await fetchImageForPreview(srcUrl)
+    if (blobUrl) {
+      proxyBlobUrl.value = blobUrl
+      imageLoadError.value = false
+    } else {
+      imageLoadError.value = true
+    }
+  } catch {
+    imageLoadError.value = true
+  } finally {
+    isLoadingViaProxy.value = false
+  }
 }
 
 // 图片预览可见性（用于 a-image preview group）
@@ -191,6 +219,12 @@ watch(
       localEmoji.value = { ...newEmoji }
       selectedGroupId.value = newEmoji.groupId || props.groupId || ''
       imageLoadError.value = false // 重置图片错误状态
+      isLoadingViaProxy.value = false
+      // 释放旧的代理 blob URL
+      if (proxyBlobUrl.value) {
+        URL.revokeObjectURL(proxyBlobUrl.value)
+        proxyBlobUrl.value = null
+      }
     }
   },
   { immediate: true }
@@ -211,6 +245,11 @@ watch(
   () => [localEmoji.value.url, localEmoji.value.displayUrl],
   () => {
     imageLoadError.value = false
+    // 释放旧的代理 blob URL
+    if (proxyBlobUrl.value) {
+      URL.revokeObjectURL(proxyBlobUrl.value)
+      proxyBlobUrl.value = null
+    }
   }
 )
 
@@ -579,9 +618,23 @@ const handleSubmit = () => {
               >
                 <h4 class="text-sm font-medium text-gray-700 dark:text-white mb-3">图片预览</h4>
                 <div class="flex items-center justify-center min-h-48">
+                  <!-- 通过代理加载的图片 -->
+                  <a-image
+                    v-if="proxyBlobUrl"
+                    :preview="{ visible: false }"
+                    :src="proxyBlobUrl"
+                    class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
+                    style="max-width: 500px"
+                    @click="visible = true"
+                  />
+
                   <!-- 有 URL 且未出错时显示图片 -->
                   <a-image
-                    v-if="(localEmoji.displayUrl || localEmoji.url) && !imageLoadError"
+                    v-else-if="
+                      (localEmoji.displayUrl || localEmoji.url) &&
+                      !imageLoadError &&
+                      !isLoadingViaProxy
+                    "
                     :preview="{ visible: false }"
                     :src="getEmojiImageUrlSync(localEmoji as Emoji)"
                     class="object-contain w-full h-full max-h-96 rounded-lg border cursor-pointer"
@@ -599,6 +652,19 @@ const handleSubmit = () => {
                     <div class="text-center text-gray-500 dark:text-gray-400">
                       <div class="text-4xl mb-2">🖼️</div>
                       <div class="text-sm">请输入图片链接</div>
+                    </div>
+                  </div>
+
+                  <!-- 正在通过代理加载 -->
+                  <div
+                    v-else-if="isLoadingViaProxy"
+                    class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
+                  >
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                      <div
+                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"
+                      ></div>
+                      <div class="text-sm">正在通过代理加载...</div>
                     </div>
                   </div>
 

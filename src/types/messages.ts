@@ -78,6 +78,20 @@ export interface LinuxDoPageFetchMessage extends BaseMessage {
 }
 
 /**
+ * LINUX_DO_UPLOAD 消息
+ */
+export interface LinuxDoUploadMessage extends BaseMessage {
+  type: 'LINUX_DO_UPLOAD'
+  options: {
+    url: string
+    fileData: number[]
+    fileName: string
+    mimeType?: string
+    sha1?: string | null
+  }
+}
+
+/**
  * PROXY_FETCH 消息
  */
 export interface ProxyFetchMessage extends BaseMessage {
@@ -161,6 +175,7 @@ export type TypedMessage =
   | RequestLinuxDoAuthMessage
   | GetLinuxDoUserMessage
   | LinuxDoPageFetchMessage
+  | LinuxDoUploadMessage
   | ProxyFetchMessage
   | ProxyImageMessage
   | DownloadImageMessage

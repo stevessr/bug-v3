@@ -26,6 +26,28 @@ log.info('Content script loaded (entry)')
 // 获取 Discourse 域名列表（向后兼容）
 const DISCOURSE_DOMAINS = getDiscourseDomains()
 
+function getCsrfTokenFromPage(): string {
+  // Try to get CSRF token from meta tag
+  const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
+  if (metaToken) {
+    return metaToken.content
+  }
+
+  // Try to get from cookie
+  const match = document.cookie.match(/csrf_token=([^;]+)/)
+  if (match) {
+    return decodeURIComponent(match[1])
+  }
+
+  // Fallback - try to extract from any form
+  const hiddenInput = DQS('input[name="authenticity_token"]') as HTMLInputElement
+  if (hiddenInput) {
+    return hiddenInput.value
+  }
+
+  return ''
+}
+
 /**
  * 初始化函数 - 使用动态加载优化
  */
@@ -90,28 +112,7 @@ if (chrome?.runtime?.onMessage) {
 
     if (message?.type === 'GET_CSRF_TOKEN') {
       try {
-        // Try to get CSRF token from meta tag
-        const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
-        if (metaToken) {
-          sendResponse({ csrfToken: metaToken.content })
-          return true // 表示异步响应
-        }
-
-        // Try to get from cookie
-        const match = document.cookie.match(/csrf_token=([^;]+)/)
-        if (match) {
-          sendResponse({ csrfToken: decodeURIComponent(match[1]) })
-          return true // 表示异步响应
-        }
-
-        // Fallback - try to extract from any form
-        const hiddenInput = DQS('input[name="authenticity_token"]') as HTMLInputElement
-        if (hiddenInput) {
-          sendResponse({ csrfToken: hiddenInput.value })
-          return true // 表示异步响应
-        }
-
-        sendResponse({ csrfToken: '' })
+        sendResponse({ csrfToken: getCsrfTokenFromPage() })
         return true // 表示异步响应
       } catch (error) {
         console.warn('[Emoji Extension] Failed to get CSRF token:', error)
@@ -167,6 +168,62 @@ if (chrome?.runtime?.onMessage) {
         .catch((error: any) => {
           sendResponse({ success: false, error: error?.message || 'Page fetch failed' })
         })
+      return true
+    }
+
+    if (message?.type === 'PAGE_UPLOAD') {
+      const opts = message?.options || {}
+      const url = opts.url
+      if (!url) {
+        sendResponse({ success: false, error: 'Missing url' })
+        return true
+      }
+
+      if (!Array.isArray(opts.fileData) || opts.fileData.length === 0) {
+        sendResponse({ success: false, error: 'Missing file data' })
+        return true
+      }
+
+      try {
+        const buffer = new Uint8Array(opts.fileData)
+        const blob = new Blob([buffer], { type: opts.mimeType || 'application/octet-stream' })
+        const file = new File([blob], opts.fileName || 'image', { type: blob.type })
+
+        const form = new FormData()
+        form.append('upload_type', 'composer')
+        form.append('relativePath', 'null')
+        form.append('name', file.name)
+        form.append('type', file.type)
+        if (opts.sha1) form.append('sha1_checksum', opts.sha1)
+        form.append('file', file, file.name)
+
+        const headers: Record<string, string> = {}
+        const csrfToken = getCsrfTokenFromPage()
+        if (csrfToken) headers['X-Csrf-Token'] = csrfToken
+
+        fetch(url, {
+          method: 'POST',
+          headers,
+          body: form,
+          credentials: 'include'
+        })
+          .then(async res => {
+            const data = await res.json().catch(async () => {
+              try {
+                return { message: await res.text() }
+              } catch {
+                return null
+              }
+            })
+            sendResponse({ success: true, status: res.status, ok: res.ok, data })
+          })
+          .catch((error: any) => {
+            sendResponse({ success: false, error: error?.message || 'Page upload failed' })
+          })
+      } catch (error: any) {
+        sendResponse({ success: false, error: error?.message || 'Page upload failed' })
+      }
+
       return true
     }
 

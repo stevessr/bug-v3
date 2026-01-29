@@ -88,6 +88,10 @@ class DiscourseUploadService implements UploadService {
 
   private async attemptUpload(file: File, onProgress?: (percent: number) => void): Promise<string> {
     try {
+      if (this.shouldUseLinuxDoPageProxy()) {
+        return await this.uploadViaLinuxDoProxy(file, onProgress)
+      }
+
       // Get cookies and CSRF token
       const { cookies, csrfToken } = await this.getAuth()
 
@@ -180,6 +184,75 @@ class DiscourseUploadService implements UploadService {
     }
 
     return { cookies, csrfToken }
+  }
+
+  private shouldUseLinuxDoPageProxy(): boolean {
+    if (this.domain !== 'linux.do') return false
+    try {
+      return globalThis?.location?.protocol === 'chrome-extension:'
+    } catch {
+      return false
+    }
+  }
+
+  private async uploadViaLinuxDoProxy(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<string> {
+    const chromeAPI = (globalThis as any).chrome
+    if (!chromeAPI?.runtime?.sendMessage) {
+      throw new Error('Page proxy unavailable: chrome.runtime is not accessible')
+    }
+
+    const arrayBuffer = await file.arrayBuffer()
+    const sha1 = await this.computeSHA1OfArrayBuffer(arrayBuffer)
+
+    onProgress?.(20)
+
+    const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
+    const response = await new Promise<any>((resolve, reject) => {
+      chromeAPI.runtime.sendMessage(
+        {
+          type: 'LINUX_DO_UPLOAD',
+          options: {
+            url: uploadUrl,
+            fileData: Array.from(new Uint8Array(arrayBuffer)),
+            fileName: file.name,
+            mimeType: file.type,
+            sha1
+          }
+        },
+        (resp: any) => {
+          if (resp?.success) {
+            resolve(resp)
+            return
+          }
+          reject(new Error(resp?.error || 'Page upload failed'))
+        }
+      )
+    })
+
+    if (response.ok && response.data?.url) {
+      onProgress?.(100)
+      return response.data.url
+    }
+
+    const errorData = response.data
+    if (response.status === 429 && errorData?.extras?.wait_seconds) {
+      const waitTime = errorData.extras.wait_seconds * 1000
+      const rateLimitError = new Error(
+        `Upload failed: 429 Too Many Requests. Please wait ${errorData.extras.wait_seconds} seconds.`
+      ) as any
+      rateLimitError.isRateLimitError = true
+      rateLimitError.waitTime = waitTime
+      throw rateLimitError
+    }
+
+    throw new Error(
+      `Upload failed: ${response.status || 'unknown'} ${
+        errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
+      }`
+    )
   }
 }
 

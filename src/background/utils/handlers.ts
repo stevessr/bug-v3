@@ -8,6 +8,7 @@ import {
   handleLinuxDoAuthRequest,
   handleLinuxDoUserRequest,
   handleLinuxDoPageFetchRequest,
+  handleLinuxDoUploadRequest,
   handleDownloadImage,
   handleCaptureScreenshot,
   setupStorageChangeListener,
@@ -89,6 +90,15 @@ export function setupMessageListener() {
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing options for LINUX_DO_PAGE_FETCH' })
+                return false
+              }
+
+            case 'LINUX_DO_UPLOAD':
+              if ('options' in typedMsg) {
+                handleLinuxDoUploadRequest((typedMsg as any).options, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing options for LINUX_DO_UPLOAD' })
                 return false
               }
 
