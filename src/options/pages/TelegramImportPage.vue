@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, watch, isRef } from 'vue'
 import { useRoute } from 'vue-router'
 
+import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import {
   getTelegramBotToken,
@@ -1134,12 +1135,11 @@ const doImport = async (): Promise<boolean> => {
                 <div
                   class="w-16 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded"
                 >
-                  <img
+                  <CachedImage
                     :src="emoji.url"
                     :alt="emoji.name"
                     class="max-w-full max-h-full object-contain"
                     loading="lazy"
-                    decoding="async"
                   />
                 </div>
                 <span

@@ -120,7 +120,7 @@ const emojiRows = computed(() => {
     >
       <div class="emoji-item">
         <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-          <img
+          <CachedImage
             :src="getImageSrcSync(emojis[0])"
             :alt="emojis[0].name"
             class="w-full h-full object-cover"

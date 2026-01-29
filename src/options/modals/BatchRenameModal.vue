@@ -2,6 +2,7 @@
 import { ref, watch, computed, type PropType } from 'vue'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { generateBatchNamesStreaming, generateBatchNames } from '@/utils/geminiService'
@@ -254,7 +255,7 @@ const progressPercentage = computed(() => {
                 :disabled="!newNames[emoji.id]"
                 @change="toggleExclude(emoji.id)"
               />
-              <img
+              <CachedImage
                 :src="getEmojiImageUrlSync(emoji)"
                 class="w-12 h-12 object-contain bg-gray-100 rounded"
                 loading="lazy"

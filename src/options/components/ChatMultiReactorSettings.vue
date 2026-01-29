@@ -19,6 +19,7 @@ import {
 
 import SettingSwitch from './SettingSwitch.vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import { requestConfirmation } from '@/options/utils/confirmService'
 
 // Discourse 表情数据结构
@@ -554,12 +555,7 @@ watch(
               class="flex items-center gap-1 px-2 py-1"
             >
               <span class="text-gray-500 text-xs mr-1">{{ index + 1 }}.</span>
-              <img
-                :src="getEmojiUrl(emoji)"
-                :alt="emoji"
-                class="w-5 h-5"
-                @error="($event.target as HTMLImageElement).style.display = 'none'"
-              />
+              <CachedImage :src="getEmojiUrl(emoji)" :alt="emoji" class="w-5 h-5" />
               <span class="text-sm">{{ emoji }}</span>
             </a-tag>
           </div>
@@ -645,7 +641,7 @@ watch(
               :title="emoji.name"
               @click="toggleEmoji(emoji.name)"
             >
-              <img
+              <CachedImage
                 :src="emoji.url.startsWith('/') ? `${discourseUrl}${emoji.url}` : emoji.url"
                 :alt="emoji.name"
                 class="w-8 h-8 object-contain"

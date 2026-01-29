@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { TagOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons-vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 
 const emojiStore = useEmojiStore()
@@ -209,7 +210,7 @@ const getTagEmojis = (tagName: string) => {
               class="relative group"
               :title="`${item.emoji.name} (${item.group})`"
             >
-              <img
+              <CachedImage
                 :src="item.emoji.displayUrl || item.emoji.url"
                 :alt="item.emoji.name"
                 class="w-8 h-8 object-cover rounded border border-gray-200 dark:border-gray-600"

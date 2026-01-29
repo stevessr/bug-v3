@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { LoadingOutlined } from '@ant-design/icons-vue'
 import { watch } from 'vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import { analyzeImageForNaming, type ImageAnalysisResult } from '@/utils/geminiService'
 import { useEmojiStore } from '@/stores/emojiStore'
 
@@ -137,7 +138,7 @@ watch(
 
       <!-- Image Preview -->
       <div class="flex justify-center">
-        <img
+        <CachedImage
           :src="imageUrl"
           alt="Preview"
           class="max-w-full max-h-48 rounded border border-gray-200"

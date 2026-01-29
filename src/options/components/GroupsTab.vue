@@ -637,7 +637,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
               <div
                 class="w-24 h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center"
               >
-                <img
+                <CachedImage
                   v-if="currentImagePreview"
                   :src="currentImagePreview"
                   alt="预览"

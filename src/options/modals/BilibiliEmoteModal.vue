@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import {
   fetchBilibiliEmotePackageById,
   convertBilibiliEmotesToPluginFormat,
@@ -244,7 +245,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                 class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
                 @click="selectSearchResult(result)"
               >
-                <img :src="result.url" class="w-8 h-8 rounded object-cover" />
+                <CachedImage :src="result.url" class="w-8 h-8 rounded object-cover" />
                 <div class="flex-1 min-w-0">
                   <div class="font-medium text-sm truncate dark:text-gray-200">
                     {{ result.text }}
@@ -353,16 +354,10 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
               @click="togglePackage(pkg.id)"
             >
               <div class="flex items-center space-x-3">
-                <img
+                <CachedImage
                   :src="pkg.url"
                   :alt="pkg.text"
                   class="w-12 h-12 rounded object-cover"
-                  @error="
-                    e => {
-                      ;(e.target as HTMLImageElement).src =
-                        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMxNi4yNjggMzIgMTAgMjUuNzMyIDEwIDE4QzEwIDEwLjI2OCAxNi4yNjggNCAyNCA0QzMxLjczMiA0IDM4IDEwLjI2OCAzOCAxOEMzOCAyNS43MzIgMzEuNzMyIDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-                    }
-                  "
                 />
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900 dark:text-white">{{ pkg.text }}</h4>
@@ -402,17 +397,12 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
 
               <!-- 表情预览 -->
               <div class="mt-3 flex flex-wrap gap-1">
-                <img
+                <CachedImage
                   v-for="emote in pkg.emote.slice(0, 6)"
                   :key="emote.id"
                   :src="emote.url"
                   :alt="emote.text"
                   class="w-6 h-6 rounded object-cover"
-                  @error="
-                    e => {
-                      ;(e.target as HTMLImageElement).style.display = 'none'
-                    }
-                  "
                 />
                 <span
                   v-if="pkg.emote.length > 6"

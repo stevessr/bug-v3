@@ -7,6 +7,8 @@ import { useEmojiImages } from '../composables/useEmojiImages'
 
 import Agent from './Agent.vue'
 
+import CachedImage from '@/components/CachedImage.vue'
+
 const { t } = useI18n()
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
@@ -280,7 +282,7 @@ const handleSearch = () => {
               :value="g.id"
               :label="g.name"
             >
-              <img
+              <CachedImage
                 v-if="g.icon.startsWith('http') || g.icon.startsWith('data:')"
                 :src="getGroupIconSrc(g.icon, g.id)"
                 class="w-4 h-4 inline-block mr-2"
@@ -318,7 +320,7 @@ const handleSearch = () => {
                   :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
                 >
                   <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
-                    <img
+                    <CachedImage
                       :src="getSearchEmojiSrc(emoji)"
                       :alt="emoji.name"
                       class="w-full h-full object-cover"
