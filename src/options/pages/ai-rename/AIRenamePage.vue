@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
 import BatchRenameModal from '@/options/modals/BatchRenameModal.vue'
+import CachedImage from '@/components/CachedImage.vue'
 
 const emojiStore = useEmojiStore()
 
@@ -32,73 +33,6 @@ const allEmojis = computed(() => {
 })
 
 const selectedEmojis = ref(new Set<string>())
-
-// 图片缓存状态管理
-const imageSources = ref<Map<string, string>>(new Map())
-const loadingStates = ref<Map<string, boolean>>(new Map())
-
-// 初始化图片缓存 - 使用并发加载优化性能
-const CONCURRENT_BATCH_SIZE = 10 // 每批并发加载的数量
-
-const initializeImageSources = async () => {
-  if (!allEmojis.value.length) return
-
-  console.log('[AIRenamePage] Initializing image sources for', allEmojis.value.length, 'emojis')
-  console.log('[AIRenamePage] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
-
-  const newSources = new Map<string, string>()
-  const newLoadingStates = new Map<string, boolean>()
-
-  // 优化：使用并发批量加载替代串行加载
-  const emojis = allEmojis.value
-
-  for (let i = 0; i < emojis.length; i += CONCURRENT_BATCH_SIZE) {
-    const batch = emojis.slice(i, i + CONCURRENT_BATCH_SIZE)
-
-    // 并发处理当前批次
-    await Promise.all(
-      batch.map(async emoji => {
-        try {
-          if (emojiStore.settings.useIndexedDBForImages) {
-            // 使用缓存优先的加载函数
-            const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-            newSources.set(emoji.id, result.url)
-            newLoadingStates.set(emoji.id, result.isLoading)
-          } else {
-            // 直接 URL 模式
-            const fallbackSrc = emoji.displayUrl || emoji.url
-            newSources.set(emoji.id, fallbackSrc)
-          }
-        } catch (error) {
-          console.warn(`[AIRenamePage] Failed to get image source for ${emoji.name}:`, error)
-          // 回退到直接 URL
-          const fallbackSrc = emoji.displayUrl || emoji.url
-          newSources.set(emoji.id, fallbackSrc)
-        }
-      })
-    )
-  }
-
-  imageSources.value = newSources
-  loadingStates.value = newLoadingStates
-  console.log('[AIRenamePage] Image sources initialized:', imageSources.value.size)
-}
-
-// 监听表情数据变化 - 移除 deep: true，只监听数组长度变化
-// 原因：deep: true 会监听所有表情对象的属性变化，导致频繁的重新初始化
-watch(
-  () => allEmojis.value.length,
-  () => {
-    console.log('[AIRenamePage] Emojis count changed, reinitializing image sources')
-    initializeImageSources()
-  }
-)
-
-// 组件挂载时初始化
-onMounted(() => {
-  console.log('[AIRenamePage] Component mounted')
-  initializeImageSources()
-})
 
 const toggleSelection = (emojiId: string) => {
   if (selectedEmojis.value.has(emojiId)) {
@@ -202,19 +136,12 @@ const containerHeight = 600
                 - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
               -->
               <div class="h-24 w-full flex items-center justify-center overflow-hidden relative">
-                <a-image
-                  :src="
-                    imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji, { preferCache: true })
-                  "
+                <CachedImage
+                  :src="getEmojiImageUrlSync(emoji, { preferCache: true })"
                   :alt="emoji.name"
+                  class="max-h-full max-w-full object-contain"
                   loading="lazy"
                 />
-                <div
-                  v-if="loadingStates.get(emoji.id)"
-                  class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
-                >
-                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                </div>
               </div>
 
               <!-- 将文字和复选框组合在一起，位于卡片底部 -->
