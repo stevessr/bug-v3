@@ -15,6 +15,7 @@ import {
 import { loadPlatformModule } from './utils/platformLoader'
 import { handleAgentAction } from './agent/actions'
 import { getDomTree, getDomTreeAtPoint } from './agent/dom'
+import { notify } from './utils/notify'
 
 import { createLogger } from '@/utils/logger'
 
@@ -176,6 +177,9 @@ if (chrome?.runtime?.onMessage) {
         sendResponse({ success: false, error: 'Missing url' })
         return true
       }
+
+      // 显示通知：正在帮助插件获取图片
+      notify('正在帮助插件获取图片...', 'info', 2000)
 
       fetch(url, {
         method: 'GET',

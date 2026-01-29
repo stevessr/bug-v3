@@ -3,6 +3,7 @@
  * CachedImage 组件
  * 自动使用 IndexedDB 缓存的图片，如果缓存可用则使用 blob URL
  * 当启用 IndexedDB 缓存时，强制使用缓存，失败则显示 404 占位图
+ * 加载过程中显示转圈动画
  */
 import { ref, watch, onMounted } from 'vue'
 
@@ -20,6 +21,7 @@ const emojiStore = useEmojiStore()
 const displaySrc = ref(props.src)
 const isCached = ref(false)
 const isError = ref(false)
+const isLoading = ref(false)
 
 // 404 占位图 - 使用 data URI 避免额外请求
 const ERROR_PLACEHOLDER =
@@ -51,13 +53,19 @@ const loadCachedImage = async (url: string) => {
   // 对于 blob: 和 data: URL，直接使用
   if (url.startsWith('blob:') || url.startsWith('data:')) {
     displaySrc.value = url
+    isLoading.value = false
     return
   }
 
   if (!shouldUseCache(url)) {
     displaySrc.value = url
+    isLoading.value = false
     return
   }
+
+  // 开始加载，显示 loading 状态
+  isLoading.value = true
+  isError.value = false
 
   try {
     const { getCachedImage, cacheImage } = await import('@/utils/imageCache')
@@ -68,6 +76,7 @@ const loadCachedImage = async (url: string) => {
       displaySrc.value = cachedUrl
       isCached.value = true
       isError.value = false
+      isLoading.value = false
       return
     }
 
@@ -77,10 +86,12 @@ const loadCachedImage = async (url: string) => {
       displaySrc.value = blobUrl
       isCached.value = true
       isError.value = false
+      isLoading.value = false
       return
     }
 
     // 缓存失败
+    isLoading.value = false
     if (isForceCache()) {
       // 强制缓存模式：显示 404 占位图
       displaySrc.value = ERROR_PLACEHOLDER
@@ -92,6 +103,7 @@ const loadCachedImage = async (url: string) => {
       isCached.value = false
     }
   } catch {
+    isLoading.value = false
     if (isForceCache()) {
       // 强制缓存模式：显示 404 占位图
       displaySrc.value = ERROR_PLACEHOLDER
@@ -140,6 +152,7 @@ watch(
     if (newSrc) {
       isCached.value = false
       isError.value = false
+      isLoading.value = false
       loadCachedImage(newSrc)
     }
   },
@@ -155,15 +168,85 @@ onMounted(() => {
 </script>
 
 <template>
-  <img
-    :src="displaySrc"
-    :alt="alt || ''"
-    :class="$props.class"
-    :title="title"
-    :loading="loading || 'lazy'"
-    :data-original-url="src"
-    :data-cached="isCached ? 'true' : undefined"
-    :data-error="isError ? 'true' : undefined"
-    @error="handleImageError"
-  />
+  <div class="cached-image-wrapper" :class="$props.class">
+    <!-- Loading spinner -->
+    <div v-if="isLoading" class="cached-image-loading">
+      <svg class="cached-image-spinner" viewBox="0 0 24 24">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-dasharray="31.4 31.4"
+        />
+      </svg>
+    </div>
+    <!-- Image -->
+    <img
+      v-show="!isLoading"
+      :src="displaySrc"
+      :alt="alt || ''"
+      class="cached-image-img"
+      :title="title"
+      :loading="loading || 'lazy'"
+      :data-original-url="src"
+      :data-cached="isCached ? 'true' : undefined"
+      :data-error="isError ? 'true' : undefined"
+      @error="handleImageError"
+    />
+  </div>
 </template>
+
+<style scoped>
+.cached-image-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.cached-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: inherit;
+}
+
+.cached-image-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 32px;
+  min-height: 32px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.cached-image-spinner {
+  width: 24px;
+  height: 24px;
+  color: #999;
+  animation: cached-image-spin 1s linear infinite;
+}
+
+@keyframes cached-image-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .cached-image-loading {
+    background: #333;
+  }
+  .cached-image-spinner {
+    color: #666;
+  }
+}
+</style>
