@@ -14,7 +14,8 @@ import {
   setupContextMenu,
   setupPeriodicCleanup,
   handleGetEmojiSetting,
-  handleProxyFetchRequest
+  handleProxyFetchRequest,
+  handleProxyImageRequest
 } from '../handlers/main.ts'
 import {
   setMcpBridgeDisabled,
@@ -114,6 +115,14 @@ export function setupMessageListener() {
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing options for PROXY_FETCH' })
+                return false
+              }
+            case 'PROXY_IMAGE':
+              if ('url' in typedMsg) {
+                handleProxyImageRequest({ url: (typedMsg as any).url }, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing url for PROXY_IMAGE' })
                 return false
               }
             case 'MCP_BRIDGE_SET_DISABLED':

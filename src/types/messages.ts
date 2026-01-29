@@ -94,6 +94,14 @@ export interface ProxyFetchMessage extends BaseMessage {
 }
 
 /**
+ * PROXY_IMAGE 消息 - 代理图片请求绕过 CORP 限制
+ */
+export interface ProxyImageMessage extends BaseMessage {
+  type: 'PROXY_IMAGE'
+  url: string
+}
+
+/**
  * DOWNLOAD_IMAGE 消息
  */
 export interface DownloadImageMessage extends BaseMessage {
@@ -154,6 +162,7 @@ export type TypedMessage =
   | GetLinuxDoUserMessage
   | LinuxDoPageFetchMessage
   | ProxyFetchMessage
+  | ProxyImageMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
 
