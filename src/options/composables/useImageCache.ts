@@ -17,6 +17,7 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
   const currentCacheEmoji = ref('')
   const shouldStopCaching = ref(false)
   const enableAutoCleanup = ref(false)
+  const isRefreshingStats = ref(false)
 
   // Progress State
   const totalProgress = ref(0)
@@ -38,12 +39,16 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
 
   // Methods
   const refreshCacheStats = async () => {
+    isRefreshingStats.value = true
     try {
       const { imageCache } = await import('@/utils/imageCache')
+      await imageCache.init()
       const stats = await imageCache.getCacheStats()
       realCachedCount.value = stats.totalEntries
     } catch (error) {
       console.error('Failed to get cache stats:', error)
+    } finally {
+      isRefreshingStats.value = false
     }
   }
 
@@ -219,6 +224,7 @@ export function useImageCache(emojiStore: any, totalEmojis: any) {
     enableAutoCleanup,
     isExporting,
     isImporting,
+    isRefreshingStats,
     exportImportError,
     totalProgress,
     totalProcessedCount,

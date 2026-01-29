@@ -178,8 +178,19 @@ if (chrome?.runtime?.onMessage) {
         return true
       }
 
+      // 提取文件名用于显示
+      let displayName = 'image'
+      try {
+        const u = new URL(url)
+        const pathname = u.pathname
+        const name = pathname.split('/').pop()
+        if (name) displayName = name.length > 20 ? name.slice(0, 20) + '...' : name
+      } catch {
+        /* ignore */
+      }
+
       // 显示通知：正在帮助插件获取图片
-      notify('正在帮助插件获取图片...', 'info', 2000)
+      notify(`正在获取：${displayName}`, 'info', 2000)
 
       fetch(url, {
         method: 'GET',

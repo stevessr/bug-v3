@@ -382,6 +382,7 @@ export class ImageCache {
     // 1. 首先检查内存缓存
     const memoryHit = this.memoryCache.get(url)
     if (memoryHit) {
+      logCache(`Memory cache hit for: ${url.slice(0, 50)}...`)
       return memoryHit
     }
 
@@ -401,9 +402,12 @@ export class ImageCache {
           const entry = request.result as CacheEntry | undefined
 
           if (!entry) {
+            logCache(`IndexedDB cache miss for: ${url.slice(0, 50)}...`)
             resolve(null)
             return
           }
+
+          logCache(`IndexedDB cache hit for: ${url.slice(0, 50)}...`)
 
           // 更新访问统计
           const now = Date.now()

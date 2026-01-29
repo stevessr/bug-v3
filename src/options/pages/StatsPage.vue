@@ -8,7 +8,8 @@ import {
   DownloadOutlined,
   StopOutlined,
   UploadOutlined,
-  ExportOutlined
+  ExportOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
@@ -36,6 +37,7 @@ const {
   enableAutoCleanup,
   isExporting,
   isImporting,
+  isRefreshingStats,
   exportImportError,
   totalProgress,
   totalProcessedCount,
@@ -94,11 +96,22 @@ onMounted(() => {
 
     <!-- Image Cache Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-lg font-semibold dark:text-white">图片缓存</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          缓存所有表情图片到本地 IndexedDB，提升加载速度和离线访问能力
-        </p>
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-semibold dark:text-white">图片缓存</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            缓存所有表情图片到本地 IndexedDB，提升加载速度和离线访问能力
+          </p>
+        </div>
+        <a-button
+          @click="refreshCacheStats"
+          :loading="isRefreshingStats"
+          :disabled="isCaching || isRefreshingStats"
+          size="small"
+        >
+          <ReloadOutlined v-if="!isRefreshingStats" />
+          {{ isRefreshingStats ? '刷新中...' : '刷新统计' }}
+        </a-button>
       </div>
 
       <div class="p-6 space-y-6">
