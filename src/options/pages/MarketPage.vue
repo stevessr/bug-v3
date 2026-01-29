@@ -391,7 +391,7 @@ onMounted(() => {
           <!-- 表情包头部 -->
           <div class="flex items-start gap-3 mb-3">
             <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
-              <img
+              <CachedImage
                 :src="normalizeImageUrl(group.icon)"
                 alt="icon"
                 class="w-12 h-12 object-contain rounded"
@@ -468,7 +468,7 @@ onMounted(() => {
           <!-- 分组基本信息 -->
           <div class="flex items-start gap-3 pb-4 border-b dark:border-gray-700">
             <template v-if="isImageUrl(normalizeImageUrl(currentDetailGroup.icon))">
-              <img
+              <CachedImage
                 :src="normalizeImageUrl(currentDetailGroup.icon)"
                 alt="icon"
                 class="w-16 h-16 object-contain rounded"

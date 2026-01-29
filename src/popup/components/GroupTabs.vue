@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { toRefs, type Ref, ref, watch } from 'vue'
 
+import CachedImage from '@/components/CachedImage.vue'
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -144,7 +145,7 @@ const focusLastTab = () => {
     >
       <span class="mr-1">
         <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
-          <img
+          <CachedImage
             :src="getGroupIconSrc(group.icon, group.id)"
             :alt="group.name ? `${group.name} ${t('groupIcon')}` : t('groupIcon')"
             class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"

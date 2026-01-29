@@ -282,7 +282,7 @@ onMounted(async () => {
               >
                 <a-checkbox :checked="selectedGroupIds.has(group.id)" @click.stop />
                 <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
-                  <img
+                  <CachedImage
                     :src="normalizeImageUrl(group.icon)"
                     alt="icon"
                     class="w-5 h-5 object-contain rounded"
@@ -306,7 +306,7 @@ onMounted(async () => {
               >
                 <a-checkbox :checked="selectedGroupIds.has(group.id)" @click.stop />
                 <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
-                  <img
+                  <CachedImage
                     :src="normalizeImageUrl(group.icon)"
                     alt="icon"
                     class="w-5 h-5 object-contain rounded"
@@ -347,7 +347,7 @@ onMounted(async () => {
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-2">
                     <template v-if="isImageUrl(normalizeImageUrl(group.icon))">
-                      <img
+                      <CachedImage
                         :src="normalizeImageUrl(group.icon)"
                         alt="icon"
                         class="w-6 h-6 object-contain rounded"
