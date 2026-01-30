@@ -1,10 +1,11 @@
-import { isImageUrl } from '../../utils/isimage'
 import { createE } from '../../utils/createEl'
 import { getCachedImageUrl } from '../../utils/contentImageCache'
 import { animateExit, ANIMATION_DURATION, injectAnimationStyles } from '../../utils/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+
+import { isImageUrl } from '@/utils/isImageUrl'
 
 /**
  * 异步替换图片元素的 src 为缓存版本
