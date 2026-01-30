@@ -2,12 +2,15 @@ import { notify } from '../utils/notify'
 
 import type { MessageHandler } from './types'
 
+import type { MessageResponse } from '@/types/messages'
+
 export const fetchImageHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'FETCH_IMAGE') return false
 
   const url = message.url
   if (!url) {
-    sendResponse({ success: false, error: 'Missing url' })
+    const errorResponse: MessageResponse = { success: false, error: 'Missing url' }
+    sendResponse(errorResponse)
     return true
   }
 
@@ -34,20 +37,31 @@ export const fetchImageHandler: MessageHandler = (message, _sender, sendResponse
   })
     .then(async res => {
       if (!res.ok) {
-        sendResponse({ success: false, error: `HTTP ${res.status}: ${res.statusText}` })
+        const errorResponse: MessageResponse = {
+          success: false,
+          error: `HTTP ${res.status}: ${res.statusText}`
+        }
+        sendResponse(errorResponse)
         return
       }
       const blob = await res.blob()
       const arrayBuffer = await blob.arrayBuffer()
-      sendResponse({
+      const response: MessageResponse = {
         success: true,
-        data: Array.from(new Uint8Array(arrayBuffer)),
-        mimeType: blob.type,
-        size: blob.size
-      })
+        data: {
+          arrayData: Array.from(new Uint8Array(arrayBuffer)),
+          mimeType: blob.type,
+          size: blob.size
+        }
+      }
+      sendResponse(response)
     })
     .catch((error: any) => {
-      sendResponse({ success: false, error: error?.message || 'Image fetch failed' })
+      const errorResponse: MessageResponse = {
+        success: false,
+        error: error?.message || 'Image fetch failed'
+      }
+      sendResponse(errorResponse)
     })
   return true
 }

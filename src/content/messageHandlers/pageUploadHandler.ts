@@ -1,5 +1,8 @@
 import { getCsrfTokenFromPage } from '../utils/csrf'
+
 import type { MessageHandler } from './types'
+
+import type { MessageResponse } from '@/types/messages'
 
 export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'PAGE_UPLOAD') return false
@@ -7,12 +10,14 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
   const opts = message.options || {}
   const url = opts.url
   if (!url) {
-    sendResponse({ success: false, error: 'Missing url' })
+    const errorResponse: MessageResponse = { success: false, error: 'Missing url' }
+    sendResponse(errorResponse)
     return true
   }
 
   if (!Array.isArray(opts.fileData) || opts.fileData.length === 0) {
-    sendResponse({ success: false, error: 'Missing file data' })
+    const errorResponse: MessageResponse = { success: false, error: 'Missing file data' }
+    sendResponse(errorResponse)
     return true
   }
 
@@ -47,13 +52,25 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
             return null
           }
         })
-        sendResponse({ success: true, status: res.status, ok: res.ok, data })
+        const response: MessageResponse = {
+          success: true,
+          data: { status: res.status, ok: res.ok, data }
+        }
+        sendResponse(response)
       })
       .catch((error: any) => {
-        sendResponse({ success: false, error: error?.message || 'Page upload failed' })
+        const errorResponse: MessageResponse = {
+          success: false,
+          error: error?.message || 'Page upload failed'
+        }
+        sendResponse(errorResponse)
       })
   } catch (error: any) {
-    sendResponse({ success: false, error: error?.message || 'Page upload failed' })
+    const errorResponse: MessageResponse = {
+      success: false,
+      error: error?.message || 'Page upload failed'
+    }
+    sendResponse(errorResponse)
   }
 
   return true

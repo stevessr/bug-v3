@@ -1,12 +1,15 @@
 import type { MessageHandler } from './types'
 
+import type { MessageResponse } from '@/types/messages'
+
 export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'PAGE_FETCH') return false
 
   const opts = message.options || {}
   const url = opts.url
   if (!url) {
-    sendResponse({ success: false, error: 'Missing url' })
+    const errorResponse: MessageResponse = { success: false, error: 'Missing url' }
+    sendResponse(errorResponse)
     return true
   }
 
@@ -19,10 +22,18 @@ export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse)
   })
     .then(async res => {
       const data = responseType === 'text' ? await res.text() : await res.json().catch(() => null)
-      sendResponse({ success: true, status: res.status, ok: res.ok, data })
+      const response: MessageResponse = {
+        success: true,
+        data: { status: res.status, ok: res.ok, data }
+      }
+      sendResponse(response)
     })
     .catch((error: any) => {
-      sendResponse({ success: false, error: error?.message || 'Page fetch failed' })
+      const errorResponse: MessageResponse = {
+        success: false,
+        error: error?.message || 'Page fetch failed'
+      }
+      sendResponse(errorResponse)
     })
   return true
 }
