@@ -338,28 +338,6 @@ export async function initializeEmojiFeature(
     })
   }
 
-  // Listen for settings updates from background script
-  if ((window as any).chrome?.runtime?.onMessage) {
-    ;(window as any).chrome.runtime.onMessage.addListener(
-      (message: any, _sender: any, _sendResponse: any) => {
-        // mark intentionally-unused params
-        void _sender
-        void _sendResponse
-        if (message.type === 'SETTINGS_UPDATED') {
-          console.log('[Emoji Extension] Settings updated from background, reloading data')
-          // 如果有 updates，优先使用增量更新
-          loadDataFromStorage(message.updates)
-          // re-apply custom css after settings updated
-          try {
-            applyCustomCssFromCache()
-          } catch (_e) {
-            void _e
-          }
-        }
-      }
-    )
-  }
-
   // periodic checks - 使用模块级变量存储定时器 ID 以便清理
   // 清理之前可能存在的定时器（防止热更新时重复创建）
   if (toolbarCheckIntervalId) {
