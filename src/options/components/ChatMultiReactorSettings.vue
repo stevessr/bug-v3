@@ -129,7 +129,7 @@ const startReaction = async () => {
       reactionUsername.value,
       reactionCount.value,
       reactionType.value,
-      (current, total, status) => {
+      (_current, _total, status) => {
         reactionStatus.value = status
       }
     )

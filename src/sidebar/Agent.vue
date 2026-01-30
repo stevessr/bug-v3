@@ -73,7 +73,7 @@ const renderMarkdown = (input: string) => {
     blocks.push({ tex, display: true })
     return `@@MATH_BLOCK_${id}@@`
   })
-  source = source.replace(/(^|[^\\])\$(.+?)\$/g, (match, prefix, tex) => {
+  source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
     const id = blocks.length
     blocks.push({ tex, display: false })
     return `${prefix}@@MATH_INLINE_${id}@@`
@@ -776,14 +776,6 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
     setTimelineCollapsed(assistantId, true)
   }
   isSending.value = false
-}
-
-const getLastUserInput = () => {
-  for (let i = messages.value.length - 1; i >= 0; i -= 1) {
-    const msg = messages.value[i]
-    if (msg.role === 'user' && msg.content) return msg.content
-  }
-  return lastUserInput.value || ''
 }
 
 const sendMessage = async () => {
