@@ -1,5 +1,7 @@
 import type { MessageHandler } from './types'
 
+import type { LinuxDoUserResponse } from '@/types/messages'
+
 export const linuxDoUserHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'GET_LINUX_DO_USER') return false
 
@@ -9,19 +11,21 @@ export const linuxDoUserHandler: MessageHandler = (message, _sender, sendRespons
       const data = JSON.parse(preloaded.dataset.preloaded || '{}')
       if (data.currentUser) {
         const user = JSON.parse(data.currentUser)
-        sendResponse({
+        const response: LinuxDoUserResponse = {
           success: true,
           user: {
             username: user?.username || '',
             trustLevel: user?.trust_level
           }
-        })
+        }
+        sendResponse(response)
         return true
       }
     }
   } catch (error) {
     console.warn('[Emoji Extension] Failed to read current user:', error)
   }
-  sendResponse({ success: false, error: 'No current user' })
+  const errorResponse: LinuxDoUserResponse = { success: false, error: 'No current user' }
+  sendResponse(errorResponse)
   return true
 }

@@ -1,16 +1,10 @@
 import { getChromeAPI } from '../utils/main.ts'
 
-type PageFetchOptions = {
-  url: string
-  method?: string
-  headers?: Record<string, string>
-  body?: string
-  responseType?: 'json' | 'text'
-}
+import type { LinuxDoPageFetchMessage, MessageResponse } from '@/types/messages'
 
 export async function handleLinuxDoPageFetchRequest(
-  opts: PageFetchOptions,
-  _sendResponse: (resp: any) => void
+  opts: LinuxDoPageFetchMessage['options'],
+  _sendResponse: (resp: MessageResponse) => void
 ) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.tabs) {

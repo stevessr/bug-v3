@@ -5,6 +5,8 @@
 
 import type { Emoji, EmojiGroup, AppSettings } from './type'
 
+import type { AgentAction } from '@/agent/types'
+
 /**
  * 基础消息接口
  */
@@ -130,6 +132,83 @@ export interface DownloadImageMessage extends BaseMessage {
 export interface CaptureScreenshotMessage extends BaseMessage {
   type: 'CAPTURE_SCREENSHOT'
   format?: 'png' | 'jpeg'
+  tabId?: number
+}
+
+/**
+ * AGENT_ACTION 消息
+ */
+export interface AgentActionMessage extends BaseMessage {
+  type: 'AGENT_ACTION'
+  action: AgentAction
+}
+
+/**
+ * DOM_QUERY 消息
+ */
+export interface DomQueryMessage extends BaseMessage {
+  type: 'DOM_QUERY'
+  kind: 'tree' | 'at-point'
+  selector?: string
+  x?: number
+  y?: number
+  options?: any
+}
+
+/**
+ * GET_CSRF_TOKEN 消息
+ */
+export interface GetCsrfTokenMessage extends BaseMessage {
+  type: 'GET_CSRF_TOKEN'
+}
+
+/**
+ * PAGE_FETCH 消息
+ */
+export interface PageFetchMessage extends BaseMessage {
+  type: 'PAGE_FETCH'
+  options: LinuxDoPageFetchMessage['options']
+}
+
+/**
+ * PAGE_UPLOAD 消息
+ */
+export interface PageUploadMessage extends BaseMessage {
+  type: 'PAGE_UPLOAD'
+  options: LinuxDoUploadMessage['options']
+}
+
+/**
+ * FETCH_IMAGE 消息
+ */
+export interface FetchImageMessage extends BaseMessage {
+  type: 'FETCH_IMAGE'
+  url: string
+}
+
+/**
+ * SETTINGS_UPDATED 消息
+ */
+export interface SettingsUpdatedMessage extends BaseMessage {
+  type: 'SETTINGS_UPDATED'
+  updates?: any
+}
+
+/**
+ * MCP 消息
+ */
+export interface McpBridgeSetDisabledMessage extends BaseMessage {
+  type: 'MCP_BRIDGE_SET_DISABLED'
+  disabled: boolean
+}
+
+export interface McpBridgeTestMessage extends BaseMessage {
+  type: 'MCP_BRIDGE_TEST'
+}
+
+export interface McpServerTestMessage extends BaseMessage {
+  type: 'MCP_SERVER_TEST'
+  options?: any
 }
 
 /**
@@ -159,9 +238,13 @@ export interface AddEmojiFromWebMessage {
  */
 export interface UploadAndAddEmojiMessage {
   action: 'uploadAndAddEmoji'
-  imageData: string // base64 or blob URL
-  name?: string
-  groupId?: string
+  payload: {
+    arrayData: number[]
+    filename: string
+    mimeType: string
+    name: string
+    originUrl?: string
+  }
 }
 
 /**
@@ -180,6 +263,16 @@ export type TypedMessage =
   | ProxyImageMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
+  | AgentActionMessage
+  | DomQueryMessage
+  | GetCsrfTokenMessage
+  | PageFetchMessage
+  | PageUploadMessage
+  | FetchImageMessage
+  | SettingsUpdatedMessage
+  | McpBridgeSetDisabledMessage
+  | McpBridgeTestMessage
+  | McpServerTestMessage
 
 /**
  * 所有基于 action 的消息联合类型
@@ -195,6 +288,19 @@ export type ActionMessage =
 export type BackgroundMessage = TypedMessage | ActionMessage
 
 /**
+ * Content Script 接收的消息联合类型
+ */
+export type ContentMessage =
+  | AgentActionMessage
+  | DomQueryMessage
+  | GetCsrfTokenMessage
+  | GetLinuxDoUserMessage
+  | PageFetchMessage
+  | PageUploadMessage
+  | FetchImageMessage
+  | SettingsUpdatedMessage
+
+/**
  * 响应类型
  */
 export interface SuccessResponse<T = any> {
@@ -208,6 +314,19 @@ export interface ErrorResponse {
 }
 
 export type MessageResponse<T = any> = SuccessResponse<T> | ErrorResponse
+
+/**
+ * 专用响应类型定义
+ */
+export interface CsrfTokenResponse {
+  csrfToken: string
+}
+
+export interface LinuxDoUserResponse {
+  success: boolean
+  user?: any
+  error?: string
+}
 
 /**
  * 类型守卫函数

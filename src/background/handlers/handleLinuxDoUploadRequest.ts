@@ -1,16 +1,10 @@
 import { getChromeAPI } from '../utils/main.ts'
 
-type PageUploadOptions = {
-  url: string
-  fileData: number[]
-  fileName: string
-  mimeType?: string
-  sha1?: string | null
-}
+import type { LinuxDoUploadMessage, MessageResponse } from '@/types/messages'
 
 export async function handleLinuxDoUploadRequest(
-  opts: PageUploadOptions,
-  _sendResponse: (resp: any) => void
+  opts: LinuxDoUploadMessage['options'],
+  _sendResponse: (resp: MessageResponse) => void
 ) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.tabs) {

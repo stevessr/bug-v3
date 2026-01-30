@@ -27,7 +27,12 @@ import {
 
 import { getChromeAPI } from './main.ts'
 
-import type { BackgroundMessage, TypedMessage, ActionMessage } from '@/types/messages'
+import type {
+  BackgroundMessage,
+  TypedMessage,
+  ActionMessage,
+  MessageResponse
+} from '@/types/messages'
 
 // Re-export setup functions so background entry can import them from ./handlers
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup, setupMcpBridge }
@@ -36,7 +41,11 @@ export function setupMessageListener() {
   const chromeAPI = getChromeAPI()
   if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.onMessage) {
     chromeAPI.runtime.onMessage.addListener(
-      (message: BackgroundMessage, _sender: chrome.runtime.MessageSender, sendResponse: any) => {
+      (
+        message: BackgroundMessage,
+        _sender: chrome.runtime.MessageSender,
+        sendResponse: (resp: MessageResponse) => void
+      ) => {
         console.log('Background received message:', message)
 
         // 首先检查 message.type
@@ -69,7 +78,7 @@ export function setupMessageListener() {
               if ('settings' in typedMsg) {
                 handleSyncSettings(
                   (typedMsg as any).settings,
-                  sendResponse,
+                  sendResponse as any,
                   (typedMsg as any).updates
                 )
                 return true
@@ -79,10 +88,10 @@ export function setupMessageListener() {
               }
 
             case 'REQUEST_LINUX_DO_AUTH':
-              handleLinuxDoAuthRequest(sendResponse)
+              handleLinuxDoAuthRequest(sendResponse as any)
               return true
             case 'GET_LINUX_DO_USER':
-              handleLinuxDoUserRequest(sendResponse)
+              handleLinuxDoUserRequest(sendResponse as any)
               return true
             case 'LINUX_DO_PAGE_FETCH':
               if ('options' in typedMsg) {
@@ -105,7 +114,7 @@ export function setupMessageListener() {
             case 'downloadImage':
             case 'DOWNLOAD_IMAGE':
               if ('url' in typedMsg) {
-                handleDownloadImage(typedMsg as any, sendResponse)
+                handleDownloadImage(typedMsg as any, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing url for DOWNLOAD_IMAGE' })
@@ -115,13 +124,13 @@ export function setupMessageListener() {
             case 'CAPTURE_SCREENSHOT':
               handleCaptureScreenshot(
                 (typedMsg as any).format,
-                sendResponse,
+                sendResponse as any,
                 (typedMsg as any).tabId
               )
               return true
             case 'PROXY_FETCH':
               if ('options' in typedMsg) {
-                handleProxyFetchRequest((typedMsg as any).options, sendResponse)
+                handleProxyFetchRequest((typedMsg as any).options, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing options for PROXY_FETCH' })
@@ -129,7 +138,7 @@ export function setupMessageListener() {
               }
             case 'PROXY_IMAGE':
               if ('url' in typedMsg) {
-                handleProxyImageRequest({ url: (typedMsg as any).url }, sendResponse)
+                handleProxyImageRequest({ url: (typedMsg as any).url }, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing url for PROXY_IMAGE' })
