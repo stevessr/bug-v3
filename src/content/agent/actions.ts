@@ -1,3 +1,5 @@
+import { Z_INDEX } from '../utils/constants'
+
 import type { AgentAction } from '@/agent/types'
 
 function getElement(selector?: string, x?: number, y?: number): HTMLElement | null {
@@ -53,7 +55,7 @@ function highlightElement(element: HTMLElement) {
   overlay.style.height = `${rect.height}px`
   overlay.style.border = '2px solid #ff6b00'
   overlay.style.background = 'rgba(255, 107, 0, 0.12)'
-  overlay.style.zIndex = '2147483647'
+  overlay.style.zIndex = String(Z_INDEX.AGENT_OVERLAY)
   overlay.style.pointerEvents = 'none'
   overlay.style.boxSizing = 'border-box'
   document.documentElement.appendChild(overlay)

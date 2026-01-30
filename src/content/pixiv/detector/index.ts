@@ -4,8 +4,6 @@ import { createPixivEmojiButton } from '../ui/button'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 import { DQSA, DQS, DOA } from '../../utils/createEl'
 
-// isPixivViewer: no longer used for scanning outer containers; we now work per-image.
-
 function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
   const img = container.querySelector(
     'img[src*="i.pximg.net"], img[src*="pximg.net"]'
@@ -154,33 +152,20 @@ function observePixivViewer() {
 function isPixivPage(): boolean {
   try {
     const hostname = window.location.hostname.toLowerCase()
-
-    if (hostname.includes('i.pximg.net') || hostname.includes('pximg.net')) {
-      return true
-    }
-
-    if (hostname.includes('pixiv.net')) {
-      return true
-    }
-
-    const ogSite = DQS('meta[property="og:site_name"]')?.getAttribute('content') || ''
-    if (ogSite.toLowerCase().includes('pixiv')) return true
-
-    const twitterMeta = DQS('meta[property="twitter:site"]') || DQS('meta[name="twitter:site"]')
-    const twitterSite = (twitterMeta && twitterMeta.getAttribute('content')) || ''
-    if (twitterSite.toLowerCase().includes('pixiv')) return true
-
-    const desc = DQS('meta[name="description"]')?.getAttribute('content') || ''
-    if (desc.toLowerCase().includes('pixiv')) return true
-
-    const ogImage = DQS('meta[property="og:image"]')?.getAttribute('content') || ''
+    // Primary checks: domain-based detection
     if (
-      ogImage.includes('pixiv.net') ||
-      ogImage.includes('pximg.net') ||
-      ogImage.includes('embed.pixiv.net')
+      hostname.includes('pixiv.net') ||
+      hostname.includes('i.pximg.net') ||
+      hostname.includes('pximg.net')
     ) {
       return true
     }
+    // Fallback: meta tag detection for embedded contexts
+    const ogSite = DQS('meta[property="og:site_name"]')?.getAttribute('content') || ''
+    if (ogSite.toLowerCase().includes('pixiv')) return true
+
+    const ogImage = DQS('meta[property="og:image"]')?.getAttribute('content') || ''
+    if (ogImage.includes('pixiv.net') || ogImage.includes('pximg.net')) return true
 
     return false
   } catch (e) {

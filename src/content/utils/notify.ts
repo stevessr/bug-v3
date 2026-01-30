@@ -1,4 +1,6 @@
 import { createE, DOA, DEBI } from './createEl'
+import { Z_INDEX } from './constants'
+
 // Lightweight toast notification utility for content scripts
 export function notify(
   message: string,
@@ -14,7 +16,7 @@ export function notify(
           position: fixed;
           right: 12px;
           bottom: 12px;
-          z-index: 2147483647;
+          z-index: ${Z_INDEX.NOTIFICATION};
           display: flex;
           flex-direction: column;
           gap: 8px;

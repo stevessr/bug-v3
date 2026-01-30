@@ -1,4 +1,5 @@
 import { createE, DOA, DHA, DAEL } from './createEl'
+import { Z_INDEX } from './constants'
 
 /**
  * Custom alert dialog to replace window.alert
@@ -14,7 +15,7 @@ export function customAlert(message: string): Promise<void> {
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 2147483646;
+        z-index: ${Z_INDEX.DIALOG};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -145,7 +146,7 @@ export function customConfirm(message: string): Promise<boolean> {
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 2147483646;
+        z-index: ${Z_INDEX.DIALOG};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -309,7 +310,7 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 2147483646;
+        z-index: ${Z_INDEX.DIALOG};
         display: flex;
         align-items: center;
         justify-content: center;
