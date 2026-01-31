@@ -485,47 +485,26 @@ export async function runBatchReaction(
     return
   }
 
-  onProgress(0, count, `Fetching posts for ${username}...`)
+  onProgress(0, count, `正在获取 ${username} 的数据...`)
   const posts = await fetchUserActions(username, count, msg => {
     onProgress(0, count, msg)
   })
 
   if (posts.length === 0) {
-    onProgress(0, 0, 'No posts found.')
+    onProgress(0, 0, '未找到该用户的相关数据，请检查用户名是否正确 (区分大小写)。')
     return
   }
 
-  onProgress(0, posts.length, `Pre-checking already reacted posts...`)
+  onProgress(0, posts.length, `检测完成！共找到 ${posts.length} 条记录。\n请确认无误后继续执行...`)
 
-  const targets: LinuxDoPost[] = []
-  for (let i = 0; i < posts.length; i++) {
-    const post = posts[i]
-    try {
-      const reacted = await isAlreadyReacted(post.id, reactionId)
-      if (!reacted) {
-        targets.push(post)
-      }
-    } catch {
-      targets.push(post)
-    }
-    onProgress(0, posts.length, `Pre-check ${i + 1}/${posts.length}`)
-    await new Promise(r => setTimeout(r, 200))
-  }
-
-  if (targets.length === 0) {
-    onProgress(0, 0, 'No posts to react (already reacted).')
-    return
-  }
-
-  onProgress(0, targets.length, `Starting reactions...`)
+  onProgress(0, posts.length, `🚀 开始批量处理...`)
 
   let successCount = 0
-  let total = targets.length
+  let total = posts.length
   let current = 0
 
-  for (let i = 0; i < targets.length; i++) {
-    const post = targets[i]
-
+  for (let i = 0; i < posts.length; i++) {
+    const post = posts[i]
     const result = await sendReactionToPost(post.id, reactionId, csrfToken)
 
     if (result === 'success') {
@@ -551,5 +530,5 @@ export async function runBatchReaction(
     }
   }
 
-  onProgress(total, total, `Done! Success: ${successCount}/${total}`)
+  onProgress(total, total, `🎉 所有操作已完成！Success: ${successCount}/${total}`)
 }

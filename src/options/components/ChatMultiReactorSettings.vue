@@ -109,12 +109,16 @@ const dailyLimit = ref<DailyLimitInfo | null>(null)
 const reactionStatus = ref('')
 const isReacting = ref(false)
 
-const checkLimit = async () => {
-  reactionStatus.value = 'Checking limit...'
+const checkLimit = async (silent = false) => {
+  if (!silent) {
+    reactionStatus.value = 'Checking limit...'
+  }
   dailyLimit.value = await checkDailyLimit()
-  reactionStatus.value = dailyLimit.value
-    ? `Ready. Logged in as ${dailyLimit.value.username}`
-    : 'Failed to check limit (Not logged in?)'
+  if (!silent) {
+    reactionStatus.value = dailyLimit.value
+      ? `Ready. Logged in as ${dailyLimit.value.username}`
+      : 'Failed to check limit (Not logged in?)'
+  }
 }
 
 const startReaction = async () => {
@@ -140,7 +144,7 @@ const startReaction = async () => {
     )
   } finally {
     isReacting.value = false
-    checkLimit()
+    checkLimit(true)
   }
 }
 
