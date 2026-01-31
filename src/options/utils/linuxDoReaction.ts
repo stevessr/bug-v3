@@ -149,6 +149,79 @@ async function getCsrfToken(): Promise<string | null> {
   }
 }
 
+type PostData = {
+  topic_id?: number
+  category_id?: number
+  current_user_reaction?: string | { id?: string }
+  current_user_reactions?: Array<string | { id?: string }>
+  reactions?:
+    | Record<string, { reacted?: boolean; id?: string }>
+    | Array<{ reacted?: boolean; id?: string }>
+}
+
+const topicCategoryCache = new Map<number, number | null>()
+const postTopicCache = new Map<number, number | null>()
+
+function normalizePostData(data: any): PostData | null {
+  if (!data) return null
+  return (data.post as PostData) || (data as PostData)
+}
+
+async function getTopicIdByPostId(postId: number): Promise<number | null> {
+  if (postTopicCache.has(postId)) return postTopicCache.get(postId) || null
+
+  const url = `${HOST}/posts/${postId}.json`
+  try {
+    const res = await proxyFetch<any>(url)
+    if (!res.ok) {
+      postTopicCache.set(postId, null)
+      return null
+    }
+    const postData = normalizePostData(res.data)
+    const topicId = postData?.topic_id || null
+    postTopicCache.set(postId, topicId)
+    return topicId
+  } catch {
+    postTopicCache.set(postId, null)
+    return null
+  }
+}
+
+async function getTopicCategoryId(topicId: number): Promise<number | null> {
+  if (topicCategoryCache.has(topicId)) return topicCategoryCache.get(topicId) || null
+
+  const url = `${HOST}/t/topic/${topicId}.json`
+  try {
+    const res = await proxyFetch<any>(url)
+    if (!res.ok) {
+      topicCategoryCache.set(topicId, null)
+      return null
+    }
+    const categoryId = res.data?.category_id || null
+    topicCategoryCache.set(topicId, categoryId)
+    return categoryId
+  } catch {
+    topicCategoryCache.set(topicId, null)
+    return null
+  }
+}
+
+async function getCategoryIdForAction(item: any): Promise<number | null> {
+  if (!item) return null
+  const directCategoryId = item.category_id || item.categoryId || null
+  if (directCategoryId) return directCategoryId
+
+  const topicId = item.topic_id || item.topicId || null
+  if (topicId) return await getTopicCategoryId(topicId)
+
+  const postId = item.post_id || item.postId || item.id || null
+  if (!postId) return null
+
+  const topicIdFromPost = await getTopicIdByPostId(postId)
+  if (!topicIdFromPost) return null
+  return await getTopicCategoryId(topicIdFromPost)
+}
+
 // Fetch user posts
 export async function fetchUserActions(
   username: string,
@@ -180,7 +253,8 @@ export async function fetchUserActions(
       for (const item of data.user_actions) {
         if (results.length >= count) break
 
-        if (item.category_id && !ALLOWED_CATEGORIES.has(item.category_id)) {
+        const categoryId = await getCategoryIdForAction(item)
+        if (!categoryId || !ALLOWED_CATEGORIES.has(categoryId)) {
           continue
         }
 
@@ -189,7 +263,7 @@ export async function fetchUserActions(
             id: item.post_id,
             title: item.title,
             excerpt: item.excerpt ? item.excerpt.substring(0, 50) + '...' : '(No preview)',
-            categoryId: item.category_id,
+            categoryId,
             topicId: item.topic_id
           })
         }
@@ -213,9 +287,8 @@ async function isAlreadyReacted(postId: number, reactionId: string): Promise<boo
     const res = await proxyFetch<any>(url)
     if (!res.ok) return false
 
-    const data = res.data
-    // Normalize logic
-    const postData = data.post || data
+    const postData = normalizePostData(res.data)
+    if (!postData) return false
 
     const currentReactions: string[] = []
 
