@@ -4,22 +4,30 @@ import { ref, computed, watch } from 'vue'
 
 import type {
   BrowserTab,
-  ViewType,
   DiscourseCategory,
   DiscourseTopic,
-  DiscourseTopicDetail,
   DiscourseUser,
-  DiscoursePost,
-  DiscourseUserProfileData,
   ActivityTabType,
-  DiscourseUserAction,
-  DiscourseReaction,
-  DiscourseSolvedPost,
-  UserActivityState,
-  MessagesTabType,
-  MessagesState
+  MessagesTabType
 } from './types'
-import { pageFetch, extractData, generateId } from './utils'
+import { generateId } from './utils'
+import { loadHome as loadHomeRoute } from './routes/root'
+import {
+  loadCategory as loadCategoryRoute,
+  loadMoreTopics as loadMoreTopicsRoute
+} from './routes/category'
+import { loadTopic as loadTopicRoute, loadMorePosts as loadMorePostsRoute } from './routes/topic'
+import {
+  loadUser as loadUserRoute,
+  loadUserActivity as loadUserActivityRoute,
+  loadActivityData as loadActivityDataRoute,
+  loadMoreActivity as loadMoreActivityRoute,
+  loadMessages as loadMessagesRoute,
+  loadMessagesData as loadMessagesDataRoute,
+  loadMoreMessages as loadMoreMessagesRoute,
+  loadMoreFollowFeed as loadMoreFollowFeedRoute
+} from './routes/user'
+import { loadSessionUsername } from './routes/session'
 
 export function useDiscourseBrowser() {
   // Base URL
@@ -39,6 +47,8 @@ export function useDiscourseBrowser() {
   // Loading more posts state
   const isLoadingMore = ref(false)
 
+  const currentUsername = ref<string | null>(null)
+
   // Sync URL input with active tab's URL
   watch(
     activeTab,
@@ -49,6 +59,11 @@ export function useDiscourseBrowser() {
     },
     { immediate: true }
   )
+
+  async function ensureSessionUser() {
+    if (currentUsername.value !== null) return
+    currentUsername.value = await loadSessionUsername(baseUrl)
+  }
 
   // Create a new tab
   function createTab(url?: string) {
@@ -142,6 +157,7 @@ export function useDiscourseBrowser() {
         await loadTopic(tab, topicId)
         tab.viewType = 'topic'
       } else if (pathname.startsWith('/u/')) {
+        await ensureSessionUser()
         const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
         const username = pathParts[0]
         if (!pathParts[1]) {
@@ -167,9 +183,11 @@ export function useDiscourseBrowser() {
                       ? 'reactions'
                       : activityKey === 'solved'
                         ? 'solved'
-                        : activityKey === 'votes'
-                          ? 'votes'
-                          : 'all'
+                        : activityKey === 'read'
+                          ? 'read'
+                          : activityKey === 'votes'
+                            ? 'votes'
+                            : 'all'
           await loadUserActivity(tab, username, activityTab)
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
@@ -222,173 +240,22 @@ export function useDiscourseBrowser() {
 
   // Load home page
   async function loadHome(tab: BrowserTab) {
-    const [catResult, topicResult] = await Promise.all([
-      pageFetch<any>(`${baseUrl.value}/categories.json`),
-      pageFetch<any>(`${baseUrl.value}/latest.json`)
-    ])
-
-    const catData = extractData(catResult)
-    const topicData = extractData(topicResult)
-
-    if (catData?.category_list?.categories) {
-      tab.categories = catData.category_list.categories
-    } else if (catData?.categories) {
-      tab.categories = catData.categories
-    } else {
-      tab.categories = []
-    }
-
-    if (topicData?.topic_list?.topics) {
-      tab.topics = topicData.topic_list.topics
-      // Check if there are more topics
-      tab.hasMoreTopics = topicData.topic_list.more_topics_url ? true : false
-    } else {
-      tab.topics = []
-      tab.hasMoreTopics = false
-    }
-
-    // Reset pagination state
-    tab.topicsPage = 0
-    tab.currentCategorySlug = ''
-    tab.currentCategoryId = null
-
-    // Store active users for sidebar
-    if (topicData?.users) {
-      tab.activeUsers = topicData.users
-      topicData.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-    } else {
-      tab.activeUsers = []
-    }
+    await loadHomeRoute(tab, baseUrl, users)
   }
 
   // Load category
   async function loadCategory(tab: BrowserTab, slug: string, categoryId: number | null = null) {
-    const url = categoryId
-      ? `${baseUrl.value}/c/${slug}/${categoryId}.json`
-      : `${baseUrl.value}/c/${slug}.json`
-
-    const result = await pageFetch<any>(url)
-    const data = extractData(result)
-
-    if (data?.topic_list?.topics) {
-      tab.topics = data.topic_list.topics
-      tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
-    } else {
-      tab.topics = []
-      tab.hasMoreTopics = false
-    }
-
-    // Save category info for pagination
-    tab.topicsPage = 0
-    tab.currentCategorySlug = slug
-    tab.currentCategoryId =
-      categoryId ??
-      data?.category?.id ??
-      data?.topic_list?.category?.id ??
-      data?.topic_list?.category_id ??
-      null
-
-    // Load subcategories for this category (if any)
-    tab.categories = []
-    if (tab.currentCategoryId) {
-      try {
-        const subResult = await pageFetch<any>(
-          `${baseUrl.value}/categories.json?parent_category_id=${tab.currentCategoryId}`
-        )
-        const subData = extractData(subResult)
-        if (subData?.category_list?.categories) {
-          tab.categories = subData.category_list.categories
-        } else if (subData?.categories) {
-          tab.categories = subData.categories
-        }
-      } catch (e) {
-        console.warn('[DiscourseBrowser] loadCategory subcategories error:', e)
-        tab.categories = []
-      }
-    }
-
-    // Store active users for sidebar
-    if (data?.users) {
-      tab.activeUsers = data.users
-      data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-    } else {
-      tab.activeUsers = []
-    }
+    await loadCategoryRoute(tab, slug, categoryId, baseUrl, users)
   }
 
   // Load topic detail
   async function loadTopic(tab: BrowserTab, topicId: number) {
-    const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
-    const data = extractData(result)
-
-    if (data) {
-      tab.currentTopic = data
-      tab.loadedPostIds = new Set(data.post_stream?.posts?.map((p: DiscoursePost) => p.id) || [])
-      tab.hasMorePosts =
-        (data.post_stream?.stream?.length || 0) > (data.post_stream?.posts?.length || 0)
-      if (data.title) {
-        tab.title = data.title
-      }
-    } else {
-      tab.currentTopic = null
-      tab.loadedPostIds = new Set()
-      tab.hasMorePosts = false
-    }
+    await loadTopicRoute(tab, topicId, baseUrl)
   }
 
   // Load user profile
   async function loadUser(tab: BrowserTab, username: string) {
-    // Fetch user info and summary in parallel
-    const [
-      userResult,
-      summaryResult,
-      badgesResult,
-      followFeedResult,
-      followingResult,
-      followersResult
-    ] = await Promise.all([
-      pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
-      pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null),
-      pageFetch<any>(`${baseUrl.value}/user-badges/${username}.json?grouped=true`).catch(
-        () => null
-      ),
-      pageFetch<any>(`${baseUrl.value}/follow/posts/${username}.json`).catch(() => null),
-      pageFetch<any>(`${baseUrl.value}/u/${username}/follow/following.json`).catch(() => null),
-      pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null)
-    ])
-
-    const userData = extractData(userResult)
-    const summaryData = summaryResult ? extractData(summaryResult) : null
-    const badgesData = badgesResult ? extractData(badgesResult) : null
-    const followFeedData = followFeedResult ? extractData(followFeedResult) : null
-    const followingData = followingResult ? extractData(followingResult) : null
-    const followersData = followersResult ? extractData(followersResult) : null
-
-    if (userData?.user) {
-      const profileData: DiscourseUserProfileData = {
-        user: userData.user,
-        user_summary: summaryData?.user_summary,
-        topics: summaryData?.topics,
-        badges: badgesData?.badges || badgesData?.user_badges || [],
-        follow_feed: followFeedData?.posts || [],
-        following: Array.isArray(followingData) ? followingData : followingData?.users || [],
-        followers: Array.isArray(followersData) ? followersData : followersData?.users || []
-      }
-      tab.currentUser = profileData.user
-      // Store summary in user object for access
-      ;(tab.currentUser as any)._summary = summaryData?.user_summary
-      ;(tab.currentUser as any)._topics = summaryData?.topics
-      ;(tab.currentUser as any)._badges = profileData.badges
-      ;(tab.currentUser as any)._follow_feed = profileData.follow_feed
-      ;(tab.currentUser as any)._following = profileData.following
-      ;(tab.currentUser as any)._followers = profileData.followers
-      tab.followFeedPage = 0
-      tab.followFeedHasMore = !!followFeedData?.extras?.has_more
-      tab.title = `${userData.user.username} - 用户主页`
-    } else {
-      tab.currentUser = null
-      throw new Error('用户不存在')
-    }
+    await loadUserRoute(tab, username, baseUrl, users)
   }
 
   // Load user activity
@@ -397,28 +264,7 @@ export function useDiscourseBrowser() {
     username: string,
     activityTab: ActivityTabType = 'all'
   ) {
-    // First load user profile if not already loaded
-    if (!tab.currentUser || tab.currentUser.username !== username) {
-      const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
-      const userData = extractData(userResult)
-      if (userData?.user) {
-        tab.currentUser = userData.user
-      }
-    }
-
-    // Initialize activity state
-    tab.activityState = {
-      activeTab: activityTab,
-      actions: [],
-      topics: [],
-      reactions: [],
-      solvedPosts: [],
-      offset: 0,
-      hasMore: true
-    }
-
-    // Load activity data based on tab type
-    await loadActivityData(tab, username, activityTab, true)
+    await loadUserActivityRoute(tab, username, activityTab, baseUrl)
   }
 
   // Load activity data for specific tab
@@ -428,134 +274,7 @@ export function useDiscourseBrowser() {
     activityTab: ActivityTabType,
     reset = false
   ) {
-    if (!tab.activityState) return
-
-    if (reset) {
-      tab.activityState.offset = 0
-      tab.activityState.hasMore = true
-      if (
-        activityTab === 'topics' ||
-        activityTab === 'assigned' ||
-        activityTab === 'votes' ||
-        activityTab === 'portfolio'
-      ) {
-        tab.activityState.topics = []
-      } else if (activityTab === 'reactions') {
-        tab.activityState.reactions = []
-      } else if (activityTab === 'solved') {
-        tab.activityState.solvedPosts = []
-      } else {
-        tab.activityState.actions = []
-      }
-    }
-
-    const offset = tab.activityState.offset
-
-    try {
-      let url: string
-      let filterParam = ''
-
-      switch (activityTab) {
-        case 'all':
-          filterParam = '4,5'
-          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
-          break
-        case 'replies':
-          filterParam = '5'
-          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
-          break
-        case 'likes':
-          filterParam = '1'
-          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
-          break
-        case 'topics': {
-          const page = Math.floor(offset / 30)
-          url = `${baseUrl.value}/topics/created-by/${username}.json${page > 0 ? `?page=${page}` : ''}`
-          break
-        }
-        case 'reactions':
-          url = `${baseUrl.value}/discourse-reactions/posts/reactions.json?username=${username}&offset=${offset}`
-          break
-        case 'solved':
-          url = `${baseUrl.value}/solution/by_user.json?username=${username}&offset=${offset}&limit=20`
-          break
-        case 'assigned': {
-          const assignedPage = Math.floor(offset / 30)
-          url = `${baseUrl.value}/topics/messages-assigned/${username}.json?exclude_category_ids%5B%5D=-1&order=&ascending=false${assignedPage > 0 ? `&page=${assignedPage}` : ''}`
-          break
-        }
-        case 'votes': {
-          const votesPage = Math.floor(offset / 30)
-          url = `${baseUrl.value}/topics/voted-by/${username}.json${votesPage > 0 ? `?page=${votesPage}` : ''}`
-          break
-        }
-        case 'portfolio': {
-          const page = Math.floor(offset / 30)
-          const params = new URLSearchParams()
-          params.append('tags[]', '作品集')
-          params.append('order', 'created')
-          if (page > 0) {
-            params.append('page', String(page))
-          }
-          url = `${baseUrl.value}/topics/created-by/${username}.json?${params.toString()}`
-          break
-        }
-        default:
-          return
-      }
-
-      const result = await pageFetch<any>(url)
-      const data = extractData(result)
-
-      if (
-        activityTab === 'topics' ||
-        activityTab === 'assigned' ||
-        activityTab === 'votes' ||
-        activityTab === 'portfolio'
-      ) {
-        const topics = data?.topic_list?.topics || []
-        if (reset) {
-          tab.activityState.topics = topics
-        } else {
-          const existingIds = new Set(tab.activityState.topics.map((t: DiscourseTopic) => t.id))
-          const newTopics = topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
-          tab.activityState.topics = [...tab.activityState.topics, ...newTopics]
-        }
-        tab.activityState.hasMore = !!data?.topic_list?.more_topics_url
-        tab.activityState.offset += 30
-      } else if (activityTab === 'reactions') {
-        const reactions = data || []
-        if (reset) {
-          tab.activityState.reactions = reactions
-        } else {
-          tab.activityState.reactions = [...tab.activityState.reactions, ...reactions]
-        }
-        tab.activityState.hasMore = reactions.length >= 20
-        tab.activityState.offset += reactions.length
-      } else if (activityTab === 'solved') {
-        const solvedPosts = data?.user_solved_posts || []
-        if (reset) {
-          tab.activityState.solvedPosts = solvedPosts
-        } else {
-          tab.activityState.solvedPosts = [...tab.activityState.solvedPosts, ...solvedPosts]
-        }
-        tab.activityState.hasMore = solvedPosts.length >= 20
-        tab.activityState.offset += solvedPosts.length
-      } else {
-        // user_actions for all, replies, likes
-        const actions = data?.user_actions || []
-        if (reset) {
-          tab.activityState.actions = actions
-        } else {
-          tab.activityState.actions = [...tab.activityState.actions, ...actions]
-        }
-        tab.activityState.hasMore = actions.length >= 30
-        tab.activityState.offset += actions.length
-      }
-    } catch (e) {
-      console.error('[DiscourseBrowser] loadActivityData error:', e)
-      tab.activityState.hasMore = false
-    }
+    await loadActivityDataRoute(tab, username, activityTab, baseUrl, reset)
   }
 
   // Switch activity tab
@@ -564,11 +283,7 @@ export function useDiscourseBrowser() {
     if (!tab || !tab.currentUser || !tab.activityState) return
     const username = tab.currentUser.username
     const subPath =
-      activityTab === 'all'
-        ? ''
-        : activityTab === 'likes'
-          ? 'likes-given'
-          : activityTab
+      activityTab === 'all' ? '' : activityTab === 'likes' ? 'likes-given' : activityTab
     const target = subPath
       ? `${baseUrl.value}/u/${username}/activity/${subPath}`
       : `${baseUrl.value}/u/${username}/activity`
@@ -577,17 +292,7 @@ export function useDiscourseBrowser() {
 
   // Load more activity items
   async function loadMoreActivity() {
-    const tab = activeTab.value
-    if (!tab || !tab.currentUser || !tab.activityState || isLoadingMore.value) return
-    if (!tab.activityState.hasMore) return
-
-    isLoadingMore.value = true
-
-    try {
-      await loadActivityData(tab, tab.currentUser.username, tab.activityState.activeTab, false)
-    } finally {
-      isLoadingMore.value = false
-    }
+    await loadMoreActivityRoute(activeTab, baseUrl, isLoadingMore)
   }
 
   // Load messages
@@ -596,25 +301,7 @@ export function useDiscourseBrowser() {
     username: string,
     messagesTab: MessagesTabType = 'all'
   ) {
-    // First load user profile if not already loaded
-    if (!tab.currentUser || tab.currentUser.username !== username) {
-      const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
-      const userData = extractData(userResult)
-      if (userData?.user) {
-        tab.currentUser = userData.user
-      }
-    }
-
-    // Initialize messages state
-    tab.messagesState = {
-      activeTab: messagesTab,
-      topics: [],
-      page: 0,
-      hasMore: true
-    }
-
-    // Load messages data
-    await loadMessagesData(tab, username, messagesTab, true)
+    await loadMessagesRoute(tab, username, messagesTab, baseUrl, users)
   }
 
   // Load messages data for specific tab
@@ -624,92 +311,11 @@ export function useDiscourseBrowser() {
     messagesTab: MessagesTabType,
     reset = false
   ) {
-    if (!tab.messagesState) return
-
-    if (reset) {
-      tab.messagesState.page = 0
-      tab.messagesState.hasMore = true
-      tab.messagesState.topics = []
-    }
-
-    const page = tab.messagesState.page
-
-    try {
-      let endpoint: string
-      switch (messagesTab) {
-        case 'all':
-          endpoint = 'private-messages'
-          break
-        case 'sent':
-          endpoint = 'private-messages-sent'
-          break
-        case 'new':
-          endpoint = 'private-messages-new'
-          break
-        case 'unread':
-          endpoint = 'private-messages-unread'
-          break
-        case 'archive':
-          endpoint = 'private-messages-archive'
-          break
-        default:
-          return
-      }
-
-      const url = `${baseUrl.value}/topics/${endpoint}/${username}.json${page > 0 ? `?page=${page}` : ''}`
-      const result = await pageFetch<any>(url)
-      const data = extractData(result)
-
-      if (data?.users) {
-        data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-      }
-
-      const topics = data?.topic_list?.topics || []
-      if (reset) {
-        tab.messagesState.topics = topics
-      } else {
-        const existingIds = new Set(tab.messagesState.topics.map((t: DiscourseTopic) => t.id))
-        const newTopics = topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
-        tab.messagesState.topics = [...tab.messagesState.topics, ...newTopics]
-      }
-      tab.messagesState.hasMore = !!data?.topic_list?.more_topics_url
-      tab.messagesState.page++
-    } catch (e) {
-      console.error('[DiscourseBrowser] loadMessagesData error:', e)
-      tab.messagesState.hasMore = false
-    }
+    await loadMessagesDataRoute(tab, username, messagesTab, baseUrl, users, reset)
   }
 
   async function loadMoreFollowFeed() {
-    const tab = activeTab.value
-    if (!tab || isLoadingMore.value || !tab.followFeedHasMore) return
-    if (tab.viewType !== 'followFeed' || !tab.currentUser) return
-
-    isLoadingMore.value = true
-    tab.followFeedPage += 1
-
-    try {
-      const pageParam = tab.followFeedPage > 0 ? `?page=${tab.followFeedPage}` : ''
-      const result = await pageFetch<any>(
-        `${baseUrl.value}/follow/posts/${tab.currentUser.username}.json${pageParam}`
-      )
-      const data = extractData(result)
-      const posts = data?.posts || []
-      const existing = new Set(
-        ((tab.currentUser as any)._follow_feed || []).map((p: { id: number }) => p.id)
-      )
-      const newPosts = posts.filter((p: { id: number }) => !existing.has(p.id))
-      ;(tab.currentUser as any)._follow_feed = [
-        ...((tab.currentUser as any)._follow_feed || []),
-        ...newPosts
-      ]
-      tab.followFeedHasMore = !!data?.extras?.has_more
-    } catch (e) {
-      console.error('[DiscourseBrowser] loadMoreFollowFeed error:', e)
-      tab.followFeedHasMore = false
-    } finally {
-      isLoadingMore.value = false
-    }
+    await loadMoreFollowFeedRoute(activeTab, baseUrl, isLoadingMore)
   }
 
   // Switch messages tab
@@ -729,17 +335,7 @@ export function useDiscourseBrowser() {
 
   // Load more messages
   async function loadMoreMessages() {
-    const tab = activeTab.value
-    if (!tab || !tab.currentUser || !tab.messagesState || isLoadingMore.value) return
-    if (!tab.messagesState.hasMore) return
-
-    isLoadingMore.value = true
-
-    try {
-      await loadMessagesData(tab, tab.currentUser.username, tab.messagesState.activeTab, false)
-    } finally {
-      isLoadingMore.value = false
-    }
+    await loadMoreMessagesRoute(activeTab, baseUrl, users, isLoadingMore)
   }
 
   // Open user messages
@@ -749,87 +345,12 @@ export function useDiscourseBrowser() {
 
   // Load more posts (pagination)
   async function loadMorePosts() {
-    const tab = activeTab.value
-    if (!tab || !tab.currentTopic || isLoadingMore.value || !tab.hasMorePosts) return
-
-    const stream = tab.currentTopic.post_stream?.stream || []
-    const unloadedIds = stream.filter((id: number) => !tab.loadedPostIds.has(id))
-
-    if (unloadedIds.length === 0) {
-      tab.hasMorePosts = false
-      return
-    }
-
-    const nextBatch = unloadedIds.slice(0, 20)
-    isLoadingMore.value = true
-
-    try {
-      const topicId = tab.currentTopic.id
-      const idsParam = nextBatch.map((id: number) => `post_ids[]=${id}`).join('&')
-      const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}`
-
-      const result = await pageFetch<any>(url)
-      const data = extractData(result)
-
-      if (data?.post_stream?.posts && tab.currentTopic) {
-        const newPosts = data.post_stream.posts as DiscoursePost[]
-        tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...newPosts]
-        newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
-        tab.hasMorePosts = stream.some((id: number) => !tab.loadedPostIds.has(id))
-      }
-    } catch (e) {
-      console.error('[DiscourseBrowser] loadMorePosts error:', e)
-    } finally {
-      isLoadingMore.value = false
-    }
+    await loadMorePostsRoute(activeTab, baseUrl, isLoadingMore)
   }
 
   // Load more topics (pagination for home/category)
   async function loadMoreTopics() {
-    const tab = activeTab.value
-    if (!tab || isLoadingMore.value || !tab.hasMoreTopics) return
-    if (tab.viewType !== 'home' && tab.viewType !== 'category') return
-
-    isLoadingMore.value = true
-    tab.topicsPage++
-
-    try {
-      let url: string
-      if (tab.viewType === 'home') {
-        url = `${baseUrl.value}/latest.json?page=${tab.topicsPage}`
-      } else {
-        // Category view
-        if (tab.currentCategoryId) {
-          url = `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json?page=${tab.topicsPage}`
-        } else {
-          url = `${baseUrl.value}/c/${tab.currentCategorySlug}.json?page=${tab.topicsPage}`
-        }
-      }
-
-      const result = await pageFetch<any>(url)
-      const data = extractData(result)
-
-      if (data?.topic_list?.topics && data.topic_list.topics.length > 0) {
-        // Filter out duplicates
-        const existingIds = new Set(tab.topics.map(t => t.id))
-        const newTopics = data.topic_list.topics.filter(
-          (t: DiscourseTopic) => !existingIds.has(t.id)
-        )
-        tab.topics = [...tab.topics, ...newTopics]
-        tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
-      } else {
-        tab.hasMoreTopics = false
-      }
-
-      if (data?.users) {
-        data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-      }
-    } catch (e) {
-      console.error('[DiscourseBrowser] loadMoreTopics error:', e)
-      tab.hasMoreTopics = false
-    } finally {
-      isLoadingMore.value = false
-    }
+    await loadMoreTopicsRoute(activeTab, baseUrl, users, isLoadingMore)
   }
 
   // Navigation functions
@@ -926,6 +447,7 @@ export function useDiscourseBrowser() {
     activeTab,
     users,
     isLoadingMore,
+    currentUsername,
 
     // Tab management
     createTab,

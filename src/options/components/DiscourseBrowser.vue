@@ -35,6 +35,7 @@ const {
   activeTab,
   users,
   isLoadingMore,
+  currentUsername,
   createTab,
   closeTab,
   switchTab,
@@ -72,6 +73,12 @@ const userExtrasTab = computed(
       | 'following'
       | 'followers'
       | undefined) || 'badges'
+)
+const isViewingSelf = computed(
+  () =>
+    !!activeTab.value?.currentUser?.username &&
+    !!currentUsername.value &&
+    activeTab.value?.currentUser?.username === currentUsername.value
 )
 
 // Scroll event handler (infinite loading for all view types)
@@ -453,6 +460,7 @@ onUnmounted(() => {
         :activityState="activeTab.activityState"
         :baseUrl="baseUrl"
         :isLoadingMore="isLoadingMore"
+        :showReadTab="isViewingSelf"
         @switchTab="handleActivityTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type {
   DiscourseUserProfile,
   UserActivityState,
@@ -16,6 +18,7 @@ const props = defineProps<{
   activityState: UserActivityState
   baseUrl: string
   isLoadingMore: boolean
+  showReadTab?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -35,8 +38,13 @@ const tabs: { key: ActivityTabType; label: string }[] = [
   { key: 'solved', label: '已解决' },
   { key: 'assigned', label: '已指定' },
   { key: 'votes', label: '投票' },
-  { key: 'portfolio', label: '作品集' }
+  { key: 'portfolio', label: '作品集' },
+  { key: 'read', label: '已读' }
 ]
+
+const visibleTabs = computed(() =>
+  props.showReadTab ? tabs : tabs.filter(tab => tab.key !== 'read')
+)
 
 // Get action type label
 const getActionTypeLabel = (actionType: number): string => {
@@ -99,7 +107,7 @@ const getActionTypeLabel = (actionType: number): string => {
     <!-- Tab navigation -->
     <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
       <button
-        v-for="tab in tabs"
+        v-for="tab in visibleTabs"
         :key="tab.key"
         class="px-4 py-2 text-sm rounded-t whitespace-nowrap transition-colors"
         :class="
@@ -159,9 +167,11 @@ const getActionTypeLabel = (actionType: number): string => {
         </div>
       </div>
 
-      <!-- Topics / Assigned / Votes / Portfolio -->
+      <!-- Topics / Assigned / Votes / Portfolio / Read -->
       <div
-        v-else-if="['topics', 'assigned', 'votes', 'portfolio'].includes(activityState.activeTab)"
+        v-else-if="
+          ['topics', 'assigned', 'votes', 'portfolio', 'read'].includes(activityState.activeTab)
+        "
         class="space-y-2"
       >
         <div
@@ -194,7 +204,9 @@ const getActionTypeLabel = (actionType: number): string => {
                 ? '暂无已指定'
                 : activityState.activeTab === 'votes'
                   ? '暂无投票'
-                  : '暂无作品集'
+                  : activityState.activeTab === 'portfolio'
+                    ? '暂无作品集'
+                    : '暂无已读'
           }}
         </div>
       </div>
