@@ -447,6 +447,7 @@ const getAvatarUrl = (template: string, size = 45) => {
 
 // 格式化时间
 const formatTime = (dateStr: string) => {
+  if (!dateStr) return ''
   const date = new Date(dateStr)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
@@ -458,6 +459,57 @@ const formatTime = (dateStr: string) => {
   if (hours < 24) return `${hours} 小时前`
   if (days < 30) return `${days} 天前`
   return date.toLocaleDateString('zh-CN')
+}
+
+// 解析帖子内容，提取图片用于预览
+interface ParsedContent {
+  html: string
+  images: string[]
+}
+
+const parsePostContent = (cooked: string): ParsedContent => {
+  if (!cooked) return { html: '', images: [] }
+
+  const images: string[] = []
+
+  // 替换 lightbox-wrapper 中的图片为占位符
+  let html = cooked.replace(
+    /<div class="lightbox-wrapper">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
+    (_match, fullUrl, _thumbUrl) => {
+      const index = images.length
+      images.push(fullUrl)
+      return `<span class="post-image-placeholder" data-index="${index}"></span>`
+    }
+  )
+
+  // 同时处理普通的 img 标签（非 lightbox）
+  html = html.replace(/<img([^>]*)src="([^"]+)"([^>]*)>/gi, (_match, before, src, after) => {
+    // 跳过 emoji 图片
+    if (src.includes('/images/emoji/') || before.includes('emoji') || after.includes('emoji')) {
+      return `<img${before}src="${src}"${after}>`
+    }
+    const index = images.length
+    images.push(src)
+    return `<span class="post-image-placeholder" data-index="${index}"></span>`
+  })
+
+  return { html, images }
+}
+
+// 存储每个帖子的解析结果
+const parsedPosts = computed(() => {
+  if (!currentTopic.value?.post_stream?.posts) return new Map()
+
+  const map = new Map<number, ParsedContent>()
+  for (const post of currentTopic.value.post_stream.posts) {
+    map.set(post.id, parsePostContent(post.cooked))
+  }
+  return map
+})
+
+// 获取帖子的解析内容
+const getParsedPost = (postId: number): ParsedContent => {
+  return parsedPosts.value.get(postId) || { html: '', images: [] }
 }
 
 // 初始化
@@ -660,10 +712,22 @@ onMounted(() => {
             </div>
 
             <!-- 帖子内容 -->
-            <div
-              class="post-content prose dark:prose-invert max-w-none text-sm"
-              v-html="post.cooked"
-            />
+            <div class="post-content prose dark:prose-invert max-w-none text-sm">
+              <div v-html="getParsedPost(post.id).html" />
+              <!-- 图片预览组 -->
+              <a-image-preview-group v-if="getParsedPost(post.id).images.length > 0">
+                <div class="post-images grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
+                  <a-image
+                    v-for="(img, idx) in getParsedPost(post.id).images"
+                    :key="idx"
+                    :src="img"
+                    :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
+                    class="rounded cursor-pointer object-cover"
+                    :style="{ maxHeight: '200px' }"
+                  />
+                </div>
+              </a-image-preview-group>
+            </div>
 
             <!-- 帖子底部 -->
             <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
