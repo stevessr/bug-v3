@@ -411,7 +411,6 @@ watch(
     loadGroupDetail(name)
   }
 )
-
 </script>
 
 <template>
@@ -580,7 +579,6 @@ watch(
           description="在 LinuxDo 点赞选择器上显示当日剩余点赞次数和冷却时间"
         />
       </div>
-
     </div>
 
     <!-- 表情配置（仅在启用时显示） -->

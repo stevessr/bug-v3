@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
 import { formatTime, getAvatarUrl, parsePostContent } from './utils'
 import DiscourseTopicList from './DiscourseTopicList.vue'

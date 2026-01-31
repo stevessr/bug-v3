@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DiscourseUserProfile, MessagesState, DiscourseTopic, MessagesTabType } from './types'
+import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from './types'
 import { formatTime, getAvatarUrl } from './utils'
 
 const props = defineProps<{
@@ -7,6 +7,7 @@ const props = defineProps<{
   messagesState: MessagesState
   baseUrl: string
   isLoadingMore: boolean
+  users: Map<number, DiscourseUser>
 }>()
 
 const emit = defineEmits<{
@@ -79,14 +80,21 @@ const tabs: { key: MessagesTabType; label: string }[] = [
         <div class="flex items-start gap-3">
           <!-- Participants avatars -->
           <div class="flex -space-x-2 flex-shrink-0">
-            <template v-if="(topic as any).participants?.length > 0">
+            <template v-if="topic.participants && topic.participants.length > 0">
               <div
-                v-for="(participant, index) in (topic as any).participants.slice(0, 3)"
+                v-for="(participant, index) in topic.participants.slice(0, 3)"
                 :key="participant.user_id"
                 class="relative"
                 :style="{ zIndex: 3 - index }"
               >
+                <img
+                  v-if="users.get(participant.user_id)"
+                  :src="getAvatarUrl(users.get(participant.user_id)!.avatar_template, baseUrl, 40)"
+                  :alt="users.get(participant.user_id)!.username"
+                  class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
+                />
                 <div
+                  v-else
                   class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300"
                 >
                   {{ index + 1 }}
@@ -111,26 +119,24 @@ const tabs: { key: MessagesTabType; label: string }[] = [
             <!-- Meta info -->
             <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
               <span>{{ topic.posts_count }} 条消息</span>
-              <span v-if="(topic as any).allowed_user_count">
-                {{ (topic as any).allowed_user_count }} 位参与者
-              </span>
+              <span v-if="topic.allowed_user_count">{{ topic.allowed_user_count }} 位参与者</span>
               <span>{{ topic.like_count }} 赞</span>
               <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
             </div>
 
             <!-- Unread indicator -->
-            <div v-if="(topic as any).unread > 0 || (topic as any).new_posts > 0" class="mt-2">
+            <div v-if="(topic.unread || 0) > 0 || (topic.new_posts || 0) > 0" class="mt-2">
               <span
-                v-if="(topic as any).unread > 0"
+                v-if="(topic.unread || 0) > 0"
                 class="inline-block px-2 py-0.5 text-xs bg-red-500 text-white rounded mr-2"
               >
-                {{ (topic as any).unread }} 未读
+                {{ topic.unread }} 未读
               </span>
               <span
-                v-if="(topic as any).new_posts > 0"
+                v-if="(topic.new_posts || 0) > 0"
                 class="inline-block px-2 py-0.5 text-xs bg-blue-500 text-white rounded"
               >
-                {{ (topic as any).new_posts }} 新消息
+                {{ topic.new_posts }} 新消息
               </span>
             </div>
           </div>

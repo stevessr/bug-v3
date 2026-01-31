@@ -542,6 +542,10 @@ export function useDiscourseBrowser() {
       const result = await pageFetch<any>(url)
       const data = extractData(result)
 
+      if (data?.users) {
+        data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+      }
+
       const topics = data?.topic_list?.topics || []
       if (reset) {
         tab.messagesState.topics = topics

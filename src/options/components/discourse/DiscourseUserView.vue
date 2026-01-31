@@ -118,13 +118,21 @@ const getTrustLevelName = (level: number): string => {
               </span>
             </div>
 
-            <!-- View activity button -->
-            <button
-              class="mt-3 px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-              @click="emit('openActivity', user.username)"
-            >
-              查看动态
-            </button>
+            <!-- Actions -->
+            <div class="mt-3 flex gap-2">
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openActivity', user.username)"
+              >
+                查看动态
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openMessages', user.username)"
+              >
+                查看私信
+              </button>
+            </div>
           </div>
         </div>
       </div>

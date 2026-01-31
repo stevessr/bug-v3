@@ -347,6 +347,7 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         @openTopic="handleUserTopicClick"
         @openActivity="handleOpenUserActivity"
+        @openMessages="handleOpenUserMessages"
       />
 
       <!-- User activity view -->
@@ -372,6 +373,7 @@ onUnmounted(() => {
         :user="activeTab.currentUser"
         :messagesState="activeTab.messagesState"
         :baseUrl="baseUrl"
+        :users="users"
         :isLoadingMore="isLoadingMore"
         @switchTab="handleMessagesTabSwitch"
         @openTopic="handleUserTopicClick"

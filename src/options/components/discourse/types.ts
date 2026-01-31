@@ -50,6 +50,16 @@ export interface DiscourseTopic {
     extras?: string
     description: string
   }>
+  participants?: Array<{
+    user_id: number
+    extras?: string
+    description?: string
+    primary_group_id?: number | null
+    flair_group_id?: number | null
+  }>
+  unread?: number
+  new_posts?: number
+  allowed_user_count?: number
 }
 
 export interface DiscourseCategory {
