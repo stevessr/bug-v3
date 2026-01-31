@@ -51,7 +51,12 @@
     "marked": "^16.4.2",
     "nanoid": "^5.1.6",
     "pinia": "^2.3.1",
+    "rehype": "^13.0.2",
+    "rehype-parse": "^9.0.1",
+    "rehype-stringify": "^10.0.1",
     "typeit": "^8.8.7",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4",
     "zod": "^4.3.5"
