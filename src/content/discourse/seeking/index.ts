@@ -146,7 +146,7 @@ function sendNotification(action: any) {
         const iconPop = createE('div', {
           class: 'dm-icon-pop',
           style: `left: ${10 + Math.random() * 70}vw; top: ${10 + Math.random() * 60}vh;`,
-          in: getActionIcon(action.action_type),
+          in: getActionIcon(action.action_type)
         })
         layer.appendChild(iconPop)
         setTimeout(() => iconPop.remove(), 3000)
@@ -154,7 +154,7 @@ function sendNotification(action: any) {
 
       const item = createE('div', {
         class: 'dm-item',
-        style: `top: ${5 + Math.random() * 80}vh; animation-duration: ${8 + Math.random() * 4}s;`,
+        style: `top: ${5 + Math.random() * 80}vh; animation-duration: ${8 + Math.random() * 4}s;`
       })
       item.onclick = () => window.open(link, '_blank')
 
@@ -362,7 +362,7 @@ function renderSidebarRows() {
     const userColor = 'var(--tertiary)'
     const row = createE('div', {
       id: `row-${u}`,
-      class: `sb-user-row ${isHidden ? '' : 'active'}`,
+      class: `sb-user-row ${isHidden ? '' : 'active'}`
     })
 
     const timerSize = 10,
@@ -394,12 +394,12 @@ function renderSidebarRows() {
     const activityEl = createE('div', {
       class: 'sb-user-activity',
       id: `activity-${u}`,
-      in: '<span title="最近发帖">--</span><span title="最近动态">--</span><span title="最近在线">--</span>',
+      in: '<span title="最近发帖">--</span><span title="最近动态">--</span><span title="最近在线">--</span>'
     })
 
     const nameEl = createE('div', {
       class: `sb-user-name ${isHidden ? 'disabled' : ''}`,
-      text: u,
+      text: u
     })
 
     row.appendChild(timerSvg)
@@ -496,7 +496,7 @@ function renderFeed() {
           <span class="sb-badge" style="color:${catColor};background:${catColor}15">${catName}</span>
           <span class="sb-timestr">${timeStr}</span>
         </div>
-      `,
+      `
       })
       fragment.appendChild(cardDiv)
     }
@@ -600,7 +600,7 @@ function startVisualLoops() {
 function createUI() {
   const host = createE('div', {
     id: 'ld-seeking-host',
-    class: `pos-${state.sidebarPosition}`,
+    class: `pos-${state.sidebarPosition}`
   })
   DOA(host)
   const root = host.attachShadow({ mode: 'open' })
@@ -628,7 +628,7 @@ function createUI() {
         </div>
         <div id="sb-list" class="sb-list"></div>
         <div id="sb-console" class="sb-console"></div>
-    </div>`,
+    </div>`
   })
   shadowRoot.appendChild(container)
 

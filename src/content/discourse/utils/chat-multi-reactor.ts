@@ -196,8 +196,9 @@ function processContainer(container: HTMLElement): void {
   // 创建按钮
   const btn = createE('span', {
     text: BUTTON_TEXT,
-    style: 'cursor:pointer;margin-left:8px;font-size:16px;user-select:none;transition:transform 0.1s;',
-    ti: `发送表情组合：${currentEmojiList.join(', ')}`,
+    style:
+      'cursor:pointer;margin-left:8px;font-size:16px;user-select:none;transition:transform 0.1s;',
+    ti: `发送表情组合：${currentEmojiList.join(', ')}`
   })
 
   // 样式微调

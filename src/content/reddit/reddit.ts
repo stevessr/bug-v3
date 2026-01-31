@@ -37,7 +37,7 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
     type: 'button',
     ti: '添加到未分组表情',
     text: '➕',
-    style: BUTTON_DEFAULT_STYLE,
+    style: BUTTON_DEFAULT_STYLE
   })
 
   const handler = async (ev: Event) => {

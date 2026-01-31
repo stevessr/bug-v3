@@ -1,6 +1,7 @@
-import { createE } from '@/content/utils/createEl'
 import { CONFIG, nameColors } from './config'
 import { state } from './state'
+
+import { createE } from '@/content/utils/createEl'
 
 export let shadowRoot: ShadowRoot | null = null
 
@@ -16,7 +17,7 @@ export function log(msg: string, type = 'info') {
   if (box) {
     const d = createE('div', {
       class: type === 'error' ? 'log-err' : type === 'success' ? 'log-ok' : '',
-      text: `[${new Date().toLocaleTimeString()}] ${msg}`,
+      text: `[${new Date().toLocaleTimeString()}] ${msg}`
     })
     box.prepend(d)
     if (box.children.length > 20 && box.lastChild) box.lastChild.remove()

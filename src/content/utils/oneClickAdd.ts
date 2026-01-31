@@ -27,7 +27,7 @@ function injectCSSAnimation() {
   if (!DEBI('oneclick-add-styles')) {
     const style = createE('style', {
       id: 'oneclick-add-styles',
-      text: cssAnimation,
+      text: cssAnimation
     })
     DHA(style)
   }

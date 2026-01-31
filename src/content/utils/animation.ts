@@ -66,7 +66,7 @@ export function injectAnimationStyles() {
       opacity: 0 !important;
       transition: opacity ${ANIMATION_DURATION}ms ease-in !important;
     }
-  `,
+  `
   })
   DHA(style)
 }

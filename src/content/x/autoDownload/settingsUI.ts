@@ -3,6 +3,7 @@
  */
 
 import { DOA, createE } from '../../utils/createEl'
+
 import { AutoDownloadManager, getAutoDownloadManager } from './manager'
 
 export class AutoDownloadSettingsUI {
@@ -46,7 +47,7 @@ export class AutoDownloadSettingsUI {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       font-size: 16px;
       transition: all 0.2s ease;
-    `,
+    `
     })
 
     button.addEventListener('mouseenter', () => {

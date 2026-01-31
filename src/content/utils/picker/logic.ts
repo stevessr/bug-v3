@@ -569,7 +569,7 @@ export class FilePickerLogic {
         }
       }
     `,
-      attrs: { 'data-custom-picker-animations': 'true' },
+      attrs: { 'data-custom-picker-animations': 'true' }
     })
     if (!DQS('style[data-custom-picker-animations]')) {
       DHA(style)

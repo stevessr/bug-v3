@@ -60,7 +60,7 @@ function highlightElement(element: HTMLElement) {
     z-index: ${Z_INDEX.AGENT_OVERLAY};
     pointer-events: none;
     box-sizing: border-box;
-  `,
+  `
   })
   DOA(overlay)
   setTimeout(() => overlay.remove(), 500)

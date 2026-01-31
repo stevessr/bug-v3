@@ -1,7 +1,8 @@
-import { createE } from '@/content/utils/createEl'
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
+
+import { createE } from '@/content/utils/createEl'
 
 /*
   添加表情按钮实现（独立文件）
@@ -200,8 +201,8 @@ export function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
     ti: '添加表情到收藏',
     dataset: {
       emojiName: data.name,
-      emojiUrl: data.url,
-    },
+      emojiUrl: data.url
+    }
   })
   setupButtonClickHandler(button, data)
   return button

@@ -122,7 +122,7 @@ export function customAlert(message: string): Promise<void> {
           transform: scale(1);
         }
       }
-    `,
+    `
     })
     DHA(style)
 
@@ -287,7 +287,7 @@ export function customConfirm(message: string): Promise<boolean> {
           transform: scale(1);
         }
       }
-    `,
+    `
     })
     DHA(style)
 
@@ -486,7 +486,7 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
           transform: scale(1);
         }
       }
-    `,
+    `
     })
     DHA(style)
 

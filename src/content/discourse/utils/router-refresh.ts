@@ -26,7 +26,7 @@ declare global {
  */
 function injectRouterScript(): void {
   const script = createE('script', {
-    src: chrome.runtime.getURL('js/discourse-router.js'),
+    src: chrome.runtime.getURL('js/discourse-router.js')
   }) as HTMLScriptElement
   script.onload = () => script.remove()
   DHA(script)

@@ -150,9 +150,13 @@ export async function initDiscourse() {
     // LinuxDo 点赞计数器（试验性功能）
     // 需同时开启试验性特性开关
     try {
-      const enableExperimentalFeatures = await requestSettingFromBackground('enableExperimentalFeatures')
+      const enableExperimentalFeatures = await requestSettingFromBackground(
+        'enableExperimentalFeatures'
+      )
       if (enableExperimentalFeatures === true) {
-        const enableLinuxDoLikeCounter = await requestSettingFromBackground('enableLinuxDoLikeCounter')
+        const enableLinuxDoLikeCounter = await requestSettingFromBackground(
+          'enableLinuxDoLikeCounter'
+        )
         if (enableLinuxDoLikeCounter === true) {
           initLinuxDoLikeCounter()
           console.log('[DiscourseOneClick] LinuxDo Like Counter enabled (experimental)')

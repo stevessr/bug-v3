@@ -394,7 +394,7 @@ async function fetchReactions(username: string) {
 
   while (keepFetching && pages < 10) {
     try {
-      let url = `${CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}${beforeId ? `&before_reaction_user_id=${beforeId}` : ''}`
+      const url = `${CONFIG.HOST}/discourse-reactions/posts/reactions.json?username=${username}${beforeId ? `&before_reaction_user_id=${beforeId}` : ''}`
       const res = await fetchWithTimeout(url)
       if (!res.ok || res.status !== 200) throw new Error(`HTTP error ${res.status}`)
       const items = await res.json()

@@ -407,7 +407,7 @@ async function downloadSelectedImages(items: TiebaImageItem[], status: HTMLEleme
   const url = URL.createObjectURL(finalBlob)
   const a = createE('a', {
     src: url,
-    attrs: { download: filename },
+    attrs: { download: filename }
   }) as HTMLAnchorElement
   DOA(a)
   a.click()

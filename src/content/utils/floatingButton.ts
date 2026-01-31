@@ -104,7 +104,7 @@ function createFloatingButton(): HTMLElement {
   const button = createE('button', {
     class: 'emoji-extension-floating-button',
     ti: '手动注入表情按钮 (Manual Emoji Injection)',
-    text: '🐈‍⬛',
+    text: '🐈‍⬛'
   })
 
   // Click handler for manual injection

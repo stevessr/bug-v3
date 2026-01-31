@@ -87,7 +87,7 @@ function createCarouselBtn(data: AddEmojiButtonData) {
   const wrapper = createE('div', {
     attrs: { dir: 'ltr' },
     style: 'color: rgb(255, 255, 255)',
-    child: [svg],
+    child: [svg]
   })
   btn.appendChild(wrapper)
   setupButtonClick(btn, data)
@@ -141,7 +141,7 @@ function createDownloadBtn(data: AddEmojiButtonData) {
             const blobUrl = URL.createObjectURL(blob)
             const a = createE('a', {
               src: blobUrl,
-              attrs: { download: name },
+              attrs: { download: name }
             }) as HTMLAnchorElement
             // append to DOM so click works in all browsers
             DOA(a)
@@ -181,7 +181,7 @@ function createDownloadBtn(data: AddEmojiButtonData) {
   const wrapper = createE('div', {
     attrs: { dir: 'ltr' },
     style: 'color: rgb(255, 255, 255)',
-    child: [svg],
+    child: [svg]
   })
   btn.appendChild(wrapper)
 
@@ -282,7 +282,8 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   // wrapper to hold both buttons — create with DOM API and set proper CSS so it can be positioned
   const wrapper = createE('div', {
     class: 'x-emoji-overlay-wrapper',
-    style: 'position:absolute;z-index:2147483647;pointer-events:auto;display:flex;gap:6px;align-items:center;',
+    style:
+      'position:absolute;z-index:2147483647;pointer-events:auto;display:flex;gap:6px;align-items:center;'
   })
 
   const downloadBtn = createDownloadBtn(data)

@@ -121,7 +121,7 @@ function getToastContainer() {
       gap: 10px;
       z-index: 10000;
       pointer-events: none;
-    `,
+    `
     })
     DOA(toastContainer)
   }
@@ -150,7 +150,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
     max-width: 80vw;
     overflow: hidden;
     text-overflow: ellipsis;
-  `,
+  `
   })
 
   container.appendChild(toast)

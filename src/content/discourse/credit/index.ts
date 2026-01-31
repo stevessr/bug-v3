@@ -376,7 +376,7 @@ function createWidget() {
   const widget = createE('div', {
     id: 'ldc-mini',
     class: 'loading',
-    text: '···',
+    text: '···'
   })
 
   // 创建 tooltip
