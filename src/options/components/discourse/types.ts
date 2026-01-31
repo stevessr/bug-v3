@@ -159,9 +159,25 @@ export interface ParsedContent {
   images: string[]
   segments: Array<
     | { type: 'html'; html: string }
-    | { type: 'image'; src: string }
-    | { type: 'carousel'; images: string[] }
+    | { type: 'lightbox'; image: LightboxImage }
+    | { type: 'carousel'; images: LightboxImage[] }
   >
+}
+
+export interface LightboxImage {
+  href: string
+  downloadHref?: string
+  title?: string
+  thumbSrc?: string
+  alt?: string
+  base62Sha1?: string
+  width?: string
+  height?: string
+  srcset?: string
+  dominantColor?: string
+  loading?: string
+  style?: string
+  metaHtml?: string
 }
 
 // User profile types

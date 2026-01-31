@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 
-import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
+import { REACTIONS } from '../../utils/linuxDoReaction'
+
+import type {
+  DiscourseTopicDetail,
+  DiscoursePost,
+  ParsedContent,
+  SuggestedTopic,
+  LightboxImage
+} from './types'
 import { formatTime, getAvatarUrl, parsePostContent, pageFetch, extractData } from './utils'
 import { togglePostLike } from './actions'
-import { REACTIONS } from '../../utils/linuxDoReaction'
 import DiscourseTopicList from './DiscourseTopicList.vue'
 import DiscourseComposer from './DiscourseComposer.vue'
 
@@ -214,6 +221,19 @@ const handleQuoteToggle = async (event: Event) => {
   }
 }
 
+const getCarouselImg = (images: LightboxImage[], index: number) => {
+  const image = images[index]
+  return image?.thumbSrc || image?.href || ''
+}
+
+const getLightboxTitle = (image: LightboxImage) => {
+  return image.title || image.alt || 'image'
+}
+
+const getLightboxThumb = (image: LightboxImage) => {
+  return image.thumbSrc || image.href
+}
+
 onMounted(() => {
   postsListRef.value?.addEventListener('click', handleQuoteToggle)
 })
@@ -284,28 +304,65 @@ onUnmounted(() => {
               <a-carousel
                 v-else-if="segment.type === 'carousel'"
                 class="post-carousel"
-                :dots="true"
+                arrows
+                dots-class="slick-dots slick-thumb"
               >
+                <template #customPaging="{ i }">
+                  <a class="post-carousel-thumb">
+                    <img :src="getCarouselImg(segment.images, i)" />
+                  </a>
+                </template>
                 <div
                   v-for="(img, imgIndex) in segment.images"
                   :key="imgIndex"
                   class="post-carousel-slide"
                 >
-                  <a-image
-                    :src="img"
-                    :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
-                    class="post-inline-image rounded cursor-pointer"
-                    :style="{ maxHeight: '420px' }"
-                  />
+                  <div class="lightbox-wrapper" dir="auto">
+                    <a
+                      class="lightbox"
+                      :href="img.href"
+                      :data-download-href="img.downloadHref"
+                      :title="getLightboxTitle(img)"
+                    >
+                      <a-image
+                        class="lightbox-image"
+                        :src="getLightboxThumb(img)"
+                        :preview="{ src: img.href }"
+                        :alt="img.alt || ''"
+                        :width="img.width"
+                        :height="img.height"
+                        :srcset="img.srcset"
+                        :data-base62-sha1="img.base62Sha1"
+                        :data-dominant-color="img.dominantColor"
+                        :loading="img.loading || 'lazy'"
+                        :style="img.style"
+                      />
+                      <div v-if="img.metaHtml" class="meta" v-html="img.metaHtml" />
+                    </a>
+                  </div>
                 </div>
               </a-carousel>
-              <a-image
-                v-else
-                :src="segment.src"
-                :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
-                class="post-inline-image rounded cursor-pointer"
-                :style="{ maxHeight: '420px' }"
-              />
+              <div v-else class="lightbox-wrapper" dir="auto">
+                <a
+                  class="lightbox"
+                  :href="segment.image.href"
+                  :data-download-href="segment.image.downloadHref"
+                  :title="getLightboxTitle(segment.image)"
+                >
+                  <a-image
+                    :src="getLightboxThumb(segment.image)"
+                    :preview="{ src: segment.image.href }"
+                    :alt="segment.image.alt || ''"
+                    :data-base62-sha1="segment.image.base62Sha1"
+                    :data-dominant-color="segment.image.dominantColor"
+                    :loading="segment.image.loading || 'lazy'"
+                    :style="segment.image.style"
+                    :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
+                    class="lightbox-image"
+                  />
+                  <div v-if="segment.image.metaHtml" class="meta" v-html="segment.image.metaHtml" />
+                </a>
+              </div>
             </template>
           </a-image-preview-group>
         </div>
@@ -410,6 +467,72 @@ onUnmounted(() => {
 .post-content :deep(.post-carousel-slide) {
   display: flex;
   justify-content: center;
+}
+
+.post-content :deep(.lightbox-wrapper) {
+  display: block;
+}
+
+.post-content :deep(.lightbox-wrapper .lightbox) {
+  display: block;
+}
+
+.post-content :deep(.lightbox-wrapper .ant-image) {
+  display: block;
+}
+
+.post-content :deep(.lightbox-wrapper .ant-image-img) {
+  border-radius: 6px;
+}
+
+.post-content :deep(.lightbox-wrapper .lightbox-image) {
+  border-radius: 6px;
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.post-content :deep(.post-carousel .slick-dots) {
+  position: relative;
+  height: auto;
+}
+
+.post-content :deep(.post-carousel .slick-slide img) {
+  border: 5px solid #fff;
+  display: block;
+  margin: auto;
+  max-width: 80%;
+}
+
+.post-content :deep(.post-carousel .slick-arrow) {
+  display: none !important;
+}
+
+.post-content :deep(.post-carousel .slick-thumb) {
+  bottom: 0px;
+}
+
+.post-content :deep(.post-carousel .slick-thumb li) {
+  width: 60px;
+  height: 45px;
+}
+
+.post-content :deep(.post-carousel .slick-thumb li img) {
+  width: 100%;
+  height: 100%;
+  filter: grayscale(100%);
+  display: block;
+  object-fit: cover;
+}
+
+.post-content :deep(.post-carousel .slick-thumb li.slick-active img) {
+  filter: grayscale(0%);
+}
+
+.post-content :deep(.post-carousel-image) {
+  max-height: 420px;
+  width: auto;
+  border-radius: 6px;
 }
 
 .post-content :deep(a) {

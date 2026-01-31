@@ -1,6 +1,6 @@
 // Discourse Browser Utilities
 
-import type { ParsedContent } from './types'
+import type { ParsedContent, LightboxImage } from './types'
 
 // Page proxy request via Chrome extension
 export async function pageFetch<T>(
@@ -90,7 +90,8 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
   if (!cooked) return { html: '', images: [], segments: [] }
 
   const images: string[] = []
-  const carousels: string[][] = []
+  const lightboxes: LightboxImage[] = []
+  const carousels: LightboxImage[][] = []
   const seen = new Set<string>()
 
   const resolveUrl = (url: string) => {
@@ -108,6 +109,30 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     return fullUrl
   }
 
+  const buildLightbox = (
+    options: Partial<LightboxImage> & { href?: string | null; thumbSrc?: string | null }
+  ): LightboxImage | null => {
+    const href = options.href ? resolveUrl(options.href) : ''
+    if (!href) return null
+    const thumbSrc = options.thumbSrc ? resolveUrl(options.thumbSrc) : href
+    addImage(href)
+    return {
+      href,
+      downloadHref: options.downloadHref ? resolveUrl(options.downloadHref) : options.downloadHref,
+      title: options.title,
+      thumbSrc,
+      alt: options.alt,
+      base62Sha1: options.base62Sha1,
+      width: options.width,
+      height: options.height,
+      srcset: options.srcset,
+      dominantColor: options.dominantColor,
+      loading: options.loading,
+      style: options.style,
+      metaHtml: options.metaHtml
+    }
+  }
+
   const parser = new DOMParser()
   const doc = parser.parseFromString(cooked, 'text/html')
   const body = doc.body
@@ -117,27 +142,55 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     return !!el.closest('.onebox')
   }
 
+  const isCarouselContainer = (el: Element | null) => {
+    if (!el) return false
+    if (el.classList.contains('d-image-grid--carousel')) return true
+    if (el.getAttribute('data-mode') === 'carousel') return true
+    if (el.querySelector('.d-image-carousel')) return true
+    return false
+  }
+
+  const isInsideCarousel = (el: Element | null) => {
+    if (!el) return false
+    return !!el.closest('.d-image-grid--carousel, .d-image-grid[data-mode="carousel"]')
+  }
+
   const replaceWithMarker = (el: Element, marker: string) => {
     const text = doc.createTextNode(marker)
     el.replaceWith(text)
   }
 
   // Step 1: handle carousel image grid
-  const carouselNodes = Array.from(body.querySelectorAll('.d-image-grid--carousel'))
+  const carouselNodes = Array.from(body.querySelectorAll('.d-image-grid, .d-image-grid--carousel'))
   carouselNodes.forEach(node => {
     if (isInsideOnebox(node)) return
-    const urls: string[] = []
+    if (!isCarouselContainer(node)) return
+    const items: LightboxImage[] = []
     const slides = Array.from(node.querySelectorAll('.d-image-carousel__slide'))
     slides.forEach(slide => {
       const anchor = slide.querySelector('a.lightbox') as HTMLAnchorElement | null
       const img = slide.querySelector('img') as HTMLImageElement | null
-      const rawUrl = anchor?.getAttribute('href') || img?.getAttribute('src')
-      const resolved = rawUrl ? resolveUrl(rawUrl) : ''
-      if (resolved && !urls.includes(resolved)) urls.push(resolved)
+      const meta = slide.querySelector('.meta') as HTMLElement | null
+      const lightbox = buildLightbox({
+        href: anchor?.getAttribute('href') || img?.getAttribute('src'),
+        downloadHref: anchor?.getAttribute('data-download-href') || undefined,
+        title: anchor?.getAttribute('title') || undefined,
+        thumbSrc: img?.getAttribute('src'),
+        alt: img?.getAttribute('alt') || undefined,
+        base62Sha1: img?.getAttribute('data-base62-sha1') || undefined,
+        width: img?.getAttribute('width') || undefined,
+        height: img?.getAttribute('height') || undefined,
+        srcset: img?.getAttribute('srcset') || undefined,
+        dominantColor: img?.getAttribute('data-dominant-color') || undefined,
+        loading: img?.getAttribute('loading') || undefined,
+        style: img?.getAttribute('style') || undefined,
+        metaHtml: meta?.innerHTML || undefined
+      })
+      if (lightbox) items.push(lightbox)
     })
-    if (urls.length > 0) {
+    if (items.length > 0) {
       const index = carousels.length
-      carousels.push(urls)
+      carousels.push(items)
       replaceWithMarker(node, `__DISCOURSE_CAROUSEL_${index}__`)
     }
   })
@@ -146,12 +199,29 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
   const lightboxWrappers = Array.from(body.querySelectorAll('.lightbox-wrapper'))
   lightboxWrappers.forEach(wrapper => {
     if (isInsideOnebox(wrapper)) return
+    if (isInsideCarousel(wrapper)) return
     const anchor = wrapper.querySelector('a.lightbox') as HTMLAnchorElement | null
-    const href = anchor?.getAttribute('href')
-    if (!href) return
-    const index = images.length
-    addImage(href)
-    replaceWithMarker(wrapper, `__DISCOURSE_IMG_${index}__`)
+    const img = wrapper.querySelector('img') as HTMLImageElement | null
+    const meta = wrapper.querySelector('.meta') as HTMLElement | null
+    const lightbox = buildLightbox({
+      href: anchor?.getAttribute('href') || img?.getAttribute('src'),
+      downloadHref: anchor?.getAttribute('data-download-href') || undefined,
+      title: anchor?.getAttribute('title') || undefined,
+      thumbSrc: img?.getAttribute('src'),
+      alt: img?.getAttribute('alt') || undefined,
+      base62Sha1: img?.getAttribute('data-base62-sha1') || undefined,
+      width: img?.getAttribute('width') || undefined,
+      height: img?.getAttribute('height') || undefined,
+      srcset: img?.getAttribute('srcset') || undefined,
+      dominantColor: img?.getAttribute('data-dominant-color') || undefined,
+      loading: img?.getAttribute('loading') || undefined,
+      style: img?.getAttribute('style') || undefined,
+      metaHtml: meta?.innerHTML || undefined
+    })
+    if (!lightbox) return
+    const index = lightboxes.length
+    lightboxes.push(lightbox)
+    replaceWithMarker(wrapper, `__DISCOURSE_LIGHTBOX_${index}__`)
   })
 
   // Step 2.5: collect lightbox links without images
@@ -166,6 +236,7 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
   const imagesNodes = Array.from(body.querySelectorAll('img'))
   imagesNodes.forEach(img => {
     if (isInsideOnebox(img)) return
+    if (isInsideCarousel(img)) return
     if (img.closest('.lightbox-wrapper')) return
     const src = img.getAttribute('src') || ''
     const className = img.getAttribute('class') || ''
@@ -173,16 +244,39 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     if (className.includes('avatar')) return
     if (className.includes('site-icon')) return
     if (!src) return
-    const index = images.length
-    addImage(src)
-    replaceWithMarker(img, `__DISCOURSE_IMG_${index}__`)
+    const lightbox = buildLightbox({
+      href: src,
+      thumbSrc: src,
+      alt: img.getAttribute('alt') || undefined,
+      base62Sha1: img.getAttribute('data-base62-sha1') || undefined,
+      width: img.getAttribute('width') || undefined,
+      height: img.getAttribute('height') || undefined,
+      srcset: img.getAttribute('srcset') || undefined,
+      dominantColor: img.getAttribute('data-dominant-color') || undefined,
+      loading: img.getAttribute('loading') || undefined,
+      style: img.getAttribute('style') || undefined
+    })
+    if (!lightbox) return
+    const index = lightboxes.length
+    lightboxes.push(lightbox)
+    replaceWithMarker(img, `__DISCOURSE_LIGHTBOX_${index}__`)
+  })
+
+  // Step 4: remove any remaining lightbox/carousel containers before rendering
+  Array.from(body.querySelectorAll('.lightbox-wrapper')).forEach(node => node.remove())
+  Array.from(
+    body.querySelectorAll(
+      '.d-image-grid--carousel, .d-image-grid[data-mode="carousel"], .d-image-grid'
+    )
+  ).forEach(node => {
+    if (isCarouselContainer(node)) node.remove()
   })
 
   const html = body.innerHTML
 
-  const markers: Array<{ marker: string; type: 'image' | 'carousel'; index: number }> = []
-  images.forEach((_item, idx) => {
-    markers.push({ marker: `__DISCOURSE_IMG_${idx}__`, type: 'image', index: idx })
+  const markers: Array<{ marker: string; type: 'lightbox' | 'carousel'; index: number }> = []
+  lightboxes.forEach((_item, idx) => {
+    markers.push({ marker: `__DISCOURSE_LIGHTBOX_${idx}__`, type: 'lightbox', index: idx })
   })
   carousels.forEach((_item, idx) => {
     markers.push({ marker: `__DISCOURSE_CAROUSEL_${idx}__`, type: 'carousel', index: idx })
@@ -212,9 +306,9 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     const chunk = html.slice(cursor, nextIndex)
     pushHtmlChunk(chunk)
 
-    if (nextMarker.type === 'image') {
-      const src = images[nextMarker.index]
-      if (src) segments.push({ type: 'image', src })
+    if (nextMarker.type === 'lightbox') {
+      const image = lightboxes[nextMarker.index]
+      if (image) segments.push({ type: 'lightbox', image })
     } else {
       const items = carousels[nextMarker.index] || []
       if (items.length > 0) segments.push({ type: 'carousel', images: items })
