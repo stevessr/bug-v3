@@ -241,8 +241,6 @@ onMounted(async () => {
               @update:enableChatMultiReactor="updateEnableChatMultiReactor"
               @update:chatMultiReactorEmojis="updateChatMultiReactorEmojis"
               @update:enableLinuxDoLikeCounter="(v: boolean) => emojiStore.updateSettings({ enableLinuxDoLikeCounter: v })"
-              @update:enableAntiCheat="updateEnableAntiCheat"
-              @update:antiCheatCustomText="updateAntiCheatCustomText"
             />
           </div>
         </a-tab-pane>
