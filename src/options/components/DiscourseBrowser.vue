@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   PlusOutlined,
   CloseOutlined,
@@ -71,6 +71,20 @@ interface DiscoursePost {
   name?: string
 }
 
+interface SuggestedTopic {
+  id: number
+  title: string
+  fancy_title: string
+  slug: string
+  posts_count: number
+  reply_count: number
+  views: number
+  like_count: number
+  created_at: string
+  last_posted_at: string
+  category_id: number
+}
+
 interface DiscourseTopicDetail {
   id: number
   title: string
@@ -87,6 +101,8 @@ interface DiscourseTopicDetail {
     created_by: DiscourseUser
     participants: DiscourseUser[]
   }
+  suggested_topics?: SuggestedTopic[]
+  related_topics?: SuggestedTopic[]
 }
 
 // 默认论坛地址
@@ -110,6 +126,12 @@ const topics = ref<DiscourseTopic[]>([])
 const currentTopic = ref<DiscourseTopicDetail | null>(null)
 const users = ref<Map<number, DiscourseUser>>(new Map())
 const errorMessage = ref('')
+
+// 分页状态
+const loadedPostIds = ref<Set<number>>(new Set())
+const isLoadingMore = ref(false)
+const hasMorePosts = ref(false)
+const contentAreaRef = ref<HTMLElement | null>(null)
 
 // 生成唯一 ID
 const generateId = () => `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -373,6 +395,10 @@ const loadTopic = async (topicId: number) => {
 
   if (data) {
     currentTopic.value = data
+    // 初始化分页状态
+    loadedPostIds.value = new Set(data.post_stream?.posts?.map((p: DiscoursePost) => p.id) || [])
+    hasMorePosts.value =
+      (data.post_stream?.stream?.length || 0) > (data.post_stream?.posts?.length || 0)
     const tab = activeTab.value
     if (tab && data.title) {
       tab.title = data.title
@@ -380,7 +406,84 @@ const loadTopic = async (topicId: number) => {
   } else {
     console.warn('[DiscourseBrowser] No topic data found')
     currentTopic.value = null
+    loadedPostIds.value = new Set()
+    hasMorePosts.value = false
   }
+}
+
+// 加载更多帖子（分页）
+const loadMorePosts = async () => {
+  if (!currentTopic.value || isLoadingMore.value || !hasMorePosts.value) return
+
+  const stream = currentTopic.value.post_stream?.stream || []
+  const unloadedIds = stream.filter((id: number) => !loadedPostIds.value.has(id))
+
+  if (unloadedIds.length === 0) {
+    hasMorePosts.value = false
+    return
+  }
+
+  // 每次加载 20 个帖子
+  const nextBatch = unloadedIds.slice(0, 20)
+  isLoadingMore.value = true
+
+  try {
+    const topicId = currentTopic.value.id
+    const idsParam = nextBatch.map((id: number) => `post_ids[]=${id}`).join('&')
+    const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}`
+
+    console.log('[DiscourseBrowser] Loading more posts:', url)
+
+    const result = await pageFetch<any>(url)
+
+    const extractData = (res: any) => {
+      if (!res) return null
+      if (res.data && typeof res.data === 'object') {
+        if (res.data.data && typeof res.data.data === 'object') {
+          return res.data.data
+        }
+        return res.data
+      }
+      return res
+    }
+
+    const data = extractData(result)
+    console.log('[DiscourseBrowser] More posts data:', data)
+
+    if (data?.post_stream?.posts && currentTopic.value) {
+      // 追加新帖子
+      const newPosts = data.post_stream.posts as DiscoursePost[]
+      currentTopic.value.post_stream.posts = [...currentTopic.value.post_stream.posts, ...newPosts]
+
+      // 更新已加载的帖子 ID
+      newPosts.forEach((p: DiscoursePost) => loadedPostIds.value.add(p.id))
+
+      // 检查是否还有更多
+      hasMorePosts.value = stream.some((id: number) => !loadedPostIds.value.has(id))
+    }
+  } catch (e) {
+    console.error('[DiscourseBrowser] loadMorePosts error:', e)
+  } finally {
+    isLoadingMore.value = false
+  }
+}
+
+// 滚动事件处理（无限加载）
+const handleScroll = () => {
+  if (currentView.value !== 'topic' || !contentAreaRef.value) return
+
+  const el = contentAreaRef.value
+  const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+
+  // 距离底部 200px 时触发加载
+  if (scrollBottom < 200) {
+    loadMorePosts()
+  }
+}
+
+// 打开推荐话题
+const openSuggestedTopic = (topic: SuggestedTopic) => {
+  navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
 }
 
 // 后退
@@ -515,6 +618,18 @@ const getParsedPost = (postId: number): ParsedContent => {
 // 初始化
 onMounted(() => {
   createTab()
+  // 下一帧绑定滚动事件（等待 ref 绑定）
+  nextTick(() => {
+    if (contentAreaRef.value) {
+      contentAreaRef.value.addEventListener('scroll', handleScroll)
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (contentAreaRef.value) {
+    contentAreaRef.value.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 
@@ -590,7 +705,10 @@ onMounted(() => {
     </div>
 
     <!-- 内容区域 -->
-    <div class="content-area flex-1 overflow-y-auto bg-white dark:bg-gray-900 p-4">
+    <div
+      ref="contentAreaRef"
+      class="content-area flex-1 overflow-y-auto bg-white dark:bg-gray-900 p-4"
+    >
       <!-- 加载中 -->
       <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
         <a-spin size="large" />
@@ -737,6 +855,68 @@ onMounted(() => {
           </div>
         </div>
         <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
+
+        <!-- 加载更多指示器 -->
+        <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
+          <a-spin />
+          <span class="ml-2 text-gray-500">加载更多帖子...</span>
+        </div>
+
+        <!-- 到底提示 -->
+        <div
+          v-if="!hasMorePosts && currentTopic.post_stream?.posts?.length"
+          class="text-center text-gray-400 py-4 text-sm"
+        >
+          已加载全部 {{ currentTopic.post_stream.posts.length }} 条帖子
+        </div>
+
+        <!-- 推荐话题 -->
+        <div
+          v-if="currentTopic.suggested_topics && currentTopic.suggested_topics.length > 0"
+          class="mt-8 pt-6 border-t dark:border-gray-700"
+        >
+          <h3 class="text-lg font-semibold mb-4 dark:text-white">推荐话题</h3>
+          <div class="space-y-2">
+            <div
+              v-for="topic in currentTopic.suggested_topics"
+              :key="topic.id"
+              class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              @click="openSuggestedTopic(topic)"
+            >
+              <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
+              <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                <span>{{ topic.posts_count }} 回复</span>
+                <span>{{ topic.views }} 浏览</span>
+                <span>{{ topic.like_count }} 赞</span>
+                <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 相关话题 -->
+        <div
+          v-if="currentTopic.related_topics && currentTopic.related_topics.length > 0"
+          class="mt-6 pt-6 border-t dark:border-gray-700"
+        >
+          <h3 class="text-lg font-semibold mb-4 dark:text-white">相关话题</h3>
+          <div class="space-y-2">
+            <div
+              v-for="topic in currentTopic.related_topics"
+              :key="topic.id"
+              class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              @click="openSuggestedTopic(topic)"
+            >
+              <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
+              <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                <span>{{ topic.posts_count }} 回复</span>
+                <span>{{ topic.views }} 浏览</span>
+                <span>{{ topic.like_count }} 赞</span>
+                <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
