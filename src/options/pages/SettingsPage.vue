@@ -232,8 +232,8 @@ onMounted(async () => {
 
         <a-tab-pane
           v-if="emojiStore.settings.enableExperimentalFeatures"
-          key="chat-reactor"
-          tab="多表情反应"
+          key="experimentalFeatures"
+          tab="试验性特性"
         >
           <div class="py-4">
             <ChatMultiReactorSettings

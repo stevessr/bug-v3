@@ -411,16 +411,6 @@ watch(
 
 <template>
   <div class="space-y-6">
-    <!-- 功能开关 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
-      <SettingSwitch
-        :model-value="getSetting('enableChatMultiReactor', false)"
-        @update:model-value="emit('update:enableChatMultiReactor', $event)"
-        label="启用聊天多表情反应"
-        description="在 Discourse 聊天消息旁添加按钮，一键发送多个表情反应"
-      />
-    </div>
-
     <!-- 用户点赞助手 -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
       <h3 class="text-md font-semibold dark:text-white mb-4">用户点赞助手</h3>
@@ -566,6 +556,16 @@ watch(
       >
         > {{ groupActionStatus }}
       </div>
+    </div>
+
+    <!-- 功能开关 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
+      <SettingSwitch
+        :model-value="getSetting('enableChatMultiReactor', false)"
+        @update:model-value="emit('update:enableChatMultiReactor', $event)"
+        label="启用聊天多表情反应"
+        description="在 Discourse 聊天消息旁添加按钮，一键发送多个表情反应"
+      />
     </div>
 
     <!-- 表情配置（仅在启用时显示） -->
