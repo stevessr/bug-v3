@@ -333,7 +333,7 @@ async function isAlreadyReacted(postId: number, reactionId: string): Promise<boo
 export async function sendReactionToPost(
   postId: number,
   reactionId: string,
-  csrfToken: string
+  csrfToken?: string | null
 ): Promise<'success' | 'skipped' | 'rate_limit' | 'failed'> {
   // Check if already reacted
   if (await isAlreadyReacted(postId, reactionId)) {
@@ -343,18 +343,22 @@ export async function sendReactionToPost(
   const url = `${HOST}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
 
   try {
+    const headers: Record<string, string> = {
+      Accept: '*/*',
+      'Content-Length': '0',
+      'Discourse-Logged-In': 'true',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json'
+    }
+    if (csrfToken) {
+      headers['X-Csrf-Token'] = csrfToken
+    }
+
     const res = await proxyFetch(
       url,
       {
         method: 'PUT',
-        headers: {
-          Accept: '*/*',
-          'Content-Length': '0',
-          'Discourse-Logged-In': 'true',
-          'X-Csrf-Token': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/json',
-        }
+        headers
       },
       'json'
     )
@@ -482,10 +486,6 @@ export async function runBatchReaction(
   onProgress: (current: number, total: number, status: string) => void
 ) {
   const csrfToken = await getCsrfToken()
-  if (!csrfToken) {
-    onProgress(0, 0, 'Error: Failed to get CSRF Token')
-    return
-  }
 
   onProgress(0, count, `正在获取 ${username} 的数据...`)
   const posts = await fetchUserActions(username, count, msg => {
