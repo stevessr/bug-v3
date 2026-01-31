@@ -119,7 +119,7 @@ async function pageFetch<T>(
   url: string,
   options?: { method?: string; headers?: Record<string, string>; body?: string },
   responseType: 'json' | 'text' = 'json'
-): Promise<{ status: number; ok: boolean; data: T }> {
+): Promise<{ status: number; ok: boolean; data: T | null }> {
   const chromeAPI = (globalThis as any).chrome
   if (!chromeAPI?.runtime?.sendMessage) {
     throw new Error('Page fetch unavailable: chrome.runtime is not accessible')
@@ -142,7 +142,7 @@ async function pageFetch<T>(
           resolve({
             status: resp.status || 200,
             ok: resp.ok !== false,
-            data: resp.data as T
+            data: resp.data ?? null
           })
           return
         }
@@ -249,30 +249,58 @@ const navigateTo = async (url: string, addToHistory = true) => {
 
 // 加载首页
 const loadHome = async () => {
-  const [catResult, topicResult] = await Promise.all([
-    pageFetch<{ category_list: { categories: DiscourseCategory[] } }>(
-      `${baseUrl.value}/categories.json`
-    ),
-    pageFetch<{ topic_list: { topics: DiscourseTopic[] }; users: DiscourseUser[] }>(
-      `${baseUrl.value}/latest.json`
-    )
-  ])
+  try {
+    const [catResult, topicResult] = await Promise.all([
+      pageFetch<{
+        category_list?: { categories?: DiscourseCategory[] }
+        categories?: DiscourseCategory[]
+      }>(`${baseUrl.value}/categories.json`),
+      pageFetch<{ topic_list?: { topics?: DiscourseTopic[] }; users?: DiscourseUser[] }>(
+        `${baseUrl.value}/latest.json`
+      )
+    ])
 
-  categories.value = catResult.data.category_list.categories
-  topics.value = topicResult.data.topic_list.topics.slice(0, 30)
+    // 处理不同的 API 响应结构
+    const catData = catResult?.data
+    if (catData?.category_list?.categories) {
+      categories.value = catData.category_list.categories
+    } else if (catData?.categories) {
+      categories.value = catData.categories
+    } else {
+      console.warn('[DiscourseBrowser] No categories found in response:', catData)
+      categories.value = []
+    }
 
-  // 缓存用户信息
-  topicResult.data.users?.forEach(u => users.value.set(u.id, u))
+    const topicData = topicResult?.data
+    if (topicData?.topic_list?.topics) {
+      topics.value = topicData.topic_list.topics.slice(0, 30)
+    } else {
+      console.warn('[DiscourseBrowser] No topics found in response:', topicData)
+      topics.value = []
+    }
+
+    // 缓存用户信息
+    topicData?.users?.forEach(u => users.value.set(u.id, u))
+  } catch (e) {
+    console.error('[DiscourseBrowser] loadHome error:', e)
+    throw e
+  }
 }
 
 // 加载分类
 const loadCategory = async (slug: string) => {
   const result = await pageFetch<{
-    topic_list: { topics: DiscourseTopic[] }
-    users: DiscourseUser[]
+    topic_list?: { topics?: DiscourseTopic[] }
+    users?: DiscourseUser[]
   }>(`${baseUrl.value}/c/${slug}.json`)
-  topics.value = result.data.topic_list.topics.slice(0, 30)
-  result.data.users?.forEach(u => users.value.set(u.id, u))
+
+  const data = result.data
+  if (data?.topic_list?.topics) {
+    topics.value = data.topic_list.topics.slice(0, 30)
+  } else {
+    topics.value = []
+  }
+  data?.users?.forEach(u => users.value.set(u.id, u))
 }
 
 // 加载话题详情
@@ -280,7 +308,7 @@ const loadTopic = async (topicId: number) => {
   const result = await pageFetch<DiscourseTopicDetail>(`${baseUrl.value}/t/${topicId}.json`)
   currentTopic.value = result.data
   const tab = activeTab.value
-  if (tab) {
+  if (tab && result.data?.title) {
     tab.title = result.data.title
   }
 }
