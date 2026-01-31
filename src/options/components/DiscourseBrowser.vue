@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import {
   PlusOutlined,
   CloseOutlined,
@@ -59,10 +59,20 @@ const {
   switchActivityTab,
   loadMoreActivity,
   switchMessagesTab,
-  loadMoreMessages
+  loadMoreMessages,
+  loadMoreFollowFeed
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
+const userExtrasTab = computed(
+  () =>
+    (activeTab.value?.viewType as
+      | 'badges'
+      | 'followFeed'
+      | 'following'
+      | 'followers'
+      | undefined) || 'badges'
+)
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = () => {
@@ -82,6 +92,8 @@ const handleScroll = () => {
       loadMoreActivity()
     } else if (viewType === 'messages') {
       loadMoreMessages()
+    } else if (viewType === 'followFeed') {
+      loadMoreFollowFeed()
     }
   }
 }
@@ -154,9 +166,7 @@ const handleOpenUserFollowers = (username: string) => {
   openUserFollowers(username)
 }
 
-const handleUserExtrasTabSwitch = (
-  tab: 'badges' | 'followFeed' | 'following' | 'followers'
-) => {
+const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 'followers') => {
   if (!activeTab.value?.currentUser) return
   const username = activeTab.value.currentUser.username
   if (tab === 'badges') openUserBadges(username)
@@ -405,7 +415,9 @@ onUnmounted(() => {
         "
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
-        :tab="activeTab.viewType"
+        :tab="userExtrasTab"
+        :isLoadingMore="isLoadingMore"
+        :hasMore="activeTab.followFeedHasMore"
         @switchTab="handleUserExtrasTabSwitch"
         @openUser="handleUserClick"
         @openTopic="handleUserTopicClick"

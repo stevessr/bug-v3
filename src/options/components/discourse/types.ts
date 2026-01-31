@@ -29,6 +29,9 @@ export interface BrowserTab {
   activityState: UserActivityState | null
   // Messages state
   messagesState: MessagesState | null
+  // Follow feed pagination
+  followFeedPage: number
+  followFeedHasMore: boolean
 }
 
 export type ViewType =

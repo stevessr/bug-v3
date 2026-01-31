@@ -29,6 +29,8 @@ const props = defineProps<{
   }
   baseUrl: string
   tab: ExtrasTab
+  isLoadingMore?: boolean
+  hasMore?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -115,7 +117,7 @@ const emit = defineEmits<{
       </div>
       <div v-else class="space-y-3">
         <div
-          v-for="post in user._follow_feed.slice(0, 10)"
+          v-for="post in user._follow_feed"
           :key="post.id"
           class="p-3 rounded bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700"
         >
@@ -130,6 +132,15 @@ const emit = defineEmits<{
           <div class="text-xs text-gray-500 mt-1 whitespace-pre-line">
             {{ post.excerpt }}
           </div>
+        </div>
+        <div v-if="isLoadingMore" class="text-sm text-gray-500 text-center py-2">
+          加载更多动态...
+        </div>
+        <div
+          v-else-if="hasMore === false"
+          class="text-xs text-gray-400 text-center py-2"
+        >
+          已加载全部动态
         </div>
       </div>
     </div>

@@ -78,7 +78,9 @@ export function useDiscourseBrowser() {
       currentCategorySlug: '',
       currentCategoryId: null,
       activityState: null,
-      messagesState: null
+      messagesState: null,
+      followFeedPage: 0,
+      followFeedHasMore: false
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -313,17 +315,23 @@ export function useDiscourseBrowser() {
   // Load user profile
   async function loadUser(tab: BrowserTab, username: string) {
     // Fetch user info and summary in parallel
-    const [userResult, summaryResult, badgesResult, followFeedResult, followingResult, followersResult] =
-      await Promise.all([
-        pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
-        pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null),
-        pageFetch<any>(`${baseUrl.value}/user-badges/${username}.json?grouped=true`).catch(
-          () => null
-        ),
-        pageFetch<any>(`${baseUrl.value}/follow/posts/${username}.json`).catch(() => null),
-        pageFetch<any>(`${baseUrl.value}/u/${username}/follow/following.json`).catch(() => null),
-        pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null)
-      ])
+    const [
+      userResult,
+      summaryResult,
+      badgesResult,
+      followFeedResult,
+      followingResult,
+      followersResult
+    ] = await Promise.all([
+      pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
+      pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null),
+      pageFetch<any>(`${baseUrl.value}/user-badges/${username}.json?grouped=true`).catch(
+        () => null
+      ),
+      pageFetch<any>(`${baseUrl.value}/follow/posts/${username}.json`).catch(() => null),
+      pageFetch<any>(`${baseUrl.value}/u/${username}/follow/following.json`).catch(() => null),
+      pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null)
+    ])
 
     const userData = extractData(userResult)
     const summaryData = summaryResult ? extractData(summaryResult) : null
@@ -350,6 +358,8 @@ export function useDiscourseBrowser() {
       ;(tab.currentUser as any)._follow_feed = profileData.follow_feed
       ;(tab.currentUser as any)._following = profileData.following
       ;(tab.currentUser as any)._followers = profileData.followers
+      tab.followFeedPage = 0
+      tab.followFeedHasMore = !!followFeedData?.extras?.has_more
       tab.title = `${userData.user.username} - 用户主页`
     } else {
       tab.currentUser = null
@@ -623,6 +633,38 @@ export function useDiscourseBrowser() {
     }
   }
 
+  async function loadMoreFollowFeed() {
+    const tab = activeTab.value
+    if (!tab || isLoadingMore.value || !tab.followFeedHasMore) return
+    if (tab.viewType !== 'followFeed' || !tab.currentUser) return
+
+    isLoadingMore.value = true
+    tab.followFeedPage += 1
+
+    try {
+      const pageParam = tab.followFeedPage > 0 ? `?page=${tab.followFeedPage}` : ''
+      const result = await pageFetch<any>(
+        `${baseUrl.value}/follow/posts/${tab.currentUser.username}.json${pageParam}`
+      )
+      const data = extractData(result)
+      const posts = data?.posts || []
+      const existing = new Set(
+        ((tab.currentUser as any)._follow_feed || []).map((p: { id: number }) => p.id)
+      )
+      const newPosts = posts.filter((p: { id: number }) => !existing.has(p.id))
+      ;(tab.currentUser as any)._follow_feed = [
+        ...((tab.currentUser as any)._follow_feed || []),
+        ...newPosts
+      ]
+      tab.followFeedHasMore = !!data?.extras?.has_more
+    } catch (e) {
+      console.error('[DiscourseBrowser] loadMoreFollowFeed error:', e)
+      tab.followFeedHasMore = false
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
   // Switch messages tab
   async function switchMessagesTab(messagesTab: MessagesTabType) {
     const tab = activeTab.value
@@ -868,6 +910,7 @@ export function useDiscourseBrowser() {
     switchActivityTab,
     loadMoreActivity,
     switchMessagesTab,
-    loadMoreMessages
+    loadMoreMessages,
+    loadMoreFollowFeed
   }
 }
