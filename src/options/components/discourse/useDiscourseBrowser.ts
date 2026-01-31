@@ -237,7 +237,31 @@ export function useDiscourseBrowser() {
     // Save category info for pagination
     tab.topicsPage = 0
     tab.currentCategorySlug = slug
-    tab.currentCategoryId = categoryId
+    tab.currentCategoryId =
+      categoryId ??
+      data?.category?.id ??
+      data?.topic_list?.category?.id ??
+      data?.topic_list?.category_id ??
+      null
+
+    // Load subcategories for this category (if any)
+    tab.categories = []
+    if (tab.currentCategoryId) {
+      try {
+        const subResult = await pageFetch<any>(
+          `${baseUrl.value}/categories.json?parent_category_id=${tab.currentCategoryId}`
+        )
+        const subData = extractData(subResult)
+        if (subData?.category_list?.categories) {
+          tab.categories = subData.category_list.categories
+        } else if (subData?.categories) {
+          tab.categories = subData.categories
+        }
+      } catch (e) {
+        console.warn('[DiscourseBrowser] loadCategory subcategories error:', e)
+        tab.categories = []
+      }
+    }
 
     // Store active users for sidebar
     if (data?.users) {

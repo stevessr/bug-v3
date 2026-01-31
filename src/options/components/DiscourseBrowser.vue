@@ -295,7 +295,14 @@ onUnmounted(() => {
       <!-- Category view -->
       <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
         <!-- Main content -->
-        <div class="flex-1 min-w-0 space-y-2">
+        <div class="flex-1 min-w-0 space-y-4">
+          <DiscourseCategoryGrid
+            v-if="activeTab.categories.length > 0"
+            :categories="activeTab.categories"
+            title="子分类"
+            @click="handleCategoryClick"
+          />
+
           <DiscourseTopicList
             :topics="activeTab.topics"
             :baseUrl="baseUrl"
