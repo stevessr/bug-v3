@@ -19,6 +19,7 @@ import type {
   MessagesTabType
 } from './discourse/types'
 import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
+import DiscourseIcon from './discourse/DiscourseIcon.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 import DiscourseComposer from './discourse/DiscourseComposer.vue'
@@ -366,6 +367,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <DiscourseIcon />
   <div
     class="discourse-browser flex flex-col h-[700px] border dark:border-gray-700 rounded-lg overflow-hidden"
   >

@@ -52,8 +52,8 @@ const getImageUrl = (url?: string | null) => {
 }
 
 const getIconHref = (icon?: string | null) => {
-  if (!icon || !props.baseUrl) return ''
-  return `${props.baseUrl}/svg-sprite/svg-sprite.svg#${icon}`
+  if (!icon) return ''
+  return `#${icon}`
 }
 
 const categoryTreeData = computed(() => {
