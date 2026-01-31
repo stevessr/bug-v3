@@ -58,8 +58,5 @@ export const defaultSettings: AppSettings = {
   // LinuxDo Credit 积分显示
   enableLinuxDoCredit: false, // 默认禁用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器
-  enableLinuxDoLikeCounter: false, // 默认禁用 LinuxDo 点赞计数器
-  // Anti-Cheat 水印替换
-  enableAntiCheat: false, // 默认禁用 Discourse 水印替换功能
-  antiCheatCustomText: '❌在错误的地方' // 默认水印文字
+  enableLinuxDoLikeCounter: false // 默认禁用 LinuxDo 点赞计数器
 }

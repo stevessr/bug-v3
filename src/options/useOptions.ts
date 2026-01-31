@@ -396,14 +396,6 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableLinuxDoCredit: value })
   }
 
-  const updateEnableAntiCheat = (value: boolean) => {
-    emojiStore.updateSettings({ enableAntiCheat: value })
-  }
-
-  const updateAntiCheatCustomText = (text: string) => {
-    emojiStore.updateSettings({ antiCheatCustomText: text })
-  }
-
   const openEditGroup = (group: EmojiGroup) => {
     if (group.id === 'favorites') {
       showError('常用分组不能编辑名称和图标')
@@ -856,8 +848,6 @@ export default function useOptions() {
     updateLinuxDoSeekingPosition,
     updateLinuxDoSeekingActionFilter,
     updateEnableLinuxDoCredit,
-    updateEnableAntiCheat,
-    updateAntiCheatCustomText,
     // drag/drop - from draggable composable
     handleDragStart: draggable.handleDragStart,
     handleDrop: draggable.handleDrop,

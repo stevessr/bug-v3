@@ -53,8 +53,6 @@ const {
   updateLinuxDoSeekingPosition,
   updateLinuxDoSeekingActionFilter,
   updateEnableLinuxDoCredit,
-  updateEnableAntiCheat,
-  updateAntiCheatCustomText,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
