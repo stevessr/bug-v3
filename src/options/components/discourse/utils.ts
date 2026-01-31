@@ -87,7 +87,7 @@ export function formatTime(dateStr: string): string {
 // Parse post content, extract images for preview
 // Skip images inside onebox, emoji, and other special containers
 export function parsePostContent(cooked: string, baseUrl?: string): ParsedContent {
-  if (!cooked) return { html: '', images: [] }
+  if (!cooked) return { html: '', images: [], segments: [] }
 
   const images: string[] = []
   const seen = new Set<string>()
@@ -159,5 +159,38 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     return oneboxes[parseInt(idx)] || ''
   })
 
-  return { html, images }
+  const segments: ParsedContent['segments'] = []
+  const placeholderRegex = /<span class="post-image-placeholder" data-index="(\d+)"><\/span>/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = placeholderRegex.exec(html)) !== null) {
+    if (match.index > lastIndex) {
+      const chunk = html.slice(lastIndex, match.index)
+      if (chunk.trim().length > 0) {
+        segments.push({ type: 'html', html: chunk })
+      }
+    }
+    const imgIndex = Number(match[1])
+    const src = images[imgIndex]
+    if (src) {
+      segments.push({ type: 'image', src })
+    }
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < html.length) {
+    const chunk = html.slice(lastIndex)
+    if (chunk.trim().length > 0) {
+      segments.push({ type: 'html', html: chunk })
+    }
+  }
+  if (segments.length === 0) {
+    segments.push({ type: 'html', html })
+  }
+
+  const cleanedHtml = segments
+    .filter(segment => segment.type === 'html')
+    .map(segment => segment.html)
+    .join('')
+
+  return { html: cleanedHtml, images, segments }
 }

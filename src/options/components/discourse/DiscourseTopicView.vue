@@ -41,7 +41,7 @@ const parsedPosts = computed(() => {
 })
 
 const getParsedPost = (postId: number): ParsedContent => {
-  return parsedPosts.value.get(postId) || { html: '', images: [] }
+  return parsedPosts.value.get(postId) || { html: '', images: [], segments: [] }
 }
 
 const handleSuggestedClick = (topic: SuggestedTopic) => {
@@ -274,19 +274,21 @@ onUnmounted(() => {
 
         <!-- Post content -->
         <div class="post-content prose dark:prose-invert max-w-none text-sm">
-          <div v-html="getParsedPost(post.id).html" />
-          <!-- Image preview group -->
-          <a-image-preview-group v-if="getParsedPost(post.id).images.length > 0">
-            <div class="post-images grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-              <a-image
-                v-for="(img, idx) in getParsedPost(post.id).images"
-                :key="idx"
-                :src="img"
-                :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
-                class="rounded cursor-pointer object-cover"
-                :style="{ maxHeight: '200px' }"
+          <a-image-preview-group>
+            <template v-for="(segment, idx) in getParsedPost(post.id).segments" :key="idx">
+              <div
+                v-if="segment.type === 'html'"
+                class="post-content-fragment"
+                v-html="segment.html"
               />
-            </div>
+              <a-image
+                v-else
+                :src="segment.src"
+                :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
+                class="post-inline-image rounded cursor-pointer"
+                :style="{ maxHeight: '420px' }"
+              />
+            </template>
           </a-image-preview-group>
         </div>
 
@@ -300,16 +302,11 @@ onUnmounted(() => {
             <button
               class="post-action-btn"
               :disabled="likingPostIds.has(post.id)"
-              @click="
-                activeReactionPostId = activeReactionPostId === post.id ? null : post.id
-              "
+              @click="activeReactionPostId = activeReactionPostId === post.id ? null : post.id"
             >
               反应
             </button>
-            <div
-              class="reaction-picker"
-              :class="{ visible: activeReactionPostId === post.id }"
-            >
+            <div class="reaction-picker" :class="{ visible: activeReactionPostId === post.id }">
               <button
                 v-for="item in REACTIONS"
                 :key="item.id"
@@ -377,6 +374,15 @@ onUnmounted(() => {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
+}
+
+.post-content :deep(.post-content-fragment) {
+  display: contents;
+}
+
+.post-content :deep(.post-inline-image) {
+  display: block;
+  margin: 0.5rem 0;
 }
 
 .post-content :deep(a) {
