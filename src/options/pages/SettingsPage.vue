@@ -53,6 +53,8 @@ const {
   updateLinuxDoSeekingPosition,
   updateLinuxDoSeekingActionFilter,
   updateEnableLinuxDoCredit,
+  updateEnableAntiCheat,
+  updateAntiCheatCustomText,
   updateTheme,
   updateCustomPrimaryColor,
   updateCustomColorScheme,
@@ -148,6 +150,11 @@ onMounted(async () => {
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
               @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"
+              @update:enableLinuxDoLikeCounter="
+                (v: boolean) => emojiStore.updateSettings({ enableLinuxDoLikeCounter: v })
+              "
+              @update:enableAntiCheat="updateEnableAntiCheat"
+              @update:antiCheatCustomText="updateAntiCheatCustomText"
             />
           </div>
         </a-tab-pane>

@@ -20,7 +20,9 @@ const emit = defineEmits([
   'update:cloudMarketDomain',
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
-  'update:enableLinuxDoLikeCounter'
+  'update:enableLinuxDoLikeCounter',
+  'update:enableAntiCheat',
+  'update:antiCheatCustomText'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -39,8 +41,8 @@ const handleSettingUpdate = (key: string, value: any) => {
 
 const getOutputFormat = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.outputFormat) || 'markdown'
-    return (settings && (settings as AppSettings).outputFormat) || 'markdown'
+    if (isRef(props.settings)) return (props.settings.value && props.settings.value.outputFormat) || 'markdown'
+    return (props.settings && (props.settings as AppSettings).outputFormat) || 'markdown'
   } catch {
     return 'markdown'
   }
@@ -123,6 +125,30 @@ const saveRouterRefreshInterval = async () => {
     await new Promise(resolve => setTimeout(resolve, 300))
   } finally {
     isRouterRefreshIntervalSaving.value = false
+  }
+}
+
+// Anti-Cheat 自定义文字的本地状态
+const localAntiCheatCustomText = ref<string>(getSetting('antiCheatCustomText', 'Hello World'))
+const isAntiCheatCustomTextSaving = ref(false)
+const enableAntiCheat = computed(() => getSetting('enableAntiCheat', false))
+
+// 监听 settings 变化，同步到本地状态
+watch(
+  () => getSetting('antiCheatCustomText', 'Hello World'),
+  val => {
+    localAntiCheatCustomText.value = val as string
+  }
+)
+
+// 保存 Anti-Cheat 自定义文字
+const saveAntiCheatCustomText = async () => {
+  isAntiCheatCustomTextSaving.value = true
+  try {
+    emit('update:antiCheatCustomText', localAntiCheatCustomText.value)
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } finally {
+    isAntiCheatCustomTextSaving.value = false
   }
 }
 </script>
@@ -216,6 +242,43 @@ const saveRouterRefreshInterval = async () => {
         label="启用 LinuxDo 点赞计数器 (试验性功能)"
         description="在 LinuxDo 点赞选择器上显示当日剩余点赞次数和冷却时间"
       />
+
+      <!-- Anti-Cheat 水印替换（仅在启用试验性特性时显示） -->
+      <SettingSwitch
+        v-if="enableExperimentalFeatures"
+        :model-value="getSetting('enableAntiCheat', false)"
+        @update:model-value="handleSettingUpdate('enableAntiCheat', $event)"
+        label="启用水印替换 (试验性功能)"
+        description="替换 Discourse 站点的隐形水印文字为自定义内容"
+      />
+
+      <!-- Anti-Cheat 自定义文字配置（仅在启用时显示） -->
+      <div
+        v-if="enableExperimentalFeatures && enableAntiCheat"
+        class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+      >
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">自定义水印文字</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">设置替换后的水印文字内容</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="localAntiCheatCustomText"
+              class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-48 dark:bg-gray-700 dark:text-white"
+              placeholder="Hello World"
+              title="自定义水印文字"
+            />
+            <a-button
+              type="primary"
+              :loading="isAntiCheatCustomTextSaving"
+              @click="saveAntiCheatCustomText"
+            >
+              保存
+            </a-button>
+          </div>
+        </div>
+      </div>
 
       <SettingSwitch
         :model-value="enableDiscourseRouterRefresh"

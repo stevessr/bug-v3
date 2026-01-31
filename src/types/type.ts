@@ -69,6 +69,9 @@ export interface AppSettings {
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器（试验性功能）
   enableLinuxDoLikeCounter?: boolean // 启用 LinuxDo 点赞计数器（显示当日剩余点赞次数）
+  // Anti-Cheat 水印替换（试验性功能）
+  enableAntiCheat?: boolean // 启用 Discourse 水印替换功能
+  antiCheatCustomText?: string // 自定义水印文字
 }
 
 export interface EmojiGroup {

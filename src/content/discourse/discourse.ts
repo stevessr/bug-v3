@@ -14,6 +14,7 @@ import { initDiscourseRouterRefresh } from './utils/router-refresh'
 import { initUserSummarySummonButton } from './utils/user-summary-summon'
 import { initLinuxDoCredit } from './credit'
 import { initLinuxDoLikeCounter } from './like-counter'
+import { initAntiCheat } from './anti-cheat'
 
 export async function initDiscourse() {
   try {
@@ -160,6 +161,16 @@ export async function initDiscourse() {
         if (enableLinuxDoLikeCounter === true) {
           initLinuxDoLikeCounter()
           console.log('[DiscourseOneClick] LinuxDo Like Counter enabled (experimental)')
+        }
+
+        // Anti-Cheat 水印替换（试验性功能）
+        const enableAntiCheat = await requestSettingFromBackground('enableAntiCheat')
+        if (enableAntiCheat === true) {
+          const antiCheatCustomText = await requestSettingFromBackground('antiCheatCustomText')
+          initAntiCheat(
+            typeof antiCheatCustomText === 'string' ? antiCheatCustomText : '❌在错误的地方'
+          )
+          console.log('[DiscourseOneClick] Anti-Cheat watermark replacement enabled (experimental)')
         }
       }
     } catch (e) {
