@@ -111,6 +111,14 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '关于'
     }
+  },
+  {
+    path: '/discourse-browser',
+    name: 'discourse-browser',
+    component: () => import('../pages/DiscourseBrowserPage.vue'),
+    meta: {
+      title: '论坛浏览器'
+    }
   }
 ]
 

@@ -157,6 +157,7 @@ const menuItems = computed(() => {
     { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
     { key: 'stats', label: t('statistics'), route: '/stats' },
     { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
+    { key: 'discourse-browser', label: '论坛浏览器', route: '/discourse-browser' },
     { key: 'about', label: t('about'), route: '/about' }
   ]
 
@@ -203,6 +204,7 @@ const handleMenuSelect = (info: any) => {
     'telegram-import': '/telegram-import',
     stats: '/stats',
     'ai-rename': '/ai-rename',
+    'discourse-browser': '/discourse-browser',
     about: '/about'
   }
 
@@ -296,6 +298,7 @@ onMounted(async () => {
         'bilibili-import': '/bilibili-import',
         stats: '/stats',
         'ai-rename': '/ai-rename',
+        'discourse-browser': '/discourse-browser',
         about: '/about'
       }
       const targetRoute = routeMap[queryTabs]

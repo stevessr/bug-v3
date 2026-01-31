@@ -240,7 +240,9 @@ onMounted(async () => {
               :settings="emojiStore.settings"
               @update:enableChatMultiReactor="updateEnableChatMultiReactor"
               @update:chatMultiReactorEmojis="updateChatMultiReactorEmojis"
-              @update:enableLinuxDoLikeCounter="(v: boolean) => emojiStore.updateSettings({ enableLinuxDoLikeCounter: v })"
+              @update:enableLinuxDoLikeCounter="
+                (v: boolean) => emojiStore.updateSettings({ enableLinuxDoLikeCounter: v })
+              "
             />
           </div>
         </a-tab-pane>
