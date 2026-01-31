@@ -25,6 +25,7 @@ export interface BrowserTab {
   // Category info for pagination
   currentCategorySlug: string
   currentCategoryId: number | null
+  currentCategoryName: string
   // Activity state
   activityState: UserActivityState | null
   // Messages state

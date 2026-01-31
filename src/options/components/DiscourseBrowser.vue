@@ -82,6 +82,21 @@ const isViewingSelf = computed(
     activeTab.value?.currentUser?.username === currentUsername.value
 )
 const showTopicComposer = ref(false)
+const showReplyComposer = ref(false)
+const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
+const currentCategoryOption = computed(() => {
+  const tab = activeTab.value
+  if (!tab?.currentCategoryId || !tab.currentCategoryName) return null
+  return {
+    id: tab.currentCategoryId,
+    name: tab.currentCategoryName,
+    slug: tab.currentCategorySlug || String(tab.currentCategoryId),
+    color: '',
+    text_color: '',
+    topic_count: 0,
+    parent_category_id: null
+  }
+})
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = () => {
@@ -217,6 +232,22 @@ const handleTopicPosted = (payload: any) => {
   }
 }
 
+const handleReplyTo = (payload: { postNumber: number; username: string }) => {
+  replyTarget.value = payload
+  showReplyComposer.value = true
+}
+
+const handleReplyPosted = () => {
+  showReplyComposer.value = false
+  replyTarget.value = null
+  refresh()
+}
+
+const handleClearReply = () => {
+  replyTarget.value = null
+  showReplyComposer.value = false
+}
+
 // Handle messages tab switch
 const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
@@ -335,21 +366,14 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
-            <a-button size="small" @click="toggleTopicComposer">
-              {{ showTopicComposer ? '收起' : '发帖' }}
-            </a-button>
-          </div>
-          <DiscourseComposer
-            v-if="showTopicComposer"
-            mode="topic"
-            :baseUrl="baseUrl"
-            :categories="activeTab.categories"
-            @posted="handleTopicPosted"
-          />
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
+        <a-button size="small" @click="toggleTopicComposer">
+          {{ showTopicComposer ? '收起' : '发帖' }}
+        </a-button>
+      </div>
 
-          <!-- Categories -->
+      <!-- Categories -->
           <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
 
           <!-- Latest topics -->
@@ -394,22 +418,14 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
-            <a-button size="small" @click="toggleTopicComposer">
-              {{ showTopicComposer ? '收起' : '发帖' }}
-            </a-button>
-          </div>
-          <DiscourseComposer
-            v-if="showTopicComposer"
-            mode="topic"
-            :baseUrl="baseUrl"
-            :categories="activeTab.categories"
-            :defaultCategoryId="activeTab.currentCategoryId"
-            @posted="handleTopicPosted"
-          />
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
+        <a-button size="small" @click="toggleTopicComposer">
+          {{ showTopicComposer ? '收起' : '发帖' }}
+        </a-button>
+      </div>
 
-          <DiscourseCategoryGrid
+      <DiscourseCategoryGrid
             v-if="activeTab.categories.length > 0"
             :categories="activeTab.categories"
             title="子分类"
@@ -461,6 +477,7 @@ onUnmounted(() => {
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
         @refresh="refresh"
+        @replyTo="handleReplyTo"
       />
 
       <!-- User profile view -->
@@ -534,6 +551,31 @@ onUnmounted(() => {
       />
     </div>
   </div>
+
+  <div v-if="activeTab?.viewType === 'topic' && activeTab.currentTopic" class="floating-composer">
+    <DiscourseComposer
+      v-if="showReplyComposer"
+      mode="reply"
+      :baseUrl="baseUrl"
+      :topicId="activeTab.currentTopic.id"
+      :replyToPostNumber="replyTarget?.postNumber || null"
+      :replyToUsername="replyTarget?.username || null"
+      @posted="handleReplyPosted"
+      @clearReply="handleClearReply"
+    />
+  </div>
+
+  <div v-if="activeTab?.viewType !== 'topic'" class="floating-composer">
+    <DiscourseComposer
+      v-if="showTopicComposer"
+      mode="topic"
+      :baseUrl="baseUrl"
+      :categories="activeTab?.categories || []"
+      :defaultCategoryId="activeTab?.currentCategoryId || null"
+      :currentCategory="currentCategoryOption"
+      @posted="handleTopicPosted"
+    />
+  </div>
 </template>
 
 <style scoped>
@@ -546,5 +588,13 @@ onUnmounted(() => {
 
 .tab-item {
   transition: background-color 0.15s;
+}
+
+.floating-composer {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  width: min(420px, calc(100vw - 40px));
+  z-index: 50;
 }
 </style>

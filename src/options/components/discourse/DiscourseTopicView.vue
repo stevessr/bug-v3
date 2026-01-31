@@ -4,6 +4,7 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
 import { formatTime, getAvatarUrl, parsePostContent, pageFetch, extractData } from './utils'
 import { togglePostLike } from './actions'
+import { REACTIONS } from '../../utils/linuxDoReaction'
 import DiscourseTopicList from './DiscourseTopicList.vue'
 import DiscourseComposer from './DiscourseComposer.vue'
 
@@ -19,13 +20,14 @@ const emit = defineEmits<{
   (e: 'openSuggestedTopic', topic: SuggestedTopic): void
   (e: 'openUser', username: string): void
   (e: 'refresh'): void
+  (e: 'replyTo', payload: { postNumber: number; username: string }): void
 }>()
 
 const postsListRef = ref<HTMLElement | null>(null)
-const composerRef = ref<HTMLElement | null>(null)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
 const likedPostIds = ref<Set<number>>(new Set())
 const likingPostIds = ref<Set<number>>(new Set())
+const activeReactionPostId = ref<number | null>(null)
 
 // Parse posts and cache results
 const parsedPosts = computed(() => {
@@ -50,48 +52,47 @@ const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
 
-const scrollToComposer = () => {
-  requestAnimationFrame(() => {
-    composerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
-
 const handleReplyClick = (post: DiscoursePost) => {
   replyTarget.value = { postNumber: post.post_number, username: post.username }
-  scrollToComposer()
+  emit('replyTo', replyTarget.value)
 }
 
 const handleClearReply = () => {
   replyTarget.value = null
 }
 
-const isPostLiked = (post: DiscoursePost) => {
+const isPostLiked = (post: DiscoursePost, reactionId: string) => {
   if (likedPostIds.value.has(post.id)) return true
   const postAny = post as any
   const summary = postAny?.actions_summary || []
   if (Array.isArray(summary)) {
-    if (summary.some((item: any) => item?.id === 2 && item?.acted)) return true
+    if (reactionId === 'heart' && summary.some((item: any) => item?.id === 2 && item?.acted))
+      return true
   }
   const reactions = postAny?.reactions
   if (reactions && typeof reactions === 'object') {
     const items = Object.values(reactions) as any[]
-    if (items.some(item => item?.id === 'heart' && item?.reacted)) return true
+    if (items.some(item => item?.id === reactionId && item?.reacted)) return true
   }
   return false
 }
 
-const toggleLike = async (post: DiscoursePost) => {
+const toggleLike = async (post: DiscoursePost, reactionId: string) => {
   if (likingPostIds.value.has(post.id)) return
   likingPostIds.value.add(post.id)
-  const wasLiked = isPostLiked(post)
+  const wasLiked = isPostLiked(post, reactionId)
   try {
-    await togglePostLike(props.baseUrl, post.id)
+    await togglePostLike(props.baseUrl, post.id, reactionId)
     if (wasLiked) {
       likedPostIds.value.delete(post.id)
-      post.like_count = Math.max(0, post.like_count - 1)
+      if (reactionId === 'heart') {
+        post.like_count = Math.max(0, post.like_count - 1)
+      }
     } else {
       likedPostIds.value.add(post.id)
-      post.like_count = (post.like_count || 0) + 1
+      if (reactionId === 'heart') {
+        post.like_count = (post.like_count || 0) + 1
+      }
     }
   } catch (error) {
     console.warn('[DiscourseBrowser] toggle like failed:', error)
@@ -290,15 +291,37 @@ onUnmounted(() => {
         </div>
 
         <!-- Post footer -->
-        <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
-          <button
-            class="post-action-btn"
-            :class="{ active: isPostLiked(post) }"
-            :disabled="likingPostIds.has(post.id)"
-            @click="toggleLike(post)"
+        <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 post-actions">
+          <div
+            class="reaction-trigger"
+            @mouseenter="activeReactionPostId = post.id"
+            @mouseleave="activeReactionPostId = null"
           >
-            👍 赞
-          </button>
+            <button
+              class="post-action-btn"
+              :disabled="likingPostIds.has(post.id)"
+              @click="
+                activeReactionPostId = activeReactionPostId === post.id ? null : post.id
+              "
+            >
+              反应
+            </button>
+            <div
+              class="reaction-picker"
+              :class="{ visible: activeReactionPostId === post.id }"
+            >
+              <button
+                v-for="item in REACTIONS"
+                :key="item.id"
+                class="reaction-item"
+                :class="{ active: isPostLiked(post, item.id) }"
+                @click="toggleLike(post, item.id)"
+              >
+                <span class="emoji">{{ item.emoji }}</span>
+                <span class="label">{{ item.name }}</span>
+              </button>
+            </div>
+          </div>
           <button class="post-action-btn" @click="handleReplyClick(post)">回复</button>
           <span v-if="post.like_count > 0">{{ post.like_count }} 赞</span>
           <span v-if="post.reply_count > 0">{{ post.reply_count }} 回复</span>
@@ -306,18 +329,6 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
-
-    <div ref="composerRef" class="pt-2">
-      <DiscourseComposer
-        mode="reply"
-        :baseUrl="baseUrl"
-        :topicId="topic.id"
-        :replyToPostNumber="replyTarget?.postNumber || null"
-        :replyToUsername="replyTarget?.username || null"
-        @posted="handleReplyPosted"
-        @clearReply="handleClearReply"
-      />
-    </div>
 
     <!-- Loading more indicator -->
     <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
@@ -421,6 +432,78 @@ onUnmounted(() => {
 .post-action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.reaction-trigger {
+  position: relative;
+}
+
+.reaction-picker {
+  position: absolute;
+  left: 0;
+  bottom: 28px;
+  display: none;
+  min-width: 220px;
+  max-width: 260px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+  z-index: 20;
+}
+
+.dark .reaction-picker {
+  background: rgba(17, 24, 39, 0.98);
+  border-color: #374151;
+}
+
+.reaction-picker.visible {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.reaction-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  text-align: left;
+}
+
+.reaction-item:hover {
+  background: #f1f5f9;
+  color: #1d4ed8;
+}
+
+.dark .reaction-item {
+  color: #cbd5f5;
+}
+
+.dark .reaction-item:hover {
+  background: #1f2937;
+  color: #93c5fd;
+}
+
+.reaction-item.active {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.reaction-item .emoji {
+  width: 18px;
+}
+
+.reaction-item .label {
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Quote styles */

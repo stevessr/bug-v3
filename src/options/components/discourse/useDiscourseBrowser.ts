@@ -92,6 +92,7 @@ export function useDiscourseBrowser() {
       hasMoreTopics: true,
       currentCategorySlug: '',
       currentCategoryId: null,
+      currentCategoryName: '',
       activityState: null,
       messagesState: null,
       followFeedPage: 0,

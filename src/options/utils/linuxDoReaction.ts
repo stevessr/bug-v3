@@ -141,6 +141,9 @@ async function getCsrfToken(): Promise<string | null> {
       'text'
     )
     const html = res.data
+    if (typeof html !== 'string') {
+      return null
+    }
     const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
     return match ? match[1] : null
   } catch (e) {

@@ -33,6 +33,11 @@ export async function loadCategory(
     data?.topic_list?.category?.id ??
     data?.topic_list?.category_id ??
     null
+  tab.currentCategoryName =
+    data?.category?.name ??
+    data?.topic_list?.category?.name ??
+    data?.topic_list?.category_name ??
+    ''
 
   if (data?.users) {
     tab.activeUsers = data.users

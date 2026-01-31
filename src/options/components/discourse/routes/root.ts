@@ -35,6 +35,7 @@ export async function loadHome(
   tab.topicsPage = 0
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
+  tab.currentCategoryName = ''
 
   if (topicData?.users) {
     tab.activeUsers = topicData.users

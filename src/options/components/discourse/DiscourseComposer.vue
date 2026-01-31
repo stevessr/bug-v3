@@ -5,7 +5,7 @@ import DOMPurify from 'dompurify'
 import katex from 'katex'
 
 import type { DiscourseCategory } from './types'
-import { createTopic, replyToTopic } from './actions'
+import { createTopic, replyToTopic, searchTags } from './actions'
 
 type ComposerMode = 'topic' | 'reply'
 
@@ -16,6 +16,7 @@ const props = defineProps<{
   replyToPostNumber?: number | null
   replyToUsername?: string | null
   categories?: DiscourseCategory[]
+  currentCategory?: DiscourseCategory | null
   defaultCategoryId?: number | null
 }>()
 
@@ -28,12 +29,15 @@ marked.setOptions({ breaks: true, gfm: true })
 
 const title = ref('')
 const raw = ref('')
-const tagsInput = ref('')
+const selectedTags = ref<string[]>([])
+const tagOptions = ref<Array<{ value: string; label: string }>>([])
+const tagsLoading = ref(false)
 const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
 const viewMode = ref<'edit' | 'preview' | 'split'>('edit')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+let tagSearchTimer: number | null = null
 
 watch(
   () => props.defaultCategoryId,
@@ -42,12 +46,29 @@ watch(
   }
 )
 
-const tags = computed(() =>
-  tagsInput.value
-    .split(/[,\\s]+/)
-    .map(v => v.trim())
-    .filter(Boolean)
-)
+const categoryTreeData = computed(() => {
+  const list = props.categories ? [...props.categories] : []
+  if (props.currentCategory && !list.find(cat => cat.id === props.currentCategory!.id)) {
+    list.unshift(props.currentCategory)
+  }
+
+  const nodeMap = new Map<number, { title: string; value: number; key: number; children: any[] }>()
+  list.forEach(cat => {
+    nodeMap.set(cat.id, { title: cat.name, value: cat.id, key: cat.id, children: [] })
+  })
+
+  const roots: Array<{ title: string; value: number; key: number; children: any[] }> = []
+  list.forEach(cat => {
+    const node = nodeMap.get(cat.id)!
+    if (cat.parent_category_id && nodeMap.has(cat.parent_category_id)) {
+      nodeMap.get(cat.parent_category_id)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+
+  return roots
+})
 
 const previewHtml = computed(() => renderMarkdown(raw.value))
 
@@ -154,10 +175,10 @@ async function handleSubmit() {
         title: title.value.trim(),
         raw: raw.value.trim(),
         categoryId: categoryId.value,
-        tags: tags.value
+        tags: selectedTags.value
       })
       title.value = ''
-      tagsInput.value = ''
+      selectedTags.value = []
     } else {
       result = await replyToTopic(props.baseUrl, {
         topicId: props.topicId!,
@@ -174,6 +195,39 @@ async function handleSubmit() {
     isSubmitting.value = false
   }
 }
+
+async function runTagSearch(query: string) {
+  tagsLoading.value = true
+  try {
+    const results = await searchTags(props.baseUrl, query, categoryId.value)
+    tagOptions.value = results.map(item => ({
+      value: item.name || item.text,
+      label: item.text || item.name
+    }))
+  } catch {
+    tagOptions.value = []
+  } finally {
+    tagsLoading.value = false
+  }
+}
+
+const handleTagSearch = (query: string) => {
+  if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+  tagSearchTimer = window.setTimeout(() => runTagSearch(query), 250)
+}
+
+const handleTagDropdown = (open: boolean) => {
+  if (open && tagOptions.value.length === 0) {
+    runTagSearch('')
+  }
+}
+
+watch(categoryId, () => {
+  tagOptions.value = []
+  if (selectedTags.value.length === 0) {
+    runTagSearch('')
+  }
+})
 
 const showPreview = computed(() => viewMode.value !== 'edit')
 const showEditor = computed(() => viewMode.value !== 'preview')
@@ -232,12 +286,30 @@ const showEditor = computed(() => viewMode.value !== 'preview')
     <div v-if="mode === 'topic'" class="px-4 pt-4 space-y-3">
       <a-input v-model:value="title" placeholder="标题" />
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a-select v-model:value="categoryId" placeholder="选择分类" allow-clear>
-          <a-select-option v-for="cat in categories || []" :key="cat.id" :value="cat.id">
-            {{ cat.name }}
+        <a-tree-select
+          v-model:value="categoryId"
+          placeholder="选择分类"
+          allow-clear
+          show-search
+          tree-default-expand-all
+          tree-node-filter-prop="title"
+          :tree-data="categoryTreeData"
+        />
+        <a-select
+          v-model:value="selectedTags"
+          mode="tags"
+          show-search
+          :filter-option="false"
+          :not-found-content="tagsLoading ? '加载中...' : '无结果'"
+          placeholder="标签 (搜索或输入)"
+          :token-separators="[' ', ',']"
+          @search="handleTagSearch"
+          @dropdownVisibleChange="handleTagDropdown"
+        >
+          <a-select-option v-for="tag in tagOptions" :key="tag.value" :value="tag.value">
+            {{ tag.label }}
           </a-select-option>
         </a-select>
-        <a-input v-model:value="tagsInput" placeholder="标签 (逗号或空格分隔)" />
       </div>
     </div>
 
