@@ -70,6 +70,7 @@ export interface DiscourseCategory {
   text_color: string
   topic_count: number
   description?: string
+  parent_category_id?: number | null
 }
 
 export interface DiscourseUser {

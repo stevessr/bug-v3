@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { DiscourseCategory, DiscourseUser } from './types'
 import { getAvatarUrl } from './utils'
 
-defineProps<{
+const props = defineProps<{
   categories: DiscourseCategory[]
   users: DiscourseUser[]
   baseUrl: string
@@ -12,6 +13,27 @@ const emit = defineEmits<{
   (e: 'clickCategory', category: DiscourseCategory): void
   (e: 'clickUser', username: string): void
 }>()
+
+const hasHierarchy = computed(() => {
+  const hasChildren = props.categories.some(cat => cat.parent_category_id)
+  const hasParents = props.categories.some(cat => !cat.parent_category_id)
+  return hasChildren && hasParents
+})
+
+const topCategories = computed(() =>
+  hasHierarchy.value ? props.categories.filter(cat => !cat.parent_category_id) : props.categories
+)
+
+const childrenByParent = computed(() => {
+  const map = new Map<number, DiscourseCategory[]>()
+  props.categories.forEach(cat => {
+    if (!cat.parent_category_id) return
+    const list = map.get(cat.parent_category_id) || []
+    list.push(cat)
+    map.set(cat.parent_category_id, list)
+  })
+  return map
+})
 </script>
 
 <template>
@@ -23,19 +45,42 @@ const emit = defineEmits<{
     >
       <h3 class="text-sm font-semibold mb-3 dark:text-white">分类</h3>
       <div class="space-y-1">
-        <div
-          v-for="cat in categories.slice(0, 12)"
-          :key="cat.id"
-          class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-          @click="emit('clickCategory', cat)"
-        >
+        <template v-for="cat in topCategories.slice(0, 12)" :key="cat.id">
           <div
-            class="w-3 h-3 rounded-sm flex-shrink-0"
-            :style="{ backgroundColor: `#${cat.color}` }"
-          />
-          <span class="text-sm dark:text-gray-300 truncate flex-1">{{ cat.name }}</span>
-          <span class="text-xs text-gray-400">{{ cat.topic_count }}</span>
-        </div>
+            class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+            @click="emit('clickCategory', cat)"
+          >
+            <div
+              class="w-3 h-3 rounded-sm flex-shrink-0"
+              :style="{ backgroundColor: `#${cat.color}` }"
+            />
+            <span class="text-sm dark:text-gray-300 truncate flex-1">{{ cat.name }}</span>
+            <span class="text-xs text-gray-400">{{ cat.topic_count }}</span>
+          </div>
+          <div
+            v-if="hasHierarchy && (childrenByParent.get(cat.id)?.length || 0) > 0"
+            class="ml-4 space-y-1"
+          >
+            <div
+              v-for="child in childrenByParent.get(cat.id)?.slice(0, 6)"
+              :key="child.id"
+              class="flex items-center gap-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+              @click="emit('clickCategory', child)"
+            >
+              <div
+                class="w-2 h-2 rounded-sm flex-shrink-0"
+                :style="{ backgroundColor: `#${child.color}` }"
+              />
+              <span class="text-xs dark:text-gray-300 truncate flex-1">{{ child.name }}</span>
+            </div>
+            <div
+              v-if="(childrenByParent.get(cat.id)?.length || 0) > 6"
+              class="text-xs text-gray-400 ml-1"
+            >
+              还有 {{ (childrenByParent.get(cat.id)?.length || 0) - 6 }} 个子分类...
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
