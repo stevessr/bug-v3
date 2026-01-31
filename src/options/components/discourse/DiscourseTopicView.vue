@@ -202,6 +202,77 @@ const handleUserClick = (username: string) => {
   vertical-align: middle;
 }
 
+/* Quote styles */
+.post-content :deep(aside.quote) {
+  border-left: 3px solid #94a3b8;
+  background: #f7f2e3;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  border-radius: 6px;
+}
+
+:global(.dark) .post-content :deep(aside.quote) {
+  background: #1f2937;
+}
+
+.post-content :deep(aside.quote .title) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.post-content :deep(aside.quote .title .avatar) {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+}
+
+.post-content :deep(aside.quote .quote-title__text-content) {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.post-content :deep(aside.quote .badge-category__wrapper) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.post-content :deep(aside.quote .badge-category) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.post-content :deep(aside.quote .badge-category svg) {
+  width: 12px;
+  height: 12px;
+}
+
+.post-content :deep(aside.quote .badge-category__name) {
+  line-height: 1;
+}
+
+.post-content :deep(aside.quote blockquote) {
+  display: block;
+  margin: 0.5rem 0 0 0;
+  color: #4b5563;
+}
+
+:global(.dark) .post-content :deep(aside.quote blockquote) {
+  color: #d1d5db;
+}
+
+.post-content :deep(aside.quote .quote-controls) {
+  display: none;
+}
+
 /* Onebox styles */
 .post-content :deep(.onebox) {
   display: block;
