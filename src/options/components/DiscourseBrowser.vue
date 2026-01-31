@@ -15,6 +15,7 @@ import type { DiscourseCategory, DiscourseTopic, SuggestedTopic } from './discou
 import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
+import DiscourseUserView from './discourse/DiscourseUserView.vue'
 
 const {
   baseUrl,
@@ -35,6 +36,7 @@ const {
   openCategory,
   openInNewTab,
   openSuggestedTopic,
+  openUser,
   loadMorePosts,
   loadMoreTopics
 } = useDiscourseBrowser()
@@ -76,6 +78,16 @@ const handleMiddleClick = (url: string) => {
 
 // Handle suggested topic click
 const handleSuggestedTopicClick = (topic: SuggestedTopic) => {
+  openSuggestedTopic(topic)
+}
+
+// Handle user click
+const handleUserClick = (username: string) => {
+  openUser(username)
+}
+
+// Handle topic click from user view
+const handleUserTopicClick = (topic: { id: number; slug: string }) => {
   openSuggestedTopic(topic)
 }
 
@@ -251,6 +263,15 @@ onUnmounted(() => {
         :isLoadingMore="isLoadingMore"
         :hasMorePosts="activeTab.hasMorePosts"
         @openSuggestedTopic="handleSuggestedTopicClick"
+        @openUser="handleUserClick"
+      />
+
+      <!-- User profile view -->
+      <DiscourseUserView
+        v-else-if="activeTab?.viewType === 'user' && activeTab.currentUser"
+        :user="activeTab.currentUser"
+        :baseUrl="baseUrl"
+        @openTopic="handleUserTopicClick"
       />
     </div>
   </div>

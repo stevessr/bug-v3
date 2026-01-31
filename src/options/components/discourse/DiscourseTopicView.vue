@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'openSuggestedTopic', topic: SuggestedTopic): void
+  (e: 'openUser', username: string): void
 }>()
 
 // Parse posts and cache results
@@ -32,6 +33,10 @@ const getParsedPost = (postId: number): ParsedContent => {
 
 const handleSuggestedClick = (topic: SuggestedTopic) => {
   emit('openSuggestedTopic', topic)
+}
+
+const handleUserClick = (username: string) => {
+  emit('openUser', username)
 }
 </script>
 
@@ -60,12 +65,25 @@ const handleSuggestedClick = (topic: SuggestedTopic) => {
           <img
             :src="getAvatarUrl(post.avatar_template, baseUrl)"
             :alt="post.username"
-            class="w-10 h-10 rounded-full"
+            class="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+            :title="`查看 ${post.username} 的主页`"
+            @click="handleUserClick(post.username)"
           />
           <div>
-            <div class="font-medium dark:text-white">{{ post.name || post.username }}</div>
+            <div
+              class="font-medium dark:text-white cursor-pointer hover:text-blue-500"
+              @click="handleUserClick(post.username)"
+            >
+              {{ post.name || post.username }}
+            </div>
             <div class="text-xs text-gray-500">
-              @{{ post.username }} · #{{ post.post_number }} · {{ formatTime(post.created_at) }}
+              <span
+                class="cursor-pointer hover:text-blue-500"
+                @click="handleUserClick(post.username)"
+              >
+                @{{ post.username }}
+              </span>
+              · #{{ post.post_number }} · {{ formatTime(post.created_at) }}
             </div>
           </div>
         </div>

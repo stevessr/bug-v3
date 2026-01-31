@@ -9,7 +9,8 @@ import type {
   DiscourseTopic,
   DiscourseTopicDetail,
   DiscourseUser,
-  DiscoursePost
+  DiscoursePost,
+  DiscourseUserProfileData
 } from './types'
 import { pageFetch, extractData, generateId } from './utils'
 
@@ -59,6 +60,7 @@ export function useDiscourseBrowser() {
       categories: [],
       topics: [],
       currentTopic: null,
+      currentUser: null,
       errorMessage: '',
       loadedPostIds: new Set(),
       hasMorePosts: false,
@@ -129,7 +131,7 @@ export function useDiscourseBrowser() {
         tab.viewType = 'topic'
       } else if (pathname.startsWith('/u/')) {
         const username = pathname.replace('/u/', '').split('/')[0]
-        tab.title = `用户：${username}`
+        await loadUser(tab, username)
         tab.viewType = 'user'
       } else {
         await loadHome(tab)
@@ -232,6 +234,34 @@ export function useDiscourseBrowser() {
       tab.currentTopic = null
       tab.loadedPostIds = new Set()
       tab.hasMorePosts = false
+    }
+  }
+
+  // Load user profile
+  async function loadUser(tab: BrowserTab, username: string) {
+    // Fetch user info and summary in parallel
+    const [userResult, summaryResult] = await Promise.all([
+      pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
+      pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null)
+    ])
+
+    const userData = extractData(userResult)
+    const summaryData = summaryResult ? extractData(summaryResult) : null
+
+    if (userData?.user) {
+      const profileData: DiscourseUserProfileData = {
+        user: userData.user,
+        user_summary: summaryData?.user_summary,
+        topics: summaryData?.topics
+      }
+      tab.currentUser = profileData.user
+      // Store summary in user object for access
+      ;(tab.currentUser as any)._summary = summaryData?.user_summary
+      ;(tab.currentUser as any)._topics = summaryData?.topics
+      tab.title = `${userData.user.username} - 用户主页`
+    } else {
+      tab.currentUser = null
+      throw new Error('用户不存在')
     }
   }
 
@@ -379,6 +409,11 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
   }
 
+  // Open user profile
+  function openUser(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}`)
+  }
+
   return {
     // State
     baseUrl,
@@ -407,6 +442,7 @@ export function useDiscourseBrowser() {
     openCategory,
     openInNewTab,
     openSuggestedTopic,
+    openUser,
     loadMorePosts,
     loadMoreTopics
   }

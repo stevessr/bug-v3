@@ -114,3 +114,76 @@ export interface ParsedContent {
   html: string
   images: string[]
 }
+
+// User profile types
+export interface DiscourseUserProfile {
+  id: number
+  username: string
+  name: string
+  avatar_template: string
+  title?: string
+  trust_level: number
+  moderator?: boolean
+  admin?: boolean
+  bio_excerpt?: string
+  bio_cooked?: string
+  website?: string
+  website_name?: string
+  location?: string
+  created_at: string
+  last_seen_at?: string
+  last_posted_at?: string
+  profile_view_count?: number
+  badge_count?: number
+  time_read?: number
+  days_visited?: number
+  flair_name?: string
+  flair_url?: string
+  flair_bg_color?: string
+  flair_color?: string
+  card_background_upload_url?: string
+  profile_background_upload_url?: string
+  featured_topic?: {
+    id: number
+    title: string
+    fancy_title: string
+    slug: string
+    posts_count: number
+  }
+  status?: {
+    description: string
+    emoji: string
+    ends_at: string | null
+  }
+}
+
+export interface DiscourseUserSummary {
+  likes_given: number
+  likes_received: number
+  topics_entered: number
+  posts_read_count: number
+  days_visited: number
+  topic_count: number
+  post_count: number
+  time_read: number
+  bookmark_count: number
+  solved_count?: number
+  topic_ids: number[]
+  top_categories: Array<{
+    id: number
+    name: string
+    color: string
+    slug: string
+    topic_count: number
+    post_count: number
+  }>
+  most_liked_by_users: DiscourseUser[]
+  most_liked_users: DiscourseUser[]
+  most_replied_to_users: DiscourseUser[]
+}
+
+export interface DiscourseUserProfileData {
+  user: DiscourseUserProfile
+  user_summary?: DiscourseUserSummary
+  topics?: DiscourseTopic[]
+}
