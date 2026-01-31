@@ -38,6 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'openTopic', topic: { id: number; slug: string }): void
   (e: 'openActivity', username: string): void
+  (e: 'openMessages', username: string): void
 }>()
 
 // Format time read

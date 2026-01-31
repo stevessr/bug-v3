@@ -27,9 +27,11 @@ export interface BrowserTab {
   currentCategoryId: number | null
   // Activity state
   activityState: UserActivityState | null
+  // Messages state
+  messagesState: MessagesState | null
 }
 
-export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'activity' | 'error'
+export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'activity' | 'messages' | 'error'
 
 export interface DiscourseTopic {
   id: number
@@ -192,7 +194,15 @@ export interface DiscourseUserProfileData {
 }
 
 // User activity types
-export type ActivityTabType = 'all' | 'topics' | 'replies' | 'likes' | 'reactions' | 'solved' | 'assigned' | 'votes'
+export type ActivityTabType =
+  | 'all'
+  | 'topics'
+  | 'replies'
+  | 'likes'
+  | 'reactions'
+  | 'solved'
+  | 'assigned'
+  | 'votes'
 
 export interface DiscourseUserAction {
   excerpt: string
@@ -290,5 +300,15 @@ export interface UserActivityState {
   reactions: DiscourseReaction[]
   solvedPosts: DiscourseSolvedPost[]
   offset: number
+  hasMore: boolean
+}
+
+// Messages types
+export type MessagesTabType = 'all' | 'sent' | 'new' | 'unread' | 'archive'
+
+export interface MessagesState {
+  activeTab: MessagesTabType
+  topics: DiscourseTopic[]
+  page: number
   hasMore: boolean
 }

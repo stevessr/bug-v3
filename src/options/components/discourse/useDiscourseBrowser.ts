@@ -15,7 +15,9 @@ import type {
   DiscourseUserAction,
   DiscourseReaction,
   DiscourseSolvedPost,
-  UserActivityState
+  UserActivityState,
+  MessagesTabType,
+  MessagesState
 } from './types'
 import { pageFetch, extractData, generateId } from './utils'
 
@@ -75,7 +77,8 @@ export function useDiscourseBrowser() {
       hasMoreTopics: true,
       currentCategorySlug: '',
       currentCategoryId: null,
-      activityState: null
+      activityState: null,
+      messagesState: null
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -144,6 +147,11 @@ export function useDiscourseBrowser() {
           await loadUserActivity(tab, username, 'all')
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
+        } else if (pathParts[1] === 'messages') {
+          // Messages page
+          await loadMessages(tab, username, 'all')
+          tab.title = `${username} - 私信`
+          tab.viewType = 'messages'
         } else {
           await loadUser(tab, username)
           tab.viewType = 'user'
@@ -464,6 +472,127 @@ export function useDiscourseBrowser() {
     }
   }
 
+  // Load messages
+  async function loadMessages(
+    tab: BrowserTab,
+    username: string,
+    messagesTab: MessagesTabType = 'all'
+  ) {
+    // First load user profile if not already loaded
+    if (!tab.currentUser || tab.currentUser.username !== username) {
+      const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
+      const userData = extractData(userResult)
+      if (userData?.user) {
+        tab.currentUser = userData.user
+      }
+    }
+
+    // Initialize messages state
+    tab.messagesState = {
+      activeTab: messagesTab,
+      topics: [],
+      page: 0,
+      hasMore: true
+    }
+
+    // Load messages data
+    await loadMessagesData(tab, username, messagesTab, true)
+  }
+
+  // Load messages data for specific tab
+  async function loadMessagesData(
+    tab: BrowserTab,
+    username: string,
+    messagesTab: MessagesTabType,
+    reset = false
+  ) {
+    if (!tab.messagesState) return
+
+    if (reset) {
+      tab.messagesState.page = 0
+      tab.messagesState.hasMore = true
+      tab.messagesState.topics = []
+    }
+
+    const page = tab.messagesState.page
+
+    try {
+      let endpoint: string
+      switch (messagesTab) {
+        case 'all':
+          endpoint = 'private-messages'
+          break
+        case 'sent':
+          endpoint = 'private-messages-sent'
+          break
+        case 'new':
+          endpoint = 'private-messages-new'
+          break
+        case 'unread':
+          endpoint = 'private-messages-unread'
+          break
+        case 'archive':
+          endpoint = 'private-messages-archive'
+          break
+        default:
+          return
+      }
+
+      const url = `${baseUrl.value}/topics/${endpoint}/${username}.json${page > 0 ? `?page=${page}` : ''}`
+      const result = await pageFetch<any>(url)
+      const data = extractData(result)
+
+      const topics = data?.topic_list?.topics || []
+      if (reset) {
+        tab.messagesState.topics = topics
+      } else {
+        const existingIds = new Set(tab.messagesState.topics.map((t: DiscourseTopic) => t.id))
+        const newTopics = topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
+        tab.messagesState.topics = [...tab.messagesState.topics, ...newTopics]
+      }
+      tab.messagesState.hasMore = !!data?.topic_list?.more_topics_url
+      tab.messagesState.page++
+    } catch (e) {
+      console.error('[DiscourseBrowser] loadMessagesData error:', e)
+      tab.messagesState.hasMore = false
+    }
+  }
+
+  // Switch messages tab
+  async function switchMessagesTab(messagesTab: MessagesTabType) {
+    const tab = activeTab.value
+    if (!tab || !tab.currentUser || !tab.messagesState) return
+
+    tab.messagesState.activeTab = messagesTab
+    isLoadingMore.value = true
+
+    try {
+      await loadMessagesData(tab, tab.currentUser.username, messagesTab, true)
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
+  // Load more messages
+  async function loadMoreMessages() {
+    const tab = activeTab.value
+    if (!tab || !tab.currentUser || !tab.messagesState || isLoadingMore.value) return
+    if (!tab.messagesState.hasMore) return
+
+    isLoadingMore.value = true
+
+    try {
+      await loadMessagesData(tab, tab.currentUser.username, tab.messagesState.activeTab, false)
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
+  // Open user messages
+  function openUserMessages(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/messages`)
+  }
+
   // Load more posts (pagination)
   async function loadMorePosts() {
     const tab = activeTab.value
@@ -648,9 +777,12 @@ export function useDiscourseBrowser() {
     openSuggestedTopic,
     openUser,
     openUserActivity,
+    openUserMessages,
     loadMorePosts,
     loadMoreTopics,
     switchActivityTab,
-    loadMoreActivity
+    loadMoreActivity,
+    switchMessagesTab,
+    loadMoreMessages
   }
 }

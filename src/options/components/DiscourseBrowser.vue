@@ -15,7 +15,8 @@ import type {
   DiscourseCategory,
   DiscourseTopic,
   SuggestedTopic,
-  ActivityTabType
+  ActivityTabType,
+  MessagesTabType
 } from './discourse/types'
 import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
@@ -23,6 +24,7 @@ import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 import DiscourseUserView from './discourse/DiscourseUserView.vue'
 import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
 import DiscourseActivityView from './discourse/DiscourseActivityView.vue'
+import DiscourseMessagesView from './discourse/DiscourseMessagesView.vue'
 
 const {
   baseUrl,
@@ -45,10 +47,13 @@ const {
   openSuggestedTopic,
   openUser,
   openUserActivity,
+  openUserMessages,
   loadMorePosts,
   loadMoreTopics,
   switchActivityTab,
-  loadMoreActivity
+  loadMoreActivity,
+  switchMessagesTab,
+  loadMoreMessages
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -69,6 +74,8 @@ const handleScroll = () => {
       loadMoreTopics()
     } else if (viewType === 'activity') {
       loadMoreActivity()
+    } else if (viewType === 'messages') {
+      loadMoreMessages()
     }
   }
 }
@@ -118,6 +125,16 @@ const handleGoToProfile = () => {
 // Handle open user activity
 const handleOpenUserActivity = (username: string) => {
   openUserActivity(username)
+}
+
+// Handle open user messages
+const handleOpenUserMessages = (username: string) => {
+  openUserMessages(username)
+}
+
+// Handle messages tab switch
+const handleMessagesTabSwitch = (tab: MessagesTabType) => {
+  switchMessagesTab(tab)
 }
 
 // Initialize
@@ -342,6 +359,21 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :isLoadingMore="isLoadingMore"
         @switchTab="handleActivityTabSwitch"
+        @openTopic="handleUserTopicClick"
+        @openUser="handleUserClick"
+        @goToProfile="handleGoToProfile"
+      />
+
+      <!-- User messages view -->
+      <DiscourseMessagesView
+        v-else-if="
+          activeTab?.viewType === 'messages' && activeTab.currentUser && activeTab.messagesState
+        "
+        :user="activeTab.currentUser"
+        :messagesState="activeTab.messagesState"
+        :baseUrl="baseUrl"
+        :isLoadingMore="isLoadingMore"
+        @switchTab="handleMessagesTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
         @goToProfile="handleGoToProfile"
