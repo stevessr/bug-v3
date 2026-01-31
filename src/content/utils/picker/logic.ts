@@ -542,8 +542,8 @@ export class FilePickerLogic {
   }
 
   private injectStyles() {
-    const style = document.createElement('style')
-    style.textContent = `
+    const style = createE('style', {
+      text: `
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -568,9 +568,10 @@ export class FilePickerLogic {
           transform: translateX(0);
         }
       }
-    `
+    `,
+      attrs: { 'data-custom-picker-animations': 'true' },
+    })
     if (!DQS('style[data-custom-picker-animations]')) {
-      style.setAttribute('data-custom-picker-animations', 'true')
       DHA(style)
     }
   }

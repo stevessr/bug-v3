@@ -2,6 +2,7 @@
  * X.com 自动下载设置界面
  */
 
+import { DOA, createE } from '../../utils/createEl'
 import { AutoDownloadManager, getAutoDownloadManager } from './manager'
 
 export class AutoDownloadSettingsUI {
@@ -21,14 +22,14 @@ export class AutoDownloadSettingsUI {
   private inject(): void {
     if (document.getElementById('x-autodownload-toggle')) return
     this.toggleButton = this.createToggleButton()
-    document.body.appendChild(this.toggleButton)
+    DOA(this.toggleButton)
   }
 
   private createToggleButton(): HTMLElement {
-    const button = document.createElement('div')
-    button.id = 'x-autodownload-toggle'
-    button.innerHTML = '⚙️'
-    button.style.cssText = `
+    const button = createE('div', {
+      id: 'x-autodownload-toggle',
+      in: '⚙️',
+      style: `
       position: fixed;
       top: 20px;
       right: 20px;
@@ -45,7 +46,8 @@ export class AutoDownloadSettingsUI {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       font-size: 16px;
       transition: all 0.2s ease;
-    `
+    `,
+    })
 
     button.addEventListener('mouseenter', () => {
       button.style.transform = 'scale(1.1)'

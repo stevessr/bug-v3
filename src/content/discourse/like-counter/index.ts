@@ -4,6 +4,8 @@
  * 基于 linux-do-toolkit.user.js 的 LikeCounter 模块移植
  */
 
+import { createE, DHA, DQS, DQSA } from '@/content/utils/createEl'
+
 const CONFIG = {
   HOST: 'https://linux.do',
   SYNC_INTERVAL: 30 * 60 * 1000,
@@ -242,7 +244,7 @@ function requestUiUpdate(immediate = false) {
 }
 
 function updateUI() {
-  const picker = document.querySelector('.discourse-reactions-picker')
+  const picker = DQS('.discourse-reactions-picker')
 
   if (cooldownTicker) {
     clearTimeout(cooldownTicker)
@@ -279,8 +281,7 @@ function updateUI() {
 
   let counter = picker.querySelector('.ld-picker-counter') as HTMLElement | null
   if (!counter) {
-    counter = document.createElement('div')
-    counter.className = finalClassName
+    counter = createE('div', { class: finalClassName })
     picker.insertBefore(counter, picker.firstChild)
   } else if (counter.className !== finalClassName) {
     counter.className = finalClassName
@@ -288,8 +289,7 @@ function updateUI() {
 
   let wrapper = counter.querySelector('.ld-content-wrapper') as HTMLElement | null
   if (!wrapper) {
-    wrapper = document.createElement('div')
-    wrapper.className = 'ld-content-wrapper'
+    wrapper = createE('div', { class: 'ld-content-wrapper' })
     counter.appendChild(wrapper)
   }
 
@@ -298,15 +298,17 @@ function updateUI() {
 
   if (shouldShowTooltip) {
     if (!tooltipSpan) {
-      tooltipSpan = document.createElement('span')
-      tooltipSpan.className = 'ld-mismatch-tooltip'
-      tooltipSpan.dataset.tooltip = '计数可能不准确'
-      tooltipSpan.innerHTML =
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>'
-      tooltipSpan.onclick = e => {
-        e.preventDefault()
-        syncRemote()
-      }
+      tooltipSpan = createE('span', {
+        class: 'ld-mismatch-tooltip',
+        dataset: { tooltip: '计数可能不准确' },
+        in: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>',
+        on: {
+          click: e => {
+            e.preventDefault()
+            syncRemote()
+          }
+        }
+      })
       wrapper.prepend(tooltipSpan)
     }
     if (wrapper.firstChild !== tooltipSpan) {
@@ -318,8 +320,7 @@ function updateUI() {
 
   let textSpan = wrapper.querySelector('.ld-text-span') as HTMLElement | null
   if (!textSpan) {
-    textSpan = document.createElement('span')
-    textSpan.className = 'ld-text-span'
+    textSpan = createE('span', { class: 'ld-text-span' })
     wrapper.appendChild(textSpan)
   }
 
@@ -496,9 +497,8 @@ export function initLinuxDoLikeCounter() {
   likeCounterInitialized = true
 
   // 注入样式
-  styleEl = document.createElement('style')
-  styleEl.textContent = css
-  document.head.appendChild(styleEl)
+  styleEl = createE('style', { text: css })
+  DHA(styleEl)
 
   installInterceptors()
   loadState()
@@ -529,7 +529,7 @@ export function initLinuxDoLikeCounter() {
     } else {
       if (observerTimer) return
       observerTimer = setTimeout(() => {
-        const picker = document.querySelector('.discourse-reactions-picker')
+        const picker = DQS('.discourse-reactions-picker')
         if (picker) requestUiUpdate()
         observerTimer = null
       }, 300)
@@ -573,7 +573,7 @@ export function destroyLinuxDoLikeCounter() {
     cooldownTicker = null
   }
   // 移除已注入的 counter
-  document.querySelectorAll('.ld-picker-counter').forEach(el => el.remove())
+  DQSA('.ld-picker-counter').forEach(el => el.remove())
   likeCounterInitialized = false
   isInitialized = false
   console.log('[LikeCounter] Destroyed')

@@ -1,7 +1,7 @@
 // Floating button module for manual injection (content script version)
 
 import { findAllToolbars, injectButton } from './injector'
-import { DOA, DQSA } from './createEl'
+import { DOA, DQSA, createE } from './createEl'
 
 import { ESI } from '@/content/utils/injectCustomCss'
 
@@ -101,10 +101,11 @@ function setButtonFeedback(
 
 // Create floating button element
 function createFloatingButton(): HTMLElement {
-  const button = document.createElement('button')
-  button.className = 'emoji-extension-floating-button'
-  button.title = '手动注入表情按钮 (Manual Emoji Injection)'
-  button.textContent = '🐈‍⬛'
+  const button = createE('button', {
+    class: 'emoji-extension-floating-button',
+    ti: '手动注入表情按钮 (Manual Emoji Injection)',
+    text: '🐈‍⬛',
+  })
 
   // Click handler for manual injection
   const clickHandler = async (e: Event) => {

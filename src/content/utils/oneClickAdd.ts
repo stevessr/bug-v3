@@ -21,13 +21,14 @@ const cssAnimation = `
 }
 `
 
-import { DEBI, DHA } from './createEl'
+import { DEBI, DHA, createE } from './createEl'
 
 function injectCSSAnimation() {
   if (!DEBI('oneclick-add-styles')) {
-    const style = document.createElement('style')
-    style.id = 'oneclick-add-styles'
-    style.textContent = cssAnimation
+    const style = createE('style', {
+      id: 'oneclick-add-styles',
+      text: cssAnimation,
+    })
     DHA(style)
   }
 }

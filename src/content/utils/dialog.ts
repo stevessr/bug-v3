@@ -106,8 +106,8 @@ export function customAlert(message: string): Promise<void> {
     backdrop.appendChild(dialog)
 
     // Add animations
-    const style = document.createElement('style')
-    style.textContent = `
+    const style = createE('style', {
+      text: `
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -122,7 +122,8 @@ export function customAlert(message: string): Promise<void> {
           transform: scale(1);
         }
       }
-    `
+    `,
+    })
     DHA(style)
 
     DOA(backdrop)
@@ -270,8 +271,8 @@ export function customConfirm(message: string): Promise<boolean> {
     backdrop.appendChild(dialog)
 
     // Add animations
-    const style = document.createElement('style')
-    style.textContent = `
+    const style = createE('style', {
+      text: `
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -286,7 +287,8 @@ export function customConfirm(message: string): Promise<boolean> {
           transform: scale(1);
         }
       }
-    `
+    `,
+    })
     DHA(style)
 
     DOA(backdrop)
@@ -468,8 +470,8 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
     backdrop.appendChild(dialog)
 
     // Add animations
-    const style = document.createElement('style')
-    style.textContent = `
+    const style = createE('style', {
+      text: `
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -484,7 +486,8 @@ export function customPrompt(message: string, defaultValue: string = ''): Promis
           transform: scale(1);
         }
       }
-    `
+    `,
+    })
     DHA(style)
 
     DOA(backdrop)

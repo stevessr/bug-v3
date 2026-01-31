@@ -3,6 +3,7 @@
  * 模块化重构版本
  */
 
+import { createE, DOA } from '../../utils/createEl'
 import { requestSettingFromBackground } from '../../utils/requestSetting'
 
 import { CONFIG, categoryMap, categoryColors } from './config'
@@ -142,19 +143,19 @@ function sendNotification(action: any) {
       const isSelfUser =
         state.selfUser && action.acting_username.toLowerCase() === state.selfUser.toLowerCase()
       if (isLikeOrReaction && isSelfUser) {
-        const iconPop = document.createElement('div')
-        iconPop.className = 'dm-icon-pop'
-        iconPop.style.left = `${10 + Math.random() * 70}vw`
-        iconPop.style.top = `${10 + Math.random() * 60}vh`
-        iconPop.innerHTML = getActionIcon(action.action_type)
+        const iconPop = createE('div', {
+          class: 'dm-icon-pop',
+          style: `left: ${10 + Math.random() * 70}vw; top: ${10 + Math.random() * 60}vh;`,
+          in: getActionIcon(action.action_type),
+        })
         layer.appendChild(iconPop)
         setTimeout(() => iconPop.remove(), 3000)
       }
 
-      const item = document.createElement('div')
-      item.className = 'dm-item'
-      item.style.top = `${5 + Math.random() * 80}vh`
-      item.style.animationDuration = `${8 + Math.random() * 4}s`
+      const item = createE('div', {
+        class: 'dm-item',
+        style: `top: ${5 + Math.random() * 80}vh; animation-duration: ${8 + Math.random() * 4}s;`,
+      })
       item.onclick = () => window.open(link, '_blank')
 
       const actionInfo = formatActionInfo(action)
@@ -359,9 +360,10 @@ function renderSidebarRows() {
   state.users.forEach(u => {
     const isHidden = state.hiddenUsers.has(u)
     const userColor = 'var(--tertiary)'
-    const row = document.createElement('div')
-    row.id = `row-${u}`
-    row.className = `sb-user-row ${isHidden ? '' : 'active'}`
+    const row = createE('div', {
+      id: `row-${u}`,
+      class: `sb-user-row ${isHidden ? '' : 'active'}`,
+    })
 
     const timerSize = 10,
       timerStroke = 2
@@ -389,14 +391,16 @@ function renderSidebarRows() {
       refreshSingleUser(u)
     }
 
-    const activityEl = document.createElement('div')
-    activityEl.className = 'sb-user-activity'
-    activityEl.id = `activity-${u}`
-    activityEl.innerHTML = `<span title="最近发帖">--</span><span title="最近动态">--</span><span title="最近在线">--</span>`
+    const activityEl = createE('div', {
+      class: 'sb-user-activity',
+      id: `activity-${u}`,
+      in: '<span title="最近发帖">--</span><span title="最近动态">--</span><span title="最近在线">--</span>',
+    })
 
-    const nameEl = document.createElement('div')
-    nameEl.className = `sb-user-name ${isHidden ? 'disabled' : ''}`
-    nameEl.textContent = u
+    const nameEl = createE('div', {
+      class: `sb-user-name ${isHidden ? 'disabled' : ''}`,
+      text: u,
+    })
 
     row.appendChild(timerSvg)
     row.appendChild(nameEl)
@@ -475,10 +479,10 @@ function renderFeed() {
       existingCards.delete(link)
     } else {
       // 新建卡片元素
-      const cardDiv = document.createElement('div')
-      cardDiv.className = 'sb-card'
-      cardDiv.setAttribute('data-link', link)
-      cardDiv.innerHTML = `
+      const cardDiv = createE('div', {
+        class: 'sb-card',
+        attrs: { 'data-link': link },
+        in: `
         <div class="sb-card-head">
           <img src="${avatar}" class="sb-avatar">
           <div class="sb-card-info">
@@ -492,7 +496,8 @@ function renderFeed() {
           <span class="sb-badge" style="color:${catColor};background:${catColor}15">${catName}</span>
           <span class="sb-timestr">${timeStr}</span>
         </div>
-      `
+      `,
+      })
       fragment.appendChild(cardDiv)
     }
   })
@@ -593,20 +598,20 @@ function startVisualLoops() {
 }
 
 function createUI() {
-  const host = document.createElement('div')
-  host.id = 'ld-seeking-host'
-  host.classList.add(`pos-${state.sidebarPosition}`)
-  document.body.appendChild(host)
+  const host = createE('div', {
+    id: 'ld-seeking-host',
+    class: `pos-${state.sidebarPosition}`,
+  })
+  DOA(host)
   const root = host.attachShadow({ mode: 'open' })
   setShadowRoot(root)
   shadowRoot = root
 
-  const style = document.createElement('style')
-  style.textContent = css
+  const style = createE('style', { text: css })
   shadowRoot.appendChild(style)
 
-  const container = document.createElement('div')
-  container.innerHTML = `
+  const container = createE('div', {
+    in: `
     <div id="dm-container" class="dm-container"></div>
     <div id="ld-sidebar" class="${state.isCollapsed ? 'collapsed' : ''}">
         <div id="ld-toggle-ball" title="切换侧边栏">👀</div>
@@ -623,7 +628,8 @@ function createUI() {
         </div>
         <div id="sb-list" class="sb-list"></div>
         <div id="sb-console" class="sb-console"></div>
-    </div>`
+    </div>`,
+  })
   shadowRoot.appendChild(container)
 
   // 绑定事件

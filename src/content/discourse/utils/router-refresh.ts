@@ -3,6 +3,7 @@
  * 周期性调用 Discourse 路由刷新以优化用户体验
  */
 
+import { DHA, createE } from '../../utils/createEl'
 import { requestSettingFromBackground } from '../../utils/requestSetting'
 import { notify } from '../../utils/notify'
 
@@ -24,10 +25,11 @@ declare global {
  * 注入脚本到页面上下文执行
  */
 function injectRouterScript(): void {
-  const script = document.createElement('script')
-  script.src = chrome.runtime.getURL('js/discourse-router.js')
+  const script = createE('script', {
+    src: chrome.runtime.getURL('js/discourse-router.js'),
+  }) as HTMLScriptElement
   script.onload = () => script.remove()
-  ;(document.head || document.documentElement).appendChild(script)
+  DHA(script)
 }
 
 /**

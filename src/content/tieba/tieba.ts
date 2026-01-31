@@ -405,12 +405,13 @@ async function downloadSelectedImages(items: TiebaImageItem[], status: HTMLEleme
   }
 
   const url = URL.createObjectURL(finalBlob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
+  const a = createE('a', {
+    src: url,
+    attrs: { download: filename },
+  }) as HTMLAnchorElement
+  DOA(a)
   a.click()
-  document.body.removeChild(a)
+  a.remove()
   URL.revokeObjectURL(url)
   status.textContent = `打包完成：${items.length} 项`
 }

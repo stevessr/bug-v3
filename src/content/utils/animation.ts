@@ -1,3 +1,5 @@
+import { DHA, createE } from './createEl'
+
 // Animation duration in milliseconds
 export const ANIMATION_DURATION = 200
 
@@ -7,8 +9,8 @@ export function injectAnimationStyles() {
   if (animationStylesInjected) return
   animationStylesInjected = true
 
-  const style = document.createElement('style')
-  style.textContent = `
+  const style = createE('style', {
+    text: `
     /* Desktop picker animations */
     .emoji-picker-enter {
       opacity: 0 !important;
@@ -64,8 +66,9 @@ export function injectAnimationStyles() {
       opacity: 0 !important;
       transition: opacity ${ANIMATION_DURATION}ms ease-in !important;
     }
-  `
-  document.head.appendChild(style)
+  `,
+  })
+  DHA(style)
 }
 
 /**

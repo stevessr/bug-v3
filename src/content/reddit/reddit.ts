@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../pixiv/types'
-import { DQSA } from '../utils/createEl'
+import { DQSA, createE } from '../utils/createEl'
 
 /** 常量定义 */
 const FEEDBACK_DISPLAY_MS = 1500
@@ -32,12 +32,13 @@ function setButtonFeedback(
 
 // create a minimal floating button that sends the direct URL to background
 function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
-  const btn = document.createElement('button')
-  btn.className = 'reddit-emoji-add-btn'
-  btn.type = 'button'
-  btn.title = '添加到未分组表情'
-  btn.textContent = '➕'
-  btn.style.cssText = BUTTON_DEFAULT_STYLE
+  const btn = createE('button', {
+    class: 'reddit-emoji-add-btn',
+    type: 'button',
+    ti: '添加到未分组表情',
+    text: '➕',
+    style: BUTTON_DEFAULT_STYLE,
+  })
 
   const handler = async (ev: Event) => {
     try {

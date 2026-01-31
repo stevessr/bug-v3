@@ -1,3 +1,5 @@
+import { createE } from '@/content/utils/createEl'
+
 /**
  * Chat Multi-Reactor 模块
  * 在聊天消息旁添加按钮，点击后依次自动发送定义好的一组表情反应
@@ -192,18 +194,15 @@ function processContainer(container: HTMLElement): void {
   const channelId = getChannelIdFromContainer(container)
 
   // 创建按钮
-  const btn = document.createElement('span')
-  btn.innerText = BUTTON_TEXT
-  btn.style.cursor = 'pointer'
-  btn.style.marginLeft = '8px'
-  btn.style.fontSize = '16px'
-  btn.style.userSelect = 'none'
-  btn.title = `发送表情组合：${currentEmojiList.join(', ')}`
+  const btn = createE('span', {
+    text: BUTTON_TEXT,
+    style: 'cursor:pointer;margin-left:8px;font-size:16px;user-select:none;transition:transform 0.1s;',
+    ti: `发送表情组合：${currentEmojiList.join(', ')}`,
+  })
 
   // 样式微调
   btn.onmouseover = () => (btn.style.transform = 'scale(1.2)')
   btn.onmouseout = () => (btn.style.transform = 'scale(1)')
-  btn.style.transition = 'transform 0.1s'
 
   // 绑定点击
   btn.onclick = (e: MouseEvent) => {

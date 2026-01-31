@@ -1,3 +1,4 @@
+import { createE } from '@/content/utils/createEl'
 import { CONFIG, nameColors } from './config'
 import { state } from './state'
 
@@ -13,9 +14,10 @@ export function log(msg: string, type = 'info') {
   console.log(`[LD-Seeking] ${msg}`)
   const box = shadowRoot.getElementById('sb-console')
   if (box) {
-    const d = document.createElement('div')
-    d.className = type === 'error' ? 'log-err' : type === 'success' ? 'log-ok' : ''
-    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+    const d = createE('div', {
+      class: type === 'error' ? 'log-err' : type === 'success' ? 'log-ok' : '',
+      text: `[${new Date().toLocaleTimeString()}] ${msg}`,
+    })
     box.prepend(d)
     if (box.children.length > 20 && box.lastChild) box.lastChild.remove()
   }
@@ -269,7 +271,7 @@ export const css = `
     /* 弹幕 */
     .dm-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; overflow: hidden; z-index: 10; }
     .dm-item {
-        position: absolute; left: 100vw;
+        position: absolute; left: 100vw;\
         display: flex; flex-direction: column; gap: 4px;
         background: var(--secondary);
         border: 1px solid var(--primary-low);
@@ -335,19 +337,17 @@ export function getTimeAgoColor(isoTime: string | null): string {
 
 export function cleanHtml(html: string): string {
   if (!html) return ''
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
+  const tmp = createE('div', { in: html })
   tmp.querySelectorAll('img').forEach(img => {
     if (img.classList.contains('emoji')) img.replaceWith(img.alt || '')
     else img.remove()
   })
-  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim()
+  return (tmp.textContent || (tmp as any).innerText || '').replace(/\\s+/g, ' ').trim()
 }
 
 export function extractImg(html: string): string | null {
   if (!html) return null
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
+  const tmp = createE('div', { in: html })
   const img = tmp.querySelector('img:not(.emoji)')
   if (!img) return null
   let src = (img as HTMLImageElement).src

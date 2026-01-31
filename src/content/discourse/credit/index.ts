@@ -1,3 +1,5 @@
+import { DOA, createE } from '../../utils/createEl'
+
 /**
  * LinuxDo Credit 积分浮窗
  * 显示 gamification_score 与 community_balance 的差值
@@ -361,26 +363,24 @@ async function fetchData(forceRefresh = false) {
 
 function createWidget() {
   // 创建 Shadow DOM host
-  const host = document.createElement('div')
-  host.id = 'ldc-credit-host'
-  document.body.appendChild(host)
+  const host = createE('div', { id: 'ldc-credit-host' })
+  DOA(host)
 
   shadowRoot = host.attachShadow({ mode: 'open' })
 
   // 注入样式
-  const style = document.createElement('style')
-  style.textContent = css
+  const style = createE('style', { text: css })
   shadowRoot.appendChild(style)
 
   // 创建 widget
-  const widget = document.createElement('div')
-  widget.id = 'ldc-mini'
-  widget.className = 'loading'
-  widget.textContent = '···'
+  const widget = createE('div', {
+    id: 'ldc-mini',
+    class: 'loading',
+    text: '···',
+  })
 
   // 创建 tooltip
-  const tooltip = document.createElement('div')
-  tooltip.id = 'ldc-tooltip'
+  const tooltip = createE('div', { id: 'ldc-tooltip' })
 
   // 设置位置
   const savedPos = loadPosition()

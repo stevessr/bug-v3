@@ -89,7 +89,7 @@ export function createControlButton(data: AddEmojiButtonData): HTMLElement {
 
   // Create the text label
   const text = createE('span', {
-    text: '添加表情'
+    text: '添加表情',
   })
 
   btn.appendChild(icon)

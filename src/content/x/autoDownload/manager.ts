@@ -1,3 +1,5 @@
+import { DOA, createE } from '../../utils/createEl'
+
 /**
  * X.com 图片自动下载管理器
  * 根据配置的 URL 后缀自动下载图片
@@ -107,8 +109,8 @@ let toastContainer: HTMLElement | null = null
 
 function getToastContainer() {
   if (!toastContainer) {
-    toastContainer = document.createElement('div')
-    toastContainer.style.cssText = `
+    toastContainer = createE('div', {
+      style: `
       position: fixed;
       bottom: 20px;
       left: 50%;
@@ -119,8 +121,9 @@ function getToastContainer() {
       gap: 10px;
       z-index: 10000;
       pointer-events: none;
-    `
-    document.body.appendChild(toastContainer)
+    `,
+    })
+    DOA(toastContainer)
   }
   return toastContainer
 }
@@ -130,9 +133,9 @@ function getToastContainer() {
  */
 function showToast(message: string, type: 'success' | 'error' = 'success') {
   const container = getToastContainer()
-  const toast = document.createElement('div')
-  toast.textContent = message
-  toast.style.cssText = `
+  const toast = createE('div', {
+    text: message,
+    style: `
     background: ${type === 'success' ? 'rgba(29, 155, 240, 0.9)' : 'rgba(244, 33, 46, 0.9)'};
     color: white;
     padding: 10px 20px;
@@ -147,7 +150,8 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
     max-width: 80vw;
     overflow: hidden;
     text-overflow: ellipsis;
-  `
+  `,
+  })
 
   container.appendChild(toast)
 

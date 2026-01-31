@@ -1,4 +1,5 @@
 import { Z_INDEX } from '../utils/constants'
+import { DOA, createE } from '../utils/createEl'
 
 import type { AgentAction } from '@/agent/types'
 
@@ -47,18 +48,21 @@ function dispatchMouseEvent(
 
 function highlightElement(element: HTMLElement) {
   const rect = element.getBoundingClientRect()
-  const overlay = document.createElement('div')
-  overlay.style.position = 'fixed'
-  overlay.style.left = `${rect.left}px`
-  overlay.style.top = `${rect.top}px`
-  overlay.style.width = `${rect.width}px`
-  overlay.style.height = `${rect.height}px`
-  overlay.style.border = '2px solid #ff6b00'
-  overlay.style.background = 'rgba(255, 107, 0, 0.12)'
-  overlay.style.zIndex = String(Z_INDEX.AGENT_OVERLAY)
-  overlay.style.pointerEvents = 'none'
-  overlay.style.boxSizing = 'border-box'
-  document.documentElement.appendChild(overlay)
+  const overlay = createE('div', {
+    style: `
+    position: fixed;
+    left: ${rect.left}px;
+    top: ${rect.top}px;
+    width: ${rect.width}px;
+    height: ${rect.height}px;
+    border: 2px solid #ff6b00;
+    background: rgba(255, 107, 0, 0.12);
+    z-index: ${Z_INDEX.AGENT_OVERLAY};
+    pointer-events: none;
+    box-sizing: border-box;
+  `,
+  })
+  DOA(overlay)
   setTimeout(() => overlay.remove(), 500)
 }
 

@@ -84,10 +84,11 @@ function createCarouselBtn(data: AddEmojiButtonData) {
   path.setAttribute('d', 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z')
   g.appendChild(path)
   svg.appendChild(g)
-  const wrapper = document.createElement('div')
-  wrapper.setAttribute('dir', 'ltr')
-  wrapper.style.color = 'rgb(255, 255, 255)'
-  wrapper.appendChild(svg)
+  const wrapper = createE('div', {
+    attrs: { dir: 'ltr' },
+    style: 'color: rgb(255, 255, 255)',
+    child: [svg],
+  })
   btn.appendChild(wrapper)
   setupButtonClick(btn, data)
   return btn
@@ -138,13 +139,14 @@ function createDownloadBtn(data: AddEmojiButtonData) {
             if (!resp.ok) throw new Error('network')
             const blob = await resp.blob()
             const blobUrl = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = blobUrl
-            a.download = name
+            const a = createE('a', {
+              src: blobUrl,
+              attrs: { download: name },
+            }) as HTMLAnchorElement
             // append to DOM so click works in all browsers
-            document.body.appendChild(a)
+            DOA(a)
             a.click()
-            document.body.removeChild(a)
+            a.remove()
             setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
             return
           } catch (e) {
@@ -176,10 +178,11 @@ function createDownloadBtn(data: AddEmojiButtonData) {
   path.setAttribute('d', 'M5 20h14v-2H5v2zm7-18L5.33 9h3.67v6h6V9h3.67L12 2z')
   g.appendChild(path)
   svg.appendChild(g)
-  const wrapper = document.createElement('div')
-  wrapper.setAttribute('dir', 'ltr')
-  wrapper.style.color = 'rgb(255, 255, 255)'
-  wrapper.appendChild(svg)
+  const wrapper = createE('div', {
+    attrs: { dir: 'ltr' },
+    style: 'color: rgb(255, 255, 255)',
+    child: [svg],
+  })
   btn.appendChild(wrapper)
 
   return btn
@@ -277,14 +280,10 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   const existing = carouselOverlayMap.get(target)
   if (existing) return existing.btn
   // wrapper to hold both buttons — create with DOM API and set proper CSS so it can be positioned
-  const wrapper = document.createElement('div')
-  wrapper.className = 'x-emoji-overlay-wrapper'
-  wrapper.style.position = 'absolute'
-  wrapper.style.zIndex = '2147483647'
-  wrapper.style.pointerEvents = 'auto'
-  wrapper.style.display = 'flex'
-  wrapper.style.gap = '6px'
-  wrapper.style.alignItems = 'center'
+  const wrapper = createE('div', {
+    class: 'x-emoji-overlay-wrapper',
+    style: 'position:absolute;z-index:2147483647;pointer-events:auto;display:flex;gap:6px;align-items:center;',
+  })
 
   const downloadBtn = createDownloadBtn(data)
   const addBtn = createCarouselBtn(data)

@@ -1,3 +1,4 @@
+import { createE } from '@/content/utils/createEl'
 import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
@@ -169,10 +170,10 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
 }
 
 export function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'emoji-add-link-pixiv'
-  button.style.cssText = `
+  const button = createE('button', {
+    type: 'button',
+    class: 'emoji-add-link-pixiv',
+    style: `
     position: absolute;
     left: 12px;
     top: 12px;
@@ -189,20 +190,19 @@ export function createPixivEmojiButton(data: AddEmojiButtonData): HTMLElement {
     align-items: center;
     gap: 6px;
     pointer-events: auto;
-  `
-  button.innerHTML = `
+  `,
+    in: `
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
     </svg>
     添加表情
-  `
-  button.title = '添加表情到收藏'
-  try {
-    button.dataset.emojiName = data.name
-    button.dataset.emojiUrl = data.url
-  } catch (_e) {
-    void _e
-  }
+  `,
+    ti: '添加表情到收藏',
+    dataset: {
+      emojiName: data.name,
+      emojiUrl: data.url,
+    },
+  })
   setupButtonClickHandler(button, data)
   return button
 }

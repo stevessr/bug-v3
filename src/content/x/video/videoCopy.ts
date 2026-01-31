@@ -175,37 +175,40 @@ function setupDownloadClick(btn: HTMLElement, url: string) {
 }
 
 function createCopyBtn(url: string) {
-  const btn = document.createElement('button')
-  btn.className = 'x-video-copy-btn'
-  btn.type = 'button'
-  btn.title = url.startsWith('blob:') ? '下载视频' : '复制视频地址'
-  btn.textContent = '📋'
-  btn.style.cssText =
-    'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
+  const btn = createE('button', {
+    class: 'x-video-copy-btn',
+    type: 'button',
+    ti: url.startsWith('blob:') ? '下载视频' : '复制视频地址',
+    text: '📋',
+    style:
+      'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;',
+  })
   setupCopyClick(btn, url)
   return btn
 }
 
 function createDownloadBtn(url: string) {
-  const btn = document.createElement('button')
-  btn.className = 'x-video-download-btn'
-  btn.type = 'button'
-  btn.title = '下载视频'
-  btn.textContent = '⬇️'
-  btn.style.cssText =
-    'position:absolute;right:40px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
+  const btn = createE('button', {
+    class: 'x-video-download-btn',
+    type: 'button',
+    ti: '下载视频',
+    text: '⬇️',
+    style:
+      'position:absolute;right:40px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;',
+  })
   setupDownloadClick(btn, url)
   return btn
 }
 
 function createInlineBtn(url: string) {
-  const btn = document.createElement('button')
-  btn.className = 'x-video-copy-inline-btn'
-  btn.type = 'button'
-  btn.title = url.startsWith('blob:') ? '下载视频' : '复制视频地址'
-  btn.textContent = '📋'
-  btn.style.cssText =
-    'display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;border-radius:6px;padding:2px 6px;background:rgba(0,0,0,0.06);color:var(--text-color,#0f1419);border:1px solid rgba(0,0,0,0.08);font-weight:600;'
+  const btn = createE('button', {
+    class: 'x-video-copy-inline-btn',
+    type: 'button',
+    ti: url.startsWith('blob:') ? '下载视频' : '复制视频地址',
+    text: '📋',
+    style:
+      'display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;border-radius:6px;padding:2px 6px;background:rgba(0,0,0,0.06);color:var(--text-color,#0f1419);border:1px solid rgba(0,0,0,0.08);font-weight:600;',
+  })
   setupCopyClick(btn, url)
   return btn
 }
