@@ -46,6 +46,23 @@ const visibleTabs = computed(() =>
   props.showReadTab ? tabs : tabs.filter(tab => tab.key !== 'read')
 )
 
+const emptyTopicsText = computed(() => {
+  switch (props.activityState.activeTab) {
+    case 'topics':
+      return '暂无话题'
+    case 'assigned':
+      return '暂无已指定'
+    case 'votes':
+      return '暂无投票'
+    case 'portfolio':
+      return '暂无作品集'
+    case 'read':
+      return '暂无已读'
+    default:
+      return '暂无数据'
+  }
+})
+
 // Get action type label
 const getActionTypeLabel = (actionType: number): string => {
   const types: Record<number, string> = {
@@ -197,17 +214,7 @@ const getActionTypeLabel = (actionType: number): string => {
           v-if="activityState.topics.length === 0 && !isLoadingMore"
           class="text-center text-gray-400 py-8"
         >
-          {{
-            activityState.activeTab === 'topics'
-              ? '暂无话题'
-              : activityState.activeTab === 'assigned'
-                ? '暂无已指定'
-                : activityState.activeTab === 'votes'
-                  ? '暂无投票'
-                  : activityState.activeTab === 'portfolio'
-                    ? '暂无作品集'
-                    : '暂无已读'
-          }}
+          {{ emptyTopicsText }}
         </div>
       </div>
 

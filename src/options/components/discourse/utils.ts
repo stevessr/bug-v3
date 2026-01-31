@@ -94,7 +94,10 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
 
   const addImage = (url: string) => {
     if (!url) return ''
-    const fullUrl = url.startsWith('http') ? url : baseUrl ? `${baseUrl}${url}` : url
+    let fullUrl = url
+    if (!url.startsWith('http')) {
+      fullUrl = baseUrl ? `${baseUrl}${url}` : url
+    }
     if (!seen.has(fullUrl)) {
       seen.add(fullUrl)
       images.push(fullUrl)

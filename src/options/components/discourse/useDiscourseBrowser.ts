@@ -170,24 +170,18 @@ export function useDiscourseBrowser() {
           tab.title = `${username} - 概览`
         } else if (pathParts[1] === 'activity') {
           const activityKey = pathParts[2] || 'all'
-          const activityTab =
-            activityKey === 'portfolio'
-              ? 'portfolio'
-              : activityKey === 'topics'
-                ? 'topics'
-                : activityKey === 'replies'
-                  ? 'replies'
-                  : activityKey === 'likes-given'
-                    ? 'likes'
-                    : activityKey === 'reactions'
-                      ? 'reactions'
-                      : activityKey === 'solved'
-                        ? 'solved'
-                        : activityKey === 'read'
-                          ? 'read'
-                          : activityKey === 'votes'
-                            ? 'votes'
-                            : 'all'
+          const activityMap: Record<string, ActivityTabType> = {
+            topics: 'topics',
+            replies: 'replies',
+            'likes-given': 'likes',
+            reactions: 'reactions',
+            solved: 'solved',
+            votes: 'votes',
+            portfolio: 'portfolio',
+            read: 'read',
+            all: 'all'
+          }
+          const activityTab = activityMap[activityKey] || 'all'
           await loadUserActivity(tab, username, activityTab)
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
@@ -282,10 +276,10 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     if (!tab || !tab.currentUser || !tab.activityState) return
     const username = tab.currentUser.username
-    const subPath =
-      activityTab === 'all' ? '' : activityTab === 'likes' ? 'likes-given' : activityTab
+    const subPath = activityTab === 'all' ? '' : activityTab
+    const pathSegment = activityTab === 'likes' ? 'likes-given' : subPath
     const target = subPath
-      ? `${baseUrl.value}/u/${username}/activity/${subPath}`
+      ? `${baseUrl.value}/u/${username}/activity/${pathSegment}`
       : `${baseUrl.value}/u/${username}/activity`
     navigateTo(target)
   }
