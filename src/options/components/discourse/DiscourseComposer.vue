@@ -317,8 +317,8 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           tree-node-label-prop="label"
         >
           <template #title="{ dataRef }">
-            <span class="category-option">
-              <span class="category-option-icon" :style="{ color: `#${dataRef.color}` }">
+            <span v-if="dataRef && dataRef.title" class="category-option">
+              <span class="category-option-icon" :style="{ color: `#${dataRef.color || '94a3b8'}` }">
                 <img
                   v-if="dataRef.logoUrl"
                   :src="getImageUrl(dataRef.logoUrl)"
@@ -334,11 +334,12 @@ const showEditor = computed(() => viewMode.value !== 'preview')
                 <span
                   v-else
                   class="category-option-dot"
-                  :style="{ backgroundColor: `#${dataRef.color}` }"
+                  :style="{ backgroundColor: `#${dataRef.color || '94a3b8'}` }"
                 />
               </span>
               <span>{{ dataRef.title }}</span>
             </span>
+            <span v-else>{{ dataRef?.title || dataRef }}</span>
           </template>
         </a-tree-select>
         <a-select

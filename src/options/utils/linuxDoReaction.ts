@@ -348,10 +348,12 @@ export async function sendReactionToPost(
       {
         method: 'PUT',
         headers: {
+          Accept: '*/*',
+          'Content-Length': '0',
+          'Discourse-Logged-In': 'true',
           'X-Csrf-Token': csrfToken,
           'X-Requested-With': 'XMLHttpRequest',
           'Content-Type': 'application/json',
-          'Discourse-Logged-In': 'true'
         }
       },
       'json'
