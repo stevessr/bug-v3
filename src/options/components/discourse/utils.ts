@@ -25,16 +25,20 @@ export async function pageFetch<T>(
           responseType
         }
       },
-      (resp: { success: boolean; status?: number; ok?: boolean; data?: T; error?: string }) => {
-        if (resp?.success) {
+      (resp: {
+        success: boolean
+        data?: { status: number; ok: boolean; data: T }
+        error?: string
+      }) => {
+        if (resp?.success && resp.data) {
           resolve({
-            status: resp.status || 200,
-            ok: resp.ok !== false,
-            data: resp.data ?? null
+            status: resp.data.status || 200,
+            ok: resp.data.ok !== false,
+            data: resp.data.data ?? null
           })
           return
         }
-        reject(new Error(resp?.error || `Page fetch failed: ${resp?.status || 'unknown'}`))
+        reject(new Error(resp?.error || `Page fetch failed: ${resp?.data?.status || 'unknown'}`))
       }
     )
   })
