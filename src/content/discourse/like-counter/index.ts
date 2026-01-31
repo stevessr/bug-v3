@@ -222,7 +222,9 @@ function installInterceptors() {
       this.addEventListener('load', function () {
         try {
           processToggleResponse(url, JSON.parse(this.responseText))
-        } catch {}
+        } catch {
+          /* empty */
+        }
       })
     }
     return originalSend.apply(this, arguments as any)
@@ -427,7 +429,9 @@ async function syncRemote() {
   if (!currentUser) {
     try {
       currentUser = (window as any).require?.('discourse/models/user')?.default?.current()
-    } catch {}
+    } catch {
+      /* empty */
+    }
     if (!currentUser) return
   }
 
@@ -540,7 +544,9 @@ export function initLinuxDoLikeCounter() {
   const onLoad = () => {
     try {
       currentUser = (window as any).require?.('discourse/models/user')?.default?.current()
-    } catch {}
+    } catch {
+      /* empty */
+    }
     setTimeout(() => syncRemote(), 3000)
     syncInterval = setInterval(() => syncRemote(), CONFIG.SYNC_INTERVAL)
     observer?.observe(document.body, { childList: true, subtree: true })
