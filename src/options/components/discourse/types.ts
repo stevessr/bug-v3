@@ -32,6 +32,8 @@ export interface BrowserTab {
   // Follow feed pagination
   followFeedPage: number
   followFeedHasMore: boolean
+  // Topic jump
+  targetPostNumber: number | null
 }
 
 export type ViewType =

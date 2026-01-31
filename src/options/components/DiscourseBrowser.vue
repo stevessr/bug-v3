@@ -411,6 +411,7 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :isLoadingMore="isLoadingMore"
         :hasMorePosts="activeTab.hasMorePosts"
+        :targetPostNumber="activeTab.targetPostNumber"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
       />

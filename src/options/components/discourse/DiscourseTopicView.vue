@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
 import { formatTime, getAvatarUrl, parsePostContent, pageFetch, extractData } from './utils'
@@ -10,6 +10,7 @@ const props = defineProps<{
   baseUrl: string
   isLoadingMore: boolean
   hasMorePosts: boolean
+  targetPostNumber?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -41,6 +42,24 @@ const handleSuggestedClick = (topic: SuggestedTopic) => {
 const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
+
+const scrollToPost = (postNumber: number) => {
+  if (!postNumber) return
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`[data-post-number="${postNumber}"]`) as HTMLElement | null
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+}
+
+watch(
+  () => props.targetPostNumber,
+  value => {
+    if (value) scrollToPost(value)
+  },
+  { immediate: true }
+)
 
 const handleQuoteToggle = async (event: Event) => {
   const target = event.target as HTMLElement | null
@@ -150,6 +169,7 @@ onUnmounted(() => {
       <div
         v-for="post in topic.post_stream.posts"
         :key="post.id"
+        :data-post-number="post.post_number"
         class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
       >
         <!-- Post header -->

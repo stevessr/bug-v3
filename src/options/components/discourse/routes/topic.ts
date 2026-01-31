@@ -3,7 +3,12 @@ import type { ComputedRef, Ref } from 'vue'
 import type { BrowserTab, DiscoursePost, DiscourseTopicDetail } from '../types'
 import { pageFetch, extractData } from '../utils'
 
-export async function loadTopic(tab: BrowserTab, topicId: number, baseUrl: Ref<string>) {
+export async function loadTopic(
+  tab: BrowserTab,
+  topicId: number,
+  baseUrl: Ref<string>,
+  targetPostNumber?: number | null
+) {
   const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
   const data = extractData(result)
 
@@ -15,10 +20,43 @@ export async function loadTopic(tab: BrowserTab, topicId: number, baseUrl: Ref<s
     if (data.title) {
       tab.title = data.title
     }
+    if (targetPostNumber && tab.currentTopic) {
+      await ensurePostByNumberLoaded(tab, topicId, targetPostNumber, baseUrl)
+    }
   } else {
     tab.currentTopic = null
     tab.loadedPostIds = new Set()
     tab.hasMorePosts = false
+  }
+}
+
+async function ensurePostByNumberLoaded(
+  tab: BrowserTab,
+  topicId: number,
+  postNumber: number,
+  baseUrl: Ref<string>
+) {
+  try {
+    const result = await pageFetch<any>(
+      `${baseUrl.value}/posts/by_number/${topicId}/${postNumber}.json`
+    )
+    const data = extractData(result)
+    const postId = data?.id
+    if (!postId || tab.loadedPostIds.has(postId)) return
+
+    const postResult = await pageFetch<any>(
+      `${baseUrl.value}/t/${topicId}/posts.json?post_ids[]=${postId}`
+    )
+    const postData = extractData(postResult)
+    const posts = postData?.post_stream?.posts || []
+    if (tab.currentTopic && posts.length > 0) {
+      tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...posts].sort(
+        (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
+      )
+      posts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
+    }
+  } catch (e) {
+    console.warn('[DiscourseBrowser] ensurePostByNumberLoaded error:', e)
   }
 }
 

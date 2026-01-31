@@ -95,7 +95,8 @@ export function useDiscourseBrowser() {
       activityState: null,
       messagesState: null,
       followFeedPage: 0,
-      followFeedHasMore: false
+      followFeedHasMore: false,
+      targetPostNumber: null
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -153,8 +154,15 @@ export function useDiscourseBrowser() {
         tab.viewType = 'category'
       } else if (pathname.startsWith('/t/')) {
         const parts = pathname.replace('/t/', '').split('/')
-        const topicId = parseInt(parts[parts.length - 1]) || parseInt(parts[0])
-        await loadTopic(tab, topicId)
+        const lastPart = parts[parts.length - 1]
+        const prevPart = parts[parts.length - 2]
+        const lastNum = lastPart ? parseInt(lastPart) : NaN
+        const prevNum = prevPart ? parseInt(prevPart) : NaN
+        const hasPostNumber = parts.length >= 3 && !Number.isNaN(lastNum) && !Number.isNaN(prevNum)
+        const topicId = hasPostNumber ? prevNum : lastNum || parseInt(parts[0])
+        const postNumber = hasPostNumber ? lastNum : null
+        tab.targetPostNumber = postNumber
+        await loadTopic(tab, topicId, postNumber)
         tab.viewType = 'topic'
       } else if (pathname.startsWith('/u/')) {
         await ensureSessionUser()
@@ -218,6 +226,10 @@ export function useDiscourseBrowser() {
         tab.viewType = 'home'
       }
 
+      if (tab.viewType !== 'topic') {
+        tab.targetPostNumber = null
+      }
+
       if (addToHistory) {
         tab.history = tab.history.slice(0, tab.historyIndex + 1)
         tab.history.push(url)
@@ -243,8 +255,8 @@ export function useDiscourseBrowser() {
   }
 
   // Load topic detail
-  async function loadTopic(tab: BrowserTab, topicId: number) {
-    await loadTopicRoute(tab, topicId, baseUrl)
+  async function loadTopic(tab: BrowserTab, topicId: number, postNumber?: number | null) {
+    await loadTopicRoute(tab, topicId, baseUrl, postNumber)
   }
 
   // Load user profile
