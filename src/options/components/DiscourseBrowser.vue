@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   PlusOutlined,
   CloseOutlined,
@@ -10,615 +10,72 @@ import {
   LoadingOutlined
 } from '@ant-design/icons-vue'
 
-// Tab 数据结构
-interface BrowserTab {
-  id: string
-  title: string
-  url: string
-  loading: boolean
-  content: string
-  history: string[]
-  historyIndex: number
-  scrollTop: number
-}
+import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
+import type { DiscourseCategory, DiscourseTopic, SuggestedTopic } from './discourse/types'
+import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
+import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
+import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 
-// Discourse Topic 数据结构
-interface DiscourseTopic {
-  id: number
-  title: string
-  fancy_title: string
-  slug: string
-  posts_count: number
-  reply_count: number
-  views: number
-  like_count: number
-  created_at: string
-  last_posted_at: string
-  bumped_at: string
-  posters: Array<{
-    user_id: number
-    extras?: string
-    description: string
-  }>
-}
+const {
+  baseUrl,
+  urlInput,
+  tabs,
+  activeTabId,
+  activeTab,
+  isLoadingMore,
+  createTab,
+  closeTab,
+  switchTab,
+  goBack,
+  goForward,
+  refresh,
+  goHome,
+  updateBaseUrl,
+  openTopic,
+  openCategory,
+  openInNewTab,
+  openSuggestedTopic,
+  loadMorePosts
+} = useDiscourseBrowser()
 
-interface DiscourseCategory {
-  id: number
-  name: string
-  slug: string
-  color: string
-  text_color: string
-  topic_count: number
-  description?: string
-}
-
-interface DiscourseUser {
-  id: number
-  username: string
-  name?: string
-  avatar_template: string
-}
-
-interface DiscoursePost {
-  id: number
-  username: string
-  avatar_template: string
-  created_at: string
-  cooked: string
-  post_number: number
-  reply_count: number
-  like_count: number
-  name?: string
-}
-
-interface SuggestedTopic {
-  id: number
-  title: string
-  fancy_title: string
-  slug: string
-  posts_count: number
-  reply_count: number
-  views: number
-  like_count: number
-  created_at: string
-  last_posted_at: string
-  category_id: number
-}
-
-interface DiscourseTopicDetail {
-  id: number
-  title: string
-  fancy_title: string
-  posts_count: number
-  views: number
-  like_count: number
-  created_at: string
-  post_stream: {
-    posts: DiscoursePost[]
-    stream: number[]
-  }
-  details: {
-    created_by: DiscourseUser
-    participants: DiscourseUser[]
-  }
-  suggested_topics?: SuggestedTopic[]
-  related_topics?: SuggestedTopic[]
-}
-
-// 默认论坛地址
-const baseUrl = ref('https://linux.do')
-const urlInput = ref('https://linux.do')
-
-// Tab 管理
-const tabs = ref<BrowserTab[]>([])
-const activeTabId = ref<string>('')
-
-// 当前活动 tab
-const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value))
-
-// 视图状态
-type ViewType = 'home' | 'category' | 'topic' | 'user' | 'error'
-const currentView = ref<ViewType>('home')
-
-// 数据
-const categories = ref<DiscourseCategory[]>([])
-const topics = ref<DiscourseTopic[]>([])
-const currentTopic = ref<DiscourseTopicDetail | null>(null)
-const users = ref<Map<number, DiscourseUser>>(new Map())
-const errorMessage = ref('')
-
-// 分页状态
-const loadedPostIds = ref<Set<number>>(new Set())
-const isLoadingMore = ref(false)
-const hasMorePosts = ref(false)
 const contentAreaRef = ref<HTMLElement | null>(null)
 
-// 生成唯一 ID
-const generateId = () => `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-// 页面代理请求
-async function pageFetch<T>(
-  url: string,
-  options?: { method?: string; headers?: Record<string, string>; body?: string },
-  responseType: 'json' | 'text' = 'json'
-): Promise<{ status: number; ok: boolean; data: T | null }> {
-  const chromeAPI = (globalThis as any).chrome
-  if (!chromeAPI?.runtime?.sendMessage) {
-    throw new Error('Page fetch unavailable: chrome.runtime is not accessible')
-  }
-
-  return await new Promise((resolve, reject) => {
-    chromeAPI.runtime.sendMessage(
-      {
-        type: 'LINUX_DO_PAGE_FETCH',
-        options: {
-          url,
-          method: options?.method || 'GET',
-          headers: options?.headers,
-          body: options?.body,
-          responseType
-        }
-      },
-      (resp: { success: boolean; status?: number; ok?: boolean; data?: T; error?: string }) => {
-        if (resp?.success) {
-          resolve({
-            status: resp.status || 200,
-            ok: resp.ok !== false,
-            data: resp.data ?? null
-          })
-          return
-        }
-        reject(new Error(resp?.error || `Page fetch failed: ${resp?.status || 'unknown'}`))
-      }
-    )
-  })
-}
-
-// 创建新 Tab
-const createTab = (url?: string) => {
-  const id = generateId()
-  const newTab: BrowserTab = {
-    id,
-    title: '新标签页',
-    url: url || baseUrl.value,
-    loading: false,
-    content: '',
-    history: [url || baseUrl.value],
-    historyIndex: 0,
-    scrollTop: 0
-  }
-  tabs.value.push(newTab)
-  activeTabId.value = id
-  navigateTo(url || baseUrl.value)
-}
-
-// 关闭 Tab
-const closeTab = (id: string) => {
-  const index = tabs.value.findIndex(t => t.id === id)
-  if (index === -1) return
-
-  tabs.value.splice(index, 1)
-
-  if (tabs.value.length === 0) {
-    createTab()
-  } else if (activeTabId.value === id) {
-    activeTabId.value = tabs.value[Math.min(index, tabs.value.length - 1)].id
-  }
-}
-
-// 切换 Tab
-const switchTab = (id: string) => {
-  activeTabId.value = id
-}
-
-// 导航到 URL
-const navigateTo = async (url: string, addToHistory = true) => {
-  const tab = activeTab.value
-  if (!tab) return
-
-  tab.loading = true
-  tab.url = url
-  errorMessage.value = ''
-
-  try {
-    // 解析 URL 类型
-    const urlObj = new URL(url)
-    const pathname = urlObj.pathname
-
-    if (pathname === '/' || pathname === '') {
-      // 首页 - 获取分类和最新话题
-      await loadHome()
-      tab.title = '首页 - ' + urlObj.hostname
-      currentView.value = 'home'
-    } else if (pathname.startsWith('/c/')) {
-      // 分类页面 - 格式：/c/{slug}/{id} 或 /c/{slug}
-      const parts = pathname.replace('/c/', '').split('/').filter(Boolean)
-      const categorySlug = parts[0]
-      const categoryId = parts[1] ? parseInt(parts[1]) : null
-      await loadCategory(categorySlug, categoryId)
-      tab.title = `分类：${categorySlug}`
-      currentView.value = 'category'
-    } else if (pathname.startsWith('/t/')) {
-      // 话题详情
-      const parts = pathname.replace('/t/', '').split('/')
-      const topicId = parseInt(parts[parts.length - 1]) || parseInt(parts[0])
-      await loadTopic(topicId)
-      currentView.value = 'topic'
-    } else if (pathname.startsWith('/u/')) {
-      // 用户页面
-      const username = pathname.replace('/u/', '').split('/')[0]
-      tab.title = `用户：${username}`
-      currentView.value = 'user'
-    } else {
-      // 尝试作为首页加载
-      await loadHome()
-      tab.title = urlObj.hostname
-      currentView.value = 'home'
-    }
-
-    // 添加到历史记录
-    if (addToHistory) {
-      tab.history = tab.history.slice(0, tab.historyIndex + 1)
-      tab.history.push(url)
-      tab.historyIndex = tab.history.length - 1
-    }
-  } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : String(e)
-    currentView.value = 'error'
-    tab.title = '加载失败'
-  } finally {
-    tab.loading = false
-  }
-}
-
-// 加载首页
-const loadHome = async () => {
-  try {
-    const [catResult, topicResult] = await Promise.all([
-      pageFetch<any>(`${baseUrl.value}/categories.json`),
-      pageFetch<any>(`${baseUrl.value}/latest.json`)
-    ])
-
-    console.log('[DiscourseBrowser] Raw catResult:', catResult)
-    console.log('[DiscourseBrowser] Raw topicResult:', topicResult)
-
-    // 提取实际数据 - 处理可能的嵌套
-    const extractData = (result: any) => {
-      if (!result) return null
-      // 如果 result.data 存在且是对象，使用它
-      if (result.data && typeof result.data === 'object') {
-        // 检查是否有二次嵌套 (result.data.data)
-        if (result.data.data && typeof result.data.data === 'object') {
-          return result.data.data
-        }
-        return result.data
-      }
-      return result
-    }
-
-    const catData = extractData(catResult)
-    const topicData = extractData(topicResult)
-
-    console.log('[DiscourseBrowser] Extracted catData:', catData)
-    console.log('[DiscourseBrowser] Extracted topicData:', topicData)
-
-    // 获取 categories
-    if (catData?.category_list?.categories) {
-      categories.value = catData.category_list.categories
-      console.log('[DiscourseBrowser] Found categories:', categories.value.length)
-    } else if (catData?.categories) {
-      categories.value = catData.categories
-      console.log('[DiscourseBrowser] Found categories (alt):', categories.value.length)
-    } else {
-      console.warn('[DiscourseBrowser] No categories found')
-      categories.value = []
-    }
-
-    // 获取 topics
-    if (topicData?.topic_list?.topics) {
-      topics.value = topicData.topic_list.topics.slice(0, 30)
-      console.log('[DiscourseBrowser] Found topics:', topics.value.length)
-    } else {
-      console.warn('[DiscourseBrowser] No topics found')
-      topics.value = []
-    }
-
-    // 缓存用户信息
-    if (topicData?.users) {
-      topicData.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-    }
-  } catch (e) {
-    console.error('[DiscourseBrowser] loadHome error:', e)
-    throw e
-  }
-}
-
-// 加载分类
-const loadCategory = async (slug: string, categoryId: number | null = null) => {
-  // 使用正确的 URL 格式：/c/{slug}/{id}.json
-  const url = categoryId
-    ? `${baseUrl.value}/c/${slug}/${categoryId}.json`
-    : `${baseUrl.value}/c/${slug}.json`
-
-  console.log('[DiscourseBrowser] Loading category:', url)
-
-  const result = await pageFetch<any>(url)
-
-  // 提取实际数据
-  const extractData = (res: any) => {
-    if (!res) return null
-    if (res.data && typeof res.data === 'object') {
-      if (res.data.data && typeof res.data.data === 'object') {
-        return res.data.data
-      }
-      return res.data
-    }
-    return res
-  }
-
-  const data = extractData(result)
-  console.log('[DiscourseBrowser] Category data:', data)
-
-  if (data?.topic_list?.topics) {
-    topics.value = data.topic_list.topics.slice(0, 30)
-    console.log('[DiscourseBrowser] Found category topics:', topics.value.length)
-  } else {
-    console.warn('[DiscourseBrowser] No topics found in category')
-    topics.value = []
-  }
-
-  if (data?.users) {
-    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-  }
-}
-
-// 加载话题详情
-const loadTopic = async (topicId: number) => {
-  console.log('[DiscourseBrowser] Loading topic:', topicId)
-
-  const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
-
-  // 提取实际数据
-  const extractData = (res: any) => {
-    if (!res) return null
-    if (res.data && typeof res.data === 'object') {
-      if (res.data.data && typeof res.data.data === 'object') {
-        return res.data.data
-      }
-      return res.data
-    }
-    return res
-  }
-
-  const data = extractData(result)
-  console.log('[DiscourseBrowser] Topic data:', data)
-
-  if (data) {
-    currentTopic.value = data
-    // 初始化分页状态
-    loadedPostIds.value = new Set(data.post_stream?.posts?.map((p: DiscoursePost) => p.id) || [])
-    hasMorePosts.value =
-      (data.post_stream?.stream?.length || 0) > (data.post_stream?.posts?.length || 0)
-    const tab = activeTab.value
-    if (tab && data.title) {
-      tab.title = data.title
-    }
-  } else {
-    console.warn('[DiscourseBrowser] No topic data found')
-    currentTopic.value = null
-    loadedPostIds.value = new Set()
-    hasMorePosts.value = false
-  }
-}
-
-// 加载更多帖子（分页）
-const loadMorePosts = async () => {
-  if (!currentTopic.value || isLoadingMore.value || !hasMorePosts.value) return
-
-  const stream = currentTopic.value.post_stream?.stream || []
-  const unloadedIds = stream.filter((id: number) => !loadedPostIds.value.has(id))
-
-  if (unloadedIds.length === 0) {
-    hasMorePosts.value = false
-    return
-  }
-
-  // 每次加载 20 个帖子
-  const nextBatch = unloadedIds.slice(0, 20)
-  isLoadingMore.value = true
-
-  try {
-    const topicId = currentTopic.value.id
-    const idsParam = nextBatch.map((id: number) => `post_ids[]=${id}`).join('&')
-    const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}`
-
-    console.log('[DiscourseBrowser] Loading more posts:', url)
-
-    const result = await pageFetch<any>(url)
-
-    const extractData = (res: any) => {
-      if (!res) return null
-      if (res.data && typeof res.data === 'object') {
-        if (res.data.data && typeof res.data.data === 'object') {
-          return res.data.data
-        }
-        return res.data
-      }
-      return res
-    }
-
-    const data = extractData(result)
-    console.log('[DiscourseBrowser] More posts data:', data)
-
-    if (data?.post_stream?.posts && currentTopic.value) {
-      // 追加新帖子
-      const newPosts = data.post_stream.posts as DiscoursePost[]
-      currentTopic.value.post_stream.posts = [...currentTopic.value.post_stream.posts, ...newPosts]
-
-      // 更新已加载的帖子 ID
-      newPosts.forEach((p: DiscoursePost) => loadedPostIds.value.add(p.id))
-
-      // 检查是否还有更多
-      hasMorePosts.value = stream.some((id: number) => !loadedPostIds.value.has(id))
-    }
-  } catch (e) {
-    console.error('[DiscourseBrowser] loadMorePosts error:', e)
-  } finally {
-    isLoadingMore.value = false
-  }
-}
-
-// 滚动事件处理（无限加载）
+// Scroll event handler (infinite loading)
 const handleScroll = () => {
-  if (currentView.value !== 'topic' || !contentAreaRef.value) return
+  if (!activeTab.value || activeTab.value.viewType !== 'topic' || !contentAreaRef.value) return
 
   const el = contentAreaRef.value
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
 
-  // 距离底部 200px 时触发加载
+  // Trigger load when 200px from bottom
   if (scrollBottom < 200) {
     loadMorePosts()
   }
 }
 
-// 打开推荐话题
-const openSuggestedTopic = (topic: SuggestedTopic) => {
-  navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
+// Handle topic click
+const handleTopicClick = (topic: DiscourseTopic | SuggestedTopic) => {
+  openTopic(topic as DiscourseTopic)
 }
 
-// 后退
-const goBack = () => {
-  const tab = activeTab.value
-  if (!tab || tab.historyIndex <= 0) return
-  tab.historyIndex--
-  navigateTo(tab.history[tab.historyIndex], false)
+// Handle category click
+const handleCategoryClick = (category: DiscourseCategory) => {
+  openCategory(category)
 }
 
-// 前进
-const goForward = () => {
-  const tab = activeTab.value
-  if (!tab || tab.historyIndex >= tab.history.length - 1) return
-  tab.historyIndex++
-  navigateTo(tab.history[tab.historyIndex], false)
+// Handle middle click (open in new tab)
+const handleMiddleClick = (url: string) => {
+  openInNewTab(url)
 }
 
-// 刷新
-const refresh = () => {
-  const tab = activeTab.value
-  if (tab) {
-    navigateTo(tab.url, false)
-  }
+// Handle suggested topic click
+const handleSuggestedTopicClick = (topic: SuggestedTopic) => {
+  openSuggestedTopic(topic)
 }
 
-// 回到首页
-const goHome = () => {
-  navigateTo(baseUrl.value)
-}
-
-// 更新基础 URL
-const updateBaseUrl = () => {
-  try {
-    const url = new URL(urlInput.value)
-    baseUrl.value = url.origin
-    navigateTo(baseUrl.value)
-  } catch {
-    errorMessage.value = '无效的 URL'
-  }
-}
-
-// 打开话题
-const openTopic = (topic: DiscourseTopic) => {
-  navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
-}
-
-// 打开分类
-const openCategory = (category: DiscourseCategory) => {
-  navigateTo(`${baseUrl.value}/c/${category.slug}/${category.id}`)
-}
-
-// 在新标签页打开
-const openInNewTab = (url: string) => {
-  createTab(url)
-}
-
-// 获取头像 URL
-const getAvatarUrl = (template: string, size = 45) => {
-  if (!template) return ''
-  const url = template.replace('{size}', String(size))
-  return url.startsWith('http') ? url : `${baseUrl.value}${url}`
-}
-
-// 格式化时间
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 60) return `${minutes} 分钟前`
-  if (hours < 24) return `${hours} 小时前`
-  if (days < 30) return `${days} 天前`
-  return date.toLocaleDateString('zh-CN')
-}
-
-// 解析帖子内容，提取图片用于预览
-interface ParsedContent {
-  html: string
-  images: string[]
-}
-
-const parsePostContent = (cooked: string): ParsedContent => {
-  if (!cooked) return { html: '', images: [] }
-
-  const images: string[] = []
-
-  // 替换 lightbox-wrapper 中的图片为占位符
-  let html = cooked.replace(
-    /<div class="lightbox-wrapper">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
-    (_match, fullUrl, _thumbUrl) => {
-      const index = images.length
-      images.push(fullUrl)
-      return `<span class="post-image-placeholder" data-index="${index}"></span>`
-    }
-  )
-
-  // 同时处理普通的 img 标签（非 lightbox）
-  html = html.replace(/<img([^>]*)src="([^"]+)"([^>]*)>/gi, (_match, before, src, after) => {
-    // 跳过 emoji 图片
-    if (src.includes('/images/emoji/') || before.includes('emoji') || after.includes('emoji')) {
-      return `<img${before}src="${src}"${after}>`
-    }
-    const index = images.length
-    images.push(src)
-    return `<span class="post-image-placeholder" data-index="${index}"></span>`
-  })
-
-  return { html, images }
-}
-
-// 存储每个帖子的解析结果
-const parsedPosts = computed(() => {
-  if (!currentTopic.value?.post_stream?.posts) return new Map()
-
-  const map = new Map<number, ParsedContent>()
-  for (const post of currentTopic.value.post_stream.posts) {
-    map.set(post.id, parsePostContent(post.cooked))
-  }
-  return map
-})
-
-// 获取帖子的解析内容
-const getParsedPost = (postId: number): ParsedContent => {
-  return parsedPosts.value.get(postId) || { html: '', images: [] }
-}
-
-// 初始化
+// Initialize
 onMounted(() => {
   createTab()
-  // 下一帧绑定滚动事件（等待 ref 绑定）
   nextTick(() => {
     if (contentAreaRef.value) {
       contentAreaRef.value.addEventListener('scroll', handleScroll)
@@ -637,11 +94,11 @@ onUnmounted(() => {
   <div
     class="discourse-browser flex flex-col h-[700px] border dark:border-gray-700 rounded-lg overflow-hidden"
   >
-    <!-- 工具栏 -->
+    <!-- Toolbar -->
     <div
       class="toolbar bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 p-2 flex items-center gap-2"
     >
-      <!-- 导航按钮 -->
+      <!-- Navigation buttons -->
       <div class="flex items-center gap-1">
         <a-button
           size="small"
@@ -665,7 +122,7 @@ onUnmounted(() => {
         </a-button>
       </div>
 
-      <!-- 地址栏 -->
+      <!-- Address bar -->
       <div class="flex-1 flex items-center gap-2">
         <a-input
           v-model:value="urlInput"
@@ -678,7 +135,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Tab 栏 -->
+    <!-- Tab bar -->
     <div
       class="tab-bar bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700 flex items-center overflow-x-auto"
     >
@@ -704,220 +161,63 @@ onUnmounted(() => {
       </a-button>
     </div>
 
-    <!-- 内容区域 -->
+    <!-- Content area -->
     <div
       ref="contentAreaRef"
       class="content-area flex-1 overflow-y-auto bg-white dark:bg-gray-900 p-4"
     >
-      <!-- 加载中 -->
+      <!-- Loading -->
       <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
         <a-spin size="large" />
       </div>
 
-      <!-- 错误页面 -->
+      <!-- Error page -->
       <div
-        v-else-if="currentView === 'error'"
+        v-else-if="activeTab?.viewType === 'error'"
         class="flex flex-col items-center justify-center h-full text-gray-500"
       >
         <div class="text-6xl mb-4">:(</div>
         <div class="text-lg mb-2">加载失败</div>
-        <div class="text-sm text-red-500">{{ errorMessage }}</div>
+        <div class="text-sm text-red-500">{{ activeTab.errorMessage }}</div>
         <a-button type="primary" class="mt-4" @click="refresh">重试</a-button>
       </div>
 
-      <!-- 首页视图 -->
-      <div v-else-if="currentView === 'home'" class="space-y-6">
-        <!-- 分类列表 -->
-        <div v-if="categories.length > 0">
-          <h3 class="text-lg font-semibold mb-3 dark:text-white">分类</h3>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <div
-              v-for="cat in categories.slice(0, 8)"
-              :key="cat.id"
-              class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"
-              :style="{ borderLeftColor: `#${cat.color}`, borderLeftWidth: '4px' }"
-              @click="openCategory(cat)"
-            >
-              <div class="font-medium dark:text-white">{{ cat.name }}</div>
-              <div class="text-xs text-gray-500">{{ cat.topic_count }} 话题</div>
-            </div>
-          </div>
-        </div>
+      <!-- Home view -->
+      <div v-else-if="activeTab?.viewType === 'home'" class="space-y-6">
+        <!-- Categories -->
+        <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
 
-        <!-- 最新话题 -->
-        <div v-if="topics.length > 0">
+        <!-- Latest topics -->
+        <div v-if="activeTab.topics.length > 0">
           <h3 class="text-lg font-semibold mb-3 dark:text-white">最新话题</h3>
-          <div class="space-y-2">
-            <div
-              v-for="topic in topics"
-              :key="topic.id"
-              class="topic-item p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              @click="openTopic(topic)"
-              @click.middle="openInNewTab(`${baseUrl}/t/${topic.slug}/${topic.id}`)"
-            >
-              <div class="flex items-start gap-3">
-                <div class="flex-1 min-w-0">
-                  <div
-                    class="font-medium dark:text-white truncate"
-                    v-html="topic.fancy_title || topic.title"
-                  />
-                  <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                    <span>{{ topic.posts_count }} 回复</span>
-                    <span>{{ topic.views }} 浏览</span>
-                    <span>{{ topic.like_count }} 赞</span>
-                    <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 分类视图 -->
-      <div v-else-if="currentView === 'category'" class="space-y-2">
-        <div
-          v-for="topic in topics"
-          :key="topic.id"
-          class="topic-item p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          @click="openTopic(topic)"
-        >
-          <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
-          <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
-            <span>{{ topic.posts_count }} 回复</span>
-            <span>{{ topic.views }} 浏览</span>
-            <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 话题详情视图 -->
-      <div v-else-if="currentView === 'topic' && currentTopic" class="space-y-4">
-        <!-- 话题标题 -->
-        <div class="border-b dark:border-gray-700 pb-4">
-          <h1
-            class="text-xl font-bold dark:text-white"
-            v-html="currentTopic.fancy_title || currentTopic.title"
+          <DiscourseTopicList
+            :topics="activeTab.topics"
+            :baseUrl="baseUrl"
+            @click="handleTopicClick"
+            @middleClick="handleMiddleClick"
           />
-          <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-            <span>{{ currentTopic.posts_count }} 回复</span>
-            <span>{{ currentTopic.views }} 浏览</span>
-            <span>{{ currentTopic.like_count }} 赞</span>
-            <span>创建于 {{ formatTime(currentTopic.created_at) }}</span>
-          </div>
-        </div>
-
-        <!-- 帖子列表 -->
-        <div v-if="currentTopic.post_stream?.posts" class="posts-list space-y-4">
-          <div
-            v-for="post in currentTopic.post_stream.posts"
-            :key="post.id"
-            class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-          >
-            <!-- 帖子头部 -->
-            <div class="flex items-center gap-3 mb-3">
-              <img
-                :src="getAvatarUrl(post.avatar_template)"
-                :alt="post.username"
-                class="w-10 h-10 rounded-full"
-              />
-              <div>
-                <div class="font-medium dark:text-white">{{ post.name || post.username }}</div>
-                <div class="text-xs text-gray-500">
-                  @{{ post.username }} · #{{ post.post_number }} · {{ formatTime(post.created_at) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 帖子内容 -->
-            <div class="post-content prose dark:prose-invert max-w-none text-sm">
-              <div v-html="getParsedPost(post.id).html" />
-              <!-- 图片预览组 -->
-              <a-image-preview-group v-if="getParsedPost(post.id).images.length > 0">
-                <div class="post-images grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-                  <a-image
-                    v-for="(img, idx) in getParsedPost(post.id).images"
-                    :key="idx"
-                    :src="img"
-                    :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
-                    class="rounded cursor-pointer object-cover"
-                    :style="{ maxHeight: '200px' }"
-                  />
-                </div>
-              </a-image-preview-group>
-            </div>
-
-            <!-- 帖子底部 -->
-            <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
-              <span v-if="post.like_count > 0">{{ post.like_count }} 赞</span>
-              <span v-if="post.reply_count > 0">{{ post.reply_count }} 回复</span>
-            </div>
-          </div>
-        </div>
-        <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
-
-        <!-- 加载更多指示器 -->
-        <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
-          <a-spin />
-          <span class="ml-2 text-gray-500">加载更多帖子...</span>
-        </div>
-
-        <!-- 到底提示 -->
-        <div
-          v-if="!hasMorePosts && currentTopic.post_stream?.posts?.length"
-          class="text-center text-gray-400 py-4 text-sm"
-        >
-          已加载全部 {{ currentTopic.post_stream.posts.length }} 条帖子
-        </div>
-
-        <!-- 推荐话题 -->
-        <div
-          v-if="currentTopic.suggested_topics && currentTopic.suggested_topics.length > 0"
-          class="mt-8 pt-6 border-t dark:border-gray-700"
-        >
-          <h3 class="text-lg font-semibold mb-4 dark:text-white">推荐话题</h3>
-          <div class="space-y-2">
-            <div
-              v-for="topic in currentTopic.suggested_topics"
-              :key="topic.id"
-              class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              @click="openSuggestedTopic(topic)"
-            >
-              <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
-              <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                <span>{{ topic.posts_count }} 回复</span>
-                <span>{{ topic.views }} 浏览</span>
-                <span>{{ topic.like_count }} 赞</span>
-                <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 相关话题 -->
-        <div
-          v-if="currentTopic.related_topics && currentTopic.related_topics.length > 0"
-          class="mt-6 pt-6 border-t dark:border-gray-700"
-        >
-          <h3 class="text-lg font-semibold mb-4 dark:text-white">相关话题</h3>
-          <div class="space-y-2">
-            <div
-              v-for="topic in currentTopic.related_topics"
-              :key="topic.id"
-              class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              @click="openSuggestedTopic(topic)"
-            >
-              <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
-              <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                <span>{{ topic.posts_count }} 回复</span>
-                <span>{{ topic.views }} 浏览</span>
-                <span>{{ topic.like_count }} 赞</span>
-                <span>{{ formatTime(topic.last_posted_at || topic.created_at) }}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
+      <!-- Category view -->
+      <div v-else-if="activeTab?.viewType === 'category'" class="space-y-2">
+        <DiscourseTopicList
+          :topics="activeTab.topics"
+          :baseUrl="baseUrl"
+          @click="handleTopicClick"
+          @middleClick="handleMiddleClick"
+        />
+      </div>
+
+      <!-- Topic detail view -->
+      <DiscourseTopicView
+        v-else-if="activeTab?.viewType === 'topic' && activeTab.currentTopic"
+        :topic="activeTab.currentTopic"
+        :baseUrl="baseUrl"
+        :isLoadingMore="isLoadingMore"
+        :hasMorePosts="activeTab.hasMorePosts"
+        @openSuggestedTopic="handleSuggestedTopicClick"
+      />
     </div>
   </div>
 </template>
@@ -932,48 +232,5 @@ onUnmounted(() => {
 
 .tab-item {
   transition: background-color 0.15s;
-}
-
-.post-content :deep(img) {
-  max-width: 100%;
-  height: auto;
-  border-radius: 4px;
-}
-
-.post-content :deep(a) {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.post-content :deep(a:hover) {
-  text-decoration: underline;
-}
-
-.post-content :deep(pre) {
-  background: #1f2937;
-  color: #e5e7eb;
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-}
-
-.post-content :deep(code) {
-  background: #374151;
-  padding: 0.125rem 0.25rem;
-  border-radius: 2px;
-  font-size: 0.875em;
-}
-
-.post-content :deep(blockquote) {
-  border-left: 3px solid #3b82f6;
-  padding-left: 1rem;
-  margin-left: 0;
-  color: #6b7280;
-}
-
-.post-content :deep(.emoji) {
-  width: 1.25em;
-  height: 1.25em;
-  vertical-align: middle;
 }
 </style>
