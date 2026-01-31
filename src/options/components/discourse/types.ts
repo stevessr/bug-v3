@@ -71,6 +71,7 @@ export interface DiscourseCategory {
   topic_count: number
   description?: string
   parent_category_id?: number | null
+  subcategory_ids?: number[] | null
 }
 
 export interface DiscourseUser {

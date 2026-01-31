@@ -13,7 +13,9 @@ const props = withDefaults(
 )
 
 const hasHierarchy = computed(() => {
-  const hasChildren = props.categories.some(cat => cat.parent_category_id)
+  const hasChildren = props.categories.some(
+    cat => cat.parent_category_id || (cat.subcategory_ids?.length || 0) > 0
+  )
   const hasParents = props.categories.some(cat => !cat.parent_category_id)
   return hasChildren && hasParents
 })
@@ -24,12 +26,35 @@ const topCategories = computed(() =>
 
 const childrenByParent = computed(() => {
   const map = new Map<number, DiscourseCategory[]>()
+  const byId = new Map<number, DiscourseCategory>()
   props.categories.forEach(cat => {
-    if (!cat.parent_category_id) return
-    const list = map.get(cat.parent_category_id) || []
-    list.push(cat)
-    map.set(cat.parent_category_id, list)
+    byId.set(cat.id, cat)
   })
+
+  const pushChild = (parentId: number, child: DiscourseCategory) => {
+    const list = map.get(parentId) || []
+    if (!list.some(item => item.id === child.id)) {
+      list.push(child)
+      map.set(parentId, list)
+    }
+  }
+
+  props.categories.forEach(cat => {
+    if (cat.parent_category_id) {
+      pushChild(cat.parent_category_id, cat)
+    }
+  })
+
+  props.categories.forEach(cat => {
+    if (!cat.subcategory_ids?.length) return
+    cat.subcategory_ids.forEach(id => {
+      const child = byId.get(id)
+      if (child) {
+        pushChild(cat.id, child)
+      }
+    })
+  })
+
   return map
 })
 
@@ -43,7 +68,7 @@ const emit = defineEmits<{
     <h3 class="text-lg font-semibold mb-3 dark:text-white">{{ props.title }}</h3>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       <div
-        v-for="cat in topCategories.slice(0, 8)"
+        v-for="cat in topCategories"
         :key="cat.id"
         class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"
         :style="{ borderLeftColor: `#${cat.color}`, borderLeftWidth: '4px' }"
