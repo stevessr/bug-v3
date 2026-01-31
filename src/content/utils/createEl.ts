@@ -1,2 +1,2 @@
 // Re-export from new location for backwards compatibility
-export * from './ui/notify'
+export * from './dom/createEl'

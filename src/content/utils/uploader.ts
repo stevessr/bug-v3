@@ -1,3 +1,2 @@
-export * from './upload/core'
-export * from './upload/ui'
-export * from './upload/helpers'
+// Re-export from new location for backwards compatibility
+export * from '../discourse/utils/uploader'

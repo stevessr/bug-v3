@@ -1,7 +1,7 @@
-import { createE, DAEL, DOA } from '../createEl'
-import { customAlert, customConfirm } from '../dialog'
-import { showCustomImagePicker, showCustomFolderPicker } from '../customFilePicker'
-import { notify } from '../notify'
+import { createE, DAEL, DOA } from '../dom/createEl'
+import { customAlert, customConfirm } from '../ui/dialog'
+import { showCustomImagePicker, showCustomFolderPicker } from '../picker'
+import { notify } from '../ui/notify'
 
 import { uploader } from './core'
 import { parseImageFilenamesFromMarkdown } from './helpers'
