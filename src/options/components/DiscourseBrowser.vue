@@ -369,7 +369,7 @@ onUnmounted(() => {
 <template>
   <DiscourseIcon />
   <div
-    class="discourse-browser flex flex-col h-[700px] border dark:border-gray-700 rounded-lg overflow-hidden"
+    class="discourse-browser flex flex-col h-full min-h-0 border dark:border-gray-700 rounded-lg overflow-hidden"
   >
     <!-- Toolbar -->
     <div

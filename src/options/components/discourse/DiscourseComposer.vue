@@ -66,7 +66,6 @@ const categoryTreeData = computed(() => {
   list.forEach(cat => {
     nodeMap.set(cat.id, {
       title: cat.name,
-      label: cat.name,
       value: cat.id,
       key: cat.id,
       icon: cat.icon,
@@ -88,6 +87,20 @@ const categoryTreeData = computed(() => {
   })
 
   return roots
+})
+
+const categoryById = computed(() => {
+  const map = new Map<number, DiscourseCategory>()
+  ;(props.categories || []).forEach(cat => map.set(cat.id, cat))
+  if (props.currentCategory && !map.has(props.currentCategory.id)) {
+    map.set(props.currentCategory.id, props.currentCategory)
+  }
+  return map
+})
+
+const selectedCategory = computed(() => {
+  if (!categoryId.value) return null
+  return categoryById.value.get(categoryId.value) || null
 })
 
 const previewHtml = computed(() => renderMarkdown(raw.value))
@@ -314,8 +327,40 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           tree-default-expand-all
           tree-node-filter-prop="title"
           :tree-data="categoryTreeData"
-          tree-node-label-prop="label"
         >
+          <template #label>
+            <span v-if="selectedCategory" class="category-option">
+              <span
+                class="category-option-icon"
+                :style="{ color: `#${selectedCategory.color || '94a3b8'}` }"
+              >
+                <img
+                  v-if="selectedCategory.uploaded_logo?.url"
+                  :src="getImageUrl(selectedCategory.uploaded_logo.url)"
+                  :alt="selectedCategory.name"
+                  class="category-option-img"
+                />
+                <img
+                  v-else-if="selectedCategory.uploaded_logo_dark?.url"
+                  :src="getImageUrl(selectedCategory.uploaded_logo_dark.url)"
+                  :alt="selectedCategory.name"
+                  class="category-option-img"
+                />
+                <span v-else-if="selectedCategory.emoji" class="category-option-emoji">
+                  {{ selectedCategory.emoji }}
+                </span>
+                <svg v-else-if="selectedCategory.icon" class="category-option-svg" viewBox="0 0 24 24">
+                  <use :href="getIconHref(selectedCategory.icon)" />
+                </svg>
+                <span
+                  v-else
+                  class="category-option-dot"
+                  :style="{ backgroundColor: `#${selectedCategory.color || '94a3b8'}` }"
+                />
+              </span>
+              <span>{{ selectedCategory.name }}</span>
+            </span>
+          </template>
           <template #title="{ dataRef }">
             <span v-if="dataRef && dataRef.title" class="category-option">
               <span class="category-option-icon" :style="{ color: `#${dataRef.color || '94a3b8'}` }">
