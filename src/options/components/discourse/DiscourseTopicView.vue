@@ -3,7 +3,9 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
 import { formatTime, getAvatarUrl, parsePostContent, pageFetch, extractData } from './utils'
+import { togglePostLike } from './actions'
 import DiscourseTopicList from './DiscourseTopicList.vue'
+import DiscourseComposer from './DiscourseComposer.vue'
 
 const props = defineProps<{
   topic: DiscourseTopicDetail
@@ -16,9 +18,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'openSuggestedTopic', topic: SuggestedTopic): void
   (e: 'openUser', username: string): void
+  (e: 'refresh'): void
 }>()
 
 const postsListRef = ref<HTMLElement | null>(null)
+const composerRef = ref<HTMLElement | null>(null)
+const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
+const likedPostIds = ref<Set<number>>(new Set())
+const likingPostIds = ref<Set<number>>(new Set())
 
 // Parse posts and cache results
 const parsedPosts = computed(() => {
@@ -43,6 +50,61 @@ const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
 
+const scrollToComposer = () => {
+  requestAnimationFrame(() => {
+    composerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+const handleReplyClick = (post: DiscoursePost) => {
+  replyTarget.value = { postNumber: post.post_number, username: post.username }
+  scrollToComposer()
+}
+
+const handleClearReply = () => {
+  replyTarget.value = null
+}
+
+const isPostLiked = (post: DiscoursePost) => {
+  if (likedPostIds.value.has(post.id)) return true
+  const postAny = post as any
+  const summary = postAny?.actions_summary || []
+  if (Array.isArray(summary)) {
+    if (summary.some((item: any) => item?.id === 2 && item?.acted)) return true
+  }
+  const reactions = postAny?.reactions
+  if (reactions && typeof reactions === 'object') {
+    const items = Object.values(reactions) as any[]
+    if (items.some(item => item?.id === 'heart' && item?.reacted)) return true
+  }
+  return false
+}
+
+const toggleLike = async (post: DiscoursePost) => {
+  if (likingPostIds.value.has(post.id)) return
+  likingPostIds.value.add(post.id)
+  const wasLiked = isPostLiked(post)
+  try {
+    await togglePostLike(props.baseUrl, post.id)
+    if (wasLiked) {
+      likedPostIds.value.delete(post.id)
+      post.like_count = Math.max(0, post.like_count - 1)
+    } else {
+      likedPostIds.value.add(post.id)
+      post.like_count = (post.like_count || 0) + 1
+    }
+  } catch (error) {
+    console.warn('[DiscourseBrowser] toggle like failed:', error)
+  } finally {
+    likingPostIds.value.delete(post.id)
+  }
+}
+
+const handleReplyPosted = () => {
+  replyTarget.value = null
+  emit('refresh')
+}
+
 const scrollToPost = (postNumber: number) => {
   if (!postNumber) return
   requestAnimationFrame(() => {
@@ -59,6 +121,15 @@ watch(
     if (value) scrollToPost(value)
   },
   { immediate: true }
+)
+
+watch(
+  () => props.topic?.id,
+  () => {
+    replyTarget.value = null
+    likedPostIds.value = new Set()
+    likingPostIds.value = new Set()
+  }
 )
 
 const handleQuoteToggle = async (event: Event) => {
@@ -220,12 +291,33 @@ onUnmounted(() => {
 
         <!-- Post footer -->
         <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
+          <button
+            class="post-action-btn"
+            :class="{ active: isPostLiked(post) }"
+            :disabled="likingPostIds.has(post.id)"
+            @click="toggleLike(post)"
+          >
+            👍 赞
+          </button>
+          <button class="post-action-btn" @click="handleReplyClick(post)">回复</button>
           <span v-if="post.like_count > 0">{{ post.like_count }} 赞</span>
           <span v-if="post.reply_count > 0">{{ post.reply_count }} 回复</span>
         </div>
       </div>
     </div>
     <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
+
+    <div ref="composerRef" class="pt-2">
+      <DiscourseComposer
+        mode="reply"
+        :baseUrl="baseUrl"
+        :topicId="topic.id"
+        :replyToPostNumber="replyTarget?.postNumber || null"
+        :replyToUsername="replyTarget?.username || null"
+        @posted="handleReplyPosted"
+        @clearReply="handleClearReply"
+      />
+    </div>
 
     <!-- Loading more indicator -->
     <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
@@ -311,6 +403,24 @@ onUnmounted(() => {
   width: 1.25em;
   height: 1.25em;
   vertical-align: middle;
+}
+
+.post-action-btn {
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.post-action-btn:hover {
+  color: #1d4ed8;
+}
+
+.post-action-btn.active {
+  color: #ef4444;
+}
+
+.post-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Quote styles */

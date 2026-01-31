@@ -21,6 +21,7 @@ import type {
 import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
+import DiscourseComposer from './discourse/DiscourseComposer.vue'
 import DiscourseUserView from './discourse/DiscourseUserView.vue'
 import DiscourseUserExtrasView from './discourse/DiscourseUserExtrasView.vue'
 import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
@@ -80,6 +81,7 @@ const isViewingSelf = computed(
     !!currentUsername.value &&
     activeTab.value?.currentUser?.username === currentUsername.value
 )
+const showTopicComposer = ref(false)
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = () => {
@@ -200,6 +202,21 @@ const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 
   else openUserFollowers(username)
 }
 
+const toggleTopicComposer = () => {
+  showTopicComposer.value = !showTopicComposer.value
+}
+
+const handleTopicPosted = (payload: any) => {
+  showTopicComposer.value = false
+  const topicId = payload?.topic_id || payload?.topicId
+  const slug = payload?.topic_slug || payload?.slug || 'topic'
+  if (topicId) {
+    openSuggestedTopic({ id: topicId, slug })
+  } else {
+    refresh()
+  }
+}
+
 // Handle messages tab switch
 const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
@@ -318,6 +335,20 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
+            <a-button size="small" @click="toggleTopicComposer">
+              {{ showTopicComposer ? '收起' : '发帖' }}
+            </a-button>
+          </div>
+          <DiscourseComposer
+            v-if="showTopicComposer"
+            mode="topic"
+            :baseUrl="baseUrl"
+            :categories="activeTab.categories"
+            @posted="handleTopicPosted"
+          />
+
           <!-- Categories -->
           <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
 
@@ -363,6 +394,21 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
+            <a-button size="small" @click="toggleTopicComposer">
+              {{ showTopicComposer ? '收起' : '发帖' }}
+            </a-button>
+          </div>
+          <DiscourseComposer
+            v-if="showTopicComposer"
+            mode="topic"
+            :baseUrl="baseUrl"
+            :categories="activeTab.categories"
+            :defaultCategoryId="activeTab.currentCategoryId"
+            @posted="handleTopicPosted"
+          />
+
           <DiscourseCategoryGrid
             v-if="activeTab.categories.length > 0"
             :categories="activeTab.categories"
@@ -414,6 +460,7 @@ onUnmounted(() => {
         :targetPostNumber="activeTab.targetPostNumber"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
+        @refresh="refresh"
       />
 
       <!-- User profile view -->
