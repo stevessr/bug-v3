@@ -35,21 +35,27 @@ const {
   openCategory,
   openInNewTab,
   openSuggestedTopic,
-  loadMorePosts
+  loadMorePosts,
+  loadMoreTopics
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
 
-// Scroll event handler (infinite loading)
+// Scroll event handler (infinite loading for all view types)
 const handleScroll = () => {
-  if (!activeTab.value || activeTab.value.viewType !== 'topic' || !contentAreaRef.value) return
+  if (!activeTab.value || !contentAreaRef.value) return
 
   const el = contentAreaRef.value
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
 
   // Trigger load when 200px from bottom
   if (scrollBottom < 200) {
-    loadMorePosts()
+    const viewType = activeTab.value.viewType
+    if (viewType === 'topic') {
+      loadMorePosts()
+    } else if (viewType === 'home' || viewType === 'category') {
+      loadMoreTopics()
+    }
   }
 }
 
@@ -196,6 +202,20 @@ onUnmounted(() => {
             @click="handleTopicClick"
             @middleClick="handleMiddleClick"
           />
+
+          <!-- Loading more indicator -->
+          <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
+            <a-spin />
+            <span class="ml-2 text-gray-500">加载更多话题...</span>
+          </div>
+
+          <!-- End indicator -->
+          <div
+            v-if="!activeTab.hasMoreTopics && !isLoadingMore"
+            class="text-center text-gray-400 py-4 text-sm"
+          >
+            已加载全部话题
+          </div>
         </div>
       </div>
 
@@ -207,6 +227,20 @@ onUnmounted(() => {
           @click="handleTopicClick"
           @middleClick="handleMiddleClick"
         />
+
+        <!-- Loading more indicator -->
+        <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
+          <a-spin />
+          <span class="ml-2 text-gray-500">加载更多话题...</span>
+        </div>
+
+        <!-- End indicator -->
+        <div
+          v-if="!activeTab.hasMoreTopics && !isLoadingMore && activeTab.topics.length > 0"
+          class="text-center text-gray-400 py-4 text-sm"
+        >
+          已加载全部话题
+        </div>
       </div>
 
       <!-- Topic detail view -->

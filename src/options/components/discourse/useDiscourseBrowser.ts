@@ -1,6 +1,7 @@
 // Discourse Browser Composable
 
 import { ref, computed, watch } from 'vue'
+
 import type {
   BrowserTab,
   ViewType,
@@ -60,7 +61,12 @@ export function useDiscourseBrowser() {
       currentTopic: null,
       errorMessage: '',
       loadedPostIds: new Set(),
-      hasMorePosts: false
+      hasMorePosts: false,
+      // Topics pagination
+      topicsPage: 0,
+      hasMoreTopics: true,
+      currentCategorySlug: '',
+      currentCategoryId: null
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -164,10 +170,18 @@ export function useDiscourseBrowser() {
     }
 
     if (topicData?.topic_list?.topics) {
-      tab.topics = topicData.topic_list.topics.slice(0, 30)
+      tab.topics = topicData.topic_list.topics
+      // Check if there are more topics
+      tab.hasMoreTopics = topicData.topic_list.more_topics_url ? true : false
     } else {
       tab.topics = []
+      tab.hasMoreTopics = false
     }
+
+    // Reset pagination state
+    tab.topicsPage = 0
+    tab.currentCategorySlug = ''
+    tab.currentCategoryId = null
 
     if (topicData?.users) {
       topicData.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
@@ -184,10 +198,17 @@ export function useDiscourseBrowser() {
     const data = extractData(result)
 
     if (data?.topic_list?.topics) {
-      tab.topics = data.topic_list.topics.slice(0, 30)
+      tab.topics = data.topic_list.topics
+      tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
     } else {
       tab.topics = []
+      tab.hasMoreTopics = false
     }
+
+    // Save category info for pagination
+    tab.topicsPage = 0
+    tab.currentCategorySlug = slug
+    tab.currentCategoryId = categoryId
 
     if (data?.users) {
       data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
@@ -246,6 +267,54 @@ export function useDiscourseBrowser() {
       }
     } catch (e) {
       console.error('[DiscourseBrowser] loadMorePosts error:', e)
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
+  // Load more topics (pagination for home/category)
+  async function loadMoreTopics() {
+    const tab = activeTab.value
+    if (!tab || isLoadingMore.value || !tab.hasMoreTopics) return
+    if (tab.viewType !== 'home' && tab.viewType !== 'category') return
+
+    isLoadingMore.value = true
+    tab.topicsPage++
+
+    try {
+      let url: string
+      if (tab.viewType === 'home') {
+        url = `${baseUrl.value}/latest.json?page=${tab.topicsPage}`
+      } else {
+        // Category view
+        if (tab.currentCategoryId) {
+          url = `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json?page=${tab.topicsPage}`
+        } else {
+          url = `${baseUrl.value}/c/${tab.currentCategorySlug}.json?page=${tab.topicsPage}`
+        }
+      }
+
+      const result = await pageFetch<any>(url)
+      const data = extractData(result)
+
+      if (data?.topic_list?.topics && data.topic_list.topics.length > 0) {
+        // Filter out duplicates
+        const existingIds = new Set(tab.topics.map(t => t.id))
+        const newTopics = data.topic_list.topics.filter(
+          (t: DiscourseTopic) => !existingIds.has(t.id)
+        )
+        tab.topics = [...tab.topics, ...newTopics]
+        tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
+      } else {
+        tab.hasMoreTopics = false
+      }
+
+      if (data?.users) {
+        data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+      }
+    } catch (e) {
+      console.error('[DiscourseBrowser] loadMoreTopics error:', e)
+      tab.hasMoreTopics = false
     } finally {
       isLoadingMore.value = false
     }
@@ -338,6 +407,7 @@ export function useDiscourseBrowser() {
     openCategory,
     openInNewTab,
     openSuggestedTopic,
-    loadMorePosts
+    loadMorePosts,
+    loadMoreTopics
   }
 }

@@ -13,10 +13,17 @@ export interface BrowserTab {
   categories: DiscourseCategory[]
   topics: DiscourseTopic[]
   currentTopic: DiscourseTopicDetail | null
+  currentUser: DiscourseUserProfile | null
   errorMessage: string
-  // Pagination state
+  // Pagination state for posts
   loadedPostIds: Set<number>
   hasMorePosts: boolean
+  // Pagination state for topics (home/category)
+  topicsPage: number
+  hasMoreTopics: boolean
+  // Category info for pagination
+  currentCategorySlug: string
+  currentCategoryId: number | null
 }
 
 export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'error'
