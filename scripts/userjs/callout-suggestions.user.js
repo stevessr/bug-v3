@@ -200,7 +200,7 @@
     border: 1px solid #444;
     border-radius: 6px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 999999;
+    z-index: 8999999;
     padding: 5px;
     display: none;
     font-size: 14px;

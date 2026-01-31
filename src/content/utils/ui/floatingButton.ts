@@ -34,7 +34,7 @@ const FLOATING_BUTTON_STYLES = `
   border: none !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   cursor: pointer !important;
-  z-index: 999999 !important;
+  z-index: 8999999 !important;
   font-size: 24px !important;
   color: white !important;
   display: flex !important;

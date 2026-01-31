@@ -933,7 +933,7 @@
       /* 选择器容器 */
       .market-emoji-picker {
         position: fixed;
-        z-index: 999999;
+        z-index: 8999999;
         background: var(--secondary, #fff);
         border: 1px solid var(--primary-low, #ddd);
         border-radius: 8px;
@@ -1136,7 +1136,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 999999;
+        z-index: 8999999;
         background: var(--secondary, #fff);
         border-radius: 16px 16px 0 0;
         box-shadow: 0 -4px 20px rgba(0,0,0,0.2);

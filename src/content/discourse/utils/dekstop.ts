@@ -40,7 +40,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       'data-identifier': 'emoji-picker',
       role: 'dialog'
     },
-    style: 'max-width: 400px; visibility: visible; z-index: 999999;'
+    style: 'max-width: 400px; visibility: visible; z-index: 8999999;'
   })
 
   const innerContent = createE('div', {
@@ -243,7 +243,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       style: `
         position: fixed;
         pointer-events: none;
-        z-index: 999999;
+        z-index: 8999999;
         padding: 6px;
         border-radius: 6px;
         background: transparent;
