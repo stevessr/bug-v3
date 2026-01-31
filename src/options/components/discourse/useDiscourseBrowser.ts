@@ -153,14 +153,33 @@ export function useDiscourseBrowser() {
         tab.title = `分类：${categorySlug}`
         tab.viewType = 'category'
       } else if (pathname.startsWith('/t/')) {
-        const parts = pathname.replace('/t/', '').split('/')
+        const parts = pathname.replace('/t/', '').split('/').filter(Boolean)
         const lastPart = parts[parts.length - 1]
         const prevPart = parts[parts.length - 2]
         const lastNum = lastPart ? parseInt(lastPart) : NaN
         const prevNum = prevPart ? parseInt(prevPart) : NaN
-        const hasPostNumber = parts.length >= 3 && !Number.isNaN(lastNum) && !Number.isNaN(prevNum)
-        const topicId = hasPostNumber ? prevNum : lastNum || parseInt(parts[0])
-        const postNumber = hasPostNumber ? lastNum : null
+        const lastIsNum = !Number.isNaN(lastNum)
+        const prevIsNum = !Number.isNaN(prevNum)
+        let topicId: number | null = null
+        let postNumber: number | null = null
+
+        if (parts.length === 1 && lastIsNum) {
+          topicId = lastNum
+        } else if (lastIsNum && prevIsNum) {
+          topicId = prevNum
+          postNumber = lastNum
+        } else if (lastIsNum) {
+          topicId = lastNum
+        } else if (prevIsNum) {
+          topicId = prevNum
+        } else if (parts[0]) {
+          const fallback = parseInt(parts[0])
+          topicId = Number.isNaN(fallback) ? null : fallback
+        }
+
+        if (!topicId) {
+          throw new Error('Invalid topic URL')
+        }
         tab.targetPostNumber = postNumber
         await loadTopic(tab, topicId, postNumber)
         tab.viewType = 'topic'
