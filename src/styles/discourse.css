@@ -1,0 +1,17 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+.discourse-standalone {
+  height: 100%;
+  background: #f8fafc;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.discourse-standalone__browser {
+  height: 100%;
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, h } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
@@ -102,6 +102,31 @@ const selectedCategory = computed(() => {
   if (!categoryId.value) return null
   return categoryById.value.get(categoryId.value) || null
 })
+
+const renderSelectedLabel = () => {
+  const cat = selectedCategory.value
+  if (!cat) return ''
+  const color = `#${cat.color || '94a3b8'}`
+  let iconNode = h('span', {
+    class: 'category-option-dot',
+    style: { backgroundColor: color }
+  })
+  if (cat.uploaded_logo?.url || cat.uploaded_logo_dark?.url) {
+    const url = cat.uploaded_logo?.url || cat.uploaded_logo_dark?.url || ''
+    iconNode = h('img', { class: 'category-option-img', src: getImageUrl(url), alt: cat.name })
+  } else if (cat.emoji) {
+    iconNode = h('span', { class: 'category-option-emoji' }, cat.emoji)
+  } else if (cat.icon) {
+    iconNode = h('svg', { class: 'category-option-svg', viewBox: '0 0 24 24' }, [
+      h('use', { href: getIconHref(cat.icon) })
+    ])
+  }
+
+  return h('span', { class: 'category-option' }, [
+    h('span', { class: 'category-option-icon', style: { color } }, [iconNode]),
+    h('span', null, cat.name)
+  ])
+}
 
 const previewHtml = computed(() => renderMarkdown(raw.value))
 
@@ -327,40 +352,8 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           tree-default-expand-all
           tree-node-filter-prop="title"
           :tree-data="categoryTreeData"
+          :optionLabelRender="renderSelectedLabel"
         >
-          <template #label>
-            <span v-if="selectedCategory" class="category-option">
-              <span
-                class="category-option-icon"
-                :style="{ color: `#${selectedCategory.color || '94a3b8'}` }"
-              >
-                <img
-                  v-if="selectedCategory.uploaded_logo?.url"
-                  :src="getImageUrl(selectedCategory.uploaded_logo.url)"
-                  :alt="selectedCategory.name"
-                  class="category-option-img"
-                />
-                <img
-                  v-else-if="selectedCategory.uploaded_logo_dark?.url"
-                  :src="getImageUrl(selectedCategory.uploaded_logo_dark.url)"
-                  :alt="selectedCategory.name"
-                  class="category-option-img"
-                />
-                <span v-else-if="selectedCategory.emoji" class="category-option-emoji">
-                  {{ selectedCategory.emoji }}
-                </span>
-                <svg v-else-if="selectedCategory.icon" class="category-option-svg" viewBox="0 0 24 24">
-                  <use :href="getIconHref(selectedCategory.icon)" />
-                </svg>
-                <span
-                  v-else
-                  class="category-option-dot"
-                  :style="{ backgroundColor: `#${selectedCategory.color || '94a3b8'}` }"
-                />
-              </span>
-              <span>{{ selectedCategory.name }}</span>
-            </span>
-          </template>
           <template #title="{ dataRef }">
             <span v-if="dataRef && dataRef.title" class="category-option">
               <span class="category-option-icon" :style="{ color: `#${dataRef.color || '94a3b8'}` }">
