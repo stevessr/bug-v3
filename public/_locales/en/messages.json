@@ -1935,6 +1935,10 @@
     "message": "Open settings in new window",
     "description": "Open settings in new window"
   },
+  "openDiscourseBrowser": {
+    "message": "Open Discourse browser",
+    "description": "Open Discourse browser"
+  },
   "openOptionsInNewWindow": {
     "message": "Open options page in new window",
     "description": "Open options in new window"

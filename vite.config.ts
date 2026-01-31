@@ -138,6 +138,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           index: fileURLToPath(new URL('index.html', import.meta.url)),
+          discourse: fileURLToPath(new URL('discourse.html', import.meta.url)),
           content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
           background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
         },

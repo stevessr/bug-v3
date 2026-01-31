@@ -34,6 +34,11 @@ const openOptionsInNewWindow = () => {
   const url = chrome.runtime.getURL('index.html?type=options&tabs=groups')
   chrome.tabs.create({ url })
 }
+
+const openDiscourseBrowser = () => {
+  const url = chrome.runtime.getURL('discourse.html')
+  chrome.tabs.create({ url })
+}
 </script>
 
 <template>
@@ -82,6 +87,20 @@ const openOptionsInNewWindow = () => {
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                ></path>
+              </svg>
+            </a-button>
+            <a-button
+              @click="openDiscourseBrowser"
+              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              :title="t('openDiscourseBrowser')"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3c4.418 0 8 2.239 8 5s-3.582 5-8 5-8-2.239-8-5 3.582-5 8-5zM4 13c0 2.761 3.582 5 8 5s8-2.239 8-5"
                 ></path>
               </svg>
             </a-button>

@@ -1935,6 +1935,10 @@
     "message": "在新窗口打开设置",
     "description": "在新窗口打开设置"
   },
+  "openDiscourseBrowser": {
+    "message": "打开论坛浏览器",
+    "description": "打开论坛浏览器"
+  },
   "openOptionsInNewWindow": {
     "message": "在新窗口打开设置页面",
     "description": "在新窗口打开设置页面"

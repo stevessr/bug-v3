@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>论坛浏览器</title>
+    <link rel="icon" type="image/png" href="/img/48.png" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      ;(() => {
+        const params = new URLSearchParams(window.location.search)
+        let changed = false
+        if (!params.get('type')) {
+          params.set('type', 'options')
+          changed = true
+        }
+        if (!params.get('tabs')) {
+          params.set('tabs', 'discourse-browser')
+          changed = true
+        }
+        if (changed) {
+          const next = `${window.location.pathname}?${params.toString()}`
+          window.history.replaceState({}, '', next)
+        }
+      })()
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
