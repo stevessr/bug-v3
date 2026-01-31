@@ -11,12 +11,18 @@ import {
 } from '@ant-design/icons-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
-import type { DiscourseCategory, DiscourseTopic, SuggestedTopic } from './discourse/types'
+import type {
+  DiscourseCategory,
+  DiscourseTopic,
+  SuggestedTopic,
+  ActivityTabType
+} from './discourse/types'
 import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 import DiscourseUserView from './discourse/DiscourseUserView.vue'
 import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
+import DiscourseActivityView from './discourse/DiscourseActivityView.vue'
 
 const {
   baseUrl,
@@ -38,8 +44,11 @@ const {
   openInNewTab,
   openSuggestedTopic,
   openUser,
+  openUserActivity,
   loadMorePosts,
-  loadMoreTopics
+  loadMoreTopics,
+  switchActivityTab,
+  loadMoreActivity
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -58,6 +67,8 @@ const handleScroll = () => {
       loadMorePosts()
     } else if (viewType === 'home' || viewType === 'category') {
       loadMoreTopics()
+    } else if (viewType === 'activity') {
+      loadMoreActivity()
     }
   }
 }
@@ -90,6 +101,23 @@ const handleUserClick = (username: string) => {
 // Handle topic click from user view
 const handleUserTopicClick = (topic: { id: number; slug: string }) => {
   openSuggestedTopic(topic)
+}
+
+// Handle activity tab switch
+const handleActivityTabSwitch = (tab: ActivityTabType) => {
+  switchActivityTab(tab)
+}
+
+// Handle go to user profile from activity view
+const handleGoToProfile = () => {
+  if (activeTab.value?.currentUser) {
+    openUser(activeTab.value.currentUser.username)
+  }
+}
+
+// Handle open user activity
+const handleOpenUserActivity = (username: string) => {
+  openUserActivity(username)
 }
 
 // Initialize
@@ -301,6 +329,22 @@ onUnmounted(() => {
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
         @openTopic="handleUserTopicClick"
+        @openActivity="handleOpenUserActivity"
+      />
+
+      <!-- User activity view -->
+      <DiscourseActivityView
+        v-else-if="
+          activeTab?.viewType === 'activity' && activeTab.currentUser && activeTab.activityState
+        "
+        :user="activeTab.currentUser"
+        :activityState="activeTab.activityState"
+        :baseUrl="baseUrl"
+        :isLoadingMore="isLoadingMore"
+        @switchTab="handleActivityTabSwitch"
+        @openTopic="handleUserTopicClick"
+        @openUser="handleUserClick"
+        @goToProfile="handleGoToProfile"
       />
     </div>
   </div>

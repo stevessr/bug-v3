@@ -10,7 +10,12 @@ import type {
   DiscourseTopicDetail,
   DiscourseUser,
   DiscoursePost,
-  DiscourseUserProfileData
+  DiscourseUserProfileData,
+  ActivityTabType,
+  DiscourseUserAction,
+  DiscourseReaction,
+  DiscourseSolvedPost,
+  UserActivityState
 } from './types'
 import { pageFetch, extractData, generateId } from './utils'
 
@@ -69,7 +74,8 @@ export function useDiscourseBrowser() {
       topicsPage: 0,
       hasMoreTopics: true,
       currentCategorySlug: '',
-      currentCategoryId: null
+      currentCategoryId: null,
+      activityState: null
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -131,9 +137,17 @@ export function useDiscourseBrowser() {
         await loadTopic(tab, topicId)
         tab.viewType = 'topic'
       } else if (pathname.startsWith('/u/')) {
-        const username = pathname.replace('/u/', '').split('/')[0]
-        await loadUser(tab, username)
-        tab.viewType = 'user'
+        const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
+        const username = pathParts[0]
+        if (pathParts[1] === 'activity' || pathParts[1] === 'summary') {
+          // Activity page
+          await loadUserActivity(tab, username, 'all')
+          tab.title = `${username} - 动态`
+          tab.viewType = 'activity'
+        } else {
+          await loadUser(tab, username)
+          tab.viewType = 'user'
+        }
       } else {
         await loadHome(tab)
         tab.title = urlObj.hostname
@@ -271,6 +285,171 @@ export function useDiscourseBrowser() {
     } else {
       tab.currentUser = null
       throw new Error('用户不存在')
+    }
+  }
+
+  // Load user activity
+  async function loadUserActivity(
+    tab: BrowserTab,
+    username: string,
+    activityTab: ActivityTabType = 'all'
+  ) {
+    // First load user profile if not already loaded
+    if (!tab.currentUser || tab.currentUser.username !== username) {
+      const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
+      const userData = extractData(userResult)
+      if (userData?.user) {
+        tab.currentUser = userData.user
+      }
+    }
+
+    // Initialize activity state
+    tab.activityState = {
+      activeTab: activityTab,
+      actions: [],
+      topics: [],
+      reactions: [],
+      solvedPosts: [],
+      offset: 0,
+      hasMore: true
+    }
+
+    // Load activity data based on tab type
+    await loadActivityData(tab, username, activityTab, true)
+  }
+
+  // Load activity data for specific tab
+  async function loadActivityData(
+    tab: BrowserTab,
+    username: string,
+    activityTab: ActivityTabType,
+    reset = false
+  ) {
+    if (!tab.activityState) return
+
+    if (reset) {
+      tab.activityState.offset = 0
+      tab.activityState.hasMore = true
+      if (activityTab === 'topics') {
+        tab.activityState.topics = []
+      } else if (activityTab === 'reactions') {
+        tab.activityState.reactions = []
+      } else if (activityTab === 'solved') {
+        tab.activityState.solvedPosts = []
+      } else {
+        tab.activityState.actions = []
+      }
+    }
+
+    const offset = tab.activityState.offset
+
+    try {
+      let url: string
+      let filterParam = ''
+
+      switch (activityTab) {
+        case 'all':
+          filterParam = '4,5'
+          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
+          break
+        case 'replies':
+          filterParam = '5'
+          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
+          break
+        case 'likes':
+          filterParam = '1'
+          url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
+          break
+        case 'topics':
+          const page = Math.floor(offset / 30)
+          url = `${baseUrl.value}/topics/created-by/${username}.json${page > 0 ? `?page=${page}` : ''}`
+          break
+        case 'reactions':
+          url = `${baseUrl.value}/discourse-reactions/posts/reactions.json?username=${username}&offset=${offset}`
+          break
+        case 'solved':
+          url = `${baseUrl.value}/solution/by_user.json?username=${username}&offset=${offset}&limit=20`
+          break
+        default:
+          return
+      }
+
+      const result = await pageFetch<any>(url)
+      const data = extractData(result)
+
+      if (activityTab === 'topics') {
+        const topics = data?.topic_list?.topics || []
+        if (reset) {
+          tab.activityState.topics = topics
+        } else {
+          const existingIds = new Set(tab.activityState.topics.map((t: DiscourseTopic) => t.id))
+          const newTopics = topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
+          tab.activityState.topics = [...tab.activityState.topics, ...newTopics]
+        }
+        tab.activityState.hasMore = !!data?.topic_list?.more_topics_url
+        tab.activityState.offset += 30
+      } else if (activityTab === 'reactions') {
+        const reactions = data || []
+        if (reset) {
+          tab.activityState.reactions = reactions
+        } else {
+          tab.activityState.reactions = [...tab.activityState.reactions, ...reactions]
+        }
+        tab.activityState.hasMore = reactions.length >= 20
+        tab.activityState.offset += reactions.length
+      } else if (activityTab === 'solved') {
+        const solvedPosts = data?.user_solved_posts || []
+        if (reset) {
+          tab.activityState.solvedPosts = solvedPosts
+        } else {
+          tab.activityState.solvedPosts = [...tab.activityState.solvedPosts, ...solvedPosts]
+        }
+        tab.activityState.hasMore = solvedPosts.length >= 20
+        tab.activityState.offset += solvedPosts.length
+      } else {
+        // user_actions for all, replies, likes
+        const actions = data?.user_actions || []
+        if (reset) {
+          tab.activityState.actions = actions
+        } else {
+          tab.activityState.actions = [...tab.activityState.actions, ...actions]
+        }
+        tab.activityState.hasMore = actions.length >= 30
+        tab.activityState.offset += actions.length
+      }
+    } catch (e) {
+      console.error('[DiscourseBrowser] loadActivityData error:', e)
+      tab.activityState.hasMore = false
+    }
+  }
+
+  // Switch activity tab
+  async function switchActivityTab(activityTab: ActivityTabType) {
+    const tab = activeTab.value
+    if (!tab || !tab.currentUser || !tab.activityState) return
+
+    tab.activityState.activeTab = activityTab
+    isLoadingMore.value = true
+
+    try {
+      await loadActivityData(tab, tab.currentUser.username, activityTab, true)
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
+  // Load more activity items
+  async function loadMoreActivity() {
+    const tab = activeTab.value
+    if (!tab || !tab.currentUser || !tab.activityState || isLoadingMore.value) return
+    if (!tab.activityState.hasMore) return
+
+    isLoadingMore.value = true
+
+    try {
+      await loadActivityData(tab, tab.currentUser.username, tab.activityState.activeTab, false)
+    } finally {
+      isLoadingMore.value = false
     }
   }
 
@@ -423,6 +602,11 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/u/${username}`)
   }
 
+  // Open user activity
+  function openUserActivity(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/activity`)
+  }
+
   return {
     // State
     baseUrl,
@@ -452,7 +636,10 @@ export function useDiscourseBrowser() {
     openInNewTab,
     openSuggestedTopic,
     openUser,
+    openUserActivity,
     loadMorePosts,
-    loadMoreTopics
+    loadMoreTopics,
+    switchActivityTab,
+    loadMoreActivity
   }
 }

@@ -37,6 +37,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'openTopic', topic: { id: number; slug: string }): void
+  (e: 'openActivity', username: string): void
 }>()
 
 // Format time read
@@ -115,6 +116,14 @@ const getTrustLevelName = (level: number): string => {
                 </a>
               </span>
             </div>
+
+            <!-- View activity button -->
+            <button
+              class="mt-3 px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+              @click="emit('openActivity', user.username)"
+            >
+              查看动态
+            </button>
           </div>
         </div>
       </div>

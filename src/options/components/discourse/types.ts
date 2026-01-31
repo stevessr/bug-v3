@@ -25,9 +25,11 @@ export interface BrowserTab {
   // Category info for pagination
   currentCategorySlug: string
   currentCategoryId: number | null
+  // Activity state
+  activityState: UserActivityState | null
 }
 
-export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'error'
+export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'activity' | 'error'
 
 export interface DiscourseTopic {
   id: number
@@ -187,4 +189,106 @@ export interface DiscourseUserProfileData {
   user: DiscourseUserProfile
   user_summary?: DiscourseUserSummary
   topics?: DiscourseTopic[]
+}
+
+// User activity types
+export type ActivityTabType = 'all' | 'topics' | 'replies' | 'likes' | 'reactions' | 'solved' | 'assigned' | 'votes'
+
+export interface DiscourseUserAction {
+  excerpt: string
+  action_type: number
+  created_at: string
+  avatar_template: string
+  acting_avatar_template: string
+  slug: string
+  topic_id: number
+  target_user_id: number
+  target_name: string
+  target_username: string
+  post_number: number
+  post_id: number
+  reply_to_post_number: number | null
+  username: string
+  name: string
+  user_id: number
+  acting_username: string
+  acting_name: string
+  acting_user_id: number
+  title: string
+  deleted: boolean
+  hidden: boolean
+  post_type: number
+  action_code: string | null
+  category_id: number
+  closed: boolean
+  archived: boolean
+}
+
+export interface DiscourseReaction {
+  id: number
+  user_id: number
+  post_id: number
+  created_at: string
+  user: {
+    id: number
+    username: string
+    name: string
+    avatar_template: string
+    title?: string
+  }
+  post: {
+    excerpt: string
+    id: number
+    created_at: string
+    topic_id: number
+    topic_title: string
+    topic_slug: string
+    url: string
+    category_id: number
+    post_number: number
+    posts_count: number
+    username: string
+    name: string
+    avatar_template: string
+  }
+  reaction: {
+    id: number
+    post_id: number
+    reaction_type: string
+    reaction_value: string
+    reaction_users_count: number
+    created_at: string
+  }
+}
+
+export interface DiscourseSolvedPost {
+  created_at: string
+  archived: boolean
+  avatar_template: string
+  category_id: number
+  closed: boolean
+  cooked: string
+  excerpt: string
+  name: string
+  post_id: number
+  post_number: number
+  post_type: number
+  raw: string
+  slug: string
+  topic_id: number
+  topic_title: string
+  truncated: boolean
+  url: string
+  user_id: number
+  username: string
+}
+
+export interface UserActivityState {
+  activeTab: ActivityTabType
+  actions: DiscourseUserAction[]
+  topics: DiscourseTopic[]
+  reactions: DiscourseReaction[]
+  solvedPosts: DiscourseSolvedPost[]
+  offset: number
+  hasMore: boolean
 }
