@@ -111,7 +111,7 @@ export function shouldInjectEmojiFeature(): boolean {
   const hostname = window.location.hostname.toLowerCase()
 
   // Check if it's a known Discourse domain
-  if (DISCOURSE_DOMAINS.some(domain => hostname == domain )) {
+  if (DISCOURSE_DOMAINS.some(domain => hostname == domain)) {
     return true
   }
 

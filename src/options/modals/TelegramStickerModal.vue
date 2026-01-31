@@ -28,8 +28,8 @@ const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'imported'])
 
 const store = useEmojiStore()
-const safeSettings = computed(() =>
-  (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
+const safeSettings = computed(
+  () => (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
 )
 
 const allowVideoStickers = computed(() => {

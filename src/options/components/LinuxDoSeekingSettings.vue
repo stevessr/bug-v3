@@ -274,7 +274,6 @@ const handleEnter = () => {
           <li>多个标签页同时打开时，会自动选出一个 Leader 标签页负责数据更新</li>
         </ul>
       </div>
-
     </template>
   </div>
 </template>

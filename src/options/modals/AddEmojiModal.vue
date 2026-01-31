@@ -842,7 +842,9 @@ const handleGeminiNameSelected = (selectedName: string) => {
                     class="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 h-48 w-full"
                   >
                     <div class="text-center text-gray-500 dark:text-gray-400">
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                      <div
+                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"
+                      ></div>
                       <div class="text-sm">正在通过代理加载...</div>
                     </div>
                   </div>

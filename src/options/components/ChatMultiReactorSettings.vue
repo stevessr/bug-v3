@@ -21,6 +21,7 @@ import SettingSwitch from './SettingSwitch.vue'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { requestConfirmation } from '@/options/utils/confirmService'
+import { shortcodeToEmoji } from '@/utils/emojiShortcode'
 
 // Discourse 表情数据结构
 interface DiscourseEmoji {
@@ -384,6 +385,11 @@ const getEmojiUrl = (emojiName: string) => {
   return `${discourseUrl.value}/images/emoji/twitter/${emojiName}.png`
 }
 
+// 获取 emoji Unicode 字符（优先使用 Unicode，如果没有映射则返回 null）
+const getEmojiChar = (emojiName: string): string | null => {
+  return shortcodeToEmoji(emojiName)
+}
+
 // 组件挂载时尝试获取表情
 onMounted(() => {
   // 如果启用了功能，自动获取表情
@@ -593,7 +599,10 @@ watch(
               class="flex items-center gap-1 px-2 py-1"
             >
               <span class="text-gray-500 text-xs mr-1">{{ index + 1 }}.</span>
-              <CachedImage :src="getEmojiUrl(emoji)" :alt="emoji" class="w-5 h-5" />
+              <span v-if="getEmojiChar(emoji)" class="text-xl leading-none">
+                {{ getEmojiChar(emoji) }}
+              </span>
+              <CachedImage v-else :src="getEmojiUrl(emoji)" :alt="emoji" class="w-5 h-5" />
               <span class="text-sm">{{ emoji }}</span>
             </a-tag>
           </div>
@@ -679,7 +688,14 @@ watch(
               :title="emoji.name"
               @click="toggleEmoji(emoji.name)"
             >
+              <span
+                v-if="getEmojiChar(emoji.name)"
+                class="text-2xl flex items-center justify-center w-8 h-8"
+              >
+                {{ getEmojiChar(emoji.name) }}
+              </span>
               <CachedImage
+                v-else
                 :src="emoji.url.startsWith('/') ? `${discourseUrl}${emoji.url}` : emoji.url"
                 :alt="emoji.name"
                 class="w-8 h-8 object-contain"

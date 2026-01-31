@@ -42,15 +42,12 @@ async function openBackgroundTab(domain: string): Promise<number | null> {
       const tabId = tab.id
 
       // Wait for the tab to finish loading with timeout
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         const timeout = setTimeout(() => {
           resolve()
         }, 15000) // 15 second timeout
 
-        const listener = (
-          updatedTabId: number,
-          changeInfo: chrome.tabs.TabChangeInfo
-        ) => {
+        const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
           if (updatedTabId === tabId && changeInfo.status === 'complete') {
             chromeAPI.tabs.onUpdated.removeListener(listener)
             clearTimeout(timeout)

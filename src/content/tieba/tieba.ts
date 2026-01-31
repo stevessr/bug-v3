@@ -186,7 +186,11 @@ function createDownloadModal(): void {
       }) as HTMLInputElement
       checkbox.checked = true
       const badge = createE('span', { class: 'tieba-emoji-download-badge', text: '已选' })
-      const thumb = createE('img', { class: 'tieba-emoji-download-thumb', src: item.url, alt: item.name })
+      const thumb = createE('img', {
+        class: 'tieba-emoji-download-thumb',
+        src: item.url,
+        alt: item.name
+      })
       const name = createE('span', { class: 'tieba-emoji-download-name', text: item.name })
       const meta = createE('div', { class: 'tieba-emoji-download-meta' })
       meta.appendChild(name)
@@ -217,7 +221,9 @@ function createDownloadModal(): void {
   })
 
   btnSelectAll.addEventListener('click', () => {
-    const checkboxes = list.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>
+    const checkboxes = list.querySelectorAll(
+      'input[type="checkbox"]'
+    ) as NodeListOf<HTMLInputElement>
     const shouldCheck = Array.from(checkboxes).some(cb => !cb.checked)
     checkboxes.forEach(cb => {
       cb.checked = shouldCheck
@@ -285,11 +291,7 @@ function computeChecksum(encoder: TextEncoder, header: Uint8Array): Uint8Array {
   return encoder.encode(padded)
 }
 
-function createTarHeader(
-  encoder: TextEncoder,
-  filename: string,
-  fileSize: number
-): Uint8Array {
+function createTarHeader(encoder: TextEncoder, filename: string, fileSize: number): Uint8Array {
   const header = new Uint8Array(512)
   header.set(padBytes(encoder, filename, 100), 0)
   header.set(numberToOctal(encoder, 0o644, 8), 100)
@@ -306,7 +308,12 @@ function createTarHeader(
   return header
 }
 
-function generateSafeFilename(encoder: TextEncoder, name: string, url: string, index: number): string {
+function generateSafeFilename(
+  encoder: TextEncoder,
+  name: string,
+  url: string,
+  index: number
+): string {
   const safeBase = name.split('/').join('_').split('\0').join('_')
   const extMatch = (url || '').match(/\.([a-zA-Z0-9]{1,5})(?:\?|$)/)
   const ext = extMatch ? extMatch[1] : 'png'
@@ -340,7 +347,8 @@ async function downloadSelectedImages(items: TiebaImageItem[], status: HTMLEleme
   const encoder = new TextEncoder()
   status.textContent = `正在打包 0/${items.length}`
   const supportsStream =
-    typeof ReadableStream !== 'undefined' && typeof (window as any).CompressionStream !== 'undefined'
+    typeof ReadableStream !== 'undefined' &&
+    typeof (window as any).CompressionStream !== 'undefined'
   const now = new Date()
   const stamp = now.toISOString().replace(/[:.]/g, '-')
   const fileBase = `tieba-images-${stamp}`

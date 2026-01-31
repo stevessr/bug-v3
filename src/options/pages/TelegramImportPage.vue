@@ -23,8 +23,8 @@ import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
-const safeSettings = computed(() =>
-  (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
+const safeSettings = computed(
+  () => (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
 )
 
 // --- 状态 ---
@@ -857,8 +857,8 @@ const doImport = async (): Promise<boolean> => {
             />
           </div>
           <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
-            启用后，视频贴纸（webm）会通过该后端转换为 AVIF 再上传；后端需支持
-            POST 原始 webm 并返回 image/avif。
+            启用后，视频贴纸（webm）会通过该后端转换为 AVIF 再上传；后端需支持 POST 原始 webm 并返回
+            image/avif。
           </p>
         </div>
 

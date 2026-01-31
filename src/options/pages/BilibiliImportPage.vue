@@ -536,11 +536,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
             :key="emote.id"
             class="flex flex-col items-center gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <CachedImage
-              :src="emote.url"
-              :alt="emote.text"
-              class="w-16 h-16 object-contain"
-            />
+            <CachedImage :src="emote.url" :alt="emote.text" class="w-16 h-16 object-contain" />
             <span class="text-xs text-center text-gray-600 dark:text-gray-400 truncate w-full">
               {{ emote.text }}
             </span>
