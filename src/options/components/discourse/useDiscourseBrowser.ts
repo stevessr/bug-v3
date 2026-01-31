@@ -330,7 +330,7 @@ export function useDiscourseBrowser() {
     if (reset) {
       tab.activityState.offset = 0
       tab.activityState.hasMore = true
-      if (activityTab === 'topics') {
+      if (activityTab === 'topics' || activityTab === 'assigned' || activityTab === 'votes') {
         tab.activityState.topics = []
       } else if (activityTab === 'reactions') {
         tab.activityState.reactions = []
@@ -360,16 +360,27 @@ export function useDiscourseBrowser() {
           filterParam = '1'
           url = `${baseUrl.value}/user_actions.json?offset=${offset}&username=${username}&filter=${filterParam}`
           break
-        case 'topics':
+        case 'topics': {
           const page = Math.floor(offset / 30)
           url = `${baseUrl.value}/topics/created-by/${username}.json${page > 0 ? `?page=${page}` : ''}`
           break
+        }
         case 'reactions':
           url = `${baseUrl.value}/discourse-reactions/posts/reactions.json?username=${username}&offset=${offset}`
           break
         case 'solved':
           url = `${baseUrl.value}/solution/by_user.json?username=${username}&offset=${offset}&limit=20`
           break
+        case 'assigned': {
+          const assignedPage = Math.floor(offset / 30)
+          url = `${baseUrl.value}/topics/messages-assigned/${username}.json?exclude_category_ids%5B%5D=-1&order=&ascending=false${assignedPage > 0 ? `&page=${assignedPage}` : ''}`
+          break
+        }
+        case 'votes': {
+          const votesPage = Math.floor(offset / 30)
+          url = `${baseUrl.value}/topics/voted-by/${username}.json${votesPage > 0 ? `?page=${votesPage}` : ''}`
+          break
+        }
         default:
           return
       }
@@ -377,7 +388,7 @@ export function useDiscourseBrowser() {
       const result = await pageFetch<any>(url)
       const data = extractData(result)
 
-      if (activityTab === 'topics') {
+      if (activityTab === 'topics' || activityTab === 'assigned' || activityTab === 'votes') {
         const topics = data?.topic_list?.topics || []
         if (reset) {
           tab.activityState.topics = topics

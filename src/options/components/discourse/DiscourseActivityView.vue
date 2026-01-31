@@ -30,7 +30,9 @@ const tabs: { key: ActivityTabType; label: string }[] = [
   { key: 'replies', label: '回复' },
   { key: 'likes', label: '赞' },
   { key: 'reactions', label: '反应' },
-  { key: 'solved', label: '已解决' }
+  { key: 'solved', label: '已解决' },
+  { key: 'assigned', label: '已指定' },
+  { key: 'votes', label: '投票' }
 ]
 
 // Get action type label
@@ -152,8 +154,11 @@ const getActionTypeLabel = (actionType: number): string => {
         </div>
       </div>
 
-      <!-- Topics -->
-      <div v-else-if="activityState.activeTab === 'topics'" class="space-y-2">
+      <!-- Topics / Assigned / Votes -->
+      <div
+        v-else-if="['topics', 'assigned', 'votes'].includes(activityState.activeTab)"
+        class="space-y-2"
+      >
         <div
           v-for="topic in activityState.topics"
           :key="topic.id"
@@ -161,10 +166,14 @@ const getActionTypeLabel = (actionType: number): string => {
           @click="emit('openTopic', topic)"
         >
           <div class="font-medium dark:text-white" v-html="topic.fancy_title || topic.title" />
-          <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+          <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
             <span>{{ topic.posts_count }} 帖子</span>
             <span>{{ topic.views }} 浏览</span>
             <span>{{ topic.like_count }} 赞</span>
+            <span v-if="(topic as any).vote_count">{{ (topic as any).vote_count }} 票</span>
+            <span v-if="(topic as any).assigned_to_user" class="text-blue-500">
+              指定给：{{ (topic as any).assigned_to_user.username }}
+            </span>
             <span>{{ formatTime(topic.created_at) }}</span>
           </div>
         </div>
@@ -173,7 +182,13 @@ const getActionTypeLabel = (actionType: number): string => {
           v-if="activityState.topics.length === 0 && !isLoadingMore"
           class="text-center text-gray-400 py-8"
         >
-          暂无话题
+          {{
+            activityState.activeTab === 'topics'
+              ? '暂无话题'
+              : activityState.activeTab === 'assigned'
+                ? '暂无已指定'
+                : '暂无投票'
+          }}
         </div>
       </div>
 
