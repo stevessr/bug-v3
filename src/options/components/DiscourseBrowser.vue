@@ -32,6 +32,7 @@ const {
   tabs,
   activeTabId,
   activeTab,
+  users,
   isLoadingMore,
   createTab,
   closeTab,
