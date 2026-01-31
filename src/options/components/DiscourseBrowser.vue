@@ -209,9 +209,11 @@ const navigateTo = async (url: string, addToHistory = true) => {
       tab.title = '首页 - ' + urlObj.hostname
       currentView.value = 'home'
     } else if (pathname.startsWith('/c/')) {
-      // 分类页面
-      const categorySlug = pathname.replace('/c/', '').split('/')[0]
-      await loadCategory(categorySlug)
+      // 分类页面 - 格式：/c/{slug}/{id} 或 /c/{slug}
+      const parts = pathname.replace('/c/', '').split('/').filter(Boolean)
+      const categorySlug = parts[0]
+      const categoryId = parts[1] ? parseInt(parts[1]) : null
+      await loadCategory(categorySlug, categoryId)
       tab.title = `分类：${categorySlug}`
       currentView.value = 'category'
     } else if (pathname.startsWith('/t/')) {
@@ -251,36 +253,58 @@ const navigateTo = async (url: string, addToHistory = true) => {
 const loadHome = async () => {
   try {
     const [catResult, topicResult] = await Promise.all([
-      pageFetch<{
-        category_list?: { categories?: DiscourseCategory[] }
-        categories?: DiscourseCategory[]
-      }>(`${baseUrl.value}/categories.json`),
-      pageFetch<{ topic_list?: { topics?: DiscourseTopic[] }; users?: DiscourseUser[] }>(
-        `${baseUrl.value}/latest.json`
-      )
+      pageFetch<any>(`${baseUrl.value}/categories.json`),
+      pageFetch<any>(`${baseUrl.value}/latest.json`)
     ])
 
-    // 处理不同的 API 响应结构
-    const catData = catResult?.data
+    console.log('[DiscourseBrowser] Raw catResult:', catResult)
+    console.log('[DiscourseBrowser] Raw topicResult:', topicResult)
+
+    // 提取实际数据 - 处理可能的嵌套
+    const extractData = (result: any) => {
+      if (!result) return null
+      // 如果 result.data 存在且是对象，使用它
+      if (result.data && typeof result.data === 'object') {
+        // 检查是否有二次嵌套 (result.data.data)
+        if (result.data.data && typeof result.data.data === 'object') {
+          return result.data.data
+        }
+        return result.data
+      }
+      return result
+    }
+
+    const catData = extractData(catResult)
+    const topicData = extractData(topicResult)
+
+    console.log('[DiscourseBrowser] Extracted catData:', catData)
+    console.log('[DiscourseBrowser] Extracted topicData:', topicData)
+
+    // 获取 categories
     if (catData?.category_list?.categories) {
       categories.value = catData.category_list.categories
+      console.log('[DiscourseBrowser] Found categories:', categories.value.length)
     } else if (catData?.categories) {
       categories.value = catData.categories
+      console.log('[DiscourseBrowser] Found categories (alt):', categories.value.length)
     } else {
-      console.warn('[DiscourseBrowser] No categories found in response:', catData)
+      console.warn('[DiscourseBrowser] No categories found')
       categories.value = []
     }
 
-    const topicData = topicResult?.data
+    // 获取 topics
     if (topicData?.topic_list?.topics) {
       topics.value = topicData.topic_list.topics.slice(0, 30)
+      console.log('[DiscourseBrowser] Found topics:', topics.value.length)
     } else {
-      console.warn('[DiscourseBrowser] No topics found in response:', topicData)
+      console.warn('[DiscourseBrowser] No topics found')
       topics.value = []
     }
 
     // 缓存用户信息
-    topicData?.users?.forEach(u => users.value.set(u.id, u))
+    if (topicData?.users) {
+      topicData.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+    }
   } catch (e) {
     console.error('[DiscourseBrowser] loadHome error:', e)
     throw e
@@ -288,28 +312,74 @@ const loadHome = async () => {
 }
 
 // 加载分类
-const loadCategory = async (slug: string) => {
-  const result = await pageFetch<{
-    topic_list?: { topics?: DiscourseTopic[] }
-    users?: DiscourseUser[]
-  }>(`${baseUrl.value}/c/${slug}.json`)
+const loadCategory = async (slug: string, categoryId: number | null = null) => {
+  // 使用正确的 URL 格式：/c/{slug}/{id}.json
+  const url = categoryId
+    ? `${baseUrl.value}/c/${slug}/${categoryId}.json`
+    : `${baseUrl.value}/c/${slug}.json`
 
-  const data = result.data
+  console.log('[DiscourseBrowser] Loading category:', url)
+
+  const result = await pageFetch<any>(url)
+
+  // 提取实际数据
+  const extractData = (res: any) => {
+    if (!res) return null
+    if (res.data && typeof res.data === 'object') {
+      if (res.data.data && typeof res.data.data === 'object') {
+        return res.data.data
+      }
+      return res.data
+    }
+    return res
+  }
+
+  const data = extractData(result)
+  console.log('[DiscourseBrowser] Category data:', data)
+
   if (data?.topic_list?.topics) {
     topics.value = data.topic_list.topics.slice(0, 30)
+    console.log('[DiscourseBrowser] Found category topics:', topics.value.length)
   } else {
+    console.warn('[DiscourseBrowser] No topics found in category')
     topics.value = []
   }
-  data?.users?.forEach(u => users.value.set(u.id, u))
+
+  if (data?.users) {
+    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+  }
 }
 
 // 加载话题详情
 const loadTopic = async (topicId: number) => {
-  const result = await pageFetch<DiscourseTopicDetail>(`${baseUrl.value}/t/${topicId}.json`)
-  currentTopic.value = result.data
-  const tab = activeTab.value
-  if (tab && result.data?.title) {
-    tab.title = result.data.title
+  console.log('[DiscourseBrowser] Loading topic:', topicId)
+
+  const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
+
+  // 提取实际数据
+  const extractData = (res: any) => {
+    if (!res) return null
+    if (res.data && typeof res.data === 'object') {
+      if (res.data.data && typeof res.data.data === 'object') {
+        return res.data.data
+      }
+      return res.data
+    }
+    return res
+  }
+
+  const data = extractData(result)
+  console.log('[DiscourseBrowser] Topic data:', data)
+
+  if (data) {
+    currentTopic.value = data
+    const tab = activeTab.value
+    if (tab && data.title) {
+      tab.title = data.title
+    }
+  } else {
+    console.warn('[DiscourseBrowser] No topic data found')
+    currentTopic.value = null
   }
 }
 
@@ -568,7 +638,7 @@ onMounted(() => {
         </div>
 
         <!-- 帖子列表 -->
-        <div class="posts-list space-y-4">
+        <div v-if="currentTopic.post_stream?.posts" class="posts-list space-y-4">
           <div
             v-for="post in currentTopic.post_stream.posts"
             :key="post.id"
@@ -602,6 +672,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
+        <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
       </div>
     </div>
   </div>
