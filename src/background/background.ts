@@ -6,8 +6,7 @@ import {
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup,
-  setupMcpBridge,
-  setupAntiCheatListener
+  setupMcpBridge
 } from './utils/handlers'
 
 console.log('Emoji Extension Background script loaded.')
@@ -19,4 +18,3 @@ setupStorageChangeListener()
 setupContextMenu()
 setupPeriodicCleanup()
 setupMcpBridge()
-setupAntiCheatListener()

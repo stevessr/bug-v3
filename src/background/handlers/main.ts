@@ -17,4 +17,3 @@ export {
   setupPeriodicCleanup,
   invalidateCache
 } from './handlersImpl'
-export { setupAntiCheatListener } from './antiCheatManager'
