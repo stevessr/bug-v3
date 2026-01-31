@@ -60,6 +60,16 @@ const childrenByParent = computed(() => {
 
   return map
 })
+
+const getImageUrl = (url?: string | null) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+}
+
+const getIconHref = (icon?: string | null) => {
+  if (!icon || !props.baseUrl) return ''
+  return `${props.baseUrl}/svg-sprite/svg-sprite.svg#${icon}`
+}
 </script>
 
 <template>
@@ -76,10 +86,29 @@ const childrenByParent = computed(() => {
             class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
             @click="emit('clickCategory', cat)"
           >
-            <div
-              class="w-3 h-3 rounded-sm flex-shrink-0"
-              :style="{ backgroundColor: `#${cat.color}` }"
-            />
+            <div class="sidebar-icon">
+              <img
+                v-if="cat.uploaded_logo?.url"
+                :src="getImageUrl(cat.uploaded_logo.url)"
+                :alt="cat.name"
+                class="sidebar-icon-img"
+              />
+              <img
+                v-else-if="cat.uploaded_logo_dark?.url"
+                :src="getImageUrl(cat.uploaded_logo_dark.url)"
+                :alt="cat.name"
+                class="sidebar-icon-img"
+              />
+              <span v-else-if="cat.emoji" class="sidebar-emoji">{{ cat.emoji }}</span>
+              <svg v-else-if="cat.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
+                <use :href="getIconHref(cat.icon)" />
+              </svg>
+              <span
+                v-else
+                class="sidebar-icon-dot"
+                :style="{ backgroundColor: `#${cat.color}` }"
+              />
+            </div>
             <span class="text-sm dark:text-gray-300 truncate flex-1">{{ cat.name }}</span>
             <span class="text-xs text-gray-400">{{ cat.topic_count }}</span>
           </div>
@@ -93,10 +122,7 @@ const childrenByParent = computed(() => {
               class="flex items-center gap-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
               @click="emit('clickCategory', child)"
             >
-              <div
-                class="w-2 h-2 rounded-sm flex-shrink-0"
-                :style="{ backgroundColor: `#${child.color}` }"
-              />
+              <span class="sidebar-icon-dot" :style="{ backgroundColor: `#${child.color}` }" />
               <span class="text-xs dark:text-gray-300 truncate flex-1">{{ child.name }}</span>
             </div>
             <div
@@ -148,3 +174,39 @@ const childrenByParent = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.sidebar-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+  flex-shrink: 0;
+}
+
+.sidebar-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.sidebar-emoji {
+  font-size: 12px;
+}
+
+.sidebar-icon-svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.sidebar-icon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+}
+</style>

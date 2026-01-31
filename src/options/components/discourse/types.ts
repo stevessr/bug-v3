@@ -94,6 +94,11 @@ export interface DiscourseCategory {
   description?: string
   parent_category_id?: number | null
   subcategory_ids?: number[] | null
+  style_type?: string | null
+  icon?: string | null
+  emoji?: string | null
+  uploaded_logo?: { url: string } | null
+  uploaded_logo_dark?: { url: string } | null
 }
 
 export interface DiscourseUser {

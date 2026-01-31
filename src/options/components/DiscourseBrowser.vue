@@ -374,7 +374,11 @@ onUnmounted(() => {
       </div>
 
       <!-- Categories -->
-          <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
+          <DiscourseCategoryGrid
+            :categories="activeTab.categories"
+            :baseUrl="baseUrl"
+            @click="handleCategoryClick"
+          />
 
           <!-- Latest topics -->
           <div v-if="activeTab.topics.length > 0">
@@ -425,9 +429,10 @@ onUnmounted(() => {
         </a-button>
       </div>
 
-      <DiscourseCategoryGrid
+          <DiscourseCategoryGrid
             v-if="activeTab.categories.length > 0"
             :categories="activeTab.categories"
+            :baseUrl="baseUrl"
             title="子分类"
             @click="handleCategoryClick"
           />

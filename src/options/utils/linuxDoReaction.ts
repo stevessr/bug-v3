@@ -147,23 +147,11 @@ async function getCsrfToken(): Promise<string | null> {
     if (auth && auth.csrfToken) {
       return auth.csrfToken
     }
-
-    // Method 2: Fetch homepage directly
-    const res = await proxyFetch<string>(
-      `${HOST}/`,
-      { headers: { 'User-Agent': navigator.userAgent } },
-      'text'
-    )
-    const html = res.data
-    if (typeof html !== 'string') {
-      return null
-    }
-    const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
-    return match ? match[1] : null
   } catch (e) {
     console.error('Failed to get CSRF token', e)
     return null
   }
+  return null
 }
 
 type PostData = {

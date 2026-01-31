@@ -7,9 +7,11 @@ const props = withDefaults(
   defineProps<{
     categories: DiscourseCategory[]
     title?: string
+    baseUrl?: string
   }>(),
   {
-    title: '分类'
+    title: '分类',
+    baseUrl: ''
   }
 )
 
@@ -62,6 +64,16 @@ const childrenByParent = computed(() => {
 const emit = defineEmits<{
   (e: 'click', category: DiscourseCategory): void
 }>()
+
+const getImageUrl = (url?: string | null) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+}
+
+const getIconHref = (icon?: string | null) => {
+  if (!icon || !props.baseUrl) return ''
+  return `${props.baseUrl}/svg-sprite/svg-sprite.svg#${icon}`
+}
 </script>
 
 <template>
@@ -75,7 +87,28 @@ const emit = defineEmits<{
         :style="{ borderLeftColor: `#${cat.color}`, borderLeftWidth: '4px' }"
         @click="emit('click', cat)"
       >
-        <div class="font-medium dark:text-white">{{ cat.name }}</div>
+        <div class="flex items-center gap-2">
+          <div class="category-icon-wrap" :style="{ color: `#${cat.color}` }">
+            <img
+              v-if="cat.uploaded_logo?.url"
+              :src="getImageUrl(cat.uploaded_logo.url)"
+              :alt="cat.name"
+              class="category-icon-img"
+            />
+            <img
+              v-else-if="cat.uploaded_logo_dark?.url"
+              :src="getImageUrl(cat.uploaded_logo_dark.url)"
+              :alt="cat.name"
+              class="category-icon-img"
+            />
+            <span v-else-if="cat.emoji" class="category-emoji">{{ cat.emoji }}</span>
+            <svg v-else-if="cat.icon" class="category-icon-svg" viewBox="0 0 24 24">
+              <use :href="getIconHref(cat.icon)" />
+            </svg>
+            <span v-else class="category-icon-dot" :style="{ backgroundColor: `#${cat.color}` }" />
+          </div>
+          <div class="font-medium dark:text-white">{{ cat.name }}</div>
+        </div>
         <div class="text-xs text-gray-500">{{ cat.topic_count }} 话题</div>
         <div
           v-if="hasHierarchy && (childrenByParent.get(cat.id)?.length || 0) > 0"
@@ -87,7 +120,10 @@ const emit = defineEmits<{
             class="text-xs text-gray-600 dark:text-gray-300 truncate cursor-pointer hover:text-blue-600"
             @click.stop="emit('click', child)"
           >
-            {{ child.name }}
+            <span class="inline-flex items-center gap-1">
+              <span class="subcategory-dot" :style="{ backgroundColor: `#${child.color}` }" />
+              {{ child.name }}
+            </span>
           </div>
           <div v-if="(childrenByParent.get(cat.id)?.length || 0) > 4" class="text-xs text-gray-400">
             还有 {{ (childrenByParent.get(cat.id)?.length || 0) - 4 }} 个子分类...
@@ -97,3 +133,45 @@ const emit = defineEmits<{
     </div>
   </div>
 </template>
+
+<style scoped>
+.category-icon-wrap {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  flex-shrink: 0;
+}
+
+.category-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.category-emoji {
+  font-size: 14px;
+}
+
+.category-icon-svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.category-icon-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.subcategory-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+}
+</style>
