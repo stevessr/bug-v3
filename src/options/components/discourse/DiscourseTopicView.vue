@@ -39,10 +39,7 @@ const handleSuggestedClick = (topic: SuggestedTopic) => {
   <div class="space-y-4">
     <!-- Topic title -->
     <div class="border-b dark:border-gray-700 pb-4">
-      <h1
-        class="text-xl font-bold dark:text-white"
-        v-html="topic.fancy_title || topic.title"
-      />
+      <h1 class="text-xl font-bold dark:text-white" v-html="topic.fancy_title || topic.title" />
       <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
         <span>{{ topic.posts_count }} 回复</span>
         <span>{{ topic.views }} 浏览</span>
@@ -184,5 +181,174 @@ const handleSuggestedClick = (topic: SuggestedTopic) => {
   width: 1.25em;
   height: 1.25em;
   vertical-align: middle;
+}
+
+/* Onebox styles */
+.post-content :deep(.onebox) {
+  display: block;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+  transition: box-shadow 0.2s;
+}
+
+.post-content :deep(.onebox:hover) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode onebox */
+:global(.dark) .post-content :deep(.onebox) {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+/* Onebox header (source) */
+.post-content :deep(.onebox .source) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.8rem;
+}
+
+:global(.dark) .post-content :deep(.onebox .source) {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.post-content :deep(.onebox .source .site-icon) {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.post-content :deep(.onebox .source a) {
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+:global(.dark) .post-content :deep(.onebox .source a) {
+  color: #9ca3af;
+}
+
+/* Onebox body */
+.post-content :deep(.onebox .onebox-body) {
+  padding: 12px;
+}
+
+.post-content :deep(.onebox .onebox-body .aspect-image) {
+  margin-bottom: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.post-content :deep(.onebox .onebox-body .thumbnail) {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.post-content :deep(.onebox .onebox-body h3) {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.post-content :deep(.onebox .onebox-body h3 a) {
+  color: #1f2937;
+}
+
+:global(.dark) .post-content :deep(.onebox .onebox-body h3 a) {
+  color: #f3f4f6;
+}
+
+.post-content :deep(.onebox .onebox-body p) {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+:global(.dark) .post-content :deep(.onebox .onebox-body p) {
+  color: #9ca3af;
+}
+
+/* Onebox metadata */
+.post-content :deep(.onebox .onebox-metadata) {
+  padding: 0 12px 10px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* Lazyload placeholder */
+.post-content :deep(.onebox .lazyYT) {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  background: #000;
+  border-radius: 6px;
+}
+
+.post-content :deep(.onebox .lazyYT img) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Video onebox */
+.post-content :deep(.onebox.video-onebox) {
+  background: #000;
+}
+
+.post-content :deep(.onebox.video-onebox .source) {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: transparent;
+}
+
+.post-content :deep(.onebox.video-onebox .source a) {
+  color: #fff;
+}
+
+/* GitHub onebox */
+.post-content :deep(.onebox.githubfolder),
+.post-content :deep(.onebox.githubblob),
+.post-content :deep(.onebox.githubcommit),
+.post-content :deep(.onebox.githubpullrequest) {
+  border-left: 3px solid #24292e;
+}
+
+:global(.dark) .post-content :deep(.onebox.githubfolder),
+:global(.dark) .post-content :deep(.onebox.githubblob),
+:global(.dark) .post-content :deep(.onebox.githubcommit),
+:global(.dark) .post-content :deep(.onebox.githubpullrequest) {
+  border-left-color: #58a6ff;
+}
+
+/* Twitter/X onebox */
+.post-content :deep(.onebox.twitterstatus) {
+  border-left: 3px solid #1da1f2;
+}
+
+/* Clear float helper */
+.post-content :deep(.onebox > div[style*='clear: both']) {
+  display: none;
 }
 </style>

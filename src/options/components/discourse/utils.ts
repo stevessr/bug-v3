@@ -81,13 +81,25 @@ export function formatTime(dateStr: string): string {
 }
 
 // Parse post content, extract images for preview
+// Skip images inside onebox, emoji, and other special containers
 export function parsePostContent(cooked: string): ParsedContent {
   if (!cooked) return { html: '', images: [] }
 
   const images: string[] = []
 
-  // Replace lightbox-wrapper images with placeholders
+  // Step 1: Temporarily replace onebox content with placeholders to protect them
+  const oneboxes: string[] = []
   let html = cooked.replace(
+    /<aside[^>]*class="[^"]*onebox[^"]*"[^>]*>[\s\S]*?<\/aside>/gi,
+    match => {
+      const idx = oneboxes.length
+      oneboxes.push(match)
+      return `<!--ONEBOX_PLACEHOLDER_${idx}-->`
+    }
+  )
+
+  // Step 2: Replace lightbox-wrapper images with placeholders (these are user-uploaded images)
+  html = html.replace(
     /<div class="lightbox-wrapper">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
     (_match, fullUrl, _thumbUrl) => {
       const index = images.length
@@ -96,15 +108,28 @@ export function parsePostContent(cooked: string): ParsedContent {
     }
   )
 
-  // Also process regular img tags (non-lightbox)
+  // Step 3: Process regular img tags (non-lightbox, non-onebox)
   html = html.replace(/<img([^>]*)src="([^"]+)"([^>]*)>/gi, (_match, before, src, after) => {
     // Skip emoji images
     if (src.includes('/images/emoji/') || before.includes('emoji') || after.includes('emoji')) {
       return `<img${before}src="${src}"${after}>`
     }
+    // Skip avatar images
+    if (before.includes('avatar') || after.includes('avatar')) {
+      return `<img${before}src="${src}"${after}>`
+    }
+    // Skip site-icon images (usually in onebox headers, but just in case)
+    if (before.includes('site-icon') || after.includes('site-icon')) {
+      return `<img${before}src="${src}"${after}>`
+    }
     const index = images.length
     images.push(src)
     return `<span class="post-image-placeholder" data-index="${index}"></span>`
+  })
+
+  // Step 4: Restore onebox content
+  html = html.replace(/<!--ONEBOX_PLACEHOLDER_(\d+)-->/g, (_match, idx) => {
+    return oneboxes[parseInt(idx)] || ''
   })
 
   return { html, images }
