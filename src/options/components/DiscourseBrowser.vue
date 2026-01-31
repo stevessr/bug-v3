@@ -22,6 +22,7 @@ import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 import DiscourseUserView from './discourse/DiscourseUserView.vue'
+import DiscourseUserExtrasView from './discourse/DiscourseUserExtrasView.vue'
 import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
 import DiscourseActivityView from './discourse/DiscourseActivityView.vue'
 import DiscourseMessagesView from './discourse/DiscourseMessagesView.vue'
@@ -49,6 +50,10 @@ const {
   openUser,
   openUserActivity,
   openUserMessages,
+  openUserBadges,
+  openUserFollowFeed,
+  openUserFollowing,
+  openUserFollowers,
   loadMorePosts,
   loadMoreTopics,
   switchActivityTab,
@@ -131,6 +136,33 @@ const handleOpenUserActivity = (username: string) => {
 // Handle open user messages
 const handleOpenUserMessages = (username: string) => {
   openUserMessages(username)
+}
+
+const handleOpenUserBadges = (username: string) => {
+  openUserBadges(username)
+}
+
+const handleOpenUserFollowFeed = (username: string) => {
+  openUserFollowFeed(username)
+}
+
+const handleOpenUserFollowing = (username: string) => {
+  openUserFollowing(username)
+}
+
+const handleOpenUserFollowers = (username: string) => {
+  openUserFollowers(username)
+}
+
+const handleUserExtrasTabSwitch = (
+  tab: 'badges' | 'followFeed' | 'following' | 'followers'
+) => {
+  if (!activeTab.value?.currentUser) return
+  const username = activeTab.value.currentUser.username
+  if (tab === 'badges') openUserBadges(username)
+  else if (tab === 'followFeed') openUserFollowFeed(username)
+  else if (tab === 'following') openUserFollowing(username)
+  else openUserFollowers(username)
 }
 
 // Handle messages tab switch
@@ -356,6 +388,28 @@ onUnmounted(() => {
         @openTopic="handleUserTopicClick"
         @openActivity="handleOpenUserActivity"
         @openMessages="handleOpenUserMessages"
+        @openUser="handleUserClick"
+        @openBadges="handleOpenUserBadges"
+        @openFollowFeed="handleOpenUserFollowFeed"
+        @openFollowing="handleOpenUserFollowing"
+        @openFollowers="handleOpenUserFollowers"
+      />
+
+      <DiscourseUserExtrasView
+        v-else-if="
+          (activeTab?.viewType === 'badges' ||
+            activeTab?.viewType === 'followFeed' ||
+            activeTab?.viewType === 'following' ||
+            activeTab?.viewType === 'followers') &&
+          activeTab.currentUser
+        "
+        :user="activeTab.currentUser"
+        :baseUrl="baseUrl"
+        :tab="activeTab.viewType"
+        @switchTab="handleUserExtrasTabSwitch"
+        @openUser="handleUserClick"
+        @openTopic="handleUserTopicClick"
+        @goToProfile="handleGoToProfile"
       />
 
       <!-- User activity view -->

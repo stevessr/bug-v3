@@ -152,6 +152,24 @@ export function useDiscourseBrowser() {
           await loadMessages(tab, username, 'all')
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
+        } else if (pathParts[1] === 'badges') {
+          await loadUser(tab, username)
+          tab.title = `${username} - 徽章`
+          tab.viewType = 'badges'
+        } else if (pathParts[1] === 'follow') {
+          await loadUser(tab, username)
+          if (pathParts[2] === 'feed') {
+            tab.title = `${username} - 关注动态`
+            tab.viewType = 'followFeed'
+          } else if (pathParts[2] === 'following') {
+            tab.title = `${username} - 正在关注`
+            tab.viewType = 'following'
+          } else if (pathParts[2] === 'followers') {
+            tab.title = `${username} - 关注者`
+            tab.viewType = 'followers'
+          } else {
+            tab.viewType = 'user'
+          }
         } else {
           await loadUser(tab, username)
           tab.viewType = 'user'
@@ -295,24 +313,43 @@ export function useDiscourseBrowser() {
   // Load user profile
   async function loadUser(tab: BrowserTab, username: string) {
     // Fetch user info and summary in parallel
-    const [userResult, summaryResult] = await Promise.all([
-      pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
-      pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null)
-    ])
+    const [userResult, summaryResult, badgesResult, followFeedResult, followingResult, followersResult] =
+      await Promise.all([
+        pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
+        pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null),
+        pageFetch<any>(`${baseUrl.value}/user-badges/${username}.json?grouped=true`).catch(
+          () => null
+        ),
+        pageFetch<any>(`${baseUrl.value}/follow/posts/${username}.json`).catch(() => null),
+        pageFetch<any>(`${baseUrl.value}/u/${username}/follow/following.json`).catch(() => null),
+        pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null)
+      ])
 
     const userData = extractData(userResult)
     const summaryData = summaryResult ? extractData(summaryResult) : null
+    const badgesData = badgesResult ? extractData(badgesResult) : null
+    const followFeedData = followFeedResult ? extractData(followFeedResult) : null
+    const followingData = followingResult ? extractData(followingResult) : null
+    const followersData = followersResult ? extractData(followersResult) : null
 
     if (userData?.user) {
       const profileData: DiscourseUserProfileData = {
         user: userData.user,
         user_summary: summaryData?.user_summary,
-        topics: summaryData?.topics
+        topics: summaryData?.topics,
+        badges: badgesData?.badges || badgesData?.user_badges || [],
+        follow_feed: followFeedData?.posts || [],
+        following: Array.isArray(followingData) ? followingData : followingData?.users || [],
+        followers: Array.isArray(followersData) ? followersData : followersData?.users || []
       }
       tab.currentUser = profileData.user
       // Store summary in user object for access
       ;(tab.currentUser as any)._summary = summaryData?.user_summary
       ;(tab.currentUser as any)._topics = summaryData?.topics
+      ;(tab.currentUser as any)._badges = profileData.badges
+      ;(tab.currentUser as any)._follow_feed = profileData.follow_feed
+      ;(tab.currentUser as any)._following = profileData.following
+      ;(tab.currentUser as any)._followers = profileData.followers
       tab.title = `${userData.user.username} - 用户主页`
     } else {
       tab.currentUser = null
@@ -775,6 +812,22 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/u/${username}/activity`)
   }
 
+  function openUserBadges(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/badges`)
+  }
+
+  function openUserFollowFeed(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/follow/feed`)
+  }
+
+  function openUserFollowing(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/follow/following`)
+  }
+
+  function openUserFollowers(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/follow/followers`)
+  }
+
   return {
     // State
     baseUrl,
@@ -806,6 +859,10 @@ export function useDiscourseBrowser() {
     openUser,
     openUserActivity,
     openUserMessages,
+    openUserBadges,
+    openUserFollowFeed,
+    openUserFollowing,
+    openUserFollowers,
     loadMorePosts,
     loadMoreTopics,
     switchActivityTab,

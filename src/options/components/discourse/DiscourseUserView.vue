@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DiscourseUserProfile } from './types'
+import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
 import { formatTime, getAvatarUrl } from './utils'
 
 const props = defineProps<{
@@ -31,6 +31,26 @@ const props = defineProps<{
       posts_count: number
       like_count: number
     }>
+    _badges?: Array<{
+      id: number
+      name: string
+      description?: string
+      image_url?: string
+      icon?: string
+    }>
+    _follow_feed?: DiscourseFollowPost[]
+    _following?: Array<{
+      id: number
+      username: string
+      name?: string
+      avatar_template: string
+    }>
+    _followers?: Array<{
+      id: number
+      username: string
+      name?: string
+      avatar_template: string
+    }>
   }
   baseUrl: string
 }>()
@@ -39,6 +59,11 @@ const emit = defineEmits<{
   (e: 'openTopic', topic: { id: number; slug: string }): void
   (e: 'openActivity', username: string): void
   (e: 'openMessages', username: string): void
+  (e: 'openUser', username: string): void
+  (e: 'openBadges', username: string): void
+  (e: 'openFollowFeed', username: string): void
+  (e: 'openFollowing', username: string): void
+  (e: 'openFollowers', username: string): void
 }>()
 
 // Format time read
@@ -131,6 +156,30 @@ const getTrustLevelName = (level: number): string => {
                 @click="emit('openMessages', user.username)"
               >
                 查看私信
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openBadges', user.username)"
+              >
+                徽章
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openFollowFeed', user.username)"
+              >
+                关注动态
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openFollowing', user.username)"
+              >
+                正在关注
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
+                @click="emit('openFollowers', user.username)"
+              >
+                关注者
               </button>
             </div>
           </div>

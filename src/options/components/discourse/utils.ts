@@ -86,10 +86,21 @@ export function formatTime(dateStr: string): string {
 
 // Parse post content, extract images for preview
 // Skip images inside onebox, emoji, and other special containers
-export function parsePostContent(cooked: string): ParsedContent {
+export function parsePostContent(cooked: string, baseUrl?: string): ParsedContent {
   if (!cooked) return { html: '', images: [] }
 
   const images: string[] = []
+  const seen = new Set<string>()
+
+  const addImage = (url: string) => {
+    if (!url) return ''
+    const fullUrl = url.startsWith('http') ? url : baseUrl ? `${baseUrl}${url}` : url
+    if (!seen.has(fullUrl)) {
+      seen.add(fullUrl)
+      images.push(fullUrl)
+    }
+    return fullUrl
+  }
 
   // Step 1: Temporarily replace onebox content with placeholders to protect them
   const oneboxes: string[] = []
@@ -107,8 +118,17 @@ export function parsePostContent(cooked: string): ParsedContent {
     /<div class="lightbox-wrapper">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
     (_match, fullUrl, _thumbUrl) => {
       const index = images.length
-      images.push(fullUrl)
+      addImage(fullUrl)
       return `<span class="post-image-placeholder" data-index="${index}"></span>`
+    }
+  )
+
+  // Step 2.5: Collect lightbox links that are not wrapped with images
+  html = html.replace(
+    /<a([^>]*class="[^"]*lightbox[^"]*"[^>]*href="([^"]+)"[^>]*)>([\s\S]*?)<\/a>/gi,
+    (match, _before, href) => {
+      addImage(href)
+      return match
     }
   )
 
@@ -127,7 +147,7 @@ export function parsePostContent(cooked: string): ParsedContent {
       return `<img${before}src="${src}"${after}>`
     }
     const index = images.length
-    images.push(src)
+    addImage(src)
     return `<span class="post-image-placeholder" data-index="${index}"></span>`
   })
 

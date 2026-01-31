@@ -31,7 +31,18 @@ export interface BrowserTab {
   messagesState: MessagesState | null
 }
 
-export type ViewType = 'home' | 'category' | 'topic' | 'user' | 'activity' | 'messages' | 'error'
+export type ViewType =
+  | 'home'
+  | 'category'
+  | 'topic'
+  | 'user'
+  | 'activity'
+  | 'messages'
+  | 'badges'
+  | 'followFeed'
+  | 'following'
+  | 'followers'
+  | 'error'
 
 export interface DiscourseTopic {
   id: number
@@ -203,6 +214,37 @@ export interface DiscourseUserProfileData {
   user: DiscourseUserProfile
   user_summary?: DiscourseUserSummary
   topics?: DiscourseTopic[]
+  badges?: DiscourseBadge[]
+  follow_feed?: DiscourseFollowPost[]
+  following?: DiscourseUser[]
+  followers?: DiscourseUser[]
+}
+
+export interface DiscourseBadge {
+  id: number
+  name: string
+  description?: string
+  image_url?: string
+  icon?: string
+  badge_type_id?: number
+  allow_title?: boolean
+}
+
+export interface DiscourseFollowPost {
+  id: number
+  excerpt: string
+  created_at: string
+  post_number: number
+  topic_id: number
+  url: string
+  user: DiscourseUser
+  topic: {
+    id: number
+    title: string
+    fancy_title: string
+    slug: string
+    posts_count: number
+  }
 }
 
 // User activity types

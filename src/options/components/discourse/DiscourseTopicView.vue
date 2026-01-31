@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from './types'
-import { formatTime, getAvatarUrl, parsePostContent } from './utils'
+import { formatTime, getAvatarUrl, parsePostContent, pageFetch, extractData } from './utils'
 import DiscourseTopicList from './DiscourseTopicList.vue'
 
 const props = defineProps<{
@@ -17,13 +17,15 @@ const emit = defineEmits<{
   (e: 'openUser', username: string): void
 }>()
 
+const postsListRef = ref<HTMLElement | null>(null)
+
 // Parse posts and cache results
 const parsedPosts = computed(() => {
   if (!props.topic?.post_stream?.posts) return new Map<number, ParsedContent>()
 
   const map = new Map<number, ParsedContent>()
   for (const post of props.topic.post_stream.posts) {
-    map.set(post.id, parsePostContent(post.cooked))
+    map.set(post.id, parsePostContent(post.cooked, props.baseUrl))
   }
   return map
 })
@@ -39,6 +41,95 @@ const handleSuggestedClick = (topic: SuggestedTopic) => {
 const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
+
+const handleQuoteToggle = async (event: Event) => {
+  const target = event.target as HTMLElement | null
+  const button = target?.closest('button.quote-toggle') as HTMLButtonElement | null
+  if (!button) return
+
+  const aside = button.closest('aside.quote') as HTMLElement | null
+  if (!aside) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const blockquote = aside.querySelector('blockquote') as HTMLElement | null
+  if (!blockquote) return
+
+  const expanded = aside.getAttribute('data-expanded') === 'true'
+  const original = blockquote.getAttribute('data-original-html')
+
+  if (expanded) {
+    if (original !== null) {
+      blockquote.innerHTML = original
+    }
+    aside.setAttribute('data-expanded', 'false')
+    button.setAttribute('aria-expanded', 'false')
+    return
+  }
+
+  if (original === null) {
+    blockquote.setAttribute('data-original-html', blockquote.innerHTML)
+  }
+
+  const topicId = aside.getAttribute('data-topic')
+  const postNumber = aside.getAttribute('data-post')
+  if (!topicId || !postNumber) return
+
+  button.classList.add('is-loading')
+  button.setAttribute('aria-expanded', 'true')
+  aside.setAttribute('data-expanded', 'true')
+
+  try {
+    const result = await pageFetch<any>(
+      `${props.baseUrl}/posts/by_number/${topicId}/${postNumber}.json`
+    )
+
+    if (result.status === 404) {
+      blockquote.innerHTML = '<div class="quote-error">引用内容不存在 (404)</div>'
+      return
+    }
+
+    const data = extractData(result)
+    if (data?.cooked) {
+      const parsed = parsePostContent(data.cooked, props.baseUrl)
+      blockquote.innerHTML = parsed.html
+
+      const existingImages = blockquote.querySelector('.quote-images')
+      if (existingImages) existingImages.remove()
+
+      if (parsed.images.length > 0) {
+        const imagesWrap = document.createElement('div')
+        imagesWrap.className = 'quote-images'
+        parsed.images.forEach(url => {
+          const img = document.createElement('img')
+          img.src = url
+          img.alt = ''
+          img.loading = 'lazy'
+          imagesWrap.appendChild(img)
+        })
+        blockquote.appendChild(imagesWrap)
+      }
+    } else if (result.ok === false) {
+      const statusText = result.status ? ` (${result.status})` : ''
+      blockquote.innerHTML = `<div class="quote-error">引用内容加载失败${statusText}</div>`
+    }
+  } catch (error) {
+    console.warn('[DiscourseBrowser] expand quote failed:', error)
+    aside.setAttribute('data-expanded', 'false')
+    button.setAttribute('aria-expanded', 'false')
+  } finally {
+    button.classList.remove('is-loading')
+  }
+}
+
+onMounted(() => {
+  postsListRef.value?.addEventListener('click', handleQuoteToggle)
+})
+
+onUnmounted(() => {
+  postsListRef.value?.removeEventListener('click', handleQuoteToggle)
+})
 </script>
 
 <template>
@@ -55,7 +146,7 @@ const handleUserClick = (username: string) => {
     </div>
 
     <!-- Posts list -->
-    <div v-if="topic.post_stream?.posts" class="posts-list space-y-4">
+    <div v-if="topic.post_stream?.posts" ref="postsListRef" class="posts-list space-y-4">
       <div
         v-for="post in topic.post_stream.posts"
         :key="post.id"
@@ -270,7 +361,40 @@ const handleUserClick = (username: string) => {
 }
 
 .post-content :deep(aside.quote .quote-controls) {
-  display: none;
+  display: inline-flex;
+}
+
+.post-content :deep(aside.quote .quote-toggle) {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.post-content :deep(aside.quote .quote-toggle.is-loading) {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.post-content :deep(aside.quote .quote-images) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.post-content :deep(aside.quote .quote-images img) {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.post-content :deep(aside.quote .quote-error) {
+  color: #b91c1c;
+  font-size: 0.85rem;
 }
 
 /* Onebox styles */
