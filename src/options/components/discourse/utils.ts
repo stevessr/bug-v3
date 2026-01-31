@@ -90,14 +90,17 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
   if (!cooked) return { html: '', images: [], segments: [] }
 
   const images: string[] = []
+  const carousels: string[][] = []
   const seen = new Set<string>()
 
-  const addImage = (url: string) => {
+  const resolveUrl = (url: string) => {
     if (!url) return ''
-    let fullUrl = url
-    if (!url.startsWith('http')) {
-      fullUrl = baseUrl ? `${baseUrl}${url}` : url
-    }
+    return url.startsWith('http') ? url : baseUrl ? `${baseUrl}${url}` : url
+  }
+
+  const addImage = (url: string) => {
+    const fullUrl = resolveUrl(url)
+    if (!fullUrl) return ''
     if (!seen.has(fullUrl)) {
       seen.add(fullUrl)
       images.push(fullUrl)
@@ -105,84 +108,125 @@ export function parsePostContent(cooked: string, baseUrl?: string): ParsedConten
     return fullUrl
   }
 
-  // Step 1: Temporarily replace onebox content with placeholders to protect them
-  const oneboxes: string[] = []
-  let html = cooked.replace(
-    /<aside[^>]*class="[^"]*onebox[^"]*"[^>]*>[\s\S]*?<\/aside>/gi,
-    match => {
-      const idx = oneboxes.length
-      oneboxes.push(match)
-      return `<!--ONEBOX_PLACEHOLDER_${idx}-->`
-    }
-  )
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(cooked, 'text/html')
+  const body = doc.body
 
-  // Step 2: Replace lightbox-wrapper images with placeholders (these are user-uploaded images)
-  html = html.replace(
-    /<div class="lightbox-wrapper">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/div>/gi,
-    (_match, fullUrl, _thumbUrl) => {
-      const index = images.length
-      addImage(fullUrl)
-      return `<span class="post-image-placeholder" data-index="${index}"></span>`
-    }
-  )
+  const isInsideOnebox = (el: Element | null) => {
+    if (!el) return false
+    return !!el.closest('.onebox')
+  }
 
-  // Step 2.5: Collect lightbox links that are not wrapped with images
-  html = html.replace(
-    /<a([^>]*class="[^"]*lightbox[^"]*"[^>]*href="([^"]+)"[^>]*)>([\s\S]*?)<\/a>/gi,
-    (match, _before, href) => {
-      addImage(href)
-      return match
-    }
-  )
+  const replaceWithMarker = (el: Element, marker: string) => {
+    const text = doc.createTextNode(marker)
+    el.replaceWith(text)
+  }
 
-  // Step 3: Process regular img tags (non-lightbox, non-onebox)
-  html = html.replace(/<img([^>]*)src="([^"]+)"([^>]*)>/gi, (_match, before, src, after) => {
-    // Skip emoji images
-    if (src.includes('/images/emoji/') || before.includes('emoji') || after.includes('emoji')) {
-      return `<img${before}src="${src}"${after}>`
+  // Step 1: handle carousel image grid
+  const carouselNodes = Array.from(body.querySelectorAll('.d-image-grid--carousel'))
+  carouselNodes.forEach(node => {
+    if (isInsideOnebox(node)) return
+    const urls: string[] = []
+    const slides = Array.from(node.querySelectorAll('.d-image-carousel__slide'))
+    slides.forEach(slide => {
+      const anchor = slide.querySelector('a.lightbox') as HTMLAnchorElement | null
+      const img = slide.querySelector('img') as HTMLImageElement | null
+      const rawUrl = anchor?.getAttribute('href') || img?.getAttribute('src')
+      const resolved = rawUrl ? resolveUrl(rawUrl) : ''
+      if (resolved && !urls.includes(resolved)) urls.push(resolved)
+    })
+    if (urls.length > 0) {
+      const index = carousels.length
+      carousels.push(urls)
+      replaceWithMarker(node, `__DISCOURSE_CAROUSEL_${index}__`)
     }
-    // Skip avatar images
-    if (before.includes('avatar') || after.includes('avatar')) {
-      return `<img${before}src="${src}"${after}>`
-    }
-    // Skip site-icon images (usually in onebox headers, but just in case)
-    if (before.includes('site-icon') || after.includes('site-icon')) {
-      return `<img${before}src="${src}"${after}>`
-    }
-    const index = images.length
-    addImage(src)
-    return `<span class="post-image-placeholder" data-index="${index}"></span>`
   })
 
-  // Step 4: Restore onebox content
-  html = html.replace(/<!--ONEBOX_PLACEHOLDER_(\d+)-->/g, (_match, idx) => {
-    return oneboxes[parseInt(idx)] || ''
+  // Step 2: replace lightbox-wrapper images
+  const lightboxWrappers = Array.from(body.querySelectorAll('.lightbox-wrapper'))
+  lightboxWrappers.forEach(wrapper => {
+    if (isInsideOnebox(wrapper)) return
+    const anchor = wrapper.querySelector('a.lightbox') as HTMLAnchorElement | null
+    const href = anchor?.getAttribute('href')
+    if (!href) return
+    const index = images.length
+    addImage(href)
+    replaceWithMarker(wrapper, `__DISCOURSE_IMG_${index}__`)
+  })
+
+  // Step 2.5: collect lightbox links without images
+  const lightboxLinks = Array.from(body.querySelectorAll('a.lightbox'))
+  lightboxLinks.forEach(link => {
+    if (isInsideOnebox(link)) return
+    const href = link.getAttribute('href')
+    if (href) addImage(href)
+  })
+
+  // Step 3: process regular img tags (non-lightbox, non-onebox)
+  const imagesNodes = Array.from(body.querySelectorAll('img'))
+  imagesNodes.forEach(img => {
+    if (isInsideOnebox(img)) return
+    if (img.closest('.lightbox-wrapper')) return
+    const src = img.getAttribute('src') || ''
+    const className = img.getAttribute('class') || ''
+    if (src.includes('/images/emoji/') || className.includes('emoji')) return
+    if (className.includes('avatar')) return
+    if (className.includes('site-icon')) return
+    if (!src) return
+    const index = images.length
+    addImage(src)
+    replaceWithMarker(img, `__DISCOURSE_IMG_${index}__`)
+  })
+
+  const html = body.innerHTML
+
+  const markers: Array<{ marker: string; type: 'image' | 'carousel'; index: number }> = []
+  images.forEach((_item, idx) => {
+    markers.push({ marker: `__DISCOURSE_IMG_${idx}__`, type: 'image', index: idx })
+  })
+  carousels.forEach((_item, idx) => {
+    markers.push({ marker: `__DISCOURSE_CAROUSEL_${idx}__`, type: 'carousel', index: idx })
   })
 
   const segments: ParsedContent['segments'] = []
-  const placeholderRegex = /<span class="post-image-placeholder" data-index="(\d+)"><\/span>/g
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = placeholderRegex.exec(html)) !== null) {
-    if (match.index > lastIndex) {
-      const chunk = html.slice(lastIndex, match.index)
-      if (chunk.trim().length > 0) {
-        segments.push({ type: 'html', html: chunk })
-      }
-    }
-    const imgIndex = Number(match[1])
-    const src = images[imgIndex]
-    if (src) {
-      segments.push({ type: 'image', src })
-    }
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < html.length) {
-    const chunk = html.slice(lastIndex)
-    if (chunk.trim().length > 0) {
+  let cursor = 0
+
+  const pushHtmlChunk = (chunk: string) => {
+    if (chunk && chunk.trim().length > 0) {
       segments.push({ type: 'html', html: chunk })
     }
   }
+
+  while (cursor < html.length) {
+    let nextIndex = -1
+    let nextMarker: (typeof markers)[number] | null = null
+    for (const marker of markers) {
+      const idx = html.indexOf(marker.marker, cursor)
+      if (idx !== -1 && (nextIndex === -1 || idx < nextIndex)) {
+        nextIndex = idx
+        nextMarker = marker
+      }
+    }
+    if (nextIndex === -1 || !nextMarker) break
+
+    const chunk = html.slice(cursor, nextIndex)
+    pushHtmlChunk(chunk)
+
+    if (nextMarker.type === 'image') {
+      const src = images[nextMarker.index]
+      if (src) segments.push({ type: 'image', src })
+    } else {
+      const items = carousels[nextMarker.index] || []
+      if (items.length > 0) segments.push({ type: 'carousel', images: items })
+    }
+
+    cursor = nextIndex + nextMarker.marker.length
+  }
+
+  if (cursor < html.length) {
+    pushHtmlChunk(html.slice(cursor))
+  }
+
   if (segments.length === 0) {
     segments.push({ type: 'html', html })
   }

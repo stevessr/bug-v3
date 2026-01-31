@@ -281,6 +281,24 @@ onUnmounted(() => {
                 class="post-content-fragment"
                 v-html="segment.html"
               />
+              <a-carousel
+                v-else-if="segment.type === 'carousel'"
+                class="post-carousel"
+                :dots="true"
+              >
+                <div
+                  v-for="(img, imgIndex) in segment.images"
+                  :key="imgIndex"
+                  class="post-carousel-slide"
+                >
+                  <a-image
+                    :src="img"
+                    :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
+                    class="post-inline-image rounded cursor-pointer"
+                    :style="{ maxHeight: '420px' }"
+                  />
+                </div>
+              </a-carousel>
               <a-image
                 v-else
                 :src="segment.src"
@@ -383,6 +401,15 @@ onUnmounted(() => {
 .post-content :deep(.post-inline-image) {
   display: block;
   margin: 0.5rem 0;
+}
+
+.post-content :deep(.post-carousel) {
+  margin: 0.5rem 0;
+}
+
+.post-content :deep(.post-carousel-slide) {
+  display: flex;
+  justify-content: center;
 }
 
 .post-content :deep(a) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, h } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
@@ -89,43 +89,8 @@ const categoryTreeData = computed(() => {
   return roots
 })
 
-const categoryById = computed(() => {
-  const map = new Map<number, DiscourseCategory>()
-  ;(props.categories || []).forEach(cat => map.set(cat.id, cat))
-  if (props.currentCategory && !map.has(props.currentCategory.id)) {
-    map.set(props.currentCategory.id, props.currentCategory)
-  }
-  return map
-})
-
-const selectedCategory = computed(() => {
-  if (!categoryId.value) return null
-  return categoryById.value.get(categoryId.value) || null
-})
-
-const renderSelectedLabel = () => {
-  const cat = selectedCategory.value
-  if (!cat) return ''
-  const color = `#${cat.color || '94a3b8'}`
-  let iconNode = h('span', {
-    class: 'category-option-dot',
-    style: { backgroundColor: color }
-  })
-  if (cat.uploaded_logo?.url || cat.uploaded_logo_dark?.url) {
-    const url = cat.uploaded_logo?.url || cat.uploaded_logo_dark?.url || ''
-    iconNode = h('img', { class: 'category-option-img', src: getImageUrl(url), alt: cat.name })
-  } else if (cat.emoji) {
-    iconNode = h('span', { class: 'category-option-emoji' }, cat.emoji)
-  } else if (cat.icon) {
-    iconNode = h('svg', { class: 'category-option-svg', viewBox: '0 0 24 24' }, [
-      h('use', { href: getIconHref(cat.icon) })
-    ])
-  }
-
-  return h('span', { class: 'category-option' }, [
-    h('span', { class: 'category-option-icon', style: { color } }, [iconNode]),
-    h('span', null, cat.name)
-  ])
+const normalizeTreeNode = (node: any) => {
+  return node?.dataRef ?? node
 }
 
 const previewHtml = computed(() => renderMarkdown(raw.value))
@@ -352,32 +317,38 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           tree-default-expand-all
           tree-node-filter-prop="title"
           :tree-data="categoryTreeData"
-          :optionLabelRender="renderSelectedLabel"
         >
-          <template #title="{ dataRef }">
-            <span v-if="dataRef && dataRef.title" class="category-option">
-              <span class="category-option-icon" :style="{ color: `#${dataRef.color || '94a3b8'}` }">
+          <template #title="node">
+            <span v-if="normalizeTreeNode(node)?.title" class="category-option">
+              <span
+                class="category-option-icon"
+                :style="{ color: `#${normalizeTreeNode(node)?.color || '94a3b8'}` }"
+              >
                 <img
-                  v-if="dataRef.logoUrl"
-                  :src="getImageUrl(dataRef.logoUrl)"
-                  :alt="dataRef.title"
+                  v-if="normalizeTreeNode(node)?.logoUrl"
+                  :src="getImageUrl(normalizeTreeNode(node)?.logoUrl)"
+                  :alt="normalizeTreeNode(node)?.title"
                   class="category-option-img"
                 />
-                <span v-else-if="dataRef.emoji" class="category-option-emoji">
-                  {{ dataRef.emoji }}
+                <span v-else-if="normalizeTreeNode(node)?.emoji" class="category-option-emoji">
+                  {{ normalizeTreeNode(node)?.emoji }}
                 </span>
-                <svg v-else-if="dataRef.icon" class="category-option-svg" viewBox="0 0 24 24">
-                  <use :href="getIconHref(dataRef.icon)" />
+                <svg
+                  v-else-if="normalizeTreeNode(node)?.icon"
+                  class="category-option-svg"
+                  viewBox="0 0 24 24"
+                >
+                  <use :href="getIconHref(normalizeTreeNode(node)?.icon)" />
                 </svg>
                 <span
                   v-else
                   class="category-option-dot"
-                  :style="{ backgroundColor: `#${dataRef.color || '94a3b8'}` }"
+                  :style="{ backgroundColor: `#${normalizeTreeNode(node)?.color || '94a3b8'}` }"
                 />
               </span>
-              <span>{{ dataRef.title }}</span>
+              <span>{{ normalizeTreeNode(node)?.title }}</span>
             </span>
-            <span v-else>{{ dataRef?.title || dataRef }}</span>
+            <span v-else>{{ normalizeTreeNode(node)?.title || normalizeTreeNode(node) }}</span>
           </template>
         </a-tree-select>
         <a-select

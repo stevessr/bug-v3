@@ -157,7 +157,11 @@ export interface DiscourseTopicDetail {
 export interface ParsedContent {
   html: string
   images: string[]
-  segments: Array<{ type: 'html'; html: string } | { type: 'image'; src: string }>
+  segments: Array<
+    | { type: 'html'; html: string }
+    | { type: 'image'; src: string }
+    | { type: 'carousel'; images: string[] }
+  >
 }
 
 // User profile types
