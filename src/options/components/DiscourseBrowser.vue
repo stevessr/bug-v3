@@ -16,6 +16,7 @@ import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
 import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
 import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
 import DiscourseUserView from './discourse/DiscourseUserView.vue'
+import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
 
 const {
   baseUrl,
@@ -201,13 +202,54 @@ onUnmounted(() => {
       </div>
 
       <!-- Home view -->
-      <div v-else-if="activeTab?.viewType === 'home'" class="space-y-6">
-        <!-- Categories -->
-        <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
+      <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
+        <!-- Main content -->
+        <div class="flex-1 min-w-0 space-y-6">
+          <!-- Categories -->
+          <DiscourseCategoryGrid :categories="activeTab.categories" @click="handleCategoryClick" />
 
-        <!-- Latest topics -->
-        <div v-if="activeTab.topics.length > 0">
-          <h3 class="text-lg font-semibold mb-3 dark:text-white">最新话题</h3>
+          <!-- Latest topics -->
+          <div v-if="activeTab.topics.length > 0">
+            <h3 class="text-lg font-semibold mb-3 dark:text-white">最新话题</h3>
+            <DiscourseTopicList
+              :topics="activeTab.topics"
+              :baseUrl="baseUrl"
+              @click="handleTopicClick"
+              @middleClick="handleMiddleClick"
+            />
+
+            <!-- Loading more indicator -->
+            <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
+              <a-spin />
+              <span class="ml-2 text-gray-500">加载更多话题...</span>
+            </div>
+
+            <!-- End indicator -->
+            <div
+              v-if="!activeTab.hasMoreTopics && !isLoadingMore"
+              class="text-center text-gray-400 py-4 text-sm"
+            >
+              已加载全部话题
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <DiscourseSidebar
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+          />
+        </div>
+      </div>
+
+      <!-- Category view -->
+      <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
+        <!-- Main content -->
+        <div class="flex-1 min-w-0 space-y-2">
           <DiscourseTopicList
             :topics="activeTab.topics"
             :baseUrl="baseUrl"
@@ -223,35 +265,22 @@ onUnmounted(() => {
 
           <!-- End indicator -->
           <div
-            v-if="!activeTab.hasMoreTopics && !isLoadingMore"
+            v-if="!activeTab.hasMoreTopics && !isLoadingMore && activeTab.topics.length > 0"
             class="text-center text-gray-400 py-4 text-sm"
           >
             已加载全部话题
           </div>
         </div>
-      </div>
 
-      <!-- Category view -->
-      <div v-else-if="activeTab?.viewType === 'category'" class="space-y-2">
-        <DiscourseTopicList
-          :topics="activeTab.topics"
-          :baseUrl="baseUrl"
-          @click="handleTopicClick"
-          @middleClick="handleMiddleClick"
-        />
-
-        <!-- Loading more indicator -->
-        <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
-          <a-spin />
-          <span class="ml-2 text-gray-500">加载更多话题...</span>
-        </div>
-
-        <!-- End indicator -->
-        <div
-          v-if="!activeTab.hasMoreTopics && !isLoadingMore && activeTab.topics.length > 0"
-          class="text-center text-gray-400 py-4 text-sm"
-        >
-          已加载全部话题
+        <!-- Sidebar -->
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <DiscourseSidebar
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+          />
         </div>
       </div>
 

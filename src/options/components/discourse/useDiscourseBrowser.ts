@@ -61,6 +61,7 @@ export function useDiscourseBrowser() {
       topics: [],
       currentTopic: null,
       currentUser: null,
+      activeUsers: [],
       errorMessage: '',
       loadedPostIds: new Set(),
       hasMorePosts: false,
@@ -185,8 +186,12 @@ export function useDiscourseBrowser() {
     tab.currentCategorySlug = ''
     tab.currentCategoryId = null
 
+    // Store active users for sidebar
     if (topicData?.users) {
+      tab.activeUsers = topicData.users
       topicData.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+    } else {
+      tab.activeUsers = []
     }
   }
 
@@ -212,8 +217,12 @@ export function useDiscourseBrowser() {
     tab.currentCategorySlug = slug
     tab.currentCategoryId = categoryId
 
+    // Store active users for sidebar
     if (data?.users) {
+      tab.activeUsers = data.users
       data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+    } else {
+      tab.activeUsers = []
     }
   }
 

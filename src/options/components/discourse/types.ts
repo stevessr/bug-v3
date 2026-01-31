@@ -14,6 +14,7 @@ export interface BrowserTab {
   topics: DiscourseTopic[]
   currentTopic: DiscourseTopicDetail | null
   currentUser: DiscourseUserProfile | null
+  activeUsers: DiscourseUser[]
   errorMessage: string
   // Pagination state for posts
   loadedPostIds: Set<number>
