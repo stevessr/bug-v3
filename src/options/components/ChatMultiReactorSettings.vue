@@ -38,7 +38,13 @@ interface DiscourseEmojisResponse {
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 
-const emit = defineEmits(['update:enableChatMultiReactor', 'update:chatMultiReactorEmojis'])
+const emit = defineEmits([
+  'update:enableChatMultiReactor',
+  'update:chatMultiReactorEmojis',
+  'update:enableLinuxDoLikeCounter',
+  'update:enableAntiCheat',
+  'update:antiCheatCustomText'
+])
 
 // 默认表情列表
 const DEFAULT_EMOJI_LIST = [
@@ -407,6 +413,29 @@ watch(
     loadGroupDetail(name)
   }
 )
+
+// Anti-Cheat 自定义文字的本地状态
+const localAntiCheatCustomText = ref<string>(getSetting('antiCheatCustomText', 'Hello World') as string)
+const isAntiCheatCustomTextSaving = ref(false)
+
+// 监听 settings 变化，同步到本地状态
+watch(
+  () => getSetting('antiCheatCustomText', 'Hello World'),
+  val => {
+    localAntiCheatCustomText.value = val as string
+  }
+)
+
+// 保存 Anti-Cheat 自定义文字
+const saveAntiCheatCustomText = async () => {
+  isAntiCheatCustomTextSaving.value = true
+  try {
+    emit('update:antiCheatCustomText', localAntiCheatCustomText.value)
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } finally {
+    isAntiCheatCustomTextSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -566,6 +595,52 @@ watch(
         label="启用聊天多表情反应"
         description="在 Discourse 聊天消息旁添加按钮，一键发送多个表情反应"
       />
+
+      <div class="mt-4">
+        <SettingSwitch
+          :model-value="getSetting('enableLinuxDoLikeCounter', false)"
+          @update:model-value="emit('update:enableLinuxDoLikeCounter', $event)"
+          label="启用 LinuxDo 点赞计数器"
+          description="在 LinuxDo 点赞选择器上显示当日剩余点赞次数和冷却时间"
+        />
+      </div>
+
+      <div class="mt-4">
+        <SettingSwitch
+          :model-value="getSetting('enableAntiCheat', false)"
+          @update:model-value="emit('update:enableAntiCheat', $event)"
+          label="启用水印替换"
+          description="替换 Discourse 站点的隐形水印文字为自定义内容"
+        />
+      </div>
+
+      <!-- Anti-Cheat 自定义文字配置（仅在启用时显示） -->
+      <div
+        v-if="getSetting('enableAntiCheat', false)"
+        class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+      >
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">自定义水印文字</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">设置替换后的水印文字内容</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="localAntiCheatCustomText"
+              class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-48 dark:bg-gray-700 dark:text-white"
+              placeholder="Hello World"
+              title="自定义水印文字"
+            />
+            <a-button
+              type="primary"
+              :loading="isAntiCheatCustomTextSaving"
+              @click="saveAntiCheatCustomText"
+            >
+              保存
+            </a-button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 表情配置（仅在启用时显示） -->
