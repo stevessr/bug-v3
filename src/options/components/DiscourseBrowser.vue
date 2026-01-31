@@ -150,6 +150,24 @@ const handleOpenUserMessages = (username: string) => {
   openUserMessages(username)
 }
 
+const handleUserMainTabSwitch = (
+  tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'
+) => {
+  if (!activeTab.value?.currentUser) return
+  const username = activeTab.value.currentUser.username
+  if (tab === 'summary') {
+    openUser(username)
+  } else if (tab === 'activity') {
+    openUserActivity(username)
+  } else if (tab === 'messages') {
+    openUserMessages(username)
+  } else if (tab === 'badges') {
+    openUserBadges(username)
+  } else {
+    openUserFollowFeed(username)
+  }
+}
+
 const handleOpenUserBadges = (username: string) => {
   openUserBadges(username)
 }
@@ -403,6 +421,7 @@ onUnmounted(() => {
         @openFollowFeed="handleOpenUserFollowFeed"
         @openFollowing="handleOpenUserFollowing"
         @openFollowers="handleOpenUserFollowers"
+        @switchMainTab="handleUserMainTabSwitch"
       />
 
       <DiscourseUserExtrasView
@@ -422,6 +441,7 @@ onUnmounted(() => {
         @openUser="handleUserClick"
         @openTopic="handleUserTopicClick"
         @goToProfile="handleGoToProfile"
+        @switchMainTab="handleUserMainTabSwitch"
       />
 
       <!-- User activity view -->
@@ -437,6 +457,7 @@ onUnmounted(() => {
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
         @goToProfile="handleGoToProfile"
+        @switchMainTab="handleUserMainTabSwitch"
       />
 
       <!-- User messages view -->
@@ -453,6 +474,7 @@ onUnmounted(() => {
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
         @goToProfile="handleGoToProfile"
+        @switchMainTab="handleUserMainTabSwitch"
       />
     </div>
   </div>

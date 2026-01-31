@@ -9,6 +9,7 @@ import type {
   ActivityTabType
 } from './types'
 import { formatTime, getAvatarUrl } from './utils'
+import DiscourseUserTabs from './DiscourseUserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile
@@ -22,6 +23,7 @@ const emit = defineEmits<{
   (e: 'openTopic', topic: { id: number; slug: string }): void
   (e: 'openUser', username: string): void
   (e: 'goToProfile'): void
+  (e: 'switchMainTab', tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'): void
 }>()
 
 const tabs: { key: ActivityTabType; label: string }[] = [
@@ -32,7 +34,8 @@ const tabs: { key: ActivityTabType; label: string }[] = [
   { key: 'reactions', label: '反应' },
   { key: 'solved', label: '已解决' },
   { key: 'assigned', label: '已指定' },
-  { key: 'votes', label: '投票' }
+  { key: 'votes', label: '投票' },
+  { key: 'portfolio', label: '作品集' }
 ]
 
 // Get action type label
@@ -90,6 +93,8 @@ const getActionTypeLabel = (actionType: number): string => {
         </div>
       </div>
     </div>
+
+    <DiscourseUserTabs active="activity" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Tab navigation -->
     <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
@@ -154,9 +159,9 @@ const getActionTypeLabel = (actionType: number): string => {
         </div>
       </div>
 
-      <!-- Topics / Assigned / Votes -->
+      <!-- Topics / Assigned / Votes / Portfolio -->
       <div
-        v-else-if="['topics', 'assigned', 'votes'].includes(activityState.activeTab)"
+        v-else-if="['topics', 'assigned', 'votes', 'portfolio'].includes(activityState.activeTab)"
         class="space-y-2"
       >
         <div
@@ -187,7 +192,9 @@ const getActionTypeLabel = (actionType: number): string => {
               ? '暂无话题'
               : activityState.activeTab === 'assigned'
                 ? '暂无已指定'
-                : '暂无投票'
+                : activityState.activeTab === 'votes'
+                  ? '暂无投票'
+                  : '暂无作品集'
           }}
         </div>
       </div>

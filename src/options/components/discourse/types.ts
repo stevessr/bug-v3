@@ -260,6 +260,7 @@ export type ActivityTabType =
   | 'solved'
   | 'assigned'
   | 'votes'
+  | 'portfolio'
 
 export interface DiscourseUserAction {
   excerpt: string

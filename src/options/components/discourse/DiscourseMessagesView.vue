@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from './types'
 import { formatTime, getAvatarUrl } from './utils'
+import DiscourseUserTabs from './DiscourseUserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   (e: 'openTopic', topic: { id: number; slug: string }): void
   (e: 'openUser', username: string): void
   (e: 'goToProfile'): void
+  (e: 'switchMainTab', tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'): void
 }>()
 
 const tabs: { key: MessagesTabType; label: string }[] = [
@@ -51,6 +53,8 @@ const tabs: { key: MessagesTabType; label: string }[] = [
         <div v-if="user.name" class="text-sm text-gray-500">{{ user.name }}</div>
       </div>
     </div>
+
+    <DiscourseUserTabs active="messages" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Tab navigation -->
     <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">

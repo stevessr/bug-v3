@@ -144,9 +144,33 @@ export function useDiscourseBrowser() {
       } else if (pathname.startsWith('/u/')) {
         const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
         const username = pathParts[0]
-        if (pathParts[1] === 'activity' || pathParts[1] === 'summary') {
-          // Activity page
-          await loadUserActivity(tab, username, 'all')
+        if (!pathParts[1]) {
+          await navigateTo(`${baseUrl.value}/u/${username}/summary`, addToHistory)
+          return
+        }
+        if (pathParts[1] === 'summary') {
+          await loadUser(tab, username)
+          tab.viewType = 'user'
+          tab.title = `${username} - 概览`
+        } else if (pathParts[1] === 'activity') {
+          const activityKey = pathParts[2] || 'all'
+          const activityTab =
+            activityKey === 'portfolio'
+              ? 'portfolio'
+              : activityKey === 'topics'
+                ? 'topics'
+                : activityKey === 'replies'
+                  ? 'replies'
+                  : activityKey === 'likes-given'
+                    ? 'likes'
+                    : activityKey === 'reactions'
+                      ? 'reactions'
+                      : activityKey === 'solved'
+                        ? 'solved'
+                        : activityKey === 'votes'
+                          ? 'votes'
+                          : 'all'
+          await loadUserActivity(tab, username, activityTab)
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
         } else if (pathParts[1] === 'messages') {
@@ -409,7 +433,12 @@ export function useDiscourseBrowser() {
     if (reset) {
       tab.activityState.offset = 0
       tab.activityState.hasMore = true
-      if (activityTab === 'topics' || activityTab === 'assigned' || activityTab === 'votes') {
+      if (
+        activityTab === 'topics' ||
+        activityTab === 'assigned' ||
+        activityTab === 'votes' ||
+        activityTab === 'portfolio'
+      ) {
         tab.activityState.topics = []
       } else if (activityTab === 'reactions') {
         tab.activityState.reactions = []
@@ -460,6 +489,17 @@ export function useDiscourseBrowser() {
           url = `${baseUrl.value}/topics/voted-by/${username}.json${votesPage > 0 ? `?page=${votesPage}` : ''}`
           break
         }
+        case 'portfolio': {
+          const page = Math.floor(offset / 30)
+          const params = new URLSearchParams()
+          params.append('tags[]', '作品集')
+          params.append('order', 'created')
+          if (page > 0) {
+            params.append('page', String(page))
+          }
+          url = `${baseUrl.value}/topics/created-by/${username}.json?${params.toString()}`
+          break
+        }
         default:
           return
       }
@@ -467,7 +507,12 @@ export function useDiscourseBrowser() {
       const result = await pageFetch<any>(url)
       const data = extractData(result)
 
-      if (activityTab === 'topics' || activityTab === 'assigned' || activityTab === 'votes') {
+      if (
+        activityTab === 'topics' ||
+        activityTab === 'assigned' ||
+        activityTab === 'votes' ||
+        activityTab === 'portfolio'
+      ) {
         const topics = data?.topic_list?.topics || []
         if (reset) {
           tab.activityState.topics = topics
@@ -517,15 +562,17 @@ export function useDiscourseBrowser() {
   async function switchActivityTab(activityTab: ActivityTabType) {
     const tab = activeTab.value
     if (!tab || !tab.currentUser || !tab.activityState) return
-
-    tab.activityState.activeTab = activityTab
-    isLoadingMore.value = true
-
-    try {
-      await loadActivityData(tab, tab.currentUser.username, activityTab, true)
-    } finally {
-      isLoadingMore.value = false
-    }
+    const username = tab.currentUser.username
+    const subPath =
+      activityTab === 'all'
+        ? ''
+        : activityTab === 'likes'
+          ? 'likes-given'
+          : activityTab
+    const target = subPath
+      ? `${baseUrl.value}/u/${username}/activity/${subPath}`
+      : `${baseUrl.value}/u/${username}/activity`
+    navigateTo(target)
   }
 
   // Load more activity items
@@ -846,7 +893,7 @@ export function useDiscourseBrowser() {
 
   // Open user profile
   function openUser(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}`)
+    navigateTo(`${baseUrl.value}/u/${username}/summary`)
   }
 
   // Open user activity

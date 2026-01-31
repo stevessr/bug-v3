@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
 import { formatTime, getAvatarUrl } from './utils'
+import DiscourseUserTabs from './DiscourseUserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile & {
@@ -64,6 +65,7 @@ const emit = defineEmits<{
   (e: 'openFollowFeed', username: string): void
   (e: 'openFollowing', username: string): void
   (e: 'openFollowers', username: string): void
+  (e: 'switchMainTab', tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'): void
 }>()
 
 // Format time read
@@ -144,48 +146,13 @@ const getTrustLevelName = (level: number): string => {
             </div>
 
             <!-- Actions -->
-            <div class="mt-3 flex gap-2">
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openActivity', user.username)"
-              >
-                查看动态
-              </button>
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openMessages', user.username)"
-              >
-                查看私信
-              </button>
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openBadges', user.username)"
-              >
-                徽章
-              </button>
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openFollowFeed', user.username)"
-              >
-                关注动态
-              </button>
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openFollowing', user.username)"
-              >
-                正在关注
-              </button>
-              <button
-                class="px-3 py-1 text-sm bg-white/20 hover:bg-white/30 rounded transition-colors"
-                @click="emit('openFollowers', user.username)"
-              >
-                关注者
-              </button>
-            </div>
+            <div class="mt-3 text-sm opacity-80">用户概览</div>
           </div>
         </div>
       </div>
     </div>
+
+    <DiscourseUserTabs active="summary" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Bio -->
     <div

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
 import { formatTime, getAvatarUrl } from './utils'
+import DiscourseUserTabs from './DiscourseUserTabs.vue'
 
 type ExtrasTab = 'badges' | 'followFeed' | 'following' | 'followers'
 
@@ -35,6 +36,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'switchTab', tab: ExtrasTab): void
+  (e: 'switchMainTab', tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'): void
   (e: 'openUser', username: string): void
   (e: 'openTopic', topic: { id: number; slug: string }): void
   (e: 'goToProfile'): void
@@ -43,6 +45,11 @@ const emit = defineEmits<{
 
 <template>
   <div class="user-extras space-y-4">
+    <DiscourseUserTabs
+      :active="tab === 'badges' ? 'badges' : 'follow'"
+      @switchTab="emit('switchMainTab', $event)"
+    />
+
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <button
