@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
-import { createE, DQS, DQSA } from '../../utils/createEl'
+import { createE, DQS, DQSA } from '../../utils/dom/createEl'
 
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'

@@ -2,7 +2,7 @@
  * X.com 自动下载设置界面
  */
 
-import { DOA, createE } from '../../utils/createEl'
+import { DOA, createE } from '../../utils/dom/createEl'
 
 import { AutoDownloadManager, getAutoDownloadManager } from './manager'
 

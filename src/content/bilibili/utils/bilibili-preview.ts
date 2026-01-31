@@ -5,7 +5,7 @@
 import { createFloatingButton, createPhotoSwipeButton } from './bilibili-buttons'
 import { extractImageUrlFromPicture, extractNameFromUrl } from './bilibili-helper'
 
-import { DQS } from '@/content/utils/createEl'
+import { DQS } from '@/content/utils/dom/createEl'
 // 防抖和状态管理
 let isProcessingPhotoSwipe = false
 let photoSwipeDebounceTimer: number | null = null

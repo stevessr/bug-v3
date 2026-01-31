@@ -4,14 +4,14 @@
  */
 
 import { initializeEmojiFeature } from './utils/init'
-import { postTimings } from './utils/timingsBinder'
-import { autoReadAllv2 } from './utils/autoReadReplies'
+import { postTimings } from './discourse/utils/timingsBinder'
+import { autoReadAllv2 } from './discourse/utils/autoReadReplies'
 import {
   detectPlatform,
   shouldInjectEmojiFeature,
   getDiscourseDomains
-} from './utils/platformDetector'
-import { loadPlatformModule } from './utils/platformLoader'
+} from './utils/core/platformDetector'
+import { loadPlatformModule } from './utils/core/platformLoader'
 import { dispatchMessage } from './messageHandlers'
 
 import { createLogger } from '@/utils/logger'

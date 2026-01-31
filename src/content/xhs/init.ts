@@ -4,7 +4,7 @@ import {
   setupButtonClick,
   AddEmojiButtonData
 } from '../x/utils'
-import { DQSA, createE } from '../utils/createEl'
+import { DQSA, createE } from '../utils/dom/createEl'
 
 function isXhsPage(): boolean {
   try {

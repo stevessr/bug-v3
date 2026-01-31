@@ -1,6 +1,6 @@
 // 导入各个功能模块
-import { requestSettingFromBackground } from '../utils/requestSetting'
-import { contentImageCache, processEmojiImages } from '../utils/contentImageCache'
+import { requestSettingFromBackground } from '../utils/core/requestSetting'
+import { contentImageCache, processEmojiImages } from '../utils/core/contentImageCache'
 
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
 import { scanForCookedContent, observeCookedContent } from './utils/cooked-content'

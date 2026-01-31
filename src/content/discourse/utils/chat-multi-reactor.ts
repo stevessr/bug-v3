@@ -1,4 +1,4 @@
-import { createE } from '@/content/utils/createEl'
+import { createE } from '@/content/utils/dom/createEl'
 
 /**
  * Chat Multi-Reactor 模块

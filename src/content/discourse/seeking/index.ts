@@ -3,8 +3,8 @@
  * 模块化重构版本
  */
 
-import { createE, DOA } from '../../utils/createEl'
-import { requestSettingFromBackground } from '../../utils/requestSetting'
+import { createE, DOA } from '../../utils/dom/createEl'
+import { requestSettingFromBackground } from '../../utils/core/requestSetting'
 
 import { CONFIG, categoryMap, categoryColors } from './config'
 import { state, saveConfig, loadConfig } from './state'

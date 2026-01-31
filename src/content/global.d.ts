@@ -3,7 +3,7 @@
  * Extends the Window interface with custom properties
  */
 
-import type { PostTimingsBinder } from './utils/timingsBinder'
+import type { PostTimingsBinder } from './discourse/utils/timingsBinder'
 
 declare global {
   interface Window {

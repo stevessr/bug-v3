@@ -1,6 +1,6 @@
 import type { AddEmojiButtonData } from '../types/main'
-import { createE, DQSA } from '../../utils/createEl'
-import { getCachedImageUrl } from '../../utils/contentImageCache'
+import { createE, DQSA } from '../../utils/dom/createEl'
+import { getCachedImageUrl } from '../../utils/core/contentImageCache'
 
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'

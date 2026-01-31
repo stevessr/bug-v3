@@ -3,9 +3,9 @@
  * 周期性调用 Discourse 路由刷新以优化用户体验
  */
 
-import { DHA, createE } from '../../utils/createEl'
-import { requestSettingFromBackground } from '../../utils/requestSetting'
-import { notify } from '../../utils/notify'
+import { DHA, createE } from '../../utils/dom/createEl'
+import { requestSettingFromBackground } from '../../utils/core/requestSetting'
+import { notify } from '../../utils/ui/notify'
 
 // 全局状态
 let refreshTimer: ReturnType<typeof setTimeout> | null = null

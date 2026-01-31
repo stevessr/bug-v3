@@ -4,7 +4,7 @@
 
 import type { AddEmojiButtonData } from './bilibili-helper'
 
-import { createE } from '@/content/utils/createEl'
+import { createE } from '@/content/utils/dom/createEl'
 // Import utility functions dynamically to avoid circular dependencies
 
 declare const chrome: typeof globalThis.chrome

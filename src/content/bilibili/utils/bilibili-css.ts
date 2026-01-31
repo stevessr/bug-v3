@@ -1,7 +1,7 @@
 /**
  * 注入按钮样式修复 CSS
  */
-import { DEBI, createE, DHA } from '@/content/utils/createEl'
+import { DEBI, createE, DHA } from '@/content/utils/dom/createEl'
 
 export function injectBilibiliButtonStyles() {
   // Check if styles are already injected

@@ -1,5 +1,5 @@
-import { Z_INDEX } from '../utils/constants'
-import { DOA, createE } from '../utils/createEl'
+import { Z_INDEX } from '../utils/dom/constants'
+import { DOA, createE } from '../utils/dom/createEl'
 
 import type { AgentAction } from '@/agent/types'
 

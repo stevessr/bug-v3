@@ -4,12 +4,12 @@
  * 这种方式比持续观察 DOM 更节省 CPU
  */
 
-import { createE, DQS, DOA } from '../../utils/createEl'
-import { showImageUploadDialog } from '../../utils/uploader'
-import { animateEnter, animateExit } from '../../utils/animation'
-import { autoReadAll, autoReadAllv2 } from '../../utils/autoReadReplies'
-import { notify } from '../../utils/notify'
-import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/iframe'
+import { createE, DQS, DOA } from '../../utils/dom/createEl'
+import { showImageUploadDialog } from './uploader'
+import { animateEnter, animateExit } from '../../utils/dom/animation'
+import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
+import { notify } from '../../utils/ui/notify'
+import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/dom/iframe'
 import { createQuickInsertMenu } from '../../utils/injector'
 
 import { cachedState } from './ensure'

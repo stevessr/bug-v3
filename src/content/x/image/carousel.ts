@@ -7,7 +7,7 @@ import {
   isXMediaHost
 } from '../utils'
 import { isImageInjectionEnabled, ImageType } from '../xConfig'
-import { DOA, DQSA, createE } from '../../utils/createEl'
+import { DOA, DQSA, createE } from '../../utils/dom/createEl'
 
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()

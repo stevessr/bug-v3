@@ -1,5 +1,5 @@
-import { DQS } from '../createEl'
-import { notify } from '../notify'
+import { DQS } from '../dom'
+import { notify } from '../ui'
 
 import { insertIntoEditor } from './helpers'
 

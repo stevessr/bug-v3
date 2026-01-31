@@ -1,4 +1,4 @@
-import { createE } from '@/content/utils/createEl'
+import { createE } from '@/content/utils/dom/createEl'
 
 const BUTTON_CLASS = 'emoji-summon-button'
 const TARGET_GROUP_NAME = '召唤分组'

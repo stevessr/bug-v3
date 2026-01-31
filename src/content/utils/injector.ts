@@ -1,12 +1,12 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
 
-import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
-import { notify } from './notify'
-import { createE, DQSA, DQS, DOA, DAEL } from './createEl'
-import { showImageUploadDialog } from './uploader'
-import { createAndShowIframeModal, createAndShowSideIframeModal } from './iframe'
-import { animateEnter, animateExit, ANIMATION_DURATION } from './animation'
+import { autoReadAll, autoReadAllv2 } from '../discourse/utils/autoReadReplies'
+import { notify } from './ui'
+import { createE, DQSA, DQS, DOA, DAEL } from './dom'
+import { showImageUploadDialog } from '../discourse/utils/uploader'
+import { createAndShowIframeModal, createAndShowSideIframeModal } from './dom'
+import { animateEnter, animateExit, ANIMATION_DURATION } from './dom'
 
 import { ICONS } from '@/content/data/callout'
 

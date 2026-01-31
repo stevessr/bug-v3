@@ -1,5 +1,5 @@
 import { extractNameFromUrl } from '../x/utils'
-import { DQSA, createE, DEBI, DOA } from '../utils/createEl'
+import { DQSA, createE, DEBI, DOA } from '../utils/dom/createEl'
 
 const SELECTOR = 'div.lazy-img-wrapper'
 const DOWNLOAD_BUTTON_ID = 'tieba-emoji-download-btn'

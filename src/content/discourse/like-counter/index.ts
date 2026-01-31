@@ -4,7 +4,7 @@
  * 基于 linux-do-toolkit.user.js 的 LikeCounter 模块移植
  */
 
-import { createE, DHA, DQS, DQSA } from '@/content/utils/createEl'
+import { createE, DHA, DQS, DQSA } from '@/content/utils/dom/createEl'
 
 const CONFIG = {
   HOST: 'https://linux.do',

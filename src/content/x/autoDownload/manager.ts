@@ -1,4 +1,4 @@
-import { DOA, createE } from '../../utils/createEl'
+import { DOA, createE } from '../../utils/dom/createEl'
 
 /**
  * X.com 图片自动下载管理器

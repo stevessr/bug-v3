@@ -1,6 +1,6 @@
-import { createE, DOA } from '../../utils/createEl'
-import { getCachedImageUrl } from '../../utils/contentImageCache'
-import { animateExit } from '../../utils/animation'
+import { createE, DOA } from '../../utils/dom/createEl'
+import { getCachedImageUrl } from '../../utils/core/contentImageCache'
+import { animateExit } from '../../utils/dom/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'

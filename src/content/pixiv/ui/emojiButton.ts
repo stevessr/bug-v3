@@ -2,7 +2,7 @@ import type { AddEmojiButtonData } from '../types'
 import { performPixivAddEmojiFlow } from '../core/helpers'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
 
-import { createE } from '@/content/utils/createEl'
+import { createE } from '@/content/utils/dom/createEl'
 
 /*
   添加表情按钮实现（独立文件）

@@ -2,7 +2,7 @@
 // 功能：在 textarea 输入 `[!` 时显示候选 Callout（英文），支持键盘和点击完成
 
 import { ESI } from '@/content/utils/injectCustomCss'
-import { createE, DOA, DEBI, DAEL } from '@/content/utils/createEl'
+import { createE, DOA, DEBI, DAEL } from '@/content/utils/dom/createEl'
 import { ICONS, calloutKeywords } from '@/content/data/callout'
 
 const DEFAULT_ICON = {

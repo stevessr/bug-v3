@@ -1,4 +1,4 @@
-import { DQS } from '../../utils/createEl'
+import { DQS } from '../../utils/dom/createEl'
 
 /**
  * 处理上传 blob 到 Discourse 的功能

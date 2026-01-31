@@ -1,7 +1,7 @@
 import { CONFIG, nameColors } from './config'
 import { state } from './state'
 
-import { createE } from '@/content/utils/createEl'
+import { createE } from '@/content/utils/dom/createEl'
 
 export let shadowRoot: ShadowRoot | null = null
 

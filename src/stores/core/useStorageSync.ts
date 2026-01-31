@@ -366,7 +366,7 @@ export function useStorageSync({
                     const emojiName = message.payload.emoji?.name || '表情'
                     const groupName = message.payload.group?.name || '未分组'
                     // 使用内置 notify 显示通知
-                    import('@/content/utils/notify')
+                    import('@/content/utils/ui/notify')
                       .then(({ notify }) => {
                         notify(`已添加 "${emojiName}" 到 "${groupName}"`, 'success')
                       })
@@ -397,7 +397,7 @@ export function useStorageSync({
                       groups.value = updatedGroups
                       console.log('[EmojiStore] Updated favorites group from runtime message')
                       // 显示通知：收藏夹已更新
-                      import('@/content/utils/notify')
+                      import('@/content/utils/ui/notify')
                         .then(({ notify }) => {
                           notify('收藏夹已更新', 'success')
                         })

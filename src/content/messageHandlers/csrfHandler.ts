@@ -1,4 +1,4 @@
-import { getCsrfTokenFromPage } from '../utils/csrf'
+import { getCsrfTokenFromPage } from '../utils/dom/csrf'
 
 import type { MessageHandler } from './types'
 

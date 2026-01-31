@@ -11,7 +11,7 @@ import {
 import getSelectorsForCurrentUrl from './selectors-by-url'
 import { createFloatingButton, createControlButton } from './bilibili-buttons'
 
-import { DQS, DQSA } from '@/content/utils/createEl'
+import { DQS, DQSA } from '@/content/utils/dom/createEl'
 /**
  * 获取当前显示的图片 - 改进 URL 解析
  */

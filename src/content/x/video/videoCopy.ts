@@ -1,4 +1,4 @@
-import { DOA, DQSA, createE } from '../../utils/createEl'
+import { DOA, DQSA, createE } from '../../utils/dom/createEl'
 
 function isXPage(): boolean {
   try {

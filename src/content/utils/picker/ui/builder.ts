@@ -1,4 +1,4 @@
-import { createE } from '../../createEl'
+import { createE } from '../../dom'
 import type { PickerUI } from '../types'
 
 export function createPickerUI(

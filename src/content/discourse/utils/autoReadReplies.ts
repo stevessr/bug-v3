@@ -1,4 +1,5 @@
 import { postTimings } from './timingsBinder'
+
 import { notify } from '@/content/utils/ui/notify'
 import { DQS, DQSA } from '@/content/utils/dom/createEl'
 

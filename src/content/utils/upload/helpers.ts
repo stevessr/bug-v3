@@ -1,4 +1,4 @@
-import { DQS } from '../createEl'
+import { DQS } from '../dom'
 
 // Function to parse image filenames from markdown text
 export function parseImageFilenamesFromMarkdown(markdownText: string): string[] {

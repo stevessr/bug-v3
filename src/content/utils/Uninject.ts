@@ -4,7 +4,7 @@
  * 保留向后兼容的 API
  */
 
-import { requestSettingFromBackground } from './requestSetting'
+import { requestSettingFromBackground } from './core'
 
 import { createLogger } from '@/utils/logger'
 
@@ -22,7 +22,7 @@ export async function Uninject(): Promise<void> {
 
   const loadPromises = platforms.map(async platform => {
     try {
-      const { loadPlatformModule } = await import('./platformLoader')
+      const { loadPlatformModule } = await import('./core/platformLoader')
       await loadPlatformModule(platform)
     } catch (e) {
       log.error(`Failed to load ${platform}:`, e)

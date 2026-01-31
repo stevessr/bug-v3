@@ -1,5 +1,5 @@
 import type { AddEmojiButtonData } from '../pixiv/types'
-import { DQSA, createE } from '../utils/createEl'
+import { DQSA, createE } from '../utils/dom/createEl'
 
 /** 常量定义 */
 const FEEDBACK_DISPLAY_MS = 1500

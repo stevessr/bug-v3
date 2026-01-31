@@ -1,4 +1,4 @@
-import { createE, DOA, DHA, DQS, DAEL } from '../createEl'
+import { createE, DOA, DHA, DQS, DAEL } from '../dom'
 
 import type {
   CustomFilePickerOptions,

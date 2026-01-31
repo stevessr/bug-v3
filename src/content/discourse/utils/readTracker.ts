@@ -1,4 +1,5 @@
 import { postTimings } from './timingsBinder'
+
 import { DQSA, DQS } from '@/content/utils/dom/createEl'
 
 // Simplified read tracker inspired by Discourse's screen-track logic.

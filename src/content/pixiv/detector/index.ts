@@ -2,7 +2,7 @@ import type { AddEmojiButtonData } from '../types'
 import { extractNameFromUrl } from '../core/helpers'
 import { createPixivEmojiButton } from '../ui/button'
 import { findPixivOriginalInContainer, toPixivOriginalUrl } from '../utils/url'
-import { DQSA, DQS, DOA } from '../../utils/createEl'
+import { DQSA, DQS, DOA } from '../../utils/dom/createEl'
 
 function extractEmojiDataFromPixiv(container: Element): AddEmojiButtonData | null {
   const img = container.querySelector(
