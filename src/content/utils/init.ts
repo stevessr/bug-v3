@@ -1,18 +1,13 @@
 import { loadDataFromStorage } from '../data/storage'
+import { startReadTracker } from '../discourse/utils/readTracker'
 
 import { DAEL } from './dom'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
-import { requestSettingFromBackground } from './core'
+import { requestSettingFromBackground, contentImageCache } from './core'
 import { initOneClickAdd } from './oneClickAdd'
-import {
-  showFloatingButton,
-  checkAndShowFloatingButton,
-  cleanupFloatingButton
-} from './ui'
-import { startReadTracker } from '../discourse/utils/readTracker'
+import { showFloatingButton, checkAndShowFloatingButton, cleanupFloatingButton } from './ui'
 import { applyCustomCssFromCache } from './injectCustomCss'
-import { contentImageCache } from './core'
 
 // 缓存子菜单注入设置状态
 let cachedSubmenuInjectorEnabled: boolean | null = null

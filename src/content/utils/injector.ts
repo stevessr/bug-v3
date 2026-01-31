@@ -1,12 +1,21 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
 import { cachedState } from '../data/state'
-
 import { autoReadAll, autoReadAllv2 } from '../discourse/utils/autoReadReplies'
-import { notify } from './ui'
-import { createE, DQSA, DQS, DOA, DAEL } from './dom'
 import { showImageUploadDialog } from '../discourse/utils/uploader'
-import { createAndShowIframeModal, createAndShowSideIframeModal } from './dom'
-import { animateEnter, animateExit, ANIMATION_DURATION } from './dom'
+
+import { notify } from './ui'
+import {
+  createE,
+  DQSA,
+  DQS,
+  DOA,
+  DAEL,
+  createAndShowIframeModal,
+  createAndShowSideIframeModal,
+  animateEnter,
+  animateExit,
+  ANIMATION_DURATION
+} from './dom'
 
 import { ICONS } from '@/content/data/callout'
 

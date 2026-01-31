@@ -5,13 +5,13 @@
  */
 
 import { createE, DQS, DOA } from '../../utils/dom/createEl'
-import { showImageUploadDialog } from './uploader'
 import { animateEnter, animateExit } from '../../utils/dom/animation'
-import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
 import { notify } from '../../utils/ui/notify'
 import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/dom/iframe'
 import { createQuickInsertMenu } from '../../utils/injector'
 
+import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
+import { showImageUploadDialog } from './uploader'
 import { cachedState } from './ensure'
 import { createEmojiPicker } from './picker'
 
