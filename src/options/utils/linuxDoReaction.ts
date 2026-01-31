@@ -85,6 +85,20 @@ async function proxyFetch<T>(
         },
         (resp: ProxyFetchResponse<T>) => {
           if (resp?.success) {
+            const payload: any = resp.data
+            if (
+              payload &&
+              typeof payload === 'object' &&
+              'status' in payload &&
+              'data' in payload
+            ) {
+              resolve({
+                status: typeof payload.status === 'number' ? payload.status : 200,
+                ok: typeof payload.ok === 'boolean' ? payload.ok : true,
+                data: payload.data as T
+              })
+              return
+            }
             resolve({
               status: resp.status || 200,
               ok: resp.ok !== false,
