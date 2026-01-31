@@ -14,6 +14,10 @@ export async function loadTopic(
 
   if (data) {
     tab.currentTopic = data as DiscourseTopicDetail
+    tab.topicExtras = {
+      suggested_topics: tab.currentTopic.suggested_topics,
+      related_topics: tab.currentTopic.related_topics
+    }
     tab.loadedPostIds = new Set(data.post_stream?.posts?.map((p: DiscoursePost) => p.id) || [])
     tab.hasMorePosts =
       (data.post_stream?.stream?.length || 0) > (data.post_stream?.posts?.length || 0)
@@ -27,6 +31,7 @@ export async function loadTopic(
     tab.currentTopic = null
     tab.loadedPostIds = new Set()
     tab.hasMorePosts = false
+    tab.topicExtras = null
   }
 }
 
@@ -92,6 +97,14 @@ export async function loadMorePosts(
       tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...newPosts]
       newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
       tab.hasMorePosts = stream.some((id: number) => !tab.loadedPostIds.has(id))
+      if (tab.topicExtras) {
+        if (!tab.currentTopic.suggested_topics && tab.topicExtras.suggested_topics) {
+          tab.currentTopic.suggested_topics = tab.topicExtras.suggested_topics
+        }
+        if (!tab.currentTopic.related_topics && tab.topicExtras.related_topics) {
+          tab.currentTopic.related_topics = tab.topicExtras.related_topics
+        }
+      }
     }
   } catch (e) {
     console.error('[DiscourseBrowser] loadMorePosts error:', e)
