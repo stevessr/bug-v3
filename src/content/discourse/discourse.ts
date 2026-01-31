@@ -13,6 +13,7 @@ import { initLinuxDoSeeking } from './seeking'
 import { initDiscourseRouterRefresh } from './utils/router-refresh'
 import { initUserSummarySummonButton } from './utils/user-summary-summon'
 import { initLinuxDoCredit } from './credit'
+import { initLinuxDoLikeCounter } from './like-counter'
 
 export async function initDiscourse() {
   try {
@@ -144,6 +145,21 @@ export async function initDiscourse() {
       }
     } catch (e) {
       console.warn('[DiscourseOneClick] failed to get enableLinuxDoCredit setting', e)
+    }
+
+    // LinuxDo 点赞计数器（试验性功能）
+    // 需同时开启试验性特性开关
+    try {
+      const enableExperimentalFeatures = await requestSettingFromBackground('enableExperimentalFeatures')
+      if (enableExperimentalFeatures === true) {
+        const enableLinuxDoLikeCounter = await requestSettingFromBackground('enableLinuxDoLikeCounter')
+        if (enableLinuxDoLikeCounter === true) {
+          initLinuxDoLikeCounter()
+          console.log('[DiscourseOneClick] LinuxDo Like Counter enabled (experimental)')
+        }
+      }
+    } catch (e) {
+      console.warn('[DiscourseOneClick] failed to get enableLinuxDoLikeCounter setting', e)
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

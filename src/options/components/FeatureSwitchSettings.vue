@@ -19,7 +19,8 @@ const emit = defineEmits([
   'update:enableSubmenuInjector',
   'update:cloudMarketDomain',
   'update:enableDiscourseRouterRefresh',
-  'update:discourseRouterRefreshInterval'
+  'update:discourseRouterRefreshInterval',
+  'update:enableLinuxDoLikeCounter'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -94,6 +95,9 @@ const isRouterRefreshIntervalSaving = ref(false)
 const enableDiscourseRouterRefresh = computed(() =>
   getSetting('enableDiscourseRouterRefresh', false)
 )
+
+// 试验性特性开关状态
+const enableExperimentalFeatures = computed(() => getSetting('enableExperimentalFeatures', false))
 
 // 监听 settings 变化，同步到本地状态
 watch(
@@ -202,6 +206,15 @@ const saveRouterRefreshInterval = async () => {
         @update:model-value="handleSettingUpdate('enableSubmenuInjector', $event)"
         label="启用子菜单注入 (试验性功能)"
         description="将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏，可降低 CPU 消耗"
+      />
+
+      <!-- LinuxDo 点赞计数器（仅在启用试验性特性时显示） -->
+      <SettingSwitch
+        v-if="enableExperimentalFeatures"
+        :model-value="getSetting('enableLinuxDoLikeCounter', false)"
+        @update:model-value="handleSettingUpdate('enableLinuxDoLikeCounter', $event)"
+        label="启用 LinuxDo 点赞计数器 (试验性功能)"
+        description="在 LinuxDo 点赞选择器上显示当日剩余点赞次数和冷却时间"
       />
 
       <SettingSwitch

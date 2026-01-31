@@ -56,5 +56,7 @@ export const defaultSettings: AppSettings = {
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
   discourseRouterRefreshInterval: 30000, // 默认 30 秒刷新一次
   // LinuxDo Credit 积分显示
-  enableLinuxDoCredit: false // 默认禁用 LinuxDo Credit 积分浮窗
+  enableLinuxDoCredit: false, // 默认禁用 LinuxDo Credit 积分浮窗
+  // LinuxDo 点赞计数器
+  enableLinuxDoLikeCounter: false // 默认禁用 LinuxDo 点赞计数器
 }

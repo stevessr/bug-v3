@@ -67,6 +67,7 @@ declare global {
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getAllArchivedGroups: typeof import('./utils/simpleStorage')['getAllArchivedGroups']
   const getAllEmojiGroups: typeof import('./utils/simpleStorage')['getAllEmojiGroups']
+  const getAllShortcodes: typeof import('./utils/emojiShortcode')['getAllShortcodes']
   const getArchivedGroup: typeof import('./utils/simpleStorage')['getArchivedGroup']
   const getArchivedGroupIds: typeof import('./utils/simpleStorage')['getArchivedGroupIds']
   const getCacheStats: typeof import('./utils/imageCache')['getCacheStats']
@@ -93,6 +94,7 @@ declare global {
   const getUILanguage: typeof import('./utils/i18n')['getUILanguage']
   const getWorkerClient: typeof import('./utils/collab/index')['getWorkerClient']
   const h: typeof import('vue')['h']
+  const hasEmojiMapping: typeof import('./utils/emojiShortcode')['hasEmojiMapping']
   const imageCache: typeof import('./utils/imageCache')['imageCache']
   const imageCacheService: typeof import('./utils/imageCacheService')['imageCacheService']
   const initI18n: typeof import('./utils/i18n')['initI18n']
@@ -175,6 +177,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const shortcodeToEmoji: typeof import('./utils/emojiShortcode')['shortcodeToEmoji']
   const startWorkerMode: typeof import('./utils/collab/index')['startWorkerMode']
   const stopWorkerMode: typeof import('./utils/collab/index')['stopWorkerMode']
   const storageBatchGet: typeof import('./utils/simpleStorage')['storageBatchGet']
@@ -318,6 +321,7 @@ declare module 'vue' {
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getAllArchivedGroups: UnwrapRef<typeof import('./utils/simpleStorage')['getAllArchivedGroups']>
     readonly getAllEmojiGroups: UnwrapRef<typeof import('./utils/simpleStorage')['getAllEmojiGroups']>
+    readonly getAllShortcodes: UnwrapRef<typeof import('./utils/emojiShortcode')['getAllShortcodes']>
     readonly getArchivedGroup: UnwrapRef<typeof import('./utils/simpleStorage')['getArchivedGroup']>
     readonly getArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['getArchivedGroupIds']>
     readonly getCacheStats: UnwrapRef<typeof import('./utils/imageCache')['getCacheStats']>
@@ -344,6 +348,7 @@ declare module 'vue' {
     readonly getUILanguage: UnwrapRef<typeof import('./utils/i18n')['getUILanguage']>
     readonly getWorkerClient: UnwrapRef<typeof import('./utils/collab/index')['getWorkerClient']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly hasEmojiMapping: UnwrapRef<typeof import('./utils/emojiShortcode')['hasEmojiMapping']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
     readonly initI18n: UnwrapRef<typeof import('./utils/i18n')['initI18n']>
@@ -426,6 +431,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly shortcodeToEmoji: UnwrapRef<typeof import('./utils/emojiShortcode')['shortcodeToEmoji']>
     readonly startWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['startWorkerMode']>
     readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['stopWorkerMode']>
     readonly storageBatchGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchGet']>

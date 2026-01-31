@@ -67,6 +67,8 @@ export interface AppSettings {
   telegramWebmToAvifBackend?: string
   // LinuxDo Credit 积分显示
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
+  // LinuxDo 点赞计数器（试验性功能）
+  enableLinuxDoLikeCounter?: boolean // 启用 LinuxDo 点赞计数器（显示当日剩余点赞次数）
 }
 
 export interface EmojiGroup {
