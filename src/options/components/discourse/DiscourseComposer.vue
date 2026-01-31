@@ -46,6 +46,16 @@ watch(
   }
 )
 
+const getImageUrl = (url?: string | null) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+}
+
+const getIconHref = (icon?: string | null) => {
+  if (!icon || !props.baseUrl) return ''
+  return `${props.baseUrl}/svg-sprite/svg-sprite.svg#${icon}`
+}
+
 const categoryTreeData = computed(() => {
   const list = props.categories ? [...props.categories] : []
   if (props.currentCategory && !list.find(cat => cat.id === props.currentCategory!.id)) {
@@ -54,7 +64,17 @@ const categoryTreeData = computed(() => {
 
   const nodeMap = new Map<number, { title: string; value: number; key: number; children: any[] }>()
   list.forEach(cat => {
-    nodeMap.set(cat.id, { title: cat.name, value: cat.id, key: cat.id, children: [] })
+    nodeMap.set(cat.id, {
+      title: cat.name,
+      label: cat.name,
+      value: cat.id,
+      key: cat.id,
+      icon: cat.icon,
+      emoji: cat.emoji,
+      color: cat.color,
+      logoUrl: cat.uploaded_logo?.url || cat.uploaded_logo_dark?.url || '',
+      children: []
+    })
   })
 
   const roots: Array<{ title: string; value: number; key: number; children: any[] }> = []
@@ -294,7 +314,33 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           tree-default-expand-all
           tree-node-filter-prop="title"
           :tree-data="categoryTreeData"
-        />
+          tree-node-label-prop="label"
+        >
+          <template #title="{ dataRef }">
+            <span class="category-option">
+              <span class="category-option-icon" :style="{ color: `#${dataRef.color}` }">
+                <img
+                  v-if="dataRef.logoUrl"
+                  :src="getImageUrl(dataRef.logoUrl)"
+                  :alt="dataRef.title"
+                  class="category-option-img"
+                />
+                <span v-else-if="dataRef.emoji" class="category-option-emoji">
+                  {{ dataRef.emoji }}
+                </span>
+                <svg v-else-if="dataRef.icon" class="category-option-svg" viewBox="0 0 24 24">
+                  <use :href="getIconHref(dataRef.icon)" />
+                </svg>
+                <span
+                  v-else
+                  class="category-option-dot"
+                  :style="{ backgroundColor: `#${dataRef.color}` }"
+                />
+              </span>
+              <span>{{ dataRef.title }}</span>
+            </span>
+          </template>
+        </a-tree-select>
         <a-select
           v-model:value="selectedTags"
           mode="tags"
@@ -372,5 +418,44 @@ const showEditor = computed(() => viewMode.value !== 'preview')
   background: #1f2937;
   padding: 0.1rem 0.25rem;
   border-radius: 4px;
+}
+
+.category-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-option-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.category-option-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.category-option-emoji {
+  font-size: 12px;
+}
+
+.category-option-svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.category-option-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
 }
 </style>

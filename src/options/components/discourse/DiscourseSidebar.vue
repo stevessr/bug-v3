@@ -122,7 +122,29 @@ const getIconHref = (icon?: string | null) => {
               class="flex items-center gap-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
               @click="emit('clickCategory', child)"
             >
-              <span class="sidebar-icon-dot" :style="{ backgroundColor: `#${child.color}` }" />
+              <span class="sidebar-icon">
+                <img
+                  v-if="child.uploaded_logo?.url"
+                  :src="getImageUrl(child.uploaded_logo.url)"
+                  :alt="child.name"
+                  class="sidebar-icon-img"
+                />
+                <img
+                  v-else-if="child.uploaded_logo_dark?.url"
+                  :src="getImageUrl(child.uploaded_logo_dark.url)"
+                  :alt="child.name"
+                  class="sidebar-icon-img"
+                />
+                <span v-else-if="child.emoji" class="sidebar-emoji">{{ child.emoji }}</span>
+                <svg v-else-if="child.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
+                  <use :href="getIconHref(child.icon)" />
+                </svg>
+                <span
+                  v-else
+                  class="sidebar-icon-dot"
+                  :style="{ backgroundColor: `#${child.color}` }"
+                />
+              </span>
               <span class="text-xs dark:text-gray-300 truncate flex-1">{{ child.name }}</span>
             </div>
             <div

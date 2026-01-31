@@ -121,7 +121,29 @@ const getIconHref = (icon?: string | null) => {
             @click.stop="emit('click', child)"
           >
             <span class="inline-flex items-center gap-1">
-              <span class="subcategory-dot" :style="{ backgroundColor: `#${child.color}` }" />
+              <span class="subcategory-icon" :style="{ color: `#${child.color}` }">
+                <img
+                  v-if="child.uploaded_logo?.url"
+                  :src="getImageUrl(child.uploaded_logo.url)"
+                  :alt="child.name"
+                  class="subcategory-icon-img"
+                />
+                <img
+                  v-else-if="child.uploaded_logo_dark?.url"
+                  :src="getImageUrl(child.uploaded_logo_dark.url)"
+                  :alt="child.name"
+                  class="subcategory-icon-img"
+                />
+                <span v-else-if="child.emoji" class="subcategory-emoji">{{ child.emoji }}</span>
+                <svg v-else-if="child.icon" class="subcategory-icon-svg" viewBox="0 0 24 24">
+                  <use :href="getIconHref(child.icon)" />
+                </svg>
+                <span
+                  v-else
+                  class="subcategory-dot"
+                  :style="{ backgroundColor: `#${child.color}` }"
+                />
+              </span>
               {{ child.name }}
             </span>
           </div>
@@ -173,5 +195,32 @@ const getIconHref = (icon?: string | null) => {
   height: 6px;
   border-radius: 999px;
   display: inline-block;
+}
+
+.subcategory-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+  flex-shrink: 0;
+}
+
+.subcategory-icon-img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+.subcategory-emoji {
+  font-size: 10px;
+}
+
+.subcategory-icon-svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
 }
 </style>
