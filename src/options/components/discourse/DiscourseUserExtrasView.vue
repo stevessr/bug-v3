@@ -102,7 +102,9 @@ const emit = defineEmits<{
         >
           <img
             v-if="badge.image_url"
-            :src="badge.image_url.startsWith('http') ? badge.image_url : `${baseUrl}${badge.image_url}`"
+            :src="
+              badge.image_url.startsWith('http') ? badge.image_url : `${baseUrl}${badge.image_url}`
+            "
             :alt="badge.name"
             class="w-8 h-8 rounded"
           />
@@ -112,10 +114,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div
-      v-else-if="tab === 'followFeed'"
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border"
-    >
+    <div v-else-if="tab === 'followFeed'" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border">
       <div
         v-if="!user._follow_feed || user._follow_feed.length === 0"
         class="text-sm text-gray-500"
@@ -143,23 +142,14 @@ const emit = defineEmits<{
         <div v-if="isLoadingMore" class="text-sm text-gray-500 text-center py-2">
           加载更多动态...
         </div>
-        <div
-          v-else-if="hasMore === false"
-          class="text-xs text-gray-400 text-center py-2"
-        >
+        <div v-else-if="hasMore === false" class="text-xs text-gray-400 text-center py-2">
           已加载全部动态
         </div>
       </div>
     </div>
 
-    <div
-      v-else-if="tab === 'following'"
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border"
-    >
-      <div
-        v-if="!user._following || user._following.length === 0"
-        class="text-sm text-gray-500"
-      >
+    <div v-else-if="tab === 'following'" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border">
+      <div v-if="!user._following || user._following.length === 0" class="text-sm text-gray-500">
         暂无关注
       </div>
       <div v-else class="flex flex-wrap gap-2">
@@ -179,14 +169,8 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div
-      v-else
-      class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border"
-    >
-      <div
-        v-if="!user._followers || user._followers.length === 0"
-        class="text-sm text-gray-500"
-      >
+    <div v-else class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border">
+      <div v-if="!user._followers || user._followers.length === 0" class="text-sm text-gray-500">
         暂无关注者
       </div>
       <div v-else class="flex flex-wrap gap-2">

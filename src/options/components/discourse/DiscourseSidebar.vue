@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import type { DiscourseCategory, DiscourseUser } from './types'
 import { getAvatarUrl } from './utils'
 

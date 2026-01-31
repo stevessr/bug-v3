@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import type { DiscourseCategory } from './types'
 
 const props = withDefaults(
@@ -88,10 +89,7 @@ const emit = defineEmits<{
           >
             {{ child.name }}
           </div>
-          <div
-            v-if="(childrenByParent.get(cat.id)?.length || 0) > 4"
-            class="text-xs text-gray-400"
-          >
+          <div v-if="(childrenByParent.get(cat.id)?.length || 0) > 4" class="text-xs text-gray-400">
             还有 {{ (childrenByParent.get(cat.id)?.length || 0) - 4 }} 个子分类...
           </div>
         </div>
