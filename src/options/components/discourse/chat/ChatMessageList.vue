@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, useTemplateRef } from 'vue'
 
 import type { ChatMessage, ParsedContent } from '../types'
 import { parsePostContent } from '../utils'
@@ -19,6 +19,7 @@ const emit = defineEmits<{
   (e: 'navigate', url: string): void
 }>()
 
+const listRef = useTemplateRef<HTMLDivElement>('list')
 const parsedCache = new Map<number, ParsedContent>()
 
 const escapeHtml = (value: string) =>
@@ -47,10 +48,27 @@ const handleLoadMore = () => {
 const handleNavigate = (url: string) => {
   emit('navigate', url)
 }
+
+const handleScroll = () => {
+  if (props.loading || !props.hasMore) return
+  const el = listRef.value
+  if (!el) return
+  if (el.scrollTop <= 20) {
+    emit('loadMore')
+  }
+}
+
+onMounted(() => {
+  listRef.value?.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  listRef.value?.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
-  <div class="chat-message-list">
+  <div ref="list" class="chat-message-list">
     <button v-if="hasMore" class="chat-load-more" @click="handleLoadMore" :disabled="loading">
       {{ loading ? '加载中...' : '加载更早消息' }}
     </button>

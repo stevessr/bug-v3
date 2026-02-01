@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, shallowRef } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, shallowRef, nextTick } from 'vue'
 
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from '../types'
 import { parsePostContent, pageFetch, extractData } from '../utils'
@@ -279,24 +279,79 @@ const toggleLike = async (post: DiscoursePost, reactionId: string) => {
   }
 }
 
+const lastAutoScrollKey = ref<string | null>(null)
+
+const scrollElementIntoView = (el: HTMLElement, container: HTMLElement | null) => {
+  if (container) {
+    const elRect = el.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+    const targetTop = elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+  } else {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
+const findNearestPostElement = (targetPost: number): HTMLElement | null => {
+  const list = postsListRef.value
+  if (!list) return null
+  const nodes = Array.from(list.querySelectorAll<HTMLElement>('[data-post-number]'))
+  if (!nodes.length) return null
+  let above: { num: number; el: HTMLElement } | null = null
+  let below: { num: number; el: HTMLElement } | null = null
+  for (const node of nodes) {
+    const raw = node.getAttribute('data-post-number')
+    if (!raw) continue
+    const num = Number.parseInt(raw, 10)
+    if (!Number.isFinite(num)) continue
+    if (num >= targetPost) {
+      if (!above || num < above.num) {
+        above = { num, el: node }
+      }
+    } else if (!below || num > below.num) {
+      below = { num, el: node }
+    }
+  }
+  return above?.el || below?.el || null
+}
+
 const scrollToPost = (postNumber: number, attempt = 0) => {
   if (!postNumber) return
+  const topicId = props.topic?.id
+  const key = topicId ? `${topicId}:${postNumber}` : null
   requestAnimationFrame(() => {
-    const el = document.querySelector(`[data-post-number="${postNumber}"]`) as HTMLElement | null
+    const list = postsListRef.value
+    const container = list?.closest('.content-area') as HTMLElement | null
+    const el = list?.querySelector(
+      `[data-post-number="${postNumber}"]`
+    ) as HTMLElement | null
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      scrollElementIntoView(el, container)
+      if (key) lastAutoScrollKey.value = key
       return
     }
-    if (attempt < 10) {
-      setTimeout(() => scrollToPost(postNumber, attempt + 1), 150)
+
+    const fallback = attempt >= 6 ? findNearestPostElement(postNumber) : null
+    if (fallback) {
+      scrollElementIntoView(fallback, container)
+      if (key) lastAutoScrollKey.value = key
+      return
+    }
+
+    if (attempt < 40) {
+      setTimeout(() => scrollToPost(postNumber, attempt + 1), 200)
     }
   })
 }
 
 watch(
-  () => [props.targetPostNumber, props.topic?.post_stream?.posts?.length] as const,
-  ([value]) => {
-    if (value) scrollToPost(value)
+  () => [props.targetPostNumber, props.topic?.id, props.topic?.post_stream?.posts?.length] as const,
+  async ([value, topicId]) => {
+    if (!value || !topicId) return
+    const key = `${topicId}:${value}`
+    if (lastAutoScrollKey.value === key) return
+    await nextTick()
+    scrollToPost(value)
   },
   { immediate: true }
 )

@@ -34,7 +34,7 @@ const getLightboxPreview = (image: LightboxImage) => {
 
 let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
-let activeFootnoteTrigger: HTMLAnchorElement | null = null
+let scrollContainer: HTMLElement | null = null
 
 const getImageGridItems = (segment: ImageGridSegment) => {
   if (segment.columns.length <= 1) return segment.columns[0] || []
@@ -125,7 +125,7 @@ const updateFootnotePosition = () => {
   const hostRect = host.getBoundingClientRect()
   const maxWidth = Math.min(520, Math.max(240, hostRect.width - 24))
   const left = Math.min(rect.left - hostRect.left, hostRect.width - maxWidth - 12)
-  const top = rect.bottom - hostRect.top + host.scrollTop + 6
+  const top = rect.bottom - hostRect.top + 6
   activeFootnoteContainer.style.maxWidth = `${maxWidth}px`
   activeFootnoteContainer.style.left = `${Math.max(12, left)}px`
   activeFootnoteContainer.style.top = `${Math.max(8, top)}px`
@@ -141,7 +141,6 @@ const hideActiveFootnote = () => {
   }
   activeFootnoteContainer = null
   activeFootnoteRoot = null
-  activeFootnoteTrigger = null
 }
 
 const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) => {
@@ -171,7 +170,6 @@ const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) 
   trigger.setAttribute('aria-expanded', 'true')
   activeFootnoteRoot = footnoteRoot
   activeFootnoteContainer = container
-  activeFootnoteTrigger = trigger
   updateFootnotePosition()
 }
 
@@ -210,7 +208,8 @@ onMounted(() => {
       contentDiv.addEventListener('click', handleClick)
       contentDiv.addEventListener('mouseover', handleMouseOver)
       contentDiv.addEventListener('mouseout', handleMouseOut)
-      contentDiv.addEventListener('scroll', updateFootnotePosition, { passive: true })
+      scrollContainer = contentDiv.closest('.content-area') as HTMLElement | null
+      scrollContainer?.addEventListener('scroll', updateFootnotePosition, { passive: true })
     }
   })
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
@@ -222,8 +221,9 @@ onUnmounted(() => {
     contentDiv.removeEventListener('click', handleClick)
     contentDiv.removeEventListener('mouseover', handleMouseOver)
     contentDiv.removeEventListener('mouseout', handleMouseOut)
-    contentDiv.removeEventListener('scroll', updateFootnotePosition)
+    scrollContainer?.removeEventListener('scroll', updateFootnotePosition)
   }
+  scrollContainer = null
   window.removeEventListener('resize', updateFootnotePosition)
   hideActiveFootnote()
 })
