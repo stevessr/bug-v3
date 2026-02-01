@@ -1,19 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { DiscourseCategory, DiscourseUser } from '../types'
+import type { DiscourseCategory, DiscourseUser, TopicListType } from '../types'
 import { getAvatarUrl } from '../utils'
 
 const props = defineProps<{
   categories: DiscourseCategory[]
   users: DiscourseUser[]
   baseUrl: string
+  topicListType: TopicListType
 }>()
 
 const emit = defineEmits<{
   (e: 'clickCategory', category: DiscourseCategory): void
   (e: 'clickUser', username: string): void
+  (e: 'changeTopicListType', type: TopicListType): void
 }>()
+
+const topicListTypes: Array<{ value: TopicListType; label: string }> = [
+  { value: 'latest', label: '最新' },
+  { value: 'new', label: '新' },
+  { value: 'unread', label: '未读' },
+  { value: 'unseen', label: '未见' },
+  { value: 'top', label: '顶流' },
+  { value: 'hot', label: '火热' }
+]
 
 const hasHierarchy = computed(() => {
   const hasChildren = props.categories.some(
@@ -70,10 +81,30 @@ const getIconHref = (icon?: string | null) => {
   if (!icon) return ''
   return `#${icon}`
 }
+
+const handleTopicListTypeChange = (type: TopicListType) => {
+  emit('changeTopicListType', type)
+}
 </script>
 
 <template>
   <div class="sidebar space-y-4">
+    <!-- Topic list type selector -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
+      <h3 class="text-sm font-semibold mb-3 dark:text-white">首页类型</h3>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="type in topicListTypes"
+          :key="type.value"
+          class="topic-type-btn"
+          :class="{ active: topicListType === type.value }"
+          @click="handleTopicListTypeChange(type.value)"
+        >
+          {{ type.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- Categories section -->
     <div
       v-if="categories.length > 0"

@@ -16,3 +16,57 @@
   background: rgba(59, 130, 246, 0.2);
   color: #93c5fd;
 }
+
+/* 分区标签样式 */
+.topic-category {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.topic-category:hover {
+  opacity: 0.8;
+}
+
+/* 话题标签样式 */
+.topic-tag {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.topic-tag:hover {
+  background-color: rgba(156, 163, 175, 0.2);
+}
+
+.dark .topic-tag:hover {
+  background-color: rgba(75, 85, 99, 0.3);
+}
+
+/* 活跃发言人样式 */
+.poster-avatar {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.poster-avatar .avatar {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.poster-avatar:hover .avatar {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.poster-avatar.latest-poster .avatar {
+  border-color: rgba(59, 130, 246, 0.8);
+}

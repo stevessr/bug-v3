@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { REACTIONS } from '../../../utils/linuxDoReaction'
-import type { DiscoursePost, ParsedContent } from '../types'
+import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import PostContent from './PostContent.vue'
@@ -17,6 +17,7 @@ const props = defineProps<{
   isPostLiked: (post: DiscoursePost, reactionId: string) => boolean
   getReactionCount: (post: DiscoursePost, reactionId: string) => number
   isLiking: boolean
+  currentUser?: DiscourseUserProfile | null
 }>()
 
 const emit = defineEmits<{
@@ -26,9 +27,23 @@ const emit = defineEmits<{
   (e: 'toggleParent', post: DiscoursePost): void
   (e: 'toggleLike', post: DiscoursePost, reactionId: string): void
   (e: 'navigate', url: string): void
+  (e: 'bookmark', post: DiscoursePost): void
+  (e: 'flag', post: DiscoursePost): void
+  (e: 'assign', post: DiscoursePost): void
+  (e: 'edit', post: DiscoursePost): void
+  (e: 'delete', post: DiscoursePost): void
+  (e: 'wiki', post: DiscoursePost): void
 }>()
 
 const isCopyLinkClicked = ref(false)
+
+const isOwnPost = computed(() => {
+  return props.currentUser && props.post.user_id === props.currentUser.id
+})
+
+const canAssign = computed(() => {
+  return props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
+})
 
 const handleUserClick = (username: string) => {
   emit('openUser', username)
@@ -72,6 +87,30 @@ const handleToggleParent = () => {
 
 const handleContentNavigation = (url: string) => {
   emit('navigate', url)
+}
+
+const handleBookmark = () => {
+  emit('bookmark', props.post)
+}
+
+const handleFlag = () => {
+  emit('flag', props.post)
+}
+
+const handleAssign = () => {
+  emit('assign', props.post)
+}
+
+const handleEdit = () => {
+  emit('edit', props.post)
+}
+
+const handleDelete = () => {
+  emit('delete', props.post)
+}
+
+const handleWiki = () => {
+  emit('wiki', props.post)
 }
 </script>
 
@@ -149,6 +188,108 @@ const handleContentNavigation = (url: string) => {
             </button>
           </div>
           <div class="flex items-center gap-2">
+            <button
+              class="btn no-text btn-icon post-action-menu__bookmark btn-flat"
+              :class="{ bookmarked: props.post.bookmarked }"
+              title="书签"
+              type="button"
+              @click="handleBookmark"
+            >
+              <svg
+                class="fa d-icon d-icon-bookmark svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#bookmark"></use>
+              </svg>
+            </button>
+            <button
+              class="btn no-text btn-icon post-action-menu__flag btn-flat"
+              title="举报"
+              type="button"
+              @click="handleFlag"
+            >
+              <svg
+                class="fa d-icon d-icon-flag svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#flag"></use>
+              </svg>
+            </button>
+            <button
+              v-if="canAssign"
+              class="btn no-text btn-icon post-action-menu__assign btn-flat"
+              title="指定"
+              type="button"
+              @click="handleAssign"
+            >
+              <svg
+                class="fa d-icon d-icon-user-plus svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#user-plus"></use>
+              </svg>
+            </button>
+            <button
+              v-if="isOwnPost && props.post.can_edit"
+              class="btn no-text btn-icon post-action-menu__edit btn-flat"
+              title="编辑"
+              type="button"
+              @click="handleEdit"
+            >
+              <svg
+                class="fa d-icon d-icon-pencil-alt svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#pencil-alt"></use>
+              </svg>
+            </button>
+            <button
+              v-if="isOwnPost && props.post.can_delete"
+              class="btn no-text btn-icon post-action-menu__delete btn-flat"
+              title="删除"
+              type="button"
+              @click="handleDelete"
+            >
+              <svg
+                class="fa d-icon d-icon-trash-alt svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#trash-alt"></use>
+              </svg>
+            </button>
+            <button
+              v-if="isOwnPost || canAssign"
+              class="btn no-text btn-icon post-action-menu__wiki btn-flat"
+              :class="{ wiki: props.post.wiki }"
+              title="Wiki"
+              type="button"
+              @click="handleWiki"
+            >
+              <svg
+                class="fa d-icon d-icon-fab-wikipedia-w svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#fab-wikipedia-w"></use>
+              </svg>
+            </button>
             <button
               class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
               :class="{ 'copy-link-clicked': isCopyLinkClicked }"

@@ -81,7 +81,7 @@ export async function loadMoreTopics(
   try {
     let url: string
     if (tab.viewType === 'home') {
-      url = `${baseUrl.value}/latest.json?page=${tab.topicsPage}`
+      url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json?page=${tab.topicsPage}`
     } else {
       if (tab.currentCategoryId) {
         url = `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json?page=${tab.topicsPage}`

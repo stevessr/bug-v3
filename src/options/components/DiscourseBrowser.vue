@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { message } from 'ant-design-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
@@ -63,7 +64,8 @@ const {
   loadMoreFollowFeed,
   selectChatChannel,
   loadMoreChatMessagesForChannel,
-  sendChat
+  sendChat,
+  changeTopicListType
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -234,6 +236,10 @@ const handleSendChatMessage = (payload: { channelId: number; message: string }) 
   sendChat(payload.channelId, payload.message)
 }
 
+const handleChangeTopicListType = (type: 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot') => {
+  changeTopicListType(type)
+}
+
 const handleUserMainTabSwitch = (
   tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'
 ) => {
@@ -306,6 +312,10 @@ const handleReplyPosted = () => {
 const handleClearReply = () => {
   replyTarget.value = null
   showReplyComposer.value = false
+}
+
+const handleEditPost = (post: any) => {
+  message.info('编辑功能即将上线')
 }
 
 const floatingStyle = computed(() => {
@@ -486,8 +496,11 @@ onUnmounted(() => {
             <TopicList
               :topics="activeTab.topics"
               :baseUrl="baseUrl"
+              :categories="activeTab.categories"
+              :users="activeTab.activeUsers"
               @click="handleTopicClick"
               @middleClick="handleMiddleClick"
+              @openUser="handleUserClick"
             />
 
             <!-- Loading more indicator -->
@@ -512,8 +525,10 @@ onUnmounted(() => {
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
             @clickCategory="handleCategoryClick"
             @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
           />
         </div>
       </div>
@@ -540,8 +555,11 @@ onUnmounted(() => {
           <TopicList
             :topics="activeTab.topics"
             :baseUrl="baseUrl"
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
             @click="handleTopicClick"
             @middleClick="handleMiddleClick"
+            @openUser="handleUserClick"
           />
 
           <!-- Loading more indicator -->
@@ -565,8 +583,10 @@ onUnmounted(() => {
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
             @clickCategory="handleCategoryClick"
             @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
           />
         </div>
       </div>
@@ -591,12 +611,14 @@ onUnmounted(() => {
         :isLoadingMore="isLoadingMore"
         :hasMorePosts="activeTab.hasMorePosts"
         :targetPostNumber="activeTab.targetPostNumber"
+        :currentUser="activeTab.currentUser"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
         @refresh="refresh"
         @replyTo="handleReplyTo"
         @openQuote="handleQuoteClick"
         @navigate="handleContentNavigation"
+        @editPost="handleEditPost"
       />
 
       <!-- User profile view -->

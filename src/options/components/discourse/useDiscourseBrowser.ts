@@ -8,10 +8,14 @@ import type {
   DiscourseTopic,
   DiscourseUser,
   ActivityTabType,
-  MessagesTabType
+  MessagesTabType,
+  TopicListType
 } from './types'
 import { generateId } from './utils'
-import { loadHome as loadHomeRoute } from './routes/root'
+import {
+  loadHome as loadHomeRoute,
+  changeTopicListType as changeTopicListTypeRoute
+} from './routes/root'
 import {
   loadCategory as loadCategoryRoute,
   loadMoreTopics as loadMoreTopicsRoute
@@ -94,6 +98,7 @@ export function useDiscourseBrowser() {
       currentCategorySlug: '',
       currentCategoryId: null,
       currentCategoryName: '',
+      topicListType: 'latest',
       activityState: null,
       messagesState: null,
       followFeedPage: 0,
@@ -539,6 +544,22 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/u/${username}/follow/followers`)
   }
 
+  // Change topic list type (latest, new, unread, etc.)
+  async function changeTopicListType(type: TopicListType) {
+    const tab = activeTab.value
+    if (!tab || tab.viewType !== 'home') return
+
+    tab.loading = true
+    try {
+      await changeTopicListTypeRoute(tab, type, baseUrl, users)
+    } catch (err) {
+      console.error('[DiscourseBrowser] changeTopicListType error:', err)
+      tab.errorMessage = '切换话题列表类型失败'
+    } finally {
+      tab.loading = false
+    }
+  }
+
   return {
     // State
     baseUrl,
@@ -587,6 +608,7 @@ export function useDiscourseBrowser() {
     loadMoreFollowFeed,
     selectChatChannel,
     loadMoreChatMessagesForChannel,
-    sendChat
+    sendChat,
+    changeTopicListType
   }
 }

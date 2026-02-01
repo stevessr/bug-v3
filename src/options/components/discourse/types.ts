@@ -1,5 +1,7 @@
 // Discourse Browser Types
 
+export type TopicListType = 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot'
+
 export interface BrowserTab {
   id: string
   title: string
@@ -26,6 +28,8 @@ export interface BrowserTab {
   currentCategorySlug: string
   currentCategoryId: number | null
   currentCategoryName: string
+  // Topic list type for home view
+  topicListType: TopicListType
   // Activity state
   activityState: UserActivityState | null
   // Messages state
@@ -88,6 +92,9 @@ export interface DiscourseTopic {
   unread_posts?: number
   last_read_post_number?: number
   allowed_user_count?: number
+  category_id?: number
+  tags?: string[]
+  last_poster_username?: string
 }
 
 export interface DiscourseCategory {
@@ -132,6 +139,22 @@ export interface DiscoursePost {
     name?: string
     avatar_template?: string
   }
+  user_id?: number
+  can_edit?: boolean
+  can_delete?: boolean
+  can_bookmark?: boolean
+  can_flag?: boolean
+  can_wiki?: boolean
+  can_recover?: boolean
+  can_unbookmark?: boolean
+  bookmarked?: boolean
+  wiki?: boolean
+  hidden?: boolean
+  user_title?: string
+  trust_level?: number
+  staff?: boolean
+  admin?: boolean
+  moderator?: boolean
 }
 
 export interface SuggestedTopic {

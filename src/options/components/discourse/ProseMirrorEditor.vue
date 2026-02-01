@@ -82,7 +82,7 @@ const insertImage = () => {
   const url = prompt('请输入图片地址：', 'https://')
   if (url) {
     const tr = editorView.state.tr.replaceSelectionWith(
-      basicSchema.schema.nodes.image.create({ src: url })
+      basicSchema.nodes.image.create({ src: url })
     )
     editorView.dispatch(tr)
     editorView.focus()
@@ -91,28 +91,25 @@ const insertImage = () => {
 
 const insertBlockquote = () => {
   if (!editorView) return
-  wrapIn(basicSchema.schema.nodes.blockquote)(editorView.state, editorView.dispatch)
+  wrapIn(basicSchema.nodes.blockquote)(editorView.state, editorView.dispatch)
   editorView.focus()
 }
 
 const insertOrderedList = () => {
   if (!editorView) return
-  wrapIn(basicSchema.schema.nodes.ordered_list)(editorView.state, editorView.dispatch)
+  wrapIn(basicSchema.nodes.ordered_list)(editorView.state, editorView.dispatch)
   editorView.focus()
 }
 
 const insertUnorderedList = () => {
   if (!editorView) return
-  wrapIn(basicSchema.schema.nodes.bullet_list)(editorView.state, editorView.dispatch)
+  wrapIn(basicSchema.nodes.bullet_list)(editorView.state, editorView.dispatch)
   editorView.focus()
 }
 
 const insertHeading = () => {
   if (!editorView) return
-  setBlockType(basicSchema.schema.nodes.heading, { level: 1 })(
-    editorView.state,
-    editorView.dispatch
-  )
+  setBlockType(basicSchema.nodes.heading, { level: 1 })(editorView.state, editorView.dispatch)
   editorView.focus()
 }
 

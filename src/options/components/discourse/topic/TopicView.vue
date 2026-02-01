@@ -1,9 +1,24 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, shallowRef, nextTick } from 'vue'
+import { message } from 'ant-design-vue'
 
-import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from '../types'
+import type {
+  DiscourseTopicDetail,
+  DiscoursePost,
+  ParsedContent,
+  SuggestedTopic,
+  DiscourseUserProfile
+} from '../types'
 import { parsePostContent, pageFetch, extractData } from '../utils'
-import { togglePostLike } from '../actions'
+import {
+  togglePostLike,
+  toggleBookmark,
+  flagPost,
+  assignPost,
+  editPost,
+  deletePost,
+  toggleWiki
+} from '../actions'
 
 import TopicHeader from './TopicHeader.vue'
 import PostItem from './PostItem.vue'
@@ -17,6 +32,7 @@ const props = defineProps<{
   isLoadingMore: boolean
   hasMorePosts: boolean
   targetPostNumber?: number | null
+  currentUser?: DiscourseUserProfile | null
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +42,7 @@ const emit = defineEmits<{
   (e: 'replyTo', payload: { postNumber: number; username: string }): void
   (e: 'openQuote', payload: { topicId: number; postNumber: number }): void
   (e: 'navigate', url: string): void
+  (e: 'editPost', post: DiscoursePost): void
 }>()
 
 const postsListRef = ref<HTMLElement | null>(null)
@@ -274,6 +291,70 @@ const toggleLike = async (post: DiscoursePost, reactionId: string) => {
     console.warn('[DiscourseBrowser] toggle like failed:', error)
   } finally {
     likingPostIds.value.delete(post.id)
+  }
+}
+
+const handleBookmark = async (post: DiscoursePost) => {
+  try {
+    const postAny = post as any
+    const currentBookmarked = postAny.bookmarked || false
+    await toggleBookmark(props.baseUrl, {
+      postId: post.id,
+      bookmarked: !currentBookmarked
+    })
+    postAny.bookmarked = !currentBookmarked
+    message.success(postAny.bookmarked ? '已添加书签' : '已取消书签')
+  } catch (error) {
+    console.warn('[DiscourseBrowser] bookmark failed:', error)
+    message.error('书签操作失败')
+  }
+}
+
+const handleFlag = async (post: DiscoursePost) => {
+  try {
+    await flagPost(props.baseUrl, {
+      postId: post.id,
+      flagType: '6', // Post action type ID 6: inappropriate content
+      message: ''
+    })
+    message.success('举报成功')
+  } catch (error) {
+    console.warn('[DiscourseBrowser] flag failed:', error)
+    message.error('举报失败')
+  }
+}
+
+const handleAssign = async (post: DiscoursePost) => {
+  message.info('指定功能需要选择用户，请在 Web 界面中使用')
+}
+
+const handleEdit = (post: DiscoursePost) => {
+  emit('editPost', post)
+}
+
+const handleDelete = async (post: DiscoursePost) => {
+  try {
+    await deletePost(props.baseUrl, post.id)
+    const postAny = post as any
+    postAny.hidden = true
+    message.success('删除成功')
+    emit('refresh')
+  } catch (error) {
+    console.warn('[DiscourseBrowser] delete failed:', error)
+    message.error('删除失败')
+  }
+}
+
+const handleWiki = async (post: DiscoursePost) => {
+  try {
+    const postAny = post as any
+    const currentWiki = postAny.wiki || false
+    await toggleWiki(props.baseUrl, post.id, !currentWiki)
+    postAny.wiki = !currentWiki
+    message.success(postAny.wiki ? '已启用 Wiki' : '已禁用 Wiki')
+  } catch (error) {
+    console.warn('[DiscourseBrowser] wiki failed:', error)
+    message.error('Wiki 操作失败')
   }
 }
 
@@ -545,12 +626,19 @@ onUnmounted(() => {
           :isPostLiked="isPostLiked"
           :getReactionCount="getReactionCount"
           :isLiking="likingPostIds.has(post.id)"
+          :currentUser="currentUser"
           @openUser="handleUserClick"
           @replyTo="handleReplyClick"
           @toggleLike="toggleLike"
           @toggleReplies="handleToggleReplies"
           @toggleParent="handleToggleParent"
           @navigate="handleContentNavigation"
+          @bookmark="handleBookmark"
+          @flag="handleFlag"
+          @assign="handleAssign"
+          @edit="handleEdit"
+          @delete="handleDelete"
+          @wiki="handleWiki"
         />
         <div v-if="isRepliesExpanded(post.post_number)" class="pl-6 mt-3 space-y-3">
           <PostRepliesTree

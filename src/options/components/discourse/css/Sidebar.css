@@ -31,3 +31,46 @@
   border-radius: 999px;
   display: inline-block;
 }
+
+/* Topic list type selector buttons */
+.topic-type-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+
+.topic-type-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.topic-type-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.dark .topic-type-btn {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+.dark .topic-type-btn:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+  color: #f3f4f6;
+}
+
+.dark .topic-type-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
