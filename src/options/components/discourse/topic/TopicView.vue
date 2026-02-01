@@ -279,19 +279,23 @@ const toggleLike = async (post: DiscoursePost, reactionId: string) => {
   }
 }
 
-const scrollToPost = (postNumber: number) => {
+const scrollToPost = (postNumber: number, attempt = 0) => {
   if (!postNumber) return
   requestAnimationFrame(() => {
     const el = document.querySelector(`[data-post-number="${postNumber}"]`) as HTMLElement | null
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    if (attempt < 10) {
+      setTimeout(() => scrollToPost(postNumber, attempt + 1), 150)
     }
   })
 }
 
 watch(
-  () => props.targetPostNumber,
-  value => {
+  () => [props.targetPostNumber, props.topic?.post_stream?.posts?.length] as const,
+  ([value]) => {
     if (value) scrollToPost(value)
   },
   { immediate: true }

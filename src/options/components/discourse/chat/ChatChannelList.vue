@@ -15,26 +15,42 @@ const emit = defineEmits<{
   (e: 'select', channel: ChatChannel): void
 }>()
 
+const getChannelLastTime = (channel: ChatChannel) => {
+  const fallback = channel.last_message?.created_at
+  const raw = channel.last_message_sent_at || fallback
+  return raw ? new Date(raw).getTime() : 0
+}
+
 const sortedChannels = computed(() => {
   return [...props.channels].sort((a, b) => {
-    const aTime = a.last_message_sent_at ? new Date(a.last_message_sent_at).getTime() : 0
-    const bTime = b.last_message_sent_at ? new Date(b.last_message_sent_at).getTime() : 0
+    const aTime = getChannelLastTime(a)
+    const bTime = getChannelLastTime(b)
     return bTime - aTime
   })
 })
 
 const getChannelTitle = (channel: ChatChannel) => {
   if (channel.title) return channel.title
+  if (channel.unicode_title) return channel.unicode_title
+  if (channel.chatable?.users?.length) {
+    return channel.chatable.users.map(user => user.name || user.username).join(', ')
+  }
   if (channel.direct_message_users?.length) {
     return channel.direct_message_users.map(user => user.name || user.username).join(', ')
   }
+  if (channel.chatable?.name) return channel.chatable.name
   return `频道 #${channel.id}`
 }
 
 const getChannelAvatar = (channel: ChatChannel) => {
-  const user = channel.direct_message_users?.[0]
+  const user = channel.chatable?.users?.[0] || channel.direct_message_users?.[0]
   if (!user?.avatar_template) return ''
   return getAvatarUrl(user.avatar_template, props.baseUrl, 32)
+}
+
+const getChannelTimeLabel = (channel: ChatChannel) => {
+  const raw = channel.last_message_sent_at || channel.last_message?.created_at
+  return raw ? formatTime(raw) : '暂无消息'
 }
 
 const getUnreadCount = (channel: ChatChannel) => {
@@ -68,10 +84,7 @@ const handleSelect = (channel: ChatChannel) => {
       <div class="chat-channel-info">
         <div class="chat-channel-title">{{ getChannelTitle(channel) }}</div>
         <div class="chat-channel-meta">
-          <span v-if="channel.last_message_sent_at">
-            {{ formatTime(channel.last_message_sent_at) }}
-          </span>
-          <span v-else>暂无消息</span>
+          <span>{{ getChannelTimeLabel(channel) }}</span>
         </div>
       </div>
       <div v-if="getUnreadCount(channel)" class="chat-channel-unread">

@@ -20,20 +20,36 @@ interface Props {
   inputFormat: 'markdown' | 'bbcode'
 }
 
+const props = defineProps<Props>()
+
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
 const editorContainer = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
+let isInternalUpdate = false
 
 function createEditorState(content: string): EditorState {
-  const doc = basicSchema.node('doc', null, [
-    basicSchema.node('paragraph', null, [basicSchema.text(content || '')])
-  ])
+  // Ensure content exists and is a string
+  const textContent = (content || '').toString()
+  
+  // Create doc node
+  let docNode
+  if (textContent) {
+    // Create paragraph with text content
+    const paragraphNode = basicSchema.node('paragraph', null, [
+      basicSchema.text(textContent)
+    ])
+    docNode = basicSchema.node('doc', null, [paragraphNode])
+  } else {
+    // Create empty paragraph without text node
+    const paragraphNode = basicSchema.node('paragraph')
+    docNode = basicSchema.node('doc', null, [paragraphNode])
+  }
 
   return EditorState.create({
-    doc,
+    doc: docNode,
     plugins: [
       history(),
       keymap({
@@ -44,42 +60,48 @@ function createEditorState(content: string): EditorState {
         'Mod-i': toggleMark(basicSchema.marks.em),
         'Mod-u': toggleMark(basicSchema.marks.underline),
         'Mod-Alt-s': toggleMark(basicSchema.marks.strike),
-        'Mod-Enter': chainCommands(exitCode, (state, dispatch) => {
-          if (dispatch) {
-            const tr = state.tr.replaceSelectionWith(basicSchema.node('paragraph'))
-            dispatch(tr)
-          }
-          return true
-        }),
         'Mod-[': lift,
         Escape: selectParentNode
       }),
-      keymap(baseKeymap),
-      new Plugin({
-        key: new PluginKey('change-handler'),
-        view: () => {
-          return {
-            update: view => {
-              const content = view.state.doc.textContent
-              emit('update:modelValue', content)
-            }
-          }
-        }
-      })
+      keymap(baseKeymap)
     ]
   })
 }
 
 onMounted(() => {
-  if (!editorContainer.value) return
+  if (!editorContainer.value) {
+    console.error('Editor container not found')
+    return
+  }
 
-  editorView = new EditorView(editorContainer.value, {
-    state: createEditorState(props.modelValue),
-    dispatchTransaction: transaction => {
-      const newState = editorView!.state.apply(transaction)
-      editorView!.updateState(newState)
-    }
-  })
+  console.log('Initializing ProseMirror editor with content:', props.modelValue)
+
+  try {
+    editorView = new EditorView(editorContainer.value, {
+      state: createEditorState(props.modelValue),
+      editable: () => true,
+      attributes: {
+        class: 'ProseMirror',
+        spellcheck: 'false'
+      },
+      dispatchTransaction: transaction => {
+        if (!editorView) return
+        
+        const newState = editorView.state.apply(transaction)
+        editorView.updateState(newState)
+        
+        // Emit update only on document changes
+        if (transaction.docChanged && !isInternalUpdate) {
+          const content = newState.doc.textContent
+          emit('update:modelValue', content)
+        }
+      }
+    })
+    
+    console.log('ProseMirror editor initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize ProseMirror editor:', error)
+  }
 })
 
 onUnmounted(() => {
@@ -91,12 +113,44 @@ onUnmounted(() => {
 
 watch(
   () => props.modelValue,
-  newValue => {
-    if (!editorView || newValue === editorView.state.doc.textContent) return
+  (newValue) => {
+    if (!editorView || isInternalUpdate) return
+    
+    const currentContent = editorView.state.doc.textContent
+    if (newValue === currentContent) return
 
-    const tr = editorView.state.tr.insert(0, basicSchema.text(newValue))
-    editorView.dispatch(tr)
-  }
+    console.log('Updating editor content:', newValue)
+
+    isInternalUpdate = true
+    try {
+      const textContent = (newValue || '').toString()
+      let newDoc
+      
+      if (textContent) {
+        newDoc = basicSchema.node('doc', null, [
+          basicSchema.node('paragraph', null, [basicSchema.text(textContent)])
+        ])
+      } else {
+        newDoc = basicSchema.node('doc', null, [
+          basicSchema.node('paragraph')
+        ])
+      }
+      
+      const tr = editorView.state.tr.replaceWith(
+        0,
+        editorView.state.doc.content.size,
+        newDoc
+      )
+      editorView.dispatch(tr)
+    } catch (error) {
+      console.error('Failed to update editor:', error)
+    }
+    
+    setTimeout(() => {
+      isInternalUpdate = false
+    }, 0)
+  },
+  { immediate: false }
 )
 </script>
 
@@ -112,11 +166,13 @@ watch(
   border-radius: 0.375rem;
   background-color: #fff;
   outline: none;
+  cursor: text;
 }
 
 .prosemirror-editor :deep(.ProseMirror) {
   outline: none;
   min-height: 180px;
+  cursor: text;
 }
 
 .prosemirror-editor :deep(.ProseMirror-focused) {

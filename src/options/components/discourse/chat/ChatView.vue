@@ -28,9 +28,14 @@ const activeChannelTitle = computed(() => {
   const channel = activeChannel.value
   if (!channel) return '选择频道'
   if (channel.title) return channel.title
+  if (channel.unicode_title) return channel.unicode_title
+  if (channel.chatable?.users?.length) {
+    return channel.chatable.users.map(user => user.name || user.username).join(', ')
+  }
   if (channel.direct_message_users?.length) {
     return channel.direct_message_users.map(user => user.name || user.username).join(', ')
   }
+  if (channel.chatable?.name) return channel.chatable.name
   return `频道 #${channel.id}`
 })
 

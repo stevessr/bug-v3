@@ -182,10 +182,22 @@ export interface ChatChannelMembership {
 export interface ChatChannel {
   id: number
   title?: string
+  unicode_title?: string
   slug?: string
   description?: string
   chatable_type?: string
   chatable_id?: number
+  chatable?: {
+    id?: number
+    name?: string
+    users?: DiscourseUser[]
+    group?: boolean
+    emoji?: string | null
+    icon?: string | null
+    slug?: string | null
+    uploaded_logo?: { url: string } | null
+    uploaded_logo_dark?: { url: string } | null
+  }
   status?: string
   last_message_sent_at?: string
   last_message_id?: number
@@ -193,6 +205,7 @@ export interface ChatChannel {
     id?: number
     cooked?: string
     message?: string
+    created_at?: string
   }
   direct_message_users?: DiscourseUser[]
   current_user_membership?: ChatChannelMembership

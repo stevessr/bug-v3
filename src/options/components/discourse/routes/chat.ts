@@ -3,14 +3,15 @@ import type { Ref } from 'vue'
 import type { BrowserTab, ChatChannel, ChatMessage, DiscourseUser } from '../types'
 import { pageFetch, extractData } from '../utils'
 
-const CHAT_CHANNEL_ENDPOINTS = ['/chat/api/chat_channels.json', '/chat/api/chat_channels']
+const CHAT_CHANNEL_ENDPOINTS = ['/chat/api/me/channels']
 
-const CHAT_MESSAGE_ENDPOINTS = (channelId: number) => [
-  `/chat/api/chat_channels/${channelId}/messages.json`,
-  `/chat/api/chat_channels/${channelId}/messages`
+const CHAT_MESSAGE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}/messages`]
+
+const CHAT_SEND_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/messages`,
+  '/chat/api/chat_messages.json',
+  '/chat/api/chat_messages'
 ]
-
-const CHAT_SEND_ENDPOINTS = ['/chat/api/chat_messages.json', '/chat/api/chat_messages']
 
 const buildChatMessageUrl = (baseUrl: string, channelId: number, params?: URLSearchParams) => {
   const query = params && params.toString() ? `?${params.toString()}` : ''
@@ -27,7 +28,22 @@ const normalizeChatChannels = (data: any): ChatChannel[] => {
       : Array.isArray(data.chat_channels)
         ? data.chat_channels
         : []
-  return [...publicChannels, ...direct]
+  const channels: ChatChannel[] = [...publicChannels, ...direct]
+  const tracking = data.tracking?.channel_tracking || {}
+  channels.forEach(channel => {
+    if (!channel.direct_message_users && channel.chatable?.users?.length) {
+      channel.direct_message_users = channel.chatable.users
+    }
+    const tracked = tracking?.[channel.id]
+    if (!tracked) return
+    if (!channel.current_user_membership) {
+      channel.current_user_membership = { chat_channel_id: channel.id }
+    }
+    if (typeof tracked.unread_count === 'number') {
+      channel.current_user_membership.unread_count = tracked.unread_count
+    }
+  })
+  return channels
 }
 
 const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boolean } => {
@@ -40,7 +56,12 @@ const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boo
         ? data
         : []
   const meta = data.meta || data
-  const hasMore = !!(meta?.can_load_more || meta?.has_more || meta?.more)
+  const hasMore = !!(
+    meta?.can_load_more_past ||
+    meta?.can_load_more ||
+    meta?.has_more ||
+    meta?.more
+  )
   return { messages, hasMore }
 }
 
@@ -83,8 +104,9 @@ const fetchChatMessages = async (
 ) => {
   const params = new URLSearchParams()
   params.set('page_size', '50')
+  params.set('direction', 'past')
   if (beforeMessageId) {
-    params.set('before_message_id', String(beforeMessageId))
+    params.set('target_message_id', String(beforeMessageId))
   }
   const urls = buildChatMessageUrl(baseUrl, channelId, params)
   for (const url of urls) {
@@ -100,22 +122,41 @@ const fetchChatMessages = async (
 }
 
 const postChatMessage = async (baseUrl: string, channelId: number, message: string) => {
-  const payload = JSON.stringify({
+  const jsonPayload = JSON.stringify({
     chat_channel_id: channelId,
     message
   })
-  for (const path of CHAT_SEND_ENDPOINTS) {
+  const formPayload = new URLSearchParams({
+    message,
+    chat_channel_id: String(channelId)
+  }).toString()
+  for (const path of CHAT_SEND_ENDPOINTS(channelId)) {
     try {
       const result = await pageFetch<any>(`${baseUrl}${path}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: payload
+        body: jsonPayload
       })
       const data = extractData(result)
       if (data?.chat_message) return data.chat_message as ChatMessage
-      if (data?.message) return data as ChatMessage
+      if (data?.message) return data.message as ChatMessage
+      if (data?.id) return data as ChatMessage
+    } catch {
+      // try form payload before moving to next endpoint
+    }
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: formPayload
+      })
+      const data = extractData(result)
+      if (data?.chat_message) return data.chat_message as ChatMessage
+      if (data?.message) return data.message as ChatMessage
       if (data?.id) return data as ChatMessage
     } catch {
       // try next endpoint
@@ -205,6 +246,21 @@ export async function loadChatMessages(
   if (merged.length > 0) {
     const minId = merged.reduce((min, item) => (item.id < min ? item.id : min), merged[0].id)
     state.beforeMessageIdByChannel[channelId] = minId
+    const maxMessage = merged.reduce(
+      (max, item) => (item.id > max.id ? item : max),
+      merged[0]
+    )
+    const channel = state.channels.find(item => item.id === channelId)
+    if (channel) {
+      channel.last_message_id = maxMessage.id
+      channel.last_message_sent_at = maxMessage.created_at
+      channel.last_message = {
+        id: maxMessage.id,
+        cooked: maxMessage.cooked,
+        message: maxMessage.message,
+        created_at: maxMessage.created_at
+      }
+    }
   }
 
   state.loadingMessages = false
@@ -226,6 +282,17 @@ export async function sendChatMessage(
     if (sent) {
       const existing = state.messagesByChannel[channelId] || []
       state.messagesByChannel[channelId] = [...existing, sent]
+      const channel = state.channels.find(item => item.id === channelId)
+      if (channel) {
+        channel.last_message_id = sent.id
+        channel.last_message_sent_at = sent.created_at
+        channel.last_message = {
+          id: sent.id,
+          cooked: sent.cooked,
+          message: sent.message,
+          created_at: sent.created_at
+        }
+      }
       return sent
     }
   } catch (error) {

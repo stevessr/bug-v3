@@ -34,6 +34,7 @@ const getLightboxPreview = (image: LightboxImage) => {
 
 let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
+let activeFootnoteTrigger: HTMLAnchorElement | null = null
 
 const getImageGridItems = (segment: ImageGridSegment) => {
   if (segment.columns.length <= 1) return segment.columns[0] || []
@@ -117,6 +118,19 @@ const handleClick = (event: MouseEvent) => {
   // External links will open normally or in new tab
 }
 
+const updateFootnotePosition = () => {
+  if (!activeFootnoteRoot || !activeFootnoteContainer || !contentRef.value) return
+  const host = contentRef.value
+  const rect = activeFootnoteRoot.getBoundingClientRect()
+  const hostRect = host.getBoundingClientRect()
+  const maxWidth = Math.min(520, Math.max(240, hostRect.width - 24))
+  const left = Math.min(rect.left - hostRect.left, hostRect.width - maxWidth - 12)
+  const top = rect.bottom - hostRect.top + host.scrollTop + 6
+  activeFootnoteContainer.style.maxWidth = `${maxWidth}px`
+  activeFootnoteContainer.style.left = `${Math.max(12, left)}px`
+  activeFootnoteContainer.style.top = `${Math.max(8, top)}px`
+}
+
 const hideActiveFootnote = () => {
   if (activeFootnoteContainer) {
     activeFootnoteContainer.remove()
@@ -127,6 +141,7 @@ const hideActiveFootnote = () => {
   }
   activeFootnoteContainer = null
   activeFootnoteRoot = null
+  activeFootnoteTrigger = null
 }
 
 const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) => {
@@ -149,18 +164,15 @@ const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) 
     hideActiveFootnote()
   })
 
-  const rect = footnoteRoot.getBoundingClientRect()
-  const maxWidth = Math.min(520, Math.max(240, window.innerWidth - 24))
-  const left = Math.min(rect.left, window.innerWidth - maxWidth - 12)
-  const top = rect.bottom + 6
-  container.style.maxWidth = `${maxWidth}px`
-  container.style.left = `${Math.max(12, left)}px`
-  container.style.top = `${Math.max(8, top)}px`
+  const host = contentRef.value
+  if (!host) return
 
-  document.body.appendChild(container)
+  host.appendChild(container)
   trigger.setAttribute('aria-expanded', 'true')
   activeFootnoteRoot = footnoteRoot
   activeFootnoteContainer = container
+  activeFootnoteTrigger = trigger
+  updateFootnotePosition()
 }
 
 const handleMouseOver = (event: MouseEvent) => {
@@ -187,33 +199,38 @@ const handleMouseOut = (event: MouseEvent) => {
 }
 
 const mounted = ref(false)
+const contentRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   mounted.value = true
   // Add click event listener to the content div
   nextTick(() => {
-    const contentDiv = document.querySelector('.post-content') as HTMLElement
+    const contentDiv = contentRef.value
     if (contentDiv) {
       contentDiv.addEventListener('click', handleClick)
       contentDiv.addEventListener('mouseover', handleMouseOver)
       contentDiv.addEventListener('mouseout', handleMouseOut)
+      contentDiv.addEventListener('scroll', updateFootnotePosition, { passive: true })
     }
   })
+  window.addEventListener('resize', updateFootnotePosition, { passive: true })
 })
 
 onUnmounted(() => {
-  const contentDiv = document.querySelector('.post-content') as HTMLElement
+  const contentDiv = contentRef.value
   if (contentDiv) {
     contentDiv.removeEventListener('click', handleClick)
     contentDiv.removeEventListener('mouseover', handleMouseOver)
     contentDiv.removeEventListener('mouseout', handleMouseOut)
+    contentDiv.removeEventListener('scroll', updateFootnotePosition)
   }
+  window.removeEventListener('resize', updateFootnotePosition)
   hideActiveFootnote()
 })
 </script>
 
 <template>
-  <div class="post-content prose dark:prose-invert max-w-none text-sm">
+  <div ref="contentRef" class="post-content prose dark:prose-invert max-w-none text-sm">
     <template v-for="(segment, idx) in props.segments" :key="idx">
       <div v-if="segment.type === 'html'" class="post-content-fragment" v-html="segment.html" />
       <div v-else-if="segment.type === 'carousel'" class="post-carousel">
