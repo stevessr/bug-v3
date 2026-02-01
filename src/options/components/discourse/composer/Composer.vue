@@ -6,6 +6,7 @@ import katex from 'katex'
 
 import type { DiscourseCategory } from '../types'
 import { createTopic, replyToTopic, searchTags } from '../actions'
+import { renderBBCode } from '../utils/bbcodeParser'
 
 type ComposerMode = 'topic' | 'reply'
 
@@ -34,6 +35,7 @@ const tagOptions = ref<Array<{ value: string; label: string }>>([])
 const tagsLoading = ref(false)
 const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
 const viewMode = ref<'edit' | 'preview' | 'split'>('edit')
+const inputFormat = ref<'markdown' | 'bbcode'>('bbcode')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -93,7 +95,45 @@ const normalizeTreeNode = (node: any) => {
   return node?.dataRef ?? node
 }
 
-const previewHtml = computed(() => renderMarkdown(raw.value))
+const previewHtml = computed(() => {
+  if (inputFormat.value === 'bbcode') {
+    return renderBBCodeWithMath(raw.value)
+  } else {
+    return renderMarkdown(raw.value)
+  }
+})
+
+function renderBBCodeWithMath(input: string) {
+  if (!input) return ''
+
+  // First, parse math blocks
+  const mathBlocks: Array<{ tex: string; display: boolean }> = []
+  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+    const id = mathBlocks.length
+    mathBlocks.push({ tex, display: true })
+    return `@@MATH_BLOCK_${id}@@`
+  })
+  source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
+    const id = mathBlocks.length
+    mathBlocks.push({ tex, display: false })
+    return `${prefix}@@MATH_INLINE_${id}@@`
+  })
+
+  // Render BBCode
+  let html = renderBBCode(source)
+
+  // Replace math placeholders with rendered LaTeX
+  html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
+    const item = mathBlocks[Number(index)]
+    if (!item) return ''
+    return katex.renderToString(item.tex, {
+      displayMode: kind === 'BLOCK',
+      throwOnError: false
+    })
+  })
+
+  return html
+}
 
 function renderMarkdown(input: string) {
   if (!input) return ''
@@ -153,6 +193,94 @@ function insertAround(
   })
 }
 
+// BBCode toolbar functions
+function insertBBCode(tag: string, attribute?: string) {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selected = textarea.value.slice(start, end)
+
+  let before = ''
+  let after = ''
+
+  if (attribute) {
+    before = `[${tag}=${attribute}]`
+  } else {
+    before = `[${tag}]`
+  }
+  after = `[/${tag}]`
+
+  insertAround(textarea, before, after, start, end)
+  textarea.focus()
+}
+
+function insertUrl() {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selected = textarea.value.slice(start, end)
+
+  if (selected) {
+    // Text is selected, use it as the link text
+    const url = prompt('请输入链接地址：', 'https://')
+    if (url) {
+      insertAround(textarea, `[url=${url}]`, '[/url]', start, end)
+    }
+  } else {
+    // No text selected, prompt for both URL and text
+    const url = prompt('请输入链接地址：', 'https://')
+    if (url) {
+      const text = prompt('请输入链接文本：', url)
+      insertAround(textarea, `[url=${url}]${text || url}`, '[/url]', start, end)
+    }
+  }
+  textarea.focus()
+}
+
+function insertImage() {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const url = prompt('请输入图片地址：', 'https://')
+  if (url) {
+    const start = textarea.selectionStart
+    insertAround(textarea, `[img]${url}[/img]`, '', start, start)
+  }
+  textarea.focus()
+}
+
+function insertColor() {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+
+  const color = prompt('请输入颜色 (如：red, #ff0000):', '')
+  if (color) {
+    insertAround(textarea, `[color=${color}]`, '[/color]', start, end)
+  }
+  textarea.focus()
+}
+
+function insertSize() {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+
+  const size = prompt('请输入字体大小 (像素):', '16')
+  if (size) {
+    insertAround(textarea, `[size=${size}]`, '[/size]', start, end)
+  }
+  textarea.focus()
+}
+
 function handleEditorKeydown(event: KeyboardEvent) {
   if (event.ctrlKey || event.metaKey || event.altKey) return
   const el = event.target as HTMLTextAreaElement | null
@@ -162,15 +290,40 @@ function handleEditorKeydown(event: KeyboardEvent) {
   const start = el.selectionStart
   const end = el.selectionEnd
 
-  if ((key === '*' || key === '_' || key === '~') && start !== end) {
-    event.preventDefault()
-    insertAround(el, key, key, start, end)
-    return
-  }
+  if (inputFormat.value === 'bbcode') {
+    // BBCode shortcuts
+    if (start !== end) {
+      if (key === 'b') {
+        event.preventDefault()
+        insertAround(el, '[b]', '[/b]', start, end)
+      } else if (key === 'i') {
+        event.preventDefault()
+        insertAround(el, '[i]', '[/i]', start, end)
+      } else if (key === 'u') {
+        event.preventDefault()
+        insertAround(el, '[u]', '[/u]', start, end)
+      } else if (key === 'q') {
+        event.preventDefault()
+        insertAround(el, '[quote]', '[/quote]', start, end)
+      }
+    }
 
-  if (key === '`' || key === '$') {
-    event.preventDefault()
-    insertAround(el, key, key, start, end)
+    if (key === '$') {
+      event.preventDefault()
+      insertAround(el, key, key, start, end)
+    }
+  } else {
+    // Markdown shortcuts
+    if ((key === '*' || key === '_' || key === '~') && start !== end) {
+      event.preventDefault()
+      insertAround(el, key, key, start, end)
+      return
+    }
+
+    if (key === '`' || key === '$') {
+      event.preventDefault()
+      insertAround(el, key, key, start, end)
+    }
   }
 }
 
@@ -272,6 +425,11 @@ const showEditor = computed(() => viewMode.value !== 'preview')
         </template>
       </div>
       <div class="flex items-center gap-2">
+        <!-- Format switcher -->
+        <a-select v-model:value="inputFormat" size="small" style="width: 100px">
+          <a-select-option value="bbcode">BBCode</a-select-option>
+          <a-select-option value="markdown">Markdown</a-select-option>
+        </a-select>
         <a-button
           size="small"
           type="text"
@@ -374,13 +532,46 @@ const showEditor = computed(() => viewMode.value !== 'preview')
       :class="showPreview && showEditor ? 'md:grid-cols-2' : 'grid-cols-1'"
     >
       <div v-if="showEditor" class="space-y-2">
+        <!-- BBCode Toolbar -->
+        <div
+          v-if="inputFormat === 'bbcode'"
+          class="bbcode-toolbar flex flex-wrap gap-1 p-2 border rounded dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+        >
+          <a-button size="small" @click="insertBBCode('b')" title="粗体"><b>B</b></a-button>
+          <a-button size="small" @click="insertBBCode('i')" title="斜体"><i>I</i></a-button>
+          <a-button size="small" @click="insertBBCode('u')" title="下划线"><u>U</u></a-button>
+          <a-button size="small" @click="insertBBCode('s')" title="删除线"><s>S</s></a-button>
+          <div class="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <a-button size="small" @click="insertUrl" title="链接">🔗</a-button>
+          <a-button size="small" @click="insertImage" title="图片">🖼️</a-button>
+          <a-button size="small" @click="insertBBCode('quote')" title="引用">❝</a-button>
+          <a-button size="small" @click="insertBBCode('code')" title="代码">💻</a-button>
+          <a-button size="small" @click="insertBBCode('list')" title="列表">📝</a-button>
+          <div class="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <a-button size="small" @click="insertColor" title="颜色">🎨</a-button>
+          <a-button size="small" @click="insertSize" title="大小">📏</a-button>
+        </div>
+
         <a-textarea
           v-model:value="raw"
           :rows="10"
-          placeholder="支持 Markdown 与 LaTeX（$...$ / $$...$$）"
+          :placeholder="
+            inputFormat === 'bbcode'
+              ? '支持 BBCode 与 LaTeX（$...$ / $$...$$）'
+              : '支持 Markdown 与 LaTeX（$...$ / $$...$$）'
+          "
           @keydown="handleEditorKeydown"
         />
-        <div class="text-xs text-gray-500">输入 ` 或 $ 会自动补全成对符号</div>
+        <div class="text-xs text-gray-500">
+          <template v-if="inputFormat === 'bbcode'">
+            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
+            图片地址 [/img] [quote] 引用 [/quote]
+          </template>
+          <template v-else>
+            Markdown: **粗体** *斜体* ~~删除~~ `代码` [链接](url) ![图片](url)
+          </template>
+          · LaTeX: $...$ 行内 / $$...$$ 块级
+        </div>
       </div>
 
       <div

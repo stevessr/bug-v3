@@ -1,0 +1,139 @@
+import DOMPurify from 'dompurify'
+
+/**
+ * Parse BBCode to HTML
+ * Supports common Discourse BBCode tags
+ */
+export function parseBBCode(bbcode: string): string {
+  if (!bbcode) return ''
+
+  let html = bbcode
+
+  // Escape HTML entities first
+  html = escapeHtml(html)
+
+  // Parse tags in order (from most specific to least specific)
+
+  // [code]...[/code] - Code blocks (must be parsed first to avoid parsing inside)
+  html = html.replace(/\[code\]([\s\S]*?)\[\/code\]/g, (_, code) => {
+    return `<pre><code>${code.trim()}</code></pre>`
+  })
+
+  // [url=...]...[/url] - Links with URL
+  html = html.replace(
+    /\[url=([^\]]+)\]([^\[]*?)\[\/url\]/g,
+    (_, url, text) => {
+      const safeUrl = escapeHtml(url)
+      const safeText = escapeHtml(text)
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeText}</a>`
+    }
+  )
+
+  // [url]...[/url] - Links without URL parameter
+  html = html.replace(/\[url\]([^\[]*?)\[\/url\]/g, (_, url) => {
+    const safeUrl = escapeHtml(url)
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`
+  })
+
+  // [img]...[/img] - Images
+  html = html.replace(/\[img\]([^\[]*?)\[\/img\]/g, (_, src) => {
+    const safeSrc = escapeHtml(src)
+    return `<img src="${safeSrc}" alt="image" loading="lazy" />`
+  })
+
+  // [quote]...[/quote] - Blockquotes
+  html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/g, (_, content) => {
+    return `<blockquote>${content}</blockquote>`
+  })
+
+  // [quote=...]...[/quote] - Blockquotes with attribution
+  html = html.replace(
+    /\[quote=([^\]]+)\]([\s\S]*?)\[\/quote\]/g,
+    (_, author, content) => {
+      const safeAuthor = escapeHtml(author)
+      return `<blockquote><cite>${safeAuthor}:</cite>${content}</blockquote>`
+    }
+  )
+
+  // [list]...[/list] - Lists
+  html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/g, (_, content) => {
+    const items = content
+      .split('[*]')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .map(item => `<li>${item}</li>`)
+      .join('')
+    return `<ul>${items}</ul>`
+  })
+
+  // [color=...]...[/color] - Text color
+  html = html.replace(
+    /\[color=([^\]]+)\]([^\[]*?)\[\/color\]/g,
+    (_, color, text) => {
+      const safeColor = escapeHtml(color)
+      return `<span style="color: ${safeColor}">${text}</span>`
+    }
+  )
+
+  // [size=...]...[/size] - Text size
+  html = html.replace(
+    /\[size=([^\]]+)\]([^\[]*?)\[\/size\]/g,
+    (_, size, text) => {
+      const safeSize = escapeHtml(size)
+      return `<span style="font-size: ${safeSize}px">${text}</span>`
+    }
+  )
+
+  // [b]...[/b] - Bold
+  html = html.replace(/\[b\]([^\[]*?)\[\/b\]/g, '<b>$1</b>')
+
+  // [i]...[/i] - Italic
+  html = html.replace(/\[i\]([^\[]*?)\[\/i\]/g, '<i>$1</i>')
+
+  // [u]...[/u] - Underline
+  html = html.replace(/\[u\]([^\[]*?)\[\/u\]/g, '<u>$1</u>')
+
+  // [s]...[/s] - Strikethrough
+  html = html.replace(/\[s\]([^\[]*?)\[\/s\]/g, '<s>$1</s>')
+
+  // Convert newlines to <br> for non-block elements
+  html = html.replace(/\n/g, '<br>')
+
+  return html
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }
+  return text.replace(/[&<>"']/g, m => map[m])
+}
+
+/**
+ * Sanitize HTML using DOMPurify
+ */
+export function sanitizeBBCode(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['iframe', 'video', 'audio', 'source'],
+    ADD_ATTR: ['target', 'src', 'href', 'style', 'class', 'width', 'height', 'controls', 'type', 'allow', 'allowfullscreen', 'frameborder', 'scrolling'],
+    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: ['script', 'style', 'object', 'embed', 'form'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+  })
+}
+
+/**
+ * Render BBCode to sanitized HTML
+ */
+export function renderBBCode(bbcode: string): string {
+  if (!bbcode) return ''
+  const html = parseBBCode(bbcode)
+  return sanitizeBBCode(html)
+}
