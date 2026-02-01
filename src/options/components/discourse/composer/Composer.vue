@@ -281,6 +281,17 @@ function insertSize() {
   textarea.focus()
 }
 
+function insertSpoiler() {
+  const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+
+  insertAround(textarea, '[spoiler]', '[/spoiler]', start, end)
+  textarea.focus()
+}
+
 function handleEditorKeydown(event: KeyboardEvent) {
   if (event.ctrlKey || event.metaKey || event.altKey) return
   const el = event.target as HTMLTextAreaElement | null
@@ -545,6 +556,7 @@ const showEditor = computed(() => viewMode.value !== 'preview')
           <a-button size="small" @click="insertUrl" title="链接">🔗</a-button>
           <a-button size="small" @click="insertImage" title="图片">🖼️</a-button>
           <a-button size="small" @click="insertBBCode('quote')" title="引用">❝</a-button>
+          <a-button size="small" @click="insertSpoiler()" title="剧透模糊">👁️</a-button>
           <a-button size="small" @click="insertBBCode('code')" title="代码">💻</a-button>
           <a-button size="small" @click="insertBBCode('list')" title="列表">📝</a-button>
           <div class="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
@@ -564,8 +576,8 @@ const showEditor = computed(() => viewMode.value !== 'preview')
         />
         <div class="text-xs text-gray-500">
           <template v-if="inputFormat === 'bbcode'">
-            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
-            图片地址 [/img] [quote] 引用 [/quote]
+            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img] 图片地址 [/img]
+            [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
           </template>
           <template v-else>
             Markdown: **粗体** *斜体* ~~删除~~ `代码` [链接](url) ![图片](url)

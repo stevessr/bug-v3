@@ -109,6 +109,11 @@ export function parseBBCode(bbcode: string): string {
   // [sup]...[/sup] - Superscript
   html = html.replace(/\[sup\]([^\[]*?)\[\/sup\]/g, '<sup>$1</sup>')
 
+  // [spoiler]...[/spoiler] - Spoiler/blur
+  html = html.replace(/\[spoiler\]([\s\S]*?)\[\/spoiler\]/g, (_, content) => {
+    return `<div class="spoiled spoiler-blurred" dir="auto" role="button" tabindex="0" data-spoiler-state="blurred" aria-expanded="false" aria-label="显示隐藏内容" aria-live="polite"><p aria-hidden="true">${content}</p></div>`
+  })
+
   // Convert newlines to <br> for non-block elements
   html = html.replace(/\n/g, '<br>')
 
@@ -148,11 +153,19 @@ export function sanitizeBBCode(html: string): string {
       'allow',
       'allowfullscreen',
       'frameborder',
-      'scrolling'
+      'scrolling',
+      'data-spoiler-state',
+      'aria-hidden',
+      'aria-expanded',
+      'aria-label',
+      'aria-live',
+      'role',
+      'tabindex',
+      'dir'
     ],
-    ALLOW_DATA_ATTR: false,
+    ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'style', 'object', 'embed', 'form'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onkeydown', 'onkeypress']
   })
 }
 
