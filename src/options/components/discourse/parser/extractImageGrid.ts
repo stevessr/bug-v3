@@ -33,7 +33,7 @@ export const extractImageGrid = (root: Node, ctx: ParseContext) => {
     if (isInsideOnebox(ancestors)) return
     if (!isImageGrid(node)) return
 
-    const columnsCount = Number(getPropString(node, 'data-columns')) || undefined
+    let columnsCount = Number(getPropString(node, 'data-columns')) || undefined
 
     const columns = Array.from(node.children).filter(
       (child): child is Element => isElement(child) && hasClass(child, 'd-image-grid-column')
@@ -91,6 +91,10 @@ export const extractImageGrid = (root: Node, ctx: ParseContext) => {
     }
 
     if (gridColumns.length === 0) return
+
+    if (!columnsCount && gridColumns.length > 1) {
+      columnsCount = gridColumns.length
+    }
 
     const markerIndex = ctx.imageGrids.length
     ctx.imageGrids.push({ columns: gridColumns, columnsCount })
