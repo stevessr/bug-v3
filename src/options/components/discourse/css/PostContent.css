@@ -13,6 +13,11 @@
   margin: 0.5rem 0;
 }
 
+.post-content :deep(.post-inline-image-wrapper) {
+  display: block;
+  margin: 0.5rem 0;
+}
+
 .post-content :deep(.post-image-grid) {
   margin: 0.5rem 0;
   display: grid;

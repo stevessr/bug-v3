@@ -23,6 +23,13 @@ const getLightboxThumb = (image: LightboxImage) => {
   return image.thumbSrc || image.href
 }
 
+const getLightboxPreview = (image: LightboxImage) => {
+  if (image.href && image.href !== getLightboxThumb(image)) {
+    return { src: image.href }
+  }
+  return true
+}
+
 const getImageGridItems = (segment: ImageGridSegment) => {
   if (segment.columns.length <= 1) return segment.columns[0] || []
   return segment.columns.flat()
@@ -182,14 +189,16 @@ onUnmounted(() => {
           />
         </div>
       </div>
-      <img
+      <a-image
         v-else
         class="post-inline-image rounded"
+        wrapper-class-name="post-inline-image-wrapper"
         :src="getLightboxThumb(segment.image)"
+        :preview="getLightboxPreview(segment.image)"
         :alt="segment.image.alt || ''"
-        :data-base62-sha1="segment.image.base62Sha1"
-        :data-dominant-color="segment.image.dominantColor"
-        :loading="segment.image.loading || 'lazy'"
+        :width="segment.image.width"
+        :height="segment.image.height"
+        :srcset="segment.image.srcset"
         :style="segment.image.style"
       />
     </template>
