@@ -9,6 +9,7 @@ type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'imag
 const props = defineProps<{
   segments: ParsedContent['segments']
   baseUrl: string
+  footnotes?: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -29,13 +30,6 @@ const getLightboxPreview = (image: LightboxImage) => {
     return { src: image.href }
   }
   return true
-}
-
-const decodeHtml = (html: string): string => {
-  if (!html) return ''
-  const textarea = document.createElement('textarea')
-  textarea.innerHTML = html
-  return textarea.value
 }
 
 let activeFootnoteRoot: HTMLElement | null = null
@@ -95,6 +89,10 @@ const handleClick = (event: MouseEvent) => {
   const anchor = target?.closest('a') as HTMLAnchorElement | null
 
   if (!anchor) return
+  if (anchor.closest('sup.footnote-ref')) {
+    event.preventDefault()
+    return
+  }
 
   const href = anchor.getAttribute('href')
   if (!href) return
@@ -124,27 +122,26 @@ const hideActiveFootnote = () => {
     activeFootnoteContainer.remove()
   }
   if (activeFootnoteRoot) {
-    const trigger = activeFootnoteRoot.querySelector('a.expand-footnote')
+    const trigger = activeFootnoteRoot.querySelector('sup.footnote-ref a')
     trigger?.setAttribute('aria-expanded', 'false')
   }
   activeFootnoteContainer = null
   activeFootnoteRoot = null
 }
 
-const showFootnoteFor = (footnoteRoot: HTMLElement) => {
+const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) => {
   if (activeFootnoteRoot === footnoteRoot) return
   hideActiveFootnote()
 
-  const trigger = footnoteRoot.querySelector('a.expand-footnote') as HTMLAnchorElement | null
-  if (!trigger) return
-
-  const rawContent = trigger.getAttribute('data-footnote-content') || ''
-  const decoded = decodeHtml(rawContent)
-  const parsed = decoded ? parsePostContent(decoded, props.baseUrl) : null
+  const href = trigger.getAttribute('href') || ''
+  const id = href.startsWith('#') ? href.slice(1) : href
+  const rawContent = id ? props.footnotes?.[id] : undefined
+  if (!rawContent) return
 
   const container = document.createElement('div')
   container.className = 'post-footnote-inline'
-  container.innerHTML = parsed?.html || decoded
+  const parsed = parsePostContent(rawContent, props.baseUrl)
+  container.innerHTML = parsed.html
   container.addEventListener('mouseenter', () => {
     // keep visible while hovering the tooltip itself
   })
@@ -168,14 +165,16 @@ const showFootnoteFor = (footnoteRoot: HTMLElement) => {
 
 const handleMouseOver = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  const footnoteRoot = target?.closest('.inline-footnote') as HTMLElement | null
+  const footnoteRoot = target?.closest('sup.footnote-ref') as HTMLElement | null
   if (!footnoteRoot) return
-  showFootnoteFor(footnoteRoot)
+  const trigger = footnoteRoot.querySelector('a') as HTMLAnchorElement | null
+  if (!trigger) return
+  showFootnoteFor(footnoteRoot, trigger)
 }
 
 const handleMouseOut = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  const footnoteRoot = target?.closest('.inline-footnote') as HTMLElement | null
+  const footnoteRoot = target?.closest('sup.footnote-ref') as HTMLElement | null
   if (!footnoteRoot) return
   if (
     event.relatedTarget instanceof Node &&

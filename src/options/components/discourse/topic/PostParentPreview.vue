@@ -89,7 +89,12 @@ const handleContentNavigation = (url: string) => {
         <button class="post-parent-jump" @click="handleJumpToPost">跳到帖子</button>
       </div>
     </div>
-    <PostContent :segments="parsed.segments" :baseUrl="baseUrl" @navigate="handleContentNavigation" />
+    <PostContent
+      :segments="parsed.segments"
+      :baseUrl="baseUrl"
+      :footnotes="parsed.footnotes"
+      @navigate="handleContentNavigation"
+    />
   </div>
 </template>
 

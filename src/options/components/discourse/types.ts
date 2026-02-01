@@ -179,6 +179,7 @@ export interface ParsedContent {
     | { type: 'carousel'; images: LightboxImage[] }
     | { type: 'image-grid'; columns: LightboxImage[][]; columnsCount?: number }
   >
+  footnotes?: Record<string, string>
 }
 
 export interface LightboxImage {

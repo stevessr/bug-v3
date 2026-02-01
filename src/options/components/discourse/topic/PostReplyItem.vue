@@ -61,6 +61,7 @@ const handleContentNavigation = (url: string) => {
     <PostContent
       :segments="props.parsed.segments"
       :baseUrl="props.baseUrl"
+      :footnotes="props.parsed.footnotes"
       @navigate="handleContentNavigation"
     />
     <div v-if="props.post.reply_count > 0" class="mt-2 text-xs text-gray-500">

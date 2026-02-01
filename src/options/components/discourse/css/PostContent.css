@@ -44,7 +44,7 @@
   background: #111827;
 }
 
-.post-content :deep(.inline-footnote) {
+.post-content :deep(sup.footnote-ref) {
   position: relative;
   display: inline-block;
 }

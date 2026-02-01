@@ -10,6 +10,7 @@ import { extractCarousels } from './extractCarousels'
 import { extractImageGrid } from './extractImageGrid'
 import { extractLightboxWrappers } from './extractLightboxWrappers'
 import { extractStandaloneImages } from './extractStandaloneImages'
+import { extractFootnotes } from './extractFootnotes'
 import { cleanupMediaNodes } from './cleanupMediaNodes'
 import { buildSegments } from './buildSegments'
 import { transformQuotes } from './transformQuotes'
@@ -34,6 +35,8 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
   const tree = unified().use(rehypeParse, { fragment: true }).parse(cooked) as Root
 
   transformQuotes(tree, ctx)
+
+  const footnotes = extractFootnotes(tree, ctx)
 
   extractCarousels(tree, ctx)
 
@@ -66,5 +69,5 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   console.log('[parsePostContent] Carousel segments:', carouselSegments)
 
-  return { html: fullHtml, images: ctx.images, segments }
+  return { html: fullHtml, images: ctx.images, segments, footnotes }
 }
