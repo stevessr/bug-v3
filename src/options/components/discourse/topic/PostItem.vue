@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { REACTIONS } from '../../../utils/linuxDoReaction'
@@ -27,6 +28,8 @@ const emit = defineEmits<{
   (e: 'navigate', url: string): void
 }>()
 
+const isCopyLinkClicked = ref(false)
+
 const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
@@ -49,6 +52,10 @@ const handleCopyLink = async () => {
     document.body.removeChild(input)
     message.success('链接已复制到剪贴板')
   }
+  isCopyLinkClicked.value = true
+  setTimeout(() => {
+    isCopyLinkClicked.value = false
+  }, 500)
 }
 
 const handleToggleLike = (reactionId: string) => {
@@ -144,6 +151,7 @@ const handleContentNavigation = (url: string) => {
           <div class="flex items-center gap-2">
             <button
               class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
+              :class="{ 'copy-link-clicked': isCopyLinkClicked }"
               title="将此帖子的链接复制到剪贴板"
               type="button"
               @click="handleCopyLink"

@@ -144,3 +144,11 @@
 .btn-icon-text .d-button-label {
   white-space: nowrap;
 }
+
+.post-action-menu__copy-link.copy-link-clicked {
+  color: #3b82f6;
+}
+
+.dark .post-action-menu__copy-link.copy-link-clicked {
+  color: #60a5fa;
+}
