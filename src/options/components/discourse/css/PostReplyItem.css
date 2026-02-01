@@ -29,10 +29,30 @@
   margin: 4px 0 10px;
 }
 
+.post-reply-item .post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.post-reply-item .post-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.post-reply-item .post-parent-inline {
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.post-reply-item .post-parent-inline-actions {
+  margin-left: auto;
+}
+
 .post-reply-item .post-parent-toggle {
   color: #64748b;
   transition: color 0.15s ease;
-  margin-left: auto;
 }
 
 .post-reply-item .post-parent-toggle:hover {

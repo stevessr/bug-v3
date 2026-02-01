@@ -47,7 +47,34 @@ const isSameSiteUrl = (url: string): boolean => {
 
 const handleClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  const anchor = target.closest('a') as HTMLAnchorElement | null
+
+  // Handle spoiler click
+  const spoiler = target?.closest('.spoiled') as HTMLElement | null
+  if (spoiler) {
+    const isBlurred =
+      spoiler.classList.contains('spoiler-blurred') ||
+      spoiler.getAttribute('data-spoiler-state') === 'blurred'
+    if (isBlurred) {
+      spoiler.classList.remove('spoiler-blurred')
+      spoiler.setAttribute('data-spoiler-state', 'revealed')
+      spoiler.setAttribute('aria-expanded', 'true')
+      spoiler.querySelectorAll('[aria-hidden="true"]').forEach(el => {
+        el.setAttribute('aria-hidden', 'false')
+      })
+    } else {
+      spoiler.classList.add('spoiler-blurred')
+      spoiler.setAttribute('data-spoiler-state', 'blurred')
+      spoiler.setAttribute('aria-expanded', 'false')
+      spoiler.querySelectorAll('[aria-hidden="false"]').forEach(el => {
+        el.setAttribute('aria-hidden', 'true')
+      })
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  const anchor = target?.closest('a') as HTMLAnchorElement | null
 
   if (!anchor) return
 

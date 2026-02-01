@@ -63,7 +63,7 @@ const handleJumpToPost = (postNumber: number) => {
     class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
   >
     <!-- Post header -->
-    <div class="flex items-center gap-3 mb-3">
+    <div class="post-header mb-3">
       <img
         :src="getAvatarUrl(props.post.avatar_template, props.baseUrl)"
         :alt="props.post.username"
@@ -71,7 +71,7 @@ const handleJumpToPost = (postNumber: number) => {
         :title="`查看 ${props.post.username} 的主页`"
         @click="handleUserClick(props.post.username)"
       />
-      <div>
+      <div class="post-header-main">
         <div
           class="font-medium dark:text-white cursor-pointer hover:text-blue-500"
           @click="handleUserClick(props.post.username)"
@@ -87,17 +87,19 @@ const handleJumpToPost = (postNumber: number) => {
           </span>
           · #{{ props.post.post_number }} · {{ formatTime(props.post.created_at) }}
         </div>
+        <div v-if="props.post.reply_to_post_number" class="post-parent-row post-parent-inline">
+          <span v-if="props.post.reply_to_user?.username">回复 @{{ props.post.reply_to_user.username }}</span>
+          <span v-else>回复 #{{ props.post.reply_to_post_number }}</span>
+        </div>
       </div>
-    </div>
-
-    <div v-if="props.post.reply_to_post_number" class="post-parent-block">
-      <div class="post-parent-row">
-        <span v-if="props.post.reply_to_user?.username">回复 @{{ props.post.reply_to_user.username }}</span>
-        <span v-else>回复 #{{ props.post.reply_to_post_number }}</span>
+      <div v-if="props.post.reply_to_post_number" class="post-parent-inline-actions">
         <button class="post-parent-toggle" @click="handleToggleParent">
           {{ props.isParentExpanded ? '收起上文' : '展开上文' }}
         </button>
       </div>
+    </div>
+
+    <div v-if="props.post.reply_to_post_number" class="post-parent-block">
       <div v-if="props.isParentExpanded" class="post-parent-preview">
         <div v-if="props.isParentLoading" class="text-xs text-gray-500">上文加载中...</div>
         <div v-else-if="props.parentPost && props.parentParsed">
