@@ -6,7 +6,7 @@ import katex from 'katex'
 
 import type { DiscourseCategory } from '../types'
 import { createTopic, replyToTopic, searchTags } from '../actions'
-import { renderBBCode } from '../utils/bbcodeParser'
+import { renderBBCode, showColorPickerAtButton } from '../bbcode'
 
 type ComposerMode = 'topic' | 'reply'
 
@@ -257,33 +257,20 @@ function insertColor() {
   const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
   if (!textarea) return
 
-  // Create a hidden color input
-  const colorInput = document.createElement('input')
-  colorInput.type = 'color'
-  colorInput.style.position = 'absolute'
-  colorInput.style.visibility = 'hidden'
-  colorInput.style.top = '-1000px'
-
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
 
-  colorInput.addEventListener('input', () => {
-    const color = colorInput.value
-    insertAround(textarea, `[color=${color}]`, '[/color]', start, end)
-  })
-
-  colorInput.addEventListener('change', () => {
-    document.body.removeChild(colorInput)
-    textarea.focus()
-  })
-
-  colorInput.addEventListener('cancel', () => {
-    document.body.removeChild(colorInput)
-    textarea.focus()
-  })
-
-  document.body.appendChild(colorInput)
-  colorInput.click()
+  showColorPickerAtButton(
+    '.bbcode-toolbar button[title="颜色"]',
+    (color: string) => {
+      insertAround(textarea, `[color=${color}]`, '[/color]', start, end)
+      textarea.focus()
+    },
+    () => {
+      textarea.focus()
+    },
+    '#ff0000'
+  )
 }
 
 function insertSize() {

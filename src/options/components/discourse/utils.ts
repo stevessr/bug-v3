@@ -1,7 +1,7 @@
 // Discourse Browser Utilities
 
 import { parsePostContent } from './parser/parsePostContent'
-export { renderBBCode } from './utils/bbcodeParser'
+export { renderBBCode } from './bbcode'
 
 // Page proxy request via Chrome extension
 export async function pageFetch<T>(
