@@ -149,9 +149,19 @@
 
 /* Smooth grid layout transitions */
 .composer-body {
-  transition: grid-template-columns 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
 }
 
 .composer-body.md\:grid-cols-2 {
-  transition: grid-template-columns 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Editor and preview panel transitions */
+.composer-body > div {
+  transition: all 0.3s ease-in-out;
+}
+
+.composer-body > div[style*="display: none"],
+.composer-body > div[style*="display: none"] ~ * {
+  animation: none;
 }
