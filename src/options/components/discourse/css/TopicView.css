@@ -1,0 +1,10 @@
+.post-parent-outer {
+  margin-left: 44px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .post-parent-outer {
+    margin-left: 36px;
+  }
+}

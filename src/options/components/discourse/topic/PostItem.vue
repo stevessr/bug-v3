@@ -4,20 +4,12 @@ import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import PostContent from './PostContent.vue'
-import PostParentPreview from './PostParentPreview.vue'
 
 const props = defineProps<{
   post: DiscoursePost
   baseUrl: string
   parsed: ParsedContent
-  parentPost?: DiscoursePost | null
-  parentParsed?: ParsedContent | null
   isParentExpanded: boolean
-  isParentLoading: boolean
-  getParentPost: (post: DiscoursePost) => DiscoursePost | null
-  getParentParsed: (post: DiscoursePost) => ParsedContent | null
-  isParentExpandedFor: (post: DiscoursePost) => boolean
-  isParentLoadingFor: (post: DiscoursePost) => boolean
   isPostLiked: (post: DiscoursePost, reactionId: string) => boolean
   getReactionCount: (post: DiscoursePost, reactionId: string) => number
   isLiking: boolean
@@ -30,7 +22,6 @@ const emit = defineEmits<{
   (e: 'toggleParent', post: DiscoursePost): void
   (e: 'toggleLike', post: DiscoursePost, reactionId: string): void
   (e: 'navigate', url: string): void
-  (e: 'jumpToPost', postNumber: number): void
 }>()
 
 const handleUserClick = (username: string) => {
@@ -56,10 +47,6 @@ const handleToggleParent = () => {
 const handleContentNavigation = (url: string) => {
   emit('navigate', url)
 }
-
-const handleJumpToPost = (postNumber: number) => {
-  emit('jumpToPost', postNumber)
-}
 </script>
 
 <template>
@@ -67,27 +54,6 @@ const handleJumpToPost = (postNumber: number) => {
     :data-post-number="props.post.post_number"
     class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
   >
-    <div v-if="props.post.reply_to_post_number" class="post-parent-block">
-      <div v-if="props.isParentExpanded" class="post-parent-container">
-        <div v-if="props.isParentLoading" class="text-xs text-gray-500">上文加载中...</div>
-        <PostParentPreview
-          v-else-if="props.parentPost && props.parentParsed"
-          :post="props.parentPost"
-          :parsed="props.parentParsed"
-          :baseUrl="props.baseUrl"
-          :getParentPost="props.getParentPost"
-          :getParentParsed="props.getParentParsed"
-          :isParentExpanded="props.isParentExpandedFor"
-          :isParentLoading="props.isParentLoadingFor"
-          @openUser="handleUserClick"
-          @jumpToPost="handleJumpToPost"
-          @navigate="handleContentNavigation"
-          @toggleParent="handleToggleParent"
-        />
-        <div v-else class="text-xs text-gray-500">上文不可用</div>
-      </div>
-    </div>
-
     <!-- Post header -->
     <div class="post-header mb-3">
       <img

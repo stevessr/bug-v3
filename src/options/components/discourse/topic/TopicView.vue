@@ -7,6 +7,7 @@ import { togglePostLike } from '../actions'
 
 import TopicHeader from './TopicHeader.vue'
 import PostItem from './PostItem.vue'
+import PostParentPreview from './PostParentPreview.vue'
 import PostRepliesTree from './PostRepliesTree.vue'
 import TopicList from './TopicList.vue'
 
@@ -435,18 +436,34 @@ onUnmounted(() => {
     <!-- Posts list -->
     <div v-if="topic.post_stream?.posts" ref="postsListRef" class="posts-list space-y-4">
       <template v-for="post in topic.post_stream.posts" :key="post.id">
+        <div
+          v-if="post.reply_to_post_number && isParentExpanded(post.post_number)"
+          class="post-parent-outer"
+        >
+          <div v-if="isParentLoading(post.post_number)" class="text-xs text-gray-500">
+            上文加载中...
+          </div>
+          <PostParentPreview
+            v-else-if="getParentPost(post) && getParsedParent(post)"
+            :post="getParentPost(post)!"
+            :parsed="getParsedParent(post)!"
+            :baseUrl="baseUrl"
+            :getParentPost="getParentPost"
+            :getParentParsed="getParsedParent"
+            :isParentExpanded="postItem => isParentExpanded(postItem.post_number)"
+            :isParentLoading="postItem => isParentLoading(postItem.post_number)"
+            @openUser="handleUserClick"
+            @jumpToPost="scrollToPost"
+            @navigate="handleContentNavigation"
+            @toggleParent="handleToggleParent"
+          />
+          <div v-else class="text-xs text-gray-500">上文不可用</div>
+        </div>
         <PostItem
           :post="post"
           :baseUrl="baseUrl"
           :parsed="getParsedPost(post.id)"
-          :parentPost="getParentPost(post)"
-          :parentParsed="getParsedParent(post)"
           :isParentExpanded="isParentExpanded(post.post_number)"
-          :isParentLoading="isParentLoading(post.post_number)"
-          :getParentPost="getParentPost"
-          :getParentParsed="getParsedParent"
-          :isParentExpandedFor="post => isParentExpanded(post.post_number)"
-          :isParentLoadingFor="post => isParentLoading(post.post_number)"
           :isPostLiked="isPostLiked"
           :getReactionCount="getReactionCount"
           :isLiking="likingPostIds.has(post.id)"
@@ -456,7 +473,6 @@ onUnmounted(() => {
           @toggleReplies="handleToggleReplies"
           @toggleParent="handleToggleParent"
           @navigate="handleContentNavigation"
-          @jumpToPost="scrollToPost"
         />
         <div v-if="isRepliesExpanded(post.post_number)" class="pl-6 mt-3 space-y-3">
           <PostRepliesTree
