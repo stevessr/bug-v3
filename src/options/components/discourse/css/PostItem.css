@@ -1,0 +1,83 @@
+.post-action-btn {
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.post-action-btn:hover {
+  color: #1d4ed8;
+}
+
+.post-action-btn.active {
+  color: #ef4444;
+}
+
+.post-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reactions-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.reactions-list .reaction-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e5e7eb;
+  transition: all 0.15s ease;
+}
+
+.reactions-list .reaction-item:hover {
+  background: #f1f5f9;
+  color: #1d4ed8;
+  border-color: #cbd5e1;
+}
+
+.dark .reactions-list .reaction-item {
+  color: #cbd5f5;
+  border-color: #475569;
+}
+
+.dark .reactions-list .reaction-item:hover {
+  background: #1f2937;
+  color: #93c5fd;
+  border-color: #64748b;
+}
+
+.reactions-list .reaction-item.active {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.dark .reactions-list .reaction-item.active {
+  background: #7f1d1d;
+  color: #fecaca;
+  border-color: #991b1b;
+}
+
+.reactions-list .reaction-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reactions-list .reaction-item .emoji {
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+}
+
+.reactions-list .reaction-item .count {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 12px;
+  text-align: center;
+}

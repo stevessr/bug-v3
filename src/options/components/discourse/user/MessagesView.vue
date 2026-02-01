@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from './types'
-import { formatTime, getAvatarUrl } from './utils'
+import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
+import { formatTime, getAvatarUrl } from '../utils'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -182,4 +182,4 @@ const tabs: { key: MessagesTabType; label: string }[] = [
   </div>
 </template>
 
-<style scoped src="./MessagesView.css"></style>
+<style scoped src="../css/MessagesView.css"></style>

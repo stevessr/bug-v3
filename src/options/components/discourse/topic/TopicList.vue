@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { DiscourseTopic, SuggestedTopic } from './types'
-import { formatTime } from './utils'
+import type { DiscourseTopic, SuggestedTopic } from '../types'
+import { formatTime } from '../utils'
 
 defineProps<{
   topics: DiscourseTopic[] | SuggestedTopic[]
@@ -48,4 +48,4 @@ const handleMiddleClick = (topic: DiscourseTopic | SuggestedTopic, baseUrl: stri
   </div>
 </template>
 
-<style scoped src="./TopicList.css"></style>
+<style scoped src="../css/TopicList.css"></style>

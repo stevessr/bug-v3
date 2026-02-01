@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { DiscourseCategory } from './types'
+import type { DiscourseCategory } from '../types'
 
 const props = withDefaults(
   defineProps<{
@@ -156,4 +156,4 @@ const getIconHref = (icon?: string | null) => {
   </div>
 </template>
 
-<style scoped src="./CategoryGrid.css"></style>
+<style scoped src="../css/CategoryGrid.css"></style>

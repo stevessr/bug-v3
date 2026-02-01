@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
-import { formatTime, getAvatarUrl } from './utils'
+import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
+import { formatTime, getAvatarUrl } from '../utils'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -307,4 +307,4 @@ const getTrustLevelName = (level: number): string => {
   </div>
 </template>
 
-<style scoped src="./UserView.css"></style>
+<style scoped src="../css/UserView.css"></style>

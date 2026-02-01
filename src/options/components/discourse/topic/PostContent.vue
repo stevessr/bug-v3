@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ParsedContent, LightboxImage } from './types'
+import type { ParsedContent, LightboxImage } from '../types'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -105,4 +105,4 @@ const getImageGridColumnsCount = (segment: ImageGridSegment) => {
   </div>
 </template>
 
-<style scoped src="./PostContent.css"></style>
+<style scoped src="../css/PostContent.css"></style>

@@ -4,8 +4,8 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 
-import type { DiscourseCategory } from './types'
-import { createTopic, replyToTopic, searchTags } from './actions'
+import type { DiscourseCategory } from '../types'
+import { createTopic, replyToTopic, searchTags } from '../actions'
 
 type ComposerMode = 'topic' | 'reply'
 
@@ -407,4 +407,4 @@ const showEditor = computed(() => viewMode.value !== 'preview')
   </div>
 </template>
 
-<style scoped src="./Composer.css"></style>
+<style scoped src="../css/Composer.css"></style>

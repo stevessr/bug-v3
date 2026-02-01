@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
-import { formatTime, getAvatarUrl } from './utils'
+import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
+import { formatTime, getAvatarUrl } from '../utils'
 import UserTabs from './UserTabs.vue'
 
 type ExtrasTab = 'badges' | 'followFeed' | 'following' | 'followers'
@@ -192,4 +192,4 @@ const emit = defineEmits<{
   </div>
 </template>
 
-<style scoped src="./UserExtrasView.css"></style>
+<style scoped src="../css/UserExtrasView.css"></style>

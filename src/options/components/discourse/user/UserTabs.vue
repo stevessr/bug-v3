@@ -36,4 +36,4 @@ const tabs: { key: UserMainTab; label: string }[] = [
   </div>
 </template>
 
-<style scoped src="./UserTabs.css"></style>
+<style scoped src="../css/UserTabs.css"></style>

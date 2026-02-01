@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { DiscourseCategory, DiscourseUser } from './types'
-import { getAvatarUrl } from './utils'
+import type { DiscourseCategory, DiscourseUser } from '../types'
+import { getAvatarUrl } from '../utils'
 
 const props = defineProps<{
   categories: DiscourseCategory[]
@@ -193,4 +193,4 @@ const getIconHref = (icon?: string | null) => {
   </div>
 </template>
 
-<style scoped src="./Sidebar.css"></style>
+<style scoped src="../css/Sidebar.css"></style>

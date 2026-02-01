@@ -1,14 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import {
-  PlusOutlined,
-  CloseOutlined,
-  ReloadOutlined,
-  HomeOutlined,
-  LeftOutlined,
-  RightOutlined,
-  LoadingOutlined
-} from '@ant-design/icons-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
@@ -18,16 +9,18 @@ import type {
   ActivityTabType,
   MessagesTabType
 } from './discourse/types'
-import CategoryGrid from './discourse/CategoryGrid.vue'
-import Icon from './discourse/Icon.vue'
-import TopicList from './discourse/TopicList.vue'
-import TopicView from './discourse/TopicView.vue'
-import Composer from './discourse/Composer.vue'
-import UserView from './discourse/UserView.vue'
-import UserExtrasView from './discourse/UserExtrasView.vue'
-import Sidebar from './discourse/Sidebar.vue'
-import ActivityView from './discourse/ActivityView.vue'
-import MessagesView from './discourse/MessagesView.vue'
+import CategoryGrid from './discourse/layout/CategoryGrid.vue'
+import Icon from './discourse/layout/Icon.vue'
+import TopicList from './discourse/topic/TopicList.vue'
+import TopicView from './discourse/topic/TopicView.vue'
+import Composer from './discourse/composer/Composer.vue'
+import UserView from './discourse/user/UserView.vue'
+import UserExtrasView from './discourse/user/UserExtrasView.vue'
+import Sidebar from './discourse/layout/Sidebar.vue'
+import ActivityView from './discourse/user/ActivityView.vue'
+import MessagesView from './discourse/user/MessagesView.vue'
+import BrowserToolbar from './discourse/browser/BrowserToolbar.vue'
+import BrowserTabs from './discourse/browser/BrowserTabs.vue'
 
 const {
   baseUrl,
@@ -380,71 +373,24 @@ onUnmounted(() => {
     class="discourse-browser flex flex-col h-full min-h-0 border dark:border-gray-700 rounded-lg overflow-hidden"
   >
     <!-- Toolbar -->
-    <div
-      class="toolbar bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 p-2 flex items-center gap-2"
-    >
-      <!-- Navigation buttons -->
-      <div class="flex items-center gap-1">
-        <a-button
-          size="small"
-          :disabled="!activeTab || activeTab.historyIndex <= 0"
-          @click="goBack"
-        >
-          <template #icon><LeftOutlined /></template>
-        </a-button>
-        <a-button
-          size="small"
-          :disabled="!activeTab || activeTab.historyIndex >= activeTab.history.length - 1"
-          @click="goForward"
-        >
-          <template #icon><RightOutlined /></template>
-        </a-button>
-        <a-button size="small" @click="refresh" :loading="activeTab?.loading">
-          <template #icon><ReloadOutlined /></template>
-        </a-button>
-        <a-button size="small" @click="goHome">
-          <template #icon><HomeOutlined /></template>
-        </a-button>
-      </div>
-
-      <!-- Address bar -->
-      <div class="flex-1 flex items-center gap-2">
-        <a-input
-          v-model:value="urlInput"
-          placeholder="输入 Discourse 论坛地址"
-          size="small"
-          class="flex-1"
-          @press-enter="updateBaseUrl"
-        />
-        <a-button type="primary" size="small" @click="updateBaseUrl">访问</a-button>
-      </div>
-    </div>
+    <BrowserToolbar
+      v-model="urlInput"
+      :activeTab="activeTab || null"
+      @goBack="goBack"
+      @goForward="goForward"
+      @refresh="refresh"
+      @goHome="goHome"
+      @updateBaseUrl="updateBaseUrl"
+    />
 
     <!-- Tab bar -->
-    <div
-      class="tab-bar bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700 flex items-center overflow-x-auto"
-    >
-      <div
-        v-for="tab in tabs"
-        :key="tab.id"
-        class="tab-item flex items-center gap-2 px-3 py-2 border-r dark:border-gray-700 cursor-pointer min-w-[120px] max-w-[200px] hover:bg-gray-100 dark:hover:bg-gray-800"
-        :class="{
-          'bg-white dark:bg-gray-800': tab.id === activeTabId,
-          'bg-gray-50 dark:bg-gray-900': tab.id !== activeTabId
-        }"
-        @click="switchTab(tab.id)"
-      >
-        <LoadingOutlined v-if="tab.loading" class="text-blue-500" />
-        <span class="flex-1 truncate text-sm dark:text-white">{{ tab.title }}</span>
-        <CloseOutlined
-          class="text-gray-400 hover:text-red-500 text-xs"
-          @click.stop="closeTab(tab.id)"
-        />
-      </div>
-      <a-button type="text" size="small" class="ml-1" @click="createTab()">
-        <template #icon><PlusOutlined /></template>
-      </a-button>
-    </div>
+    <BrowserTabs
+      :tabs="tabs"
+      :activeTabId="activeTabId"
+      @switchTab="switchTab"
+      @closeTab="closeTab"
+      @createTab="createTab"
+    />
 
     <!-- Content area -->
     <div

@@ -9,8 +9,8 @@ import type {
   DiscourseReaction,
   DiscourseSolvedPost,
   ActivityTabType
-} from './types'
-import { formatTime, getAvatarUrl } from './utils'
+} from '../types'
+import { formatTime, getAvatarUrl } from '../utils'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -326,4 +326,4 @@ const getActionTypeLabel = (actionType: number): string => {
   </div>
 </template>
 
-<style scoped src="./ActivityView.css"></style>
+<style scoped src="../css/ActivityView.css"></style>
