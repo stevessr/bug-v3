@@ -31,7 +31,7 @@ const isInsideQuote = (ancestors: Element[]) => {
 }
 
 export const extractCarousels = (root: Node, ctx: ParseContext) => {
-  console.log('[extractCarousels] Starting carousel extraction')
+  //console.log('[extractCarousels] Starting carousel extraction')
   let foundCount = 0
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
@@ -40,7 +40,7 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
     if (isInsideQuote(ancestors)) return
 
     const isCarousel = isCarouselContainer(node)
-    console.log('[extractCarousels] Node check:', {
+    //console.log('[extractCarousels] Node check:', {
       tagName: node.tagName,
       classes: getClassList(node),
       isCarousel
@@ -49,10 +49,10 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
     if (!isCarousel) return
 
     foundCount++
-    console.log('[extractCarousels] Found carousel #' + foundCount)
+    //console.log('[extractCarousels] Found carousel #' + foundCount)
 
     const slides = findAll(node, el => hasClass(el, 'd-image-carousel__slide'))
-    console.log('[extractCarousels] Slides:', slides.length)
+    //console.log('[extractCarousels] Slides:', slides.length)
 
     const buildFromContainer = (container: Element) => {
       const anchor = findFirst(container, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
@@ -86,17 +86,17 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
         .filter(Boolean) as ParseContext['carousels'][number]
     }
 
-    console.log('[extractCarousels] Items:', items.length)
+    //console.log('[extractCarousels] Items:', items.length)
 
     if (items.length === 0) return
 
     const markerIndex = ctx.carousels.length
     const marker = `__DISCOURSE_CAROUSEL_${markerIndex}__`
-    console.log('[extractCarousels] Replacing with marker:', marker)
+    //console.log('[extractCarousels] Replacing with marker:', marker)
     ctx.carousels.push(items as ParseContext['carousels'][number])
     replaceNodeWithText(parent as Parent, index, marker)
     return false
   })
 
-  console.log('[extractCarousels] Total carousels found:', foundCount)
+  //console.log('[extractCarousels] Total carousels found:', foundCount)
 }
