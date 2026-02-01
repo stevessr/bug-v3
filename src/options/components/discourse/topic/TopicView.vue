@@ -155,6 +155,31 @@ watch(
 const handleQuoteToggle = async (event: Event) => {
   const target = event.target as HTMLElement | null
 
+  const spoiler = target?.closest('.spoiled') as HTMLElement | null
+  if (spoiler) {
+    const isBlurred =
+      spoiler.classList.contains('spoiler-blurred') ||
+      spoiler.getAttribute('data-spoiler-state') === 'blurred'
+    if (isBlurred) {
+      spoiler.classList.remove('spoiler-blurred')
+      spoiler.setAttribute('data-spoiler-state', 'revealed')
+      spoiler.setAttribute('aria-expanded', 'true')
+      spoiler.querySelectorAll('[aria-hidden="true"]').forEach(el => {
+        el.setAttribute('aria-hidden', 'false')
+      })
+    } else {
+      spoiler.classList.add('spoiler-blurred')
+      spoiler.setAttribute('data-spoiler-state', 'blurred')
+      spoiler.setAttribute('aria-expanded', 'false')
+      spoiler.querySelectorAll('[aria-hidden="false"]').forEach(el => {
+        el.setAttribute('aria-hidden', 'true')
+      })
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
   // Check if clicked on quote title (to navigate)
   const titleLink = target?.closest('.quote-title__text-content, .quote-controls')
   if (titleLink) {

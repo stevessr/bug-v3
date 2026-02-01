@@ -127,6 +127,39 @@
   color: #6b7280;
 }
 
+.post-content :deep(.spoiled) {
+  position: relative;
+  display: block;
+  border-radius: 6px;
+}
+
+.post-content :deep(.spoiled.spoiler-blurred) {
+  cursor: pointer;
+}
+
+.post-content :deep(.spoiled.spoiler-blurred > *) {
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.post-content :deep(.spoiled.spoiler-blurred::after) {
+  content: '点击显示隐藏内容';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 6px;
+}
+
+.dark .post-content :deep(.spoiled.spoiler-blurred::after) {
+  color: #cbd5f5;
+  background: rgba(15, 23, 42, 0.5);
+}
+
 .post-content :deep(.emoji) {
   width: 1.25em;
   height: 1.25em;

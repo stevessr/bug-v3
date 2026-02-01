@@ -27,6 +27,10 @@ const isInsideLightboxWrapper = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'lightbox-wrapper'))
 }
 
+const isInsideSpoiler = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'spoiled') || hasClass(el, 'spoiler-blurred'))
+}
+
 export const extractStandaloneImages = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
@@ -35,6 +39,7 @@ export const extractStandaloneImages = (root: Node, ctx: ParseContext) => {
     if (isInsideOnebox(ancestors)) return
     if (isInsideCarousel(ancestors)) return
     if (isInsideImageGrid(ancestors)) return
+    if (isInsideSpoiler(ancestors)) return
     if (isInsideLightboxWrapper(ancestors)) return
 
     const src = getPropString(node, 'src')
