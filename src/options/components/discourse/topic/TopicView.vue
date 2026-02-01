@@ -539,6 +539,7 @@ onUnmounted(() => {
         <PostItem
           :post="post"
           :baseUrl="baseUrl"
+          :topicId="topic.id"
           :parsed="getParsedPost(post.id)"
           :isParentExpanded="isParentExpanded(post.post_number)"
           :isPostLiked="isPostLiked"

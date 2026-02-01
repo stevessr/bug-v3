@@ -8,6 +8,7 @@ import PostContent from './PostContent.vue'
 const props = defineProps<{
   post: DiscoursePost
   baseUrl: string
+  topicId: number
   parsed: ParsedContent
   isParentExpanded: boolean
   isPostLiked: (post: DiscoursePost, reactionId: string) => boolean
@@ -30,6 +31,20 @@ const handleUserClick = (username: string) => {
 
 const handleReplyClick = () => {
   emit('replyTo', { postNumber: props.post.post_number, username: props.post.username })
+}
+
+const handleCopyLink = async () => {
+  const url = `${props.baseUrl}/t/${props.topicId}/${props.post.post_number}`
+  try {
+    await navigator.clipboard.writeText(url)
+  } catch {
+    const input = document.createElement('input')
+    input.value = url
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    document.body.removeChild(input)
+  }
 }
 
 const handleToggleLike = (reactionId: string) => {
@@ -118,15 +133,51 @@ const handleContentNavigation = (url: string) => {
           <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
         </button>
       </div>
-      <button class="post-action-btn" @click="handleReplyClick">回复</button>
-      <span v-if="props.post.like_count > 0">{{ props.post.like_count }} 赞</span>
-      <button
-        v-if="props.post.reply_count > 0"
-        class="post-action-btn post-replies-toggle"
-        @click="handleToggleReplies"
-      >
-        {{ props.post.reply_count }} 回复
-      </button>
+      <div class="ml-auto flex items-center gap-2">
+        <button
+          class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
+          title="将此帖子的链接复制到剪贴板"
+          type="button"
+          @click="handleCopyLink"
+        >
+          <svg
+            class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
+            width="1em"
+            height="1em"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <use href="#link"></use>
+          </svg>
+          <span aria-hidden="true">&ZeroWidthSpace;</span>
+        </button>
+        <button
+          class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
+          title="开始撰写对此帖子的回复"
+          :aria-label="`回复 @${props.post.username} 发布的帖子 #${props.post.post_number}`"
+          type="button"
+          @click="handleReplyClick"
+        >
+          <svg
+            class="fa d-icon d-icon-reply svg-icon fa-width-auto svg-string"
+            width="1em"
+            height="1em"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <use href="#reply"></use>
+          </svg>
+          <span class="d-button-label">回复</span>
+        </button>
+        <button
+          v-if="props.post.reply_count > 0"
+          class="post-action-btn post-replies-toggle"
+          @click="handleToggleReplies"
+        >
+          {{ props.post.reply_count }} 回复
+        </button>
+        <span v-if="props.post.like_count > 0">{{ props.post.like_count }} 赞</span>
+      </div>
     </div>
   </div>
 </template>
