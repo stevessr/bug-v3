@@ -89,6 +89,7 @@
   font-size: 12px;
   color: #6b7280;
   margin-bottom: 8px;
+  width: 100%;
 }
 
 .post-parent-block {
@@ -98,6 +99,7 @@
 .post-parent-toggle {
   color: #64748b;
   transition: color 0.15s ease;
+  margin-left: auto;
 }
 
 .post-parent-toggle:hover {
