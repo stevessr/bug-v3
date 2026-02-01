@@ -24,6 +24,7 @@ const emit = defineEmits<{
   (e: 'refresh'): void
   (e: 'replyTo', payload: { postNumber: number; username: string }): void
   (e: 'openQuote', payload: { topicId: number; postNumber: number }): void
+  (e: 'navigate', url: string): void
 }>()
 
 const postsListRef = ref<HTMLElement | null>(null)
@@ -32,6 +33,10 @@ const likingPostIds = ref<Set<number>>(new Set())
 const expandedReplies = shallowRef<Set<number>>(new Set())
 const replyMap = shallowRef<Map<number, DiscoursePost[]>>(new Map())
 const replyParsedCache = new Map<number, ParsedContent>()
+const expandedParents = shallowRef<Set<number>>(new Set())
+const parentPostCache = shallowRef<Map<number, DiscoursePost>>(new Map())
+const parentParsedCache = new Map<number, ParsedContent>()
+const parentLoading = shallowRef<Set<number>>(new Set())
 
 // Parse posts and cache results
 const parsedPosts = computed(() => {
@@ -56,12 +61,71 @@ const getParsedReply = (post: DiscoursePost): ParsedContent => {
   return parsed
 }
 
+const getParentPostByNumber = (postNumber: number): DiscoursePost | null => {
+  const local = props.topic.post_stream?.posts?.find(post => post.post_number === postNumber)
+  if (local) return local
+  return parentPostCache.value.get(postNumber) || null
+}
+
+const getParentPost = (post: DiscoursePost): DiscoursePost | null => {
+  if (!post.reply_to_post_number) return null
+  return getParentPostByNumber(post.reply_to_post_number)
+}
+
+const getParsedParent = (post: DiscoursePost): ParsedContent | null => {
+  const parent = getParentPost(post)
+  if (!parent) return null
+  const parsedFromMain = parsedPosts.value.get(parent.id)
+  if (parsedFromMain) return parsedFromMain
+  const cached = parentParsedCache.get(parent.id)
+  if (cached) return cached
+  const parsed = parsePostContent(parent.cooked, props.baseUrl)
+  parentParsedCache.set(parent.id, parsed)
+  return parsed
+}
+
 const getRepliesForPost = (postNumber: number): DiscoursePost[] => {
   return replyMap.value.get(postNumber) || []
 }
 
 const isRepliesExpanded = (postNumber: number) => {
   return expandedReplies.value.has(postNumber)
+}
+
+const isParentExpanded = (postNumber: number) => {
+  return expandedParents.value.has(postNumber)
+}
+
+const isParentLoading = (postNumber: number) => {
+  return parentLoading.value.has(postNumber)
+}
+
+const fetchParentForPost = async (post: DiscoursePost) => {
+  if (!props.topic?.id) return
+  if (!post.reply_to_post_number) return
+
+  const parentNumber = post.reply_to_post_number
+  if (getParentPostByNumber(parentNumber)) return
+
+  parentLoading.value = new Set(parentLoading.value)
+  parentLoading.value.add(post.post_number)
+
+  try {
+    const result = await pageFetch<any>(
+      `${props.baseUrl}/posts/by_number/${props.topic.id}/${parentNumber}.json`
+    )
+    if (result.status === 404) return
+    const data = extractData(result)
+    if (data?.id) {
+      parentPostCache.value = new Map(parentPostCache.value)
+      parentPostCache.value.set(parentNumber, data as DiscoursePost)
+    }
+  } catch (error) {
+    console.warn('[DiscourseBrowser] fetch parent failed:', error)
+  } finally {
+    parentLoading.value = new Set(parentLoading.value)
+    parentLoading.value.delete(post.post_number)
+  }
 }
 
 const fetchRepliesForPost = async (post: DiscoursePost) => {
@@ -112,6 +176,21 @@ const handleToggleReplies = async (post: DiscoursePost) => {
   }
 }
 
+const handleToggleParent = async (post: DiscoursePost) => {
+  const postNumber = post.post_number
+  const next = new Set(expandedParents.value)
+  if (next.has(postNumber)) {
+    next.delete(postNumber)
+    expandedParents.value = next
+    return
+  }
+  next.add(postNumber)
+  expandedParents.value = next
+  if (!getParentPost(post)) {
+    await fetchParentForPost(post)
+  }
+}
+
 const handleSuggestedClick = (topic: SuggestedTopic) => {
   emit('openSuggestedTopic', topic)
 }
@@ -122,6 +201,10 @@ const handleUserClick = (username: string) => {
 
 const handleReplyClick = (payload: { postNumber: number; username: string }) => {
   emit('replyTo', payload)
+}
+
+const handleContentNavigation = (url: string) => {
+  emit('navigate', url)
 }
 
 const isPostLiked = (post: DiscoursePost, reactionId: string) => {
@@ -218,6 +301,13 @@ watch(
   () => {
     likedPostIds.value = new Set()
     likingPostIds.value = new Set()
+    expandedReplies.value = new Set()
+    replyMap.value = new Map()
+    replyParsedCache.clear()
+    expandedParents.value = new Set()
+    parentPostCache.value = new Map()
+    parentLoading.value = new Set()
+    parentParsedCache.clear()
   }
 )
 
@@ -349,6 +439,10 @@ onUnmounted(() => {
           :post="post"
           :baseUrl="baseUrl"
           :parsed="getParsedPost(post.id)"
+          :parentPost="getParentPost(post)"
+          :parentParsed="getParsedParent(post)"
+          :isParentExpanded="isParentExpanded(post.post_number)"
+          :isParentLoading="isParentLoading(post.post_number)"
           :isPostLiked="isPostLiked"
           :getReactionCount="getReactionCount"
           :isLiking="likingPostIds.has(post.id)"
@@ -356,6 +450,9 @@ onUnmounted(() => {
           @replyTo="handleReplyClick"
           @toggleLike="toggleLike"
           @toggleReplies="handleToggleReplies"
+          @toggleParent="handleToggleParent"
+          @navigate="handleContentNavigation"
+          @jumpToPost="scrollToPost"
         />
         <div v-if="isRepliesExpanded(post.post_number)" class="pl-6 mt-3 space-y-3">
           <PostRepliesTree
@@ -364,8 +461,14 @@ onUnmounted(() => {
             :getParsed="getParsedReply"
             :getReplies="getRepliesForPost"
             :isExpanded="isRepliesExpanded"
+            :getParent="getParentPost"
+            :getParentParsed="getParsedParent"
+            :isParentExpanded="isParentExpanded"
+            :isParentLoading="isParentLoading"
             @openUser="handleUserClick"
             @toggleReplies="handleToggleReplies"
+            @toggleParent="handleToggleParent"
+            @jumpToPost="scrollToPost"
           />
         </div>
       </template>

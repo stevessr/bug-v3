@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+
 import type { ParsedContent, LightboxImage } from '../types'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
 const props = defineProps<{
   segments: ParsedContent['segments']
+  baseUrl: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'navigate', url: string): void
 }>()
 
 const getCarouselImg = (images: LightboxImage[], index: number) => {
@@ -26,6 +33,66 @@ const getImageGridColumnsCount = (segment: ImageGridSegment) => {
   if (segment.columns.length > 1) return segment.columns.length
   return 2
 }
+
+const isSameSiteUrl = (url: string): boolean => {
+  if (!url) return false
+  try {
+    const urlObj = new URL(url, props.baseUrl)
+    const baseUrlObj = new URL(props.baseUrl)
+    return urlObj.origin === baseUrlObj.origin
+  } catch {
+    return false
+  }
+}
+
+const handleClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  const anchor = target.closest('a') as HTMLAnchorElement | null
+
+  if (!anchor) return
+
+  const href = anchor.getAttribute('href')
+  if (!href) return
+
+  // Check if it's a same-site URL
+  if (href.startsWith('/')) {
+    // Internal path
+    event.preventDefault()
+    emit('navigate', href)
+  } else if (href.startsWith('http') && isSameSiteUrl(href)) {
+    // Same-site full URL, convert to internal path
+    event.preventDefault()
+    try {
+      const urlObj = new URL(href)
+      const internalPath = urlObj.pathname + urlObj.search + urlObj.hash
+      emit('navigate', internalPath)
+    } catch {
+      // Invalid URL, let it open
+      return
+    }
+  }
+  // External links will open normally or in new tab
+}
+
+const mounted = ref(false)
+
+onMounted(() => {
+  mounted.value = true
+  // Add click event listener to the content div
+  nextTick(() => {
+    const contentDiv = document.querySelector('.post-content') as HTMLElement
+    if (contentDiv) {
+      contentDiv.addEventListener('click', handleClick)
+    }
+  })
+})
+
+onUnmounted(() => {
+  const contentDiv = document.querySelector('.post-content') as HTMLElement
+  if (contentDiv) {
+    contentDiv.removeEventListener('click', handleClick)
+  }
+})
 </script>
 
 <template>

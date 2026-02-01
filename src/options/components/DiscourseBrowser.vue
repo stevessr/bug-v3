@@ -172,6 +172,17 @@ const handleQuoteClick = (payload: { topicId: number; postNumber: number }) => {
   openQuote(payload)
 }
 
+// Handle content navigation (links in posts)
+const handleContentNavigation = (url: string) => {
+  if (url.startsWith('/')) {
+    // Internal path
+    navigateTo(url)
+  } else {
+    // External URL, open in new tab
+    window.open(url, '_blank')
+  }
+}
+
 // Handle topic click from user view
 const handleUserTopicClick = (topic: { id: number; slug: string }) => {
   openSuggestedTopic(topic)
@@ -546,6 +557,7 @@ onUnmounted(() => {
         @refresh="refresh"
         @replyTo="handleReplyTo"
         @openQuote="handleQuoteClick"
+        @navigate="handleContentNavigation"
       />
 
       <!-- User profile view -->
