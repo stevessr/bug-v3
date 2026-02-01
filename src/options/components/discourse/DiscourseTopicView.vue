@@ -279,6 +279,19 @@ const getLightboxThumb = (image: LightboxImage) => {
   return image.thumbSrc || image.href
 }
 
+type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
+
+const getImageGridItems = (segment: ImageGridSegment) => {
+  if (segment.columns.length <= 1) return segment.columns[0] || []
+  return segment.columns.flat()
+}
+
+const getImageGridColumnsCount = (segment: ImageGridSegment) => {
+  if (segment.columnsCount) return Math.max(segment.columnsCount, 1)
+  if (segment.columns.length > 1) return segment.columns.length
+  return 2
+}
+
 onMounted(() => {
   postsListRef.value?.addEventListener('click', handleQuoteToggle)
 })
@@ -377,59 +390,27 @@ onUnmounted(() => {
               </a-carousel>
               <div
                 v-else-if="segment.type === 'image-grid'"
-                class="post-image-grid d-image-grid"
-                :data-columns="
-                  segment.columnsCount || (segment.columns.length > 1 ? segment.columns.length : null)
-                "
+                class="post-image-grid"
+                :style="{ '--grid-columns': getImageGridColumnsCount(segment) }"
               >
-                <template v-if="segment.columns.length === 1">
-                  <div
-                    v-for="(img, imgIndex) in segment.columns[0]"
-                    :key="imgIndex"
-                    class="post-image-grid-item lightbox-wrapper"
-                  >
-                    <a-image
-                      class="post-image-grid-image"
-                      :src="getLightboxThumb(img)"
-                      :preview="{ src: img.href }"
-                      :alt="img.alt || ''"
-                      :width="img.width"
-                      :height="img.height"
-                      :srcset="img.srcset"
-                      :data-base62-sha1="img.base62Sha1"
-                      :data-dominant-color="img.dominantColor"
-                      :loading="img.loading || 'lazy'"
-                      :style="img.style"
-                    />
-                  </div>
-                </template>
-                <template v-else>
-                  <div
-                    v-for="(column, columnIndex) in segment.columns"
-                    :key="columnIndex"
-                    class="post-image-grid-column d-image-grid-column"
-                  >
-                    <div
-                      v-for="(img, imgIndex) in column"
-                      :key="imgIndex"
-                      class="post-image-grid-item lightbox-wrapper"
-                    >
-                      <a-image
-                        class="post-image-grid-image"
-                        :src="getLightboxThumb(img)"
-                        :preview="{ src: img.href }"
-                        :alt="img.alt || ''"
-                        :width="img.width"
-                        :height="img.height"
-                        :srcset="img.srcset"
-                        :data-base62-sha1="img.base62Sha1"
-                        :data-dominant-color="img.dominantColor"
-                        :loading="img.loading || 'lazy'"
-                        :style="img.style"
-                      />
-                    </div>
-                  </div>
-                </template>
+                <div
+                  v-for="(img, imgIndex) in getImageGridItems(segment)"
+                  :key="imgIndex"
+                  class="post-image-grid-item"
+                >
+                  <img
+                    class="post-image-grid-image"
+                    :src="getLightboxThumb(img)"
+                    :alt="img.alt || ''"
+                    :width="img.width"
+                    :height="img.height"
+                    :srcset="img.srcset"
+                    :data-base62-sha1="img.base62Sha1"
+                    :data-dominant-color="img.dominantColor"
+                    :loading="img.loading || 'lazy'"
+                    :style="img.style"
+                  />
+                </div>
               </div>
               <a-image
                 v-else
@@ -531,11 +512,10 @@ onUnmounted(() => {
 
 .post-content :deep(.post-image-grid) {
   margin: 0.5rem 0;
-}
-
-.post-content :deep(.post-image-grid .lightbox-wrapper) {
-  width: 100%;
-  margin-bottom: 6px;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 2), minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: start;
 }
 
 .post-content :deep(.post-image-grid-image) {
@@ -547,6 +527,10 @@ onUnmounted(() => {
   width: 100%;
   height: auto;
   border-radius: 6px;
+}
+
+.post-content :deep(.post-image-grid-item) {
+  width: 100%;
 }
 
 .post-content :deep(.post-carousel) {
