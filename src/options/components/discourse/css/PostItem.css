@@ -91,6 +91,10 @@
   margin-bottom: 8px;
 }
 
+.post-parent-block {
+  margin: 4px 0 10px;
+}
+
 .post-parent-toggle {
   color: #64748b;
   transition: color 0.15s ease;
