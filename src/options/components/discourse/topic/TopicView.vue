@@ -247,22 +247,6 @@ const handleQuoteToggle = async (event: Event) => {
     if (data?.cooked) {
       const parsed = parsePostContent(data.cooked, props.baseUrl)
       blockquote.innerHTML = parsed.html
-
-      const existingImages = blockquote.querySelector('.quote-images')
-      if (existingImages) existingImages.remove()
-
-      if (parsed.images.length > 0) {
-        const imagesWrap = document.createElement('div')
-        imagesWrap.className = 'quote-images'
-        parsed.images.forEach(url => {
-          const img = document.createElement('img')
-          img.src = url
-          img.alt = ''
-          img.loading = 'lazy'
-          imagesWrap.appendChild(img)
-        })
-        blockquote.appendChild(imagesWrap)
-      }
     } else if (result.ok === false) {
       const statusText = result.status ? ` (${result.status})` : ''
       blockquote.innerHTML = `<div class="quote-error">引用内容加载失败${statusText}</div>`

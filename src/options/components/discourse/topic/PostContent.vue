@@ -30,52 +30,17 @@ const getImageGridColumnsCount = (segment: ImageGridSegment) => {
 
 <template>
   <div class="post-content prose dark:prose-invert max-w-none text-sm">
-    <a-image-preview-group>
-      <template v-for="(segment, idx) in props.segments" :key="idx">
-        <div v-if="segment.type === 'html'" class="post-content-fragment" v-html="segment.html" />
-        <a-carousel
-          v-else-if="segment.type === 'carousel'"
-          class="post-carousel"
-          arrows
-          dots-class="slick-dots slick-thumb"
-        >
-          <template #customPaging="{ i }">
-            <a class="post-carousel-thumb">
-              <img :src="getCarouselImg(segment.images, i)" />
-            </a>
-          </template>
+    <template v-for="(segment, idx) in props.segments" :key="idx">
+      <div v-if="segment.type === 'html'" class="post-content-fragment" v-html="segment.html" />
+      <div v-else-if="segment.type === 'carousel'" class="post-carousel">
+        <div class="post-carousel-track">
           <div
             v-for="(img, imgIndex) in segment.images"
             :key="imgIndex"
             class="post-carousel-slide"
           >
-            <a-image
-              class="post-carousel-image"
-              :src="getLightboxThumb(img)"
-              :preview="{ src: img.href }"
-              :alt="img.alt || ''"
-              :width="img.width"
-              :height="img.height"
-              :srcset="img.srcset"
-              :data-base62-sha1="img.base62Sha1"
-              :data-dominant-color="img.dominantColor"
-              :loading="img.loading || 'lazy'"
-              :style="img.style"
-            />
-          </div>
-        </a-carousel>
-        <div
-          v-else-if="segment.type === 'image-grid'"
-          class="post-image-grid"
-          :style="{ '--grid-columns': getImageGridColumnsCount(segment) }"
-        >
-          <div
-            v-for="(img, imgIndex) in getImageGridItems(segment)"
-            :key="imgIndex"
-            class="post-image-grid-item"
-          >
             <img
-              class="post-image-grid-image"
+              class="post-carousel-image"
               :src="getLightboxThumb(img)"
               :alt="img.alt || ''"
               :width="img.width"
@@ -88,20 +53,52 @@ const getImageGridColumnsCount = (segment: ImageGridSegment) => {
             />
           </div>
         </div>
-        <a-image
-          v-else
-          :src="getLightboxThumb(segment.image)"
-          :preview="{ src: segment.image.href }"
-          :alt="segment.image.alt || ''"
-          :data-base62-sha1="segment.image.base62Sha1"
-          :data-dominant-color="segment.image.dominantColor"
-          :loading="segment.image.loading || 'lazy'"
-          :style="segment.image.style"
-          :fallback="'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4='"
-          class="post-inline-image rounded cursor-pointer"
-        />
-      </template>
-    </a-image-preview-group>
+        <div class="post-carousel-thumbs">
+          <img
+            v-for="(img, imgIndex) in segment.images"
+            :key="`thumb-${imgIndex}`"
+            class="post-carousel-thumb"
+            :src="getCarouselImg(segment.images, imgIndex)"
+            :alt="img.alt || ''"
+            loading="lazy"
+          />
+        </div>
+      </div>
+      <div
+        v-else-if="segment.type === 'image-grid'"
+        class="post-image-grid"
+        :style="{ '--grid-columns': getImageGridColumnsCount(segment) }"
+      >
+        <div
+          v-for="(img, imgIndex) in getImageGridItems(segment)"
+          :key="imgIndex"
+          class="post-image-grid-item"
+        >
+          <img
+            class="post-image-grid-image"
+            :src="getLightboxThumb(img)"
+            :alt="img.alt || ''"
+            :width="img.width"
+            :height="img.height"
+            :srcset="img.srcset"
+            :data-base62-sha1="img.base62Sha1"
+            :data-dominant-color="img.dominantColor"
+            :loading="img.loading || 'lazy'"
+            :style="img.style"
+          />
+        </div>
+      </div>
+      <img
+        v-else
+        class="post-inline-image rounded"
+        :src="getLightboxThumb(segment.image)"
+        :alt="segment.image.alt || ''"
+        :data-base62-sha1="segment.image.base62Sha1"
+        :data-dominant-color="segment.image.dominantColor"
+        :loading="segment.image.loading || 'lazy'"
+        :style="segment.image.style"
+      />
+    </template>
   </div>
 </template>
 

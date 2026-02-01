@@ -28,6 +28,10 @@ const isInsideSpoiler = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'spoiled') || hasClass(el, 'spoiler-blurred'))
 }
 
+const isInsideQuote = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'quote'))
+}
+
 const isInsideImageGrid = (ancestors: Element[]) => {
   return ancestors.some(
     el =>
@@ -47,6 +51,7 @@ export const extractLightboxWrappers = (root: Node, ctx: ParseContext) => {
     if (isInsideCarousel(ancestors)) return
     if (isInsideImageGrid(ancestors)) return
     if (isInsideSpoiler(ancestors)) return
+    if (isInsideQuote(ancestors)) return
 
     const anchor = findFirst(node, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
     const img = findFirst(node, el => el.tagName === 'img')

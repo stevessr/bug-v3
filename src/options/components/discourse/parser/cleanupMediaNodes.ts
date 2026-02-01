@@ -26,12 +26,21 @@ export const cleanupMediaNodes = (root: Node) => {
     return ancestors.some(el => hasClass(el, 'spoiled') || hasClass(el, 'spoiler-blurred'))
   }
 
+  const isInsideQuote = (ancestors: Element[]) => {
+    return ancestors.some(el => hasClass(el, 'quote'))
+  }
+
   const walk = (node: Node, ancestors: Element[]) => {
     if (!isParent(node)) return
     for (let i = 0; i < node.children.length; ) {
       const child = node.children[i] as Node
       if (isElement(child) && hasClass(child, 'lightbox-wrapper')) {
-        if (!isInsideCarousel(ancestors) && !isInsideImageGrid(ancestors) && !isInsideSpoiler(ancestors)) {
+        if (
+          !isInsideCarousel(ancestors) &&
+          !isInsideImageGrid(ancestors) &&
+          !isInsideSpoiler(ancestors) &&
+          !isInsideQuote(ancestors)
+        ) {
           node.children.splice(i, 1)
           continue
         }

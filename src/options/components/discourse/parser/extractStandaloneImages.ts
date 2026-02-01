@@ -31,6 +31,10 @@ const isInsideSpoiler = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'spoiled') || hasClass(el, 'spoiler-blurred'))
 }
 
+const isInsideQuote = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'quote'))
+}
+
 export const extractStandaloneImages = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
@@ -41,6 +45,7 @@ export const extractStandaloneImages = (root: Node, ctx: ParseContext) => {
     if (isInsideImageGrid(ancestors)) return
     if (isInsideSpoiler(ancestors)) return
     if (isInsideLightboxWrapper(ancestors)) return
+    if (isInsideQuote(ancestors)) return
 
     const src = getPropString(node, 'src')
     if (!src) return

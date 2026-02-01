@@ -12,6 +12,8 @@ import { extractLightboxWrappers } from './extractLightboxWrappers'
 import { extractStandaloneImages } from './extractStandaloneImages'
 import { cleanupMediaNodes } from './cleanupMediaNodes'
 import { buildSegments } from './buildSegments'
+import { transformQuotes } from './transformQuotes'
+import { renderSegmentsToHtml } from './renderSegmentsToHtml'
 
 export const parsePostContent = (cooked: string, baseUrl?: string): ParsedContent => {
   if (!cooked) return { html: '', images: [], segments: [] }
@@ -30,6 +32,8 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
   )
 
   const tree = unified().use(rehypeParse, { fragment: true }).parse(cooked) as Root
+
+  transformQuotes(tree, ctx)
 
   extractCarousels(tree, ctx)
 
@@ -57,17 +61,10 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   const segments = buildSegments(html, ctx.lightboxes, ctx.carousels, ctx.imageGrids)
 
+  const fullHtml = renderSegmentsToHtml(segments)
   const carouselSegments = segments.filter(s => s.type === 'carousel').length
 
   console.log('[parsePostContent] Carousel segments:', carouselSegments)
 
-  const cleanedHtml = segments
-
-    .filter(segment => segment.type === 'html')
-
-    .map(segment => segment.html)
-
-    .join('')
-
-  return { html: cleanedHtml, images: ctx.images, segments }
+  return { html: fullHtml, images: ctx.images, segments }
 }

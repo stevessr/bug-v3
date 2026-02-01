@@ -26,11 +26,16 @@ const isInsideOnebox = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'onebox'))
 }
 
+const isInsideQuote = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'quote'))
+}
+
 export const extractImageGrid = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
     if (!isElement(node)) return
     if (isInsideOnebox(ancestors)) return
+    if (isInsideQuote(ancestors)) return
     if (!isImageGrid(node)) return
 
     let columnsCount = Number(getPropString(node, 'data-columns')) || undefined

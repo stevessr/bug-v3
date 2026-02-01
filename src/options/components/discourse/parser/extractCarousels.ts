@@ -26,6 +26,10 @@ const isInsideOnebox = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'onebox'))
 }
 
+const isInsideQuote = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'quote'))
+}
+
 export const extractCarousels = (root: Node, ctx: ParseContext) => {
   console.log('[extractCarousels] Starting carousel extraction')
   let foundCount = 0
@@ -33,6 +37,7 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
     if (!parent || index === null) return
     if (!isElement(node)) return
     if (isInsideOnebox(ancestors)) return
+    if (isInsideQuote(ancestors)) return
 
     const isCarousel = isCarouselContainer(node)
     console.log('[extractCarousels] Node check:', {
