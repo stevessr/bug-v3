@@ -31,16 +31,36 @@ export async function loadTopic(
     }
 
     if (tab.currentTopic?.post_stream?.posts?.length) {
-      void sendReadTimings(tab, tab.currentTopic.id, baseUrl.value, tab.currentTopic.post_stream.posts)
+      void sendReadTimings(
+        tab,
+        tab.currentTopic.id,
+        baseUrl.value,
+        tab.currentTopic.post_stream.posts
+      )
+    }
+
+    let effectiveTargetPostNumber = targetPostNumber ?? null
+    if (
+      hasTargetPost &&
+      typeof tab.currentTopic?.last_read_post_number === 'number' &&
+      tab.currentTopic.last_read_post_number === targetPostNumber
+    ) {
+      const nextPost = tab.currentTopic.last_read_post_number + 1
+      const highest =
+        tab.currentTopic.highest_post_number || tab.currentTopic.posts_count || nextPost
+      effectiveTargetPostNumber = Math.min(nextPost, highest)
+    }
+    if (typeof effectiveTargetPostNumber === 'number') {
+      tab.targetPostNumber = effectiveTargetPostNumber
     }
 
     const hasTargetPostLoaded =
-      hasTargetPost &&
+      typeof effectiveTargetPostNumber === 'number' &&
       tab.currentTopic?.post_stream?.posts?.some(
-        (post: DiscoursePost) => post.post_number === targetPostNumber
+        (post: DiscoursePost) => post.post_number === effectiveTargetPostNumber
       )
-    if (hasTargetPost && tab.currentTopic && !hasTargetPostLoaded) {
-      await ensurePostByNumberLoaded(tab, topicId, targetPostNumber, baseUrl)
+    if (typeof effectiveTargetPostNumber === 'number' && tab.currentTopic && !hasTargetPostLoaded) {
+      await ensurePostByNumberLoaded(tab, topicId, effectiveTargetPostNumber, baseUrl)
     }
 
     if (!tab.topicExtras?.suggested_topics && !tab.topicExtras?.related_topics) {

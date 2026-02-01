@@ -139,9 +139,7 @@ const fetchRepliesForPost = async (post: DiscoursePost) => {
 
   if (post.reply_count && replies.length < post.reply_count) {
     try {
-      const result = await pageFetch<any>(
-        `${props.baseUrl}/t/${props.topic.id}/${postNumber}.json`
-      )
+      const result = await pageFetch<any>(`${props.baseUrl}/t/${props.topic.id}/${postNumber}.json`)
       const data = extractData(result)
       const fetched = (data?.post_stream?.posts || []).filter(
         (p: DiscoursePost) => p.reply_to_post_number === postNumber
@@ -281,14 +279,23 @@ const toggleLike = async (post: DiscoursePost, reactionId: string) => {
 
 const lastAutoScrollKey = ref<string | null>(null)
 
-const scrollElementIntoView = (el: HTMLElement, container: HTMLElement | null) => {
+const scrollElementIntoView = (
+  el: HTMLElement,
+  container: HTMLElement | null,
+  behavior: ScrollBehavior = 'smooth'
+) => {
   if (container) {
     const elRect = el.getBoundingClientRect()
     const containerRect = container.getBoundingClientRect()
-    const targetTop = elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2
-    container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    const targetTop =
+      elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2
+    const nextTop = Math.max(0, targetTop)
+    container.scrollTo({ top: nextTop, behavior })
+    if (behavior !== 'auto') {
+      container.scrollTop = nextTop
+    }
   } else {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.scrollIntoView({ behavior, block: 'center' })
   }
 }
 
@@ -321,19 +328,30 @@ const scrollToPost = (postNumber: number, attempt = 0) => {
   const key = topicId ? `${topicId}:${postNumber}` : null
   requestAnimationFrame(() => {
     const list = postsListRef.value
+    if (!list) {
+      if (attempt < 40) {
+        setTimeout(() => scrollToPost(postNumber, attempt + 1), 200)
+      }
+      return
+    }
     const container = list?.closest('.content-area') as HTMLElement | null
-    const el = list?.querySelector(
-      `[data-post-number="${postNumber}"]`
-    ) as HTMLElement | null
+    if (container && container.clientHeight === 0) {
+      if (attempt < 40) {
+        setTimeout(() => scrollToPost(postNumber, attempt + 1), 200)
+      }
+      return
+    }
+    const el = list?.querySelector(`[data-post-number="${postNumber}"]`) as HTMLElement | null
+    const behavior: ScrollBehavior = attempt === 0 ? 'auto' : 'smooth'
     if (el) {
-      scrollElementIntoView(el, container)
+      scrollElementIntoView(el, container, behavior)
       if (key) lastAutoScrollKey.value = key
       return
     }
 
     const fallback = attempt >= 6 ? findNearestPostElement(postNumber) : null
     if (fallback) {
-      scrollElementIntoView(fallback, container)
+      scrollElementIntoView(fallback, container, behavior)
       if (key) lastAutoScrollKey.value = key
       return
     }
@@ -581,11 +599,7 @@ onUnmounted(() => {
       class="mt-6 pt-6 border-t dark:border-gray-700"
     >
       <h3 class="text-lg font-semibold mb-4 dark:text-white">相关话题</h3>
-      <TopicList
-        :topics="topic.related_topics"
-        :baseUrl="baseUrl"
-        @click="handleSuggestedClick"
-      />
+      <TopicList :topics="topic.related_topics" :baseUrl="baseUrl" @click="handleSuggestedClick" />
     </div>
   </div>
 </template>
