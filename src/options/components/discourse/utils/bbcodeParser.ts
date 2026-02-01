@@ -20,14 +20,11 @@ export function parseBBCode(bbcode: string): string {
   })
 
   // [url=...]...[/url] - Links with URL
-  html = html.replace(
-    /\[url=([^\]]+)\]([^\[]*?)\[\/url\]/g,
-    (_, url, text) => {
-      const safeUrl = escapeHtml(url)
-      const safeText = escapeHtml(text)
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeText}</a>`
-    }
-  )
+  html = html.replace(/\[url=([^\]]+)\]([^\[]*?)\[\/url\]/g, (_, url, text) => {
+    const safeUrl = escapeHtml(url)
+    const safeText = escapeHtml(text)
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeText}</a>`
+  })
 
   // [url]...[/url] - Links without URL parameter
   html = html.replace(/\[url\]([^\[]*?)\[\/url\]/g, (_, url) => {
@@ -47,13 +44,10 @@ export function parseBBCode(bbcode: string): string {
   })
 
   // [quote=...]...[/quote] - Blockquotes with attribution
-  html = html.replace(
-    /\[quote=([^\]]+)\]([\s\S]*?)\[\/quote\]/g,
-    (_, author, content) => {
-      const safeAuthor = escapeHtml(author)
-      return `<blockquote><cite>${safeAuthor}:</cite>${content}</blockquote>`
-    }
-  )
+  html = html.replace(/\[quote=([^\]]+)\]([\s\S]*?)\[\/quote\]/g, (_, author, content) => {
+    const safeAuthor = escapeHtml(author)
+    return `<blockquote><cite>${safeAuthor}:</cite>${content}</blockquote>`
+  })
 
   // [list]...[/list] - Lists
   html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/g, (_, content) => {
@@ -66,23 +60,36 @@ export function parseBBCode(bbcode: string): string {
     return `<ul>${items}</ul>`
   })
 
+  // [list=1]...[/list] - Ordered lists
+  html = html.replace(/\[list=1\]([\s\S]*?)\[\/list\]/g, (_, content) => {
+    const items = content
+      .split('[*]')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .map(item => `<li>${item}</li>`)
+      .join('')
+    return `<ol>${items}</ol>`
+  })
+
   // [color=...]...[/color] - Text color
-  html = html.replace(
-    /\[color=([^\]]+)\]([^\[]*?)\[\/color\]/g,
-    (_, color, text) => {
-      const safeColor = escapeHtml(color)
-      return `<span style="color: ${safeColor}">${text}</span>`
-    }
-  )
+  html = html.replace(/\[color=([^\]]+)\]([^\[]*?)\[\/color\]/g, (_, color, text) => {
+    const safeColor = escapeHtml(color)
+    return `<span style="color: ${safeColor}">${text}</span>`
+  })
 
   // [size=...]...[/size] - Text size
+  html = html.replace(/\[size=([^\]]+)\]([^\[]*?)\[\/size\]/g, (_, size, text) => {
+    const safeSize = escapeHtml(size)
+    return `<span style="font-size: ${safeSize}px">${text}</span>`
+  })
+
+  // [left]...[/left], [center]...[/center], [right]...[/right] - Text alignment
+  html = html.replace(/\[left\]([^\[]*?)\[\/left\]/g, '<div style="text-align: left">$1</div>')
   html = html.replace(
-    /\[size=([^\]]+)\]([^\[]*?)\[\/size\]/g,
-    (_, size, text) => {
-      const safeSize = escapeHtml(size)
-      return `<span style="font-size: ${safeSize}px">${text}</span>`
-    }
+    /\[center\]([^\[]*?)\[\/center\]/g,
+    '<div style="text-align: center">$1</div>'
   )
+  html = html.replace(/\[right\]([^\[]*?)\[\/right\]/g, '<div style="text-align: right">$1</div>')
 
   // [b]...[/b] - Bold
   html = html.replace(/\[b\]([^\[]*?)\[\/b\]/g, '<b>$1</b>')
@@ -95,6 +102,12 @@ export function parseBBCode(bbcode: string): string {
 
   // [s]...[/s] - Strikethrough
   html = html.replace(/\[s\]([^\[]*?)\[\/s\]/g, '<s>$1</s>')
+
+  // [sub]...[/sub] - Subscript
+  html = html.replace(/\[sub\]([^\[]*?)\[\/sub\]/g, '<sub>$1</sub>')
+
+  // [sup]...[/sup] - Superscript
+  html = html.replace(/\[sup\]([^\[]*?)\[\/sup\]/g, '<sup>$1</sup>')
 
   // Convert newlines to <br> for non-block elements
   html = html.replace(/\n/g, '<br>')
@@ -122,7 +135,21 @@ function escapeHtml(text: string): string {
 export function sanitizeBBCode(html: string): string {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['iframe', 'video', 'audio', 'source'],
-    ADD_ATTR: ['target', 'src', 'href', 'style', 'class', 'width', 'height', 'controls', 'type', 'allow', 'allowfullscreen', 'frameborder', 'scrolling'],
+    ADD_ATTR: [
+      'target',
+      'src',
+      'href',
+      'style',
+      'class',
+      'width',
+      'height',
+      'controls',
+      'type',
+      'allow',
+      'allowfullscreen',
+      'frameborder',
+      'scrolling'
+    ],
     ALLOW_DATA_ATTR: false,
     FORBID_TAGS: ['script', 'style', 'object', 'embed', 'form'],
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
