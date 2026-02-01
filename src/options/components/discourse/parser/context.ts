@@ -5,7 +5,7 @@ export interface ParseContext {
   images: string[]
   lightboxes: LightboxImage[]
   carousels: LightboxImage[][]
-  imageGrids: LightboxImage[][][]
+  imageGrids: Array<{ columns: LightboxImage[][]; columnsCount?: number }>
   seen: Set<string>
   stringify: (node: unknown) => string
 }

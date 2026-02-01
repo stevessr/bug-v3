@@ -375,14 +375,19 @@ onUnmounted(() => {
                   />
                 </div>
               </a-carousel>
-              <div v-else-if="segment.type === 'image-grid'" class="post-image-grid">
-                <div
-                  v-for="(column, columnIndex) in segment.columns"
-                  :key="columnIndex"
-                  class="post-image-grid-column"
-                >
+              <div
+                v-else-if="segment.type === 'image-grid'"
+                class="post-image-grid"
+                :class="{ 'post-image-grid--masonry': segment.columns.length === 1 }"
+                :style="
+                  segment.columns.length === 1 && segment.columnsCount
+                    ? { '--grid-columns': segment.columnsCount }
+                    : undefined
+                "
+              >
+                <template v-if="segment.columns.length === 1">
                   <a-image
-                    v-for="(img, imgIndex) in column"
+                    v-for="(img, imgIndex) in segment.columns[0]"
                     :key="imgIndex"
                     class="post-image-grid-image"
                     :src="getLightboxThumb(img)"
@@ -396,7 +401,30 @@ onUnmounted(() => {
                     :loading="img.loading || 'lazy'"
                     :style="img.style"
                   />
-                </div>
+                </template>
+                <template v-else>
+                  <div
+                    v-for="(column, columnIndex) in segment.columns"
+                    :key="columnIndex"
+                    class="post-image-grid-column"
+                  >
+                    <a-image
+                      v-for="(img, imgIndex) in column"
+                      :key="imgIndex"
+                      class="post-image-grid-image"
+                      :src="getLightboxThumb(img)"
+                      :preview="{ src: img.href }"
+                      :alt="img.alt || ''"
+                      :width="img.width"
+                      :height="img.height"
+                      :srcset="img.srcset"
+                      :data-base62-sha1="img.base62Sha1"
+                      :data-dominant-color="img.dominantColor"
+                      :loading="img.loading || 'lazy'"
+                      :style="img.style"
+                    />
+                  </div>
+                </template>
               </div>
               <a-image
                 v-else
@@ -507,6 +535,7 @@ onUnmounted(() => {
   flex: 1;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .post-content :deep(.post-image-grid-image) {
@@ -517,6 +546,19 @@ onUnmounted(() => {
   width: 100%;
   height: auto;
   border-radius: 6px;
+}
+
+.post-content :deep(.post-image-grid--masonry) {
+  display: block;
+  column-count: var(--grid-columns, 2);
+  column-gap: 0.5rem;
+}
+
+.post-content :deep(.post-image-grid--masonry .post-image-grid-image) {
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 0.5rem 0;
+  break-inside: avoid;
 }
 
 .post-content :deep(.post-carousel) {

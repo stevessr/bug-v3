@@ -4,7 +4,7 @@ export const buildSegments = (
   html: string,
   lightboxes: LightboxImage[],
   carousels: LightboxImage[][],
-  imageGrids: LightboxImage[][][]
+  imageGrids: Array<{ columns: LightboxImage[][]; columnsCount?: number }>
 ): ParsedContent['segments'] => {
   const markers: Array<{
     marker: string
@@ -52,8 +52,14 @@ export const buildSegments = (
       const items = carousels[nextMarker.index] || []
       if (items.length > 0) segments.push({ type: 'carousel', images: items })
     } else {
-      const columns = imageGrids[nextMarker.index] || []
-      if (columns.length > 0) segments.push({ type: 'image-grid', columns })
+      const grid = imageGrids[nextMarker.index]
+      if (grid?.columns?.length > 0) {
+        segments.push({
+          type: 'image-grid',
+          columns: grid.columns,
+          columnsCount: grid.columnsCount
+        })
+      }
     }
 
     cursor = nextIndex + nextMarker.marker.length
