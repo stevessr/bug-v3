@@ -25,6 +25,35 @@
   height: auto;
 }
 
+.post-content :deep(.post-footnote-inline) {
+  position: fixed;
+  z-index: 20;
+  min-width: 240px;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 6px;
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.06);
+  pointer-events: auto;
+}
+
+.dark .post-content :deep(.post-footnote-inline) {
+  border-left-color: #374151;
+  background: #111827;
+}
+
+.post-content :deep(.inline-footnote) {
+  position: relative;
+  display: inline-block;
+}
+
+.post-content :deep(.footnotes-sep),
+.post-content :deep(.footnotes-list) {
+  display: none;
+}
+
 .post-content :deep(.post-image-grid) {
   margin: 0.5rem 0;
   display: grid;

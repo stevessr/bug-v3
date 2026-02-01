@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 import type { ParsedContent, LightboxImage } from '../types'
+import { parsePostContent } from '../parser/parsePostContent'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -29,6 +30,16 @@ const getLightboxPreview = (image: LightboxImage) => {
   }
   return true
 }
+
+const decodeHtml = (html: string): string => {
+  if (!html) return ''
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = html
+  return textarea.value
+}
+
+let activeFootnoteRoot: HTMLElement | null = null
+let activeFootnoteContainer: HTMLDivElement | null = null
 
 const getImageGridItems = (segment: ImageGridSegment) => {
   if (segment.columns.length <= 1) return segment.columns[0] || []
@@ -108,6 +119,74 @@ const handleClick = (event: MouseEvent) => {
   // External links will open normally or in new tab
 }
 
+const hideActiveFootnote = () => {
+  if (activeFootnoteContainer) {
+    activeFootnoteContainer.remove()
+  }
+  if (activeFootnoteRoot) {
+    const trigger = activeFootnoteRoot.querySelector('a.expand-footnote')
+    trigger?.setAttribute('aria-expanded', 'false')
+  }
+  activeFootnoteContainer = null
+  activeFootnoteRoot = null
+}
+
+const showFootnoteFor = (footnoteRoot: HTMLElement) => {
+  if (activeFootnoteRoot === footnoteRoot) return
+  hideActiveFootnote()
+
+  const trigger = footnoteRoot.querySelector('a.expand-footnote') as HTMLAnchorElement | null
+  if (!trigger) return
+
+  const rawContent = trigger.getAttribute('data-footnote-content') || ''
+  const decoded = decodeHtml(rawContent)
+  const parsed = decoded ? parsePostContent(decoded, props.baseUrl) : null
+
+  const container = document.createElement('div')
+  container.className = 'post-footnote-inline'
+  container.innerHTML = parsed?.html || decoded
+  container.addEventListener('mouseenter', () => {
+    // keep visible while hovering the tooltip itself
+  })
+  container.addEventListener('mouseleave', () => {
+    hideActiveFootnote()
+  })
+
+  const rect = footnoteRoot.getBoundingClientRect()
+  const maxWidth = Math.min(520, Math.max(240, window.innerWidth - 24))
+  const left = Math.min(rect.left, window.innerWidth - maxWidth - 12)
+  const top = rect.bottom + 6
+  container.style.maxWidth = `${maxWidth}px`
+  container.style.left = `${Math.max(12, left)}px`
+  container.style.top = `${Math.max(8, top)}px`
+
+  document.body.appendChild(container)
+  trigger.setAttribute('aria-expanded', 'true')
+  activeFootnoteRoot = footnoteRoot
+  activeFootnoteContainer = container
+}
+
+const handleMouseOver = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  const footnoteRoot = target?.closest('.inline-footnote') as HTMLElement | null
+  if (!footnoteRoot) return
+  showFootnoteFor(footnoteRoot)
+}
+
+const handleMouseOut = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  const footnoteRoot = target?.closest('.inline-footnote') as HTMLElement | null
+  if (!footnoteRoot) return
+  if (
+    event.relatedTarget instanceof Node &&
+    (footnoteRoot.contains(event.relatedTarget) ||
+      activeFootnoteContainer?.contains(event.relatedTarget))
+  ) {
+    return
+  }
+  hideActiveFootnote()
+}
+
 const mounted = ref(false)
 
 onMounted(() => {
@@ -117,6 +196,8 @@ onMounted(() => {
     const contentDiv = document.querySelector('.post-content') as HTMLElement
     if (contentDiv) {
       contentDiv.addEventListener('click', handleClick)
+      contentDiv.addEventListener('mouseover', handleMouseOver)
+      contentDiv.addEventListener('mouseout', handleMouseOut)
     }
   })
 })
@@ -125,7 +206,10 @@ onUnmounted(() => {
   const contentDiv = document.querySelector('.post-content') as HTMLElement
   if (contentDiv) {
     contentDiv.removeEventListener('click', handleClick)
+    contentDiv.removeEventListener('mouseover', handleMouseOver)
+    contentDiv.removeEventListener('mouseout', handleMouseOut)
   }
+  hideActiveFootnote()
 })
 </script>
 
