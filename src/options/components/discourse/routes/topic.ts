@@ -38,25 +38,31 @@ export async function loadTopic(
     }
 
     if (!tab.topicExtras?.suggested_topics && !tab.topicExtras?.related_topics) {
-      try {
-        const extrasResult = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
-        const extrasData = extractData(extrasResult)
-        if (extrasData) {
-          tab.topicExtras = {
-            suggested_topics: extrasData.suggested_topics,
-            related_topics: extrasData.related_topics
-          }
-          if (tab.currentTopic) {
-            if (!tab.currentTopic.suggested_topics && extrasData.suggested_topics) {
-              tab.currentTopic.suggested_topics = extrasData.suggested_topics
+      const lastPostNumber =
+        tab.currentTopic?.highest_post_number || tab.currentTopic?.posts_count || null
+      if (lastPostNumber) {
+        try {
+          const extrasResult = await pageFetch<any>(
+            `${baseUrl.value}/t/${topicId}/${lastPostNumber}.json`
+          )
+          const extrasData = extractData(extrasResult)
+          if (extrasData) {
+            tab.topicExtras = {
+              suggested_topics: extrasData.suggested_topics,
+              related_topics: extrasData.related_topics
             }
-            if (!tab.currentTopic.related_topics && extrasData.related_topics) {
-              tab.currentTopic.related_topics = extrasData.related_topics
+            if (tab.currentTopic) {
+              if (!tab.currentTopic.suggested_topics && extrasData.suggested_topics) {
+                tab.currentTopic.suggested_topics = extrasData.suggested_topics
+              }
+              if (!tab.currentTopic.related_topics && extrasData.related_topics) {
+                tab.currentTopic.related_topics = extrasData.related_topics
+              }
             }
           }
+        } catch (e) {
+          console.warn('[DiscourseBrowser] load topic extras failed:', e)
         }
-      } catch (e) {
-        console.warn('[DiscourseBrowser] load topic extras failed:', e)
       }
     }
   } else {
