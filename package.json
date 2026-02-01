@@ -42,6 +42,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@bbob/core": "^4.3.1",
+    "@bbob/html": "^4.3.1",
+    "@bbob/parser": "^4.3.1",
     "ant-design-vue": "^4.2.6",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.1",

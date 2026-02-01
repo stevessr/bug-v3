@@ -257,14 +257,33 @@ function insertColor() {
   const textarea = document.querySelector('.composer textarea') as HTMLTextAreaElement
   if (!textarea) return
 
+  // Create a hidden color input
+  const colorInput = document.createElement('input')
+  colorInput.type = 'color'
+  colorInput.style.position = 'absolute'
+  colorInput.style.visibility = 'hidden'
+  colorInput.style.top = '-1000px'
+
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
 
-  const color = prompt('请输入颜色 (如：red, #ff0000):', '')
-  if (color) {
+  colorInput.addEventListener('input', () => {
+    const color = colorInput.value
     insertAround(textarea, `[color=${color}]`, '[/color]', start, end)
-  }
-  textarea.focus()
+  })
+
+  colorInput.addEventListener('change', () => {
+    document.body.removeChild(colorInput)
+    textarea.focus()
+  })
+
+  colorInput.addEventListener('cancel', () => {
+    document.body.removeChild(colorInput)
+    textarea.focus()
+  })
+
+  document.body.appendChild(colorInput)
+  colorInput.click()
 }
 
 function insertSize() {
