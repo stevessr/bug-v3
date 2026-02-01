@@ -421,7 +421,13 @@ export function useDiscourseBrowser() {
 
   // Open topic
   function openTopic(topic: DiscourseTopic) {
-    navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
+    const unread = topic.unread_posts ?? topic.new_posts ?? topic.unread ?? 0
+    const lastRead = topic.last_read_post_number
+    const target = typeof lastRead === 'number' && lastRead >= 0 && unread > 0 ? lastRead + 1 : null
+    const url = target
+      ? `${baseUrl.value}/t/${topic.slug}/${topic.id}/${target}`
+      : `${baseUrl.value}/t/${topic.slug}/${topic.id}`
+    navigateTo(url)
   }
 
   // Open category
@@ -435,8 +441,21 @@ export function useDiscourseBrowser() {
   }
 
   // Open suggested topic
-  function openSuggestedTopic(topic: { id: number; slug: string }) {
-    navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
+  function openSuggestedTopic(topic: {
+    id: number
+    slug: string
+    last_read_post_number?: number
+    unread_posts?: number
+    new_posts?: number
+    unread?: number
+  }) {
+    const unread = topic.unread_posts ?? topic.new_posts ?? topic.unread ?? 0
+    const lastRead = topic.last_read_post_number
+    const target = typeof lastRead === 'number' && lastRead >= 0 && unread > 0 ? lastRead + 1 : null
+    const url = target
+      ? `${baseUrl.value}/t/${topic.slug}/${topic.id}/${target}`
+      : `${baseUrl.value}/t/${topic.slug}/${topic.id}`
+    navigateTo(url)
   }
 
   // Open quote (navigate to quoted post)
