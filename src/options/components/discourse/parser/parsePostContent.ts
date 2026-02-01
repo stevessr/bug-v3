@@ -15,7 +15,15 @@ import { buildSegments } from './buildSegments'
 export const parsePostContent = (cooked: string, baseUrl?: string): ParsedContent => {
   if (!cooked) return { html: '', images: [], segments: [] }
 
+  console.log('[parsePostContent] Input length:', cooked.length)
+
+  console.log(
+    '[parsePostContent] Contains carousel grid?',
+    cooked.includes('d-image-grid--carousel')
+  )
+
   const processor = unified().use(rehypeStringify)
+
   const ctx = createParseContext(baseUrl, (node: unknown) =>
     String(processor.stringify(node as Root))
   )
@@ -23,16 +31,39 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
   const tree = unified().use(rehypeParse, { fragment: true }).parse(cooked) as Root
 
   extractCarousels(tree, ctx)
+
   extractLightboxWrappers(tree, ctx)
+
   extractStandaloneImages(tree, ctx)
+
   cleanupMediaNodes(tree)
 
+  console.log(
+    '[parsePostContent] After extraction - carousels:',
+    ctx.carousels.length,
+    'lightboxes:',
+    ctx.lightboxes.length
+  )
+
   const html = String(processor.stringify(tree))
+
+  console.log(
+    '[parsePostContent] HTML contains carousel markers:',
+    html.includes('__DISCOURSE_CAROUSEL_')
+  )
+
   const segments = buildSegments(html, ctx.lightboxes, ctx.carousels)
 
+  const carouselSegments = segments.filter(s => s.type === 'carousel').length
+
+  console.log('[parsePostContent] Carousel segments:', carouselSegments)
+
   const cleanedHtml = segments
+
     .filter(segment => segment.type === 'html')
+
     .map(segment => segment.html)
+
     .join('')
 
   return { html: cleanedHtml, images: ctx.images, segments }

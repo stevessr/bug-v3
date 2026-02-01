@@ -4,6 +4,7 @@ import { buildLightbox, ParseContext } from './context'
 import {
   findAll,
   findFirst,
+  getClassList,
   getPropString,
   hasClass,
   isElement,
@@ -13,8 +14,10 @@ import {
 import { traverse } from './traverse'
 
 const isCarouselContainer = (node: Element) => {
+  // Check if node has carousel-specific classes or data attributes
   if (hasClass(node, 'd-image-grid--carousel')) return true
   if (getPropString(node, 'data-mode') === 'carousel') return true
+  // Only treat as carousel if it contains d-image-carousel (not just d-image-grid)
   const carousel = findFirst(node, el => hasClass(el, 'd-image-carousel'))
   return !!carousel
 }
@@ -24,13 +27,28 @@ const isInsideOnebox = (ancestors: Element[]) => {
 }
 
 export const extractCarousels = (root: Node, ctx: ParseContext) => {
+  console.log('[extractCarousels] Starting carousel extraction')
+  let foundCount = 0
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
     if (!isElement(node)) return
     if (isInsideOnebox(ancestors)) return
-    if (!isCarouselContainer(node)) return
+
+    const isCarousel = isCarouselContainer(node)
+    console.log('[extractCarousels] Node check:', {
+      tagName: node.tagName,
+      classes: getClassList(node),
+      isCarousel
+    })
+
+    if (!isCarousel) return
+
+    foundCount++
+    console.log('[extractCarousels] Found carousel #' + foundCount)
 
     const slides = findAll(node, el => hasClass(el, 'd-image-carousel__slide'))
+    console.log('[extractCarousels] Slides:', slides.length)
+
     const items = slides
       .map(slide => {
         const anchor = findFirst(slide, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
@@ -59,11 +77,17 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
       })
       .filter(Boolean)
 
+    console.log('[extractCarousels] Items:', items.length)
+
     if (items.length === 0) return
 
     const markerIndex = ctx.carousels.length
+    const marker = `__DISCOURSE_CAROUSEL_${markerIndex}__`
+    console.log('[extractCarousels] Replacing with marker:', marker)
     ctx.carousels.push(items as ParseContext['carousels'][number])
-    replaceNodeWithText(parent as Parent, index, `__DISCOURSE_CAROUSEL_${markerIndex}__`)
+    replaceNodeWithText(parent as Parent, index, marker)
     return false
   })
+
+  console.log('[extractCarousels] Total carousels found:', foundCount)
 }

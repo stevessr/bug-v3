@@ -57,6 +57,7 @@ const {
   openUserFollowFeed,
   openUserFollowing,
   openUserFollowers,
+  openQuote,
   loadMorePosts,
   loadMoreTopics,
   switchActivityTab,
@@ -160,6 +161,11 @@ const handleSuggestedTopicClick = (topic: SuggestedTopic) => {
 // Handle user click
 const handleUserClick = (username: string) => {
   openUser(username)
+}
+
+// Handle quote click
+const handleQuoteClick = (payload: { topicId: number; postNumber: number }) => {
+  openQuote(payload)
 }
 
 // Handle topic click from user view
@@ -580,6 +586,7 @@ onUnmounted(() => {
         @openUser="handleUserClick"
         @refresh="refresh"
         @replyTo="handleReplyTo"
+        @openQuote="handleQuoteClick"
       />
 
       <!-- User profile view -->

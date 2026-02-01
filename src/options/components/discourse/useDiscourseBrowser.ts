@@ -439,6 +439,11 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/t/${topic.slug}/${topic.id}`)
   }
 
+  // Open quote (navigate to quoted post)
+  function openQuote(params: { topicId: number; postNumber: number }) {
+    navigateTo(`${baseUrl.value}/t/${params.topicId}/${params.postNumber}`)
+  }
+
   // Open user profile
   function openUser(username: string) {
     navigateTo(`${baseUrl.value}/u/${username}/summary`)
@@ -501,6 +506,7 @@ export function useDiscourseBrowser() {
     openUserFollowFeed,
     openUserFollowing,
     openUserFollowers,
+    openQuote,
     loadMorePosts,
     loadMoreTopics,
     switchActivityTab,

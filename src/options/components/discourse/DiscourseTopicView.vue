@@ -28,13 +28,13 @@ const emit = defineEmits<{
   (e: 'openUser', username: string): void
   (e: 'refresh'): void
   (e: 'replyTo', payload: { postNumber: number; username: string }): void
+  (e: 'openQuote', payload: { topicId: number; postNumber: number }): void
 }>()
 
 const postsListRef = ref<HTMLElement | null>(null)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
 const likedPostIds = ref<Set<number>>(new Set())
 const likingPostIds = ref<Set<number>>(new Set())
-const activeReactionPostId = ref<number | null>(null)
 
 // Parse posts and cache results
 const parsedPosts = computed(() => {
@@ -71,17 +71,46 @@ const handleClearReply = () => {
 const isPostLiked = (post: DiscoursePost, reactionId: string) => {
   if (likedPostIds.value.has(post.id)) return true
   const postAny = post as any
+  // Check current_user_reaction from API response
+  const currentUserReaction = postAny?.current_user_reaction
+  if (currentUserReaction) {
+    if (typeof currentUserReaction === 'string') {
+      return currentUserReaction === reactionId
+    } else if (typeof currentUserReaction === 'object' && currentUserReaction.id) {
+      return currentUserReaction.id === reactionId
+    }
+  }
   const summary = postAny?.actions_summary || []
   if (Array.isArray(summary)) {
     if (reactionId === 'heart' && summary.some((item: any) => item?.id === 2 && item?.acted))
       return true
   }
   const reactions = postAny?.reactions
-  if (reactions && typeof reactions === 'object') {
+  if (Array.isArray(reactions)) {
+    const item = reactions.find((r: any) => r?.id === reactionId)
+    if (item?.reacted) return true
+  } else if (reactions && typeof reactions === 'object') {
     const items = Object.values(reactions) as any[]
     if (items.some(item => item?.id === reactionId && item?.reacted)) return true
   }
   return false
+}
+
+const getReactionCount = (post: DiscoursePost, reactionId: string): number => {
+  const postAny = post as any
+  const reactions = postAny?.reactions
+  if (Array.isArray(reactions)) {
+    const item = reactions.find((r: any) => r?.id === reactionId)
+    if (item && typeof item.count === 'number') {
+      return item.count
+    }
+  } else if (reactions && typeof reactions === 'object') {
+    const item = reactions[reactionId]
+    if (item && typeof item === 'object' && typeof item.count === 'number') {
+      return item.count
+    }
+  }
+  return 0
 }
 
 const toggleLike = async (post: DiscoursePost, reactionId: string) => {
@@ -89,17 +118,19 @@ const toggleLike = async (post: DiscoursePost, reactionId: string) => {
   likingPostIds.value.add(post.id)
   const wasLiked = isPostLiked(post, reactionId)
   try {
-    await togglePostLike(props.baseUrl, post.id, reactionId)
-    if (wasLiked) {
-      likedPostIds.value.delete(post.id)
-      if (reactionId === 'heart') {
-        post.like_count = Math.max(0, post.like_count - 1)
-      }
-    } else {
+    const data = await togglePostLike(props.baseUrl, post.id, reactionId)
+    // Update post with response data
+    const postAny = post as any
+    if (data) {
+      postAny.reactions = data.reactions || []
+      postAny.current_user_reaction = data.current_user_reaction
+      postAny.reaction_users_count = data.reaction_users_count || 0
+    }
+    // Sync likedPostIds with current_user_reaction
+    if (data?.current_user_reaction) {
       likedPostIds.value.add(post.id)
-      if (reactionId === 'heart') {
-        post.like_count = (post.like_count || 0) + 1
-      }
+    } else {
+      likedPostIds.value.delete(post.id)
     }
   } catch (error) {
     console.warn('[DiscourseBrowser] toggle like failed:', error)
@@ -142,6 +173,24 @@ watch(
 
 const handleQuoteToggle = async (event: Event) => {
   const target = event.target as HTMLElement | null
+
+  // Check if clicked on quote title (to navigate)
+  const titleLink = target?.closest('.quote-title__text-content, .quote-controls')
+  if (titleLink) {
+    const aside = target?.closest('aside.quote') as HTMLElement | null
+    if (!aside) return
+
+    const topicId = aside.getAttribute('data-topic')
+    const postNumber = aside.getAttribute('data-post')
+    if (!topicId || !postNumber) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    emit('openQuote', { topicId: parseInt(topicId), postNumber: parseInt(postNumber) })
+    return
+  }
+
+  // Original expand/collapse logic
   const button = target?.closest('button.quote-toggle') as HTMLButtonElement | null
   if (!button) return
 
@@ -246,8 +295,6 @@ onUnmounted(() => {
       <h1 class="text-xl font-bold dark:text-white" v-html="topic.fancy_title || topic.title" />
       <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
         <span>{{ topic.posts_count }} 回复</span>
-        <span>{{ topic.views }} 浏览</span>
-        <span>{{ topic.like_count }} 赞</span>
         <span>创建于 {{ formatTime(topic.created_at) }}</span>
       </div>
     </div>
@@ -346,30 +393,19 @@ onUnmounted(() => {
 
         <!-- Post footer -->
         <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 post-actions">
-          <div
-            class="reaction-trigger"
-            @mouseenter="activeReactionPostId = post.id"
-            @mouseleave="activeReactionPostId = null"
-          >
+          <div class="reactions-list">
             <button
-              class="post-action-btn"
+              v-for="item in REACTIONS"
+              :key="item.id"
+              class="reaction-item"
+              :class="{ active: isPostLiked(post, item.id) }"
               :disabled="likingPostIds.has(post.id)"
-              @click="activeReactionPostId = activeReactionPostId === post.id ? null : post.id"
+              @click="toggleLike(post, item.id)"
+              :title="item.name"
             >
-              反应
+              <span class="emoji">{{ item.emoji }}</span>
+              <span class="count">{{ getReactionCount(post, item.id) }}</span>
             </button>
-            <div class="reaction-picker" :class="{ visible: activeReactionPostId === post.id }">
-              <button
-                v-for="item in REACTIONS"
-                :key="item.id"
-                class="reaction-item"
-                :class="{ active: isPostLiked(post, item.id) }"
-                @click="toggleLike(post, item.id)"
-              >
-                <span class="emoji">{{ item.emoji }}</span>
-                <span class="label">{{ item.name }}</span>
-              </button>
-            </div>
           </div>
           <button class="post-action-btn" @click="handleReplyClick(post)">回复</button>
           <span v-if="post.like_count > 0">{{ post.like_count }} 赞</span>
@@ -552,76 +588,70 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.reaction-trigger {
-  position: relative;
-}
-
-.reaction-picker {
-  position: absolute;
-  left: 0;
-  bottom: 28px;
-  display: none;
-  min-width: 220px;
-  max-width: 260px;
-  padding: 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
-  z-index: 20;
-}
-
-.dark .reaction-picker {
-  background: rgba(17, 24, 39, 0.98);
-  border-color: #374151;
-}
-
-.reaction-picker.visible {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.reaction-item {
+.reactions-list {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: transparent;
-  color: #475569;
-  text-align: left;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.reaction-item:hover {
+.reactions-list .reaction-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e5e7eb;
+  transition: all 0.15s ease;
+}
+
+.reactions-list .reaction-item:hover {
   background: #f1f5f9;
   color: #1d4ed8;
+  border-color: #cbd5e1;
 }
 
-.dark .reaction-item {
+.dark .reactions-list .reaction-item {
   color: #cbd5f5;
+  border-color: #475569;
 }
 
-.dark .reaction-item:hover {
+.dark .reactions-list .reaction-item:hover {
   background: #1f2937;
   color: #93c5fd;
+  border-color: #64748b;
 }
 
-.reaction-item.active {
+.reactions-list .reaction-item.active {
   background: #fee2e2;
   color: #b91c1c;
+  border-color: #fecaca;
 }
 
-.reaction-item .emoji {
-  width: 18px;
+.dark .reactions-list .reaction-item.active {
+  background: #7f1d1d;
+  color: #fecaca;
+  border-color: #991b1b;
 }
 
-.reaction-item .label {
+.reactions-list .reaction-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reactions-list .reaction-item .emoji {
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+}
+
+.reactions-list .reaction-item .count {
   font-size: 11px;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
+  min-width: 12px;
+  text-align: center;
 }
 
 /* Quote styles */
@@ -657,6 +687,12 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.post-content :deep(aside.quote .quote-title__text-content:hover) {
+  opacity: 0.8;
 }
 
 .post-content :deep(aside.quote .badge-category__wrapper) {
@@ -693,6 +729,12 @@ onUnmounted(() => {
 
 .post-content :deep(aside.quote .quote-controls) {
   display: inline-flex;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.post-content :deep(aside.quote .quote-controls:hover) {
+  opacity: 0.8;
 }
 
 .post-content :deep(aside.quote .quote-toggle) {
