@@ -4,6 +4,7 @@ import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import PostContent from './PostContent.vue'
+import PostParentPreview from './PostParentPreview.vue'
 
 const props = defineProps<{
   post: DiscoursePost
@@ -13,6 +14,10 @@ const props = defineProps<{
   parentParsed?: ParsedContent | null
   isParentExpanded: boolean
   isParentLoading: boolean
+  getParentPost: (post: DiscoursePost) => DiscoursePost | null
+  getParentParsed: (post: DiscoursePost) => ParsedContent | null
+  isParentExpandedFor: (post: DiscoursePost) => boolean
+  isParentLoadingFor: (post: DiscoursePost) => boolean
   isPostLiked: (post: DiscoursePost, reactionId: string) => boolean
   getReactionCount: (post: DiscoursePost, reactionId: string) => number
   isLiking: boolean
@@ -63,37 +68,22 @@ const handleJumpToPost = (postNumber: number) => {
     class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
   >
     <div v-if="props.post.reply_to_post_number" class="post-parent-block">
-      <div v-if="props.isParentExpanded" class="post-parent-preview">
+      <div v-if="props.isParentExpanded" class="post-parent-container">
         <div v-if="props.isParentLoading" class="text-xs text-gray-500">上文加载中...</div>
-        <div v-else-if="props.parentPost && props.parentParsed">
-          <div class="post-parent-header">
-            <img
-              :src="getAvatarUrl(props.parentPost.avatar_template, props.baseUrl, 32)"
-              :alt="props.parentPost.username"
-              class="post-parent-avatar"
-              @click="handleUserClick(props.parentPost.username)"
-            />
-            <div class="post-parent-title">
-              <span class="post-parent-name" @click="handleUserClick(props.parentPost.username)">
-                {{ props.parentPost.name || props.parentPost.username }}
-              </span>
-              <span class="post-parent-time">
-                {{ formatTime(props.parentPost.created_at) }}
-              </span>
-            </div>
-            <button
-              class="post-parent-jump"
-              @click="handleJumpToPost(props.parentPost.post_number)"
-            >
-              跳到帖子
-            </button>
-          </div>
-          <PostContent
-            :segments="props.parentParsed.segments"
-            :baseUrl="props.baseUrl"
-            @navigate="handleContentNavigation"
-          />
-        </div>
+        <PostParentPreview
+          v-else-if="props.parentPost && props.parentParsed"
+          :post="props.parentPost"
+          :parsed="props.parentParsed"
+          :baseUrl="props.baseUrl"
+          :getParentPost="props.getParentPost"
+          :getParentParsed="props.getParentParsed"
+          :isParentExpanded="props.isParentExpandedFor"
+          :isParentLoading="props.isParentLoadingFor"
+          @openUser="handleUserClick"
+          @jumpToPost="handleJumpToPost"
+          @navigate="handleContentNavigation"
+          @toggleParent="handleToggleParent"
+        />
         <div v-else class="text-xs text-gray-500">上文不可用</div>
       </div>
     </div>
