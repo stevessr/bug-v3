@@ -1,0 +1,15 @@
+.activity-view :deep(a) {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.activity-view :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

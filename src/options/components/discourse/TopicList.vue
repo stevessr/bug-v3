@@ -48,8 +48,4 @@ const handleMiddleClick = (topic: DiscourseTopic | SuggestedTopic, baseUrl: stri
   </div>
 </template>
 
-<style scoped>
-.topic-item {
-  transition: background-color 0.15s;
-}
-</style>
+<style scoped src="./TopicList.css"></style>

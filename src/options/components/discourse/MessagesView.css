@@ -1,0 +1,8 @@
+.messages-view :deep(a) {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.messages-view :deep(a:hover) {
+  text-decoration: underline;
+}

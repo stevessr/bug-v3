@@ -1,0 +1,3 @@
+.user-tabs :deep(button) {
+  line-height: 1.2;
+}

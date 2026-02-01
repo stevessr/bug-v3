@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from './types'
 import { formatTime, getAvatarUrl } from './utils'
-import DiscourseUserTabs from './DiscourseUserTabs.vue'
+import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile
@@ -54,7 +54,7 @@ const tabs: { key: MessagesTabType; label: string }[] = [
       </div>
     </div>
 
-    <DiscourseUserTabs active="messages" @switchTab="emit('switchMainTab', $event)" />
+    <UserTabs active="messages" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Tab navigation -->
     <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
@@ -182,13 +182,4 @@ const tabs: { key: MessagesTabType; label: string }[] = [
   </div>
 </template>
 
-<style scoped>
-.messages-view :deep(a) {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.messages-view :deep(a:hover) {
-  text-decoration: underline;
-}
-</style>
+<style scoped src="./MessagesView.css"></style>

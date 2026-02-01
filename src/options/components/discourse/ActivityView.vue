@@ -11,7 +11,7 @@ import type {
   ActivityTabType
 } from './types'
 import { formatTime, getAvatarUrl } from './utils'
-import DiscourseUserTabs from './DiscourseUserTabs.vue'
+import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile
@@ -119,7 +119,7 @@ const getActionTypeLabel = (actionType: number): string => {
       </div>
     </div>
 
-    <DiscourseUserTabs active="activity" @switchTab="emit('switchMainTab', $event)" />
+    <UserTabs active="activity" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Tab navigation -->
     <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
@@ -326,20 +326,4 @@ const getActionTypeLabel = (actionType: number): string => {
   </div>
 </template>
 
-<style scoped>
-.activity-view :deep(a) {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.activity-view :deep(a:hover) {
-  text-decoration: underline;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>
+<style scoped src="./ActivityView.css"></style>

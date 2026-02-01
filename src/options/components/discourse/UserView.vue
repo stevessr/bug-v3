@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from './types'
 import { formatTime, getAvatarUrl } from './utils'
-import DiscourseUserTabs from './DiscourseUserTabs.vue'
+import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
   user: DiscourseUserProfile & {
@@ -152,7 +152,7 @@ const getTrustLevelName = (level: number): string => {
       </div>
     </div>
 
-    <DiscourseUserTabs active="summary" @switchTab="emit('switchMainTab', $event)" />
+    <UserTabs active="summary" @switchTab="emit('switchMainTab', $event)" />
 
     <!-- Bio -->
     <div
@@ -307,13 +307,4 @@ const getTrustLevelName = (level: number): string => {
   </div>
 </template>
 
-<style scoped>
-.user-profile :deep(a) {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.user-profile :deep(a:hover) {
-  text-decoration: underline;
-}
-</style>
+<style scoped src="./UserView.css"></style>

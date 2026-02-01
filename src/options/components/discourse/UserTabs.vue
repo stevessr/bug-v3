@@ -36,8 +36,4 @@ const tabs: { key: UserMainTab; label: string }[] = [
   </div>
 </template>
 
-<style scoped>
-.user-tabs :deep(button) {
-  line-height: 1.2;
-}
-</style>
+<style scoped src="./UserTabs.css"></style>

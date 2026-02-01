@@ -193,38 +193,4 @@ const getIconHref = (icon?: string | null) => {
   </div>
 </template>
 
-<style scoped>
-.sidebar-icon {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: rgba(148, 163, 184, 0.15);
-  flex-shrink: 0;
-}
-
-.sidebar-icon-img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-}
-
-.sidebar-emoji {
-  font-size: 12px;
-}
-
-.sidebar-icon-svg {
-  width: 12px;
-  height: 12px;
-  fill: currentColor;
-}
-
-.sidebar-icon-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  display: inline-block;
-}
-</style>
+<style scoped src="./Sidebar.css"></style>

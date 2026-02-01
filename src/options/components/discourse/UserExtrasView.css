@@ -1,0 +1,8 @@
+.user-extras :deep(a) {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.user-extras :deep(a:hover) {
+  text-decoration: underline;
+}

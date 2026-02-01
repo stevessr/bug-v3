@@ -18,16 +18,16 @@ import type {
   ActivityTabType,
   MessagesTabType
 } from './discourse/types'
-import DiscourseCategoryGrid from './discourse/DiscourseCategoryGrid.vue'
-import DiscourseIcon from './discourse/DiscourseIcon.vue'
-import DiscourseTopicList from './discourse/DiscourseTopicList.vue'
-import DiscourseTopicView from './discourse/DiscourseTopicView.vue'
-import DiscourseComposer from './discourse/DiscourseComposer.vue'
-import DiscourseUserView from './discourse/DiscourseUserView.vue'
-import DiscourseUserExtrasView from './discourse/DiscourseUserExtrasView.vue'
-import DiscourseSidebar from './discourse/DiscourseSidebar.vue'
-import DiscourseActivityView from './discourse/DiscourseActivityView.vue'
-import DiscourseMessagesView from './discourse/DiscourseMessagesView.vue'
+import CategoryGrid from './discourse/CategoryGrid.vue'
+import Icon from './discourse/Icon.vue'
+import TopicList from './discourse/TopicList.vue'
+import TopicView from './discourse/TopicView.vue'
+import Composer from './discourse/Composer.vue'
+import UserView from './discourse/UserView.vue'
+import UserExtrasView from './discourse/UserExtrasView.vue'
+import Sidebar from './discourse/Sidebar.vue'
+import ActivityView from './discourse/ActivityView.vue'
+import MessagesView from './discourse/MessagesView.vue'
 
 const {
   baseUrl,
@@ -375,7 +375,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DiscourseIcon />
+  <Icon />
   <div
     class="discourse-browser flex flex-col h-full min-h-0 border dark:border-gray-700 rounded-lg overflow-hidden"
   >
@@ -479,7 +479,7 @@ onUnmounted(() => {
           </div>
 
           <!-- Categories -->
-          <DiscourseCategoryGrid
+          <CategoryGrid
             :categories="activeTab.categories"
             :baseUrl="baseUrl"
             @click="handleCategoryClick"
@@ -488,7 +488,7 @@ onUnmounted(() => {
           <!-- Latest topics -->
           <div v-if="activeTab.topics.length > 0">
             <h3 class="text-lg font-semibold mb-3 dark:text-white">最新话题</h3>
-            <DiscourseTopicList
+            <TopicList
               :topics="activeTab.topics"
               :baseUrl="baseUrl"
               @click="handleTopicClick"
@@ -513,7 +513,7 @@ onUnmounted(() => {
 
         <!-- Sidebar -->
         <div class="w-64 flex-shrink-0 hidden lg:block">
-          <DiscourseSidebar
+          <Sidebar
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
@@ -534,7 +534,7 @@ onUnmounted(() => {
             </a-button>
           </div>
 
-          <DiscourseCategoryGrid
+          <CategoryGrid
             v-if="activeTab.categories.length > 0"
             :categories="activeTab.categories"
             :baseUrl="baseUrl"
@@ -542,7 +542,7 @@ onUnmounted(() => {
             @click="handleCategoryClick"
           />
 
-          <DiscourseTopicList
+          <TopicList
             :topics="activeTab.topics"
             :baseUrl="baseUrl"
             @click="handleTopicClick"
@@ -566,7 +566,7 @@ onUnmounted(() => {
 
         <!-- Sidebar -->
         <div class="w-64 flex-shrink-0 hidden lg:block">
-          <DiscourseSidebar
+          <Sidebar
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
@@ -577,7 +577,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Topic detail view -->
-      <DiscourseTopicView
+      <TopicView
         v-else-if="activeTab?.viewType === 'topic' && activeTab.currentTopic"
         :topic="activeTab.currentTopic"
         :baseUrl="baseUrl"
@@ -592,7 +592,7 @@ onUnmounted(() => {
       />
 
       <!-- User profile view -->
-      <DiscourseUserView
+      <UserView
         v-else-if="activeTab?.viewType === 'user' && activeTab.currentUser"
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
@@ -607,7 +607,7 @@ onUnmounted(() => {
         @switchMainTab="handleUserMainTabSwitch"
       />
 
-      <DiscourseUserExtrasView
+      <UserExtrasView
         v-else-if="
           (activeTab?.viewType === 'badges' ||
             activeTab?.viewType === 'followFeed' ||
@@ -628,7 +628,7 @@ onUnmounted(() => {
       />
 
       <!-- User activity view -->
-      <DiscourseActivityView
+      <ActivityView
         v-else-if="
           activeTab?.viewType === 'activity' && activeTab.currentUser && activeTab.activityState
         "
@@ -645,7 +645,7 @@ onUnmounted(() => {
       />
 
       <!-- User messages view -->
-      <DiscourseMessagesView
+      <MessagesView
         v-else-if="
           activeTab?.viewType === 'messages' && activeTab.currentUser && activeTab.messagesState
         "
@@ -674,7 +674,7 @@ onUnmounted(() => {
         <button class="floating-close" @click="handleClearReply">×</button>
       </div>
       <div class="floating-body">
-        <DiscourseComposer
+        <Composer
           mode="reply"
           :baseUrl="baseUrl"
           :topicId="activeTab.currentTopic.id"
@@ -699,7 +699,7 @@ onUnmounted(() => {
         <button class="floating-close" @click="toggleTopicComposer">×</button>
       </div>
       <div class="floating-body">
-        <DiscourseComposer
+        <Composer
           mode="topic"
           :baseUrl="baseUrl"
           :categories="activeTab?.categories || []"

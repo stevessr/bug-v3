@@ -1,0 +1,8 @@
+.user-profile :deep(a) {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.user-profile :deep(a:hover) {
+  text-decoration: underline;
+}
