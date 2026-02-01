@@ -17,6 +17,12 @@ const isInsideCarousel = (ancestors: Element[]) => {
   )
 }
 
+const isInsideImageGrid = (ancestors: Element[]) => {
+  return ancestors.some(
+    el => hasClass(el, 'd-image-grid') && !hasClass(el, 'd-image-grid--carousel')
+  )
+}
+
 const isInsideLightboxWrapper = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'lightbox-wrapper'))
 }
@@ -28,6 +34,7 @@ export const extractStandaloneImages = (root: Node, ctx: ParseContext) => {
     if (node.tagName !== 'img') return
     if (isInsideOnebox(ancestors)) return
     if (isInsideCarousel(ancestors)) return
+    if (isInsideImageGrid(ancestors)) return
     if (isInsideLightboxWrapper(ancestors)) return
 
     const src = getPropString(node, 'src')

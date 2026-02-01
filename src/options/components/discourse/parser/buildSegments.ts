@@ -3,14 +3,22 @@ import type { ParsedContent, LightboxImage } from '../types'
 export const buildSegments = (
   html: string,
   lightboxes: LightboxImage[],
-  carousels: LightboxImage[][]
+  carousels: LightboxImage[][],
+  imageGrids: LightboxImage[][][]
 ): ParsedContent['segments'] => {
-  const markers: Array<{ marker: string; type: 'lightbox' | 'carousel'; index: number }> = []
+  const markers: Array<{
+    marker: string
+    type: 'lightbox' | 'carousel' | 'image-grid'
+    index: number
+  }> = []
   lightboxes.forEach((_item, idx) => {
     markers.push({ marker: `__DISCOURSE_LIGHTBOX_${idx}__`, type: 'lightbox', index: idx })
   })
   carousels.forEach((_item, idx) => {
     markers.push({ marker: `__DISCOURSE_CAROUSEL_${idx}__`, type: 'carousel', index: idx })
+  })
+  imageGrids.forEach((_item, idx) => {
+    markers.push({ marker: `__DISCOURSE_IMAGE_GRID_${idx}__`, type: 'image-grid', index: idx })
   })
 
   const segments: ParsedContent['segments'] = []
@@ -40,9 +48,12 @@ export const buildSegments = (
     if (nextMarker.type === 'lightbox') {
       const image = lightboxes[nextMarker.index]
       if (image) segments.push({ type: 'lightbox', image })
-    } else {
+    } else if (nextMarker.type === 'carousel') {
       const items = carousels[nextMarker.index] || []
       if (items.length > 0) segments.push({ type: 'carousel', images: items })
+    } else {
+      const columns = imageGrids[nextMarker.index] || []
+      if (columns.length > 0) segments.push({ type: 'image-grid', columns })
     }
 
     cursor = nextIndex + nextMarker.marker.length

@@ -375,6 +375,29 @@ onUnmounted(() => {
                   />
                 </div>
               </a-carousel>
+              <div v-else-if="segment.type === 'image-grid'" class="post-image-grid">
+                <div
+                  v-for="(column, columnIndex) in segment.columns"
+                  :key="columnIndex"
+                  class="post-image-grid-column"
+                >
+                  <a-image
+                    v-for="(img, imgIndex) in column"
+                    :key="imgIndex"
+                    class="post-image-grid-image"
+                    :src="getLightboxThumb(img)"
+                    :preview="{ src: img.href }"
+                    :alt="img.alt || ''"
+                    :width="img.width"
+                    :height="img.height"
+                    :srcset="img.srcset"
+                    :data-base62-sha1="img.base62Sha1"
+                    :data-dominant-color="img.dominantColor"
+                    :loading="img.loading || 'lazy'"
+                    :style="img.style"
+                  />
+                </div>
+              </div>
               <a-image
                 v-else
                 :src="getLightboxThumb(segment.image)"
@@ -471,6 +494,29 @@ onUnmounted(() => {
 .post-content :deep(.post-inline-image) {
   display: block;
   margin: 0.5rem 0;
+}
+
+.post-content :deep(.post-image-grid) {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.post-content :deep(.post-image-grid-column) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.post-content :deep(.post-image-grid-image) {
+  width: 100%;
+}
+
+.post-content :deep(.post-image-grid-image .ant-image-img) {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
 }
 
 .post-content :deep(.post-carousel) {

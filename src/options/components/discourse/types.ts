@@ -161,6 +161,7 @@ export interface ParsedContent {
     | { type: 'html'; html: string }
     | { type: 'lightbox'; image: LightboxImage }
     | { type: 'carousel'; images: LightboxImage[] }
+    | { type: 'image-grid'; columns: LightboxImage[][] }
   >
 }
 

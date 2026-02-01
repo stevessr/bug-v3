@@ -2,29 +2,40 @@ import type { Node, Element } from 'hast'
 
 import { findFirst, getPropString, hasClass, isElement, isParent } from './astUtils'
 
-const isCarouselContainer = (node: Element) => {
-  // Only remove carousel containers, not regular image grids
-  if (hasClass(node, 'd-image-grid--carousel')) return true
-  if (getPropString(node, 'data-mode') === 'carousel') return true
-  // Only treat as carousel if it contains d-image-carousel
-  const carousel = findFirst(node, el => hasClass(el, 'd-image-carousel'))
-  return !!carousel
-}
-
 export const cleanupMediaNodes = (root: Node) => {
-  const walk = (node: Node) => {
+  const isInsideCarousel = (ancestors: Element[]) => {
+    return ancestors.some(
+      el =>
+        hasClass(el, 'd-image-carousel') ||
+        hasClass(el, 'd-image-grid--carousel') ||
+        getPropString(el, 'data-mode') === 'carousel' ||
+        !!findFirst(el, inner => hasClass(inner, 'd-image-carousel'))
+    )
+  }
+
+  const isInsideImageGrid = (ancestors: Element[]) => {
+    return ancestors.some(
+      el =>
+        hasClass(el, 'd-image-grid') &&
+        !hasClass(el, 'd-image-grid--carousel') &&
+        getPropString(el, 'data-mode') !== 'carousel'
+    )
+  }
+
+  const walk = (node: Node, ancestors: Element[]) => {
     if (!isParent(node)) return
     for (let i = 0; i < node.children.length; ) {
       const child = node.children[i] as Node
-      // Remove only carousel containers and lightbox-wrappers
-      // Don't remove regular d-image-grid (waterfall layout)
-      if (isElement(child) && (hasClass(child, 'lightbox-wrapper') || isCarouselContainer(child))) {
-        node.children.splice(i, 1)
-        continue
+      if (isElement(child) && hasClass(child, 'lightbox-wrapper')) {
+        if (!isInsideCarousel(ancestors) && !isInsideImageGrid(ancestors)) {
+          node.children.splice(i, 1)
+          continue
+        }
       }
-      walk(child)
+      const nextAncestors = isElement(child) ? [...ancestors, child] : ancestors
+      walk(child, nextAncestors)
       i += 1
     }
   }
-  walk(root)
+  walk(root, [])
 }

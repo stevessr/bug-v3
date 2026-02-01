@@ -5,6 +5,7 @@ export interface ParseContext {
   images: string[]
   lightboxes: LightboxImage[]
   carousels: LightboxImage[][]
+  imageGrids: LightboxImage[][][]
   seen: Set<string>
   stringify: (node: unknown) => string
 }
@@ -18,6 +19,7 @@ export const createParseContext = (
     images: [],
     lightboxes: [],
     carousels: [],
+    imageGrids: [],
     seen: new Set<string>(),
     stringify
   }
@@ -62,4 +64,3 @@ export const buildLightbox = (
     metaHtml: options.metaHtml
   }
 }
-

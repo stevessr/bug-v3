@@ -24,6 +24,16 @@ const isInsideCarousel = (ancestors: Element[]) => {
   )
 }
 
+const isInsideImageGrid = (ancestors: Element[]) => {
+  return ancestors.some(
+    el =>
+      hasClass(el, 'd-image-grid') &&
+      !hasClass(el, 'd-image-grid--carousel') &&
+      getPropString(el, 'data-mode') !== 'carousel' &&
+      !findFirst(el, inner => hasClass(inner, 'd-image-carousel'))
+  )
+}
+
 export const extractLightboxWrappers = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, parent, index, ancestors) => {
     if (!parent || index === null) return
@@ -31,6 +41,7 @@ export const extractLightboxWrappers = (root: Node, ctx: ParseContext) => {
     if (!hasClass(node, 'lightbox-wrapper')) return
     if (isInsideOnebox(ancestors)) return
     if (isInsideCarousel(ancestors)) return
+    if (isInsideImageGrid(ancestors)) return
 
     const anchor = findFirst(node, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
     const img = findFirst(node, el => el.tagName === 'img')

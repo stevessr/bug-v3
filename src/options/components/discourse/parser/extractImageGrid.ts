@@ -33,46 +33,53 @@ export const extractImageGrid = (root: Node, ctx: ParseContext) => {
     if (isInsideOnebox(ancestors)) return
     if (!isImageGrid(node)) return
 
-    // Extract lightbox wrappers from the grid
-    const lightboxWrappers = Array.from(node.children)
-      .filter((child): child is Element => isElement(child) && hasClass(child, 'd-image-grid-column'))
-      .flatMap(column => Array.from(column.children))
-      .filter((child): child is Element => isElement(child) && hasClass(child, 'lightbox-wrapper'))
+    const columns = Array.from(node.children).filter(
+      (child): child is Element => isElement(child) && hasClass(child, 'd-image-grid-column')
+    )
 
-    // Replace each lightbox-wrapper with a marker
-    lightboxWrappers.forEach(wrapper => {
-      const wrapperColumn = wrapper.parentNode as Element | null
-      if (!wrapperColumn) return
-      const wrapperIndex = wrapperColumn.children.indexOf(wrapper)
-      if (wrapperIndex === -1) return
+    const gridColumns = columns
+      .map(column => {
+        const wrappers = Array.from(column.children).filter(
+          (child): child is Element => isElement(child) && hasClass(child, 'lightbox-wrapper')
+        )
 
-      const anchor = findFirst(wrapper, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
-      const img = findFirst(wrapper, el => el.tagName === 'img')
-      const meta = findFirst(wrapper, el => hasClass(el, 'meta'))
+        const items = wrappers
+          .map(wrapper => {
+            const anchor = findFirst(wrapper, el => el.tagName === 'a' && hasClass(el, 'lightbox'))
+            const img = findFirst(wrapper, el => el.tagName === 'img')
+            const meta = findFirst(wrapper, el => hasClass(el, 'meta'))
 
-      const lightbox = buildLightbox(ctx, {
-        href: anchor ? getPropString(anchor, 'href') : img ? getPropString(img, 'src') : undefined,
-        downloadHref: anchor ? getPropString(anchor, 'data-download-href') : undefined,
-        title: anchor ? getPropString(anchor, 'title') : undefined,
-        thumbSrc: img ? getPropString(img, 'src') : undefined,
-        alt: img ? getPropString(img, 'alt') : undefined,
-        base62Sha1: img ? getPropString(img, 'data-base62-sha1') : undefined,
-        width: img ? getPropString(img, 'width') : undefined,
-        height: img ? getPropString(img, 'height') : undefined,
-        srcset: img ? getPropString(img, 'srcset') : undefined,
-        dominantColor: img ? getPropString(img, 'data-dominant-color') : undefined,
-        loading: img ? getPropString(img, 'loading') : undefined,
-        style: img ? getPropString(img, 'style') : undefined,
-        metaHtml: meta ? stringifyChildren(ctx, meta) : undefined
+            return buildLightbox(ctx, {
+              href: anchor
+                ? getPropString(anchor, 'href')
+                : img
+                  ? getPropString(img, 'src')
+                  : undefined,
+              downloadHref: anchor ? getPropString(anchor, 'data-download-href') : undefined,
+              title: anchor ? getPropString(anchor, 'title') : undefined,
+              thumbSrc: img ? getPropString(img, 'src') : undefined,
+              alt: img ? getPropString(img, 'alt') : undefined,
+              base62Sha1: img ? getPropString(img, 'data-base62-sha1') : undefined,
+              width: img ? getPropString(img, 'width') : undefined,
+              height: img ? getPropString(img, 'height') : undefined,
+              srcset: img ? getPropString(img, 'srcset') : undefined,
+              dominantColor: img ? getPropString(img, 'data-dominant-color') : undefined,
+              loading: img ? getPropString(img, 'loading') : undefined,
+              style: img ? getPropString(img, 'style') : undefined,
+              metaHtml: meta ? stringifyChildren(ctx, meta) : undefined
+            })
+          })
+          .filter(Boolean)
+
+        return items as NonNullable<(typeof items)[number]>[]
       })
-      if (!lightbox) return
+      .filter(column => column.length > 0)
 
-      const markerIndex = ctx.lightboxes.length
-      ctx.lightboxes.push(lightbox)
-      replaceNodeWithText(wrapperColumn as Parent, wrapperIndex, `__DISCOURSE_LIGHTBOX_${markerIndex}__`)
-    })
+    if (gridColumns.length === 0) return
 
-    // Don't descend into the grid's children anymore
+    const markerIndex = ctx.imageGrids.length
+    ctx.imageGrids.push(gridColumns)
+    replaceNodeWithText(parent as Parent, index, `__DISCOURSE_IMAGE_GRID_${markerIndex}__`)
     return false
   })
 }

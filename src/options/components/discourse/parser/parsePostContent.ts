@@ -7,6 +7,7 @@ import type { ParsedContent } from '../types'
 
 import { createParseContext } from './context'
 import { extractCarousels } from './extractCarousels'
+import { extractImageGrid } from './extractImageGrid'
 import { extractLightboxWrappers } from './extractLightboxWrappers'
 import { extractStandaloneImages } from './extractStandaloneImages'
 import { cleanupMediaNodes } from './cleanupMediaNodes'
@@ -32,6 +33,8 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   extractCarousels(tree, ctx)
 
+  extractImageGrid(tree, ctx)
+
   extractLightboxWrappers(tree, ctx)
 
   extractStandaloneImages(tree, ctx)
@@ -52,7 +55,7 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
     html.includes('__DISCOURSE_CAROUSEL_')
   )
 
-  const segments = buildSegments(html, ctx.lightboxes, ctx.carousels)
+  const segments = buildSegments(html, ctx.lightboxes, ctx.carousels, ctx.imageGrids)
 
   const carouselSegments = segments.filter(s => s.type === 'carousel').length
 
