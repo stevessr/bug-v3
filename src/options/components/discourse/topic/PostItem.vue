@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { message } from 'ant-design-vue'
+
 import { REACTIONS } from '../../../utils/linuxDoReaction'
 import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
@@ -37,6 +39,7 @@ const handleCopyLink = async () => {
   const url = `${props.baseUrl}/t/${props.topicId}/${props.post.post_number}`
   try {
     await navigator.clipboard.writeText(url)
+    message.success('链接已复制到剪贴板')
   } catch {
     const input = document.createElement('input')
     input.value = url
@@ -44,6 +47,7 @@ const handleCopyLink = async () => {
     input.select()
     document.execCommand('copy')
     document.body.removeChild(input)
+    message.success('链接已复制到剪贴板')
   }
 }
 
@@ -95,7 +99,9 @@ const handleContentNavigation = (url: string) => {
           · #{{ props.post.post_number }} · {{ formatTime(props.post.created_at) }}
         </div>
         <div v-if="props.post.reply_to_post_number" class="post-parent-row post-parent-inline">
-          <span v-if="props.post.reply_to_user?.username">回复 @{{ props.post.reply_to_user.username }}</span>
+          <span v-if="props.post.reply_to_user?.username">
+            回复 @{{ props.post.reply_to_user.username }}
+          </span>
           <span v-else>回复 #{{ props.post.reply_to_post_number }}</span>
         </div>
       </div>
@@ -115,68 +121,73 @@ const handleContentNavigation = (url: string) => {
     />
 
     <!-- Post footer -->
-    <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 post-actions">
-      <div class="reactions-list">
-        <button
-          v-for="item in REACTIONS"
-          :key="item.id"
-          class="reaction-item"
-          :class="{ active: props.isPostLiked(props.post, item.id) }"
-          :disabled="props.isLiking"
-          @click="handleToggleLike(item.id)"
-          :title="item.name"
-        >
-          <span v-if="item.emoji.startsWith('http')" class="emoji emoji-image">
-            <img :src="item.emoji" :alt="item.name" loading="lazy" />
-          </span>
-          <span v-else class="emoji">{{ item.emoji }}</span>
-          <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
-        </button>
-      </div>
-      <div class="ml-auto flex items-center gap-2">
-        <button
-          class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
-          title="将此帖子的链接复制到剪贴板"
-          type="button"
-          @click="handleCopyLink"
-        >
-          <svg
-            class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
-            width="1em"
-            height="1em"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
+    <div class="post-actions mt-3 text-xs text-gray-500">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <div class="reactions-list">
+            <button
+              v-for="item in REACTIONS"
+              :key="item.id"
+              class="reaction-item"
+              :class="{ active: props.isPostLiked(props.post, item.id) }"
+              :disabled="props.isLiking"
+              @click="handleToggleLike(item.id)"
+              :title="item.name"
+            >
+              <span v-if="item.emoji.startsWith('http')" class="emoji emoji-image">
+                <img :src="item.emoji" :alt="item.name" loading="lazy" />
+              </span>
+              <span v-else class="emoji">{{ item.emoji }}</span>
+              <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
+              title="将此帖子的链接复制到剪贴板"
+              type="button"
+              @click="handleCopyLink"
+            >
+              <svg
+                class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#link"></use>
+              </svg>
+            </button>
+            <button
+              class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
+              title="开始撰写对此帖子的回复"
+              :aria-label="`回复 @${props.post.username} 发布的帖子 #${props.post.post_number}`"
+              type="button"
+              @click="handleReplyClick"
+            >
+              <svg
+                class="fa d-icon d-icon-reply svg-icon fa-width-auto svg-string"
+                width="1em"
+                height="1em"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <use href="#reply"></use>
+              </svg>
+              <span class="d-button-label">回复</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <button
+            v-if="props.post.reply_count > 0"
+            class="post-action-btn post-replies-toggle"
+            @click="handleToggleReplies"
           >
-            <use href="#link"></use>
-          </svg>
-          <span aria-hidden="true">&ZeroWidthSpace;</span>
-        </button>
-        <button
-          class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
-          title="开始撰写对此帖子的回复"
-          :aria-label="`回复 @${props.post.username} 发布的帖子 #${props.post.post_number}`"
-          type="button"
-          @click="handleReplyClick"
-        >
-          <svg
-            class="fa d-icon d-icon-reply svg-icon fa-width-auto svg-string"
-            width="1em"
-            height="1em"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <use href="#reply"></use>
-          </svg>
-          <span class="d-button-label">回复</span>
-        </button>
-        <button
-          v-if="props.post.reply_count > 0"
-          class="post-action-btn post-replies-toggle"
-          @click="handleToggleReplies"
-        >
-          {{ props.post.reply_count }} 回复
-        </button>
-        <span v-if="props.post.like_count > 0">{{ props.post.like_count }} 赞</span>
+            {{ props.post.reply_count }} 回复
+          </button>
+          <span v-if="props.post.like_count > 0">{{ props.post.like_count }} 赞</span>
+        </div>
       </div>
     </div>
   </div>

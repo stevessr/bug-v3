@@ -130,3 +130,17 @@
 .post-parent-toggle:hover {
   color: #1d4ed8;
 }
+
+.btn-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-icon-text svg {
+  flex-shrink: 0;
+}
+
+.btn-icon-text .d-button-label {
+  white-space: nowrap;
+}
