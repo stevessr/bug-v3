@@ -108,17 +108,27 @@ const currentCategoryOption = computed(() => {
 })
 
 // Scroll event handler (infinite loading for all view types)
-const handleScroll = () => {
+const handleScroll = async () => {
   if (!activeTab.value || !contentAreaRef.value) return
 
   const el = contentAreaRef.value
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+  const viewType = activeTab.value.viewType
+
+  if (viewType === 'topic' && el.scrollTop < 200) {
+    const previousHeight = el.scrollHeight
+    const previousTop = el.scrollTop
+    await loadMorePosts('up')
+    await nextTick()
+    const nextHeight = el.scrollHeight
+    el.scrollTop = previousTop + (nextHeight - previousHeight)
+    return
+  }
 
   // Trigger load when 200px from bottom
   if (scrollBottom < 200) {
-    const viewType = activeTab.value.viewType
     if (viewType === 'topic') {
-      loadMorePosts()
+      loadMorePosts('down')
     } else if (viewType === 'home' || viewType === 'category') {
       loadMoreTopics()
     } else if (viewType === 'activity') {
@@ -129,6 +139,7 @@ const handleScroll = () => {
       loadMoreFollowFeed()
     }
   }
+
 }
 
 // Handle topic click

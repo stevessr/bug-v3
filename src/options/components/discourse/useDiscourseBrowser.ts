@@ -371,8 +371,8 @@ export function useDiscourseBrowser() {
   }
 
   // Load more posts (pagination)
-  async function loadMorePosts() {
-    await loadMorePostsRoute(activeTab, baseUrl, isLoadingMore)
+  async function loadMorePosts(direction: 'up' | 'down' = 'down') {
+    await loadMorePostsRoute(activeTab, baseUrl, isLoadingMore, direction)
   }
 
   // Load more topics (pagination for home/category)

@@ -9,7 +9,11 @@ export async function loadTopic(
   baseUrl: Ref<string>,
   targetPostNumber?: number | null
 ) {
-  const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
+  const hasTargetPost = typeof targetPostNumber === 'number' && targetPostNumber > 0
+  const endpoint = hasTargetPost
+    ? `${baseUrl.value}/t/${topicId}/${targetPostNumber}.json?track_visit=true&forceLoad=true`
+    : `${baseUrl.value}/t/${topicId}.json`
+  const result = await pageFetch<any>(endpoint)
   const data = extractData(result)
 
   if (data) {
@@ -24,7 +28,12 @@ export async function loadTopic(
     if (data.title) {
       tab.title = data.title
     }
-    if (targetPostNumber && tab.currentTopic) {
+    const hasTargetPostLoaded =
+      hasTargetPost &&
+      tab.currentTopic?.post_stream?.posts?.some(
+        (post: DiscoursePost) => post.post_number === targetPostNumber
+      )
+    if (hasTargetPost && tab.currentTopic && !hasTargetPostLoaded) {
       await ensurePostByNumberLoaded(tab, topicId, targetPostNumber, baseUrl)
     }
   } else {
@@ -68,26 +77,52 @@ async function ensurePostByNumberLoaded(
 export async function loadMorePosts(
   activeTab: ComputedRef<BrowserTab | undefined>,
   baseUrl: Ref<string>,
-  isLoadingMore: Ref<boolean>
+  isLoadingMore: Ref<boolean>,
+  direction: 'up' | 'down' = 'down'
 ) {
   const tab = activeTab.value
   if (!tab || !tab.currentTopic || isLoadingMore.value || !tab.hasMorePosts) return
 
   const stream = tab.currentTopic.post_stream?.stream || []
-  const unloadedIds = stream.filter((id: number) => !tab.loadedPostIds.has(id))
-
-  if (unloadedIds.length === 0) {
+  if (stream.length === 0) {
     tab.hasMorePosts = false
     return
   }
 
-  const nextBatch = unloadedIds.slice(0, 20)
+  const loadedIndices = stream
+    .map((id: number, index: number) => (tab.loadedPostIds.has(id) ? index : -1))
+    .filter(index => index >= 0)
+
+  if (loadedIndices.length === 0) {
+    tab.hasMorePosts = false
+    return
+  }
+
+  let nextBatch: number[] = []
+  if (direction === 'up') {
+    const firstLoaded = Math.min(...loadedIndices)
+    const candidates = stream
+      .slice(0, firstLoaded)
+      .filter((id: number) => !tab.loadedPostIds.has(id))
+    nextBatch = candidates.slice(-20)
+  } else {
+    const lastLoaded = Math.max(...loadedIndices)
+    const candidates = stream
+      .slice(lastLoaded + 1)
+      .filter((id: number) => !tab.loadedPostIds.has(id))
+    nextBatch = candidates.slice(0, 20)
+  }
+
+  if (nextBatch.length === 0) {
+    tab.hasMorePosts = stream.some((id: number) => !tab.loadedPostIds.has(id))
+    return
+  }
   isLoadingMore.value = true
 
   try {
     const topicId = tab.currentTopic.id
     const idsParam = nextBatch.map((id: number) => `post_ids[]=${id}`).join('&')
-    const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}`
+    const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}&include_suggested=false`
 
     const result = await pageFetch<any>(url)
     const data = extractData(result)
@@ -96,6 +131,9 @@ export async function loadMorePosts(
       const newPosts = data.post_stream.posts as DiscoursePost[]
       tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...newPosts]
       newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
+      tab.currentTopic.post_stream.posts.sort(
+        (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
+      )
       tab.hasMorePosts = stream.some((id: number) => !tab.loadedPostIds.has(id))
       if (tab.topicExtras) {
         if (!tab.currentTopic.suggested_topics && tab.topicExtras.suggested_topics) {
