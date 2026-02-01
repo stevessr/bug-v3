@@ -1,6 +1,7 @@
 export { handleAddToFavorites } from './handleAddToFavorites'
 export { handleLinuxDoAuthRequest } from './handleLinuxDoAuthRequest'
 export { handleLinuxDoUserRequest } from './handleLinuxDoUserRequest'
+export { handlePageFetchRequest } from './handlePageFetchRequest'
 export { handleLinuxDoPageFetchRequest } from './handleLinuxDoPageFetchRequest'
 export { handleLinuxDoUploadRequest } from './handleLinuxDoUploadRequest'
 export { handleProxyFetchRequest } from './handleProxyFetchRequest'

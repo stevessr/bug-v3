@@ -7,6 +7,7 @@ import {
   handleSyncSettings,
   handleLinuxDoAuthRequest,
   handleLinuxDoUserRequest,
+  handlePageFetchRequest,
   handleLinuxDoPageFetchRequest,
   handleLinuxDoUploadRequest,
   handleDownloadImage,
@@ -99,6 +100,14 @@ export function setupMessageListener() {
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing options for LINUX_DO_PAGE_FETCH' })
+                return false
+              }
+            case 'PAGE_FETCH':
+              if ('options' in typedMsg) {
+                handlePageFetchRequest((typedMsg as any).options, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing options for PAGE_FETCH' })
                 return false
               }
 

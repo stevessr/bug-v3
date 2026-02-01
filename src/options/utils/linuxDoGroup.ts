@@ -21,7 +21,7 @@ async function pageFetch<T>(
   return await new Promise((resolve, reject) => {
     chromeAPI.runtime.sendMessage(
       {
-        type: 'LINUX_DO_PAGE_FETCH',
+        type: 'PAGE_FETCH',
         options: {
           url,
           method: options?.method || 'GET',
