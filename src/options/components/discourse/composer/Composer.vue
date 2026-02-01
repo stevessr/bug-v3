@@ -6,10 +6,8 @@ import katex from 'katex'
 
 import type { DiscourseCategory } from '../types'
 import { createTopic, replyToTopic, searchTags } from '../actions'
-import { renderBBCode, parseEmojiShortcodeToHTML } from '../bbcode'
+import { renderBBCode } from '../bbcode'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
-
-import { useEmojiStore } from '@/stores/emojiStore'
 
 type ComposerMode = 'topic' | 'reply'
 type EditMode = 'edit' | 'preview' | 'split'
@@ -45,9 +43,6 @@ const errorMessage = ref('')
 const successMessage = ref('')
 let tagSearchTimer: number | null = null
 
-// Initialize emoji store for emoji shortcode support
-const emojiStore = useEmojiStore()
-
 watch(
   () => props.defaultCategoryId,
   value => {
@@ -55,6 +50,7 @@ watch(
   }
 )
 
+const showEditor = computed(() => editMode.value !== 'preview')
 const showPreview = computed(() => editMode.value !== 'edit')
 
 const getImageUrl = (url?: string | null) => {
@@ -115,20 +111,9 @@ const previewHtml = computed(() => {
 function renderBBCodeWithMath(input: string) {
   if (!input) return ''
 
-  // First, parse emoji shortcodes
-  const emojiBlocks: Array<{ name: string }> = []
-  let source = input.replace(
-    /(^|[^\\]):([a-zA-Z0-9_\u4e00-\u9fa5]+):($|[^\\])/g,
-    (_match, before, name, after) => {
-      const id = emojiBlocks.length
-      emojiBlocks.push({ name })
-      return `${before}@@EMOJI_${id}@@${after}`
-    }
-  )
-
   // Parse math blocks
   const mathBlocks: Array<{ tex: string; display: boolean }> = []
-  source = source.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
     const id = mathBlocks.length
     mathBlocks.push({ tex, display: true })
     return `@@MATH_BLOCK_${id}@@`
@@ -152,42 +137,16 @@ function renderBBCodeWithMath(input: string) {
     })
   })
 
-  // Replace emoji placeholders with HTML images
-  html = html.replace(/@@EMOJI_(\d+)@@/g, (_match, index) => {
-    const emoji = emojiBlocks[Number(index)]
-    if (!emoji) return ''
-    // Find emoji from store
-    const emojiData = emojiStore.groups
-      .flatMap(g => g.emojis || [])
-      .find(e => e.name === emoji.name)
-    if (emojiData) {
-      const style =
-        emojiData.width && emojiData.height
-          ? `width: ${emojiData.width * 0.3}px; height: ${emojiData.height * 0.3}px;`
-          : `max-width: 80px; max-height: 80px;`
-      return `<img src="${emojiData.url}" alt="${emoji.name}" style="${style}" class="emoji-inline" />`
-    }
-    return `:${emoji.name}:`
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path', 'img'],
+    ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
   })
-
-  return html
 }
 
 function renderMarkdown(input: string) {
   if (!input) return ''
-  // First, parse emoji shortcodes
-  const emojiBlocks: Array<{ name: string }> = []
-  let source = input.replace(
-    /(^|[^\\]):([a-zA-Z0-9_\u4e00-\u9fa5]+):($|[^\\])/g,
-    (_match, before, name, after) => {
-      const id = emojiBlocks.length
-      emojiBlocks.push({ name })
-      return `${before}@@EMOJI_${id}@@${after}`
-    }
-  )
-
   const blocks: Array<{ tex: string; display: boolean }> = []
-  source = source.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
     const id = blocks.length
     blocks.push({ tex, display: true })
     return `@@MATH_BLOCK_${id}@@`
@@ -206,38 +165,9 @@ function renderMarkdown(input: string) {
       throwOnError: false
     })
   })
-  // Replace emoji placeholders with HTML images
-  html = html.replace(/@@EMOJI_(\d+)@@/g, (_match, index) => {
-    const emoji = emojiBlocks[Number(index)]
-    if (!emoji) return ''
-    // Find emoji from store
-    const emojiData = emojiStore.groups
-      .flatMap(g => g.emojis || [])
-      .find(e => e.name === emoji.name)
-    if (emojiData) {
-      const style =
-        emojiData.width && emojiData.height
-          ? `width: ${emojiData.width * 0.3}px; height: ${emojiData.height * 0.3}px;`
-          : `max-width: 80px; max-height: 80px;`
-      return `<img src="${emojiData.url}" alt="${emoji.name}" style="${style}" class="emoji-inline" />`
-    }
-    return `:${emoji.name}:`
-  })
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: [
-      'math',
-      'semantics',
-      'mrow',
-      'mi',
-      'mn',
-      'mo',
-      'annotation',
-      'annotation-xml',
-      'svg',
-      'path',
-      'img'
-    ],
-    ADD_ATTR: ['class', 'style', 'src', 'alt']
+    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path', 'img'],
+    ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
   })
 }
 
@@ -446,8 +376,7 @@ watch(categoryId, () => {
         <ProseMirrorEditor v-model="raw" :inputFormat="inputFormat" />
         <div class="text-xs text-gray-500">
           <template v-if="inputFormat === 'bbcode'">
-            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
-            图片地址 [/img] [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
+            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img] 图片地址 [/img] [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
           </template>
           <template v-else>
             Markdown: **粗体** *斜体* ~~删除~~ `代码` [链接](url) ![图片](url)
