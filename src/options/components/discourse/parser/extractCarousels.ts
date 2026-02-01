@@ -40,11 +40,13 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
     if (isInsideQuote(ancestors)) return
 
     const isCarousel = isCarouselContainer(node)
-    //console.log('[extractCarousels] Node check:', {
+    /*
+    console.log('[extractCarousels] Node check:', {
       tagName: node.tagName,
       classes: getClassList(node),
       isCarousel
     })
+    */
 
     if (!isCarousel) return
 
