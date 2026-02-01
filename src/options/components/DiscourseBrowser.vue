@@ -293,7 +293,9 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
   state.dragging = true
   state.startX = point.clientX
   state.startY = point.clientY
-  const rect = (event.currentTarget as HTMLElement | null)?.closest('.floating-composer')?.getBoundingClientRect()
+  const rect = (event.currentTarget as HTMLElement | null)
+    ?.closest('.floating-composer')
+    ?.getBoundingClientRect()
   if (rect) {
     state.startLeft = rect.left
     state.startTop = rect.top
@@ -469,14 +471,14 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-6">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
-        <a-button size="small" @click="toggleTopicComposer">
-          {{ showTopicComposer ? '收起' : '发帖' }}
-        </a-button>
-      </div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
+            <a-button size="small" @click="toggleTopicComposer">
+              {{ showTopicComposer ? '收起' : '发帖' }}
+            </a-button>
+          </div>
 
-      <!-- Categories -->
+          <!-- Categories -->
           <DiscourseCategoryGrid
             :categories="activeTab.categories"
             :baseUrl="baseUrl"
@@ -525,12 +527,12 @@ onUnmounted(() => {
       <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
         <!-- Main content -->
         <div class="flex-1 min-w-0 space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
-        <a-button size="small" @click="toggleTopicComposer">
-          {{ showTopicComposer ? '收起' : '发帖' }}
-        </a-button>
-      </div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
+            <a-button size="small" @click="toggleTopicComposer">
+              {{ showTopicComposer ? '收起' : '发帖' }}
+            </a-button>
+          </div>
 
           <DiscourseCategoryGrid
             v-if="activeTab.categories.length > 0"

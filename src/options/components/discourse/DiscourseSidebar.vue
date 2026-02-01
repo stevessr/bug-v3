@@ -103,11 +103,7 @@ const getIconHref = (icon?: string | null) => {
               <svg v-else-if="cat.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
                 <use :href="getIconHref(cat.icon)" />
               </svg>
-              <span
-                v-else
-                class="sidebar-icon-dot"
-                :style="{ backgroundColor: `#${cat.color}` }"
-              />
+              <span v-else class="sidebar-icon-dot" :style="{ backgroundColor: `#${cat.color}` }" />
             </div>
             <span class="text-sm dark:text-gray-300 truncate flex-1">{{ cat.name }}</span>
             <span class="text-xs text-gray-400">{{ cat.topic_count }}</span>

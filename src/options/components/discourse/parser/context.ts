@@ -50,7 +50,9 @@ export const buildLightbox = (
   addImage(ctx, href)
   return {
     href,
-    downloadHref: options.downloadHref ? resolveUrl(ctx, options.downloadHref) : options.downloadHref,
+    downloadHref: options.downloadHref
+      ? resolveUrl(ctx, options.downloadHref)
+      : options.downloadHref,
     title: options.title,
     thumbSrc,
     alt: options.alt,
