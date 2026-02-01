@@ -20,14 +20,22 @@ const buildChatMessageUrl = (baseUrl: string, channelId: number, params?: URLSea
 
 const normalizeChatChannels = (data: any): ChatChannel[] => {
   if (!data) return []
-  const direct = Array.isArray(data.direct_message_channels) ? data.direct_message_channels : []
-  const publicChannels = Array.isArray(data.public_channels)
+  const directRaw = Array.isArray(data.direct_message_channels) ? data.direct_message_channels : []
+  const publicRaw = Array.isArray(data.public_channels)
     ? data.public_channels
     : Array.isArray(data.channels)
       ? data.channels
       : Array.isArray(data.chat_channels)
         ? data.chat_channels
         : []
+  const direct = directRaw.map(channel => ({
+    ...(channel as ChatChannel),
+    channelType: 'direct' as const
+  }))
+  const publicChannels = publicRaw.map(channel => ({
+    ...(channel as ChatChannel),
+    channelType: 'public' as const
+  }))
   const channels: ChatChannel[] = [...publicChannels, ...direct]
   const tracking = data.tracking?.channel_tracking || {}
   channels.forEach(channel => {

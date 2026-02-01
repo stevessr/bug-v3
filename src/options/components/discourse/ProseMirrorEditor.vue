@@ -9,11 +9,28 @@ import {
   chainCommands,
   exitCode,
   selectParentNode,
-  lift
+  lift,
+  wrapIn,
+  setBlockType
 } from 'prosemirror-commands'
 import { baseKeymap } from 'prosemirror-commands'
 import { history, undo, redo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
+import {
+  BoldOutlined,
+  ItalicOutlined,
+  UnderlineOutlined,
+  StrikethroughOutlined,
+  LinkOutlined,
+  PictureOutlined,
+  CodeOutlined,
+  RollbackOutlined,
+  RedoOutlined,
+  OrderedListOutlined,
+  UnorderedListOutlined,
+  BlockOutlined,
+  BgColorsOutlined
+} from '@ant-design/icons-vue'
 
 interface Props {
   modelValue: string
@@ -30,17 +47,111 @@ const editorContainer = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
 let isInternalUpdate = false
 
+// Toolbar functions
+const toggleBold = () => {
+  if (!editorView) return
+  toggleMark(basicSchema.marks.strong)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const toggleItalic = () => {
+  if (!editorView) return
+  toggleMark(basicSchema.marks.em)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const toggleUnderline = () => {
+  if (!editorView) return
+  toggleMark(basicSchema.marks.underline)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const toggleStrike = () => {
+  if (!editorView) return
+  toggleMark(basicSchema.marks.strike)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const insertCode = () => {
+  if (!editorView) return
+  toggleMark(basicSchema.marks.code)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const insertLink = () => {
+  if (!editorView) return
+  const url = prompt('请输入链接地址：', 'https://')
+  if (url) {
+    const tr = editorView.state.tr.addMark(
+      editorView.state.selection.from,
+      editorView.state.selection.to,
+      basicSchema.marks.link.create({ href: url })
+    )
+    editorView.dispatch(tr)
+    editorView.focus()
+  }
+}
+
+const insertImage = () => {
+  if (!editorView) return
+  const url = prompt('请输入图片地址：', 'https://')
+  if (url) {
+    const tr = editorView.state.tr.replaceSelectionWith(
+      basicSchema.schema.nodes.image.create({ src: url })
+    )
+    editorView.dispatch(tr)
+    editorView.focus()
+  }
+}
+
+const insertBlockquote = () => {
+  if (!editorView) return
+  wrapIn(basicSchema.schema.nodes.blockquote)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const insertOrderedList = () => {
+  if (!editorView) return
+  wrapIn(basicSchema.schema.nodes.ordered_list)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const insertUnorderedList = () => {
+  if (!editorView) return
+  wrapIn(basicSchema.schema.nodes.bullet_list)(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const insertHeading = () => {
+  if (!editorView) return
+  setBlockType(basicSchema.schema.nodes.heading, { level: 1 })(
+    editorView.state,
+    editorView.dispatch
+  )
+  editorView.focus()
+}
+
+const undoAction = () => {
+  if (!editorView) return
+  undo(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
+const redoAction = () => {
+  if (!editorView) return
+  redo(editorView.state, editorView.dispatch)
+  editorView.focus()
+}
+
 function createEditorState(content: string): EditorState {
   // Ensure content exists and is a string
   const textContent = (content || '').toString()
-  
+
   // Create doc node
   let docNode
   if (textContent) {
     // Create paragraph with text content
-    const paragraphNode = basicSchema.node('paragraph', null, [
-      basicSchema.text(textContent)
-    ])
+    const paragraphNode = basicSchema.node('paragraph', null, [basicSchema.text(textContent)])
     docNode = basicSchema.node('doc', null, [paragraphNode])
   } else {
     // Create empty paragraph without text node
@@ -86,10 +197,10 @@ onMounted(() => {
       },
       dispatchTransaction: transaction => {
         if (!editorView) return
-        
+
         const newState = editorView.state.apply(transaction)
         editorView.updateState(newState)
-        
+
         // Emit update only on document changes
         if (transaction.docChanged && !isInternalUpdate) {
           const content = newState.doc.textContent
@@ -97,7 +208,7 @@ onMounted(() => {
         }
       }
     })
-    
+
     console.log('ProseMirror editor initialized successfully')
   } catch (error) {
     console.error('Failed to initialize ProseMirror editor:', error)
@@ -113,9 +224,9 @@ onUnmounted(() => {
 
 watch(
   () => props.modelValue,
-  (newValue) => {
+  newValue => {
     if (!editorView || isInternalUpdate) return
-    
+
     const currentContent = editorView.state.doc.textContent
     if (newValue === currentContent) return
 
@@ -125,27 +236,21 @@ watch(
     try {
       const textContent = (newValue || '').toString()
       let newDoc
-      
+
       if (textContent) {
         newDoc = basicSchema.node('doc', null, [
           basicSchema.node('paragraph', null, [basicSchema.text(textContent)])
         ])
       } else {
-        newDoc = basicSchema.node('doc', null, [
-          basicSchema.node('paragraph')
-        ])
+        newDoc = basicSchema.node('doc', null, [basicSchema.node('paragraph')])
       }
-      
-      const tr = editorView.state.tr.replaceWith(
-        0,
-        editorView.state.doc.content.size,
-        newDoc
-      )
+
+      const tr = editorView.state.tr.replaceWith(0, editorView.state.doc.content.size, newDoc)
       editorView.dispatch(tr)
     } catch (error) {
       console.error('Failed to update editor:', error)
     }
-    
+
     setTimeout(() => {
       isInternalUpdate = false
     }, 0)
@@ -155,129 +260,61 @@ watch(
 </script>
 
 <template>
-  <div ref="editorContainer" class="prosemirror-editor"></div>
+  <div class="prosemirror-editor-wrapper">
+    <div class="prosemirror-toolbar">
+      <div class="toolbar-group">
+        <button class="toolbar-btn" @click="undoAction" title="撤销 (Ctrl+Z)">
+          <RollbackOutlined />
+        </button>
+        <button class="toolbar-btn" @click="redoAction" title="重做 (Ctrl+Y)">
+          <RedoOutlined />
+        </button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" @click="toggleBold" title="粗体 (Ctrl+B)">
+          <BoldOutlined />
+        </button>
+        <button class="toolbar-btn" @click="toggleItalic" title="斜体 (Ctrl+I)">
+          <ItalicOutlined />
+        </button>
+        <button class="toolbar-btn" @click="toggleUnderline" title="下划线 (Ctrl+U)">
+          <UnderlineOutlined />
+        </button>
+        <button class="toolbar-btn" @click="toggleStrike" title="删除线 (Ctrl+Alt+S)">
+          <StrikethroughOutlined />
+        </button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" @click="insertLink" title="插入链接">
+          <LinkOutlined />
+        </button>
+        <button class="toolbar-btn" @click="insertImage" title="插入图片">
+          <PictureOutlined />
+        </button>
+        <button class="toolbar-btn" @click="insertCode" title="行内代码">
+          <CodeOutlined />
+        </button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" @click="insertBlockquote" title="引用">
+          <BlockOutlined />
+        </button>
+        <button class="toolbar-btn" @click="insertOrderedList" title="有序列表">
+          <OrderedListOutlined />
+        </button>
+        <button class="toolbar-btn" @click="insertUnorderedList" title="无序列表">
+          <UnorderedListOutlined />
+        </button>
+        <button class="toolbar-btn" @click="insertHeading" title="标题">
+          <BgColorsOutlined />
+        </button>
+      </div>
+    </div>
+    <div ref="editorContainer" class="prosemirror-editor"></div>
+  </div>
 </template>
 
-<style scoped>
-.prosemirror-editor {
-  min-height: 200px;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  background-color: #fff;
-  outline: none;
-  cursor: text;
-}
-
-.prosemirror-editor :deep(.ProseMirror) {
-  outline: none;
-  min-height: 180px;
-  cursor: text;
-}
-
-.prosemirror-editor :deep(.ProseMirror-focused) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.prosemirror-editor :deep(.ProseMirror p) {
-  margin: 0.5em 0;
-  line-height: 1.5;
-}
-
-.prosemirror-editor :deep(.ProseMirror p:first-child) {
-  margin-top: 0;
-}
-
-.prosemirror-editor :deep(.ProseMirror p:last-child) {
-  margin-bottom: 0;
-}
-
-.prosemirror-editor :deep(.ProseMirror blockquote) {
-  border-left: 3px solid #4b5563;
-  padding-left: 1em;
-  margin: 1em 0;
-  color: #6b7280;
-}
-
-.prosemirror-editor :deep(.ProseMirror pre) {
-  background: #111827;
-  color: #e5e7eb;
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  overflow-x: auto;
-}
-
-.prosemirror-editor :deep(.ProseMirror code) {
-  background: #1f2937;
-  padding: 0.1rem 0.25rem;
-  border-radius: 0.25rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 0.875em;
-}
-
-.prosemirror-editor :deep(.ProseMirror pre code) {
-  background: transparent;
-  padding: 0;
-}
-
-.prosemirror-editor :deep(.ProseMirror img) {
-  max-width: 100%;
-  border-radius: 0.25rem;
-}
-
-.prosemirror-editor :deep(.ProseMirror ul),
-.prosemirror-editor :deep(.ProseMirror ol) {
-  padding-left: 1.5rem;
-  margin: 0.5em 0;
-}
-
-.prosemirror-editor :deep(.ProseMirror li) {
-  margin: 0.25em 0;
-}
-
-.prosemirror-editor :deep(.ProseMirror a) {
-  color: #3b82f6;
-  text-decoration: underline;
-}
-
-.prosemirror-editor :deep(.ProseMirror a:hover) {
-  color: #2563eb;
-}
-
-.prosemirror-editor :deep(.ProseMirror-selection) {
-  background: #3b82f6;
-}
-
-@media (prefers-color-scheme: dark) {
-  .prosemirror-editor {
-    background-color: #1f2937;
-    border-color: #374151;
-  }
-
-  .prosemirror-editor :deep(.ProseMirror-focused) {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
-  }
-
-  .prosemirror-editor :deep(.ProseMirror blockquote) {
-    color: #9ca3af;
-  }
-
-  .prosemirror-editor :deep(.ProseMirror pre) {
-    background: #111827;
-  }
-
-  .prosemirror-editor :deep(.ProseMirror code) {
-    background: #374151;
-  }
-
-  .prosemirror-editor :deep(.ProseMirror a) {
-    color: #60a5fa;
-  }
-
-  .prosemirror-editor :deep(.ProseMirror a:hover) {
-    color: #3b82f6;
-  }
-}
-</style>
+<style scoped src="./css/ProseMirrorEditor.css"></style>

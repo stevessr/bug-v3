@@ -21,12 +21,35 @@ const getChannelLastTime = (channel: ChatChannel) => {
   return raw ? new Date(raw).getTime() : 0
 }
 
-const sortedChannels = computed(() => {
-  return [...props.channels].sort((a, b) => {
-    const aTime = getChannelLastTime(a)
-    const bTime = getChannelLastTime(b)
-    return bTime - aTime
+const sortChannels = (channels: ChatChannel[]) =>
+  [...channels].sort((a, b) => getChannelLastTime(b) - getChannelLastTime(a))
+
+const groupedChannels = computed(() => {
+  const starred: ChatChannel[] = []
+  const publicChannels: ChatChannel[] = []
+  const directChannels: ChatChannel[] = []
+
+  props.channels.forEach(channel => {
+    const isStarred = !!channel.current_user_membership?.starred
+    const isDirect =
+      channel.channelType === 'direct' ||
+      channel.chatable_type === 'DirectMessage' ||
+      !!channel.chatable?.users?.length
+
+    if (isStarred) {
+      starred.push(channel)
+    } else if (isDirect) {
+      directChannels.push(channel)
+    } else {
+      publicChannels.push(channel)
+    }
   })
+
+  return {
+    starred: sortChannels(starred),
+    public: sortChannels(publicChannels),
+    direct: sortChannels(directChannels)
+  }
 })
 
 const getChannelTitle = (channel: ChatChannel) => {
@@ -66,31 +89,92 @@ const handleSelect = (channel: ChatChannel) => {
 <template>
   <div class="chat-channel-list">
     <div v-if="loading" class="chat-channel-loading">加载频道中...</div>
-    <button
-      v-for="channel in sortedChannels"
-      :key="channel.id"
-      class="chat-channel-item"
-      :class="{ active: channel.id === activeChannelId }"
-      @click="handleSelect(channel)"
-    >
-      <div class="chat-channel-avatar">
-        <img
-          v-if="getChannelAvatar(channel)"
-          :src="getChannelAvatar(channel)"
-          :alt="getChannelTitle(channel)"
-        />
-        <span v-else>#</span>
-      </div>
-      <div class="chat-channel-info">
-        <div class="chat-channel-title">{{ getChannelTitle(channel) }}</div>
-        <div class="chat-channel-meta">
-          <span>{{ getChannelTimeLabel(channel) }}</span>
+    <template v-if="groupedChannels.starred.length">
+      <div class="chat-channel-section">收藏</div>
+      <button
+        v-for="channel in groupedChannels.starred"
+        :key="`starred-${channel.id}`"
+        class="chat-channel-item"
+        :class="{ active: channel.id === activeChannelId }"
+        @click="handleSelect(channel)"
+      >
+        <div class="chat-channel-avatar">
+          <img
+            v-if="getChannelAvatar(channel)"
+            :src="getChannelAvatar(channel)"
+            :alt="getChannelTitle(channel)"
+          />
+          <span v-else>#</span>
         </div>
-      </div>
-      <div v-if="getUnreadCount(channel)" class="chat-channel-unread">
-        {{ getUnreadCount(channel) }}
-      </div>
-    </button>
+        <div class="chat-channel-info">
+          <div class="chat-channel-title">{{ getChannelTitle(channel) }}</div>
+          <div class="chat-channel-meta">
+            <span>{{ getChannelTimeLabel(channel) }}</span>
+          </div>
+        </div>
+        <div v-if="getUnreadCount(channel)" class="chat-channel-unread">
+          {{ getUnreadCount(channel) }}
+        </div>
+      </button>
+    </template>
+
+    <template v-if="groupedChannels.public.length">
+      <div class="chat-channel-section">频道</div>
+      <button
+        v-for="channel in groupedChannels.public"
+        :key="`public-${channel.id}`"
+        class="chat-channel-item"
+        :class="{ active: channel.id === activeChannelId }"
+        @click="handleSelect(channel)"
+      >
+        <div class="chat-channel-avatar">
+          <img
+            v-if="getChannelAvatar(channel)"
+            :src="getChannelAvatar(channel)"
+            :alt="getChannelTitle(channel)"
+          />
+          <span v-else>#</span>
+        </div>
+        <div class="chat-channel-info">
+          <div class="chat-channel-title">{{ getChannelTitle(channel) }}</div>
+          <div class="chat-channel-meta">
+            <span>{{ getChannelTimeLabel(channel) }}</span>
+          </div>
+        </div>
+        <div v-if="getUnreadCount(channel)" class="chat-channel-unread">
+          {{ getUnreadCount(channel) }}
+        </div>
+      </button>
+    </template>
+
+    <template v-if="groupedChannels.direct.length">
+      <div class="chat-channel-section">直接消息</div>
+      <button
+        v-for="channel in groupedChannels.direct"
+        :key="`direct-${channel.id}`"
+        class="chat-channel-item"
+        :class="{ active: channel.id === activeChannelId }"
+        @click="handleSelect(channel)"
+      >
+        <div class="chat-channel-avatar">
+          <img
+            v-if="getChannelAvatar(channel)"
+            :src="getChannelAvatar(channel)"
+            :alt="getChannelTitle(channel)"
+          />
+          <span v-else>#</span>
+        </div>
+        <div class="chat-channel-info">
+          <div class="chat-channel-title">{{ getChannelTitle(channel) }}</div>
+          <div class="chat-channel-meta">
+            <span>{{ getChannelTimeLabel(channel) }}</span>
+          </div>
+        </div>
+        <div v-if="getUnreadCount(channel)" class="chat-channel-unread">
+          {{ getUnreadCount(channel) }}
+        </div>
+      </button>
+    </template>
   </div>
 </template>
 

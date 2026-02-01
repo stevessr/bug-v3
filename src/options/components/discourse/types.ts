@@ -177,12 +177,16 @@ export interface ChatChannelMembership {
   chat_channel_id?: number
   last_read_message_id?: number
   unread_count?: number
+  starred?: boolean
+  muted?: boolean
+  notification_level?: string
 }
 
 export interface ChatChannel {
   id: number
   title?: string
   unicode_title?: string
+  channelType?: 'public' | 'direct'
   slug?: string
   description?: string
   chatable_type?: string
