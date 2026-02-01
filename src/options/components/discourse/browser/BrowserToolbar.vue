@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import {
-  ReloadOutlined,
-  HomeOutlined,
-  LeftOutlined,
-  RightOutlined
-} from '@ant-design/icons-vue'
-
 import type { BrowserTab } from '../types'
 
 const props = defineProps<{

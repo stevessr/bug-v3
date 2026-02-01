@@ -16,21 +16,6 @@ import {
 import { baseKeymap } from 'prosemirror-commands'
 import { history, undo, redo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
-import {
-  BoldOutlined,
-  ItalicOutlined,
-  UnderlineOutlined,
-  StrikethroughOutlined,
-  LinkOutlined,
-  PictureOutlined,
-  CodeOutlined,
-  RollbackOutlined,
-  RedoOutlined,
-  OrderedListOutlined,
-  UnorderedListOutlined,
-  BlockOutlined,
-  BgColorsOutlined
-} from '@ant-design/icons-vue'
 
 interface Props {
   modelValue: string
