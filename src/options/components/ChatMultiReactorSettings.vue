@@ -316,7 +316,11 @@ const fetchEmojis = async () => {
       throw new Error(`HTTP ${result.status}: Failed to fetch emojis`)
     }
 
-    const data = result.data
+    const data = result.data.data as DiscourseEmojisResponse
+
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid emoji data format')
+    }
 
     // 扁平化表情列表
     const allEmojis: DiscourseEmoji[] = []
