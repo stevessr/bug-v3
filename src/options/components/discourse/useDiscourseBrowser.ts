@@ -98,7 +98,9 @@ export function useDiscourseBrowser() {
       followFeedPage: 0,
       followFeedHasMore: false,
       targetPostNumber: null,
-      topicExtras: null
+      topicExtras: null,
+      lastTimingSentAt: undefined,
+      lastTimingTopicId: undefined
     }
     tabs.value.push(newTab)
     activeTabId.value = id

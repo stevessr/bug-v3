@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 
 import type { BrowserTab, DiscoursePost, DiscourseTopicDetail } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { sendReadTimings } from '../utils/readTimings'
 
 export async function loadTopic(
   tab: BrowserTab,
@@ -28,6 +29,11 @@ export async function loadTopic(
     if (data.title) {
       tab.title = data.title
     }
+
+    if (tab.currentTopic?.post_stream?.posts?.length) {
+      void sendReadTimings(tab, tab.currentTopic.id, baseUrl.value, tab.currentTopic.post_stream.posts)
+    }
+
     const hasTargetPostLoaded =
       hasTargetPost &&
       tab.currentTopic?.post_stream?.posts?.some(
@@ -97,6 +103,7 @@ async function ensurePostByNumberLoaded(
         (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
       )
       posts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
+      void sendReadTimings(tab, topicId, baseUrl.value, posts)
     }
   } catch (e) {
     console.warn('[DiscourseBrowser] ensurePostByNumberLoaded error:', e)
@@ -172,6 +179,8 @@ export async function loadMorePosts(
           tab.currentTopic.related_topics = tab.topicExtras.related_topics
         }
       }
+
+      void sendReadTimings(tab, topicId, baseUrl.value, newPosts)
     }
   } catch (e) {
     console.error('[DiscourseBrowser] loadMorePosts error:', e)

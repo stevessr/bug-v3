@@ -40,6 +40,8 @@ export interface BrowserTab {
     suggested_topics?: SuggestedTopic[]
     related_topics?: SuggestedTopic[]
   } | null
+  lastTimingSentAt?: number
+  lastTimingTopicId?: number
 }
 
 export type ViewType =
@@ -81,6 +83,8 @@ export interface DiscourseTopic {
   }>
   unread?: number
   new_posts?: number
+  unread_posts?: number
+  last_read_post_number?: number
   allowed_user_count?: number
 }
 
@@ -118,6 +122,7 @@ export interface DiscoursePost {
   reply_count: number
   like_count: number
   name?: string
+  read?: boolean
 }
 
 export interface SuggestedTopic {
@@ -132,6 +137,10 @@ export interface SuggestedTopic {
   created_at: string
   last_posted_at: string
   category_id: number
+  unread?: number
+  new_posts?: number
+  unread_posts?: number
+  last_read_post_number?: number
 }
 
 export interface DiscourseTopicDetail {
