@@ -65,7 +65,11 @@ export function generateId(): string {
 export function getAvatarUrl(template: string, baseUrl: string, size = 45): string {
   if (!template) return ''
   const url = template.replace('{size}', String(size))
-  return url.startsWith('http') ? url : `${baseUrl}${url}`
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`
+  if (fullUrl.includes('/user_avatar/')) {
+    return fullUrl.replace(/\.(png|jpg|jpeg|webp)(\?.*)?$/i, '.gif$2')
+  }
+  return fullUrl
 }
 
 // Format time

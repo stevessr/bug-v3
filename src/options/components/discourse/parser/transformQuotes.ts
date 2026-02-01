@@ -1,6 +1,6 @@
 import type { Element, Node, Parent, Properties } from 'hast'
 
-import { buildLightbox, ParseContext } from './context'
+import { buildLightbox, ParseContext, resolveUrl } from './context'
 import {
   findAll,
   findFirst,
@@ -230,6 +230,39 @@ export const transformQuotes = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, _parent, _index, ancestors) => {
     if (!isElement(node)) return
     if (!hasClass(node, 'quote')) return
+
+    const title = findFirst(node, el => hasClass(el, 'title'))
+    if (title) {
+      const anchors = findAll(title, el => el.tagName === 'a')
+      anchors.forEach(anchor => {
+        const href = getPropString(anchor, 'href')
+        if (href && !href.startsWith('http')) {
+          anchor.properties = {
+            ...(anchor.properties || {}),
+            href: resolveUrl(ctx, href)
+          }
+        }
+      })
+
+      const avatars = findAll(title, el => el.tagName === 'img' && hasClass(el, 'avatar'))
+      avatars.forEach(img => {
+        const src = getPropString(img, 'src')
+        if (!src) return
+        const full = resolveUrl(ctx, src)
+        if (full.includes('/user_avatar/')) {
+          const gifUrl = full.replace(/\.(png|jpg|jpeg|webp)(\?.*)?$/i, '.gif$2')
+          img.properties = {
+            ...(img.properties || {}),
+            src: gifUrl
+          }
+        } else if (!src.startsWith('http')) {
+          img.properties = {
+            ...(img.properties || {}),
+            src: full
+          }
+        }
+      })
+    }
 
     const blockquotes = findAll(node, el => el.tagName === 'blockquote')
     for (const block of blockquotes) {
