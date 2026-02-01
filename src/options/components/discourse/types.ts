@@ -42,12 +42,14 @@ export interface BrowserTab {
   } | null
   lastTimingSentAt?: number
   lastTimingTopicId?: number
+  chatState: ChatState | null
 }
 
 export type ViewType =
   | 'home'
   | 'category'
   | 'topic'
+  | 'chat'
   | 'user'
   | 'activity'
   | 'messages'
@@ -168,6 +170,56 @@ export interface DiscourseTopicDetail {
   }
   suggested_topics?: SuggestedTopic[]
   related_topics?: SuggestedTopic[]
+}
+
+export interface ChatChannelMembership {
+  id?: number
+  chat_channel_id?: number
+  last_read_message_id?: number
+  unread_count?: number
+}
+
+export interface ChatChannel {
+  id: number
+  title?: string
+  slug?: string
+  description?: string
+  chatable_type?: string
+  chatable_id?: number
+  status?: string
+  last_message_sent_at?: string
+  last_message_id?: number
+  last_message?: {
+    id?: number
+    cooked?: string
+    message?: string
+  }
+  direct_message_users?: DiscourseUser[]
+  current_user_membership?: ChatChannelMembership
+}
+
+export interface ChatMessage {
+  id: number
+  message?: string
+  cooked?: string
+  created_at: string
+  user_id?: number
+  username?: string
+  name?: string
+  avatar_template?: string
+  user?: DiscourseUser
+}
+
+export interface ChatState {
+  channels: ChatChannel[]
+  activeChannelId: number | null
+  messagesByChannel: Record<number, ChatMessage[]>
+  hasMoreByChannel: Record<number, boolean>
+  beforeMessageIdByChannel: Record<number, number | null>
+  loadingChannels: boolean
+  loadingMessages: boolean
+  sendingMessage: boolean
+  errorMessage: string
 }
 
 export interface ParsedContent {

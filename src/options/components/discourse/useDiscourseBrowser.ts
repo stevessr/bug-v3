@@ -28,6 +28,7 @@ import {
   loadMoreFollowFeed as loadMoreFollowFeedRoute
 } from './routes/user'
 import { loadSessionUsername } from './routes/session'
+import { loadChat as loadChatRoute, loadChatMessages, sendChatMessage } from './routes/chat'
 
 export function useDiscourseBrowser() {
   // Base URL
@@ -100,7 +101,8 @@ export function useDiscourseBrowser() {
       targetPostNumber: null,
       topicExtras: null,
       lastTimingSentAt: undefined,
-      lastTimingTopicId: undefined
+      lastTimingTopicId: undefined,
+      chatState: null
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -187,6 +189,15 @@ export function useDiscourseBrowser() {
         tab.targetPostNumber = postNumber
         await loadTopic(tab, topicId, postNumber)
         tab.viewType = 'topic'
+      } else if (pathname.startsWith('/chat')) {
+        await ensureSessionUser()
+        const parts = pathname.split('/').filter(Boolean)
+        const lastPart = parts[parts.length - 1]
+        const channelId = lastPart ? parseInt(lastPart) : NaN
+        const targetChannelId = Number.isNaN(channelId) ? null : channelId
+        await loadChat(tab, targetChannelId)
+        tab.title = '聊天'
+        tab.viewType = 'chat'
       } else if (pathname.startsWith('/u/')) {
         await ensureSessionUser()
         const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
@@ -282,6 +293,10 @@ export function useDiscourseBrowser() {
     await loadTopicRoute(tab, topicId, baseUrl, postNumber)
   }
 
+  async function loadChat(tab: BrowserTab, targetChannelId?: number | null) {
+    await loadChatRoute(tab, baseUrl, users, targetChannelId)
+  }
+
   // Load user profile
   async function loadUser(tab: BrowserTab, username: string) {
     await loadUserRoute(tab, username, baseUrl, users)
@@ -370,6 +385,39 @@ export function useDiscourseBrowser() {
   // Open user messages
   function openUserMessages(username: string) {
     navigateTo(`${baseUrl.value}/u/${username}/messages`)
+  }
+
+  function openChat() {
+    navigateTo(`${baseUrl.value}/chat`)
+  }
+
+  function openChatChannel(channel: { id: number; slug?: string }) {
+    const slug = channel.slug ? `/${channel.slug}` : ''
+    navigateTo(`${baseUrl.value}/chat/channel${slug}/${channel.id}`)
+  }
+
+  async function selectChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.activeChannelId = channelId
+    if (!tab.chatState.messagesByChannel[channelId]) {
+      await loadChatMessages(tab, baseUrl, users, channelId, true)
+    }
+  }
+
+  async function loadMoreChatMessagesForChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    if (tab.chatState.loadingMessages) return
+    const hasMore = tab.chatState.hasMoreByChannel[channelId]
+    if (hasMore === false) return
+    await loadChatMessages(tab, baseUrl, users, channelId, false)
+  }
+
+  async function sendChat(channelId: number, message: string) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    await sendChatMessage(tab, baseUrl, channelId, message)
   }
 
   // Load more posts (pagination)
@@ -527,6 +575,8 @@ export function useDiscourseBrowser() {
     openUserFollowFeed,
     openUserFollowing,
     openUserFollowers,
+    openChat,
+    openChatChannel,
     openQuote,
     loadMorePosts,
     loadMoreTopics,
@@ -534,6 +584,9 @@ export function useDiscourseBrowser() {
     loadMoreActivity,
     switchMessagesTab,
     loadMoreMessages,
-    loadMoreFollowFeed
+    loadMoreFollowFeed,
+    selectChatChannel,
+    loadMoreChatMessagesForChannel,
+    sendChat
   }
 }

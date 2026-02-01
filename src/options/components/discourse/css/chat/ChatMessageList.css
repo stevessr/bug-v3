@@ -1,0 +1,26 @@
+.chat-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  min-height: 320px;
+}
+
+.dark .chat-message-list {
+  background: #0b1220;
+  border-color: #334155;
+}
+
+.chat-load-more {
+  align-self: center;
+  font-size: 12px;
+  color: #64748b;
+  background: transparent;
+}
+
+.chat-load-more:hover {
+  color: #1d4ed8;
+}

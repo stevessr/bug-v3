@@ -1,0 +1,45 @@
+.chat-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.dark .chat-composer {
+  background: #0b1220;
+  border-color: #334155;
+}
+
+.chat-composer-input {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  resize: none;
+  background: #f8fafc;
+}
+
+.dark .chat-composer-input {
+  background: #111827;
+  border-color: #1f2937;
+  color: #e2e8f0;
+}
+
+.chat-composer-send {
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+
+.chat-composer-send:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}

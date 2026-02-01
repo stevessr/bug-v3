@@ -21,6 +21,7 @@ import ActivityView from './discourse/user/ActivityView.vue'
 import MessagesView from './discourse/user/MessagesView.vue'
 import BrowserToolbar from './discourse/browser/BrowserToolbar.vue'
 import BrowserTabs from './discourse/browser/BrowserTabs.vue'
+import ChatView from './discourse/chat/ChatView.vue'
 
 const {
   baseUrl,
@@ -39,6 +40,7 @@ const {
   refresh,
   goHome,
   updateBaseUrl,
+  navigateTo,
   openTopic,
   openCategory,
   openInNewTab,
@@ -50,6 +52,7 @@ const {
   openUserFollowFeed,
   openUserFollowing,
   openUserFollowers,
+  openChat,
   openQuote,
   loadMorePosts,
   loadMoreTopics,
@@ -57,7 +60,10 @@ const {
   loadMoreActivity,
   switchMessagesTab,
   loadMoreMessages,
-  loadMoreFollowFeed
+  loadMoreFollowFeed,
+  selectChatChannel,
+  loadMoreChatMessagesForChannel,
+  sendChat
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -137,6 +143,8 @@ const handleScroll = async () => {
       loadMoreMessages()
     } else if (viewType === 'followFeed') {
       loadMoreFollowFeed()
+    } else if (viewType === 'chat') {
+      // chat list handles its own pagination
     }
   }
 
@@ -208,6 +216,22 @@ const handleOpenUserActivity = (username: string) => {
 // Handle open user messages
 const handleOpenUserMessages = (username: string) => {
   openUserMessages(username)
+}
+
+const handleOpenChat = () => {
+  openChat()
+}
+
+const handleSelectChatChannel = (channel: { id: number; slug?: string }) => {
+  selectChatChannel(channel.id)
+}
+
+const handleLoadMoreChatMessages = (channelId: number) => {
+  loadMoreChatMessagesForChannel(channelId)
+}
+
+const handleSendChatMessage = (payload: { channelId: number; message: string }) => {
+  sendChat(payload.channelId, payload.message)
 }
 
 const handleUserMainTabSwitch = (
@@ -441,9 +465,12 @@ onUnmounted(() => {
         <div class="flex-1 min-w-0 space-y-6">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
-            <a-button size="small" @click="toggleTopicComposer">
-              {{ showTopicComposer ? '收起' : '发帖' }}
-            </a-button>
+            <div class="flex items-center gap-2">
+              <a-button size="small" @click="toggleTopicComposer">
+                {{ showTopicComposer ? '收起' : '发帖' }}
+              </a-button>
+              <a-button size="small" @click="handleOpenChat">聊天</a-button>
+            </div>
           </div>
 
           <!-- Categories -->
@@ -543,6 +570,18 @@ onUnmounted(() => {
           />
         </div>
       </div>
+
+      <!-- Chat view -->
+      <ChatView
+        v-else-if="activeTab?.viewType === 'chat' && activeTab.chatState"
+        :chatState="activeTab.chatState"
+        :baseUrl="baseUrl"
+        :currentUsername="currentUsername"
+        @selectChannel="handleSelectChatChannel"
+        @loadMore="handleLoadMoreChatMessages"
+        @sendMessage="handleSendChatMessage"
+        @navigate="handleContentNavigation"
+      />
 
       <!-- Topic detail view -->
       <TopicView
