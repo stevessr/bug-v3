@@ -14,8 +14,15 @@
 }
 
 .post-content :deep(.post-inline-image-wrapper) {
-  display: block;
+  display: inline-block;
   margin: 0.5rem 0;
+  max-width: 100%;
+}
+
+.post-content :deep(.post-inline-image-wrapper .ant-image-img) {
+  width: auto;
+  max-width: 100%;
+  height: auto;
 }
 
 .post-content :deep(.post-image-grid) {
