@@ -121,10 +121,9 @@
 }
 
 .post-content :deep(blockquote) {
-  border-left: 3px solid #3b82f6;
-  padding-left: 1rem;
   margin-left: 0;
-  color: #6b7280;
+  margin-right: 0;
+  padding: 0.75em;
 }
 
 .post-content :deep(.spoiled) {
@@ -168,24 +167,33 @@
 
 /* Quote styles */
 .post-content :deep(aside.quote) {
-  border-left: 3px solid #94a3b8;
-  background: #f7f2e3;
-  padding: 0.75rem 1rem;
-  margin: 0.75rem 0;
+  margin-top: 1em;
+  margin-bottom: 1em;
   border-radius: 6px;
-}
-
-:global(.dark) .post-content :deep(aside.quote) {
-  background: #1f2937;
 }
 
 .post-content :deep(aside.quote .title) {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: start;
   gap: 0.5rem;
+  color: var(--primary-high-or-secondary-low, #6b7280);
+  padding: 0.8em 0.8em 0 0.8em;
+  border-left: 5px solid var(--primary-300, #93c5fd);
+  background-color: var(--blend-primary-secondary-5, #f8fafc);
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
   font-size: 0.85rem;
-  margin-bottom: 0.5rem;
+}
+
+.post-content :deep(aside.quote .title[data-can-toggle-quote]) {
+  cursor: pointer;
+}
+
+:global(.dark) .post-content :deep(aside.quote .title) {
+  color: #cbd5f5;
+  background-color: #1f2937;
+  border-left-color: #64748b;
 }
 
 .post-content :deep(aside.quote .title .avatar) {
@@ -195,10 +203,12 @@
 }
 
 .post-content :deep(aside.quote .quote-title__text-content) {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0 0.5rem;
   flex-wrap: wrap;
+  min-width: 0;
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
@@ -212,6 +222,7 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.8rem;
+  align-self: center;
 }
 
 .post-content :deep(aside.quote .badge-category) {
@@ -231,22 +242,36 @@
 
 .post-content :deep(aside.quote blockquote) {
   display: block;
-  margin: 0.5rem 0 0 0;
+  margin-top: 0;
+  padding: 0.75em 0.8em 0.8em 0.8em;
+  border-left: 5px solid var(--primary-300, #93c5fd);
+  background-color: var(--blend-primary-secondary-5, #f8fafc);
   color: #4b5563;
 }
 
 :global(.dark) .post-content :deep(aside.quote blockquote) {
   color: #d1d5db;
+  background-color: #1f2937;
+  border-left-color: #64748b;
 }
 
 .post-content :deep(aside.quote .quote-controls) {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  order: 2;
+  min-height: 24px;
   cursor: pointer;
   transition: opacity 0.15s ease;
+  color: var(--primary-low-mid-or-secondary-high, #94a3b8);
 }
 
 .post-content :deep(aside.quote .quote-controls:hover) {
   opacity: 0.8;
+}
+
+.post-content :deep(aside.quote .quote-controls a) {
+  margin-left: 0.3em;
 }
 
 .post-content :deep(aside.quote .quote-toggle) {
