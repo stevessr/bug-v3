@@ -36,6 +36,29 @@ export async function loadTopic(
     if (hasTargetPost && tab.currentTopic && !hasTargetPostLoaded) {
       await ensurePostByNumberLoaded(tab, topicId, targetPostNumber, baseUrl)
     }
+
+    if (!tab.topicExtras?.suggested_topics && !tab.topicExtras?.related_topics) {
+      try {
+        const extrasResult = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
+        const extrasData = extractData(extrasResult)
+        if (extrasData) {
+          tab.topicExtras = {
+            suggested_topics: extrasData.suggested_topics,
+            related_topics: extrasData.related_topics
+          }
+          if (tab.currentTopic) {
+            if (!tab.currentTopic.suggested_topics && extrasData.suggested_topics) {
+              tab.currentTopic.suggested_topics = extrasData.suggested_topics
+            }
+            if (!tab.currentTopic.related_topics && extrasData.related_topics) {
+              tab.currentTopic.related_topics = extrasData.related_topics
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[DiscourseBrowser] load topic extras failed:', e)
+      }
+    }
   } else {
     tab.currentTopic = null
     tab.loadedPostIds = new Set()
