@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { REACTIONS } from '../../../utils/linuxDoReaction'
-
 import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
 import PostContent from './PostContent.vue'
 
 const props = defineProps<{
@@ -17,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'openUser', username: string): void
   (e: 'replyTo', payload: { postNumber: number; username: string }): void
+  (e: 'toggleReplies', post: DiscoursePost): void
   (e: 'toggleLike', post: DiscoursePost, reactionId: string): void
 }>()
 
@@ -30,6 +31,10 @@ const handleReplyClick = () => {
 
 const handleToggleLike = (reactionId: string) => {
   emit('toggleLike', props.post, reactionId)
+}
+
+const handleToggleReplies = () => {
+  emit('toggleReplies', props.post)
 }
 </script>
 
@@ -87,7 +92,13 @@ const handleToggleLike = (reactionId: string) => {
       </div>
       <button class="post-action-btn" @click="handleReplyClick">回复</button>
       <span v-if="props.post.like_count > 0">{{ props.post.like_count }} 赞</span>
-      <span v-if="props.post.reply_count > 0">{{ props.post.reply_count }} 回复</span>
+      <button
+        v-if="props.post.reply_count > 0"
+        class="post-action-btn post-replies-toggle"
+        @click="handleToggleReplies"
+      >
+        {{ props.post.reply_count }} 回复
+      </button>
     </div>
   </div>
 </template>

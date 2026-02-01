@@ -1,0 +1,16 @@
+.post-reply-item {
+  padding: 0.75rem 0 0.5rem;
+}
+
+.post-reply-item + .post-reply-item {
+  margin-top: 0.75rem;
+}
+
+.post-reply-item .post-replies-toggle {
+  color: #6b7280;
+  transition: color 0.15s ease;
+}
+
+.post-reply-item .post-replies-toggle:hover {
+  color: #3b82f6;
+}

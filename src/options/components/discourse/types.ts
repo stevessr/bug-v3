@@ -123,6 +123,13 @@ export interface DiscoursePost {
   like_count: number
   name?: string
   read?: boolean
+  reply_to_post_number?: number | null
+  reply_to_user?: {
+    id?: number
+    username?: string
+    name?: string
+    avatar_template?: string
+  }
 }
 
 export interface SuggestedTopic {

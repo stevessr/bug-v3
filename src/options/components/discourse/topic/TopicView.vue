@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, shallowRef } from 'vue'
 
 import type { DiscourseTopicDetail, DiscoursePost, ParsedContent, SuggestedTopic } from '../types'
 import { parsePostContent, pageFetch, extractData } from '../utils'
 import { togglePostLike } from '../actions'
+
 import TopicHeader from './TopicHeader.vue'
 import PostItem from './PostItem.vue'
+import PostRepliesTree from './PostRepliesTree.vue'
 import TopicList from './TopicList.vue'
 
 const props = defineProps<{
@@ -27,6 +29,9 @@ const emit = defineEmits<{
 const postsListRef = ref<HTMLElement | null>(null)
 const likedPostIds = ref<Set<number>>(new Set())
 const likingPostIds = ref<Set<number>>(new Set())
+const expandedReplies = shallowRef<Set<number>>(new Set())
+const replyMap = shallowRef<Map<number, DiscoursePost[]>>(new Map())
+const replyParsedCache = new Map<number, ParsedContent>()
 
 // Parse posts and cache results
 const parsedPosts = computed(() => {
@@ -41,6 +46,70 @@ const parsedPosts = computed(() => {
 
 const getParsedPost = (postId: number): ParsedContent => {
   return parsedPosts.value.get(postId) || { html: '', images: [], segments: [] }
+}
+
+const getParsedReply = (post: DiscoursePost): ParsedContent => {
+  const cached = replyParsedCache.get(post.id)
+  if (cached) return cached
+  const parsed = parsePostContent(post.cooked, props.baseUrl)
+  replyParsedCache.set(post.id, parsed)
+  return parsed
+}
+
+const getRepliesForPost = (postNumber: number): DiscoursePost[] => {
+  return replyMap.value.get(postNumber) || []
+}
+
+const isRepliesExpanded = (postNumber: number) => {
+  return expandedReplies.value.has(postNumber)
+}
+
+const fetchRepliesForPost = async (post: DiscoursePost) => {
+  if (!props.topic?.id) return
+  const postNumber = post.post_number
+  const localReplies =
+    props.topic.post_stream?.posts?.filter(p => p.reply_to_post_number === postNumber) || []
+
+  let replies = [...localReplies]
+
+  if (post.reply_count && replies.length < post.reply_count) {
+    try {
+      const result = await pageFetch<any>(
+        `${props.baseUrl}/t/${props.topic.id}/${postNumber}.json`
+      )
+      const data = extractData(result)
+      const fetched = (data?.post_stream?.posts || []).filter(
+        (p: DiscoursePost) => p.reply_to_post_number === postNumber
+      )
+      const seen = new Set(replies.map(p => p.id))
+      fetched.forEach((p: DiscoursePost) => {
+        if (!seen.has(p.id)) {
+          replies.push(p)
+          seen.add(p.id)
+        }
+      })
+    } catch (error) {
+      console.warn('[DiscourseBrowser] fetch replies failed:', error)
+    }
+  }
+
+  replyMap.value = new Map(replyMap.value)
+  replyMap.value.set(postNumber, replies)
+}
+
+const handleToggleReplies = async (post: DiscoursePost) => {
+  const postNumber = post.post_number
+  const next = new Set(expandedReplies.value)
+  if (next.has(postNumber)) {
+    next.delete(postNumber)
+    expandedReplies.value = next
+    return
+  }
+  next.add(postNumber)
+  expandedReplies.value = next
+  if (!replyMap.value.has(postNumber)) {
+    await fetchRepliesForPost(post)
+  }
 }
 
 const handleSuggestedClick = (topic: SuggestedTopic) => {
@@ -275,19 +344,31 @@ onUnmounted(() => {
 
     <!-- Posts list -->
     <div v-if="topic.post_stream?.posts" ref="postsListRef" class="posts-list space-y-4">
-      <PostItem
-        v-for="post in topic.post_stream.posts"
-        :key="post.id"
-        :post="post"
-        :baseUrl="baseUrl"
-        :parsed="getParsedPost(post.id)"
-        :isPostLiked="isPostLiked"
-        :getReactionCount="getReactionCount"
-        :isLiking="likingPostIds.has(post.id)"
-        @openUser="handleUserClick"
-        @replyTo="handleReplyClick"
-        @toggleLike="toggleLike"
-      />
+      <template v-for="post in topic.post_stream.posts" :key="post.id">
+        <PostItem
+          :post="post"
+          :baseUrl="baseUrl"
+          :parsed="getParsedPost(post.id)"
+          :isPostLiked="isPostLiked"
+          :getReactionCount="getReactionCount"
+          :isLiking="likingPostIds.has(post.id)"
+          @openUser="handleUserClick"
+          @replyTo="handleReplyClick"
+          @toggleLike="toggleLike"
+          @toggleReplies="handleToggleReplies"
+        />
+        <div v-if="isRepliesExpanded(post.post_number)" class="pl-6 mt-3 space-y-3">
+          <PostRepliesTree
+            :posts="getRepliesForPost(post.post_number)"
+            :baseUrl="baseUrl"
+            :getParsed="getParsedReply"
+            :getReplies="getRepliesForPost"
+            :isExpanded="isRepliesExpanded"
+            @openUser="handleUserClick"
+            @toggleReplies="handleToggleReplies"
+          />
+        </div>
+      </template>
     </div>
     <div v-else class="text-center text-gray-500 py-8">加载帖子中...</div>
 

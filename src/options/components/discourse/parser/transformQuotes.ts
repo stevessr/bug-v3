@@ -226,6 +226,29 @@ const transformMediaInContainer = (root: Parent, ctx: ParseContext, ancestors: E
   }
 }
 
+// Convert full URL to internal path if it's same-site
+const toInternalUrl = (ctx: ParseContext, url?: string | null): string | null => {
+  if (!url) return null
+  if (!ctx.baseUrl) return url
+
+  try {
+    // Parse the URL
+    const urlObj = new URL(url)
+    const baseUrlObj = new URL(ctx.baseUrl)
+
+    // If same origin, return pathname
+    if (urlObj.origin === baseUrlObj.origin) {
+      return urlObj.pathname + urlObj.search + urlObj.hash
+    }
+
+    // Different origin, return original URL
+    return url
+  } catch {
+    // Invalid URL, return as-is
+    return url
+  }
+}
+
 export const transformQuotes = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, _parent, _index, ancestors) => {
     if (!isElement(node)) return
@@ -236,10 +259,14 @@ export const transformQuotes = (root: Node, ctx: ParseContext) => {
       const anchors = findAll(title, el => el.tagName === 'a')
       anchors.forEach(anchor => {
         const href = getPropString(anchor, 'href')
-        if (href && !href.startsWith('http')) {
+        if (!href) return
+
+        // Convert to internal URL if same-site
+        const internalUrl = toInternalUrl(ctx, href)
+        if (internalUrl !== null && internalUrl !== href) {
           anchor.properties = {
             ...(anchor.properties || {}),
-            href: resolveUrl(ctx, href)
+            href: internalUrl
           }
         }
       })
