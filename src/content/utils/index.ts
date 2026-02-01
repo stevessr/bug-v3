@@ -13,7 +13,6 @@ export * from './core'
 export { initializeEmojiFeature } from './init'
 export { findAllToolbars, injectButton } from './injector'
 export { initOneClickAdd } from './oneClickAdd'
-export { Uninject } from './Uninject'
 
 // Upload utilities
 export * from './upload'

@@ -4,6 +4,7 @@
  */
 
 import type { Platform } from './platformDetector'
+import { requestSettingFromBackground } from './requestSetting'
 
 import { createLogger } from '@/utils/logger'
 
@@ -11,6 +12,38 @@ const log = createLogger('PlatformLoader')
 
 // Track loaded platforms to avoid duplicate loading
 const loadedPlatforms = new Set<Platform>()
+
+/**
+ * 检查设置并初始化 X 平台功能
+ */
+async function initXIfEnabled(): Promise<void> {
+  try {
+    const val = await requestSettingFromBackground('enableXcomExtraSelectors')
+    const enabled = val === null || val === undefined || val === true
+
+    if (val === null || val === undefined) {
+      log.info('enableXcomExtraSelectors unavailable; defaulting to enabled for X injection')
+    } else {
+      log.info('Fetched enableXcomExtraSelectors from background:', val)
+    }
+
+    log.info('X init decision - enabled:', enabled)
+
+    if (enabled) {
+      try {
+        const { initX } = await import('../../x/init')
+        initX()
+        log.info('X module initialized')
+      } catch (innerErr) {
+        log.error('initX threw an error during invocation', innerErr)
+      }
+    } else {
+      log.info('Skipping X init: enableXcomExtraSelectors disabled in settings')
+    }
+  } catch (err) {
+    log.error('initX check failed', err)
+  }
+}
 
 /**
  * 动态加载并初始化平台模块
@@ -58,7 +91,6 @@ export async function loadPlatformModule(platform: Platform): Promise<void> {
       case 'x':
         {
           // X (Twitter) 需要检查设置
-          const { initXIfEnabled } = await import('../Uninject')
           await initXIfEnabled()
           log.info('X module loaded and initialized')
         }
