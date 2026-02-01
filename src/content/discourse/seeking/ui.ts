@@ -376,8 +376,11 @@ export function getActionIcon(actionType: any): string {
   if (actionType === 4) return ACTION_ICONS.post
   if (actionType === 1) return ACTION_ICONS.like
   if (typeof actionType === 'string') {
-    if (REACTION_ICONS[actionType as keyof typeof REACTION_ICONS])
-      return `<img src="${CONFIG.HOST}${REACTION_ICONS[actionType as keyof typeof REACTION_ICONS]}" class="action-emoji" alt=":${actionType}:">`
+    if (REACTION_ICONS[actionType as keyof typeof REACTION_ICONS]) {
+      const iconPath = REACTION_ICONS[actionType as keyof typeof REACTION_ICONS]
+      const fullUrl = iconPath.startsWith('http') ? iconPath : CONFIG.HOST + iconPath
+      return `<img src="${fullUrl}" class="action-emoji" alt=":${actionType}:">`
+    }
     return `<img src="${CONFIG.HOST}/images/emoji/twemoji/${actionType}.png?v=15" class="action-emoji" alt=":${actionType}:">`
   }
   return ACTION_ICONS.reply

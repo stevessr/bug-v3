@@ -110,7 +110,10 @@ const handleContentNavigation = (url: string) => {
           @click="handleToggleLike(item.id)"
           :title="item.name"
         >
-          <span class="emoji">{{ item.emoji }}</span>
+          <span v-if="item.emoji.startsWith('http')" class="emoji emoji-image">
+            <img :src="item.emoji" :alt="item.name" loading="lazy" />
+          </span>
+          <span v-else class="emoji">{{ item.emoji }}</span>
           <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
         </button>
       </div>

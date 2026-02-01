@@ -107,3 +107,51 @@
   border-radius: 999px;
   display: inline-block;
 }
+
+/* Layout transition for composer-body */
+.layout-enter-active,
+.layout-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.layout-enter-from {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.layout-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* Panel transition for editor and preview panels */
+.panel-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.panel-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  overflow: hidden;
+}
+
+.panel-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  overflow: hidden;
+}
+
+/* Smooth grid layout transitions */
+.composer-body {
+  transition: grid-template-columns 0.3s ease-in-out;
+}
+
+.composer-body.md\:grid-cols-2 {
+  transition: grid-template-columns 0.3s ease-in-out;
+}

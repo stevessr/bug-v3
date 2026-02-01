@@ -73,6 +73,15 @@
   width: 16px;
   height: 16px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reactions-list .reaction-item .emoji-image img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .reactions-list .reaction-item .count {

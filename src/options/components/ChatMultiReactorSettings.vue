@@ -435,11 +435,17 @@ watch(
             <a-input-number v-model:value="reactionCount" :min="1" :max="100" class="w-full" />
           </div>
 
-          <div class="w-40">
+          <div class="w-48">
             <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">表情</div>
             <a-select v-model:value="reactionType" class="w-full">
               <a-select-option v-for="r in REACTIONS" :key="r.id" :value="r.id">
-                {{ r.name }}
+                <div class="flex items-center gap-2">
+                  <span v-if="r.emoji.startsWith('http')" class="inline-flex">
+                    <img :src="r.emoji" :alt="r.name" class="w-5 h-5 object-contain" />
+                  </span>
+                  <span v-else class="text-base">{{ r.emoji }}</span>
+                  <span>{{ r.name }}</span>
+                </div>
               </a-select-option>
             </a-select>
           </div>
