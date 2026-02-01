@@ -14,6 +14,15 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.39.0
         version: 0.39.0
+      '@bbob/core':
+        specifier: ^4.3.1
+        version: 4.3.1
+      '@bbob/html':
+        specifier: ^4.3.1
+        version: 4.3.1
+      '@bbob/parser':
+        specifier: ^4.3.1
+        version: 4.3.1
       ant-design-vue:
         specifier: ^4.2.6
         version: 4.2.6(vue@3.5.26(typescript@5.9.3))
@@ -209,6 +218,21 @@ packages:
   '@babel/types@7.28.5':
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
+
+  '@bbob/core@4.3.1':
+    resolution: {integrity: sha512-qNS5wNY2oJROV5CQ2e29e9dBz4ZuSO7JcciBXM2yDHvKFUYl+J4o8DxOsugce6z2cFpGz6F4J7vJN7X+6ujWiQ==}
+
+  '@bbob/html@4.3.1':
+    resolution: {integrity: sha512-W1qFvBZwhpGkZBNfeRpUFsoF492BlfNmgdh5iczg7B/PDULdOPH5lPLtT/6ZNpyx/xo6/DBssl9YtEO/bm15hw==}
+
+  '@bbob/parser@4.3.1':
+    resolution: {integrity: sha512-BqDo8PDLcVLhFvOMdLmeaWk5qqD8E1bEdvzSJQuJC/U1XFs1tMC4lwZ4oPBFmZCeCLNsYFawqjP/S5MDdr7/Tg==}
+
+  '@bbob/plugin-helper@4.3.1':
+    resolution: {integrity: sha512-0gyhW5sU270iCBvaRO1jYDTs1oGHu913yB9tqxPO9zT5OIDhu47PwensdJ7EuZwgYKEyQ4zZZ+1jvDzkubjdyQ==}
+
+  '@bbob/types@4.3.1':
+    resolution: {integrity: sha512-TXxFPfKvZVH/sR0mfn5I99bEFmbnAzIoqFBxG1htRiKyJUx7Yb/ZNS/OsQD1mIsR6+srDqXFDaWbDgVudTTjvQ==}
 
   '@ctrl/tinycolor@3.6.1':
     resolution: {integrity: sha512-SITSV6aIXsuVNV3f3O0f2n/cgyEDWoSqtZMYiAmcsYHydcKrOz3gUxB/iXd/Qf08+IZX4KpgNbvUdMBmWz+kcA==}
@@ -2631,6 +2655,29 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@bbob/core@4.3.1':
+    dependencies:
+      '@bbob/parser': 4.3.1
+      '@bbob/plugin-helper': 4.3.1
+      '@bbob/types': 4.3.1
+
+  '@bbob/html@4.3.1':
+    dependencies:
+      '@bbob/core': 4.3.1
+      '@bbob/plugin-helper': 4.3.1
+      '@bbob/types': 4.3.1
+
+  '@bbob/parser@4.3.1':
+    dependencies:
+      '@bbob/plugin-helper': 4.3.1
+      '@bbob/types': 4.3.1
+
+  '@bbob/plugin-helper@4.3.1':
+    dependencies:
+      '@bbob/types': 4.3.1
+
+  '@bbob/types@4.3.1': {}
 
   '@ctrl/tinycolor@3.6.1': {}
 

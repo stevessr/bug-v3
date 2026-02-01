@@ -461,14 +461,8 @@ onUnmounted(() => {
             :getParsed="getParsedReply"
             :getReplies="getRepliesForPost"
             :isExpanded="isRepliesExpanded"
-            :getParent="getParentPost"
-            :getParentParsed="getParsedParent"
-            :isParentExpanded="isParentExpanded"
-            :isParentLoading="isParentLoading"
             @openUser="handleUserClick"
             @toggleReplies="handleToggleReplies"
-            @toggleParent="handleToggleParent"
-            @jumpToPost="scrollToPost"
           />
         </div>
       </template>
