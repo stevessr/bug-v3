@@ -11,6 +11,7 @@ import type {
   ActivityTabType,
   MessagesTabType
 } from './discourse/types'
+import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import CategoryGrid from './discourse/layout/CategoryGrid.vue'
 import TagGrid from './discourse/layout/TagGrid.vue'
 import Icon from './discourse/layout/Icon.vue'
@@ -21,12 +22,14 @@ import UserView from './discourse/user/UserView.vue'
 import UserExtrasView from './discourse/user/UserExtrasView.vue'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import Sidebar from './discourse/layout/Sidebar.vue'
+import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
 import ActivityView from './discourse/user/ActivityView.vue'
 import MessagesView from './discourse/user/MessagesView.vue'
 import BrowserToolbar from './discourse/browser/BrowserToolbar.vue'
 import BrowserTabs from './discourse/browser/BrowserTabs.vue'
 import ChatView from './discourse/chat/ChatView.vue'
 import { pageFetch } from './discourse/utils'
+import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 
 const {
   baseUrl,
@@ -103,6 +106,11 @@ const lastTopicPollAt = ref(0)
 const lastListPollAt = ref(0)
 const lastNotificationsPollAt = ref(0)
 const pollTimer = ref<number | null>(null)
+const quickSidebarOpen = ref(false)
+const quickSidebarLoading = ref(false)
+const quickSidebarSections = ref<QuickSidebarSection[]>([])
+const quickSidebarError = ref<string | null>(null)
+const quickSidebarFetchedAt = ref(0)
 const POLL_TICK_MS = 5000
 const TOPIC_POLL_INTERVAL_MS = 15000
 const LIST_POLL_INTERVAL_MS = 60000
@@ -304,6 +312,141 @@ const handleOpenUserMessages = (username: string) => {
 
 const handleOpenChat = () => {
   openChat()
+}
+
+const toggleQuickSidebar = () => {
+  quickSidebarOpen.value = !quickSidebarOpen.value
+}
+
+const closeQuickSidebar = () => {
+  quickSidebarOpen.value = false
+}
+
+const navigateQuickSidebar = (path: string) => {
+  closeQuickSidebar()
+  navigateTo(path)
+}
+
+const buildCategoryItems = (
+  ids: unknown,
+  map: Map<number, DiscourseCategory>,
+  muted = false
+): QuickSidebarItem[] => {
+  if (!Array.isArray(ids)) return []
+  return ids
+    .map(id => {
+      const numericId = typeof id === 'number' ? id : Number(id)
+      if (!Number.isFinite(numericId)) return null
+      const category = map.get(numericId)
+      if (!category) return null
+      return {
+        id: `category-${numericId}`,
+        label: category.name,
+        path: `/c/${category.slug}/${category.id}`,
+        color: category.color,
+        muted
+      }
+    })
+    .filter(Boolean) as QuickSidebarItem[]
+}
+
+const buildTagItems = (tags: unknown): QuickSidebarItem[] => {
+  if (!Array.isArray(tags)) return []
+  return tags
+    .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
+    .filter(tag => tag.length > 0)
+    .map(tag => ({
+      id: `tag-${tag}`,
+      label: tag,
+      path: `/tag/${encodeURIComponent(tag)}`
+    }))
+}
+
+const loadQuickSidebar = async (force = false) => {
+  const now = Date.now()
+  if (!currentUsername.value) return
+  if (!force && now - quickSidebarFetchedAt.value < 60000) return
+  if (quickSidebarLoading.value) return
+
+  quickSidebarLoading.value = true
+  quickSidebarError.value = null
+
+  try {
+    const [userResult, categoriesResult] = await Promise.all([
+      pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(currentUsername.value)}.json`),
+      pageFetch<any>(`${baseUrl.value}/categories.json`)
+    ])
+
+    const userData = userResult.data || {}
+    const categoriesData = categoriesResult.data || {}
+    const categories = normalizeCategoriesFromResponse(categoriesData)
+    const categoryMap = new Map<number, DiscourseCategory>(
+      categories.map(category => [category.id, category])
+    )
+
+    const user = userData.user || {}
+    const sections: QuickSidebarSection[] = []
+
+    sections.push({
+      title: '快捷入口',
+      items: [
+        { id: 'home', label: '主页', path: '/' },
+        { id: 'categories', label: '分类', path: '/categories' },
+        { id: 'tags', label: '标签', path: '/tags' },
+        {
+          id: 'notifications',
+          label: '通知',
+          path: currentUsername.value
+            ? `/u/${encodeURIComponent(currentUsername.value)}/notifications`
+            : '/my/notifications'
+        },
+        { id: 'bookmarks', label: '书签', path: '/bookmarks' },
+        { id: 'posted', label: '我的帖子', path: '/posted' }
+      ]
+    })
+
+    const regularItems = buildCategoryItems(user.regular_category_ids, categoryMap)
+    if (regularItems.length) {
+      sections.push({ title: '常用分类', items: regularItems })
+    }
+
+    const watchedItems = buildCategoryItems(user.watched_category_ids, categoryMap)
+    if (watchedItems.length) {
+      sections.push({ title: '关注分类', items: watchedItems })
+    }
+
+    const trackedItems = buildCategoryItems(user.tracked_category_ids, categoryMap)
+    if (trackedItems.length) {
+      sections.push({ title: '追踪分类', items: trackedItems })
+    }
+
+    const mutedItems = buildCategoryItems(user.muted_category_ids, categoryMap, true)
+    if (mutedItems.length) {
+      sections.push({ title: '静音分类', items: mutedItems })
+    }
+
+    const watchedTags = buildTagItems(user.watched_tags)
+    if (watchedTags.length) {
+      sections.push({ title: '关注标签', items: watchedTags })
+    }
+
+    const trackedTags = buildTagItems(user.tracked_tags)
+    if (trackedTags.length) {
+      sections.push({ title: '追踪标签', items: trackedTags })
+    }
+
+    const mutedTags = buildTagItems(user.muted_tags)
+    if (mutedTags.length) {
+      sections.push({ title: '静音标签', items: mutedTags.map(item => ({ ...item, muted: true })) })
+    }
+
+    quickSidebarSections.value = sections
+    quickSidebarFetchedAt.value = now
+  } catch (error) {
+    quickSidebarError.value = error instanceof Error ? error.message : '加载失败'
+  } finally {
+    quickSidebarLoading.value = false
+  }
 }
 
 const handleSelectChatChannel = (channel: { id: number; slug?: string }) => {
@@ -571,6 +714,25 @@ watch(
   }
 )
 
+watch(
+  () => quickSidebarOpen.value,
+  open => {
+    if (open) {
+      void loadQuickSidebar()
+    }
+  }
+)
+
+watch(
+  () => [baseUrl.value, currentUsername.value],
+  () => {
+    quickSidebarFetchedAt.value = 0
+    if (quickSidebarOpen.value) {
+      void loadQuickSidebar(true)
+    }
+  }
+)
+
 const pollUpdates = async () => {
   const tab = activeTab.value
   if (!tab || tab.loading || pollingBusy.value) return
@@ -656,6 +818,9 @@ onUnmounted(() => {
       @updateBaseUrl="updateBaseUrl"
     >
       <template #right>
+        <a-button size="small" class="toolbar-sidebar-btn" @click="toggleQuickSidebar">
+          <template #icon><MenuOutlined /></template>
+        </a-button>
         <NotificationsDropdown
           :notifications="activeTab?.notifications || []"
           :filter="activeTab?.notificationsFilter || 'all'"
@@ -677,6 +842,16 @@ onUnmounted(() => {
       @switchTab="switchTab"
       @closeTab="closeTab"
       @createTab="createTab"
+    />
+
+    <QuickSidebarPanel
+      :open="quickSidebarOpen"
+      :loading="quickSidebarLoading"
+      :sections="quickSidebarSections"
+      :error="quickSidebarError"
+      @close="closeQuickSidebar"
+      @navigate="navigateQuickSidebar"
+      @refresh="() => loadQuickSidebar(true)"
     />
 
     <!-- Content area -->
@@ -1097,6 +1272,7 @@ onUnmounted(() => {
     system-ui,
     -apple-system,
     sans-serif;
+  position: relative;
 }
 
 .tab-item {
@@ -1164,5 +1340,4 @@ onUnmounted(() => {
   cursor: se-resize;
   background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.8) 50%);
 }
-
 </style>
