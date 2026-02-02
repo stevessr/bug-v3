@@ -196,6 +196,80 @@ const getHashtagLabel = (anchor: HTMLAnchorElement) => {
   return label
 }
 
+const splitClassList = (value: string) =>
+  value
+    .split(/\s+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+
+const getHashtagPropsFromAnchor = (anchor: HTMLAnchorElement) => {
+  const label = getHashtagLabel(anchor)
+  if (!label) return null
+
+  const extraClass = splitClassList(anchor.className).filter(item => item !== 'hashtag-cooked')
+
+  const { type, slug, id: tagId, styleType, icon, valid } = anchor.dataset as {
+    type?: string
+    slug?: string
+    id?: string
+    styleType?: string
+    icon?: string
+    valid?: string
+  }
+
+  return {
+    href: anchor.getAttribute('href') || '',
+    label,
+    type,
+    slug,
+    tagId,
+    styleType,
+    icon,
+    valid: valid !== 'false',
+    extraClass,
+    title: anchor.getAttribute('title') || undefined,
+    ariaLabel: anchor.getAttribute('aria-label') || undefined
+  }
+}
+
+const getHashtagPropsFromHost = (host: HTMLElement) => {
+  const label = host.dataset.label || ''
+  if (!label) return null
+
+  const extraClass = splitClassList(host.dataset.extraClass || '')
+  return {
+    href: host.dataset.href || '',
+    label,
+    type: host.dataset.type,
+    slug: host.dataset.slug,
+    tagId: host.dataset.tagId,
+    styleType: host.dataset.styleType,
+    icon: host.dataset.icon,
+    valid: host.dataset.valid !== 'false',
+    extraClass,
+    title: host.dataset.title || undefined,
+    ariaLabel: host.dataset.ariaLabel || undefined
+  }
+}
+
+const persistHashtagHostData = (
+  host: HTMLElement,
+  data: ReturnType<typeof getHashtagPropsFromAnchor>
+) => {
+  if (!data) return
+  host.dataset.href = data.href
+  host.dataset.label = data.label
+  host.dataset.type = data.type || ''
+  host.dataset.slug = data.slug || ''
+  host.dataset.tagId = data.tagId || ''
+  host.dataset.styleType = data.styleType || ''
+  host.dataset.icon = data.icon || ''
+  host.dataset.valid = data.valid ? 'true' : 'false'
+  host.dataset.extraClass = data.extraClass.join(' ')
+  host.dataset.title = data.title || ''
+  host.dataset.ariaLabel = data.ariaLabel || ''
+}
+
 const setupHashtagEnhancements = () => {
   teardownHashtagEnhancements()
   const host = contentRef.value
@@ -203,51 +277,25 @@ const setupHashtagEnhancements = () => {
 
   const anchors = Array.from(host.querySelectorAll<HTMLAnchorElement>('a.hashtag-cooked'))
   anchors.forEach(anchor => {
-    const label = getHashtagLabel(anchor)
-    if (!label) return
+    const data = getHashtagPropsFromAnchor(anchor)
+    if (!data) return
 
     const mountRoot = document.createElement('span')
     mountRoot.className = 'hashtag-cooked-host'
-
-    const extraClass = anchor.className
-      .split(/\s+/)
-      .map(item => item.trim())
-      .filter(item => item && item !== 'hashtag-cooked')
-
-    const {
-      type,
-      slug,
-      id: tagId,
-      styleType,
-      icon,
-      valid
-    } = anchor.dataset as {
-      type?: string
-      slug?: string
-      id?: string
-      styleType?: string
-      icon?: string
-      valid?: string
-    }
-
-    const href = anchor.getAttribute('href') || ''
-    const title = anchor.getAttribute('title') || undefined
-
+    persistHashtagHostData(mountRoot, data)
     anchor.replaceWith(mountRoot)
 
-    const app = createApp(HashtagCooked, {
-      href,
-      label,
-      type,
-      slug,
-      tagId,
-      styleType,
-      icon,
-      valid: valid !== 'false',
-      extraClass,
-      title
-    })
+    const app = createApp(HashtagCooked, data)
+    app.mount(mountRoot)
+    hashtagCleanupFns.push(() => app.unmount())
+  })
 
+  const hosts = Array.from(host.querySelectorAll<HTMLElement>('span.hashtag-cooked-host'))
+  hosts.forEach(mountRoot => {
+    if (mountRoot.childNodes.length > 0) return
+    const data = getHashtagPropsFromHost(mountRoot)
+    if (!data) return
+    const app = createApp(HashtagCooked, data)
     app.mount(mountRoot)
     hashtagCleanupFns.push(() => app.unmount())
   })

@@ -14,7 +14,8 @@ export default defineComponent({
     icon: { type: String, default: '' },
     valid: { type: Boolean, default: true },
     extraClass: { type: Array as () => string[], default: () => [] },
-    title: { type: String, default: '' }
+    title: { type: String, default: '' },
+    ariaLabel: { type: String, default: '' }
   },
   setup(props) {
     const className = computed(() => {
@@ -36,6 +37,7 @@ export default defineComponent({
         data-icon={props.icon || undefined}
         data-valid={props.valid ? undefined : 'false'}
         title={props.title || undefined}
+        aria-label={props.ariaLabel || props.label || undefined}
       >
         <TagPill name={tagName.value} text={props.label} compact clickable />
       </a>
