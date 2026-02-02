@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import { tag_icon_list } from '../linux.do/icon.js'
 import type { DiscourseTag, DiscourseTagGroup } from '../types'
 
 const props = withDefaults(
@@ -21,6 +22,49 @@ const emit = defineEmits<{
 
 const sortBy = ref<'count' | 'name'>('count')
 
+type TagVisual = {
+  icon: string
+  color: string
+}
+
+const toKey = (value?: string | null) => (value || '').trim().toLocaleLowerCase()
+
+const tagVisualMap = (() => {
+  const map = new Map<string, TagVisual>()
+  tag_icon_list.split('|').forEach(item => {
+    const [rawName, rawIcon, rawColor] = item.split(',').map(part => (part || '').trim())
+    const key = toKey(rawName)
+    if (!key || !rawIcon) return
+    map.set(key, {
+      icon: rawIcon,
+      color: rawColor || '#669d34'
+    })
+  })
+  return map
+})()
+
+const getTagVisual = (tag: DiscourseTag) => {
+  return tagVisualMap.get(toKey(tag.name)) || tagVisualMap.get(toKey(tag.text)) || null
+}
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const clean = hex.replace('#', '').trim()
+  const normalized =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map(char => char + char)
+          .join('')
+      : clean
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return `rgba(102,157,52,${alpha})`
+  }
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 const displayedGroups = computed(() => {
   const sourceGroups =
     props.groups.length > 0 ? props.groups : [{ id: 0, name: '全部标签', tags: props.tags }]
@@ -40,6 +84,21 @@ const displayedGroups = computed(() => {
     })
     .filter(group => group.tags.length > 0)
 })
+
+const getTagHoverDescription = (tag: DiscourseTag) => {
+  if (!tag.description) return undefined
+  return tag.description.replace(/<[^>]+>/g, '').trim() || undefined
+}
+
+const getTagLabelStyle = (tag: DiscourseTag) => {
+  const visual = getTagVisual(tag)
+  if (!visual) return undefined
+  return {
+    color: visual.color,
+    borderColor: hexToRgba(visual.color, 0.35),
+    backgroundColor: hexToRgba(visual.color, 0.12)
+  }
+}
 </script>
 
 <template>
@@ -79,8 +138,18 @@ const displayedGroups = computed(() => {
             @click="emit('click', tag)"
           >
             <span
-              class="inline-flex max-w-[260px] truncate px-2 py-1 rounded bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              class="inline-flex items-center max-w-[320px] truncate px-2 py-1 rounded border bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              :style="getTagLabelStyle(tag)"
+              :title="getTagHoverDescription(tag)"
             >
+              <svg
+                v-if="getTagVisual(tag)"
+                class="w-4 h-4 mr-1.5 flex-shrink-0"
+                viewBox="0 0 512 512"
+                fill="currentColor"
+              >
+                <use :href="`#${getTagVisual(tag)?.icon}`" />
+              </svg>
               {{ tag.text || tag.name }}
             </span>
             <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
