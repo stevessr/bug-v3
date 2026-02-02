@@ -3,25 +3,6 @@ import { defineComponent, ref, computed } from 'vue'
 import type { LightboxImage } from '../types'
 import '../css/ImageCarousel.css'
 
-const getRatioFromStyle = (style?: string) => {
-  if (!style) return null
-  const match = style.match(/aspect-ratio\s*:\s*([0-9.]+)\s*\/\s*([0-9.]+)/i)
-  if (!match) return null
-  const w = Number(match[1])
-  const h = Number(match[2])
-  if (!Number.isFinite(w) || !Number.isFinite(h) || h === 0) return null
-  return w / h
-}
-
-const getAspectRatio = (image: LightboxImage) => {
-  const fromStyle = getRatioFromStyle(image.style)
-  if (fromStyle) return fromStyle
-  const w = Number(image.width)
-  const h = Number(image.height)
-  if (Number.isFinite(w) && Number.isFinite(h) && h > 0) return w / h
-  return null
-}
-
 const getImageSrc = (image: LightboxImage) => image.thumbSrc || image.href
 
 export default defineComponent({
@@ -38,6 +19,7 @@ export default defineComponent({
     const suppressClick = ref(false)
     const containerWidth = ref(0)
     const lastPointerX = ref(0)
+    const focusRef = ref<HTMLDivElement | null>(null)
 
     const total = computed(() => props.images.length)
 
@@ -53,6 +35,9 @@ export default defineComponent({
 
     const beginAnimateTo = (direction: 'next' | 'prev') => {
       if (isAnimating.value || total.value <= 1) return
+      if (containerWidth.value <= 1 && focusRef.value) {
+        containerWidth.value = focusRef.value.getBoundingClientRect().width || 1
+      }
       pendingDirection.value = direction
       isAnimating.value = true
       suppressClick.value = true
@@ -126,6 +111,7 @@ export default defineComponent({
         {currentImage.value ? (
           <div
             class={['post-carousel-focus-tsx', isDragging.value ? 'is-dragging' : '']}
+            ref={focusRef}
             onPointerdown={handlePointerDown}
             onPointermove={handlePointerMove}
             onPointerup={handlePointerUp}
@@ -133,20 +119,16 @@ export default defineComponent({
           >
             <div
               class={['post-carousel-track-tsx', isAnimating.value ? 'is-animating' : '']}
-              style={{ transform: `translateX(calc(-100% + ${dragX.value}px))` }}
+              style={{ transform: `translateX(calc(-100% / 3 + ${dragX.value}px))` }}
               onTransitionend={handleTransitionEnd}
             >
               {[getIndex(-1), getIndex(0), getIndex(1)].map((idx, slot) => {
                 const image = props.images[idx]
-                const ratio = getAspectRatio(image)
-                const frameStyle = ratio
-                  ? {
-                      aspectRatio: String(ratio),
-                      backgroundColor: image.dominantColor ? `#${image.dominantColor}` : undefined
-                    }
-                  : undefined
                 return (
-                  <div class="post-carousel-slide-tsx" key={`${image.base62Sha1 || image.href}-${slot}`}>
+                  <div
+                    class="post-carousel-slide-tsx"
+                    key={`${image.base62Sha1 || image.href}-${slot}`}
+                  >
                     <a
                       class="post-carousel-link-tsx"
                       href={image.href}
@@ -156,19 +138,17 @@ export default defineComponent({
                       data-no-router="true"
                       onClick={handleLinkClick}
                     >
-                      <div class="post-carousel-frame-tsx" style={frameStyle}>
-                        <img
-                          class="post-carousel-image-tsx"
-                          src={getImageSrc(image)}
-                          alt={image.alt || ''}
-                          width={image.width}
-                          height={image.height}
-                          srcset={image.srcset}
-                          data-base62-sha1={image.base62Sha1}
-                          data-dominant-color={image.dominantColor}
-                          loading={image.loading || 'lazy'}
-                        />
-                      </div>
+                      <img
+                        class="post-carousel-image-tsx"
+                        src={getImageSrc(image)}
+                        alt={image.alt || ''}
+                        width={image.width}
+                        height={image.height}
+                        srcset={image.srcset}
+                        data-base62-sha1={image.base62Sha1}
+                        data-dominant-color={image.dominantColor}
+                        loading={image.loading || 'lazy'}
+                      />
                     </a>
                   </div>
                 )
