@@ -28,12 +28,12 @@
 }
 
 .post-carousel-track-tsx.is-animating {
-  transition: transform 240ms ease;
+  transition: transform 280ms cubic-bezier(0.22, 1.4, 0.36, 1);
 }
 
 .post-carousel-slide-tsx {
-  width: 100%;
-  flex: 0 0 100%;
+  width: calc(100% / 3);
+  flex: 0 0 calc(100% / 3);
   display: flex;
   justify-content: center;
 }
