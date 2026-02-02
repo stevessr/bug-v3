@@ -180,3 +180,4 @@ scripts/cfworker/public/updates/extension.xpi
 extension-key.pem
 extension-public.pem
 scripts/under_going/.work
+docs/linux.do/*.json
