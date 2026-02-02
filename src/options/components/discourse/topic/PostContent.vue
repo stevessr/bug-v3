@@ -4,8 +4,11 @@ import { ref, onMounted, onUnmounted, nextTick, watch, createApp } from 'vue'
 import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
+
 import PollView from './PollView'
 import HashtagCooked from './HashtagCooked'
+import ImageCarousel from './ImageCarousel'
+import ImageMasonry from './ImageMasonry'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -21,11 +24,6 @@ const emit = defineEmits<{
   (e: 'navigate', url: string): void
 }>()
 
-const getCarouselImg = (images: LightboxImage[], index: number) => {
-  const image = images[index]
-  return image?.thumbSrc || image?.href || ''
-}
-
 const getLightboxThumb = (image: LightboxImage) => {
   return image.thumbSrc || image.href
 }
@@ -39,20 +37,11 @@ const getLightboxPreview = (image: LightboxImage) => {
 
 const processHtmlContent = (html: string) => html
 
-const normalizeLoading = (value?: string): 'lazy' | 'eager' => {
-  return value === 'eager' ? 'eager' : 'lazy'
-}
-
 let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
 let scrollContainer: HTMLElement | null = null
 let pollCleanupFns: Array<() => void> = []
 let hashtagCleanupFns: Array<() => void> = []
-
-const getImageGridItems = (segment: ImageGridSegment) => {
-  if (segment.columns.length <= 1) return segment.columns[0] || []
-  return segment.columns.flat()
-}
 
 const getImageGridColumnsCount = (segment: ImageGridSegment) => {
   if (segment.columnsCount) return Math.max(segment.columnsCount, 1)
@@ -103,6 +92,7 @@ const handleClick = (event: MouseEvent) => {
   const anchor = target?.closest('a') as HTMLAnchorElement | null
 
   if (!anchor) return
+  if (anchor.dataset.noRouter === 'true') return
   if (anchor.closest('sup.footnote-ref')) {
     event.preventDefault()
     return
@@ -208,7 +198,14 @@ const getHashtagPropsFromAnchor = (anchor: HTMLAnchorElement) => {
 
   const extraClass = splitClassList(anchor.className).filter(item => item !== 'hashtag-cooked')
 
-  const { type, slug, id: tagId, styleType, icon, valid } = anchor.dataset as {
+  const {
+    type,
+    slug,
+    id: tagId,
+    styleType,
+    icon,
+    valid
+  } = anchor.dataset as {
     type?: string
     slug?: string
     id?: string
@@ -344,8 +341,7 @@ const setupPollEnhancements = () => {
       })
       .filter(Boolean) as Array<{ id: string; label: string }>
 
-    const pollTitleHtml =
-      pollContainer.querySelector<HTMLElement>('.poll-title')?.innerHTML || ''
+    const pollTitleHtml = pollContainer.querySelector<HTMLElement>('.poll-title')?.innerHTML || ''
 
     const mountRoot = root
     mountRoot.innerHTML = ''
@@ -481,62 +477,12 @@ watch(
         class="post-content-fragment"
         v-html="processHtmlContent(segment.html)"
       />
-      <div v-else-if="segment.type === 'carousel'" class="post-carousel">
-        <div class="post-carousel-track">
-          <div
-            v-for="(img, imgIndex) in segment.images"
-            :key="imgIndex"
-            class="post-carousel-slide"
-          >
-            <img
-              class="post-carousel-image"
-              :src="getLightboxThumb(img)"
-              :alt="img.alt || ''"
-              :width="img.width"
-              :height="img.height"
-              :srcset="img.srcset"
-              :data-base62-sha1="img.base62Sha1"
-              :data-dominant-color="img.dominantColor"
-              :loading="normalizeLoading(img.loading)"
-              :style="img.style"
-            />
-          </div>
-        </div>
-        <div class="post-carousel-thumbs">
-          <img
-            v-for="(img, imgIndex) in segment.images"
-            :key="`thumb-${imgIndex}`"
-            class="post-carousel-thumb"
-            :src="getCarouselImg(segment.images, imgIndex)"
-            :alt="img.alt || ''"
-            loading="lazy"
-          />
-        </div>
-      </div>
-      <div
+      <ImageCarousel v-else-if="segment.type === 'carousel'" :images="segment.images" />
+      <ImageMasonry
         v-else-if="segment.type === 'image-grid'"
-        class="post-image-grid"
-        :style="{ '--grid-columns': getImageGridColumnsCount(segment) }"
-      >
-        <div
-          v-for="(img, imgIndex) in getImageGridItems(segment)"
-          :key="imgIndex"
-          class="post-image-grid-item"
-        >
-          <img
-            class="post-image-grid-image"
-            :src="getLightboxThumb(img)"
-            :alt="img.alt || ''"
-            :width="img.width"
-            :height="img.height"
-            :srcset="img.srcset"
-            :data-base62-sha1="img.base62Sha1"
-            :data-dominant-color="img.dominantColor"
-            :loading="normalizeLoading(img.loading)"
-            :style="img.style"
-          />
-        </div>
-      </div>
+        :columns="segment.columns"
+        :columnsCount="getImageGridColumnsCount(segment)"
+      />
       <a-image
         v-else
         class="post-inline-image rounded"
