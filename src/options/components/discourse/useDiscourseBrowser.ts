@@ -16,6 +16,7 @@ import {
   loadHome as loadHomeRoute,
   changeTopicListType as changeTopicListTypeRoute,
   loadCategories as loadCategoriesRoute,
+  loadTags as loadTagsRoute,
   loadPosted as loadPostedRoute,
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
@@ -92,6 +93,7 @@ export function useDiscourseBrowser() {
       currentTopic: null,
       currentUser: null,
       activeUsers: [],
+      tags: [],
       errorMessage: '',
       loadedPostIds: new Set(),
       hasMorePosts: false,
@@ -163,6 +165,7 @@ export function useDiscourseBrowser() {
     tab.url = normalizedUrl
     urlInput.value = normalizedUrl
     tab.errorMessage = ''
+    tab.tags = []
     let isTopicNavigation = false
 
     try {
@@ -281,6 +284,10 @@ export function useDiscourseBrowser() {
         await loadCategories(tab)
         tab.title = '分类'
         tab.viewType = 'categories'
+      } else if (pathname === '/tags' || pathname === '/tags.json') {
+        await loadTags(tab)
+        tab.title = '标签'
+        tab.viewType = 'tags'
       } else if (pathname === '/posted') {
         await loadPosted(tab)
         tab.title = '我的帖子'
@@ -336,6 +343,11 @@ export function useDiscourseBrowser() {
   // Load categories page
   async function loadCategories(tab: BrowserTab) {
     await loadCategoriesRoute(tab, baseUrl, users)
+  }
+
+  // Load tags page
+  async function loadTags(tab: BrowserTab) {
+    await loadTagsRoute(tab, baseUrl)
   }
 
   // Load posted topics

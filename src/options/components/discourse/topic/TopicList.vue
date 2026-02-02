@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import type { DiscourseTopic, SuggestedTopic, DiscourseCategory, DiscourseUser } from '../types'
+import type {
+  DiscourseTopic,
+  SuggestedTopic,
+  DiscourseCategory,
+  DiscourseUser,
+  DiscourseTopicTag
+} from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
 defineProps<{
@@ -74,6 +80,16 @@ const getPosters = (topic: DiscourseTopic | SuggestedTopic, users?: DiscourseUse
 const handleUserClick = (username: string) => {
   emit('openUser', username)
 }
+
+const getTagLabel = (tag: string | DiscourseTopicTag) => {
+  if (typeof tag === 'string') return tag
+  return tag.name || tag.text || tag.slug || String(tag.id || '')
+}
+
+const getTagKey = (tag: string | DiscourseTopicTag) => {
+  if (typeof tag === 'string') return tag
+  return String(tag.id || tag.slug || tag.name || tag.text || JSON.stringify(tag))
+}
 </script>
 
 <template>
@@ -101,10 +117,10 @@ const handleUserClick = (username: string) => {
             </span>
             <span
               v-for="tag in (topic as DiscourseTopic).tags"
-              :key="tag"
+              :key="getTagKey(tag)"
               class="topic-tag text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
             >
-              #{{ tag }}
+              #{{ getTagLabel(tag) }}
             </span>
           </div>
 

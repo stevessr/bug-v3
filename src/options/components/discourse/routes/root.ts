@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 
-import type { BrowserTab, DiscourseUser, TopicListType } from '../types'
+import type { BrowserTab, DiscourseTag, DiscourseUser, TopicListType } from '../types'
 import { pageFetch, extractData } from '../utils'
 
 import { normalizeCategoriesFromResponse } from './categories'
@@ -157,4 +157,34 @@ export async function loadBookmarks(
 
   // Keep categories empty for bookmarks view
   tab.categories = []
+}
+
+function normalizeTagsFromResponse(data: any): DiscourseTag[] {
+  if (!Array.isArray(data?.tags)) return []
+  return data.tags
+    .filter((item: any) => item && typeof item.name === 'string')
+    .map((item: any) => ({
+      id: Number(item.id) || 0,
+      text: typeof item.text === 'string' ? item.text : item.name,
+      name: item.name,
+      description: item.description ?? null,
+      count: Number(item.count) || 0,
+      pm_only: Boolean(item.pm_only),
+      target_tag: item.target_tag ?? null
+    }))
+}
+
+export async function loadTags(tab: BrowserTab, baseUrl: Ref<string>) {
+  const result = await pageFetch<any>(`${baseUrl.value}/tags.json`)
+  const data = extractData(result)
+
+  tab.tags = normalizeTagsFromResponse(data)
+  tab.topics = []
+  tab.categories = []
+  tab.activeUsers = []
+  tab.hasMoreTopics = false
+  tab.topicsPage = 0
+  tab.currentCategorySlug = ''
+  tab.currentCategoryId = null
+  tab.currentCategoryName = ''
 }

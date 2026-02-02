@@ -5,12 +5,14 @@ import { message } from 'ant-design-vue'
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
   DiscourseCategory,
+  DiscourseTag,
   DiscourseTopic,
   SuggestedTopic,
   ActivityTabType,
   MessagesTabType
 } from './discourse/types'
 import CategoryGrid from './discourse/layout/CategoryGrid.vue'
+import TagGrid from './discourse/layout/TagGrid.vue'
 import Icon from './discourse/layout/Icon.vue'
 import TopicList from './discourse/topic/TopicList.vue'
 import TopicView from './discourse/topic/TopicView.vue'
@@ -162,6 +164,11 @@ const handleTopicClick = (topic: DiscourseTopic | SuggestedTopic) => {
 // Handle category click
 const handleCategoryClick = (category: DiscourseCategory) => {
   openCategory(category)
+}
+
+const handleTagClick = (tag: DiscourseTag) => {
+  const encoded = encodeURIComponent(tag.name)
+  navigateTo(`${baseUrl.value}/tag/${encoded}`)
 }
 
 // Handle middle click (open in new tab)
@@ -624,6 +631,25 @@ onUnmounted(() => {
             @click="handleCategoryClick"
             @topicClick="handleTopicClick"
           />
+        </div>
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <Sidebar
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
+          />
+        </div>
+      </div>
+
+      <!-- Tags view -->
+      <div v-else-if="activeTab?.viewType === 'tags'" class="flex gap-4">
+        <div class="flex-1 min-w-0">
+          <TagGrid :tags="activeTab.tags" @click="handleTagClick" />
         </div>
         <div class="w-64 flex-shrink-0 hidden lg:block">
           <Sidebar
