@@ -199,93 +199,60 @@ const handleWiki = () => {
               <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
             </button>
           </div>
-          <div class="post-action-right flex items-center gap-2">
+          <div class="post-action-right actions flex items-center gap-2">
             <button
-              class="btn no-text btn-icon post-action-menu__bookmark btn-flat"
-              :class="{ bookmarked: props.post.bookmarked }"
-              title="书签"
+              class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
+              :class="{ 'copy-link-clicked': isCopyLinkClicked }"
+              title="将此帖子的链接复制到剪贴板"
               type="button"
-              @click="handleBookmark"
+              @click="handleCopyLink"
             >
               <svg
-                class="fa d-icon d-icon-bookmark svg-icon fa-width-auto svg-string"
+                class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
                 width="1em"
                 height="1em"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <use href="#bookmark"></use>
+                <use href="#link"></use>
               </svg>
             </button>
-            <button
-              class="btn no-text btn-icon post-action-menu__flag btn-flat"
-              title="举报"
-              type="button"
-              @click="handleFlag"
-            >
-              <svg
-                class="fa d-icon d-icon-flag svg-icon fa-width-auto svg-string"
-                width="1em"
-                height="1em"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
+            <div class="double-button">
+              <button
+                class="btn no-text btn-icon post-action-menu__flag create-flag btn-flat"
+                title="以私密方式举报此帖子以引起注意，或发送一个关于它的个人消息"
+                type="button"
+                @click="handleFlag"
               >
-                <use href="#flag"></use>
-              </svg>
-            </button>
-            <button
-              v-if="canAssign"
-              class="btn no-text btn-icon post-action-menu__assign btn-flat"
-              title="指定"
-              type="button"
-              @click="handleAssign"
-            >
-              <svg
-                class="fa d-icon d-icon-user-plus svg-icon fa-width-auto svg-string"
-                width="1em"
-                height="1em"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <use href="#user-plus"></use>
-              </svg>
-            </button>
+                <svg
+                  class="fa d-icon d-icon-flag svg-icon fa-width-auto svg-string"
+                  width="1em"
+                  height="1em"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <use href="#flag"></use>
+                </svg>
+              </button>
+            </div>
             <button
               v-if="isOwnPost && props.post.can_edit"
-              class="btn no-text btn-icon post-action-menu__edit btn-flat"
-              title="编辑"
+              class="btn no-text btn-icon post-action-menu__edit edit btn-flat"
+              title="编辑此帖子"
               type="button"
               @click="handleEdit"
             >
               <svg
-                class="fa d-icon d-icon-pencil-alt svg-icon fa-width-auto svg-string"
+                class="fa d-icon d-icon-pencil svg-icon fa-width-auto svg-string"
                 width="1em"
                 height="1em"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <use href="#pencil-alt"></use>
-              </svg>
-            </button>
-            <button
-              v-if="isOwnPost && props.post.can_delete"
-              class="btn no-text btn-icon post-action-menu__delete btn-flat"
-              title="删除"
-              type="button"
-              @click="handleDelete"
-            >
-              <svg
-                class="fa d-icon d-icon-trash-alt svg-icon fa-width-auto svg-string"
-                width="1em"
-                height="1em"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <use href="#trash-alt"></use>
+                <use href="#pencil"></use>
               </svg>
             </button>
             <a-dropdown
-              v-if="isOwnPost || canAssign"
               trigger="click"
               placement="bottomRight"
               overlay-class-name="post-admin-dropdown"
@@ -305,33 +272,22 @@ const handleWiki = () => {
                 >
                   <use href="#wrench"></use>
                 </svg>
-                <span aria-hidden="true">&ZeroWidthSpace;</span>
               </button>
               <template #overlay>
                 <a-menu>
-                  <a-menu-item @click="handleWiki">
+                  <a-menu-item @click="handleBookmark">
+                    {{ props.post.bookmarked ? '移除书签' : '加入书签' }}
+                  </a-menu-item>
+                  <a-menu-item v-if="isOwnPost && props.post.can_delete" @click="handleDelete">
+                    删除
+                  </a-menu-item>
+                  <a-menu-item v-if="canAssign" @click="handleAssign">指定</a-menu-item>
+                  <a-menu-item v-if="props.post.can_wiki" @click="handleWiki">
                     {{ wikiTitle }}
                   </a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
-            <button
-              class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
-              :class="{ 'copy-link-clicked': isCopyLinkClicked }"
-              title="将此帖子的链接复制到剪贴板"
-              type="button"
-              @click="handleCopyLink"
-            >
-              <svg
-                class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
-                width="1em"
-                height="1em"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <use href="#link"></use>
-              </svg>
-            </button>
             <button
               class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
               title="开始撰写对此帖子的回复"
