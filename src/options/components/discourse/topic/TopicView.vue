@@ -351,7 +351,13 @@ const handleWiki = async (post: DiscoursePost) => {
     const postAny = post as any
     const currentWiki = postAny.wiki || false
     await toggleWiki(props.baseUrl, post.id, !currentWiki)
-    postAny.wiki = !currentWiki
+    const postResult = await pageFetch<any>(`${props.baseUrl}/posts/${post.id}.json`)
+    const postData = extractData(postResult)
+    if (postData && typeof postData === 'object') {
+      Object.assign(postAny, postData)
+    } else {
+      postAny.wiki = !currentWiki
+    }
     message.success(postAny.wiki ? '已启用 Wiki' : '已禁用 Wiki')
   } catch (error) {
     console.warn('[DiscourseBrowser] wiki failed:', error)

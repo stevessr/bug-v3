@@ -46,6 +46,11 @@ const isOwnPost = computed(() => {
   return false
 })
 
+const wikiTitle = computed(() => {
+  if (props.post.wiki) return '移除 Wiki'
+  return isOwnPost.value ? '设置为 Wiki' : 'Wiki'
+})
+
 const canAssign = computed(() => {
   return props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
 })
@@ -194,7 +199,7 @@ const handleWiki = () => {
               <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
             </button>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="post-action-right flex items-center gap-2">
             <button
               class="btn no-text btn-icon post-action-menu__bookmark btn-flat"
               :class="{ bookmarked: props.post.bookmarked }"
@@ -279,24 +284,37 @@ const handleWiki = () => {
                 <use href="#trash-alt"></use>
               </svg>
             </button>
-            <button
+            <a-dropdown
               v-if="isOwnPost || canAssign"
-              class="btn no-text btn-icon post-action-menu__wiki btn-flat"
-              :class="{ wiki: props.post.wiki }"
-              title="Wiki"
-              type="button"
-              @click="handleWiki"
+              trigger="click"
+              placement="bottomRight"
+              overlay-class-name="post-admin-dropdown"
             >
-              <svg
-                class="fa d-icon d-icon-fab-wikipedia-w svg-icon fa-width-auto svg-string"
-                width="1em"
-                height="1em"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
+              <button
+                class="btn no-text btn-icon post-action-menu__admin show-post-admin-menu btn-flat"
+                :class="{ wiki: props.post.wiki }"
+                title="帖子管理员操作"
+                type="button"
               >
-                <use href="#fab-wikipedia-w"></use>
-              </svg>
-            </button>
+                <svg
+                  class="fa d-icon d-icon-wrench svg-icon fa-width-auto svg-string"
+                  width="1em"
+                  height="1em"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <use href="#wrench"></use>
+                </svg>
+                <span aria-hidden="true">&ZeroWidthSpace;</span>
+              </button>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item @click="handleWiki">
+                    {{ wikiTitle }}
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
             <button
               class="btn no-text btn-icon post-action-menu__copy-link btn-flat"
               :class="{ 'copy-link-clicked': isCopyLinkClicked }"

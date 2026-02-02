@@ -122,6 +122,10 @@
   margin-left: auto;
 }
 
+.post-action-right {
+  margin-left: auto;
+}
+
 .post-parent-toggle {
   color: #64748b;
   transition: color 0.15s ease;
@@ -162,9 +166,9 @@
 }
 
 .post-action-menu__wiki.wiki {
-  color: #8b5cf6;
+  color: #2563eb;
 }
 
 .dark .post-action-menu__wiki.wiki {
-  color: #a78bfa;
+  color: #60a5fa;
 }
