@@ -96,8 +96,18 @@ const handleTopicListTypeChange = (type: TopicListType) => {
   emit('changeTopicListType', type)
 }
 
+const buildNavigationUrl = (path: string) => {
+  if (!path) return props.baseUrl
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  if (!props.baseUrl) return path
+
+  const base = props.baseUrl.replace(/\/+$/, '')
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return `${base}${normalizedPath}`
+}
+
 const handleNavigateTo = (path: string) => {
-  emit('navigateTo', path)
+  emit('navigateTo', buildNavigationUrl(path))
 }
 </script>
 
@@ -127,7 +137,7 @@ const handleNavigateTo = (path: string) => {
           v-for="link in quickLinks"
           :key="link.path"
           class="quick-link flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-          @click="emit('navigateTo', link.path)"
+          @click="handleNavigateTo(link.path)"
         >
           <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
             <use :href="`#${link.icon}`" />
