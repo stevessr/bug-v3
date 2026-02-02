@@ -3,7 +3,48 @@ import { pageFetch, extractData } from '../utils'
 export interface BookmarkPayload {
   postId: number
   bookmarked: boolean
+  bookmark_id?: number | null
   reminder_at?: string | null
+  name?: string | null
+  auto_delete_preference?: number | null
+}
+
+export async function updateBookmark(baseUrl: string, payload: BookmarkPayload) {
+  if (!payload.bookmark_id) {
+    throw new Error('bookmark_id is required for update')
+  }
+
+  const params = new URLSearchParams()
+  params.append('id', String(payload.bookmark_id))
+  params.append('bookmarkable_id', String(payload.postId))
+  params.append('bookmarkable_type', 'Post')
+  params.append('auto_delete_preference', String(payload.auto_delete_preference ?? 3))
+
+  if (payload.reminder_at !== undefined) {
+    params.append('reminder_at', payload.reminder_at)
+  }
+  if (payload.name) {
+    params.append('name', payload.name)
+  } else {
+    params.append('name', '')
+  }
+
+  const url = `${baseUrl}/bookmarks/${payload.bookmark_id}.json`
+  const result = await pageFetch<any>(url, {
+    method: 'PUT',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Discourse-Logged-In': 'true'
+    },
+    body: params.toString()
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    const message = data?.errors?.join(', ') || data?.error || '更新书签失败'
+    throw new Error(message)
+  }
+  return data
 }
 
 export interface FlagPayload {
@@ -71,8 +112,12 @@ export async function toggleBookmark(baseUrl: string, payload: BookmarkPayload) 
     }
     return data
   } else {
-    // 删除书签
-    const url = `${baseUrl}/bookmarks.json?bookmarkable_id=${payload.postId}&bookmarkable_type=Post`
+    // 删除书签 - 使用 bookmark_id
+    if (!payload.bookmark_id) {
+      throw new Error('bookmark_id is required to delete bookmark')
+    }
+
+    const url = `${baseUrl}/bookmarks/${payload.bookmark_id}.json`
     const result = await pageFetch<any>(url, {
       method: 'DELETE',
       headers: {

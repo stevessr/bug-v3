@@ -70,3 +70,92 @@ export async function changeTopicListType(
     data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
   }
 }
+
+export async function loadCategories(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>
+) {
+  const result = await pageFetch<any>(`${baseUrl.value}/categories.json`)
+  const data = extractData(result)
+
+  if (data?.category_list?.categories) {
+    tab.categories = data.category_list.categories
+  } else if (data?.categories) {
+    tab.categories = data.categories
+  } else {
+    tab.categories = []
+  }
+
+  tab.topics = []
+  tab.hasMoreTopics = false
+  tab.topicsPage = 0
+  tab.currentCategorySlug = ''
+  tab.currentCategoryId = null
+  tab.currentCategoryName = ''
+  tab.activeUsers = []
+}
+
+export async function loadPosted(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>
+) {
+  const result = await pageFetch<any>(`${baseUrl.value}/posted.json`)
+  const data = extractData(result)
+
+  if (data?.topic_list?.topics) {
+    tab.topics = data.topic_list.topics
+    tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
+  } else {
+    tab.topics = []
+    tab.hasMoreTopics = false
+  }
+
+  tab.topicsPage = 0
+  tab.currentCategorySlug = ''
+  tab.currentCategoryId = null
+  tab.currentCategoryName = ''
+
+  if (data?.users) {
+    tab.activeUsers = data.users
+    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+  } else {
+    tab.activeUsers = []
+  }
+
+  // Keep categories empty for posted view
+  tab.categories = []
+}
+
+export async function loadBookmarks(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>
+) {
+  const result = await pageFetch<any>(`${baseUrl.value}/bookmarks.json`)
+  const data = extractData(result)
+
+  if (data?.topic_list?.topics) {
+    tab.topics = data.topic_list.topics
+    tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
+  } else {
+    tab.topics = []
+    tab.hasMoreTopics = false
+  }
+
+  tab.topicsPage = 0
+  tab.currentCategorySlug = ''
+  tab.currentCategoryId = null
+  tab.currentCategoryName = ''
+
+  if (data?.users) {
+    tab.activeUsers = data.users
+    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+  } else {
+    tab.activeUsers = []
+  }
+
+  // Keep categories empty for bookmarks view
+  tab.categories = []
+}

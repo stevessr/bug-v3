@@ -14,7 +14,10 @@ import type {
 import { generateId } from './utils'
 import {
   loadHome as loadHomeRoute,
-  changeTopicListType as changeTopicListTypeRoute
+  changeTopicListType as changeTopicListTypeRoute,
+  loadCategories as loadCategoriesRoute,
+  loadPosted as loadPostedRoute,
+  loadBookmarks as loadBookmarksRoute
 } from './routes/root'
 import {
   loadCategory as loadCategoryRoute,
@@ -259,6 +262,20 @@ export function useDiscourseBrowser() {
           await loadUser(tab, username)
           tab.viewType = 'user'
         }
+      } else if (pathname === '/categories') {
+        await loadCategories(tab)
+        tab.title = '分类'
+        tab.viewType = 'categories'
+      } else if (pathname === '/posted') {
+        await loadPosted(tab)
+        tab.title = '我的帖子'
+        tab.viewType = 'home'
+        tab.topicListType = 'posted'
+      } else if (pathname === '/bookmarks') {
+        await loadBookmarks(tab)
+        tab.title = '书签'
+        tab.viewType = 'home'
+        tab.topicListType = 'bookmarks'
       } else {
         await loadHome(tab)
         tab.title = urlObj.hostname
@@ -291,6 +308,21 @@ export function useDiscourseBrowser() {
   // Load category
   async function loadCategory(tab: BrowserTab, slug: string, categoryId: number | null = null) {
     await loadCategoryRoute(tab, slug, categoryId, baseUrl, users)
+  }
+
+  // Load categories page
+  async function loadCategories(tab: BrowserTab) {
+    await loadCategoriesRoute(tab, baseUrl, users)
+  }
+
+  // Load posted topics
+  async function loadPosted(tab: BrowserTab) {
+    await loadPostedRoute(tab, baseUrl, users)
+  }
+
+  // Load bookmarks
+  async function loadBookmarks(tab: BrowserTab) {
+    await loadBookmarksRoute(tab, baseUrl, users)
   }
 
   // Load topic detail

@@ -4,10 +4,13 @@ export { createTopic, replyToTopic } from './topic'
 export type { CreateTopicPayload, ReplyPayload } from './topic'
 
 // Post actions
+
 export * from './post'
+
 export {
   togglePostLike,
   toggleBookmark,
+  updateBookmark,
   flagPost,
   assignPost,
   editPost,
@@ -15,6 +18,7 @@ export {
   recoverPost,
   toggleWiki
 } from './post'
+
 export type { BookmarkPayload, FlagPayload, AssignPayload, EditPostPayload } from './post'
 
 // Tag actions

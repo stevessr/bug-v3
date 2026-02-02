@@ -149,7 +149,6 @@ const handleScroll = async () => {
       // chat list handles its own pagination
     }
   }
-
 }
 
 // Handle topic click
@@ -236,8 +235,28 @@ const handleSendChatMessage = (payload: { channelId: number; message: string }) 
   sendChat(payload.channelId, payload.message)
 }
 
-const handleChangeTopicListType = (type: 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot') => {
+const handleChangeTopicListType = (
+  type: 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'bookmarks'
+) => {
   changeTopicListType(type)
+}
+
+const handleNavigate = (path: string) => {
+  navigateTo(path)
+}
+
+const getTopicListTitle = (type?: string) => {
+  const titles: Record<string, string> = {
+    latest: '最新话题',
+    new: '新话题',
+    unread: '未读话题',
+    unseen: '未见话题',
+    top: '顶流话题',
+    hot: '火热话题',
+    posted: '我的帖子',
+    bookmarks: '我的书签'
+  }
+  return type ? titles[type] || '话题列表' : '话题列表'
 }
 
 const handleUserMainTabSwitch = (
@@ -492,7 +511,9 @@ onUnmounted(() => {
 
           <!-- Latest topics -->
           <div v-if="activeTab.topics.length > 0">
-            <h3 class="text-lg font-semibold mb-3 dark:text-white">最新话题</h3>
+            <h3 class="text-lg font-semibold mb-3 dark:text-white">
+              {{ getTopicListTitle(activeTab.topicListType) }}
+            </h3>
             <TopicList
               :topics="activeTab.topics"
               :baseUrl="baseUrl"
@@ -529,6 +550,31 @@ onUnmounted(() => {
             @clickCategory="handleCategoryClick"
             @clickUser="handleUserClick"
             @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
+          />
+        </div>
+      </div>
+
+      <!-- Categories view -->
+      <div v-else-if="activeTab?.viewType === 'categories'" class="flex gap-4">
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold mb-6 dark:text-white">分类目录</h3>
+          <CategoryGrid
+            :categories="activeTab.categories"
+            :baseUrl="baseUrl"
+            @click="handleCategoryClick"
+          />
+        </div>
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <Sidebar
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
           />
         </div>
       </div>
@@ -587,6 +633,7 @@ onUnmounted(() => {
             @clickCategory="handleCategoryClick"
             @clickUser="handleUserClick"
             @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
           />
         </div>
       </div>

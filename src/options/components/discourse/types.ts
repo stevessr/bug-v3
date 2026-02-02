@@ -1,6 +1,14 @@
 // Discourse Browser Types
 
-export type TopicListType = 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot'
+export type TopicListType =
+  | 'latest'
+  | 'new'
+  | 'unread'
+  | 'unseen'
+  | 'top'
+  | 'hot'
+  | 'posted'
+  | 'bookmarks'
 
 export interface BrowserTab {
   id: string
@@ -51,6 +59,7 @@ export interface BrowserTab {
 
 export type ViewType =
   | 'home'
+  | 'categories'
   | 'category'
   | 'topic'
   | 'chat'
@@ -148,6 +157,7 @@ export interface DiscoursePost {
   can_recover?: boolean
   can_unbookmark?: boolean
   bookmarked?: boolean
+  bookmark_id?: number | null
   wiki?: boolean
   hidden?: boolean
   user_title?: string

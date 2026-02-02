@@ -74,3 +74,21 @@
   border-color: #3b82f6;
   color: white;
 }
+
+/* Quick links */
+.quick-link {
+  color: #6b7280;
+  transition: color 0.15s;
+}
+
+.quick-link:hover {
+  color: #1d4ed8;
+}
+
+.dark .quick-link {
+  color: #cbd5f5;
+}
+
+.dark .quick-link:hover {
+  color: #93c5fd;
+}

@@ -15,6 +15,7 @@ const emit = defineEmits<{
   (e: 'clickCategory', category: DiscourseCategory): void
   (e: 'clickUser', username: string): void
   (e: 'changeTopicListType', type: TopicListType): void
+  (e: 'navigateTo', path: string): void
 }>()
 
 const topicListTypes: Array<{ value: TopicListType; label: string }> = [
@@ -23,7 +24,15 @@ const topicListTypes: Array<{ value: TopicListType; label: string }> = [
   { value: 'unread', label: '未读' },
   { value: 'unseen', label: '未见' },
   { value: 'top', label: '顶流' },
-  { value: 'hot', label: '火热' }
+  { value: 'hot', label: '火热' },
+  { value: 'posted', label: '我的帖子' },
+  { value: 'bookmarks', label: '书签' }
+]
+
+const quickLinks: Array<{ path: string; label: string; icon: string }> = [
+  { path: '/categories', label: '分类', icon: 'folder' },
+  { path: '/posted', label: '我的帖子', icon: 'edit' },
+  { path: '/bookmarks', label: '书签', icon: 'bookmark' }
 ]
 
 const hasHierarchy = computed(() => {
@@ -85,6 +94,10 @@ const getIconHref = (icon?: string | null) => {
 const handleTopicListTypeChange = (type: TopicListType) => {
   emit('changeTopicListType', type)
 }
+
+const handleNavigateTo = (path: string) => {
+  emit('navigateTo', path)
+}
 </script>
 
 <template>
@@ -102,6 +115,24 @@ const handleTopicListTypeChange = (type: TopicListType) => {
         >
           {{ type.label }}
         </button>
+      </div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
+      <h3 class="text-sm font-semibold mb-3 dark:text-white">快速导航</h3>
+      <div class="space-y-1">
+        <a
+          v-for="link in quickLinks"
+          :key="link.path"
+          class="quick-link flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+          @click="emit('navigateTo', link.path)"
+        >
+          <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+            <use :href="`#${link.icon}`" />
+          </svg>
+          <span class="text-sm dark:text-gray-300">{{ link.label }}</span>
+        </a>
       </div>
     </div>
 
