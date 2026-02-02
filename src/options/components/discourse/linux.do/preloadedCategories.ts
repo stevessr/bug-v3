@@ -18,8 +18,9 @@ type PreloadedCategory = {
 
 const byId = new Map<number, PreloadedCategory>()
 const bySlug = new Map<string, PreloadedCategory>()
+const all = preloadedCategories as PreloadedCategory[]
 
-;(preloadedCategories as PreloadedCategory[]).forEach(category => {
+all.forEach(category => {
   if (typeof category.id === 'number') {
     byId.set(category.id, category)
   }
@@ -33,3 +34,5 @@ export const getPreloadedCategory = (id?: number | null, slug?: string | null) =
   if (typeof slug === 'string' && slug.trim()) return bySlug.get(slug) || null
   return null
 }
+
+export const getAllPreloadedCategories = () => all

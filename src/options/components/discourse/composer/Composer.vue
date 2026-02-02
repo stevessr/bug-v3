@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify'
 import katex from 'katex'
 
 import type { DiscourseCategory } from '../types'
+import { getAllPreloadedCategories } from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, searchTags } from '../actions'
 import { renderBBCode } from '../bbcode'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
@@ -63,11 +64,46 @@ const getIconHref = (icon?: string | null) => {
   return `#${icon}`
 }
 
-const categoryTreeData = computed(() => {
-  const list = props.categories ? [...props.categories] : []
-  if (props.currentCategory && !list.find(cat => cat.id === props.currentCategory!.id)) {
-    list.unshift(props.currentCategory)
+const mergedCategories = computed(() => {
+  const localMap = new Map<number, DiscourseCategory>()
+  const usingLinuxDo = props.baseUrl.includes('linux.do')
+
+  if (usingLinuxDo) {
+    getAllPreloadedCategories().forEach(raw => {
+      if (typeof raw.id !== 'number') return
+      localMap.set(raw.id, {
+        id: raw.id,
+        name: raw.name || `category-${raw.id}`,
+        slug: raw.slug || String(raw.id),
+        color: raw.color || '0088CC',
+        text_color: raw.text_color || 'FFFFFF',
+        topic_count: 0,
+        parent_category_id: raw.parent_category_id ?? null,
+        style_type: raw.style_type ?? null,
+        icon: raw.icon ?? null,
+        emoji: raw.emoji ?? null,
+        uploaded_logo: raw.uploaded_logo ?? null,
+        uploaded_logo_dark: raw.uploaded_logo_dark ?? null
+      })
+    })
   }
+
+  ;(props.categories || []).forEach(cat => {
+    localMap.set(cat.id, { ...localMap.get(cat.id), ...cat })
+  })
+
+  if (props.currentCategory?.id) {
+    localMap.set(props.currentCategory.id, {
+      ...localMap.get(props.currentCategory.id),
+      ...props.currentCategory
+    })
+  }
+
+  return Array.from(localMap.values())
+})
+
+const categoryTreeData = computed(() => {
+  const list = mergedCategories.value
 
   const nodeMap = new Map<number, { title: string; value: number; key: number; children: any[] }>()
   const childrenByParent = new Map<number, Set<number>>()
