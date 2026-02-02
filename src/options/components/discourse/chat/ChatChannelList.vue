@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import type { ChatChannel } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 
 const props = defineProps<{
   channels: ChatChannel[]
@@ -99,10 +100,11 @@ const handleSelect = (channel: ChatChannel) => {
         @click="handleSelect(channel)"
       >
         <div class="chat-channel-avatar">
-          <img
+          <ImageProxy
             v-if="getChannelAvatar(channel)"
-            :src="getChannelAvatar(channel)"
+            :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
+            :fallback-src="getChannelAvatar(channel)"
           />
           <span v-else>#</span>
         </div>
@@ -128,10 +130,11 @@ const handleSelect = (channel: ChatChannel) => {
         @click="handleSelect(channel)"
       >
         <div class="chat-channel-avatar">
-          <img
+          <ImageProxy
             v-if="getChannelAvatar(channel)"
-            :src="getChannelAvatar(channel)"
+            :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
+            :fallback-src="getChannelAvatar(channel)"
           />
           <span v-else>#</span>
         </div>
@@ -157,10 +160,11 @@ const handleSelect = (channel: ChatChannel) => {
         @click="handleSelect(channel)"
       >
         <div class="chat-channel-avatar">
-          <img
+          <ImageProxy
             v-if="getChannelAvatar(channel)"
-            :src="getChannelAvatar(channel)"
+            :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
+            :fallback-src="getChannelAvatar(channel)"
           />
           <span v-else>#</span>
         </div>

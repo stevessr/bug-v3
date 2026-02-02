@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 import type { ParsedContent, LightboxImage } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
+import ImageProxy from '../ImageProxy.vue'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -215,6 +216,136 @@ onMounted(() => {
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
 })
 
+// Process HTML content to replace img-proxy tags with actual ImageProxy components
+const processHtmlContent = (html: string): string => {
+  // Replace img-proxy tags with span wrappers that will be converted to ImageProxy components
+  return html.replace(
+    /<img-proxy\s+([^>]+)>/g,
+    (match, attrs) => {
+      // Parse attributes
+      const originalSrcMatch = attrs.match(/original-src="([^"]*)"/)
+      const fallbackSrcMatch = attrs.match(/fallback-src="([^"]*)"/)
+      const altMatch = attrs.match(/alt="([^"]*)"/)
+      const loadingMatch = attrs.match(/loading="([^"]*)"/)
+      const widthMatch = attrs.match(/width="([^"]*)"/)
+      const heightMatch = attrs.match(/height="([^"]*)"/)
+      const srcsetMatch = attrs.match(/srcset="([^"]*)"/)
+      const styleMatch = attrs.match(/style="([^"]*)"/)
+
+      const originalSrc = originalSrcMatch ? originalSrcMatch[1] : ''
+      const fallbackSrc = fallbackSrcMatch ? fallbackSrcMatch[1] : originalSrc
+      const alt = altMatch ? altMatch[1] : ''
+      const loading = loadingMatch ? loadingMatch[1] : ''
+      const width = widthMatch ? widthMatch[1] : ''
+      const height = heightMatch ? heightMatch[1] : ''
+      const srcset = srcsetMatch ? srcsetMatch[1] : ''
+      const style = styleMatch ? styleMatch[1] : ''
+
+      // Create a placeholder element that will be replaced by the ImageProxy component
+      return `<span class="img-proxy-placeholder"
+        data-original-src="${originalSrc}"
+        data-fallback-src="${fallbackSrc}"
+        data-alt="${alt}"
+        data-loading="${loading}"
+        data-width="${width}"
+        data-height="${height}"
+        data-srcset="${srcset}"
+        data-style="${style}"></span>`
+    }
+  )
+}
+
+// Handle content updates to replace placeholders with actual ImageProxy components
+const handleContentUpdate = async () => {
+  await nextTick()
+  replacePlaceholderImages()
+}
+
+// Replace placeholder spans with actual ImageProxy components
+const replacePlaceholderImages = () => {
+  const contentDiv = contentRef.value
+  if (!contentDiv) return
+
+  const placeholders = contentDiv.querySelectorAll('.img-proxy-placeholder')
+  placeholders.forEach(placeholder => {
+    const originalSrc = placeholder.getAttribute('data-original-src') || ''
+    const fallbackSrc = placeholder.getAttribute('data-fallback-src') || originalSrc
+    const alt = placeholder.getAttribute('data-alt') || ''
+    const loading = placeholder.getAttribute('data-loading') || ''
+    const width = placeholder.getAttribute('data-width') || ''
+    const height = placeholder.getAttribute('data-height') || ''
+    const srcset = placeholder.getAttribute('data-srcset') || ''
+    const style = placeholder.getAttribute('data-style') || ''
+
+    // Create a wrapper element for the ImageProxy component
+    const wrapper = document.createElement('span')
+    wrapper.className = 'image-proxy-wrapper'
+
+    // We'll use a different approach here since we can't dynamically create Vue components
+    // Instead, we'll create an img element that uses our proxy mechanism
+    const img = document.createElement('img')
+    img.setAttribute('data-original-src', originalSrc)
+    img.setAttribute('alt', alt)
+    if (width) img.setAttribute('width', width)
+    if (height) img.setAttribute('height', height)
+    if (srcset) img.setAttribute('srcset', srcset)
+    if (loading) img.setAttribute('loading', loading)
+    if (style) img.setAttribute('style', style)
+
+    // Load the image through our proxy
+    loadImageThroughProxy(img, originalSrc, fallbackSrc)
+
+    wrapper.appendChild(img)
+    placeholder.parentNode?.replaceChild(wrapper, placeholder)
+  })
+}
+
+// Load image through proxy
+const loadImageThroughProxy = async (img: HTMLImageElement, originalSrc: string, fallbackSrc: string) => {
+  try {
+    // Import pageFetch dynamically to avoid circular dependencies
+    const { pageFetch } = await import('../utils')
+
+    // Try to load the image through the proxy
+    const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
+
+    if (response.ok && response.data) {
+      const blob = response.data as unknown as Blob
+      const url = URL.createObjectURL(blob)
+      img.src = url
+
+      // Clean up the object URL when the image is no longer needed
+      img.onload = () => URL.revokeObjectURL(url)
+    } else {
+      // Fallback to original URL if proxy fails
+      img.src = fallbackSrc
+    }
+  } catch (error) {
+    // If proxy fails, fallback to original URL
+    img.src = fallbackSrc
+    console.warn(`Failed to load image through proxy: ${originalSrc}`, error)
+  }
+}
+
+onMounted(() => {
+  mounted.value = true
+  // Add click event listener to the content div
+  nextTick(() => {
+    const contentDiv = contentRef.value
+    if (contentDiv) {
+      contentDiv.addEventListener('click', handleClick)
+      contentDiv.addEventListener('mouseover', handleMouseOver)
+      contentDiv.addEventListener('mouseout', handleMouseOut)
+      scrollContainer = contentDiv.closest('.content-area') as HTMLElement | null
+      scrollContainer?.addEventListener('scroll', updateFootnotePosition, { passive: true })
+
+      // Process any existing placeholder images
+      setTimeout(replacePlaceholderImages, 100)
+    }
+  })
+  window.addEventListener('resize', updateFootnotePosition, { passive: true })
+})
+
 onUnmounted(() => {
   const contentDiv = contentRef.value
   if (contentDiv) {
@@ -232,7 +363,9 @@ onUnmounted(() => {
 <template>
   <div ref="contentRef" class="post-content prose dark:prose-invert max-w-none text-sm">
     <template v-for="(segment, idx) in props.segments" :key="idx">
-      <div v-if="segment.type === 'html'" class="post-content-fragment" v-html="segment.html" />
+      <div v-if="segment.type === 'html'" class="post-content-fragment">
+        <div v-html="processHtmlContent(segment.html)" @DOMNodeInserted="handleContentUpdate"></div>
+      </div>
       <div v-else-if="segment.type === 'carousel'" class="post-carousel">
         <div class="post-carousel-track">
           <div
@@ -240,28 +373,28 @@ onUnmounted(() => {
             :key="imgIndex"
             class="post-carousel-slide"
           >
-            <img
+            <ImageProxy
               class="post-carousel-image"
-              :src="getLightboxThumb(img)"
+              :original-src="getLightboxThumb(img)"
               :alt="img.alt || ''"
               :width="img.width"
               :height="img.height"
               :srcset="img.srcset"
-              :data-base62-sha1="img.base62Sha1"
-              :data-dominant-color="img.dominantColor"
               :loading="img.loading || 'lazy'"
               :style="img.style"
+              :fallback-src="getLightboxThumb(img)"
             />
           </div>
         </div>
         <div class="post-carousel-thumbs">
-          <img
+          <ImageProxy
             v-for="(img, imgIndex) in segment.images"
             :key="`thumb-${imgIndex}`"
             class="post-carousel-thumb"
-            :src="getCarouselImg(segment.images, imgIndex)"
+            :original-src="getCarouselImg(segment.images, imgIndex)"
             :alt="img.alt || ''"
             loading="lazy"
+            :fallback-src="getCarouselImg(segment.images, imgIndex)"
           />
         </div>
       </div>
@@ -275,17 +408,16 @@ onUnmounted(() => {
           :key="imgIndex"
           class="post-image-grid-item"
         >
-          <img
+          <ImageProxy
             class="post-image-grid-image"
-            :src="getLightboxThumb(img)"
+            :original-src="getLightboxThumb(img)"
             :alt="img.alt || ''"
             :width="img.width"
             :height="img.height"
             :srcset="img.srcset"
-            :data-base62-sha1="img.base62Sha1"
-            :data-dominant-color="img.dominantColor"
             :loading="img.loading || 'lazy'"
             :style="img.style"
+            :fallback-src="getLightboxThumb(img)"
           />
         </div>
       </div>

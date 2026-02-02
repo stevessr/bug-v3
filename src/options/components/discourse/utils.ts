@@ -7,7 +7,7 @@ export { renderBBCode } from './bbcode'
 export async function pageFetch<T>(
   url: string,
   options?: { method?: string; headers?: Record<string, string>; body?: string },
-  responseType: 'json' | 'text' = 'json'
+  responseType: 'json' | 'text' | 'blob' = 'json'
 ): Promise<{ status: number; ok: boolean; data: T | null }> {
   const chromeAPI = (globalThis as any).chrome
   if (!chromeAPI?.runtime?.sendMessage) {

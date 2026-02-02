@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -106,10 +107,11 @@ const getTrustLevelName = (level: number): string => {
       <div class="bg-black/40 p-6">
         <div class="flex items-start gap-4">
           <!-- Avatar -->
-          <img
-            :src="getAvatarUrl(user.avatar_template, baseUrl, 120)"
+          <ImageProxy
+            :original-src="getAvatarUrl(user.avatar_template, baseUrl, 120)"
             :alt="user.username"
             class="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+            :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 120)"
           />
 
           <div class="flex-1 text-white">

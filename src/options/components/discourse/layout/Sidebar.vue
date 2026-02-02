@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import type { DiscourseCategory, DiscourseUser, TopicListType } from '../types'
 import { getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 
 const props = defineProps<{
   categories: DiscourseCategory[]
@@ -149,17 +150,19 @@ const handleNavigateTo = (path: string) => {
             @click="emit('clickCategory', cat)"
           >
             <div class="sidebar-icon">
-              <img
+              <ImageProxy
                 v-if="cat.uploaded_logo?.url"
-                :src="getImageUrl(cat.uploaded_logo.url)"
+                :original-src="getImageUrl(cat.uploaded_logo.url)"
                 :alt="cat.name"
                 class="sidebar-icon-img"
+                :fallback-src="getImageUrl(cat.uploaded_logo.url)"
               />
-              <img
+              <ImageProxy
                 v-else-if="cat.uploaded_logo_dark?.url"
-                :src="getImageUrl(cat.uploaded_logo_dark.url)"
+                :original-src="getImageUrl(cat.uploaded_logo_dark.url)"
                 :alt="cat.name"
                 class="sidebar-icon-img"
+                :fallback-src="getImageUrl(cat.uploaded_logo_dark.url)"
               />
               <span v-else-if="cat.emoji" class="sidebar-emoji">{{ cat.emoji }}</span>
               <svg v-else-if="cat.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
@@ -181,17 +184,19 @@ const handleNavigateTo = (path: string) => {
               @click="emit('clickCategory', child)"
             >
               <span class="sidebar-icon">
-                <img
+                <ImageProxy
                   v-if="child.uploaded_logo?.url"
-                  :src="getImageUrl(child.uploaded_logo.url)"
+                  :original-src="getImageUrl(child.uploaded_logo.url)"
                   :alt="child.name"
                   class="sidebar-icon-img"
+                  :fallback-src="getImageUrl(child.uploaded_logo.url)"
                 />
-                <img
+                <ImageProxy
                   v-else-if="child.uploaded_logo_dark?.url"
-                  :src="getImageUrl(child.uploaded_logo_dark.url)"
+                  :original-src="getImageUrl(child.uploaded_logo_dark.url)"
                   :alt="child.name"
                   class="sidebar-icon-img"
+                  :fallback-src="getImageUrl(child.uploaded_logo_dark.url)"
                 />
                 <span v-else-if="child.emoji" class="sidebar-emoji">{{ child.emoji }}</span>
                 <svg v-else-if="child.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
@@ -223,14 +228,15 @@ const handleNavigateTo = (path: string) => {
     >
       <h3 class="text-sm font-semibold mb-3 dark:text-white">活跃用户</h3>
       <div class="flex flex-wrap gap-2">
-        <img
+        <ImageProxy
           v-for="user in users.slice(0, 20)"
           :key="user.id"
-          :src="getAvatarUrl(user.avatar_template, baseUrl, 32)"
+          :original-src="getAvatarUrl(user.avatar_template, baseUrl, 32)"
           :alt="user.username"
           :title="user.username"
           class="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
           @click="emit('clickUser', user.username)"
+          :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 32)"
         />
       </div>
       <div v-if="users.length > 20" class="text-xs text-gray-400 mt-2">

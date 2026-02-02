@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ChatMessage, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 
 import PostContent from '../topic/PostContent.vue'
 
@@ -28,10 +29,11 @@ const getAvatarTemplate = () => {
 
 <template>
   <div class="chat-message-item" :class="{ 'chat-message-own': isOwn }">
-    <img
+    <ImageProxy
       class="chat-message-avatar"
-      :src="getAvatarUrl(getAvatarTemplate(), baseUrl, 32)"
+      :original-src="getAvatarUrl(getAvatarTemplate(), baseUrl, 32)"
       :alt="getDisplayName()"
+      :fallback-src="getAvatarUrl(getAvatarTemplate(), baseUrl, 32)"
     />
     <div class="chat-message-content">
       <div class="chat-message-meta">

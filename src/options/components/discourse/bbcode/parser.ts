@@ -35,7 +35,7 @@ export function parseBBCode(bbcode: string): string {
   // [img]...[/img] - Images
   html = html.replace(/\[img\]([^\[]*?)\[\/img\]/g, (_, src) => {
     const safeSrc = escapeHtml(src)
-    return `<img src="${safeSrc}" alt="image" loading="lazy" />`
+    return `<img-proxy original-src="${safeSrc}" alt="image" loading="lazy" fallback-src="${safeSrc}" />`
   })
 
   // [quote]...[/quote] - Blockquotes
@@ -139,7 +139,7 @@ function escapeHtml(text: string): string {
  */
 export function sanitizeBBCode(html: string): string {
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['iframe', 'video', 'audio', 'source'],
+    ADD_TAGS: ['iframe', 'video', 'audio', 'source', 'img-proxy'],
     ADD_ATTR: [
       'target',
       'src',
@@ -161,7 +161,11 @@ export function sanitizeBBCode(html: string): string {
       'aria-live',
       'role',
       'tabindex',
-      'dir'
+      'dir',
+      'original-src',
+      'fallback-src',
+      'alt',
+      'loading'
     ],
     ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'style', 'object', 'embed', 'form'],

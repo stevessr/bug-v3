@@ -7,6 +7,7 @@ import katex from 'katex'
 import type { DiscourseCategory } from '../types'
 import { createTopic, replyToTopic, searchTags } from '../actions'
 import { renderBBCode } from '../bbcode'
+import ImageProxy from '../ImageProxy.vue'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
 
 type ComposerMode = 'topic' | 'reply'
@@ -322,11 +323,12 @@ watch(categoryId, () => {
                 class="category-option-icon"
                 :style="{ color: `#${normalizeTreeNode(node)?.color || '94a3b8'}` }"
               >
-                <img
+                <ImageProxy
                   v-if="normalizeTreeNode(node)?.logoUrl"
-                  :src="getImageUrl(normalizeTreeNode(node)?.logoUrl)"
+                  :original-src="getImageUrl(normalizeTreeNode(node)?.logoUrl)"
                   :alt="normalizeTreeNode(node)?.title"
                   class="category-option-img"
+                  :fallback-src="getImageUrl(normalizeTreeNode(node)?.logoUrl)"
                 />
                 <span v-else-if="normalizeTreeNode(node)?.emoji" class="category-option-emoji">
                   {{ normalizeTreeNode(node)?.emoji }}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -34,11 +35,12 @@ const tabs: { key: MessagesTabType; label: string }[] = [
     <div
       class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700"
     >
-      <img
-        :src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
+      <ImageProxy
+        :original-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
         :alt="user.username"
         class="w-16 h-16 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
         @click="emit('goToProfile')"
+        :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
       />
       <div class="flex-1">
         <div class="flex items-center gap-2">
@@ -91,11 +93,12 @@ const tabs: { key: MessagesTabType; label: string }[] = [
                 class="relative"
                 :style="{ zIndex: 3 - index }"
               >
-                <img
+                <ImageProxy
                   v-if="users.get(participant.user_id)"
-                  :src="getAvatarUrl(users.get(participant.user_id)!.avatar_template, baseUrl, 40)"
+                  :original-src="getAvatarUrl(users.get(participant.user_id)!.avatar_template, baseUrl, 40)"
                   :alt="users.get(participant.user_id)!.username"
                   class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
+                  :fallback-src="getAvatarUrl(users.get(participant.user_id)!.avatar_template, baseUrl, 40)"
                 />
                 <div
                   v-else

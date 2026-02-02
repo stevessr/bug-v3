@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
+import ImageProxy from './ImageProxy.vue'
 
 interface Props {
   show?: boolean
@@ -110,7 +111,7 @@ const handleKeydown = (event: KeyboardEvent) => {
               :title="group.name"
             >
               <span v-if="group.icon.startsWith('http')" class="group-icon-img">
-                <img :src="group.icon" :alt="group.name" />
+                <ImageProxy :original-src="group.icon" :alt="group.name" :fallback-src="group.icon" />
               </span>
               <span v-else class="group-icon-text">{{ group.icon }}</span>
             </button>
@@ -129,7 +130,7 @@ const handleKeydown = (event: KeyboardEvent) => {
                 :title="emoji.name"
                 @click="selectEmoji(emoji)"
               >
-                <img :src="emoji.url" :alt="emoji.name" loading="lazy" />
+                <ImageProxy :original-src="emoji.url" :alt="emoji.name" loading="lazy" :fallback-src="emoji.url" />
               </button>
             </div>
           </div>

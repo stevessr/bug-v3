@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import ImageProxy from '../ImageProxy.vue'
 
 import PostContent from './PostContent.vue'
 
@@ -68,11 +69,12 @@ const handleContentNavigation = (url: string) => {
     </div>
 
     <div class="post-parent-header">
-      <img
-        :src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
+      <ImageProxy
+        :original-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
         :alt="props.post.username"
         class="post-parent-avatar"
         @click="handleUserClick(props.post.username)"
+        :fallback-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
       />
       <div class="post-parent-title">
         <span class="post-parent-name" @click="handleUserClick(props.post.username)">
