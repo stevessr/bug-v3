@@ -216,114 +216,90 @@ onMounted(() => {
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
 })
 
-// Process HTML content to replace img-proxy tags with actual ImageProxy components
+// Process HTML content to replace img-proxy tags with img tags that will be handled via DOM manipulation
 const processHtmlContent = (html: string): string => {
-  // Replace img-proxy tags with span wrappers that will be converted to ImageProxy components
-  return html.replace(
-    /<img-proxy\s+([^>]+)>/g,
-    (match, attrs) => {
-      // Parse attributes
-      const originalSrcMatch = attrs.match(/original-src="([^"]*)"/)
-      const fallbackSrcMatch = attrs.match(/fallback-src="([^"]*)"/)
-      const altMatch = attrs.match(/alt="([^"]*)"/)
-      const loadingMatch = attrs.match(/loading="([^"]*)"/)
-      const widthMatch = attrs.match(/width="([^"]*)"/)
-      const heightMatch = attrs.match(/height="([^"]*)"/)
-      const srcsetMatch = attrs.match(/srcset="([^"]*)"/)
-      const styleMatch = attrs.match(/style="([^"]*)"/)
+  // Replace img-proxy tags with regular img tags but with custom data attributes
+  return html.replace(/<img-proxy\s+([^>]+)>/g, (match, attrs) => {
+    // Parse attributes
+    const originalSrcMatch = attrs.match(/original-src="([^"]*)"/)
+    const fallbackSrcMatch = attrs.match(/fallback-src="([^"]*)"/)
+    const altMatch = attrs.match(/alt="([^"]*)"/)
+    const loadingMatch = attrs.match(/loading="([^"]*)"/)
+    const widthMatch = attrs.match(/width="([^"]*)"/)
+    const heightMatch = attrs.match(/height="([^"]*)"/)
+    const srcsetMatch = attrs.match(/srcset="([^"]*)"/)
+    const styleMatch = attrs.match(/style="([^"]*)"/)
 
-      const originalSrc = originalSrcMatch ? originalSrcMatch[1] : ''
-      const fallbackSrc = fallbackSrcMatch ? fallbackSrcMatch[1] : originalSrc
-      const alt = altMatch ? altMatch[1] : ''
-      const loading = loadingMatch ? loadingMatch[1] : ''
-      const width = widthMatch ? widthMatch[1] : ''
-      const height = heightMatch ? heightMatch[1] : ''
-      const srcset = srcsetMatch ? srcsetMatch[1] : ''
-      const style = styleMatch ? styleMatch[1] : ''
+    const originalSrc = originalSrcMatch ? originalSrcMatch[1] : ''
+    const fallbackSrc = fallbackSrcMatch ? fallbackSrcMatch[1] : originalSrc
+    const alt = altMatch ? altMatch[1] : ''
+    const loading = loadingMatch ? loadingMatch[1] : ''
+    const width = widthMatch ? widthMatch[1] : ''
+    const height = heightMatch ? heightMatch[1] : ''
+    const srcset = srcsetMatch ? srcsetMatch[1] : ''
+    const style = styleMatch ? styleMatch[1] : ''
 
-      // Create a placeholder element that will be replaced by the ImageProxy component
-      return `<span class="img-proxy-placeholder"
-        data-original-src="${originalSrc}"
-        data-fallback-src="${fallbackSrc}"
-        data-alt="${alt}"
-        data-loading="${loading}"
-        data-width="${width}"
-        data-height="${height}"
-        data-srcset="${srcset}"
-        data-style="${style}"></span>`
-    }
-  )
-}
+    // Create an img tag with data attributes for later processing
+    let imgTag = `<img data-original-src="${originalSrc}" alt="${alt}" `
+    if (width) imgTag += `width="${width}" `
+    if (height) imgTag += `height="${height}" `
+    if (srcset) imgTag += `srcset="${srcset}" `
+    if (loading) imgTag += `loading="${loading}" `
+    if (style) imgTag += `style="${style}" `
+    imgTag += `class="proxy-image" />`
 
-// Handle content updates to replace placeholders with actual ImageProxy components
-const handleContentUpdate = async () => {
-  await nextTick()
-  replacePlaceholderImages()
-}
-
-// Replace placeholder spans with actual ImageProxy components
-const replacePlaceholderImages = () => {
-  const contentDiv = contentRef.value
-  if (!contentDiv) return
-
-  const placeholders = contentDiv.querySelectorAll('.img-proxy-placeholder')
-  placeholders.forEach(placeholder => {
-    const originalSrc = placeholder.getAttribute('data-original-src') || ''
-    const fallbackSrc = placeholder.getAttribute('data-fallback-src') || originalSrc
-    const alt = placeholder.getAttribute('data-alt') || ''
-    const loading = placeholder.getAttribute('data-loading') || ''
-    const width = placeholder.getAttribute('data-width') || ''
-    const height = placeholder.getAttribute('data-height') || ''
-    const srcset = placeholder.getAttribute('data-srcset') || ''
-    const style = placeholder.getAttribute('data-style') || ''
-
-    // Create a wrapper element for the ImageProxy component
-    const wrapper = document.createElement('span')
-    wrapper.className = 'image-proxy-wrapper'
-
-    // We'll use a different approach here since we can't dynamically create Vue components
-    // Instead, we'll create an img element that uses our proxy mechanism
-    const img = document.createElement('img')
-    img.setAttribute('data-original-src', originalSrc)
-    img.setAttribute('alt', alt)
-    if (width) img.setAttribute('width', width)
-    if (height) img.setAttribute('height', height)
-    if (srcset) img.setAttribute('srcset', srcset)
-    if (loading) img.setAttribute('loading', loading)
-    if (style) img.setAttribute('style', style)
-
-    // Load the image through our proxy
-    loadImageThroughProxy(img, originalSrc, fallbackSrc)
-
-    wrapper.appendChild(img)
-    placeholder.parentNode?.replaceChild(wrapper, placeholder)
+    return imgTag
   })
 }
 
-// Load image through proxy
-const loadImageThroughProxy = async (img: HTMLImageElement, originalSrc: string, fallbackSrc: string) => {
-  try {
-    // Import pageFetch dynamically to avoid circular dependencies
-    const { pageFetch } = await import('../utils')
+// Function to replace proxy images with actual images loaded through pageFetch
+const replaceProxyImages = async () => {
+  const contentDiv = contentRef.value
+  if (!contentDiv) return
 
-    // Try to load the image through the proxy
-    const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
+  const proxyImages = contentDiv.querySelectorAll('img.proxy-image[data-original-src]')
 
-    if (response.ok && response.data) {
-      const blob = response.data as unknown as Blob
-      const url = URL.createObjectURL(blob)
-      img.src = url
+  for (const img of Array.from(proxyImages)) {
+    const originalSrc = img.getAttribute('data-original-src') || ''
+    const fallbackSrc = img.getAttribute('data-original-src') || '' // Use original as fallback too
+    const alt = img.getAttribute('alt') || ''
+    const width = img.getAttribute('width')
+    const height = img.getAttribute('height')
+    const srcset = img.getAttribute('srcset')
+    const loading = img.getAttribute('loading')
+    const style = img.getAttribute('style')
 
-      // Clean up the object URL when the image is no longer needed
-      img.onload = () => URL.revokeObjectURL(url)
-    } else {
-      // Fallback to original URL if proxy fails
-      img.src = fallbackSrc
+    try {
+      // Import pageFetch dynamically
+      const { pageFetch } = await import('../utils')
+
+      // Fetch the image through the proxy
+      const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
+
+      if (response.ok && response.data) {
+        const blob = response.data as unknown as Blob
+        const url = URL.createObjectURL(blob)
+
+        // Set the src to the blob URL
+        img.setAttribute('src', url)
+
+        // Clean up the object URL when the image is no longer needed
+        img.addEventListener(
+          'load',
+          () => {
+            URL.revokeObjectURL(url)
+          },
+          { once: true }
+        )
+      } else {
+        // Fallback to original URL if proxy fails
+        img.setAttribute('src', fallbackSrc)
+      }
+    } catch (error) {
+      // If proxy fails, fallback to original URL
+      img.setAttribute('src', fallbackSrc)
+      console.warn(`Failed to load image through proxy: ${originalSrc}`, error)
     }
-  } catch (error) {
-    // If proxy fails, fallback to original URL
-    img.src = fallbackSrc
-    console.warn(`Failed to load image through proxy: ${originalSrc}`, error)
   }
 }
 
@@ -339,8 +315,8 @@ onMounted(() => {
       scrollContainer = contentDiv.closest('.content-area') as HTMLElement | null
       scrollContainer?.addEventListener('scroll', updateFootnotePosition, { passive: true })
 
-      // Process any existing placeholder images
-      setTimeout(replacePlaceholderImages, 100)
+      // Process proxy images after content is rendered
+      setTimeout(replaceProxyImages, 100)
     }
   })
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
@@ -363,9 +339,11 @@ onUnmounted(() => {
 <template>
   <div ref="contentRef" class="post-content prose dark:prose-invert max-w-none text-sm">
     <template v-for="(segment, idx) in props.segments" :key="idx">
-      <div v-if="segment.type === 'html'" class="post-content-fragment">
-        <div v-html="processHtmlContent(segment.html)" @DOMNodeInserted="handleContentUpdate"></div>
-      </div>
+      <div
+        v-if="segment.type === 'html'"
+        class="post-content-fragment"
+        v-html="processHtmlContent(segment.html)"
+      />
       <div v-else-if="segment.type === 'carousel'" class="post-carousel">
         <div class="post-carousel-track">
           <div
