@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 
 import type { BrowserTab, DiscourseTopic, DiscourseUser } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
 import { normalizeCategoriesFromResponse } from './categories'
 
 export async function loadCategory(
@@ -51,6 +52,9 @@ export async function loadCategory(
   tab.categories = []
   if (tab.currentCategoryId) {
     try {
+      if (isLinuxDoUrl(baseUrl.value)) {
+        await ensurePreloadedCategoriesLoaded()
+      }
       const subResult = await pageFetch<any>(
         `${baseUrl.value}/categories.json?parent_category_id=${tab.currentCategoryId}`
       )

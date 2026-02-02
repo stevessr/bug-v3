@@ -5,7 +5,11 @@ import DOMPurify from 'dompurify'
 import katex from 'katex'
 
 import type { DiscourseCategory } from '../types'
-import { getAllPreloadedCategories } from '../linux.do/preloadedCategories'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories,
+  isLinuxDoUrl
+} from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, searchTags } from '../actions'
 import { renderBBCode } from '../bbcode'
 import TagPill from '../layout/TagPill.vue'
@@ -44,12 +48,23 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 let tagSearchTimer: number | null = null
+const preloadedCategoriesReadyToken = ref(0)
 
 watch(
   () => props.defaultCategoryId,
   value => {
     if (value) categoryId.value = value
   }
+)
+
+watch(
+  () => props.baseUrl,
+  async value => {
+    if (!isLinuxDoUrl(value)) return
+    await ensurePreloadedCategoriesLoaded()
+    preloadedCategoriesReadyToken.value++
+  },
+  { immediate: true }
 )
 
 const showEditor = computed(() => editMode.value !== 'preview')
@@ -66,8 +81,9 @@ const getIconHref = (icon?: string | null) => {
 }
 
 const mergedCategories = computed(() => {
+  const readyToken = preloadedCategoriesReadyToken.value
   const localMap = new Map<number, DiscourseCategory>()
-  const usingLinuxDo = props.baseUrl.includes('linux.do')
+  const usingLinuxDo = isLinuxDoUrl(props.baseUrl) && readyToken >= 0
 
   if (usingLinuxDo) {
     getAllPreloadedCategories().forEach(raw => {

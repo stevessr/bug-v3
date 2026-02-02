@@ -162,7 +162,9 @@ const requestPollVote = async (method: 'PUT' | 'DELETE', body: URLSearchParams) 
       method,
       headers: {
         accept: '*/*',
-        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
       },
       body: body.toString()
     },
@@ -193,6 +195,42 @@ const updatePollVoters = (pollEl: HTMLElement, voters?: number) => {
   if (infoNumber) {
     infoNumber.textContent = String(voters)
   }
+}
+
+const ensurePollButtons = (pollEl: HTMLElement) => {
+  const container = pollEl.querySelector<HTMLElement>('.poll-container') || pollEl
+  let buttonsWrap = pollEl.querySelector<HTMLElement>('.poll-buttons')
+  if (!buttonsWrap) {
+    buttonsWrap = document.createElement('div')
+    buttonsWrap.className = 'poll-buttons'
+    const info = pollEl.querySelector('.poll-info')
+    if (info) {
+      pollEl.insertBefore(buttonsWrap, info)
+    } else {
+      container.appendChild(buttonsWrap)
+    }
+  }
+
+  let castButton = buttonsWrap.querySelector<HTMLButtonElement>('.cast-votes')
+  if (!castButton) {
+    castButton = document.createElement('button')
+    castButton.type = 'button'
+    castButton.className = 'btn btn-primary cast-votes'
+    castButton.textContent = '提交投票'
+    buttonsWrap.appendChild(castButton)
+  }
+
+  let clearButton = buttonsWrap.querySelector<HTMLButtonElement>('.revoke-votes')
+  if (!clearButton) {
+    clearButton = document.createElement('button')
+    clearButton.type = 'button'
+    clearButton.className = 'btn btn-default revoke-votes'
+    clearButton.title = '撤销投票'
+    clearButton.textContent = '撤销'
+    buttonsWrap.insertBefore(clearButton, castButton)
+  }
+
+  return { buttonsWrap, castButton, clearButton }
 }
 
 const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: string) => {
@@ -232,17 +270,7 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
   let max = pollType === 'multiple' ? inferMaxSelections(pollEl) : 1
 
   const isSingle = pollType !== 'multiple'
-  const castButton = pollEl.querySelector<HTMLButtonElement>('.poll-buttons .cast-votes')
-  const buttonsWrap = pollEl.querySelector<HTMLElement>('.poll-buttons')
-  let clearButton = pollEl.querySelector<HTMLButtonElement>('.poll-buttons .revoke-votes')
-  if (!clearButton && buttonsWrap) {
-    clearButton = document.createElement('button')
-    clearButton.type = 'button'
-    clearButton.className = 'btn btn-default revoke-votes'
-    clearButton.title = '撤销投票'
-    clearButton.textContent = '撤销'
-    buttonsWrap.insertBefore(clearButton, buttonsWrap.firstChild)
-  }
+  const { castButton, clearButton } = ensurePollButtons(pollEl)
 
   const setOptionChecked = (item: HTMLLIElement, checked: boolean) => {
     const button = item.querySelector('button')
@@ -400,9 +428,49 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
 
 const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
   const optionNodes = Array.from(
-    pollEl.querySelectorAll<HTMLElement>('.ranked-choice-poll-option[data-poll-option-id]')
+    pollEl.querySelectorAll<HTMLElement>(
+      '.ranked-choice-poll-option[data-poll-option-id], li[data-poll-option-id]'
+    )
   )
   if (optionNodes.length === 0) return
+
+  const ensureRankedOptionButton = (node: HTMLElement) => {
+    const existing = node.querySelector<HTMLButtonElement>('button.poll-option-btn')
+    if (existing) return existing
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'poll-option-btn'
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    icon.setAttribute('class', 'poll-option-icon')
+    icon.setAttribute('viewBox', '0 0 448 512')
+    icon.setAttribute('width', '1em')
+    icon.setAttribute('height', '1em')
+    icon.setAttribute('aria-hidden', 'true')
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use')
+    use.setAttribute('href', '#sort-amount-down')
+    icon.appendChild(use)
+
+    const optionText = document.createElement('span')
+    optionText.className = 'option-text'
+    optionText.textContent = (node.textContent || '').trim()
+
+    const rankText = document.createElement('span')
+    rankText.className = 'poll-rank-label'
+    rankText.textContent = '弃权'
+
+    button.appendChild(icon)
+    button.appendChild(optionText)
+    button.appendChild(rankText)
+    node.textContent = ''
+    node.appendChild(button)
+    return button
+  }
+
+  optionNodes.forEach(node => {
+    ensureRankedOptionButton(node)
+  })
 
   const ranks = new Map<string, number>()
   optionNodes.forEach(node => {
@@ -412,17 +480,7 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
     ranks.set(id, Number.isFinite(rank) && rank > 0 ? rank : 0)
   })
 
-  const castButton = pollEl.querySelector<HTMLButtonElement>('.poll-buttons .cast-votes')
-  const buttonsWrap = pollEl.querySelector<HTMLElement>('.poll-buttons')
-  let clearButton = pollEl.querySelector<HTMLButtonElement>('.poll-buttons .revoke-votes')
-  if (!clearButton && buttonsWrap) {
-    clearButton = document.createElement('button')
-    clearButton.type = 'button'
-    clearButton.className = 'btn btn-default revoke-votes'
-    clearButton.title = '撤销投票'
-    clearButton.textContent = '撤销'
-    buttonsWrap.insertBefore(clearButton, buttonsWrap.firstChild)
-  }
+  const { castButton, clearButton } = ensurePollButtons(pollEl)
 
   const compactRanks = () => {
     const ordered = Array.from(ranks.entries())
@@ -442,7 +500,7 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
       const id = node.dataset.pollOptionId
       if (!id) return
       const rank = ranks.get(id) || 0
-      const label = node.querySelector<HTMLElement>('button .d-button-label')
+      const label = node.querySelector<HTMLElement>('.poll-rank-label')
       if (label) {
         label.textContent = rank > 0 ? `第 ${rank} 选择` : '弃权'
       }
@@ -501,6 +559,11 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
       const body = new URLSearchParams()
       body.append('post_id', String(props.postId))
       body.append('poll_name', pollName)
+      if (!Array.from(ranks.values()).some(rank => rank > 0)) {
+        message.warning('请先选择排序选项')
+        updateUi()
+        return
+      }
       optionNodes.forEach((node, index) => {
         const optionId = node.dataset.pollOptionId
         if (!optionId) return

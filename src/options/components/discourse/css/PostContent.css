@@ -525,6 +525,19 @@
   flex: 0 0 auto;
 }
 
+.post-content :deep(.poll .poll-rank-label) {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.post-content :deep(.poll .poll-buttons) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+
 .post-content :deep(.poll-outer .poll-option-votes) {
   margin-left: 0.5rem;
   font-size: 0.75rem;

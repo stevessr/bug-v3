@@ -31,22 +31,26 @@ const configs = {
 
   build: {
     ENABLE_LOGGING: 'false', // 生产环境禁用日志
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
+    BUILD_MINIFIER: 'esbuild'
   },
 
   'build:prod': {
     ENABLE_LOGGING: 'false',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
+    BUILD_MINIFIER: 'terser'
   },
   'build:minimal': {
     ENABLE_LOGGING: 'false',
-    NODE_ENV: 'production'
+    NODE_ENV: 'production',
+    BUILD_MINIFIER: 'terser'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
     ENABLE_LOGGING: 'true',
     NODE_ENV: 'production',
-    BUILD_MINIFIED: 'false'
+    BUILD_MINIFIED: 'false',
+    BUILD_FAST: 'true'
   }
 }
 

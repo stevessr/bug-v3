@@ -8,6 +8,7 @@ import type {
   TopicListType
 } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
 
 import { normalizeCategoriesFromResponse } from './categories'
 
@@ -16,6 +17,10 @@ export async function loadHome(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
+  if (isLinuxDoUrl(baseUrl.value)) {
+    await ensurePreloadedCategoriesLoaded()
+  }
+
   const [catResult, topicResult] = await Promise.all([
     pageFetch<any>(`${baseUrl.value}/categories.json`),
     pageFetch<any>(`${baseUrl.value}/${tab.topicListType || 'latest'}.json`)
@@ -82,6 +87,10 @@ export async function loadCategories(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
+  if (isLinuxDoUrl(baseUrl.value)) {
+    await ensurePreloadedCategoriesLoaded()
+  }
+
   let data: any = null
   try {
     const result = await pageFetch<any>(`${baseUrl.value}/categories_and_latest.json`)

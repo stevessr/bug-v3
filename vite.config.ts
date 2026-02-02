@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
   const isDev = mode === 'development'
   const isProd = mode === 'production'
+  const isFastBuild = process.env.BUILD_FAST === 'true'
+  const minifier = process.env.BUILD_MINIFIER === 'terser' ? 'terser' : 'esbuild'
   // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
   const enableLogging = isDev && process.env.ENABLE_LOGGING !== 'false'
 
@@ -70,12 +72,12 @@ export default defineConfig(({ mode }) => {
             }
           }
         ],
-        dts: 'src/auto-imports.d.ts',
+        dts: isFastBuild ? false : 'src/auto-imports.d.ts',
         dirs: ['src/composables', 'src/utils'],
         vueTemplate: true
       }),
       Components({
-        dts: 'src/components.d.ts',
+        dts: isFastBuild ? false : 'src/components.d.ts',
         resolvers: [
           AntDesignVueResolver({
             importStyle: 'less',
@@ -93,14 +95,16 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: process.env.BUILD_SOURCEMAP === 'true',
       manifest: process.env.BUILD_MANIFEST === 'true',
-      minify: process.env.BUILD_MINIFIED === 'false' ? false : 'terser',
+      minify: process.env.BUILD_MINIFIED === 'false' ? false : minifier,
+      reportCompressedSize: false, // Skip gzip/brotli size calculation for faster builds
       chunkSizeWarningLimit: 1000, // Increase limit to 1000 kB since this is a feature-rich extension
       // 优化：目标现代浏览器
       target: 'esnext',
       // 优化：启用 CSS 代码分割
       cssCodeSplit: true,
+      cssMinify: isFastBuild ? false : undefined,
       terserOptions:
-        process.env.BUILD_MINIFIED === 'false'
+        process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
           ? undefined
           : {
               compress: {
@@ -148,31 +152,35 @@ export default defineConfig(({ mode }) => {
           assetFileNames: 'assets/[name].[ext]',
           format: 'es', // Use ES module format for better code splitting support
           inlineDynamicImports: false,
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              // UI 库单独打包，避免 content script 加载不需要的 UI 代码
-              if (id.includes('ant-design-vue') || id.includes('@ant-design')) {
-                return 'vendor-ui'
+          manualChunks: isFastBuild
+            ? undefined
+            : id => {
+                if (id.includes('node_modules')) {
+                  // UI 库单独打包，避免 content script 加载不需要的 UI 代码
+                  if (id.includes('ant-design-vue') || id.includes('@ant-design')) {
+                    return 'vendor-ui'
+                  }
+                  // 核心框架单独打包
+                  if (
+                    id.includes('vue') ||
+                    id.includes('pinia') ||
+                    id.includes('vue-router') ||
+                    id.includes('@vueuse')
+                  ) {
+                    return 'vendor-core'
+                  }
+                  // 其他第三方依赖
+                  return 'vendor-libs'
+                }
               }
-              // 核心框架单独打包
-              if (
-                id.includes('vue') ||
-                id.includes('pinia') ||
-                id.includes('vue-router') ||
-                id.includes('@vueuse')
-              ) {
-                return 'vendor-core'
-              }
-              // 其他第三方依赖
-              return 'vendor-libs'
-            }
-          }
         },
         // 优化：tree-shaking 优化
-        treeshake: {
-          moduleSideEffects: 'no-external',
-          propertyReadSideEffects: false
-        },
+        treeshake: isFastBuild
+          ? false
+          : {
+              moduleSideEffects: 'no-external',
+              propertyReadSideEffects: false
+            },
         external: id => {
           return false // Don't externalize anything
         }
