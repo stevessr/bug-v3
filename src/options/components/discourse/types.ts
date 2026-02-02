@@ -213,6 +213,29 @@ export interface DiscoursePost {
   staff?: boolean
   admin?: boolean
   moderator?: boolean
+  polls?: DiscoursePoll[]
+}
+
+export interface DiscoursePollOption {
+  id: string
+  html?: string
+  votes?: number
+  chosen?: boolean
+  rank?: number[] | number
+}
+
+export interface DiscoursePoll {
+  id: number
+  name: string
+  type: 'regular' | 'multiple' | 'ranked_choice' | string
+  status?: string
+  results?: string
+  min?: number
+  max?: number
+  dynamic?: boolean
+  options?: DiscoursePollOption[]
+  voters?: number
+  ranked_choice_outcome?: Record<string, any> | null
 }
 
 export interface SuggestedTopic {

@@ -163,6 +163,7 @@ const handleWiki = () => {
       :segments="props.parsed.segments"
       :baseUrl="props.baseUrl"
       :postId="props.post.id"
+      :polls="props.post.polls"
       :footnotes="props.parsed.footnotes"
       @navigate="handleContentNavigation"
     />

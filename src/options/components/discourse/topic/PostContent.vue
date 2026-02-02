@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
-import type { ParsedContent, LightboxImage } from '../types'
+import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
 
@@ -13,6 +13,7 @@ const props = defineProps<{
   baseUrl: string
   postId: number
   footnotes?: Record<string, string>
+  polls?: DiscoursePoll[]
 }>()
 
 const emit = defineEmits<{
@@ -230,10 +231,31 @@ const ensurePollButtons = (pollEl: HTMLElement) => {
     buttonsWrap.insertBefore(clearButton, castButton)
   }
 
-  return { buttonsWrap, castButton, clearButton }
+  let resultsButton = buttonsWrap.querySelector<HTMLButtonElement>('.toggle-results')
+  if (!resultsButton) {
+    const existing = pollEl.querySelector<HTMLButtonElement>('.toggle-results')
+    if (existing) {
+      resultsButton = existing
+      buttonsWrap.appendChild(resultsButton)
+    }
+  }
+  if (!resultsButton) {
+    resultsButton = document.createElement('button')
+    resultsButton.type = 'button'
+    resultsButton.className = 'btn btn-default toggle-results'
+    resultsButton.textContent = '结果'
+    buttonsWrap.appendChild(resultsButton)
+  }
+
+  return { buttonsWrap, castButton, clearButton, resultsButton }
 }
 
-const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: string) => {
+const setupMultiplePoll = (
+  pollEl: HTMLElement,
+  pollName: string,
+  pollType: string,
+  pollData?: DiscoursePoll
+) => {
   const optionItems = Array.from(pollEl.querySelectorAll<HTMLLIElement>('li[data-poll-option-id]'))
   if (optionItems.length === 0) return
 
@@ -270,7 +292,10 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
   let max = pollType === 'multiple' ? inferMaxSelections(pollEl) : 1
 
   const isSingle = pollType !== 'multiple'
-  const { castButton, clearButton } = ensurePollButtons(pollEl)
+  const { castButton, clearButton, resultsButton } = ensurePollButtons(pollEl)
+  if (resultsButton) {
+    resultsButton.disabled = !pollData
+  }
 
   const setOptionChecked = (item: HTMLLIElement, checked: boolean) => {
     const button = item.querySelector('button')
@@ -305,7 +330,7 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
     counter.textContent = `(${votes})`
   }
 
-  const applyResult = (poll: any) => {
+  const applyResult = (poll: DiscoursePoll | undefined) => {
     if (!poll) return
     if (typeof poll.max === 'number') {
       max = poll.max
@@ -411,9 +436,17 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
   })
   castButton?.addEventListener('click', onCastClick)
   clearButton?.addEventListener('click', onClearClick)
+  const onResultsClick = (event: Event) => {
+    event.preventDefault()
+    applyResult(pollData)
+  }
+  resultsButton?.addEventListener('click', onResultsClick)
 
   optionItems.forEach(item => setOptionChecked(item, false))
   syncCastButtonState()
+  if (pollData?.results === 'always') {
+    applyResult(pollData)
+  }
 
   pollCleanupFns.push(() => {
     optionItems.forEach(item => {
@@ -423,10 +456,15 @@ const setupMultiplePoll = (pollEl: HTMLElement, pollName: string, pollType: stri
     })
     castButton?.removeEventListener('click', onCastClick)
     clearButton?.removeEventListener('click', onClearClick)
+    resultsButton?.removeEventListener('click', onResultsClick)
   })
 }
 
-const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
+const setupRankedChoicePoll = (
+  pollEl: HTMLElement,
+  pollName: string,
+  pollData?: DiscoursePoll
+) => {
   const optionNodes = Array.from(
     pollEl.querySelectorAll<HTMLElement>(
       '.ranked-choice-poll-option[data-poll-option-id], li[data-poll-option-id]'
@@ -437,6 +475,10 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
   const ensureRankedOptionButton = (node: HTMLElement) => {
     const existing = node.querySelector<HTMLButtonElement>('button.poll-option-btn')
     if (existing) return existing
+
+    const optionTextNode = node.querySelector<HTMLElement>('.option-text')
+    const optionTextValue =
+      optionTextNode?.textContent?.trim() || (node.textContent || '').trim()
 
     const button = document.createElement('button')
     button.type = 'button'
@@ -454,7 +496,7 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
 
     const optionText = document.createElement('span')
     optionText.className = 'option-text'
-    optionText.textContent = (node.textContent || '').trim()
+    optionText.textContent = optionTextValue
 
     const rankText = document.createElement('span')
     rankText.className = 'poll-rank-label'
@@ -480,7 +522,10 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
     ranks.set(id, Number.isFinite(rank) && rank > 0 ? rank : 0)
   })
 
-  const { castButton, clearButton } = ensurePollButtons(pollEl)
+  const { castButton, clearButton, resultsButton } = ensurePollButtons(pollEl)
+  if (resultsButton) {
+    resultsButton.disabled = !pollData
+  }
 
   const compactRanks = () => {
     const ordered = Array.from(ranks.entries())
@@ -515,12 +560,29 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
     }
   }
 
+  const upsertVotesLabel = (node: HTMLElement, votes?: number) => {
+    if (typeof votes !== 'number') return
+    const textContainer = node.querySelector<HTMLElement>('.option-text') || node
+    let counter = node.querySelector<HTMLElement>('.poll-option-votes')
+    if (!counter) {
+      counter = document.createElement('span')
+      counter.className = 'poll-option-votes'
+      textContainer.insertAdjacentElement('afterend', counter)
+    }
+    counter.textContent = `(${votes})`
+  }
+
   const applyResult = (poll: any) => {
     if (!poll || !Array.isArray(poll.options)) return
     poll.options.forEach((option: any) => {
-      const rank = Array.isArray(option?.rank) ? Number(option.rank[0]) : 0
-      if (option?.id && ranks.has(option.id)) {
+      const hasRank = Array.isArray(option?.rank) && option.rank.length > 0
+      const rank = hasRank ? Number(option.rank[0]) : 0
+      if (option?.id && ranks.has(option.id) && hasRank) {
         ranks.set(option.id, Number.isFinite(rank) && rank > 0 ? rank : 0)
+      }
+      const node = optionNodes.find(item => item.dataset.pollOptionId === option?.id)
+      if (node) {
+        upsertVotesLabel(node, typeof option?.votes === 'number' ? option.votes : undefined)
       }
     })
     compactRanks()
@@ -608,7 +670,15 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
   })
   castButton?.addEventListener('click', onCastClick)
   clearButton?.addEventListener('click', onClearClick)
+  const onResultsClick = (event: Event) => {
+    event.preventDefault()
+    applyResult(pollData)
+  }
+  resultsButton?.addEventListener('click', onResultsClick)
   updateUi()
+  if (pollData?.results === 'always') {
+    applyResult(pollData)
+  }
 
   pollCleanupFns.push(() => {
     optionNodes.forEach(node => {
@@ -618,6 +688,7 @@ const setupRankedChoicePoll = (pollEl: HTMLElement, pollName: string) => {
     })
     castButton?.removeEventListener('click', onCastClick)
     clearButton?.removeEventListener('click', onClearClick)
+    resultsButton?.removeEventListener('click', onResultsClick)
   })
 }
 
@@ -645,14 +716,18 @@ const setupPollEnhancements = () => {
   polls.forEach(pollEl => {
     const pollName =
       pollEl.dataset.pollName || pollEl.closest<HTMLElement>('.poll-outer')?.dataset.pollName || ''
-    const pollType = pollEl.dataset.pollType || 'regular'
+    const pollType =
+      pollEl.dataset.pollType ||
+      pollEl.closest<HTMLElement>('.poll-outer')?.dataset.pollType ||
+      'regular'
     if (!pollName) return
+    const pollData = props.polls?.find(item => item.name === pollName)
 
     if (pollType === 'ranked_choice') {
-      setupRankedChoicePoll(pollEl, pollName)
+      setupRankedChoicePoll(pollEl, pollName, pollData)
       return
     }
-    setupMultiplePoll(pollEl, pollName, pollType)
+    setupMultiplePoll(pollEl, pollName, pollType, pollData)
   })
 }
 

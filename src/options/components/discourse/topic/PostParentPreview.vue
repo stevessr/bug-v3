@@ -92,6 +92,8 @@ const handleContentNavigation = (url: string) => {
     <PostContent
       :segments="parsed.segments"
       :baseUrl="baseUrl"
+      :postId="props.post.id"
+      :polls="props.post.polls"
       :footnotes="parsed.footnotes"
       @navigate="handleContentNavigation"
     />
