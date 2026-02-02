@@ -19,7 +19,7 @@ import TopicView from './discourse/topic/TopicView.vue'
 import Composer from './discourse/composer/Composer.vue'
 import UserView from './discourse/user/UserView.vue'
 import UserExtrasView from './discourse/user/UserExtrasView.vue'
-import NotificationsView from './discourse/notifications/NotificationsView.vue'
+import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import Sidebar from './discourse/layout/Sidebar.vue'
 import ActivityView from './discourse/user/ActivityView.vue'
 import MessagesView from './discourse/user/MessagesView.vue'
@@ -138,10 +138,6 @@ const unreadNotificationsCount = computed(
   () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
 )
 const notificationsOpen = ref(false)
-const notificationsPreview = computed(() => {
-  const list = activeTab.value?.notifications || []
-  return list.slice(0, 20)
-})
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
@@ -653,7 +649,21 @@ onUnmounted(() => {
       @refresh="refresh"
       @goHome="goHome"
       @updateBaseUrl="updateBaseUrl"
-    />
+    >
+      <template #right>
+        <NotificationsDropdown
+          :notifications="activeTab?.notifications || []"
+          :filter="activeTab?.notificationsFilter || 'all'"
+          :unreadCount="unreadNotificationsCount"
+          :open="notificationsOpen"
+          @openChange="handleNotificationsOpenChange"
+          @refresh="handleRefreshNotifications"
+          @openAll="handleOpenNotifications"
+          @open="handleOpenNotification"
+          @changeFilter="handleNotificationFilterChange"
+        />
+      </template>
+    </BrowserToolbar>
 
     <!-- Tab bar -->
     <BrowserTabs
@@ -692,35 +702,6 @@ onUnmounted(() => {
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
             <div class="flex items-center gap-2">
-              <a-dropdown
-                v-model:open="notificationsOpen"
-                trigger="click"
-                placement="bottomRight"
-                @openChange="handleNotificationsOpenChange"
-              >
-                <a-badge :count="unreadNotificationsCount" :overflowCount="99">
-                  <a-button size="small">通知</a-button>
-                </a-badge>
-                <template #overlay>
-                  <div class="notifications-dropdown">
-                    <div class="notifications-dropdown__header">
-                      <span class="title">通知</span>
-                      <div class="actions">
-                        <a-button size="small" @click="handleRefreshNotifications">刷新</a-button>
-                        <a-button size="small" @click="handleOpenNotifications">查看全部</a-button>
-                      </div>
-                    </div>
-                    <div class="notifications-dropdown__body">
-                      <NotificationsView
-                        :notifications="notificationsPreview"
-                        :filter="activeTab?.notificationsFilter || 'all'"
-                        @changeFilter="handleNotificationFilterChange"
-                        @open="handleOpenNotification"
-                      />
-                    </div>
-                  </div>
-                </template>
-              </a-dropdown>
               <a-button size="small" @click="toggleTopicComposer">
                 {{ showTopicComposer ? '收起' : '发帖' }}
               </a-button>
@@ -1179,47 +1160,4 @@ onUnmounted(() => {
   background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.8) 50%);
 }
 
-.notifications-dropdown {
-  width: 320px;
-  max-width: 70vw;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
-  overflow: hidden;
-}
-
-.dark .notifications-dropdown {
-  background: #111827;
-  border-color: #374151;
-}
-
-.notifications-dropdown__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 12px;
-}
-
-.dark .notifications-dropdown__header {
-  border-bottom-color: #374151;
-}
-
-.notifications-dropdown__header .title {
-  font-weight: 600;
-}
-
-.notifications-dropdown__header .actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.notifications-dropdown__body {
-  max-height: 360px;
-  overflow: auto;
-  padding: 8px 12px;
-}
 </style>

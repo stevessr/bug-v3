@@ -25,12 +25,18 @@ const handleInput = (value: string) => {
     class="toolbar bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 p-2 flex items-center gap-2"
   >
     <div class="flex items-center gap-1">
-      <a-button size="small" :disabled="!props.activeTab || props.activeTab.historyIndex <= 0" @click="emit('goBack')">
+      <a-button
+        size="small"
+        :disabled="!props.activeTab || props.activeTab.historyIndex <= 0"
+        @click="emit('goBack')"
+      >
         <template #icon><LeftOutlined /></template>
       </a-button>
       <a-button
         size="small"
-        :disabled="!props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1"
+        :disabled="
+          !props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1
+        "
         @click="emit('goForward')"
       >
         <template #icon><RightOutlined /></template>
@@ -53,6 +59,10 @@ const handleInput = (value: string) => {
         @press-enter="emit('updateBaseUrl')"
       />
       <a-button type="primary" size="small" @click="emit('updateBaseUrl')">访问</a-button>
+    </div>
+
+    <div class="toolbar-right flex items-center gap-2">
+      <slot name="right" />
     </div>
   </div>
 </template>
