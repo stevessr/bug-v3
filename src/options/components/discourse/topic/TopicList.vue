@@ -148,6 +148,7 @@ const handleUserClick = (username: string) => {
                 class="avatar"
                 loading="lazy"
                 :fallback-src="getAvatarUrl(poster.user.avatar_template, baseUrl, 24)"
+                :force-proxy="true"
               />
             </div>
           </div>

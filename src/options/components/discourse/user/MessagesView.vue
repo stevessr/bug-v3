@@ -41,6 +41,7 @@ const tabs: { key: MessagesTabType; label: string }[] = [
         class="w-16 h-16 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
         @click="emit('goToProfile')"
         :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
+        :force-proxy="true"
       />
       <div class="flex-1">
         <div class="flex items-center gap-2">
@@ -99,6 +100,7 @@ const tabs: { key: MessagesTabType; label: string }[] = [
                   :alt="users.get(participant.user_id)!.username"
                   class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
                   :fallback-src="getAvatarUrl(users.get(participant.user_id)!.avatar_template, baseUrl, 40)"
+                  :force-proxy="true"
                 />
                 <div
                   v-else

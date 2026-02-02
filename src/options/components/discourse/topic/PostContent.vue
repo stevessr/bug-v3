@@ -240,7 +240,7 @@ const processHtmlContent = (html: string): string => {
     const style = styleMatch ? styleMatch[1] : ''
 
     // Create an img tag with data attributes for later processing
-    let imgTag = `<img data-original-src="${originalSrc}" alt="${alt}" `
+    let imgTag = `<img data-original-src="${originalSrc}" data-force-proxy="true" alt="${alt}" `
     if (width) imgTag += `width="${width}" `
     if (height) imgTag += `height="${height}" `
     if (srcset) imgTag += `srcset="${srcset}" `
@@ -261,6 +261,7 @@ const replaceProxyImages = async () => {
 
   for (const img of Array.from(proxyImages)) {
     const originalSrc = img.getAttribute('data-original-src') || ''
+    const forceProxy = img.getAttribute('data-force-proxy') === 'true'
     const fallbackSrc = img.getAttribute('data-original-src') || '' // Use original as fallback too
     const alt = img.getAttribute('alt') || ''
     const width = img.getAttribute('width')
@@ -273,27 +274,53 @@ const replaceProxyImages = async () => {
       // Import pageFetch dynamically
       const { pageFetch } = await import('../utils')
 
-      // Fetch the image through the proxy
-      const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
+      // If forceProxy is true, always use the proxy
+      if (forceProxy) {
+        // Force through proxy
+        const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
 
-      if (response.ok && response.data) {
-        const blob = response.data as unknown as Blob
-        const url = URL.createObjectURL(blob)
+        if (response.ok && response.data) {
+          const blob = response.data as unknown as Blob
+          const url = URL.createObjectURL(blob)
 
-        // Set the src to the blob URL
-        img.setAttribute('src', url)
+          // Set the src to the blob URL
+          img.setAttribute('src', url)
 
-        // Clean up the object URL when the image is no longer needed
-        img.addEventListener(
-          'load',
-          () => {
-            URL.revokeObjectURL(url)
-          },
-          { once: true }
-        )
+          // Clean up the object URL when the image is no longer needed
+          img.addEventListener(
+            'load',
+            () => {
+              URL.revokeObjectURL(url)
+            },
+            { once: true }
+          )
+        } else {
+          // Fallback to original URL if proxy fails
+          img.setAttribute('src', fallbackSrc)
+        }
       } else {
-        // Fallback to original URL if proxy fails
-        img.setAttribute('src', fallbackSrc)
+        // Fetch the image through the proxy
+        const response = await pageFetch<Blob>(originalSrc, {}, 'blob')
+
+        if (response.ok && response.data) {
+          const blob = response.data as unknown as Blob
+          const url = URL.createObjectURL(blob)
+
+          // Set the src to the blob URL
+          img.setAttribute('src', url)
+
+          // Clean up the object URL when the image is no longer needed
+          img.addEventListener(
+            'load',
+            () => {
+              URL.revokeObjectURL(url)
+            },
+            { once: true }
+          )
+        } else {
+          // Fallback to original URL if proxy fails
+          img.setAttribute('src', fallbackSrc)
+        }
       }
     } catch (error) {
       // If proxy fails, fallback to original URL
@@ -361,6 +388,7 @@ onUnmounted(() => {
               :loading="img.loading || 'lazy'"
               :style="img.style"
               :fallback-src="getLightboxThumb(img)"
+              :force-proxy="true"
             />
           </div>
         </div>
@@ -373,6 +401,7 @@ onUnmounted(() => {
             :alt="img.alt || ''"
             loading="lazy"
             :fallback-src="getCarouselImg(segment.images, imgIndex)"
+            :force-proxy="true"
           />
         </div>
       </div>
@@ -396,6 +425,7 @@ onUnmounted(() => {
             :loading="img.loading || 'lazy'"
             :style="img.style"
             :fallback-src="getLightboxThumb(img)"
+            :force-proxy="true"
           />
         </div>
       </div>

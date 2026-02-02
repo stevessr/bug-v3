@@ -105,6 +105,7 @@ const handleSelect = (channel: ChatChannel) => {
             :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
             :fallback-src="getChannelAvatar(channel)"
+            :force-proxy="true"
           />
           <span v-else>#</span>
         </div>
@@ -135,6 +136,7 @@ const handleSelect = (channel: ChatChannel) => {
             :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
             :fallback-src="getChannelAvatar(channel)"
+            :force-proxy="true"
           />
           <span v-else>#</span>
         </div>
@@ -165,6 +167,7 @@ const handleSelect = (channel: ChatChannel) => {
             :original-src="getChannelAvatar(channel)"
             :alt="getChannelTitle(channel)"
             :fallback-src="getChannelAvatar(channel)"
+            :force-proxy="true"
           />
           <span v-else>#</span>
         </div>

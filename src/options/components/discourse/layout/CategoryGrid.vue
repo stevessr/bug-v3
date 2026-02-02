@@ -96,6 +96,7 @@ const getIconHref = (icon?: string | null) => {
               :alt="cat.name"
               class="category-icon-img"
               :fallback-src="getImageUrl(cat.uploaded_logo.url)"
+              :force-proxy="true"
             />
             <ImageProxy
               v-else-if="cat.uploaded_logo_dark?.url"
@@ -103,6 +104,7 @@ const getIconHref = (icon?: string | null) => {
               :alt="cat.name"
               class="category-icon-img"
               :fallback-src="getImageUrl(cat.uploaded_logo_dark.url)"
+              :force-proxy="true"
             />
             <span v-else-if="cat.emoji" class="category-emoji">{{ cat.emoji }}</span>
             <svg v-else-if="cat.icon" class="category-icon-svg" viewBox="0 0 24 24">
@@ -131,6 +133,7 @@ const getIconHref = (icon?: string | null) => {
                   :alt="child.name"
                   class="subcategory-icon-img"
                   :fallback-src="getImageUrl(child.uploaded_logo.url)"
+                  :force-proxy="true"
                 />
                 <ImageProxy
                   v-else-if="child.uploaded_logo_dark?.url"
@@ -138,6 +141,7 @@ const getIconHref = (icon?: string | null) => {
                   :alt="child.name"
                   class="subcategory-icon-img"
                   :fallback-src="getImageUrl(child.uploaded_logo_dark.url)"
+                  :force-proxy="true"
                 />
                 <span v-else-if="child.emoji" class="subcategory-emoji">{{ child.emoji }}</span>
                 <svg v-else-if="child.icon" class="subcategory-icon-svg" viewBox="0 0 24 24">

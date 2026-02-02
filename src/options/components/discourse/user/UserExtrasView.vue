@@ -111,6 +111,7 @@ const emit = defineEmits<{
             :fallback-src="
               badge.image_url.startsWith('http') ? badge.image_url : `${baseUrl}${badge.image_url}`
             "
+            :force-proxy="true"
           />
           <div v-else class="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700" />
           <div class="text-xs dark:text-gray-300 truncate">{{ badge.name }}</div>
@@ -168,6 +169,7 @@ const emit = defineEmits<{
             :alt="u.username"
             class="w-6 h-6 rounded-full"
             :fallback-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
+            :force-proxy="true"
           />
           <span class="text-xs dark:text-gray-300">{{ u.name || u.username }}</span>
         </div>
@@ -190,6 +192,7 @@ const emit = defineEmits<{
             :alt="u.username"
             class="w-6 h-6 rounded-full"
             :fallback-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
+            :force-proxy="true"
           />
           <span class="text-xs dark:text-gray-300">{{ u.name || u.username }}</span>
         </div>

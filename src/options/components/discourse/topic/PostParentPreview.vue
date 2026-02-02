@@ -75,6 +75,7 @@ const handleContentNavigation = (url: string) => {
         class="post-parent-avatar"
         @click="handleUserClick(props.post.username)"
         :fallback-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
+        :force-proxy="true"
       />
       <div class="post-parent-title">
         <span class="post-parent-name" @click="handleUserClick(props.post.username)">

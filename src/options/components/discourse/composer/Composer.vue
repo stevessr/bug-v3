@@ -329,6 +329,7 @@ watch(categoryId, () => {
                   :alt="normalizeTreeNode(node)?.title"
                   class="category-option-img"
                   :fallback-src="getImageUrl(normalizeTreeNode(node)?.logoUrl)"
+                  :force-proxy="true"
                 />
                 <span v-else-if="normalizeTreeNode(node)?.emoji" class="category-option-emoji">
                   {{ normalizeTreeNode(node)?.emoji }}

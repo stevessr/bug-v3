@@ -112,6 +112,7 @@ const getTrustLevelName = (level: number): string => {
             :alt="user.username"
             class="w-24 h-24 rounded-full border-4 border-white shadow-lg"
             :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 120)"
+            :force-proxy="true"
           />
 
           <div class="flex-1 text-white">
