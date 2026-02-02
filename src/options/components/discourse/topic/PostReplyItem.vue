@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
-import ImageProxy from '../ImageProxy.vue'
 
 import PostContent from './PostContent.vue'
 
@@ -33,13 +32,12 @@ const handleContentNavigation = (url: string) => {
 <template>
   <div class="post-reply-item border-l border-gray-200 dark:border-gray-700 pl-4">
     <div class="post-header mb-2">
-      <ImageProxy
-        :original-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
+      <img
+        :src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
         :alt="props.post.username"
         class="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
         :title="`查看 ${props.post.username} 的主页`"
         @click="handleUserClick(props.post.username)"
-        :fallback-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
       />
       <div class="post-header-main text-sm">
         <span

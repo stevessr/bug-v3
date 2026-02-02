@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DiscourseTopic, SuggestedTopic, DiscourseCategory, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
-import ImageProxy from '../ImageProxy.vue'
 
 defineProps<{
   topics: DiscourseTopic[] | SuggestedTopic[]
@@ -141,13 +140,12 @@ const handleUserClick = (username: string) => {
               "
               @click="poster.user && handleUserClick(poster.user.username)"
             >
-              <ImageProxy
+              <img
                 v-if="poster.user"
-                :original-src="getAvatarUrl(poster.user.avatar_template, baseUrl, 24)"
+                :src="getAvatarUrl(poster.user.avatar_template, baseUrl, 24)"
                 :alt="poster.user.username"
                 class="avatar"
                 loading="lazy"
-                :fallback-src="getAvatarUrl(poster.user.avatar_template, baseUrl, 24)"
               />
             </div>
           </div>

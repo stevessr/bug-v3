@@ -11,7 +11,6 @@ import type {
   ActivityTabType
 } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
-import ImageProxy from '../ImageProxy.vue'
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{
@@ -89,12 +88,11 @@ const getActionTypeLabel = (actionType: number): string => {
     <div
       class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700"
     >
-      <ImageProxy
-        :original-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
+      <img
+        :src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
         :alt="user.username"
         class="w-16 h-16 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
         @click="emit('goToProfile')"
-        :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
       />
       <div class="flex-1">
         <div class="flex items-center gap-2">
@@ -151,12 +149,11 @@ const getActionTypeLabel = (actionType: number): string => {
           @click="emit('openTopic', { id: action.topic_id, slug: action.slug })"
         >
           <div class="flex items-start gap-3">
-            <ImageProxy
-              :original-src="getAvatarUrl(action.avatar_template, baseUrl, 40)"
+            <img
+              :src="getAvatarUrl(action.avatar_template, baseUrl, 40)"
               :alt="action.username"
               class="w-10 h-10 rounded-full flex-shrink-0"
               @click.stop="emit('openUser', action.username)"
-              :fallback-src="getAvatarUrl(action.avatar_template, baseUrl, 40)"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -230,12 +227,11 @@ const getActionTypeLabel = (actionType: number): string => {
           @click="emit('openTopic', { id: reaction.post.topic_id, slug: reaction.post.topic_slug })"
         >
           <div class="flex items-start gap-3">
-            <ImageProxy
-              :original-src="getAvatarUrl(reaction.post.avatar_template, baseUrl, 40)"
+            <img
+              :src="getAvatarUrl(reaction.post.avatar_template, baseUrl, 40)"
               :alt="reaction.post.username"
               class="w-10 h-10 rounded-full flex-shrink-0"
               @click.stop="emit('openUser', reaction.post.username)"
-              :fallback-src="getAvatarUrl(reaction.post.avatar_template, baseUrl, 40)"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -285,11 +281,10 @@ const getActionTypeLabel = (actionType: number): string => {
           @click="emit('openTopic', { id: post.topic_id, slug: post.slug })"
         >
           <div class="flex items-start gap-3">
-            <ImageProxy
-              :original-src="getAvatarUrl(post.avatar_template, baseUrl, 40)"
+            <img
+              :src="getAvatarUrl(post.avatar_template, baseUrl, 40)"
               :alt="post.username"
               class="w-10 h-10 rounded-full flex-shrink-0"
-              :fallback-src="getAvatarUrl(post.avatar_template, baseUrl, 40)"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">

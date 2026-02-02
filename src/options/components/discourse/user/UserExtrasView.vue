@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
-import ImageProxy from '../ImageProxy.vue'
 import UserTabs from './UserTabs.vue'
 
 type ExtrasTab = 'badges' | 'followFeed' | 'following' | 'followers'
@@ -101,16 +100,13 @@ const emit = defineEmits<{
           class="flex items-center gap-2 p-2 rounded bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700"
           :title="badge.description || badge.name"
         >
-          <ImageProxy
+          <img
             v-if="badge.image_url"
-            :original-src="
+            :src="
               badge.image_url.startsWith('http') ? badge.image_url : `${baseUrl}${badge.image_url}`
             "
             :alt="badge.name"
             class="w-8 h-8 rounded"
-            :fallback-src="
-              badge.image_url.startsWith('http') ? badge.image_url : `${baseUrl}${badge.image_url}`
-            "
           />
           <div v-else class="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700" />
           <div class="text-xs dark:text-gray-300 truncate">{{ badge.name }}</div>
@@ -163,11 +159,10 @@ const emit = defineEmits<{
           class="flex items-center gap-2 px-2 py-1 rounded bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700 cursor-pointer"
           @click="emit('openUser', u.username)"
         >
-          <ImageProxy
-            :original-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
+          <img
+            :src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
             :alt="u.username"
             class="w-6 h-6 rounded-full"
-            :fallback-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
           />
           <span class="text-xs dark:text-gray-300">{{ u.name || u.username }}</span>
         </div>
@@ -185,11 +180,10 @@ const emit = defineEmits<{
           class="flex items-center gap-2 px-2 py-1 rounded bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700 cursor-pointer"
           @click="emit('openUser', u.username)"
         >
-          <ImageProxy
-            :original-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
+          <img
+            :src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
             :alt="u.username"
             class="w-6 h-6 rounded-full"
-            :fallback-src="getAvatarUrl(u.avatar_template, baseUrl, 32)"
           />
           <span class="text-xs dark:text-gray-300">{{ u.name || u.username }}</span>
         </div>

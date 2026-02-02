@@ -5,7 +5,6 @@ import { message } from 'ant-design-vue'
 import { REACTIONS } from '../../../utils/linuxDoReaction'
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
-import ImageProxy from '../ImageProxy.vue'
 
 import PostContent from './PostContent.vue'
 
@@ -122,8 +121,8 @@ const handleWiki = () => {
   >
     <!-- Post header -->
     <div class="post-header mb-3">
-      <ImageProxy
-        :original-src="getAvatarUrl(props.post.avatar_template, props.baseUrl)"
+      <img
+        :src="getAvatarUrl(props.post.avatar_template, props.baseUrl)"
         :alt="props.post.username"
         class="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
         :title="`查看 ${props.post.username} 的主页`"
@@ -182,12 +181,7 @@ const handleWiki = () => {
               :title="item.name"
             >
               <span v-if="item.emoji.startsWith('http')" class="emoji emoji-image">
-                <ImageProxy
-                  :original-src="item.emoji"
-                  :alt="item.name"
-                  loading="lazy"
-                  :fallback-src="item.emoji"
-                />
+                <img :src="item.emoji" :alt="item.name" loading="lazy" />
               </span>
               <span v-else class="emoji">{{ item.emoji }}</span>
               <span class="count">{{ props.getReactionCount(props.post, item.id) }}</span>
