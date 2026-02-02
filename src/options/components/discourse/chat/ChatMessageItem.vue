@@ -34,7 +34,6 @@ const getAvatarTemplate = () => {
       :original-src="getAvatarUrl(getAvatarTemplate(), baseUrl, 32)"
       :alt="getDisplayName()"
       :fallback-src="getAvatarUrl(getAvatarTemplate(), baseUrl, 32)"
-      :force-proxy="true"
     />
     <div class="chat-message-content">
       <div class="chat-message-meta">

@@ -40,7 +40,6 @@ const handleContentNavigation = (url: string) => {
         :title="`查看 ${props.post.username} 的主页`"
         @click="handleUserClick(props.post.username)"
         :fallback-src="getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)"
-        :force-proxy="true"
       />
       <div class="post-header-main text-sm">
         <span

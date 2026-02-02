@@ -95,7 +95,6 @@ const getActionTypeLabel = (actionType: number): string => {
         class="w-16 h-16 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
         @click="emit('goToProfile')"
         :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 64)"
-        :force-proxy="true"
       />
       <div class="flex-1">
         <div class="flex items-center gap-2">
@@ -158,7 +157,6 @@ const getActionTypeLabel = (actionType: number): string => {
               class="w-10 h-10 rounded-full flex-shrink-0"
               @click.stop="emit('openUser', action.username)"
               :fallback-src="getAvatarUrl(action.avatar_template, baseUrl, 40)"
-              :force-proxy="true"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -238,7 +236,6 @@ const getActionTypeLabel = (actionType: number): string => {
               class="w-10 h-10 rounded-full flex-shrink-0"
               @click.stop="emit('openUser', reaction.post.username)"
               :fallback-src="getAvatarUrl(reaction.post.avatar_template, baseUrl, 40)"
-              :force-proxy="true"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -293,7 +290,6 @@ const getActionTypeLabel = (actionType: number): string => {
               :alt="post.username"
               class="w-10 h-10 rounded-full flex-shrink-0"
               :fallback-src="getAvatarUrl(post.avatar_template, baseUrl, 40)"
-              :force-proxy="true"
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">

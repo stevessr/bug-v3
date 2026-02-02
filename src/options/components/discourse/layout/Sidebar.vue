@@ -166,7 +166,6 @@ const handleNavigateTo = (path: string) => {
                 :alt="cat.name"
                 class="sidebar-icon-img"
                 :fallback-src="getImageUrl(cat.uploaded_logo.url)"
-                :force-proxy="true"
               />
               <ImageProxy
                 v-else-if="cat.uploaded_logo_dark?.url"
@@ -174,7 +173,6 @@ const handleNavigateTo = (path: string) => {
                 :alt="cat.name"
                 class="sidebar-icon-img"
                 :fallback-src="getImageUrl(cat.uploaded_logo_dark.url)"
-                :force-proxy="true"
               />
               <span v-else-if="cat.emoji" class="sidebar-emoji">{{ cat.emoji }}</span>
               <svg v-else-if="cat.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
@@ -202,7 +200,6 @@ const handleNavigateTo = (path: string) => {
                   :alt="child.name"
                   class="sidebar-icon-img"
                   :fallback-src="getImageUrl(child.uploaded_logo.url)"
-                  :force-proxy="true"
                 />
                 <ImageProxy
                   v-else-if="child.uploaded_logo_dark?.url"
@@ -210,7 +207,6 @@ const handleNavigateTo = (path: string) => {
                   :alt="child.name"
                   class="sidebar-icon-img"
                   :fallback-src="getImageUrl(child.uploaded_logo_dark.url)"
-                  :force-proxy="true"
                 />
                 <span v-else-if="child.emoji" class="sidebar-emoji">{{ child.emoji }}</span>
                 <svg v-else-if="child.icon" class="sidebar-icon-svg" viewBox="0 0 24 24">
@@ -251,7 +247,6 @@ const handleNavigateTo = (path: string) => {
           class="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
           @click="emit('clickUser', user.username)"
           :fallback-src="getAvatarUrl(user.avatar_template, baseUrl, 32)"
-          :force-proxy="true"
         />
       </div>
       <div v-if="users.length > 20" class="text-xs text-gray-400 mt-2">

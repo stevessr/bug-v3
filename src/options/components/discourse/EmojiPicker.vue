@@ -111,7 +111,7 @@ const handleKeydown = (event: KeyboardEvent) => {
               :title="group.name"
             >
               <span v-if="group.icon.startsWith('http')" class="group-icon-img">
-                <ImageProxy :original-src="group.icon" :alt="group.name" :fallback-src="group.icon" :force-proxy="true" />
+                <ImageProxy :original-src="group.icon" :alt="group.name" :fallback-src="group.icon" />
               </span>
               <span v-else class="group-icon-text">{{ group.icon }}</span>
             </button>
@@ -130,7 +130,7 @@ const handleKeydown = (event: KeyboardEvent) => {
                 :title="emoji.name"
                 @click="selectEmoji(emoji)"
               >
-                <ImageProxy :original-src="emoji.url" :alt="emoji.name" loading="lazy" :fallback-src="emoji.url" :force-proxy="true" />
+                <ImageProxy :original-src="emoji.url" :alt="emoji.name" loading="lazy" :fallback-src="emoji.url" />
               </button>
             </div>
           </div>

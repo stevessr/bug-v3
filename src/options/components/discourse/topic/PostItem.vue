@@ -128,7 +128,6 @@ const handleWiki = () => {
         class="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
         :title="`查看 ${props.post.username} 的主页`"
         @click="handleUserClick(props.post.username)"
-        :force-proxy="true"
       />
       <div class="post-header-main">
         <div
@@ -188,7 +187,6 @@ const handleWiki = () => {
                   :alt="item.name"
                   loading="lazy"
                   :fallback-src="item.emoji"
-                  :force-proxy="true"
                 />
               </span>
               <span v-else class="emoji">{{ item.emoji }}</span>

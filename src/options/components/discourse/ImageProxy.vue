@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 
 import { pageFetch } from './utils'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   originalSrc: string
   alt?: string
   width?: string | number
@@ -12,10 +12,7 @@ const props = withDefaults(defineProps<{
   loading?: string
   style?: Record<string, string>
   fallbackSrc?: string
-  forceProxy?: boolean  // 添加强制代理开关
-}>(), {
-  forceProxy: false
-})
+}>()
 
 const imageUrl = ref<string | null>(null)
 const hasError = ref(false)
@@ -31,31 +28,16 @@ const handleError = () => {
 
 onMounted(async () => {
   try {
-    // 如果强制代理或原图加载失败，则通过代理获取图片
-    if (props.forceProxy) {
-      // 强制通过代理加载
-      const response = await pageFetch<Blob>(props.originalSrc, {}, 'blob')
+    // 尝试通过 PAGE_FETCH 代理获取图片
+    const response = await pageFetch<Blob>(props.originalSrc, {}, 'blob')
 
-      if (response.ok && response.data) {
-        // 创建 blob URL
-        const blob = response.data as unknown as Blob
-        imageUrl.value = URL.createObjectURL(blob)
-      } else {
-        // 如果代理请求失败，使用原始 URL
-        imageUrl.value = props.originalSrc
-      }
+    if (response.ok && response.data) {
+      // 创建 blob URL
+      const blob = response.data as unknown as Blob
+      imageUrl.value = URL.createObjectURL(blob)
     } else {
-      // 尝试通过 PAGE_FETCH 代理获取图片
-      const response = await pageFetch<Blob>(props.originalSrc, {}, 'blob')
-
-      if (response.ok && response.data) {
-        // 创建 blob URL
-        const blob = response.data as unknown as Blob
-        imageUrl.value = URL.createObjectURL(blob)
-      } else {
-        // 如果代理请求失败，使用原始 URL
-        imageUrl.value = props.originalSrc
-      }
+      // 如果代理请求失败，使用原始 URL
+      imageUrl.value = props.originalSrc
     }
   } catch (error) {
     console.warn(`[ImageProxy] Failed to load image via proxy: ${props.originalSrc}`, error)
