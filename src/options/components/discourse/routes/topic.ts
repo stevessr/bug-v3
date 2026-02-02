@@ -15,6 +15,13 @@ export async function loadTopic(
     ? `${baseUrl.value}/t/${topicId}/${targetPostNumber}.json?track_visit=true&forceLoad=true`
     : `${baseUrl.value}/t/${topicId}.json`
   const result = await pageFetch<any>(endpoint)
+  if (result.status === 404 || result.ok === false) {
+    tab.currentTopic = null
+    tab.loadedPostIds = new Set()
+    tab.hasMorePosts = false
+    tab.topicExtras = null
+    throw new Error('TOPIC_NOT_FOUND_404')
+  }
   const data = extractData(result)
 
   if (data) {

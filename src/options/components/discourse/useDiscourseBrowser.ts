@@ -146,13 +146,27 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     if (!tab) return
 
+    const rawUrl = (url || '').trim()
+    const base = baseUrl.value.replace(/\/+$/, '')
+    const normalizedUrl = (() => {
+      if (!rawUrl) return base
+      if (rawUrl.startsWith('/')) return `${base}${rawUrl}`
+      if (rawUrl.startsWith('//')) return `https:${rawUrl}`
+      try {
+        return new URL(rawUrl).toString()
+      } catch {
+        return new URL(rawUrl, `${base}/`).toString()
+      }
+    })()
+
     tab.loading = true
-    tab.url = url
-    urlInput.value = url
+    tab.url = normalizedUrl
+    urlInput.value = normalizedUrl
     tab.errorMessage = ''
+    let isTopicNavigation = false
 
     try {
-      const urlObj = new URL(url)
+      const urlObj = new URL(normalizedUrl)
       const pathname = urlObj.pathname
 
       if (pathname === '/' || pathname === '') {
@@ -167,6 +181,7 @@ export function useDiscourseBrowser() {
         tab.title = `分类：${categorySlug}`
         tab.viewType = 'category'
       } else if (pathname.startsWith('/t/')) {
+        isTopicNavigation = true
         const parts = pathname.replace('/t/', '').split('/').filter(Boolean)
         const lastPart = parts[parts.length - 1]
         const prevPart = parts[parts.length - 2]
@@ -288,11 +303,19 @@ export function useDiscourseBrowser() {
 
       if (addToHistory) {
         tab.history = tab.history.slice(0, tab.historyIndex + 1)
-        tab.history.push(url)
+        tab.history.push(normalizedUrl)
         tab.historyIndex = tab.history.length - 1
       }
     } catch (e) {
-      tab.errorMessage = e instanceof Error ? e.message : String(e)
+      const message = e instanceof Error ? e.message : String(e)
+      if (isTopicNavigation && message.includes('TOPIC_NOT_FOUND_404')) {
+        const previousUrl = tab.history[tab.historyIndex]
+        if (previousUrl && previousUrl !== normalizedUrl) {
+          await navigateTo(previousUrl, false)
+          return
+        }
+      }
+      tab.errorMessage = message
       tab.viewType = 'error'
       tab.title = '加载失败'
     } finally {
