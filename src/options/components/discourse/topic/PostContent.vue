@@ -32,6 +32,12 @@ const getLightboxPreview = (image: LightboxImage) => {
   return true
 }
 
+const processHtmlContent = (html: string) => html
+
+const normalizeLoading = (value?: string): 'lazy' | 'eager' => {
+  return value === 'eager' ? 'eager' : 'lazy'
+}
+
 let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
 let scrollContainer: HTMLElement | null = null
@@ -253,7 +259,7 @@ onUnmounted(() => {
               :srcset="img.srcset"
               :data-base62-sha1="img.base62Sha1"
               :data-dominant-color="img.dominantColor"
-              :loading="img.loading || 'lazy'"
+              :loading="normalizeLoading(img.loading)"
               :style="img.style"
             />
           </div>
@@ -288,7 +294,7 @@ onUnmounted(() => {
             :srcset="img.srcset"
             :data-base62-sha1="img.base62Sha1"
             :data-dominant-color="img.dominantColor"
-            :loading="img.loading || 'lazy'"
+            :loading="normalizeLoading(img.loading)"
             :style="img.style"
           />
         </div>
