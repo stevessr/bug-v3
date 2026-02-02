@@ -70,6 +70,14 @@ const categoryTreeData = computed(() => {
   }
 
   const nodeMap = new Map<number, { title: string; value: number; key: number; children: any[] }>()
+  const childrenByParent = new Map<number, Set<number>>()
+
+  const linkChild = (parentId: number, childId: number) => {
+    const children = childrenByParent.get(parentId) || new Set<number>()
+    children.add(childId)
+    childrenByParent.set(parentId, children)
+  }
+
   list.forEach(cat => {
     nodeMap.set(cat.id, {
       title: cat.name,
@@ -83,12 +91,40 @@ const categoryTreeData = computed(() => {
     })
   })
 
-  const roots: Array<{ title: string; value: number; key: number; children: any[] }> = []
+  // Prefer explicit parent links.
   list.forEach(cat => {
-    const node = nodeMap.get(cat.id)!
     if (cat.parent_category_id && nodeMap.has(cat.parent_category_id)) {
-      nodeMap.get(cat.parent_category_id)!.children.push(node)
-    } else {
+      linkChild(cat.parent_category_id, cat.id)
+    }
+  })
+
+  // Fallback: infer hierarchy from parent subcategory_ids.
+  list.forEach(cat => {
+    if (!cat.subcategory_ids?.length) return
+    cat.subcategory_ids.forEach(childId => {
+      if (nodeMap.has(childId)) {
+        linkChild(cat.id, childId)
+      }
+    })
+  })
+
+  const hasParent = new Set<number>()
+  childrenByParent.forEach((childIds, parentId) => {
+    const parent = nodeMap.get(parentId)
+    if (!parent) return
+    childIds.forEach(childId => {
+      const child = nodeMap.get(childId)
+      if (!child) return
+      if (!parent.children.some(item => item.value === child.value)) {
+        parent.children.push(child)
+      }
+      hasParent.add(childId)
+    })
+  })
+
+  const roots: Array<{ title: string; value: number; key: number; children: any[] }> = []
+  nodeMap.forEach((node, id) => {
+    if (!hasParent.has(id)) {
       roots.push(node)
     }
   })
@@ -138,7 +174,19 @@ function renderBBCodeWithMath(input: string) {
   })
 
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path', 'img'],
+    ADD_TAGS: [
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mn',
+      'mo',
+      'annotation',
+      'annotation-xml',
+      'svg',
+      'path',
+      'img'
+    ],
     ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
   })
 }
@@ -166,7 +214,19 @@ function renderMarkdown(input: string) {
     })
   })
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mn', 'mo', 'annotation', 'annotation-xml', 'svg', 'path', 'img'],
+    ADD_TAGS: [
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mn',
+      'mo',
+      'annotation',
+      'annotation-xml',
+      'svg',
+      'path',
+      'img'
+    ],
     ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
   })
 }
@@ -376,7 +436,8 @@ watch(categoryId, () => {
         <ProseMirrorEditor v-model="raw" :inputFormat="inputFormat" />
         <div class="text-xs text-gray-500">
           <template v-if="inputFormat === 'bbcode'">
-            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img] 图片地址 [/img] [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
+            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
+            图片地址 [/img] [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
           </template>
           <template v-else>
             Markdown: **粗体** *斜体* ~~删除~~ `代码` [链接](url) ![图片](url)
