@@ -134,6 +134,14 @@ const currentCategoryOption = computed(() => {
     parent_category_id: null
   }
 })
+const unreadNotificationsCount = computed(
+  () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
+)
+const notificationsOpen = ref(false)
+const notificationsPreview = computed(() => {
+  const list = activeTab.value?.notifications || []
+  return list.slice(0, 20)
+})
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
@@ -193,7 +201,35 @@ const handleOpenTopicTag = (tagName: string) => {
 
 const handleOpenNotification = (path: string) => {
   if (!path) return
+  notificationsOpen.value = false
   navigateTo(path)
+}
+
+const handleOpenNotifications = () => {
+  notificationsOpen.value = false
+  navigateTo('/notifications')
+}
+
+const handleNotificationsOpenChange = async (open: boolean) => {
+  notificationsOpen.value = open
+  if (!open) return
+  const tab = activeTab.value
+  if (!tab) return
+  try {
+    await loadNotifications(tab, tab.notificationsFilter)
+  } catch (error) {
+    console.warn('[DiscourseBrowser] notifications load failed:', error)
+  }
+}
+
+const handleRefreshNotifications = async () => {
+  const tab = activeTab.value
+  if (!tab) return
+  try {
+    await loadNotifications(tab, tab.notificationsFilter)
+  } catch (error) {
+    console.warn('[DiscourseBrowser] notifications refresh failed:', error)
+  }
 }
 
 const handleNotificationFilterChange = async (filter: any) => {
@@ -546,15 +582,11 @@ const pollUpdates = async () => {
         lastTopicPollAt.value = now
         await pollTopicUpdates(tab)
       }
-      return
     }
 
-    if (tab.viewType === 'notifications') {
-      if (now - lastNotificationsPollAt.value >= NOTIFICATIONS_POLL_INTERVAL_MS) {
-        lastNotificationsPollAt.value = now
-        await loadNotifications(tab, tab.notificationsFilter)
-      }
-      return
+    if (now - lastNotificationsPollAt.value >= NOTIFICATIONS_POLL_INTERVAL_MS) {
+      lastNotificationsPollAt.value = now
+      await loadNotifications(tab, tab.notificationsFilter)
     }
 
     if (tab.viewType === 'home' || tab.viewType === 'category' || tab.viewType === 'tag') {
@@ -660,6 +692,35 @@ onUnmounted(() => {
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
             <div class="flex items-center gap-2">
+              <a-dropdown
+                v-model:open="notificationsOpen"
+                trigger="click"
+                placement="bottomRight"
+                @openChange="handleNotificationsOpenChange"
+              >
+                <a-badge :count="unreadNotificationsCount" :overflowCount="99">
+                  <a-button size="small">通知</a-button>
+                </a-badge>
+                <template #overlay>
+                  <div class="notifications-dropdown">
+                    <div class="notifications-dropdown__header">
+                      <span class="title">通知</span>
+                      <div class="actions">
+                        <a-button size="small" @click="handleRefreshNotifications">刷新</a-button>
+                        <a-button size="small" @click="handleOpenNotifications">查看全部</a-button>
+                      </div>
+                    </div>
+                    <div class="notifications-dropdown__body">
+                      <NotificationsView
+                        :notifications="notificationsPreview"
+                        :filter="activeTab?.notificationsFilter || 'all'"
+                        @changeFilter="handleNotificationFilterChange"
+                        @open="handleOpenNotification"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </a-dropdown>
               <a-button size="small" @click="toggleTopicComposer">
                 {{ showTopicComposer ? '收起' : '发帖' }}
               </a-button>
@@ -1116,5 +1177,49 @@ onUnmounted(() => {
   align-self: flex-end;
   cursor: se-resize;
   background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.8) 50%);
+}
+
+.notifications-dropdown {
+  width: 320px;
+  max-width: 70vw;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.dark .notifications-dropdown {
+  background: #111827;
+  border-color: #374151;
+}
+
+.notifications-dropdown__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.dark .notifications-dropdown__header {
+  border-bottom-color: #374151;
+}
+
+.notifications-dropdown__header .title {
+  font-weight: 600;
+}
+
+.notifications-dropdown__header .actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notifications-dropdown__body {
+  max-height: 360px;
+  overflow: auto;
+  padding: 8px 12px;
 }
 </style>

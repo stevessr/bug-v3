@@ -5,6 +5,7 @@ import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
 import PollView from './PollView'
+import HashtagCooked from './HashtagCooked'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -46,6 +47,7 @@ let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
 let scrollContainer: HTMLElement | null = null
 let pollCleanupFns: Array<() => void> = []
+let hashtagCleanupFns: Array<() => void> = []
 
 const getImageGridItems = (segment: ImageGridSegment) => {
   if (segment.columns.length <= 1) return segment.columns[0] || []
@@ -181,6 +183,74 @@ const requestPollVote = async (method: 'PUT' | 'DELETE', body: URLSearchParams) 
 const teardownPollEnhancements = () => {
   pollCleanupFns.forEach(fn => fn())
   pollCleanupFns = []
+}
+
+const teardownHashtagEnhancements = () => {
+  hashtagCleanupFns.forEach(fn => fn())
+  hashtagCleanupFns = []
+}
+
+const getHashtagLabel = (anchor: HTMLAnchorElement) => {
+  const labelNode = anchor.querySelector('span:last-child')
+  const label = (labelNode?.textContent || anchor.textContent || '').trim()
+  return label
+}
+
+const setupHashtagEnhancements = () => {
+  teardownHashtagEnhancements()
+  const host = contentRef.value
+  if (!host) return
+
+  const anchors = Array.from(host.querySelectorAll<HTMLAnchorElement>('a.hashtag-cooked'))
+  anchors.forEach(anchor => {
+    const label = getHashtagLabel(anchor)
+    if (!label) return
+
+    const mountRoot = document.createElement('span')
+    mountRoot.className = 'hashtag-cooked-host'
+
+    const extraClass = anchor.className
+      .split(/\s+/)
+      .map(item => item.trim())
+      .filter(item => item && item !== 'hashtag-cooked')
+
+    const {
+      type,
+      slug,
+      id: tagId,
+      styleType,
+      icon,
+      valid
+    } = anchor.dataset as {
+      type?: string
+      slug?: string
+      id?: string
+      styleType?: string
+      icon?: string
+      valid?: string
+    }
+
+    const href = anchor.getAttribute('href') || ''
+    const title = anchor.getAttribute('title') || undefined
+
+    anchor.replaceWith(mountRoot)
+
+    const app = createApp(HashtagCooked, {
+      href,
+      label,
+      type,
+      slug,
+      tagId,
+      styleType,
+      icon,
+      valid: valid !== 'false',
+      extraClass,
+      title
+    })
+
+    app.mount(mountRoot)
+    hashtagCleanupFns.push(() => app.unmount())
+  })
 }
 
 const setupPollEnhancements = () => {
@@ -324,6 +394,7 @@ onMounted(() => {
       scrollContainer = contentDiv.closest('.content-area') as HTMLElement | null
       scrollContainer?.addEventListener('scroll', updateFootnotePosition, { passive: true })
       setupPollEnhancements()
+      setupHashtagEnhancements()
     }
   })
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
@@ -341,6 +412,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateFootnotePosition)
   hideActiveFootnote()
   teardownPollEnhancements()
+  teardownHashtagEnhancements()
 })
 
 watch(
@@ -348,6 +420,7 @@ watch(
   async () => {
     await nextTick()
     setupPollEnhancements()
+    setupHashtagEnhancements()
   }
 )
 </script>

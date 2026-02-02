@@ -131,6 +131,15 @@
   text-decoration: underline;
 }
 
+.post-content :deep(a.hashtag-cooked) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-content :deep(a.hashtag-cooked:hover) {
+  text-decoration: none;
+}
+
 .post-content :deep(pre) {
   background: #1f2937;
   color: #e5e7eb;
