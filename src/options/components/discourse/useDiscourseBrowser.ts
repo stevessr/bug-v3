@@ -7,11 +7,13 @@ import type {
   DiscourseCategory,
   DiscourseTopic,
   DiscourseUser,
+  DiscoursePost,
   ActivityTabType,
   MessagesTabType,
-  TopicListType
+  TopicListType,
+  DiscourseNotificationFilter
 } from './types'
-import { generateId } from './utils'
+import { generateId, pageFetch, extractData } from './utils'
 import {
   loadHome as loadHomeRoute,
   changeTopicListType as changeTopicListTypeRoute,
@@ -21,6 +23,7 @@ import {
   loadPosted as loadPostedRoute,
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
+import { loadNotifications as loadNotificationsRoute } from './routes/notifications'
 import {
   loadCategory as loadCategoryRoute,
   loadMoreTopics as loadMoreTopicsRoute
@@ -38,6 +41,7 @@ import {
 } from './routes/user'
 import { loadUsernameFromExtension } from './routes/session'
 import { loadChat as loadChatRoute, loadChatMessages, sendChatMessage } from './routes/chat'
+import { sendReadTimings } from './utils/readTimings'
 
 export function useDiscourseBrowser() {
   // Base URL
@@ -107,6 +111,8 @@ export function useDiscourseBrowser() {
       tags: [],
       tagGroups: [],
       errorMessage: '',
+      notifications: [],
+      notificationsFilter: 'all',
       loadedPostIds: new Set(),
       hasMorePosts: false,
       // Topics pagination
@@ -125,7 +131,9 @@ export function useDiscourseBrowser() {
       topicExtras: null,
       lastTimingSentAt: undefined,
       lastTimingTopicId: undefined,
-      chatState: null
+      chatState: null,
+      pendingTopics: null,
+      pendingTopicsCount: 0
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -303,6 +311,10 @@ export function useDiscourseBrowser() {
         await loadTags(tab)
         tab.title = '标签'
         tab.viewType = 'tags'
+      } else if (pathname === '/notifications' || pathname === '/notifications.json') {
+        await loadNotifications(tab, 'all')
+        tab.title = '通知'
+        tab.viewType = 'notifications'
       } else if (pathname.startsWith('/tag/')) {
         const tagPath = pathname.replace('/tag/', '').replace(/\.json$/i, '')
         const tagName = decodeURIComponent(tagPath || '').trim()
@@ -372,6 +384,93 @@ export function useDiscourseBrowser() {
   // Load tags page
   async function loadTags(tab: BrowserTab) {
     await loadTagsRoute(tab, baseUrl)
+  }
+
+  async function loadNotifications(tab: BrowserTab, filter: DiscourseNotificationFilter) {
+    await loadNotificationsRoute(tab, baseUrl, filter)
+  }
+
+  async function checkTopicListUpdates(tab: BrowserTab) {
+    if (!tab || !['home', 'category', 'tag'].includes(tab.viewType)) return
+
+    let url = ''
+    if (tab.viewType === 'home') {
+      url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json`
+    } else if (tab.viewType === 'category') {
+      url = tab.currentCategoryId
+        ? `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json`
+        : `${baseUrl.value}/c/${tab.currentCategorySlug}.json`
+    } else if (tab.viewType === 'tag') {
+      const encoded = encodeURIComponent(tab.currentTagName || '')
+      if (!encoded) return
+      url = `${baseUrl.value}/tag/${encoded}.json`
+    }
+
+    if (!url) return
+
+    const result = await pageFetch<any>(url)
+    const data = extractData(result)
+    const topics = data?.topic_list?.topics || []
+    if (!Array.isArray(topics)) return
+
+    const existingIds = new Set(tab.topics.map(topic => topic.id))
+    const pending = topics.filter(topic => !existingIds.has(topic.id))
+    tab.pendingTopics = pending.length > 0 ? pending : null
+    tab.pendingTopicsCount = pending.length
+
+    if (Array.isArray(data?.users)) {
+      data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+    }
+  }
+
+  function applyPendingTopics(tab: BrowserTab) {
+    const pending = tab.pendingTopics || []
+    if (!pending.length) return
+    const existingIds = new Set(tab.topics.map(topic => topic.id))
+    const merged = [...pending.filter(topic => !existingIds.has(topic.id)), ...tab.topics]
+    tab.topics = merged
+    tab.pendingTopics = null
+    tab.pendingTopicsCount = 0
+  }
+
+  async function pollTopicUpdates(tab: BrowserTab) {
+    if (!tab?.currentTopic) return
+    const topicId = tab.currentTopic.id
+    const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
+    const data = extractData(result)
+    if (!data?.post_stream?.stream || !tab.currentTopic) return
+    if (tab.currentTopic.id !== topicId) return
+
+    const stream = data.post_stream.stream as number[]
+    const newIds = stream.filter(id => !tab.loadedPostIds.has(id))
+    if (newIds.length === 0) {
+      tab.currentTopic.post_stream.stream = stream
+      tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
+      return
+    }
+
+    const requestIds = newIds.slice(-30)
+    const idsParam = requestIds.map(id => `post_ids[]=${id}`).join('&')
+    const postsResult = await pageFetch<any>(
+      `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}&include_suggested=false`
+    )
+    const postData = extractData(postsResult)
+    const newPosts = postData?.post_stream?.posts || []
+    if (!Array.isArray(newPosts) || newPosts.length === 0) return
+
+    tab.currentTopic.post_stream.posts = [
+      ...tab.currentTopic.post_stream.posts,
+      ...newPosts
+    ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
+    newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
+    tab.currentTopic.post_stream.stream = stream
+    tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count
+    tab.currentTopic.highest_post_number =
+      data.highest_post_number ?? tab.currentTopic.highest_post_number
+    tab.currentTopic.last_posted_at = data.last_posted_at ?? tab.currentTopic.last_posted_at
+    tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
+
+    void sendReadTimings(tab, topicId, baseUrl.value, newPosts)
   }
 
   // Load single tag topic list
@@ -706,6 +805,10 @@ export function useDiscourseBrowser() {
     selectChatChannel,
     loadMoreChatMessagesForChannel,
     sendChat,
-    changeTopicListType
+    changeTopicListType,
+    loadNotifications,
+    checkTopicListUpdates,
+    applyPendingTopics,
+    pollTopicUpdates
   }
 }

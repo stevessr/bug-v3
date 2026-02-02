@@ -28,6 +28,8 @@ export interface BrowserTab {
   tags: DiscourseTag[]
   tagGroups: DiscourseTagGroup[]
   errorMessage: string
+  notifications: DiscourseNotification[]
+  notificationsFilter: DiscourseNotificationFilter
   // Pagination state for posts
   loadedPostIds: Set<number>
   hasMorePosts: boolean
@@ -58,6 +60,8 @@ export interface BrowserTab {
   lastTimingSentAt?: number
   lastTimingTopicId?: number
   chatState: ChatState | null
+  pendingTopics?: DiscourseTopic[] | null
+  pendingTopicsCount?: number
 }
 
 export type ViewType =
@@ -71,6 +75,7 @@ export type ViewType =
   | 'user'
   | 'activity'
   | 'messages'
+  | 'notifications'
   | 'badges'
   | 'followFeed'
   | 'following'
@@ -176,6 +181,29 @@ export interface DiscourseTagGroup {
   id: number
   name: string
   tags: DiscourseTag[]
+}
+
+export type DiscourseNotificationFilter =
+  | 'all'
+  | 'replies'
+  | 'mentions'
+  | 'likes'
+  | 'messages'
+  | 'badges'
+  | 'other'
+  | `category:${number}`
+  | `category:${string}`
+
+export interface DiscourseNotification {
+  id: number
+  notification_type: number
+  read: boolean
+  created_at: string
+  slug?: string
+  topic_id?: number
+  post_number?: number
+  data?: Record<string, any>
+  fancy_title?: string
 }
 
 export interface DiscoursePost {

@@ -41,6 +41,8 @@ export async function loadCategory(
     data?.topic_list?.category_name ??
     ''
   tab.currentTagName = ''
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   if (data?.users) {
     tab.activeUsers = data.users

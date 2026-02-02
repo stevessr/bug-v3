@@ -45,6 +45,8 @@ export async function loadHome(
   tab.currentCategoryName = ''
   tab.currentTagName = ''
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   if (topicData?.users) {
     tab.activeUsers = topicData.users
@@ -64,6 +66,8 @@ export async function changeTopicListType(
   tab.topicsPage = 0
   tab.currentTagName = ''
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   const result = await pageFetch<any>(`${baseUrl.value}/${type}.json`)
   const data = extractData(result)
@@ -110,6 +114,8 @@ export async function loadCategories(
   tab.currentCategoryName = ''
   tab.currentTagName = ''
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
   tab.activeUsers = data?.users || []
   if (Array.isArray(data?.users)) {
     data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
@@ -138,6 +144,8 @@ export async function loadPosted(
   tab.currentCategoryName = ''
   tab.currentTagName = ''
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   if (data?.users) {
     tab.activeUsers = data.users
@@ -172,6 +180,8 @@ export async function loadBookmarks(
   tab.currentCategoryName = ''
   tab.currentTagName = ''
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   if (data?.users) {
     tab.activeUsers = data.users
@@ -240,6 +250,8 @@ export async function loadTag(
   tab.currentCategoryName = ''
   tab.currentTagName = tagName
   tab.tagGroups = []
+  tab.pendingTopics = null
+  tab.pendingTopicsCount = 0
 
   if (Array.isArray(data?.users)) {
     tab.activeUsers = data.users

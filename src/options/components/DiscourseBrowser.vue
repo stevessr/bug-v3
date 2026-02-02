@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
@@ -19,6 +19,7 @@ import TopicView from './discourse/topic/TopicView.vue'
 import Composer from './discourse/composer/Composer.vue'
 import UserView from './discourse/user/UserView.vue'
 import UserExtrasView from './discourse/user/UserExtrasView.vue'
+import NotificationsView from './discourse/notifications/NotificationsView.vue'
 import Sidebar from './discourse/layout/Sidebar.vue'
 import ActivityView from './discourse/user/ActivityView.vue'
 import MessagesView from './discourse/user/MessagesView.vue'
@@ -69,7 +70,11 @@ const {
   selectChatChannel,
   loadMoreChatMessagesForChannel,
   sendChat,
-  changeTopicListType
+  changeTopicListType,
+  loadNotifications,
+  checkTopicListUpdates,
+  applyPendingTopics,
+  pollTopicUpdates
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -93,6 +98,15 @@ const showReplyComposer = ref(false)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
 const proxiedBlobUrls = new Set<string>()
 const proxyingImages = new WeakSet<HTMLImageElement>()
+const pollingBusy = ref(false)
+const lastTopicPollAt = ref(0)
+const lastListPollAt = ref(0)
+const lastNotificationsPollAt = ref(0)
+const pollTimer = ref<number | null>(null)
+const POLL_TICK_MS = 5000
+const TOPIC_POLL_INTERVAL_MS = 15000
+const LIST_POLL_INTERVAL_MS = 60000
+const NOTIFICATIONS_POLL_INTERVAL_MS = 60000
 const floatingState = ref({
   left: null as number | null,
   top: null as number | null,
@@ -175,6 +189,22 @@ const handleTagClick = (tag: DiscourseTag) => {
 const handleOpenTopicTag = (tagName: string) => {
   const encoded = encodeURIComponent(tagName)
   navigateTo(`${baseUrl.value}/tag/${encoded}`)
+}
+
+const handleOpenNotification = (path: string) => {
+  if (!path) return
+  navigateTo(path)
+}
+
+const handleNotificationFilterChange = async (filter: any) => {
+  const tab = activeTab.value
+  if (!tab) return
+  tab.notificationsFilter = filter
+  try {
+    await loadNotifications(tab, filter)
+  } catch (error) {
+    console.warn('[DiscourseBrowser] notifications load failed:', error)
+  }
 }
 
 // Handle middle click (open in new tab)
@@ -307,6 +337,12 @@ const handleOpenUserFollowing = (username: string) => {
 
 const handleOpenUserFollowers = (username: string) => {
   openUserFollowers(username)
+}
+
+const handleApplyPendingTopics = () => {
+  const tab = activeTab.value
+  if (!tab) return
+  applyPendingTopics(tab)
 }
 
 const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 'followers') => {
@@ -489,6 +525,51 @@ const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
 }
 
+watch(
+  () => activeTab.value?.viewType,
+  () => {
+    lastTopicPollAt.value = 0
+    lastListPollAt.value = 0
+    lastNotificationsPollAt.value = 0
+  }
+)
+
+const pollUpdates = async () => {
+  const tab = activeTab.value
+  if (!tab || tab.loading || pollingBusy.value) return
+  const now = Date.now()
+
+  pollingBusy.value = true
+  try {
+    if (tab.viewType === 'topic' && tab.currentTopic) {
+      if (now - lastTopicPollAt.value >= TOPIC_POLL_INTERVAL_MS) {
+        lastTopicPollAt.value = now
+        await pollTopicUpdates(tab)
+      }
+      return
+    }
+
+    if (tab.viewType === 'notifications') {
+      if (now - lastNotificationsPollAt.value >= NOTIFICATIONS_POLL_INTERVAL_MS) {
+        lastNotificationsPollAt.value = now
+        await loadNotifications(tab, tab.notificationsFilter)
+      }
+      return
+    }
+
+    if (tab.viewType === 'home' || tab.viewType === 'category' || tab.viewType === 'tag') {
+      if (now - lastListPollAt.value >= LIST_POLL_INTERVAL_MS) {
+        lastListPollAt.value = now
+        await checkTopicListUpdates(tab)
+      }
+    }
+  } catch (error) {
+    console.warn('[DiscourseBrowser] pollUpdates failed:', error)
+  } finally {
+    pollingBusy.value = false
+  }
+}
+
 // Initialize
 onMounted(() => {
   ensureSessionUser()
@@ -504,6 +585,7 @@ onMounted(() => {
   window.addEventListener('touchend', stopPointer)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('load', handleGlobalImageLoad, true)
+  pollTimer.value = window.setInterval(pollUpdates, POLL_TICK_MS)
 })
 
 onUnmounted(() => {
@@ -518,6 +600,10 @@ onUnmounted(() => {
   window.removeEventListener('load', handleGlobalImageLoad, true)
   proxiedBlobUrls.forEach(url => URL.revokeObjectURL(url))
   proxiedBlobUrls.clear()
+  if (pollTimer.value !== null) {
+    window.clearInterval(pollTimer.value)
+    pollTimer.value = null
+  }
 })
 </script>
 
@@ -586,6 +672,11 @@ onUnmounted(() => {
             <h3 class="text-lg font-semibold mb-3 dark:text-white">
               {{ getTopicListTitle(activeTab.topicListType) }}
             </h3>
+            <div v-if="activeTab.pendingTopicsCount" class="mb-3">
+              <a-button type="primary" size="small" @click="handleApplyPendingTopics">
+                发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
+              </a-button>
+            </div>
             <TopicList
               :topics="activeTab.topics"
               :baseUrl="baseUrl"
@@ -673,12 +764,42 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Notifications view -->
+      <div v-else-if="activeTab?.viewType === 'notifications'" class="flex gap-4">
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold mb-3 dark:text-white">通知</h3>
+          <NotificationsView
+            :notifications="activeTab.notifications"
+            :filter="activeTab.notificationsFilter"
+            @changeFilter="handleNotificationFilterChange"
+            @open="handleOpenNotification"
+          />
+        </div>
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <Sidebar
+            :categories="[]"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
+          />
+        </div>
+      </div>
+
       <!-- Tag topics view -->
       <div v-else-if="activeTab?.viewType === 'tag'" class="flex gap-4">
         <div class="flex-1 min-w-0">
           <h3 class="text-lg font-semibold mb-3 dark:text-white">
             标签：{{ activeTab.currentTagName }}
           </h3>
+          <div v-if="activeTab.pendingTopicsCount" class="mb-3">
+            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
+              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
+            </a-button>
+          </div>
           <TopicList
             :topics="activeTab.topics"
             :baseUrl="baseUrl"
@@ -722,6 +843,12 @@ onUnmounted(() => {
             title="子分类"
             @click="handleCategoryClick"
           />
+
+          <div v-if="activeTab.pendingTopicsCount" class="mb-3">
+            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
+              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
+            </a-button>
+          </div>
 
           <TopicList
             :topics="activeTab.topics"

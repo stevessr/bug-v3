@@ -33,7 +33,8 @@ const quickLinks: Array<{ path: string; label: string; icon: string }> = [
   { path: '/categories', label: '分类', icon: 'folder' },
   { path: '/tags', label: '标签', icon: 'tags' },
   { path: '/posted', label: '我的帖子', icon: 'edit' },
-  { path: '/bookmarks', label: '书签', icon: 'bookmark' }
+  { path: '/bookmarks', label: '书签', icon: 'bookmark' },
+  { path: '/notifications', label: '通知', icon: 'bell' }
 ]
 
 const hasHierarchy = computed(() => {
