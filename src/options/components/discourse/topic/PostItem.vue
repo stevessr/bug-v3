@@ -162,6 +162,7 @@ const handleWiki = () => {
     <PostContent
       :segments="props.parsed.segments"
       :baseUrl="props.baseUrl"
+      :postId="props.post.id"
       :footnotes="props.parsed.footnotes"
       @navigate="handleContentNavigation"
     />
