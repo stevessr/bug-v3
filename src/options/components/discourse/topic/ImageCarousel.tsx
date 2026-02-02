@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { defineComponent, ref, computed } from 'vue'
 
 import type { LightboxImage } from '../types'
 import '../css/ImageCarousel.css'
@@ -30,102 +30,71 @@ export default defineComponent({
     images: { type: Array as () => LightboxImage[], required: true }
   },
   setup(props) {
-    const trackRef = ref<HTMLDivElement | null>(null)
     const currentIndex = ref(0)
+    const navDirection = ref<'next' | 'prev'>('next')
 
     const total = computed(() => props.images.length)
 
-    const scrollToIndex = async (index: number) => {
-      const track = trackRef.value
-      if (!track) return
-      const clamped = Math.min(Math.max(index, 0), Math.max(0, total.value - 1))
-      currentIndex.value = clamped
-      await nextTick()
-      const slide = track.querySelector<HTMLDivElement>(`[data-slide='${clamped}']`)
-      slide?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    const currentImage = computed(() => props.images[currentIndex.value])
+
+    const clampIndex = (index: number) => {
+      if (total.value === 0) return 0
+      const mod = index % total.value
+      return mod < 0 ? mod + total.value : mod
     }
 
-    const handlePrev = () => scrollToIndex(currentIndex.value - 1)
-    const handleNext = () => scrollToIndex(currentIndex.value + 1)
-
-    const handleScroll = () => {
-      const track = trackRef.value
-      if (!track) return
-      const slides = Array.from(track.querySelectorAll<HTMLDivElement>('[data-slide]'))
-      if (slides.length === 0) return
-      const trackRect = track.getBoundingClientRect()
-      const center = trackRect.left + trackRect.width / 2
-      let bestIndex = 0
-      let bestDistance = Number.POSITIVE_INFINITY
-      slides.forEach((slide, idx) => {
-        const rect = slide.getBoundingClientRect()
-        const slideCenter = rect.left + rect.width / 2
-        const distance = Math.abs(slideCenter - center)
-        if (distance < bestDistance) {
-          bestDistance = distance
-          bestIndex = idx
-        }
-      })
-      currentIndex.value = bestIndex
+    const scrollToIndex = (index: number, direction: 'next' | 'prev') => {
+      navDirection.value = direction
+      currentIndex.value = clampIndex(index)
     }
 
-    onMounted(() => {
-      const track = trackRef.value
-      if (track) {
-        track.addEventListener('scroll', handleScroll, { passive: true })
-      }
-    })
-
-    onUnmounted(() => {
-      const track = trackRef.value
-      if (track) {
-        track.removeEventListener('scroll', handleScroll)
-      }
-    })
+    const handlePrev = () => scrollToIndex(currentIndex.value - 1, 'prev')
+    const handleNext = () => scrollToIndex(currentIndex.value + 1, 'next')
 
     return () => (
       <div class="post-carousel-tsx">
-        <div class="post-carousel-track-tsx" ref={trackRef}>
-          {props.images.map((image, idx) => {
-            const ratio = getAspectRatio(image)
-            const wrapperStyle = ratio
-              ? {
-                  aspectRatio: String(ratio),
-                  backgroundColor: image.dominantColor ? `#${image.dominantColor}` : undefined
-                }
-              : undefined
-            return (
-              <div
-                class="post-carousel-slide-tsx"
-                key={image.base62Sha1 || image.href}
-                data-slide={idx}
-              >
-                <a
-                  class="post-carousel-link-tsx"
-                  href={image.href}
-                  title={image.title || image.alt || undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-no-router="true"
-                >
-                  <div class="post-carousel-frame-tsx" style={wrapperStyle}>
+        {currentImage.value ? (
+          <div class={['post-carousel-focus-tsx', `is-${navDirection.value}`]}>
+            <a
+              class="post-carousel-link-tsx"
+              href={currentImage.value.href}
+              title={currentImage.value.title || currentImage.value.alt || undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-no-router="true"
+            >
+              {(() => {
+                const ratio = getAspectRatio(currentImage.value)
+                const frameStyle = ratio
+                  ? {
+                      aspectRatio: String(ratio),
+                      backgroundColor: currentImage.value.dominantColor
+                        ? `#${currentImage.value.dominantColor}`
+                        : undefined
+                    }
+                  : undefined
+                return (
+                  <div
+                    class="post-carousel-frame-tsx"
+                    style={frameStyle}
+                  >
                     <img
                       class="post-carousel-image-tsx"
-                      src={getImageSrc(image)}
-                      alt={image.alt || ''}
-                      width={image.width}
-                      height={image.height}
-                      srcset={image.srcset}
-                      data-base62-sha1={image.base62Sha1}
-                      data-dominant-color={image.dominantColor}
-                      loading={image.loading || 'lazy'}
+                      src={getImageSrc(currentImage.value)}
+                      alt={currentImage.value.alt || ''}
+                      width={currentImage.value.width}
+                      height={currentImage.value.height}
+                      srcset={currentImage.value.srcset}
+                      data-base62-sha1={currentImage.value.base62Sha1}
+                      data-dominant-color={currentImage.value.dominantColor}
+                      loading={currentImage.value.loading || 'lazy'}
                     />
                   </div>
-                </a>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })()}
+            </a>
+          </div>
+        ) : null}
         {total.value > 1 ? (
           <div class="post-carousel-controls-tsx">
             <button
@@ -144,7 +113,9 @@ export default defineComponent({
                   class={['post-carousel-dot-tsx', idx === currentIndex.value ? 'is-active' : '']}
                   aria-label={`转到幻灯片 ${idx + 1}`}
                   aria-current={idx === currentIndex.value ? 'true' : undefined}
-                  onClick={() => scrollToIndex(idx)}
+                  onClick={() =>
+                    scrollToIndex(idx, idx >= currentIndex.value ? 'next' : 'prev')
+                  }
                 />
               ))}
             </div>
