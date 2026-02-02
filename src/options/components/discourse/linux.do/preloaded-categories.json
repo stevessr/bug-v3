@@ -31,7 +31,7 @@
   },
   {
     "id": 20,
-    "name": "开发调优, Lv1",
+    "name": "开发调优，Lv1",
     "slug": "develop-lv1",
     "parent_category_id": 4,
     "color": "0088CC",
@@ -44,7 +44,7 @@
   },
   {
     "id": 31,
-    "name": "开发调优, Lv2",
+    "name": "开发调优，Lv2",
     "slug": "develop-lv2",
     "parent_category_id": 4,
     "color": "874EFE",
@@ -57,7 +57,7 @@
   },
   {
     "id": 88,
-    "name": "开发调优, Lv3",
+    "name": "开发调优，Lv3",
     "slug": "develop-lv3",
     "parent_category_id": 4,
     "color": "FF0000",
@@ -87,7 +87,7 @@
   },
   {
     "id": 99,
-    "name": "国产替代, Lv1",
+    "name": "国产替代，Lv1",
     "slug": "domestic-lv1",
     "parent_category_id": 98,
     "color": "0088CC",
@@ -100,7 +100,7 @@
   },
   {
     "id": 100,
-    "name": "国产替代, Lv2",
+    "name": "国产替代，Lv2",
     "slug": "domestic-lv2",
     "parent_category_id": 98,
     "color": "874EFE",
@@ -113,7 +113,7 @@
   },
   {
     "id": 101,
-    "name": "国产替代, Lv3",
+    "name": "国产替代，Lv3",
     "slug": "domestic-lv3",
     "parent_category_id": 98,
     "color": "FF0000",
@@ -143,7 +143,7 @@
   },
   {
     "id": 83,
-    "name": "资源荟萃, Lv1",
+    "name": "资源荟萃，Lv1",
     "slug": "resource-lv1",
     "parent_category_id": 14,
     "color": "0088CC",
@@ -156,7 +156,7 @@
   },
   {
     "id": 84,
-    "name": "资源荟萃, Lv2",
+    "name": "资源荟萃，Lv2",
     "slug": "resource-lv2",
     "parent_category_id": 14,
     "color": "874EFE",
@@ -169,7 +169,7 @@
   },
   {
     "id": 85,
-    "name": "资源荟萃, Lv3",
+    "name": "资源荟萃，Lv3",
     "slug": "resource-lv3",
     "parent_category_id": 14,
     "color": "FF0000",
@@ -199,7 +199,7 @@
   },
   {
     "id": 95,
-    "name": "网盘资源, Lv1",
+    "name": "网盘资源，Lv1",
     "slug": "cloud-asset-lv1",
     "parent_category_id": 94,
     "color": "0088CC",
@@ -212,7 +212,7 @@
   },
   {
     "id": 96,
-    "name": "网盘资源, Lv2",
+    "name": "网盘资源，Lv2",
     "slug": "cloud-asset-lv2",
     "parent_category_id": 94,
     "color": "874EFE",
@@ -225,7 +225,7 @@
   },
   {
     "id": 97,
-    "name": "网盘资源, Lv3",
+    "name": "网盘资源，Lv3",
     "slug": "cloud-asset-lv3",
     "parent_category_id": 94,
     "color": "FF0000",
@@ -255,7 +255,7 @@
   },
   {
     "id": 75,
-    "name": "文档共建, Lv1",
+    "name": "文档共建，Lv1",
     "slug": "wiki-lv1",
     "parent_category_id": 42,
     "color": "0088CC",
@@ -268,7 +268,7 @@
   },
   {
     "id": 76,
-    "name": "文档共建, Lv2",
+    "name": "文档共建，Lv2",
     "slug": "wiki-lv2",
     "parent_category_id": 42,
     "color": "874EFE",
@@ -281,7 +281,7 @@
   },
   {
     "id": 77,
-    "name": "文档共建, Lv3",
+    "name": "文档共建，Lv3",
     "slug": "wiki-lv3",
     "parent_category_id": 42,
     "color": "FF0000",
@@ -328,7 +328,7 @@
   },
   {
     "id": 107,
-    "name": "积分乐园, Lv1",
+    "name": "积分乐园，Lv1",
     "slug": "credit-lv1",
     "parent_category_id": 106,
     "color": "0088CC",
@@ -341,7 +341,7 @@
   },
   {
     "id": 108,
-    "name": "积分乐园, Lv2",
+    "name": "积分乐园，Lv2",
     "slug": "credit-lv2",
     "parent_category_id": 106,
     "color": "874EFE",
@@ -354,7 +354,7 @@
   },
   {
     "id": 109,
-    "name": "积分乐园, Lv3",
+    "name": "积分乐园，Lv3",
     "slug": "credit-lv3",
     "parent_category_id": 106,
     "color": "FF0000",
@@ -384,7 +384,7 @@
   },
   {
     "id": 72,
-    "name": "非我莫属, Lv1",
+    "name": "非我莫属，Lv1",
     "slug": "job-lv1",
     "parent_category_id": 27,
     "color": "0088CC",
@@ -397,7 +397,7 @@
   },
   {
     "id": 73,
-    "name": "非我莫属, Lv2",
+    "name": "非我莫属，Lv2",
     "slug": "job-lv2",
     "parent_category_id": 27,
     "color": "874EFE",
@@ -410,7 +410,7 @@
   },
   {
     "id": 74,
-    "name": "非我莫属, Lv3",
+    "name": "非我莫属，Lv3",
     "slug": "job-lv3",
     "parent_category_id": 27,
     "color": "FF0000",
@@ -440,7 +440,7 @@
   },
   {
     "id": 69,
-    "name": "读书成诗, Lv1",
+    "name": "读书成诗，Lv1",
     "slug": "reading-lv1",
     "parent_category_id": 32,
     "color": "0088CC",
@@ -453,7 +453,7 @@
   },
   {
     "id": 70,
-    "name": "读书成诗, Lv2",
+    "name": "读书成诗，Lv2",
     "slug": "reading-lv2",
     "parent_category_id": 32,
     "color": "874EFE",
@@ -466,7 +466,7 @@
   },
   {
     "id": 71,
-    "name": "读书成诗, Lv3",
+    "name": "读书成诗，Lv3",
     "slug": "reading-lv3",
     "parent_category_id": 32,
     "color": "FF0000",
@@ -496,7 +496,7 @@
   },
   {
     "id": 66,
-    "name": "扬帆起航, Lv1",
+    "name": "扬帆起航，Lv1",
     "slug": "startup-lv1",
     "parent_category_id": 46,
     "color": "0088CC",
@@ -509,7 +509,7 @@
   },
   {
     "id": 67,
-    "name": "扬帆起航, Lv2",
+    "name": "扬帆起航，Lv2",
     "slug": "startup-lv2",
     "parent_category_id": 46,
     "color": "874EFE",
@@ -522,7 +522,7 @@
   },
   {
     "id": 68,
-    "name": "扬帆起航, Lv3",
+    "name": "扬帆起航，Lv3",
     "slug": "startup-lv3",
     "parent_category_id": 46,
     "color": "FF0000",
@@ -552,7 +552,7 @@
   },
   {
     "id": 78,
-    "name": "前沿快讯, Lv1",
+    "name": "前沿快讯，Lv1",
     "slug": "news-lv1",
     "parent_category_id": 34,
     "color": "0088CC",
@@ -565,7 +565,7 @@
   },
   {
     "id": 79,
-    "name": "前沿快讯, Lv2",
+    "name": "前沿快讯，Lv2",
     "slug": "news-lv2",
     "parent_category_id": 34,
     "color": "874EFE",
@@ -578,7 +578,7 @@
   },
   {
     "id": 80,
-    "name": "前沿快讯, Lv3",
+    "name": "前沿快讯，Lv3",
     "slug": "news-lv3",
     "parent_category_id": 34,
     "color": "FF0000",
@@ -625,7 +625,7 @@
   },
   {
     "id": 60,
-    "name": "福利羊毛, Lv1",
+    "name": "福利羊毛，Lv1",
     "slug": "welfare-lv1",
     "parent_category_id": 36,
     "color": "0088CC",
@@ -638,7 +638,7 @@
   },
   {
     "id": 61,
-    "name": "福利羊毛, Lv2",
+    "name": "福利羊毛，Lv2",
     "slug": "welfare-lv2",
     "parent_category_id": 36,
     "color": "874EFE",
@@ -651,7 +651,7 @@
   },
   {
     "id": 62,
-    "name": "福利羊毛, Lv3",
+    "name": "福利羊毛，Lv3",
     "slug": "welfare-lv3",
     "parent_category_id": 36,
     "color": "FF0000",
@@ -681,7 +681,7 @@
   },
   {
     "id": 35,
-    "name": "搞七捻三, Lv1",
+    "name": "搞七捻三，Lv1",
     "slug": "gossip-lv1",
     "parent_category_id": 11,
     "color": "0088CC",
@@ -694,7 +694,7 @@
   },
   {
     "id": 89,
-    "name": "搞七捻三, Lv2",
+    "name": "搞七捻三，Lv2",
     "slug": "gossip-lv2",
     "parent_category_id": 11,
     "color": "874EFE",
@@ -707,7 +707,7 @@
   },
   {
     "id": 21,
-    "name": "搞七捻三, Lv3",
+    "name": "搞七捻三，Lv3",
     "slug": "gossip-lv3",
     "parent_category_id": 11,
     "color": "FF0000",
@@ -737,7 +737,7 @@
   },
   {
     "id": 103,
-    "name": "社区孵化, Lv1",
+    "name": "社区孵化，Lv1",
     "slug": "incubator-lv1",
     "parent_category_id": 102,
     "color": "0088CC",
@@ -750,7 +750,7 @@
   },
   {
     "id": 104,
-    "name": "社区孵化, Lv2",
+    "name": "社区孵化，Lv2",
     "slug": "incubator-lv2",
     "parent_category_id": 102,
     "color": "874EFE",
@@ -763,7 +763,7 @@
   },
   {
     "id": 105,
-    "name": "社区孵化, Lv3",
+    "name": "社区孵化，Lv3",
     "slug": "incubator-lv3",
     "parent_category_id": 102,
     "color": "FF0000",
@@ -858,7 +858,7 @@
   },
   {
     "id": 118,
-    "name": "桌面GNU/Linux",
+    "name": "桌面 GNU/Linux",
     "slug": "linux-desktop",
     "parent_category_id": 110,
     "color": "0088CC",
@@ -966,7 +966,7 @@
   },
   {
     "id": 63,
-    "name": "运营反馈, Lv1",
+    "name": "运营反馈，Lv1",
     "slug": "feedback-lv1",
     "parent_category_id": 2,
     "color": "0088CC",
@@ -979,7 +979,7 @@
   },
   {
     "id": 64,
-    "name": "运营反馈, Lv2",
+    "name": "运营反馈，Lv2",
     "slug": "feedback-lv2",
     "parent_category_id": 2,
     "color": "874EFE",
@@ -992,7 +992,7 @@
   },
   {
     "id": 65,
-    "name": "运营反馈, Lv3",
+    "name": "运营反馈，Lv3",
     "slug": "feedback-lv3",
     "parent_category_id": 2,
     "color": "FF0000",
@@ -1022,7 +1022,7 @@
   },
   {
     "id": 57,
-    "name": "深海幽域, Lv1",
+    "name": "深海幽域，Lv1",
     "slug": "muted-lv1",
     "parent_category_id": 45,
     "color": "0088CC",
@@ -1035,7 +1035,7 @@
   },
   {
     "id": 58,
-    "name": "深海幽域, Lv2",
+    "name": "深海幽域，Lv2",
     "slug": "muted-lv2",
     "parent_category_id": 45,
     "color": "874EFE",
@@ -1048,7 +1048,7 @@
   },
   {
     "id": 59,
-    "name": "深海幽域, Lv3",
+    "name": "深海幽域，Lv3",
     "slug": "muted-lv3",
     "parent_category_id": 45,
     "color": "FF0000",
