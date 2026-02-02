@@ -171,6 +171,11 @@ const handleTagClick = (tag: DiscourseTag) => {
   navigateTo(`${baseUrl.value}/tag/${encoded}`)
 }
 
+const handleOpenTopicTag = (tagName: string) => {
+  const encoded = encodeURIComponent(tagName)
+  navigateTo(`${baseUrl.value}/tag/${encoded}`)
+}
+
 // Handle middle click (open in new tab)
 const handleMiddleClick = (url: string) => {
   openInNewTab(url)
@@ -587,6 +592,7 @@ onUnmounted(() => {
               @click="handleTopicClick"
               @middleClick="handleMiddleClick"
               @openUser="handleUserClick"
+              @openTag="handleOpenTopicTag"
             />
 
             <!-- Loading more indicator -->
@@ -649,11 +655,42 @@ onUnmounted(() => {
       <!-- Tags view -->
       <div v-else-if="activeTab?.viewType === 'tags'" class="flex gap-4">
         <div class="flex-1 min-w-0">
-          <TagGrid :tags="activeTab.tags" @click="handleTagClick" />
+          <TagGrid :tags="activeTab.tags" :groups="activeTab.tagGroups" @click="handleTagClick" />
         </div>
         <div class="w-64 flex-shrink-0 hidden lg:block">
           <Sidebar
             :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            :baseUrl="baseUrl"
+            :topicListType="activeTab.topicListType"
+            @clickCategory="handleCategoryClick"
+            @clickUser="handleUserClick"
+            @changeTopicListType="handleChangeTopicListType"
+            @navigateTo="handleNavigate"
+          />
+        </div>
+      </div>
+
+      <!-- Tag topics view -->
+      <div v-else-if="activeTab?.viewType === 'tag'" class="flex gap-4">
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold mb-3 dark:text-white">
+            标签：{{ activeTab.currentTagName }}
+          </h3>
+          <TopicList
+            :topics="activeTab.topics"
+            :baseUrl="baseUrl"
+            :categories="activeTab.categories"
+            :users="activeTab.activeUsers"
+            @click="handleTopicClick"
+            @middleClick="handleMiddleClick"
+            @openUser="handleUserClick"
+            @openTag="handleOpenTopicTag"
+          />
+        </div>
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <Sidebar
+            :categories="[]"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
             :topicListType="activeTab.topicListType"
@@ -692,6 +729,7 @@ onUnmounted(() => {
             @click="handleTopicClick"
             @middleClick="handleMiddleClick"
             @openUser="handleUserClick"
+            @openTag="handleOpenTopicTag"
           />
 
           <!-- Loading more indicator -->

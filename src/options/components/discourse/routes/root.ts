@@ -1,6 +1,12 @@
 import type { Ref } from 'vue'
 
-import type { BrowserTab, DiscourseTag, DiscourseUser, TopicListType } from '../types'
+import type {
+  BrowserTab,
+  DiscourseTag,
+  DiscourseTagGroup,
+  DiscourseUser,
+  TopicListType
+} from '../types'
 import { pageFetch, extractData } from '../utils'
 
 import { normalizeCategoriesFromResponse } from './categories'
@@ -32,6 +38,8 @@ export async function loadHome(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentTagName = ''
+  tab.tagGroups = []
 
   if (topicData?.users) {
     tab.activeUsers = topicData.users
@@ -49,6 +57,8 @@ export async function changeTopicListType(
 ) {
   tab.topicListType = type
   tab.topicsPage = 0
+  tab.currentTagName = ''
+  tab.tagGroups = []
 
   const result = await pageFetch<any>(`${baseUrl.value}/${type}.json`)
   const data = extractData(result)
@@ -89,6 +99,8 @@ export async function loadCategories(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentTagName = ''
+  tab.tagGroups = []
   tab.activeUsers = data?.users || []
   if (Array.isArray(data?.users)) {
     data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
@@ -115,6 +127,8 @@ export async function loadPosted(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentTagName = ''
+  tab.tagGroups = []
 
   if (data?.users) {
     tab.activeUsers = data.users
@@ -147,6 +161,8 @@ export async function loadBookmarks(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentTagName = ''
+  tab.tagGroups = []
 
   if (data?.users) {
     tab.activeUsers = data.users
@@ -179,6 +195,7 @@ export async function loadTags(tab: BrowserTab, baseUrl: Ref<string>) {
   const data = extractData(result)
 
   tab.tags = normalizeTagsFromResponse(data)
+  tab.tagGroups = normalizeTagGroupsFromResponse(data, tab.tags)
   tab.topics = []
   tab.categories = []
   tab.activeUsers = []
@@ -187,4 +204,62 @@ export async function loadTags(tab: BrowserTab, baseUrl: Ref<string>) {
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentTagName = ''
+}
+
+export async function loadTag(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  tagName: string
+) {
+  const encodedTag = encodeURIComponent(tagName)
+  const result = await pageFetch<any>(`${baseUrl.value}/tag/${encodedTag}.json`)
+  const data = extractData(result)
+
+  if (data?.topic_list?.topics) {
+    tab.topics = data.topic_list.topics
+  } else {
+    tab.topics = []
+  }
+
+  tab.hasMoreTopics = false
+  tab.topicsPage = 0
+  tab.categories = []
+  tab.currentCategorySlug = ''
+  tab.currentCategoryId = null
+  tab.currentCategoryName = ''
+  tab.currentTagName = tagName
+  tab.tagGroups = []
+
+  if (Array.isArray(data?.users)) {
+    tab.activeUsers = data.users
+    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+  } else {
+    tab.activeUsers = []
+  }
+}
+
+function normalizeTagGroupsFromResponse(data: any, allTags: DiscourseTag[]): DiscourseTagGroup[] {
+  const rawGroups = data?.extras?.tag_groups
+  if (!Array.isArray(rawGroups)) return []
+
+  const groups: DiscourseTagGroup[] = rawGroups
+    .filter((group: any) => group && typeof group.name === 'string')
+    .map((group: any) => ({
+      id: Number(group.id) || 0,
+      name: group.name,
+      tags: normalizeTagsFromResponse({ tags: group.tags || [] })
+    }))
+    .filter(group => group.tags.length > 0)
+
+  const groupedNames = new Set(
+    groups.flatMap(group => group.tags.map(tag => tag.name.toLocaleLowerCase()))
+  )
+  const ungroupedTags = allTags.filter(tag => !groupedNames.has(tag.name.toLocaleLowerCase()))
+  if (ungroupedTags.length > 0) {
+    groups.push({ id: 0, name: '其他标签', tags: ungroupedTags })
+  }
+
+  return groups
 }

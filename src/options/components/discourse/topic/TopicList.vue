@@ -19,6 +19,7 @@ const emit = defineEmits<{
   (e: 'click', topic: DiscourseTopic | SuggestedTopic): void
   (e: 'middleClick', url: string): void
   (e: 'openUser', username: string): void
+  (e: 'openTag', tagName: string): void
 }>()
 
 const handleClick = (topic: DiscourseTopic | SuggestedTopic) => {
@@ -90,6 +91,12 @@ const getTagKey = (tag: string | DiscourseTopicTag) => {
   if (typeof tag === 'string') return tag
   return String(tag.id || tag.slug || tag.name || tag.text || JSON.stringify(tag))
 }
+
+const handleTagClick = (tag: string | DiscourseTopicTag) => {
+  const label = getTagLabel(tag).trim()
+  if (!label) return
+  emit('openTag', label)
+}
 </script>
 
 <template>
@@ -118,7 +125,8 @@ const getTagKey = (tag: string | DiscourseTopicTag) => {
             <span
               v-for="tag in (topic as DiscourseTopic).tags"
               :key="getTagKey(tag)"
-              class="topic-tag text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              class="topic-tag text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+              @click.stop="handleTagClick(tag)"
             >
               #{{ getTagLabel(tag) }}
             </span>
@@ -145,7 +153,7 @@ const getTagKey = (tag: string | DiscourseTopicTag) => {
           <div v-if="getPosters(topic, users).length > 0" class="flex items-center gap-1 mt-2">
             <span class="text-xs text-gray-400 mr-1">活跃：</span>
             <div
-              v-for="(poster, index) in getPosters(topic, users)"
+              v-for="poster in getPosters(topic, users)"
               :key="poster.user_id"
               class="poster-avatar"
               :class="{ 'latest-poster': poster.extras === 'latest' }"

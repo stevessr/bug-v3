@@ -17,6 +17,7 @@ import {
   changeTopicListType as changeTopicListTypeRoute,
   loadCategories as loadCategoriesRoute,
   loadTags as loadTagsRoute,
+  loadTag as loadTagRoute,
   loadPosted as loadPostedRoute,
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
@@ -94,6 +95,7 @@ export function useDiscourseBrowser() {
       currentUser: null,
       activeUsers: [],
       tags: [],
+      tagGroups: [],
       errorMessage: '',
       loadedPostIds: new Set(),
       hasMorePosts: false,
@@ -103,6 +105,7 @@ export function useDiscourseBrowser() {
       currentCategorySlug: '',
       currentCategoryId: null,
       currentCategoryName: '',
+      currentTagName: '',
       topicListType: 'latest',
       activityState: null,
       messagesState: null,
@@ -166,6 +169,8 @@ export function useDiscourseBrowser() {
     urlInput.value = normalizedUrl
     tab.errorMessage = ''
     tab.tags = []
+    tab.tagGroups = []
+    tab.currentTagName = ''
     let isTopicNavigation = false
 
     try {
@@ -288,6 +293,15 @@ export function useDiscourseBrowser() {
         await loadTags(tab)
         tab.title = '标签'
         tab.viewType = 'tags'
+      } else if (pathname.startsWith('/tag/')) {
+        const tagPath = pathname.replace('/tag/', '').replace(/\.json$/i, '')
+        const tagName = decodeURIComponent(tagPath || '').trim()
+        if (!tagName) {
+          throw new Error('Invalid tag URL')
+        }
+        await loadTag(tab, tagName)
+        tab.title = `标签：${tagName}`
+        tab.viewType = 'tag'
       } else if (pathname === '/posted') {
         await loadPosted(tab)
         tab.title = '我的帖子'
@@ -348,6 +362,11 @@ export function useDiscourseBrowser() {
   // Load tags page
   async function loadTags(tab: BrowserTab) {
     await loadTagsRoute(tab, baseUrl)
+  }
+
+  // Load single tag topic list
+  async function loadTag(tab: BrowserTab, tagName: string) {
+    await loadTagRoute(tab, baseUrl, users, tagName)
   }
 
   // Load posted topics

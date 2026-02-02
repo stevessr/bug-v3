@@ -26,6 +26,7 @@ export interface BrowserTab {
   currentUser: DiscourseUserProfile | null
   activeUsers: DiscourseUser[]
   tags: DiscourseTag[]
+  tagGroups: DiscourseTagGroup[]
   errorMessage: string
   // Pagination state for posts
   loadedPostIds: Set<number>
@@ -37,6 +38,7 @@ export interface BrowserTab {
   currentCategorySlug: string
   currentCategoryId: number | null
   currentCategoryName: string
+  currentTagName: string
   // Topic list type for home view
   topicListType: TopicListType
   // Activity state
@@ -62,6 +64,7 @@ export type ViewType =
   | 'home'
   | 'categories'
   | 'tags'
+  | 'tag'
   | 'category'
   | 'topic'
   | 'chat'
@@ -166,6 +169,12 @@ export interface DiscourseTag {
   count: number
   pm_only?: boolean
   target_tag?: string | null
+}
+
+export interface DiscourseTagGroup {
+  id: number
+  name: string
+  tags: DiscourseTag[]
 }
 
 export interface DiscoursePost {

@@ -39,6 +39,7 @@ export async function loadCategory(
     data?.topic_list?.category?.name ??
     data?.topic_list?.category_name ??
     ''
+  tab.currentTagName = ''
 
   if (data?.users) {
     tab.activeUsers = data.users
