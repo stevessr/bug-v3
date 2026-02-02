@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, createApp } from 'vue'
 
 import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
+import PollView from './PollView'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
 
@@ -178,773 +178,6 @@ const requestPollVote = async (method: 'PUT' | 'DELETE', body: URLSearchParams) 
   return data
 }
 
-const inferMaxSelections = (pollEl: HTMLElement) => {
-  const maxStrong = pollEl.querySelector('.multiple-help-text strong')?.textContent || ''
-  const direct = maxStrong.match(/\d+/)?.[0]
-  if (direct) return Number(direct)
-
-  const helpText = pollEl.querySelector('.multiple-help-text')?.textContent || ''
-  const fallback = helpText.match(/(\d+)/)?.[1]
-  if (fallback) return Number(fallback)
-
-  return null
-}
-
-const updatePollVoters = (pollEl: HTMLElement, voters?: number) => {
-  if (typeof voters !== 'number') return
-  const infoNumber = pollEl.querySelector('.poll-info .info-number')
-  if (infoNumber) {
-    infoNumber.textContent = String(voters)
-  }
-}
-
-const ensurePollResultsBox = (pollEl: HTMLElement) => {
-  let resultsBox = pollEl.querySelector<HTMLElement>('.poll-results')
-  if (!resultsBox) {
-    resultsBox = document.createElement('div')
-    resultsBox.className = 'poll-results'
-    pollEl.appendChild(resultsBox)
-  }
-  return resultsBox
-}
-
-const setPollView = (pollEl: HTMLElement, mode: 'vote' | 'results') => {
-  const container = pollEl.querySelector<HTMLElement>('.poll-container')
-  const resultsBox = pollEl.querySelector<HTMLElement>('.poll-results')
-  pollEl.dataset.pollView = mode
-  if (container) {
-    container.style.display = mode === 'results' ? 'none' : ''
-  }
-  if (resultsBox) {
-    resultsBox.dataset.visible = mode === 'results' ? 'true' : 'false'
-    if (mode === 'vote') {
-      resultsBox.innerHTML = ''
-    }
-  }
-}
-
-const updatePollActionButtons = (
-  pollEl: HTMLElement,
-  buttons: {
-    castButton?: HTMLButtonElement | null
-    clearButton?: HTMLButtonElement | null
-    resultsButton?: HTMLButtonElement | null
-  },
-  hasVoted: boolean,
-  disableActions: boolean
-) => {
-  const { castButton, clearButton, resultsButton } = buttons
-  if (castButton) {
-    castButton.style.display = hasVoted ? 'none' : ''
-    castButton.disabled = disableActions || castButton.disabled
-  }
-  if (clearButton) {
-    clearButton.style.display = hasVoted ? '' : 'none'
-    clearButton.disabled = disableActions || clearButton.disabled
-  }
-  if (resultsButton) {
-    resultsButton.textContent = '投票'
-  }
-  pollEl.dataset.pollHasVoted = hasVoted ? 'true' : 'false'
-}
-
-const renderPollResults = (pollEl: HTMLElement, poll?: DiscoursePoll | null) => {
-  if (!poll || !Array.isArray(poll.options)) return
-  const resultsBox = ensurePollResultsBox(pollEl)
-  resultsBox.innerHTML = ''
-
-  const totalVotes = poll.options.reduce((acc, option) => acc + (option.votes || 0), 0)
-  const maxVotes = Math.max(1, ...poll.options.map(option => option.votes || 0))
-
-  const title = document.createElement('div')
-  title.className = 'poll-results-title'
-  title.textContent = poll.type === 'ranked_choice' ? '结果' : '结果'
-  resultsBox.appendChild(title)
-
-  if (poll.type === 'ranked_choice' && poll.ranked_choice_outcome) {
-    const outcome = poll.ranked_choice_outcome as Record<string, any>
-    const rounds = Array.isArray(outcome.round_activity) ? outcome.round_activity : []
-
-    const roundsWrap = document.createElement('div')
-    roundsWrap.className = 'poll-results-rounds'
-
-    rounds.forEach((roundItem: any) => {
-      const roundRow = document.createElement('div')
-      roundRow.className = 'poll-results-round'
-
-      const roundLabel = document.createElement('div')
-      roundLabel.className = 'poll-results-round-label'
-      roundLabel.textContent = `回合 ${roundItem?.round ?? ''}`.trim()
-
-      const eliminated = Array.isArray(roundItem?.eliminated) ? roundItem.eliminated : []
-      const eliminatedText =
-        eliminated.length > 0
-          ? eliminated.map((item: any) => item?.html || '').filter(Boolean).join('、')
-          : '—'
-
-      const eliminatedRow = document.createElement('div')
-      eliminatedRow.className = 'poll-results-round-eliminated'
-      eliminatedRow.textContent = `淘汰：${eliminatedText}`
-
-      roundRow.appendChild(roundLabel)
-      roundRow.appendChild(eliminatedRow)
-      roundsWrap.appendChild(roundRow)
-    })
-
-    const summary = document.createElement('div')
-    summary.className = 'poll-results-summary'
-
-    if (outcome.winning_candidate?.html) {
-      summary.innerHTML = `结果：${outcome.winning_candidate.html}`
-    } else if (Array.isArray(outcome.tied_candidates) && outcome.tied_candidates.length > 0) {
-      summary.innerHTML = `结果：${outcome.tied_candidates
-        .map((item: any) => item?.html || '')
-        .filter(Boolean)
-        .join('、')}`
-    } else {
-      summary.textContent = '结果：暂无'
-    }
-
-    resultsBox.appendChild(roundsWrap)
-    resultsBox.appendChild(summary)
-  } else {
-    const list = document.createElement('div')
-    list.className = 'poll-results-list'
-
-    poll.options.forEach(option => {
-      const row = document.createElement('div')
-      row.className = 'poll-results-row'
-
-      const label = document.createElement('div')
-      label.className = 'poll-results-label'
-      label.innerHTML = option.html || ''
-
-      const barWrap = document.createElement('div')
-      barWrap.className = 'poll-results-bar-wrap'
-
-      const bar = document.createElement('div')
-      bar.className = 'poll-results-bar'
-      const voteCount = option.votes || 0
-      bar.style.width = `${Math.round((voteCount / maxVotes) * 100)}%`
-
-      const votes = document.createElement('div')
-      votes.className = 'poll-results-votes'
-      const percent = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0
-      votes.textContent = `${percent}%`
-
-      barWrap.appendChild(bar)
-      row.appendChild(label)
-      row.appendChild(barWrap)
-      row.appendChild(votes)
-      list.appendChild(row)
-    })
-
-  resultsBox.appendChild(list)
-  }
-
-  resultsBox.dataset.visible = 'true'
-}
-
-const togglePollResults = (pollEl: HTMLElement, poll?: DiscoursePoll | null) => {
-  if (!poll) return
-  const resultsBox = ensurePollResultsBox(pollEl)
-  const isVisible = resultsBox.dataset.visible === 'true'
-  if (isVisible) {
-    setPollView(pollEl, 'vote')
-    return
-  }
-  renderPollResults(pollEl, poll)
-  setPollView(pollEl, 'results')
-}
-
-const ensurePollButtons = (pollEl: HTMLElement) => {
-  const container = pollEl.querySelector<HTMLElement>('.poll-container') || pollEl
-  let buttonsWrap = pollEl.querySelector<HTMLElement>('.poll-buttons')
-  if (!buttonsWrap) {
-    buttonsWrap = document.createElement('div')
-    buttonsWrap.className = 'poll-buttons'
-    const info = pollEl.querySelector('.poll-info')
-    if (info) {
-      pollEl.insertBefore(buttonsWrap, info)
-    } else {
-      container.appendChild(buttonsWrap)
-    }
-  }
-
-  let castButton = buttonsWrap.querySelector<HTMLButtonElement>('.cast-votes')
-  if (!castButton) {
-    castButton = document.createElement('button')
-    castButton.type = 'button'
-    castButton.className = 'btn btn-primary cast-votes'
-    castButton.textContent = '提交投票'
-    buttonsWrap.appendChild(castButton)
-  }
-
-  let clearButton = buttonsWrap.querySelector<HTMLButtonElement>('.revoke-votes')
-  if (!clearButton) {
-    clearButton = document.createElement('button')
-    clearButton.type = 'button'
-    clearButton.className = 'btn btn-default revoke-votes'
-    clearButton.title = '撤销投票'
-    clearButton.textContent = '撤销'
-    buttonsWrap.insertBefore(clearButton, castButton)
-  }
-
-  let resultsButton = buttonsWrap.querySelector<HTMLButtonElement>('.toggle-results')
-  if (!resultsButton) {
-    const existing = pollEl.querySelector<HTMLButtonElement>('.toggle-results')
-    if (existing) {
-      resultsButton = existing
-      buttonsWrap.appendChild(resultsButton)
-    }
-  }
-  if (!resultsButton) {
-    resultsButton = document.createElement('button')
-    resultsButton.type = 'button'
-    resultsButton.className = 'btn btn-default toggle-results'
-    resultsButton.textContent = '结果'
-    buttonsWrap.appendChild(resultsButton)
-  }
-
-  return { buttonsWrap, castButton, clearButton, resultsButton }
-}
-
-const setupMultiplePoll = (
-  pollEl: HTMLElement,
-  pollName: string,
-  pollType: string,
-  pollData?: DiscoursePoll
-) => {
-  const optionItems = Array.from(pollEl.querySelectorAll<HTMLLIElement>('li[data-poll-option-id]'))
-  if (optionItems.length === 0) return
-
-  const ensureOptionButton = (item: HTMLLIElement) => {
-    const existing = item.querySelector('button')
-    if (existing) return existing
-
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'poll-option-btn'
-
-    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    icon.setAttribute('class', 'poll-option-icon')
-    icon.setAttribute('viewBox', '0 0 448 512')
-    icon.setAttribute('width', '1em')
-    icon.setAttribute('height', '1em')
-    icon.setAttribute('aria-hidden', 'true')
-    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use')
-    use.setAttribute('href', '#far-square')
-    icon.appendChild(use)
-
-    const optionText = document.createElement('span')
-    optionText.className = 'option-text'
-    optionText.textContent = (item.textContent || '').trim()
-
-    button.appendChild(icon)
-    button.appendChild(optionText)
-    item.textContent = ''
-    item.appendChild(button)
-    return button
-  }
-
-  const selected = new Set<string>()
-  let max = pollType === 'multiple' ? inferMaxSelections(pollEl) : 1
-
-  const isSingle = pollType !== 'multiple'
-  const { castButton, clearButton, resultsButton } = ensurePollButtons(pollEl)
-  if (resultsButton) {
-    resultsButton.disabled = !pollData
-  }
-
-  const setOptionChecked = (item: HTMLLIElement, checked: boolean) => {
-    const button = item.querySelector('button')
-    if (!button) return
-    item.classList.toggle('poll-option-selected', checked)
-    button.setAttribute('aria-pressed', checked ? 'true' : 'false')
-    const use = button.querySelector('use')
-    if (use) {
-      use.setAttribute('href', checked ? '#far-square-check' : '#far-square')
-    }
-  }
-
-  const syncCastButtonState = () => {
-    if (!castButton) return
-    const isResultsView = pollEl.dataset.pollView === 'results'
-    const hasSelection = selected.size > 0
-    castButton.disabled = isResultsView || !hasSelection || (!!max && selected.size > max)
-    if (clearButton) {
-      clearButton.disabled = isResultsView || !hasSelection
-    }
-    updatePollActionButtons(
-      pollEl,
-      { castButton, clearButton, resultsButton },
-      pollEl.dataset.pollHasVoted === 'true',
-      isResultsView
-    )
-  }
-
-  const upsertVotesLabel = (item: HTMLLIElement, votes?: number) => {
-    if (typeof votes !== 'number') return
-    const textContainer =
-      item.querySelector<HTMLElement>('.option-text') || item.querySelector<HTMLElement>('button')
-    if (!textContainer) return
-    let counter = item.querySelector<HTMLElement>('.poll-option-votes')
-    if (!counter) {
-      counter = document.createElement('span')
-      counter.className = 'poll-option-votes'
-      textContainer.insertAdjacentElement('afterend', counter)
-    }
-    counter.textContent = `(${votes})`
-  }
-
-  const applyResult = (poll: DiscoursePoll | undefined) => {
-    if (!poll) return
-    if (typeof poll.max === 'number') {
-      max = poll.max
-    }
-
-    if (Array.isArray(poll.options)) {
-      selected.clear()
-      const byId = new Map(optionItems.map(item => [item.dataset.pollOptionId || '', item]))
-      let hasChosen = false
-      poll.options.forEach((option: any) => {
-        const item = byId.get(option?.id || '')
-        if (!item) return
-        const chosen = Boolean(option?.chosen)
-        if (chosen) selected.add(option.id)
-        if (chosen) hasChosen = true
-        setOptionChecked(item, chosen)
-        upsertVotesLabel(item, typeof option?.votes === 'number' ? option.votes : undefined)
-      })
-      pollEl.dataset.pollHasVoted = hasChosen ? 'true' : 'false'
-    }
-
-    updatePollVoters(pollEl, poll.voters)
-    syncCastButtonState()
-  }
-
-  const onOptionClick = (event: Event) => {
-    event.preventDefault()
-    event.stopPropagation()
-
-    const item = (event.currentTarget as HTMLElement).closest(
-      'li[data-poll-option-id]'
-    ) as HTMLLIElement | null
-    if (!item) return
-    const optionId = item.dataset.pollOptionId
-    if (!optionId) return
-
-    if (selected.has(optionId)) {
-      selected.delete(optionId)
-      setOptionChecked(item, false)
-      syncCastButtonState()
-      return
-    }
-
-    if (isSingle) {
-      selected.forEach(id => {
-        const match = optionItems.find(node => node.dataset.pollOptionId === id)
-        if (match) setOptionChecked(match, false)
-      })
-      selected.clear()
-    } else if (max && selected.size >= max) {
-      message.warning(`最多选择 ${max} 个选项`)
-      return
-    }
-
-    selected.add(optionId)
-    setOptionChecked(item, true)
-    syncCastButtonState()
-  }
-
-  const onCastClick = async (event: Event) => {
-    event.preventDefault()
-    if (!castButton || castButton.disabled) return
-
-    castButton.disabled = true
-    try {
-      const body = new URLSearchParams()
-      body.append('post_id', String(props.postId))
-      body.append('poll_name', pollName)
-      selected.forEach(optionId => {
-        body.append('options[]', optionId)
-      })
-
-      const data = await requestPollVote('PUT', body)
-      applyResult(data.poll)
-      message.success('投票成功')
-    } catch (error) {
-      const text = error instanceof Error ? error.message : '投票失败'
-      message.error(text)
-      syncCastButtonState()
-    }
-  }
-
-  const onClearClick = async (event: Event) => {
-    event.preventDefault()
-    if (!clearButton || clearButton.disabled) return
-    clearButton.disabled = true
-    castButton && (castButton.disabled = true)
-
-    try {
-      const body = new URLSearchParams()
-      body.append('post_id', String(props.postId))
-      body.append('poll_name', pollName)
-      const data = await requestPollVote('DELETE', body)
-      applyResult(data.poll)
-      message.success('已撤销投票')
-    } catch (error) {
-      const text = error instanceof Error ? error.message : '撤销投票失败'
-      message.error(text)
-      syncCastButtonState()
-    }
-  }
-
-  optionItems.forEach(item => {
-    const button = ensureOptionButton(item)
-    button.addEventListener('click', onOptionClick)
-  })
-  castButton?.addEventListener('click', onCastClick)
-  clearButton?.addEventListener('click', onClearClick)
-  const onResultsClick = (event: Event) => {
-    event.preventDefault()
-    if (!pollData) {
-      message.warning('暂无可用的投票结果')
-      return
-    }
-    togglePollResults(pollEl, pollData)
-    syncCastButtonState()
-  }
-  resultsButton?.addEventListener('click', onResultsClick)
-
-  optionItems.forEach(item => setOptionChecked(item, false))
-  syncCastButtonState()
-  if (pollData?.results === 'always') {
-    applyResult(pollData)
-    renderPollResults(pollEl, pollData)
-    setPollView(pollEl, 'results')
-    if (resultsButton) resultsButton.textContent = '投票'
-  }
-
-  pollCleanupFns.push(() => {
-    optionItems.forEach(item => {
-      const button = item.querySelector('button')
-      if (!button) return
-      button.removeEventListener('click', onOptionClick)
-    })
-    castButton?.removeEventListener('click', onCastClick)
-    clearButton?.removeEventListener('click', onClearClick)
-    resultsButton?.removeEventListener('click', onResultsClick)
-  })
-}
-
-const setupRankedChoicePoll = (
-  pollEl: HTMLElement,
-  pollName: string,
-  pollData?: DiscoursePoll
-) => {
-  const optionNodes = Array.from(
-    pollEl.querySelectorAll<HTMLElement>(
-      '.ranked-choice-poll-option[data-poll-option-id], li[data-poll-option-id]'
-    )
-  )
-  if (optionNodes.length === 0) return
-
-  const ensureRankedOptionButton = (node: HTMLElement) => {
-    const existing = node.querySelector<HTMLButtonElement>('button.poll-option-btn')
-    if (existing) return existing
-
-    const optionTextNode = node.querySelector<HTMLElement>('.option-text')
-    const optionTextValue =
-      optionTextNode?.textContent?.trim() || (node.textContent || '').trim()
-
-    const rankSelect = document.createElement('select')
-    rankSelect.className = 'poll-rank-select'
-    rankSelect.setAttribute('aria-label', '选择排序')
-
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'poll-option-btn'
-    button.disabled = true
-
-    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    icon.setAttribute('class', 'poll-option-icon')
-    icon.setAttribute('viewBox', '0 0 448 512')
-    icon.setAttribute('width', '1em')
-    icon.setAttribute('height', '1em')
-    icon.setAttribute('aria-hidden', 'true')
-    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use')
-    use.setAttribute('href', '#sort-amount-down')
-    icon.appendChild(use)
-
-    const optionText = document.createElement('span')
-    optionText.className = 'option-text'
-    optionText.textContent = optionTextValue
-
-    button.appendChild(icon)
-    button.appendChild(optionText)
-    node.textContent = ''
-    node.appendChild(button)
-    node.appendChild(rankSelect)
-    return button
-  }
-
-  optionNodes.forEach(node => {
-    ensureRankedOptionButton(node)
-  })
-
-  const ranks = new Map<string, number>()
-  optionNodes.forEach(node => {
-    const id = node.dataset.pollOptionId
-    if (!id) return
-    const rank = Number(node.dataset.pollOptionRank || '0')
-    ranks.set(id, Number.isFinite(rank) && rank > 0 ? rank : 0)
-  })
-
-  const { castButton, clearButton, resultsButton } = ensurePollButtons(pollEl)
-  if (resultsButton) {
-    resultsButton.disabled = !pollData
-  }
-
-  const maxRankOptions = Math.max(
-    1,
-    pollData?.options?.length || optionNodes.length || 1
-  )
-
-  const ensureRankOptions = () => {
-    optionNodes.forEach(node => {
-      const select = node.querySelector<HTMLSelectElement>('.poll-rank-select')
-      if (!select) return
-      if (select.options.length === maxRankOptions + 1) return
-      select.innerHTML = ''
-
-      const noneOption = document.createElement('option')
-      noneOption.value = '0'
-      noneOption.textContent = '弃权'
-      select.appendChild(noneOption)
-
-      for (let i = 1; i <= maxRankOptions; i++) {
-        const opt = document.createElement('option')
-        opt.value = String(i)
-        if (i === 1) {
-          opt.textContent = `${i}（最高优先级）`
-        } else if (i === maxRankOptions) {
-          opt.textContent = `${i}（最低优先级）`
-        } else {
-          opt.textContent = String(i)
-        }
-        select.appendChild(opt)
-      }
-    })
-  }
-
-  ensureRankOptions()
-
-  const compactRanks = () => {
-    const ordered = Array.from(ranks.entries())
-      .filter(([, rank]) => rank > 0)
-      .sort((a, b) => a[1] - b[1])
-    ordered.forEach(([id], index) => {
-      ranks.set(id, index + 1)
-    })
-  }
-
-  const getMaxRank = () => {
-    return Math.max(0, ...Array.from(ranks.values()))
-  }
-
-  const updateUi = () => {
-    optionNodes.forEach(node => {
-      const id = node.dataset.pollOptionId
-      if (!id) return
-      const rank = ranks.get(id) || 0
-      const select = node.querySelector<HTMLSelectElement>('.poll-rank-select')
-      if (select) {
-        select.value = String(rank || 0)
-      }
-      node.classList.toggle('poll-rank-active', rank > 0)
-      node.dataset.pollOptionRank = String(rank)
-    })
-    if (castButton) {
-      const isResultsView = pollEl.dataset.pollView === 'results'
-      castButton.disabled = isResultsView || !Array.from(ranks.values()).some(rank => rank > 0)
-    }
-    if (clearButton) {
-      const isResultsView = pollEl.dataset.pollView === 'results'
-      clearButton.disabled = isResultsView || !Array.from(ranks.values()).some(rank => rank > 0)
-    }
-    updatePollActionButtons(
-      pollEl,
-      { castButton, clearButton, resultsButton },
-      pollEl.dataset.pollHasVoted === 'true',
-      pollEl.dataset.pollView === 'results'
-    )
-  }
-
-  const upsertVotesLabel = (node: HTMLElement, votes?: number) => {
-    if (typeof votes !== 'number') return
-    const textContainer = node.querySelector<HTMLElement>('.option-text') || node
-    let counter = node.querySelector<HTMLElement>('.poll-option-votes')
-    if (!counter) {
-      counter = document.createElement('span')
-      counter.className = 'poll-option-votes'
-      textContainer.insertAdjacentElement('afterend', counter)
-    }
-    counter.textContent = `(${votes})`
-  }
-
-  const applyResult = (poll: any) => {
-    if (!poll || !Array.isArray(poll.options)) return
-    ranks.forEach((_, id) => {
-      ranks.set(id, 0)
-    })
-    let hasVoted = false
-    poll.options.forEach((option: any) => {
-      const hasRank = Array.isArray(option?.rank) && option.rank.length > 0
-      const rank = hasRank ? Number(option.rank[0]) : 0
-      if (option?.id && ranks.has(option.id) && hasRank) {
-        ranks.set(option.id, Number.isFinite(rank) && rank > 0 ? rank : 0)
-        hasVoted = true
-      }
-      const node = optionNodes.find(item => item.dataset.pollOptionId === option?.id)
-      if (node) {
-        upsertVotesLabel(node, typeof option?.votes === 'number' ? option.votes : undefined)
-      }
-    })
-    pollEl.dataset.pollHasVoted = hasVoted ? 'true' : 'false'
-    compactRanks()
-    updateUi()
-    updatePollVoters(pollEl, poll.voters)
-  }
-
-  const setRank = (optionId: string, nextRank: number) => {
-    if (!optionId) return
-    if (nextRank < 0) nextRank = 0
-    if (nextRank > 0) {
-      ranks.forEach((rank, id) => {
-        if (id !== optionId && rank === nextRank) {
-          ranks.set(id, 0)
-        }
-      })
-    }
-    ranks.set(optionId, nextRank)
-    updateUi()
-  }
-
-  const onRankChange = (event: Event) => {
-    const select = event.target as HTMLSelectElement
-    const node = select.closest<HTMLElement>('.ranked-choice-poll-option, li[data-poll-option-id]')
-    const optionId = node?.dataset.pollOptionId
-    if (!optionId) return
-    const nextRank = Number(select.value || '0')
-    setRank(optionId, Number.isFinite(nextRank) ? nextRank : 0)
-  }
-
-  const onCastClick = async (event: Event) => {
-    event.preventDefault()
-    if (!castButton || castButton.disabled) return
-    castButton.disabled = true
-
-    try {
-      const body = new URLSearchParams()
-      body.append('post_id', String(props.postId))
-      body.append('poll_name', pollName)
-      if (!Array.from(ranks.values()).some(rank => rank > 0)) {
-        message.warning('请先选择排序选项')
-        updateUi()
-        return
-      }
-      optionNodes.forEach((node, index) => {
-        const optionId = node.dataset.pollOptionId
-        if (!optionId) return
-        const rank = ranks.get(optionId) || 0
-        body.append(`options[${index}][digest]`, optionId)
-        body.append(`options[${index}][rank]`, String(rank))
-      })
-
-      const data = await requestPollVote('PUT', body)
-      applyResult(data.poll)
-      pollEl.dataset.pollHasVoted = 'true'
-      updatePollActionButtons(
-        pollEl,
-        { castButton, clearButton, resultsButton },
-        true,
-        pollEl.dataset.pollView === 'results'
-      )
-      message.success('投票成功')
-    } catch (error) {
-      const text = error instanceof Error ? error.message : '投票失败'
-      message.error(text)
-      updateUi()
-    }
-  }
-
-  const onClearClick = async (event: Event) => {
-    event.preventDefault()
-    if (!clearButton || clearButton.disabled) return
-    clearButton.disabled = true
-    castButton && (castButton.disabled = true)
-    try {
-      const body = new URLSearchParams()
-      body.append('post_id', String(props.postId))
-      body.append('poll_name', pollName)
-      const data = await requestPollVote('DELETE', body)
-      applyResult(data.poll)
-      pollEl.dataset.pollHasVoted = 'false'
-      updatePollActionButtons(
-        pollEl,
-        { castButton, clearButton, resultsButton },
-        false,
-        pollEl.dataset.pollView === 'results'
-      )
-      message.success('已撤销投票')
-    } catch (error) {
-      const text = error instanceof Error ? error.message : '撤销投票失败'
-      message.error(text)
-      updateUi()
-    }
-  }
-
-  optionNodes.forEach(node => {
-    const select = node.querySelector<HTMLSelectElement>('.poll-rank-select')
-    select?.addEventListener('change', onRankChange)
-  })
-  castButton?.addEventListener('click', onCastClick)
-  clearButton?.addEventListener('click', onClearClick)
-  const onResultsClick = (event: Event) => {
-    event.preventDefault()
-    if (!pollData) {
-      message.warning('暂无可用的投票结果')
-      return
-    }
-    togglePollResults(pollEl, pollData)
-    updateUi()
-  }
-  resultsButton?.addEventListener('click', onResultsClick)
-  updateUi()
-  if (pollData?.results === 'always') {
-    applyResult(pollData)
-    renderPollResults(pollEl, pollData)
-    setPollView(pollEl, 'results')
-    updatePollActionButtons(
-      pollEl,
-      { castButton, clearButton, resultsButton },
-      pollEl.dataset.pollHasVoted === 'true',
-      true
-    )
-  }
-
-  pollCleanupFns.push(() => {
-    optionNodes.forEach(node => {
-      const select = node.querySelector<HTMLSelectElement>('.poll-rank-select')
-      select?.removeEventListener('change', onRankChange)
-    })
-    castButton?.removeEventListener('click', onCastClick)
-    clearButton?.removeEventListener('click', onClearClick)
-    resultsButton?.removeEventListener('click', onResultsClick)
-  })
-}
-
 const teardownPollEnhancements = () => {
   pollCleanupFns.forEach(fn => fn())
   pollCleanupFns = []
@@ -958,32 +191,71 @@ const setupPollEnhancements = () => {
   const pollRoots = Array.from(
     host.querySelectorAll<HTMLElement>('.poll-outer[data-poll-name], .poll[data-poll-name]')
   )
-  const polls = pollRoots
-    .map(root =>
-      root.classList.contains('poll-outer')
-        ? root.querySelector<HTMLElement>('.poll[data-poll-name]') || root
-        : root
-    )
-    .filter((value, index, arr) => arr.indexOf(value) === index)
 
-  polls.forEach(pollEl => {
+  pollRoots.forEach(root => {
+    const pollContainer = root.classList.contains('poll')
+      ? root
+      : root.querySelector<HTMLElement>('.poll[data-poll-name]') || root
+
     const pollName =
-      pollEl.dataset.pollName || pollEl.closest<HTMLElement>('.poll-outer')?.dataset.pollName || ''
-    const pollType =
-      pollEl.dataset.pollType ||
-      pollEl.closest<HTMLElement>('.poll-outer')?.dataset.pollType ||
-      'regular'
+      pollContainer.dataset.pollName ||
+      pollContainer.closest<HTMLElement>('.poll-outer')?.dataset.pollName ||
+      ''
     if (!pollName) return
+
+    const pollType =
+      pollContainer.dataset.pollType ||
+      pollContainer.closest<HTMLElement>('.poll-outer')?.dataset.pollType ||
+      'regular'
+
     const pollData = props.polls?.find(item => item.name === pollName)
 
-    if (pollType === 'ranked_choice') {
-      setupRankedChoicePoll(pollEl, pollName, pollData)
-      return
-    }
-    setupMultiplePoll(pollEl, pollName, pollType, pollData)
+    const optionNodes = Array.from(
+      pollContainer.querySelectorAll<HTMLElement>(
+        'li[data-poll-option-id], .ranked-choice-poll-option[data-poll-option-id]'
+      )
+    )
+
+    const options = optionNodes
+      .map(node => {
+        const id = node.dataset.pollOptionId || ''
+        if (!id) return null
+        const textNode = node.querySelector<HTMLElement>('.option-text')
+        const label = (textNode?.textContent || node.textContent || '').trim()
+        return { id, label }
+      })
+      .filter(Boolean) as Array<{ id: string; label: string }>
+
+    const pollTitleHtml =
+      pollContainer.querySelector<HTMLElement>('.poll-title')?.innerHTML || ''
+
+    const mountRoot = root
+    mountRoot.innerHTML = ''
+    const mountEl = document.createElement('div')
+    mountEl.className = 'poll-tsx-root'
+    mountRoot.appendChild(mountEl)
+
+    const app = createApp(PollView, {
+      pollName,
+      pollType,
+      pollTitleHtml,
+      options,
+      pollData,
+      baseUrl: props.baseUrl,
+      postId: props.postId,
+      requestPollVote,
+      pollMeta: {
+        min: Number(pollContainer.dataset.pollMin) || pollData?.min,
+        max: Number(pollContainer.dataset.pollMax) || pollData?.max,
+        results: pollContainer.dataset.pollResults || pollData?.results,
+        voters: pollData?.voters
+      }
+    })
+
+    app.mount(mountEl)
+    pollCleanupFns.push(() => app.unmount())
   })
 }
-
 const showFootnoteFor = (footnoteRoot: HTMLElement, trigger: HTMLAnchorElement) => {
   if (activeFootnoteRoot === footnoteRoot) return
   hideActiveFootnote()

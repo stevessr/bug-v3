@@ -84,6 +84,7 @@
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-vue": "^6.0.3",
+    "@vitejs/plugin-vue-jsx": "^4.2.0",
     "autoprefixer": "^10.4.23",
     "crx3": "^2.0.0",
     "eslint": "^9.39.2",
