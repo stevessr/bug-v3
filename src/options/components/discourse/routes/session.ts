@@ -1,12 +1,13 @@
 import type { Ref } from 'vue'
 
-import { pageFetch, extractData } from '../utils'
-
-export async function loadSessionUsername(baseUrl: Ref<string>): Promise<string | null> {
+export async function loadUsernameFromExtension(): Promise<string | null> {
   try {
-    const result = await pageFetch<any>(`${baseUrl.value}/session/current.json`)
-    const data = extractData(result)
-    return data?.current_user?.username || null
+    const chromeAPI = (globalThis as any).chrome
+    if (!chromeAPI?.runtime?.sendMessage) return null
+    const resp = await new Promise<any>(resolve => {
+      chromeAPI.runtime.sendMessage({ type: 'GET_LINUX_DO_USER' }, resolve)
+    })
+    return resp?.success && resp?.user?.username ? resp.user.username : null
   } catch {
     return null
   }

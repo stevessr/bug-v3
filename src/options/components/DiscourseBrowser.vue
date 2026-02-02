@@ -36,6 +36,7 @@ const {
   users,
   isLoadingMore,
   currentUsername,
+  ensureSessionUser,
   createTab,
   closeTab,
   switchTab,
@@ -490,6 +491,7 @@ const handleMessagesTabSwitch = (tab: MessagesTabType) => {
 
 // Initialize
 onMounted(() => {
+  ensureSessionUser()
   createTab()
   nextTick(() => {
     if (contentAreaRef.value) {
@@ -783,6 +785,7 @@ onUnmounted(() => {
         :hasMorePosts="activeTab.hasMorePosts"
         :targetPostNumber="activeTab.targetPostNumber"
         :currentUser="activeTab.currentUser"
+        :currentUsername="currentUsername"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
         @refresh="refresh"

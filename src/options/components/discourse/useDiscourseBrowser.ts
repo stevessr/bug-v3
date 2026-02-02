@@ -36,7 +36,7 @@ import {
   loadMoreMessages as loadMoreMessagesRoute,
   loadMoreFollowFeed as loadMoreFollowFeedRoute
 } from './routes/user'
-import { loadSessionUsername } from './routes/session'
+import { loadUsernameFromExtension } from './routes/session'
 import { loadChat as loadChatRoute, loadChatMessages, sendChatMessage } from './routes/chat'
 
 export function useDiscourseBrowser() {
@@ -72,8 +72,18 @@ export function useDiscourseBrowser() {
 
   async function ensureSessionUser() {
     if (currentUsername.value !== null) return
-    currentUsername.value = await loadSessionUsername(baseUrl)
+    currentUsername.value = await loadUsernameFromExtension()
   }
+
+  watch(
+    baseUrl,
+    async () => {
+      currentUsername.value = await loadUsernameFromExtension()
+    },
+    { immediate: true }
+  )
+
+  void ensureSessionUser()
 
   // Create a new tab
   function createTab(url?: string) {
@@ -656,6 +666,7 @@ export function useDiscourseBrowser() {
     users,
     isLoadingMore,
     currentUsername,
+    ensureSessionUser,
 
     // Tab management
     createTab,

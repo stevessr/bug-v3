@@ -33,6 +33,7 @@ const props = defineProps<{
   hasMorePosts: boolean
   targetPostNumber?: number | null
   currentUser?: DiscourseUserProfile | null
+  currentUsername?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -627,6 +628,7 @@ onUnmounted(() => {
           :getReactionCount="getReactionCount"
           :isLiking="likingPostIds.has(post.id)"
           :currentUser="currentUser"
+          :currentUsername="currentUsername"
           @openUser="handleUserClick"
           @replyTo="handleReplyClick"
           @toggleLike="toggleLike"

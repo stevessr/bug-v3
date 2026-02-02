@@ -14,6 +14,7 @@ const props = defineProps<{
   topicId: number
   parsed: ParsedContent
   isParentExpanded: boolean
+  currentUsername?: string | null
   isPostLiked: (post: DiscoursePost, reactionId: string) => boolean
   getReactionCount: (post: DiscoursePost, reactionId: string) => number
   isLiking: boolean
@@ -38,7 +39,11 @@ const emit = defineEmits<{
 const isCopyLinkClicked = ref(false)
 
 const isOwnPost = computed(() => {
-  return props.currentUser && props.post.user_id === props.currentUser.id
+  if (props.currentUser && props.post.user_id === props.currentUser.id) return true
+  if (props.currentUsername && props.post.username) {
+    return props.currentUsername.toLowerCase() === props.post.username.toLowerCase()
+  }
+  return false
 })
 
 const canAssign = computed(() => {
@@ -172,7 +177,7 @@ const handleWiki = () => {
     <div class="post-actions mt-3 text-xs text-gray-500">
       <div class="flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <div class="reactions-list">
+          <div v-if="!isOwnPost" class="reactions-list">
             <button
               v-for="item in REACTIONS"
               :key="item.id"

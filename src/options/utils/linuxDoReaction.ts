@@ -125,6 +125,53 @@ async function proxyFetch<T>(
   throw new Error('Proxy fetch unavailable: chrome.runtime is not accessible')
 }
 
+const USER_CACHE_KEY = 'linuxdo_user_cache_v1'
+const USER_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+
+type CachedUser = { username: string; trustLevel?: number; fetchedAt: number }
+
+function loadCachedUser(): CachedUser | null {
+  try {
+    const raw = localStorage.getItem(USER_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CachedUser
+    if (!parsed?.username || typeof parsed.fetchedAt !== 'number') return null
+    if (Date.now() - parsed.fetchedAt > USER_CACHE_TTL_MS) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+async function loadCachedUserFromStorage(): Promise<CachedUser | null> {
+  try {
+    const chromeAPI = (globalThis as any).chrome
+    if (!chromeAPI?.storage?.local) return null
+    const data = await chromeAPI.storage.local.get(USER_CACHE_KEY)
+    const parsed = data?.[USER_CACHE_KEY] as CachedUser | undefined
+    if (!parsed?.username || typeof parsed.fetchedAt !== 'number') return null
+    if (Date.now() - parsed.fetchedAt > USER_CACHE_TTL_MS) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveCachedUser(user: { username: string; trustLevel?: number }) {
+  try {
+    const payload: CachedUser = {
+      username: user.username,
+      trustLevel: user.trustLevel,
+      fetchedAt: Date.now()
+    }
+    localStorage.setItem(USER_CACHE_KEY, JSON.stringify(payload))
+    const chromeAPI = (globalThis as any).chrome
+    chromeAPI?.storage?.local?.set?.({ [USER_CACHE_KEY]: payload })
+  } catch {
+    /* noop */
+  }
+}
+
 async function getCurrentUserInfo(): Promise<{ username: string; trustLevel?: number } | null> {
   try {
     const chromeAPI = (globalThis as any).chrome
@@ -135,13 +182,21 @@ async function getCurrentUserInfo(): Promise<{ username: string; trustLevel?: nu
     })
 
     if (resp?.success && resp?.user?.username) {
-      return {
+      const user = {
         username: resp.user.username,
         trustLevel: resp.user.trustLevel
       }
+      saveCachedUser(user)
+      return user
     }
   } catch (e) {
-    return null
+    // ignore and fallback to cache
+  }
+  const cached = loadCachedUser()
+  if (cached) return { username: cached.username, trustLevel: cached.trustLevel }
+  const cachedFromStorage = await loadCachedUserFromStorage()
+  if (cachedFromStorage) {
+    return { username: cachedFromStorage.username, trustLevel: cachedFromStorage.trustLevel }
   }
   return null
 }
