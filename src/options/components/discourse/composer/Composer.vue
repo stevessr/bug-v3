@@ -8,6 +8,7 @@ import type { DiscourseCategory } from '../types'
 import { getAllPreloadedCategories } from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, searchTags } from '../actions'
 import { renderBBCode } from '../bbcode'
+import TagPill from '../layout/TagPill.vue'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
 
 type ComposerMode = 'topic' | 'reply'
@@ -34,7 +35,7 @@ marked.setOptions({ breaks: true, gfm: true })
 const title = ref('')
 const raw = ref('')
 const selectedTags = ref<string[]>([])
-const tagOptions = ref<Array<{ value: string; label: string }>>([])
+const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
 const tagsLoading = ref(false)
 const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
 const editMode = ref<EditMode>('edit')
@@ -318,13 +319,18 @@ async function runTagSearch(query: string) {
     const results = await searchTags(props.baseUrl, query, categoryId.value)
     tagOptions.value = results.map(item => ({
       value: item.name || item.text,
-      label: item.text || item.name
+      label: item.text || item.name,
+      description: item.description || null
     }))
   } catch {
     tagOptions.value = []
   } finally {
     tagsLoading.value = false
   }
+}
+
+const getTagOption = (value: string) => {
+  return tagOptions.value.find(option => option.value === value) || null
 }
 
 const handleTagSearch = (query: string) => {
@@ -455,8 +461,32 @@ watch(categoryId, () => {
           @search="handleTagSearch"
           @dropdownVisibleChange="handleTagDropdown"
         >
+          <template #tagRender="{ value, closable, onClose }">
+            <span class="inline-flex items-center gap-1 mr-1">
+              <TagPill
+                :name="String(value)"
+                :text="getTagOption(String(value))?.label || String(value)"
+                :description="getTagOption(String(value))?.description || null"
+                compact
+              />
+              <button
+                v-if="closable"
+                type="button"
+                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                @mousedown.prevent
+                @click="onClose"
+              >
+                ×
+              </button>
+            </span>
+          </template>
           <a-select-option v-for="tag in tagOptions" :key="tag.value" :value="tag.value">
-            {{ tag.label }}
+            <TagPill
+              :name="tag.value"
+              :text="tag.label"
+              :description="tag.description || null"
+              compact
+            />
           </a-select-option>
         </a-select>
       </div>
