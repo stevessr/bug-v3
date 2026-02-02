@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 
 import type { BrowserTab, DiscourseTopic, DiscourseUser } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { normalizeCategoriesFromResponse } from './categories'
 
 export async function loadCategory(
   tab: BrowserTab,
@@ -53,11 +54,7 @@ export async function loadCategory(
         `${baseUrl.value}/categories.json?parent_category_id=${tab.currentCategoryId}`
       )
       const subData = extractData(subResult)
-      if (subData?.category_list?.categories) {
-        tab.categories = subData.category_list.categories
-      } else if (subData?.categories) {
-        tab.categories = subData.categories
-      }
+      tab.categories = normalizeCategoriesFromResponse(subData)
     } catch (e) {
       console.warn('[DiscourseBrowser] loadCategory subcategories error:', e)
       tab.categories = []

@@ -19,11 +19,14 @@ export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse)
     return true
   }
 
-  const responseType = opts.responseType === 'text' ? 'text' : 'json'
+  const responseType =
+    opts.responseType === 'text' ? 'text' : opts.responseType === 'blob' ? 'blob' : 'json'
 
   // Build headers with Discourse-specific ones for authenticated requests
+  const defaultAccept =
+    responseType === 'blob' ? 'image/*,*/*;q=0.8' : 'application/json, text/javascript, */*; q=0.01'
   const headers: Record<string, string> = {
-    accept: 'application/json, text/javascript, */*; q=0.01',
+    accept: defaultAccept,
     'x-requested-with': 'XMLHttpRequest',
     'discourse-logged-in': 'true',
     'discourse-present': 'true',
@@ -43,7 +46,19 @@ export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse)
     credentials: 'include'
   })
     .then(async res => {
-      const data = responseType === 'text' ? await res.text() : await res.json().catch(() => null)
+      let data: any
+      if (responseType === 'text') {
+        data = await res.text()
+      } else if (responseType === 'blob') {
+        const arrayBuffer = await res.arrayBuffer()
+        const mimeType = res.headers.get('content-type') || 'application/octet-stream'
+        data = {
+          arrayData: Array.from(new Uint8Array(arrayBuffer)),
+          mimeType
+        }
+      } else {
+        data = await res.json().catch(() => null)
+      }
       const response: MessageResponse = {
         success: true,
         data: { status: res.status, ok: res.ok, data }

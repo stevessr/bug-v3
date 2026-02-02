@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { DiscourseCategory } from '../types'
+import type { DiscourseCategory, DiscourseTopic } from '../types'
+import { formatTime, getAvatarUrl } from '../utils'
+
+type CategoryTopic = NonNullable<DiscourseCategory['topics']>[number]
 
 const props = withDefaults(
   defineProps<{
     categories: DiscourseCategory[]
     title?: string
     baseUrl?: string
+    layout?: 'grid' | 'directory'
   }>(),
   {
     title: '分类',
-    baseUrl: ''
+    baseUrl: '',
+    layout: 'grid'
   }
 )
 
@@ -63,6 +68,7 @@ const childrenByParent = computed(() => {
 
 const emit = defineEmits<{
   (e: 'click', category: DiscourseCategory): void
+  (e: 'topicClick', topic: DiscourseTopic): void
 }>()
 
 const getImageUrl = (url?: string | null) => {
@@ -74,12 +80,102 @@ const getIconHref = (icon?: string | null) => {
   if (!icon) return ''
   return `#${icon}`
 }
+
+const getTopicTitle = (topic: CategoryTopic) => {
+  return topic.fancy_title || topic.title
+}
 </script>
 
 <template>
   <div v-if="props.categories.length > 0">
     <h3 class="text-lg font-semibold mb-3 dark:text-white">{{ props.title }}</h3>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div v-if="props.layout === 'directory'" class="category-directory">
+      <div
+        v-for="cat in topCategories"
+        :key="cat.id"
+        class="category-directory-row"
+        :style="{ borderLeftColor: `#${cat.color}` }"
+      >
+        <div class="category-directory-left" @click="emit('click', cat)">
+          <div class="category-directory-title-wrap">
+            <div
+              class="category-icon-wrap category-icon-wrap-lg"
+              :style="{ color: `#${cat.color}` }"
+            >
+              <img
+                v-if="cat.uploaded_logo?.url"
+                :src="getImageUrl(cat.uploaded_logo.url)"
+                :alt="cat.name"
+                class="category-icon-img category-icon-img-lg"
+              />
+              <img
+                v-else-if="cat.uploaded_logo_dark?.url"
+                :src="getImageUrl(cat.uploaded_logo_dark.url)"
+                :alt="cat.name"
+                class="category-icon-img category-icon-img-lg"
+              />
+              <span v-else-if="cat.emoji" class="category-emoji">{{ cat.emoji }}</span>
+              <svg v-else-if="cat.icon" class="category-icon-svg" viewBox="0 0 24 24">
+                <use :href="getIconHref(cat.icon)" />
+              </svg>
+              <span
+                v-else
+                class="category-icon-dot category-icon-dot-lg"
+                :style="{ backgroundColor: `#${cat.color}` }"
+              />
+            </div>
+            <div>
+              <div class="font-semibold dark:text-white">{{ cat.name }}</div>
+              <div class="text-xs text-gray-500">{{ cat.topic_count }} 话题</div>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500 mt-2 line-clamp-2">
+            {{ cat.description_excerpt || cat.description || '' }}
+          </div>
+          <div
+            v-if="hasHierarchy && (childrenByParent.get(cat.id)?.length || 0) > 0"
+            class="mt-2 flex flex-wrap gap-x-2 gap-y-1"
+          >
+            <button
+              v-for="child in childrenByParent.get(cat.id)?.slice(0, 8)"
+              :key="child.id"
+              class="subcategory-chip"
+              @click.stop="emit('click', child)"
+            >
+              {{ child.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="category-directory-right">
+          <div
+            v-for="topic in (cat.topics || []).slice(0, 10)"
+            :key="topic.id"
+            class="category-topic-row"
+            @click="emit('topicClick', topic as DiscourseTopic)"
+          >
+            <span class="category-topic-title" :title="getTopicTitle(topic)">
+              {{ getTopicTitle(topic) }}
+            </span>
+            <span class="category-topic-meta">
+              <img
+                v-if="topic.last_poster?.avatar_template"
+                :src="getAvatarUrl(topic.last_poster.avatar_template, baseUrl || '', 24)"
+                class="category-topic-avatar"
+                :alt="topic.last_poster?.username || ''"
+              />
+              <span v-if="topic.last_poster?.username" class="truncate max-w-[100px]">
+                {{ topic.last_poster.username }}
+              </span>
+              <span v-if="topic.last_posted_at">{{ formatTime(topic.last_posted_at) }}</span>
+              <span>{{ topic.reply_count ?? 0 }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       <div
         v-for="cat in topCategories"
         :key="cat.id"

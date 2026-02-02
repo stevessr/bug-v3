@@ -3,11 +3,26 @@
 import { parsePostContent } from './parser/parsePostContent'
 export { renderBBCode } from './bbcode'
 
+type BlobPayload = {
+  arrayData: number[]
+  mimeType?: string
+}
+
+function toBlobIfNeeded(data: unknown, responseType: 'json' | 'text' | 'blob') {
+  if (responseType !== 'blob') return data
+  if (!data || typeof data !== 'object') return null
+  const payload = data as BlobPayload
+  if (!Array.isArray(payload.arrayData)) return null
+  return new Blob([new Uint8Array(payload.arrayData)], {
+    type: payload.mimeType || 'application/octet-stream'
+  })
+}
+
 // Page proxy request via Chrome extension
 export async function pageFetch<T>(
   url: string,
   options?: { method?: string; headers?: Record<string, string>; body?: string },
-  responseType: 'json' | 'text' = 'json'
+  responseType: 'json' | 'text' | 'blob' = 'json'
 ): Promise<{ status: number; ok: boolean; data: T | null }> {
   const chromeAPI = (globalThis as any).chrome
   if (!chromeAPI?.runtime?.sendMessage) {
@@ -32,10 +47,11 @@ export async function pageFetch<T>(
         error?: string
       }) => {
         if (resp?.success && resp.data) {
+          const normalizedData = toBlobIfNeeded(resp.data.data, responseType) as T | null
           resolve({
             status: resp.data.status || 200,
             ok: resp.data.ok !== false,
-            data: resp.data.data ?? null
+            data: normalizedData ?? resp.data.data ?? null
           })
           return
         }

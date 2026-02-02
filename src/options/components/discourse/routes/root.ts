@@ -3,6 +3,8 @@ import type { Ref } from 'vue'
 import type { BrowserTab, DiscourseUser, TopicListType } from '../types'
 import { pageFetch, extractData } from '../utils'
 
+import { normalizeCategoriesFromResponse } from './categories'
+
 export async function loadHome(
   tab: BrowserTab,
   baseUrl: Ref<string>,
@@ -16,13 +18,7 @@ export async function loadHome(
   const catData = extractData(catResult)
   const topicData = extractData(topicResult)
 
-  if (catData?.category_list?.categories) {
-    tab.categories = catData.category_list.categories
-  } else if (catData?.categories) {
-    tab.categories = catData.categories
-  } else {
-    tab.categories = []
-  }
+  tab.categories = normalizeCategoriesFromResponse(catData)
 
   if (topicData?.topic_list?.topics) {
     tab.topics = topicData.topic_list.topics
@@ -76,16 +72,16 @@ export async function loadCategories(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
-  const result = await pageFetch<any>(`${baseUrl.value}/categories.json`)
-  const data = extractData(result)
-
-  if (data?.category_list?.categories) {
-    tab.categories = data.category_list.categories
-  } else if (data?.categories) {
-    tab.categories = data.categories
-  } else {
-    tab.categories = []
+  let data: any = null
+  try {
+    const result = await pageFetch<any>(`${baseUrl.value}/categories_and_latest.json`)
+    data = extractData(result)
+  } catch {
+    const fallbackResult = await pageFetch<any>(`${baseUrl.value}/categories.json`)
+    data = extractData(fallbackResult)
   }
+
+  tab.categories = normalizeCategoriesFromResponse(data)
 
   tab.topics = []
   tab.hasMoreTopics = false
@@ -93,7 +89,10 @@ export async function loadCategories(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
-  tab.activeUsers = []
+  tab.activeUsers = data?.users || []
+  if (Array.isArray(data?.users)) {
+    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+  }
 }
 
 export async function loadPosted(

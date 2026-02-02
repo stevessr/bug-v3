@@ -114,6 +114,7 @@ export interface DiscourseCategory {
   text_color: string
   topic_count: number
   description?: string
+  description_excerpt?: string
   parent_category_id?: number | null
   subcategory_ids?: number[] | null
   style_type?: string | null
@@ -121,6 +122,24 @@ export interface DiscourseCategory {
   emoji?: string | null
   uploaded_logo?: { url: string } | null
   uploaded_logo_dark?: { url: string } | null
+  topics?: Array<{
+    id: number
+    title: string
+    fancy_title?: string
+    slug?: string
+    posts_count?: number
+    reply_count?: number
+    created_at?: string
+    last_posted_at?: string
+    bumped_at?: string
+    image_url?: string | null
+    last_poster?: {
+      id?: number
+      username?: string
+      name?: string | null
+      avatar_template?: string
+    }
+  }>
 }
 
 export interface DiscourseUser {

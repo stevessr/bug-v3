@@ -23,6 +23,7 @@ import MessagesView from './discourse/user/MessagesView.vue'
 import BrowserToolbar from './discourse/browser/BrowserToolbar.vue'
 import BrowserTabs from './discourse/browser/BrowserTabs.vue'
 import ChatView from './discourse/chat/ChatView.vue'
+import { pageFetch } from './discourse/utils'
 
 const {
   baseUrl,
@@ -87,6 +88,8 @@ const isViewingSelf = computed(
 const showTopicComposer = ref(false)
 const showReplyComposer = ref(false)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
+const proxiedBlobUrls = new Set<string>()
+const proxyingImages = new WeakSet<HTMLImageElement>()
 const floatingState = ref({
   left: null as number | null,
   top: null as number | null,
@@ -354,6 +357,62 @@ const floatingStyle = computed(() => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
+const normalizeImageUrl = (img: HTMLImageElement) => {
+  const rawSrc = img.getAttribute('src') || ''
+  if (rawSrc.startsWith('http://') || rawSrc.startsWith('https://')) return rawSrc
+  if (rawSrc.startsWith('//')) return `https:${rawSrc}`
+  if (rawSrc.startsWith('data:') || rawSrc.startsWith('blob:')) return rawSrc
+
+  if (rawSrc.startsWith('/')) {
+    const base = baseUrl.value?.replace(/\/+$/, '')
+    return base ? `${base}${rawSrc}` : rawSrc
+  }
+
+  if (rawSrc) {
+    try {
+      return new URL(rawSrc, baseUrl.value || window.location.href).toString()
+    } catch {
+      return rawSrc
+    }
+  }
+
+  return img.currentSrc || img.src || ''
+}
+
+const handleGlobalImageLoad = (event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement)) return
+  target.removeAttribute('data-page-fetch-proxy-tried')
+}
+
+const handleGlobalImageError = (event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement)) return
+  if (target.dataset.pageFetchProxyTried === '1') return
+  if (proxyingImages.has(target)) return
+
+  const imageUrl = normalizeImageUrl(target)
+  if (!imageUrl || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) return
+
+  target.dataset.pageFetchProxyTried = '1'
+  proxyingImages.add(target)
+
+  void (async () => {
+    try {
+      const result = await pageFetch<Blob>(imageUrl, undefined, 'blob')
+      if (!result.ok || !result.data) return
+
+      const blobUrl = URL.createObjectURL(result.data)
+      proxiedBlobUrls.add(blobUrl)
+      target.src = blobUrl
+    } catch {
+      // Keep original failed image if proxy fetch also fails.
+    } finally {
+      proxyingImages.delete(target)
+    }
+  })()
+}
+
 const startDrag = (event: MouseEvent | TouchEvent) => {
   const point = 'touches' in event ? event.touches[0] : event
   if (!point) return
@@ -429,6 +488,8 @@ onMounted(() => {
   window.addEventListener('mouseup', stopPointer)
   window.addEventListener('touchmove', handlePointerMove, { passive: true })
   window.addEventListener('touchend', stopPointer)
+  window.addEventListener('error', handleGlobalImageError, true)
+  window.addEventListener('load', handleGlobalImageLoad, true)
 })
 
 onUnmounted(() => {
@@ -439,6 +500,10 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', stopPointer)
   window.removeEventListener('touchmove', handlePointerMove)
   window.removeEventListener('touchend', stopPointer)
+  window.removeEventListener('error', handleGlobalImageError, true)
+  window.removeEventListener('load', handleGlobalImageLoad, true)
+  proxiedBlobUrls.forEach(url => URL.revokeObjectURL(url))
+  proxiedBlobUrls.clear()
 })
 </script>
 
@@ -502,13 +567,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Categories -->
-          <CategoryGrid
-            :categories="activeTab.categories"
-            :baseUrl="baseUrl"
-            @click="handleCategoryClick"
-          />
-
           <!-- Latest topics -->
           <div v-if="activeTab.topics.length > 0">
             <h3 class="text-lg font-semibold mb-3 dark:text-white">
@@ -543,7 +601,7 @@ onUnmounted(() => {
         <!-- Sidebar -->
         <div class="w-64 flex-shrink-0 hidden lg:block">
           <Sidebar
-            :categories="activeTab.categories"
+            :categories="[]"
             :users="activeTab.activeUsers"
             :baseUrl="baseUrl"
             :topicListType="activeTab.topicListType"
@@ -562,7 +620,9 @@ onUnmounted(() => {
           <CategoryGrid
             :categories="activeTab.categories"
             :baseUrl="baseUrl"
+            layout="directory"
             @click="handleCategoryClick"
+            @topicClick="handleTopicClick"
           />
         </div>
         <div class="w-64 flex-shrink-0 hidden lg:block">

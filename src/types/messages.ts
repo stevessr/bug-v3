@@ -75,7 +75,7 @@ export interface LinuxDoPageFetchMessage extends BaseMessage {
     method?: string
     headers?: Record<string, string>
     body?: string
-    responseType?: 'json' | 'text'
+    responseType?: 'json' | 'text' | 'blob'
   }
 }
 
@@ -105,7 +105,7 @@ export interface ProxyFetchMessage extends BaseMessage {
     body?: string
     includeCookies?: boolean
     cookieDomain?: string
-    responseType?: 'json' | 'text'
+    responseType?: 'json' | 'text' | 'blob'
   }
 }
 
