@@ -447,12 +447,11 @@ watch(categoryId, () => {
         </a-tree-select>
         <a-select
           v-model:value="selectedTags"
-          mode="tags"
+          mode="multiple"
           show-search
           :filter-option="false"
           :not-found-content="tagsLoading ? '加载中...' : '无结果'"
           placeholder="标签 (搜索或输入)"
-          :token-separators="[' ', ',']"
           @search="handleTagSearch"
           @dropdownVisibleChange="handleTagDropdown"
         >
