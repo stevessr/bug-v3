@@ -212,9 +212,11 @@ export interface DiscoursePost {
   avatar_template: string
   created_at: string
   cooked: string
+  raw?: string
   post_number: number
   reply_count: number
   like_count: number
+  topic_id?: number
   name?: string
   read?: boolean
   reply_to_post_number?: number | null

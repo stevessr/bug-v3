@@ -62,6 +62,9 @@ export interface EditPostPayload {
   postId: number
   raw: string
   editReason?: string
+  topicId?: number
+  originalText?: string
+  locale?: string
 }
 
 export async function togglePostLike(baseUrl: string, postId: number, reactionId = 'heart') {
@@ -187,6 +190,15 @@ export async function editPost(baseUrl: string, payload: EditPostPayload) {
   params.append('post[raw]', payload.raw)
   if (payload.editReason) {
     params.append('post[edit_reason]', payload.editReason)
+  }
+  if (payload.topicId) {
+    params.append('post[topic_id]', String(payload.topicId))
+  }
+  if (payload.originalText !== undefined) {
+    params.append('post[original_text]', payload.originalText)
+  }
+  if (payload.locale !== undefined) {
+    params.append('post[locale]', payload.locale)
   }
 
   const result = await pageFetch<any>(url, {

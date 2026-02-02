@@ -9,7 +9,8 @@ import type {
   DiscourseTopic,
   SuggestedTopic,
   ActivityTabType,
-  MessagesTabType
+  MessagesTabType,
+  DiscoursePost
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import CategoryGrid from './discourse/layout/CategoryGrid.vue'
@@ -28,7 +29,7 @@ import MessagesView from './discourse/user/MessagesView.vue'
 import BrowserToolbar from './discourse/browser/BrowserToolbar.vue'
 import BrowserTabs from './discourse/browser/BrowserTabs.vue'
 import ChatView from './discourse/chat/ChatView.vue'
-import { pageFetch } from './discourse/utils'
+import { pageFetch, extractData } from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 
 const {
@@ -96,9 +97,11 @@ const isViewingSelf = computed(
     !!currentUsername.value &&
     activeTab.value?.currentUser?.username === currentUsername.value
 )
-const showTopicComposer = ref(false)
-const showReplyComposer = ref(false)
+const composerMode = ref<'reply' | 'topic' | 'edit' | null>(null)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
+const editTarget = ref<DiscoursePost | null>(null)
+const editInitialRaw = ref('')
+const editOriginalRaw = ref('')
 const proxiedBlobUrls = new Set<string>()
 const proxyingImages = new WeakSet<HTMLImageElement>()
 const pollingBusy = ref(false)
@@ -536,11 +539,11 @@ const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 
 }
 
 const toggleTopicComposer = () => {
-  showTopicComposer.value = !showTopicComposer.value
+  composerMode.value = composerMode.value === 'topic' ? null : 'topic'
 }
 
 const handleTopicPosted = (payload: any) => {
-  showTopicComposer.value = false
+  composerMode.value = null
   const topicId = payload?.topic_id || payload?.topicId
   const slug = payload?.topic_slug || payload?.slug || 'topic'
   if (topicId) {
@@ -552,22 +555,64 @@ const handleTopicPosted = (payload: any) => {
 
 const handleReplyTo = (payload: { postNumber: number; username: string }) => {
   replyTarget.value = payload
-  showReplyComposer.value = true
+  composerMode.value = 'reply'
 }
 
 const handleReplyPosted = () => {
-  showReplyComposer.value = false
+  composerMode.value = null
   replyTarget.value = null
   refresh()
 }
 
 const handleClearReply = () => {
   replyTarget.value = null
-  showReplyComposer.value = false
+  if (composerMode.value === 'reply') {
+    composerMode.value = null
+  }
 }
 
-const handleEditPost = (post: any) => {
-  message.info('编辑功能即将上线')
+const handleEditPost = async (post: DiscoursePost) => {
+  editTarget.value = post
+  const existingRaw = (post as DiscoursePost & { raw?: string }).raw
+  editInitialRaw.value = existingRaw || ''
+  editOriginalRaw.value = existingRaw || ''
+  composerMode.value = 'edit'
+
+  if (existingRaw) return
+
+  try {
+    const result = await pageFetch<any>(`${baseUrl.value}/posts/${post.id}.json`)
+    const data = extractData(result)
+    const raw = data?.raw || data?.post?.raw || ''
+    editInitialRaw.value = raw
+    editOriginalRaw.value = raw
+  } catch (error) {
+    console.warn('[DiscourseBrowser] load edit raw failed:', error)
+    message.error('获取原始内容失败')
+  }
+}
+
+const handleEditPosted = (payload: any) => {
+  const postPayload = payload?.post || payload
+  if (editTarget.value && postPayload && typeof postPayload === 'object') {
+    Object.assign(editTarget.value, postPayload)
+  }
+  editTarget.value = null
+  editInitialRaw.value = ''
+  editOriginalRaw.value = ''
+  composerMode.value = null
+}
+
+const handleComposerClose = () => {
+  if (composerMode.value === 'reply') {
+    replyTarget.value = null
+  }
+  if (composerMode.value === 'edit') {
+    editTarget.value = null
+    editInitialRaw.value = ''
+    editOriginalRaw.value = ''
+  }
+  composerMode.value = null
 }
 
 const floatingStyle = computed(() => {
@@ -884,7 +929,7 @@ onUnmounted(() => {
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
             <div class="flex items-center gap-2">
               <a-button size="small" @click="toggleTopicComposer">
-                {{ showTopicComposer ? '收起' : '发帖' }}
+                {{ composerMode === 'topic' ? '收起' : '发帖' }}
               </a-button>
               <a-button size="small" @click="handleOpenChat">聊天</a-button>
             </div>
@@ -1055,7 +1100,7 @@ onUnmounted(() => {
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
             <a-button size="small" @click="toggleTopicComposer">
-              {{ showTopicComposer ? '收起' : '发帖' }}
+              {{ composerMode === 'topic' ? '收起' : '发帖' }}
             </a-button>
           </div>
 
@@ -1217,49 +1262,47 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div
-    v-if="activeTab?.viewType === 'topic' && activeTab.currentTopic && showReplyComposer"
-    class="floating-composer"
-    :style="floatingStyle"
-  >
+  <div v-if="composerMode" class="floating-composer" :style="floatingStyle">
     <div class="floating-shell">
       <div class="floating-bar" @mousedown="startDrag" @touchstart.prevent="startDrag">
-        <span>回复编辑器</span>
-        <button class="floating-close" @click="handleClearReply">×</button>
+        <span>
+          {{
+            composerMode === 'topic'
+              ? '发帖编辑器'
+              : composerMode === 'edit'
+                ? '编辑帖子'
+                : '回复编辑器'
+          }}
+        </span>
+        <button class="floating-close" @click="handleComposerClose">×</button>
       </div>
       <div class="floating-body">
         <Composer
-          mode="reply"
+          :mode="composerMode"
           :baseUrl="baseUrl"
-          :topicId="activeTab.currentTopic.id"
-          :replyToPostNumber="replyTarget?.postNumber || null"
-          :replyToUsername="replyTarget?.username || null"
-          @posted="handleReplyPosted"
+          :topicId="
+            composerMode === 'edit'
+              ? editTarget?.topic_id || activeTab?.currentTopic?.id
+              : activeTab?.currentTopic?.id
+          "
+          :postId="composerMode === 'edit' ? editTarget?.id : undefined"
+          :initialRaw="composerMode === 'edit' ? editInitialRaw : undefined"
+          :originalRaw="composerMode === 'edit' ? editOriginalRaw : undefined"
+          :replyToPostNumber="composerMode === 'reply' ? replyTarget?.postNumber || null : null"
+          :replyToUsername="composerMode === 'reply' ? replyTarget?.username || null : null"
+          :categories="composerMode === 'topic' ? activeTab?.categories || [] : []"
+          :defaultCategoryId="
+            composerMode === 'topic' ? activeTab?.currentCategoryId || null : null
+          "
+          :currentCategory="composerMode === 'topic' ? currentCategoryOption : null"
+          @posted="
+            composerMode === 'topic'
+              ? handleTopicPosted
+              : composerMode === 'edit'
+                ? handleEditPosted
+                : handleReplyPosted
+          "
           @clearReply="handleClearReply"
-        />
-      </div>
-      <div class="floating-resize" @mousedown="startResize" @touchstart.prevent="startResize" />
-    </div>
-  </div>
-
-  <div
-    v-if="activeTab?.viewType !== 'topic' && showTopicComposer"
-    class="floating-composer"
-    :style="floatingStyle"
-  >
-    <div class="floating-shell">
-      <div class="floating-bar" @mousedown="startDrag" @touchstart.prevent="startDrag">
-        <span>发帖编辑器</span>
-        <button class="floating-close" @click="toggleTopicComposer">×</button>
-      </div>
-      <div class="floating-body">
-        <Composer
-          mode="topic"
-          :baseUrl="baseUrl"
-          :categories="activeTab?.categories || []"
-          :defaultCategoryId="activeTab?.currentCategoryId || null"
-          :currentCategory="currentCategoryOption"
-          @posted="handleTopicPosted"
         />
       </div>
       <div class="floating-resize" @mousedown="startResize" @touchstart.prevent="startResize" />

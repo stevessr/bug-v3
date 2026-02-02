@@ -6,6 +6,42 @@
     monospace;
 }
 
+.composer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.composer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.composer-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.composer-editor-input {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.composer :deep(.prosemirror-editor-wrapper) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.composer :deep(.prosemirror-editor) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.composer :deep(.prosemirror-editor .ProseMirror) {
+  min-height: 100%;
+}
+
 .bbcode-toolbar :deep(.ant-btn) {
   min-width: 28px;
   height: 28px;

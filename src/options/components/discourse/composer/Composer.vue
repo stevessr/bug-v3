@@ -10,18 +10,21 @@ import {
   getAllPreloadedCategories,
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
-import { createTopic, replyToTopic, searchTags } from '../actions'
+import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { renderBBCode } from '../bbcode'
 import TagPill from '../layout/TagPill.vue'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
 
-type ComposerMode = 'topic' | 'reply'
+type ComposerMode = 'topic' | 'reply' | 'edit'
 type EditMode = 'edit' | 'preview' | 'split'
 
 const props = defineProps<{
   mode: ComposerMode
   baseUrl: string
   topicId?: number
+  postId?: number
+  initialRaw?: string | null
+  originalRaw?: string | null
   replyToPostNumber?: number | null
   replyToUsername?: string | null
   categories?: DiscourseCategory[]
@@ -43,6 +46,7 @@ const tagOptions = ref<Array<{ value: string; label: string; description?: strin
 const tagsLoading = ref(false)
 const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
 const editMode = ref<EditMode>('edit')
+const editReason = ref('')
 const inputFormat = ref<'markdown' | 'bbcode'>('bbcode')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
@@ -55,6 +59,19 @@ watch(
   value => {
     if (value) categoryId.value = value
   }
+)
+
+watch(
+  () => [props.mode, props.postId, props.initialRaw] as const,
+  ([mode, postId, initialRaw]) => {
+    if (mode === 'edit') {
+      raw.value = initialRaw || ''
+      editReason.value = ''
+    } else if (mode === 'reply') {
+      raw.value = ''
+    }
+  },
+  { immediate: true }
 )
 
 watch(
@@ -297,6 +314,10 @@ async function handleSubmit() {
     errorMessage.value = '缺少话题 ID'
     return
   }
+  if (props.mode === 'edit' && !props.postId) {
+    errorMessage.value = '缺少帖子 ID'
+    return
+  }
 
   errorMessage.value = ''
   successMessage.value = ''
@@ -312,15 +333,24 @@ async function handleSubmit() {
       })
       title.value = ''
       selectedTags.value = []
-    } else {
+    } else if (props.mode === 'reply') {
       result = await replyToTopic(props.baseUrl, {
         topicId: props.topicId!,
         raw: raw.value.trim(),
         replyToPostNumber: props.replyToPostNumber
       })
+    } else {
+      result = await editPost(props.baseUrl, {
+        postId: props.postId!,
+        raw: raw.value.trim(),
+        editReason: editReason.value || undefined,
+        topicId: props.topicId,
+        originalText: props.originalRaw ?? props.initialRaw ?? raw.value.trim(),
+        locale: ''
+      })
     }
     raw.value = ''
-    successMessage.value = '发布成功'
+    successMessage.value = props.mode === 'edit' ? '编辑成功' : '发布成功'
     emit('posted', result)
   } catch (error) {
     errorMessage.value = (error as Error).message || '请求失败'
@@ -375,6 +405,7 @@ watch(categoryId, () => {
     >
       <div class="text-sm font-medium dark:text-white">
         <template v-if="mode === 'topic'">发帖子</template>
+        <template v-else-if="mode === 'edit'">编辑帖子</template>
         <template v-else>
           回复
           <span v-if="replyToPostNumber" class="text-xs text-gray-500 ml-1">
@@ -512,9 +543,9 @@ watch(categoryId, () => {
       class="composer-body px-4 py-4 grid gap-4"
       :class="showPreview && showEditor ? 'md:grid-cols-2' : 'grid-cols-1'"
     >
-      <div v-if="showEditor" class="space-y-2">
+      <div v-if="showEditor" class="composer-editor space-y-2">
         <!-- ProseMirror Editor -->
-        <ProseMirrorEditor v-model="raw" :inputFormat="inputFormat" />
+        <ProseMirrorEditor v-model="raw" :inputFormat="inputFormat" class="composer-editor-input" />
         <div class="text-xs text-gray-500">
           <template v-if="inputFormat === 'bbcode'">
             BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
@@ -540,11 +571,16 @@ watch(categoryId, () => {
     </div>
 
     <div class="composer-footer px-4 pb-4 space-y-2">
+      <a-input
+        v-if="mode === 'edit'"
+        v-model:value="editReason"
+        placeholder="编辑原因（可选）"
+      />
       <div v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</div>
       <div v-if="successMessage" class="text-sm text-green-600">{{ successMessage }}</div>
       <div class="flex items-center justify-end gap-2">
         <a-button :loading="isSubmitting" type="primary" @click="handleSubmit">
-          {{ mode === 'topic' ? '发布' : '回复' }}
+          {{ mode === 'topic' ? '发布' : mode === 'edit' ? '保存' : '回复' }}
         </a-button>
       </div>
     </div>
