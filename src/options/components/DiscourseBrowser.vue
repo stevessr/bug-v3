@@ -390,18 +390,19 @@ const loadQuickSidebar = async (force = false) => {
     sections.push({
       title: '快捷入口',
       items: [
-        { id: 'home', label: '主页', path: '/' },
-        { id: 'categories', label: '分类', path: '/categories' },
-        { id: 'tags', label: '标签', path: '/tags' },
+        { id: 'home', label: '主页', path: '/', icon: 'list' },
+        { id: 'categories', label: '分类', path: '/categories', icon: 'list' },
+        { id: 'tags', label: '标签', path: '/tags', icon: 'tags' },
         {
           id: 'notifications',
           label: '通知',
           path: currentUsername.value
             ? `/u/${encodeURIComponent(currentUsername.value)}/notifications`
-            : '/my/notifications'
+            : '/my/notifications',
+          icon: 'bell'
         },
-        { id: 'bookmarks', label: '书签', path: '/bookmarks' },
-        { id: 'posted', label: '我的帖子', path: '/posted' }
+        { id: 'bookmarks', label: '书签', path: '/bookmarks', icon: 'bookmark' },
+        { id: 'posted', label: '我的帖子', path: '/posted', icon: 'pencil' }
       ]
     })
 

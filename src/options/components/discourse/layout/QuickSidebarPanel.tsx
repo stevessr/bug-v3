@@ -10,6 +10,7 @@ export type QuickSidebarItem = {
   path: string
   color?: string
   muted?: boolean
+  icon?: string
 }
 
 export type QuickSidebarSection = {
@@ -63,10 +64,23 @@ export default defineComponent({
                         onClick={() => emit('navigate', item.path)}
                         type="button"
                       >
-                        <span
-                          class="quick-sidebar-dot"
-                          style={item.color ? { backgroundColor: `#${item.color}` } : {}}
-                        />
+                        {item.icon ? (
+                          <span class="quick-sidebar-icon">
+                            <svg
+                              class="fa d-icon svg-icon"
+                              width="1em"
+                              height="1em"
+                              aria-hidden="true"
+                            >
+                              <use href={`#${item.icon}`} />
+                            </svg>
+                          </span>
+                        ) : (
+                          <span
+                            class="quick-sidebar-dot"
+                            style={item.color ? { backgroundColor: `#${item.color}` } : {}}
+                          />
+                        )}
                         <span class="quick-sidebar-label">{item.label}</span>
                       </button>
                     ))}
