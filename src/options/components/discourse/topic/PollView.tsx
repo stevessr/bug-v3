@@ -323,7 +323,7 @@ export default defineComponent({
                 撤销
               </Button>
             )}
-            <Button onClick={toggleResults}>结果</Button>
+            <Button onClick={toggleResults}>{viewMode.value === 'results' ? '投票' : '结果'}</Button>
           </div>
           <div class="poll-tsx-info">
             {voters.value != null && <span>{voters.value} 投票人</span>}
