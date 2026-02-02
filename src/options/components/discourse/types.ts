@@ -116,6 +116,7 @@ export interface DiscourseTopicTag {
   name?: string
   text?: string
   slug?: string
+  description?: string | null
 }
 
 export interface DiscourseCategory {

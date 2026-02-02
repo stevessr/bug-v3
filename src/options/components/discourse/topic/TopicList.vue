@@ -7,6 +7,7 @@ import type {
   DiscourseTopicTag
 } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import TagPill from '../layout/TagPill.vue'
 
 defineProps<{
   topics: DiscourseTopic[] | SuggestedTopic[]
@@ -125,10 +126,16 @@ const handleTagClick = (tag: string | DiscourseTopicTag) => {
             <span
               v-for="tag in (topic as DiscourseTopic).tags"
               :key="getTagKey(tag)"
-              class="topic-tag text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+              class="topic-tag"
               @click.stop="handleTagClick(tag)"
             >
-              #{{ getTagLabel(tag) }}
+              <TagPill
+                :name="getTagLabel(tag)"
+                :text="getTagLabel(tag)"
+                :description="typeof tag === 'string' ? null : tag.description || null"
+                compact
+                clickable
+              />
             </span>
           </div>
 
