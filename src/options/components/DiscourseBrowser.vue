@@ -203,7 +203,12 @@ const handleOpenNotification = (path: string) => {
 
 const handleOpenNotifications = () => {
   notificationsOpen.value = false
-  navigateTo('/notifications')
+  const username = currentUsername.value
+  if (username) {
+    navigateTo(`/u/${encodeURIComponent(username)}/notifications`)
+    return
+  }
+  navigateTo('/my/notifications')
 }
 
 const handleNotificationsOpenChange = async (open: boolean) => {
