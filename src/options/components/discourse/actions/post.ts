@@ -4,7 +4,6 @@ export interface BookmarkPayload {
   postId: number
   bookmarked: boolean
   reminder_at?: string | null
-  name?: string | null
 }
 
 export interface FlagPayload {
@@ -43,27 +42,52 @@ export async function togglePostLike(baseUrl: string, postId: number, reactionId
 }
 
 export async function toggleBookmark(baseUrl: string, payload: BookmarkPayload) {
-  const url = `${baseUrl}/bookmark`
-  const result = await pageFetch<any>(url, {
-    method: 'POST',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/json',
-      'Discourse-Logged-In': 'true'
-    },
-    body: JSON.stringify({
-      post_id: payload.postId,
-      bookmarked: payload.bookmarked,
-      reminder_at: payload.reminder_at,
-      name: payload.name
+  const params = new URLSearchParams()
+  params.append('bookmarkable_id', String(payload.postId))
+  params.append('bookmarkable_type', 'Post')
+  params.append('auto_delete_preference', '3')
+
+  if (payload.bookmarked) {
+    // 添加书签或更新提醒
+    const url = `${baseUrl}/bookmarks.json`
+    if (payload.reminder_at) {
+      params.append('reminder_at', payload.reminder_at)
+    } else {
+      params.append('reminder_at', '')
+    }
+    const result = await pageFetch<any>(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Discourse-Logged-In': 'true'
+      },
+      body: params.toString()
     })
-  })
-  const data = extractData(result)
-  if (result.ok === false) {
-    const message = data?.errors?.join(', ') || data?.error || '书签操作失败'
-    throw new Error(message)
+    const data = extractData(result)
+    if (result.ok === false) {
+      const message = data?.errors?.join(', ') || data?.error || '添加书签失败'
+      throw new Error(message)
+    }
+    return data
+  } else {
+    // 删除书签
+    const url = `${baseUrl}/bookmarks.json?bookmarkable_id=${payload.postId}&bookmarkable_type=Post`
+    const result = await pageFetch<any>(url, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'Discourse-Logged-In': 'true'
+      }
+    })
+    const data = extractData(result)
+    if (result.ok === false) {
+      const message = data?.errors?.join(', ') || data?.error || '删除书签失败'
+      throw new Error(message)
+    }
+    return data
   }
-  return data
 }
 
 export async function flagPost(baseUrl: string, payload: FlagPayload) {

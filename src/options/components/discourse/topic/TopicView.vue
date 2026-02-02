@@ -303,7 +303,7 @@ const handleBookmark = async (post: DiscoursePost) => {
       bookmarked: !currentBookmarked
     })
     postAny.bookmarked = !currentBookmarked
-    message.success(postAny.bookmarked ? '已添加书签' : '已取消书签')
+    message.success(postAny.bookmarked ? '已添加书签' : '已删除书签')
   } catch (error) {
     console.warn('[DiscourseBrowser] bookmark failed:', error)
     message.error('书签操作失败')
