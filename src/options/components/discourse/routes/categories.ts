@@ -1,4 +1,5 @@
 import type { DiscourseCategory } from '../types'
+import { getPreloadedCategory } from '../linux.do/preloadedCategories'
 
 type RawCategory = Record<string, any>
 
@@ -33,8 +34,12 @@ function upsertCategory(
   if (id === null) return null
 
   const rawParentId = toCategoryId(raw.parent_category_id ?? raw.parentCategoryId)
-  const parentId = rawParentId ?? fallbackParentId
+  const preloaded = getPreloadedCategory(id, typeof raw.slug === 'string' ? raw.slug : null)
+  const preloadedParentId = toCategoryId(preloaded?.parent_category_id)
+  const parentId = rawParentId ?? fallbackParentId ?? preloadedParentId
   const subcategoryIds = normalizeIdList(raw.subcategory_ids ?? raw.subcategoryIds)
+  const colorRaw = raw.color ?? preloaded?.color
+  const textColorRaw = raw.text_color ?? preloaded?.text_color
   const topicCountRaw = raw.topic_count ?? raw.topicCount
   const topicCount = typeof topicCountRaw === 'number' ? topicCountRaw : Number(topicCountRaw) || 0
 
@@ -43,11 +48,20 @@ function upsertCategory(
     id,
     name: typeof raw.name === 'string' ? raw.name : `category-${id}`,
     slug: typeof raw.slug === 'string' ? raw.slug : String(id),
-    color: typeof raw.color === 'string' ? raw.color : '0088CC',
-    text_color: typeof raw.text_color === 'string' ? raw.text_color : 'FFFFFF',
+    color: typeof colorRaw === 'string' ? colorRaw : '0088CC',
+    text_color: typeof textColorRaw === 'string' ? textColorRaw : 'FFFFFF',
     topic_count: topicCount,
     parent_category_id: parentId,
     subcategory_ids: subcategoryIds
+  }
+
+  if (preloaded) {
+    incoming.style_type = incoming.style_type ?? preloaded.style_type ?? null
+    incoming.icon = incoming.icon ?? preloaded.icon ?? null
+    incoming.emoji = incoming.emoji ?? preloaded.emoji ?? null
+    incoming.uploaded_logo = incoming.uploaded_logo ?? preloaded.uploaded_logo ?? null
+    incoming.uploaded_logo_dark =
+      incoming.uploaded_logo_dark ?? preloaded.uploaded_logo_dark ?? null
   }
 
   const existing = byId.get(id)

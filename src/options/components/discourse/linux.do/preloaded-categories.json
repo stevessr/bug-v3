@@ -1,0 +1,1062 @@
+[
+  {
+    "id": 1,
+    "name": "未分类",
+    "slug": "",
+    "parent_category_id": null,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 4,
+    "name": "开发调优",
+    "slug": "develop",
+    "parent_category_id": null,
+    "color": "32c3c3",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "code",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/c/5/c59e612cafa47255927d8c73f90e8dac05f78b5c.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/c/5/c59e612cafa47255927d8c73f90e8dac05f78b5c.png"
+    }
+  },
+  {
+    "id": 20,
+    "name": "开发调优, Lv1",
+    "slug": "develop-lv1",
+    "parent_category_id": 4,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "code",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 31,
+    "name": "开发调优, Lv2",
+    "slug": "develop-lv2",
+    "parent_category_id": 4,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "code",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 88,
+    "name": "开发调优, Lv3",
+    "slug": "develop-lv3",
+    "parent_category_id": 4,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "code",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 98,
+    "name": "国产替代",
+    "slug": "domestic",
+    "parent_category_id": null,
+    "color": "D12C25",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "seedling",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/4/2/d/42db3e789b9c65694639e5cbcdebd5d7ebb238be.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/4/2/d/42db3e789b9c65694639e5cbcdebd5d7ebb238be.png"
+    }
+  },
+  {
+    "id": 99,
+    "name": "国产替代, Lv1",
+    "slug": "domestic-lv1",
+    "parent_category_id": 98,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "seedling",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 100,
+    "name": "国产替代, Lv2",
+    "slug": "domestic-lv2",
+    "parent_category_id": 98,
+    "color": "874EFE",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "seedling",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 101,
+    "name": "国产替代, Lv3",
+    "slug": "domestic-lv3",
+    "parent_category_id": 98,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "seedling",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 14,
+    "name": "资源荟萃",
+    "slug": "resource",
+    "parent_category_id": null,
+    "color": "12A89D",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "square-share-nodes",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/1X/6334a38d6a816e61423f46a0399c160eaaf07321.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/1X/6334a38d6a816e61423f46a0399c160eaaf07321.png"
+    }
+  },
+  {
+    "id": 83,
+    "name": "资源荟萃, Lv1",
+    "slug": "resource-lv1",
+    "parent_category_id": 14,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "square-share-nodes",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 84,
+    "name": "资源荟萃, Lv2",
+    "slug": "resource-lv2",
+    "parent_category_id": 14,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "square-share-nodes",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 85,
+    "name": "资源荟萃, Lv3",
+    "slug": "resource-lv3",
+    "parent_category_id": 14,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "square-share-nodes",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 94,
+    "name": "网盘资源",
+    "slug": "cloud-asset",
+    "parent_category_id": 14,
+    "color": "16b176",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "hard-drive",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/f/0/9/f09d3cb44fe18aa60cf205a8898885f6655c4b44.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/f/0/9/f09d3cb44fe18aa60cf205a8898885f6655c4b44.png"
+    }
+  },
+  {
+    "id": 95,
+    "name": "网盘资源, Lv1",
+    "slug": "cloud-asset-lv1",
+    "parent_category_id": 94,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "hard-drive",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 96,
+    "name": "网盘资源, Lv2",
+    "slug": "cloud-asset-lv2",
+    "parent_category_id": 94,
+    "color": "874EFE",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "hard-drive",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 97,
+    "name": "网盘资源, Lv3",
+    "slug": "cloud-asset-lv3",
+    "parent_category_id": 94,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "hard-drive",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 42,
+    "name": "文档共建",
+    "slug": "wiki",
+    "parent_category_id": null,
+    "color": "9cb6c4",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "book",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/c/b/cb17799169729bb83cdc252271a3621885ca33a8.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/c/b/cb17799169729bb83cdc252271a3621885ca33a8.png"
+    }
+  },
+  {
+    "id": 75,
+    "name": "文档共建, Lv1",
+    "slug": "wiki-lv1",
+    "parent_category_id": 42,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 76,
+    "name": "文档共建, Lv2",
+    "slug": "wiki-lv2",
+    "parent_category_id": 42,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 77,
+    "name": "文档共建, Lv3",
+    "slug": "wiki-lv3",
+    "parent_category_id": 42,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 10,
+    "name": "跳蚤市场",
+    "slug": "trade",
+    "parent_category_id": null,
+    "color": "ED207B",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "coins",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/d/3/d3a3955a407296311f9a9837eec17d39cfa63425.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/d/3/d3a3955a407296311f9a9837eec17d39cfa63425.png"
+    }
+  },
+  {
+    "id": 106,
+    "name": "积分乐园",
+    "slug": "credit",
+    "parent_category_id": null,
+    "color": "fcca44",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "credit-card",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/9/3/c/93c85b824d59d1e0a5ed68575d767bcaf4718ebe.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/9/3/c/93c85b824d59d1e0a5ed68575d767bcaf4718ebe.png"
+    }
+  },
+  {
+    "id": 107,
+    "name": "积分乐园, Lv1",
+    "slug": "credit-lv1",
+    "parent_category_id": 106,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "credit-card",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 108,
+    "name": "积分乐园, Lv2",
+    "slug": "credit-lv2",
+    "parent_category_id": 106,
+    "color": "874EFE",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "credit-card",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 109,
+    "name": "积分乐园, Lv3",
+    "slug": "credit-lv3",
+    "parent_category_id": 106,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "credit-card",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 27,
+    "name": "非我莫属",
+    "slug": "job",
+    "parent_category_id": null,
+    "color": "a8c6fe",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "briefcase",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/2X/0/0ca85c534e813ae5ec9a86ca3334a8c4a99fcc51.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/2X/0/0ca85c534e813ae5ec9a86ca3334a8c4a99fcc51.png"
+    }
+  },
+  {
+    "id": 72,
+    "name": "非我莫属, Lv1",
+    "slug": "job-lv1",
+    "parent_category_id": 27,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "briefcase",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 73,
+    "name": "非我莫属, Lv2",
+    "slug": "job-lv2",
+    "parent_category_id": 27,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "briefcase",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 74,
+    "name": "非我莫属, Lv3",
+    "slug": "job-lv3",
+    "parent_category_id": 27,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "briefcase",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 32,
+    "name": "读书成诗",
+    "slug": "reading",
+    "parent_category_id": null,
+    "color": "e0d900",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "book-open-reader",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/2X/8/82dd6190fc33a1bcbe88a2f2d4cf24f3c7966e8c.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/2X/8/82dd6190fc33a1bcbe88a2f2d4cf24f3c7966e8c.png"
+    }
+  },
+  {
+    "id": 69,
+    "name": "读书成诗, Lv1",
+    "slug": "reading-lv1",
+    "parent_category_id": 32,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book-open-reader",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 70,
+    "name": "读书成诗, Lv2",
+    "slug": "reading-lv2",
+    "parent_category_id": 32,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book-open-reader",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 71,
+    "name": "读书成诗, Lv3",
+    "slug": "reading-lv3",
+    "parent_category_id": 32,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "book-open-reader",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 46,
+    "name": "扬帆起航",
+    "slug": "startup",
+    "parent_category_id": null,
+    "color": "ff9838",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "rocket",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/9/4/947e5009b6c84d4c3f4a335b20b557193b8fa26b.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/9/4/947e5009b6c84d4c3f4a335b20b557193b8fa26b.png"
+    }
+  },
+  {
+    "id": 66,
+    "name": "扬帆起航, Lv1",
+    "slug": "startup-lv1",
+    "parent_category_id": 46,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "rocket",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 67,
+    "name": "扬帆起航, Lv2",
+    "slug": "startup-lv2",
+    "parent_category_id": 46,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "rocket",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 68,
+    "name": "扬帆起航, Lv3",
+    "slug": "startup-lv3",
+    "parent_category_id": 46,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "rocket",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 34,
+    "name": "前沿快讯",
+    "slug": "news",
+    "parent_category_id": null,
+    "color": "BB8FCE",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "newspaper",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/3/b/3bc85a6999925899bce84ac7feedd907c8b0be8f.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/3/b/3bc85a6999925899bce84ac7feedd907c8b0be8f.png"
+    }
+  },
+  {
+    "id": 78,
+    "name": "前沿快讯, Lv1",
+    "slug": "news-lv1",
+    "parent_category_id": 34,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "newspaper",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 79,
+    "name": "前沿快讯, Lv2",
+    "slug": "news-lv2",
+    "parent_category_id": 34,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "newspaper",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 80,
+    "name": "前沿快讯, Lv3",
+    "slug": "news-lv3",
+    "parent_category_id": 34,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "newspaper",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 92,
+    "name": "网络记忆",
+    "slug": "feeds",
+    "parent_category_id": null,
+    "color": "F7941D",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "rss",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/4/c/7/4c7ba1f00c28e1fe838386bb26e87ab4f29c424c.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/4/c/7/4c7ba1f00c28e1fe838386bb26e87ab4f29c424c.png"
+    }
+  },
+  {
+    "id": 36,
+    "name": "福利羊毛",
+    "slug": "welfare",
+    "parent_category_id": null,
+    "color": "E45735",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "piggy-bank",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/b/4/b445e49d3e3bdab0cb726e4469f896d001d7188b.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/b/4/b445e49d3e3bdab0cb726e4469f896d001d7188b.png"
+    }
+  },
+  {
+    "id": 60,
+    "name": "福利羊毛, Lv1",
+    "slug": "welfare-lv1",
+    "parent_category_id": 36,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "piggy-bank",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 61,
+    "name": "福利羊毛, Lv2",
+    "slug": "welfare-lv2",
+    "parent_category_id": 36,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "piggy-bank",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 62,
+    "name": "福利羊毛, Lv3",
+    "slug": "welfare-lv3",
+    "parent_category_id": 36,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "piggy-bank",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 11,
+    "name": "搞七捻三",
+    "slug": "gossip",
+    "parent_category_id": null,
+    "color": "3AB54A",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "droplet",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/1X/f73623406bea03a1f66c657859d80db47842b6b2.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/1X/f73623406bea03a1f66c657859d80db47842b6b2.png"
+    }
+  },
+  {
+    "id": 35,
+    "name": "搞七捻三, Lv1",
+    "slug": "gossip-lv1",
+    "parent_category_id": 11,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "droplet",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 89,
+    "name": "搞七捻三, Lv2",
+    "slug": "gossip-lv2",
+    "parent_category_id": 11,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "droplet",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 21,
+    "name": "搞七捻三, Lv3",
+    "slug": "gossip-lv3",
+    "parent_category_id": 11,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "droplet",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 102,
+    "name": "社区孵化",
+    "slug": "incubator",
+    "parent_category_id": null,
+    "color": "ffbb00",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "lightbulb",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/d/5/e/d5ee82211bd07779123d4dec337cccce788e827b.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/d/5/e/d5ee82211bd07779123d4dec337cccce788e827b.png"
+    }
+  },
+  {
+    "id": 103,
+    "name": "社区孵化, Lv1",
+    "slug": "incubator-lv1",
+    "parent_category_id": 102,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "lightbulb",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 104,
+    "name": "社区孵化, Lv2",
+    "slug": "incubator-lv2",
+    "parent_category_id": 102,
+    "color": "874EFE",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "lightbulb",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 105,
+    "name": "社区孵化, Lv3",
+    "slug": "incubator-lv3",
+    "parent_category_id": 102,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "lightbulb",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 110,
+    "name": "虫洞广场",
+    "slug": "square",
+    "parent_category_id": null,
+    "color": "ff00f7",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "hurricane",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/4X/a/6/0/a60b29099b83d51a949bccd708cbdacee40ada80.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/4X/a/6/0/a60b29099b83d51a949bccd708cbdacee40ada80.png"
+    }
+  },
+  {
+    "id": 113,
+    "name": "人类之光",
+    "slug": "research",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 114,
+    "name": "游戏人生",
+    "slug": "gaming-life",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 115,
+    "name": "二次元",
+    "slug": "acgn",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 116,
+    "name": "音乐",
+    "slug": "music",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 117,
+    "name": "我爱我车",
+    "slug": "cars",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 118,
+    "name": "桌面GNU/Linux",
+    "slug": "linux-desktop",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 119,
+    "name": "嵌天嵌地",
+    "slug": "embedded",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 120,
+    "name": "刷机与维修",
+    "slug": "discoverdevices",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 121,
+    "name": "美拍",
+    "slug": "photography",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 122,
+    "name": "游戏开发",
+    "slug": "game-dev",
+    "parent_category_id": 110,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "square",
+    "icon": null,
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 2,
+    "name": "运营反馈",
+    "slug": "feedback",
+    "parent_category_id": null,
+    "color": "808281",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "comments",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/1X/078b3612909bedaf877f5b688a4b01833cc4a3cd.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/1X/078b3612909bedaf877f5b688a4b01833cc4a3cd.png"
+    }
+  },
+  {
+    "id": 49,
+    "name": "公告",
+    "slug": "announcement",
+    "parent_category_id": 2,
+    "color": "F1592A",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "bullhorn",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 30,
+    "name": "活动",
+    "slug": "activity",
+    "parent_category_id": 2,
+    "color": "38571A",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "users",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 63,
+    "name": "运营反馈, Lv1",
+    "slug": "feedback-lv1",
+    "parent_category_id": 2,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "comments",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 64,
+    "name": "运营反馈, Lv2",
+    "slug": "feedback-lv2",
+    "parent_category_id": 2,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "comments",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 65,
+    "name": "运营反馈, Lv3",
+    "slug": "feedback-lv3",
+    "parent_category_id": 2,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "comments",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 45,
+    "name": "深海幽域",
+    "slug": "muted",
+    "parent_category_id": null,
+    "color": "45B7D1",
+    "text_color": "000000",
+    "style_type": "icon",
+    "icon": "water",
+    "emoji": null,
+    "uploaded_logo": {
+      "url": "/uploads/default/original/3X/e/a/ea7ec51e4c424915941f23a4abb083a0c899defd.png"
+    },
+    "uploaded_logo_dark": {
+      "url": "/uploads/default/original/3X/e/a/ea7ec51e4c424915941f23a4abb083a0c899defd.png"
+    }
+  },
+  {
+    "id": 57,
+    "name": "深海幽域, Lv1",
+    "slug": "muted-lv1",
+    "parent_category_id": 45,
+    "color": "0088CC",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "water",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 58,
+    "name": "深海幽域, Lv2",
+    "slug": "muted-lv2",
+    "parent_category_id": 45,
+    "color": "874EFE",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "water",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  },
+  {
+    "id": 59,
+    "name": "深海幽域, Lv3",
+    "slug": "muted-lv3",
+    "parent_category_id": 45,
+    "color": "FF0000",
+    "text_color": "FFFFFF",
+    "style_type": "icon",
+    "icon": "water",
+    "emoji": null,
+    "uploaded_logo": null,
+    "uploaded_logo_dark": null
+  }
+]
