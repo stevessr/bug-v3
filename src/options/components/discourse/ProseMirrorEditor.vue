@@ -44,6 +44,7 @@ const emojiSuggestions = ref<EmojiShortcode[]>([])
 const emojiQuery = ref('')
 const emojiActiveIndex = ref(0)
 const emojiAutocompletePos = ref<{ x: number; y: number } | null>(null)
+const emojiAutocompleteRef = ref<HTMLElement | null>(null)
 
 // Toolbar functions
 const toggleBold = () => {
@@ -193,6 +194,16 @@ const updateEmojiAutocomplete = () => {
     emojiAutocompletePos.value = null
   }
   showEmojiAutocomplete.value = true
+  requestAnimationFrame(() => {
+    scrollActiveEmojiIntoView()
+  })
+}
+
+const scrollActiveEmojiIntoView = () => {
+  const host = emojiAutocompleteRef.value
+  if (!host) return
+  const activeItem = host.querySelector('.emoji-autocomplete-item.active') as HTMLElement | null
+  activeItem?.scrollIntoView({ block: 'nearest' })
 }
 
 const handleEditorKeydown = (event: KeyboardEvent) => {
@@ -200,10 +211,16 @@ const handleEditorKeydown = (event: KeyboardEvent) => {
   if (event.key === 'ArrowDown') {
     event.preventDefault()
     emojiActiveIndex.value = (emojiActiveIndex.value + 1) % emojiSuggestions.value.length
+    requestAnimationFrame(() => {
+      scrollActiveEmojiIntoView()
+    })
   } else if (event.key === 'ArrowUp') {
     event.preventDefault()
     emojiActiveIndex.value =
       (emojiActiveIndex.value - 1 + emojiSuggestions.value.length) % emojiSuggestions.value.length
+    requestAnimationFrame(() => {
+      scrollActiveEmojiIntoView()
+    })
   } else if (event.key === 'Enter' || event.key === 'Tab') {
     event.preventDefault()
     const selected = emojiSuggestions.value[emojiActiveIndex.value]
@@ -217,7 +234,16 @@ const handleEditorKeydown = (event: KeyboardEvent) => {
   }
 }
 
-const handleEditorKeyup = () => {
+const handleEditorKeyup = (event: KeyboardEvent) => {
+  if (
+    event.key === 'ArrowDown' ||
+    event.key === 'ArrowUp' ||
+    event.key === 'Enter' ||
+    event.key === 'Tab' ||
+    event.key === 'Escape'
+  ) {
+    return
+  }
   updateEmojiAutocomplete()
 }
 
@@ -434,6 +460,7 @@ watch(
           ? { left: `${emojiAutocompletePos.x}px`, top: `${emojiAutocompletePos.y}px` }
           : {}
       "
+      ref="emojiAutocompleteRef"
     >
       <button
         v-for="(emoji, index) in emojiSuggestions"
