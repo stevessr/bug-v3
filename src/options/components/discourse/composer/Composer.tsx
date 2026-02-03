@@ -14,7 +14,7 @@ import {
 import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
-import TagPill from '../layout/TagPill.vue'
+import TagPill from '../layout/TagPill'
 import ProseMirrorEditor from '../ProseMirrorEditor'
 import '../css/Composer.css'
 import '../css/highlight.css'

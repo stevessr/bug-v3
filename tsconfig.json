@@ -15,6 +15,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "jsx": "preserve",
     "types": ["chrome", "node"],
     "baseUrl": ".",
     "paths": {
@@ -23,6 +24,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "src/**/*.tsx",
     "src/**/*.vue",
     "content/**/*.ts",
     "background/**/*.ts",

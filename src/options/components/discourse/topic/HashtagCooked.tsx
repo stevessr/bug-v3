@@ -1,6 +1,6 @@
 import { defineComponent, computed } from 'vue'
 
-import TagPill from '../layout/TagPill.vue'
+import TagPill from '../layout/TagPill'
 
 export default defineComponent({
   name: 'HashtagCooked',

@@ -4,7 +4,7 @@ import { BellOutlined } from '@ant-design/icons-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
 
-import NotificationsView from './NotificationsView.vue'
+import NotificationsView from './NotificationsView'
 import '../css/NotificationsDropdown.css'
 
 export default defineComponent({
