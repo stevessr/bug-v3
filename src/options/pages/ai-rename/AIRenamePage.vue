@@ -3,11 +3,10 @@ import { ref, computed } from 'vue'
 
 import type { Emoji } from '@/types/type'
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
 import VirtualList from '@/options/components/VirtualList.vue'
 import BatchActionsBar from '@/options/components/BatchActionsBar.vue'
 import BatchRenameModal from '@/options/modals/BatchRenameModal.vue'
-import CachedImage from '@/components/CachedImage.vue'
+import AIRenameEmojiCard from '@/options/components/AIRenameEmojiCard'
 
 const emojiStore = useEmojiStore()
 
@@ -43,6 +42,13 @@ const toggleSelection = (emojiId: string) => {
 }
 
 const selectedCount = computed(() => selectedEmojis.value.size)
+
+const groupCount = computed(
+  () =>
+    emojiStore.sortedGroups.filter(group => group.id !== 'favorites' && group.id !== 'ungrouped')
+      .length
+)
+const totalEmojiCount = computed(() => allEmojis.value.length)
 
 const handleSelectAll = () => {
   selectedEmojis.value = new Set(allEmojis.value.map(e => e.id))
@@ -94,15 +100,37 @@ const containerHeight = 600
 
 <template>
   <div class="p-4">
-    <div class="mb-4">
-      <h1 class="text-2xl font-bold">AI 批量重命名</h1>
-      <p class="text-gray-600 dark:text-gray-400">
-        选择多个表情，使用 AI 智能批量重命名。支持流式加载和虚拟滚动优化。
-      </p>
+    <div class="mb-4 space-y-3">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold">AI 批量重命名</h1>
+          <p class="text-gray-600 dark:text-gray-400">
+            选择多个表情，使用 AI 智能批量重命名。支持流式加载和虚拟滚动优化。
+          </p>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <span class="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1">
+            分组 {{ groupCount }}
+          </span>
+          <span class="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1">
+            表情 {{ totalEmojiCount }}
+          </span>
+          <span
+            class="rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 px-3 py-1"
+          >
+            已选 {{ selectedCount }}
+          </span>
+        </div>
+      </div>
+      <div
+        class="rounded-lg border bg-gradient-to-r from-amber-50 via-white to-emerald-50 dark:from-amber-900/10 dark:via-gray-900 dark:to-emerald-900/10 px-4 py-3 text-sm text-gray-600 dark:text-gray-300"
+      >
+        提示：先多选再生成，支持按分组流式加载；生成后可逐个排除或重新生成。
+      </div>
     </div>
 
     <!-- 使用虚拟滚动优化的列表 -->
-    <div class="border rounded-lg overflow-hidden">
+    <div v-if="allEmojis.length > 0" class="border rounded-lg overflow-hidden">
       <VirtualList
         ref="virtualListRef"
         :items="allEmojis"
@@ -112,54 +140,17 @@ const containerHeight = 600
         :items-per-row="gridColumns"
       >
         <template #default="{ item: emoji }">
-          <a-card
-            class="m-1 cursor-pointer transition-all duration-200 h-full flex flex-col"
-            :class="{
-              'hover:shadow-lg hover:border-green-300': !selectedEmojis.has(emoji.id),
-              'border-blue-500 border-2': selectedEmojis.has(emoji.id),
-              'shadow-md': !selectedEmojis.has(emoji.id)
-            }"
-            @click="toggleSelection(emoji.id)"
-            hoverable
-          >
-            <!-- 
-              修复 #1: 
-              - 移除了错误的 h-128。
-              - 使用 justify-between 来在垂直方向上分隔图片和文字内容。
-              - 确保此容器占满整个卡片高度 (h-full)。
-            -->
-            <div class="flex flex-col items-center justify-between p-2 h-full">
-              <!-- 
-                修复 #2: 
-                - 创建一个新的 div 作为图片的 "视窗"。
-                - 给它一个固定的高度 (例如 h-24)，这个高度决定了图片显示区域的大小。
-                - 在这个视窗上应用 overflow-hidden 来裁剪放大后的图片。
-              -->
-              <div class="h-24 w-full flex items-center justify-center overflow-hidden relative">
-                <CachedImage
-                  :src="getEmojiImageUrlSync(emoji, { preferCache: true })"
-                  :alt="emoji.name"
-                  class="max-h-full max-w-full object-contain"
-                  loading="lazy"
-                />
-              </div>
-
-              <!-- 将文字和复选框组合在一起，位于卡片底部 -->
-              <div class="text-center w-full mt-2">
-                <div class="text-center truncate w-full text-sm dark:text-white mb-1">
-                  {{ emoji.name }}
-                </div>
-                <div class="flex items-center justify-center">
-                  <a-checkbox
-                    :checked="selectedEmojis.has(emoji.id)"
-                    @click.stop="toggleSelection(emoji.id)"
-                  />
-                </div>
-              </div>
-            </div>
-          </a-card>
+          <AIRenameEmojiCard
+            :emoji="emoji"
+            :selected="selectedEmojis.has(emoji.id)"
+            @toggle="toggleSelection(emoji.id)"
+          />
         </template>
       </VirtualList>
+    </div>
+
+    <div v-else class="border rounded-lg p-10">
+      <a-empty description="暂无可批量重命名的表情" />
     </div>
 
     <BatchActionsBar

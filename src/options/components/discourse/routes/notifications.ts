@@ -26,7 +26,12 @@ export async function loadNotifications(
   baseUrl: Ref<string>,
   filter: DiscourseNotificationFilter = 'all'
 ) {
-  const result = await pageFetch<any>(`${baseUrl.value}/notifications.json`)
+  const params = new URLSearchParams()
+  if (filter === 'unread') {
+    params.set('filter', 'unread')
+  }
+  const query = params.toString() ? `?${params.toString()}` : ''
+  const result = await pageFetch<any>(`${baseUrl.value}/notifications.json${query}`)
   const data = extractData(result)
   tab.notifications = normalizeNotificationsFromResponse(data)
   tab.notificationsFilter = filter

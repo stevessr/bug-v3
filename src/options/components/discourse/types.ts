@@ -185,6 +185,7 @@ export interface DiscourseTagGroup {
 
 export type DiscourseNotificationFilter =
   | 'all'
+  | 'unread'
   | 'replies'
   | 'mentions'
   | 'likes'

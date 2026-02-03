@@ -199,6 +199,13 @@ export function useDiscourseBrowser() {
         await loadHome(tab)
         tab.title = '首页 - ' + urlObj.hostname
         tab.viewType = 'home'
+      } else if (pathname.startsWith('/my/notifications')) {
+        const filterParam = urlObj.searchParams.get('filter')
+        const notificationFilter: DiscourseNotificationFilter =
+          filterParam === 'unread' ? 'unread' : 'all'
+        await loadNotifications(tab, notificationFilter)
+        tab.title = '通知'
+        tab.viewType = 'notifications'
       } else if (pathname.startsWith('/c/')) {
         const parts = pathname.replace('/c/', '').split('/').filter(Boolean)
         const categorySlug = parts[0]
@@ -281,6 +288,13 @@ export function useDiscourseBrowser() {
           await loadMessages(tab, username, 'all')
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
+        } else if (pathParts[1] === 'notifications') {
+          const filterParam = urlObj.searchParams.get('filter')
+          const notificationFilter: DiscourseNotificationFilter =
+            filterParam === 'unread' ? 'unread' : 'all'
+          await loadNotifications(tab, notificationFilter)
+          tab.title = `${username} - 通知`
+          tab.viewType = 'notifications'
         } else if (pathParts[1] === 'badges') {
           await loadUser(tab, username)
           tab.title = `${username} - 徽章`
@@ -312,7 +326,10 @@ export function useDiscourseBrowser() {
         tab.title = '标签'
         tab.viewType = 'tags'
       } else if (pathname === '/notifications' || pathname === '/notifications.json') {
-        await loadNotifications(tab, 'all')
+        const filterParam = urlObj.searchParams.get('filter')
+        const notificationFilter: DiscourseNotificationFilter =
+          filterParam === 'unread' ? 'unread' : 'all'
+        await loadNotifications(tab, notificationFilter)
         tab.title = '通知'
         tab.viewType = 'notifications'
       } else if (pathname.startsWith('/tag/')) {

@@ -174,8 +174,11 @@ const handleApply = () => {
   emit('apply', finalNames)
 }
 
+const generatedCount = computed(() => Object.keys(newNames.value).length)
+const excludedCount = computed(() => excludedIds.value.size)
+
 const okButtonProps = computed(() => ({
-  disabled: Object.keys(newNames.value).length === 0
+  disabled: generatedCount.value === 0
 }))
 
 const progressPercentage = computed(() => {
@@ -197,43 +200,66 @@ const progressPercentage = computed(() => {
     <div class="space-y-4">
       <a-alert v-if="error" :message="error" type="error" show-icon />
 
-      <div>
-        <p class="font-semibold">命名提示：</p>
-        <a-textarea
-          v-model:value="prompt"
-          placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"
-          :rows="2"
-        />
-        <p class="text-xs text-gray-500 mt-1">语言设置已移至 设置 → AI 设置</p>
+      <div class="grid gap-4 md:grid-cols-[1.7fr_1fr]">
+        <div class="space-y-3 rounded-lg border bg-gray-50/80 dark:bg-gray-800/40 p-4">
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">命名提示</p>
+            <span class="text-xs text-gray-500">设置 → AI 设置</span>
+          </div>
+          <a-textarea
+            v-model:value="prompt"
+            placeholder="例如：给这些表情加上'搞笑'前缀，或者'根据图片内容生成描述性名称'"
+            :rows="3"
+          />
+          <div class="flex flex-wrap items-center gap-3">
+            <a-button type="primary" @click="handleGenerateNames" :loading="isLoading">
+              {{ isLoading ? '生成中...' : '开始生成' }}
+            </a-button>
+            <a-checkbox v-model:checked="enableGroupedStreaming" :disabled="isLoading">
+              按分组流式加载
+            </a-checkbox>
+            <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.length }} 个表情</span>
+          </div>
+        </div>
+
+        <div class="space-y-3 rounded-lg border bg-white dark:bg-gray-900 p-4">
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">生成概览</p>
+            <span class="text-xs text-gray-500">{{ progressPercentage }}%</span>
+          </div>
+          <div class="flex flex-wrap gap-2 text-sm">
+            <span
+              class="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300 px-3 py-1"
+            >
+              已生成 {{ generatedCount }}
+            </span>
+            <span
+              class="rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 px-3 py-1"
+            >
+              待生成 {{ selectedEmojis.length - generatedCount }}
+            </span>
+            <span
+              class="rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300 px-3 py-1"
+            >
+              已排除 {{ excludedCount }}
+            </span>
+          </div>
+          <div class="space-y-2">
+            <a-progress :percent="progressPercentage" :status="isLoading ? 'active' : 'normal'" />
+            <p class="text-xs text-gray-500">
+              正在生成 ({{ progress.current }} / {{ progress.total }})
+              <span v-if="enableGroupedStreaming && progress.groupIndex !== undefined">
+                - 分组 {{ progress.groupIndex + 1 }}
+              </span>
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div class="flex items-center gap-4">
-        <a-button type="primary" @click="handleGenerateNames" :loading="isLoading">
-          {{ isLoading ? '生成中...' : '开始生成' }}
-        </a-button>
-        <a-checkbox v-model:checked="enableGroupedStreaming" :disabled="isLoading">
-          按分组流式加载
-        </a-checkbox>
-        <span class="text-sm text-gray-600">已选择 {{ selectedEmojis.length }} 个表情</span>
-      </div>
-
-      <div v-if="isLoading" class="space-y-2">
-        <a-progress :percent="progressPercentage" status="active" />
-        <p class="text-center text-gray-500 text-sm">
-          正在生成 ({{ progress.current }} / {{ progress.total }})
-          <span v-if="enableGroupedStreaming && progress.groupIndex !== undefined">
-            - 分组 {{ progress.groupIndex + 1 }}
-          </span>
-        </p>
-      </div>
-
-      <div
-        v-if="Object.keys(newNames).length > 0 || isLoading"
-        class="border rounded-lg overflow-hidden"
-      >
-        <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b flex items-center">
+      <div v-if="generatedCount > 0 || isLoading" class="border rounded-lg overflow-hidden">
+        <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b flex items-center gap-2">
           <h3 class="font-semibold flex-1">
-            名称预览 ({{ Object.keys(newNames).length }} / {{ selectedEmojis.length }})
+            名称预览 ({{ generatedCount }} / {{ selectedEmojis.length }})
           </h3>
           <span class="text-xs text-gray-500">虚拟滚动优化</span>
         </div>
@@ -262,13 +288,15 @@ const progressPercentage = computed(() => {
                 alt="emoji"
               />
               <div class="flex-1 min-w-0">
-                <div class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                <div class="text-xs text-gray-500 dark:text-gray-400 truncate">原名</div>
+                <div class="text-sm text-gray-700 dark:text-gray-200 truncate">
                   {{ emoji.name }}
                 </div>
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">新名</div>
                 <div
                   class="text-sm font-medium truncate"
                   :class="{
-                    'text-green-600': !!newNames[emoji.id],
+                    'text-emerald-600': !!newNames[emoji.id],
                     'text-gray-400 animate-pulse': !newNames[emoji.id] && isLoading,
                     'text-gray-400': !newNames[emoji.id] && !isLoading
                   }"
@@ -294,7 +322,7 @@ const progressPercentage = computed(() => {
         </VirtualList>
       </div>
 
-      <div v-if="!isLoading && Object.keys(newNames).length === 0" class="text-center py-8">
+      <div v-if="!isLoading && generatedCount === 0" class="text-center py-8">
         <p class="text-gray-500">点击"开始生成"按钮使用 AI 生成新名称</p>
       </div>
     </div>

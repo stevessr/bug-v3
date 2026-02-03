@@ -14,6 +14,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const baseFilters: Array<{ key: DiscourseNotificationFilter; label: string }> = [
       { key: 'all', label: '全部' },
+      { key: 'unread', label: '未读' },
       { key: 'replies', label: '回复' },
       { key: 'mentions', label: '提及' },
       { key: 'likes', label: '点赞' },
@@ -77,6 +78,7 @@ export default defineComponent({
 
     const filteredNotifications = computed(() => {
       if (props.filter === 'all') return props.notifications
+      if (props.filter === 'unread') return props.notifications.filter(item => !item.read)
       if (String(props.filter).startsWith('category:')) {
         const rawKey = String(props.filter).slice('category:'.length)
         return props.notifications.filter(item => {
