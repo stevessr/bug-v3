@@ -1,6 +1,8 @@
 .options-emoji-grid-container {
   width: 100%;
   position: relative;
+  max-height: 520px;
+  overflow: auto;
 }
 
 .options-emoji-grid {
