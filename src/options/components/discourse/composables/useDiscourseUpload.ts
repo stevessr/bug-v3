@@ -7,7 +7,7 @@ type UploadResponse = {
 
 type UseDiscourseUploadOptions = {
   baseUrl?: string
-  inputFormat: () => 'markdown' | 'bbcode'
+  inputFormat: () => 'markdown' | 'bbcode' | 'html'
   onInsertText: (text: string) => void
 }
 
@@ -15,8 +15,15 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
   const fileInputRef = ref<HTMLInputElement | null>(null)
   const isUploading = ref(false)
 
+  const escapeAttr = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
   const buildImageMarkup = (url: string, filename?: string) => {
     const safeUrl = url
+    if (options.inputFormat() === 'html') {
+      const alt = escapeAttr(filename || 'image')
+      return `<img src="${escapeAttr(safeUrl)}" alt="${alt}" />`
+    }
     if (options.inputFormat() === 'markdown') {
       const alt = filename || 'image'
       return `![${alt}](${safeUrl})`
@@ -27,6 +34,12 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
   const buildFileMarkup = (url: string, filename?: string) => {
     const safeUrl = url
     const label = filename || safeUrl
+    if (options.inputFormat() === 'html') {
+      const safeLabel = escapeAttr(label)
+      return `<a href="${escapeAttr(
+        safeUrl
+      )}" target="_blank" rel="nofollow noopener">${safeLabel}</a>`
+    }
     if (options.inputFormat() === 'markdown') {
       return `[${label}](${safeUrl})`
     }

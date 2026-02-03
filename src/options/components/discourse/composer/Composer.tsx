@@ -16,6 +16,7 @@ import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCod
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import TagPill from '../layout/TagPill'
 import ProseMirrorEditor from '../ProseMirrorEditor'
+import WysiwygEditor from '../WysiwygEditor'
 import '../css/Composer.css'
 import '../css/highlight.css'
 
@@ -60,7 +61,7 @@ export default defineComponent({
     const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
     const tagsLoading = ref(false)
     const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
-    const editMode = ref<'edit' | 'preview' | 'split'>('edit')
+    const editMode = ref<'edit' | 'preview' | 'split' | 'wysiwyg'>('edit')
     const editReason = ref('')
     const inputFormat = ref<'markdown' | 'bbcode'>('markdown')
     const isSubmitting = ref(false)
@@ -129,8 +130,9 @@ export default defineComponent({
       { immediate: true }
     )
 
-    const showEditor = computed(() => editMode.value !== 'preview')
-    const showPreview = computed(() => editMode.value !== 'edit')
+    const showEditor = computed(() => editMode.value === 'edit' || editMode.value === 'split')
+    const showPreview = computed(() => editMode.value === 'preview' || editMode.value === 'split')
+    const showWysiwyg = computed(() => editMode.value === 'wysiwyg')
 
     const previewFormat = computed(() => {
       const value = raw.value || ''
@@ -592,6 +594,14 @@ export default defineComponent({
             >
               预览
             </Button>
+            <Button
+              size="small"
+              type="text"
+              class={{ 'text-blue-500': editMode.value === 'wysiwyg' }}
+              onClick={() => (editMode.value = 'wysiwyg')}
+            >
+              所见即所得
+            </Button>
             {props.mode === 'reply' && props.replyToPostNumber ? (
               <Button size="small" onClick={() => emit('clearReply')}>
                 取消引用
@@ -714,6 +724,19 @@ export default defineComponent({
               />
               <div class="text-xs text-gray-500">
                 <span>Markdown / BBCode / HTML 混合编排 · LaTeX: $...$ 行内 / $$...$$ 块级</span>
+              </div>
+            </div>
+          ) : null}
+
+          {showWysiwyg.value ? (
+            <div class="composer-editor space-y-2">
+              <WysiwygEditor
+                modelValue={raw.value}
+                baseUrl={props.baseUrl}
+                onUpdate:modelValue={value => (raw.value = value)}
+              />
+              <div class="text-xs text-gray-500">
+                <span>所见即所得模式 · 输出 HTML</span>
               </div>
             </div>
           ) : null}

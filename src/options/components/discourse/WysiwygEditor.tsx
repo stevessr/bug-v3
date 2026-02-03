@@ -1,4 +1,7 @@
-import { defineComponent, ref, watch, computed } from 'vue'
+import { defineComponent, ref, watch, computed, onMounted } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import katex from 'katex'
 import {
   RollbackOutlined,
   RedoOutlined,
@@ -18,29 +21,23 @@ import {
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
-import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
-import { searchEmojis } from './bbcode'
+import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
 import './css/EmojiPicker.css'
 import './css/PluginEmojiPicker.css'
 import './css/ProseMirrorEditor.css'
 
-type Props = {
-  modelValue: string
-  inputFormat: 'markdown' | 'bbcode'
-  baseUrl?: string
-}
+marked.setOptions({ breaks: true, gfm: true })
 
 export default defineComponent({
-  name: 'ProseMirrorEditor',
+  name: 'WysiwygEditor',
   props: {
     modelValue: { type: String, required: true },
-    inputFormat: { type: String as () => 'markdown' | 'bbcode', required: true },
     baseUrl: { type: String, default: undefined }
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
-    const textareaRef = ref<HTMLTextAreaElement | null>(null)
+    const editorRef = ref<HTMLDivElement | null>(null)
     const showEmojiPicker = ref(false)
     const emojiPickerPos = ref<{ x: number; y: number } | null>(null)
     const showPluginEmojiPicker = ref(false)
@@ -51,70 +48,277 @@ export default defineComponent({
     const showImagePanel = ref(false)
     const imageUrl = ref('https://')
     const imageAlt = ref('')
+    let lastEmittedValue = ''
 
-    const showEmojiAutocomplete = ref(false)
-    const emojiSuggestions = ref<Array<{ id: string; name: string; url: string }>>([])
-    const emojiActiveIndex = ref(0)
-    const emojiAutocompletePos = ref<{ x: number; y: number } | null>(null)
-    const emojiAutocompleteRef = ref<HTMLElement | null>(null)
+    const escapeAttr = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
 
-    const syncValue = (value: string) => {
+    const emitValue = (value: string) => {
+      lastEmittedValue = value
       emit('update:modelValue', value)
     }
 
-    const insertTextAtCursor = (text: string) => {
-      const el = textareaRef.value
-      if (!el) return
-      const start = el.selectionStart ?? el.value.length
-      const end = el.selectionEnd ?? el.value.length
-      const next = `${el.value.slice(0, start)}${text}${el.value.slice(end)}`
-      el.value = next
-      const cursor = start + text.length
-      el.setSelectionRange(cursor, cursor)
-      syncValue(next)
-      el.focus()
+    const renderBBCodeWithMath = (input: string) => {
+      if (!input) return ''
+      const withEmoji = parseEmojiShortcodeToBBCode(input)
+
+      const mathBlocks: Array<{ tex: string; display: boolean }> = []
+      let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+        const id = mathBlocks.length
+        mathBlocks.push({ tex, display: true })
+        return `@@MATH_BLOCK_${id}@@`
+      })
+      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
+        const id = mathBlocks.length
+        mathBlocks.push({ tex, display: false })
+        return `${prefix}@@MATH_INLINE_${id}@@`
+      })
+
+      let html = renderBBCode(source)
+      html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
+        const item = mathBlocks[Number(index)]
+        if (!item) return ''
+        return katex.renderToString(item.tex, {
+          displayMode: kind === 'BLOCK',
+          throwOnError: false
+        })
+      })
+
+      return DOMPurify.sanitize(html, {
+        ADD_TAGS: [
+          'math',
+          'semantics',
+          'mrow',
+          'mi',
+          'mn',
+          'mo',
+          'annotation',
+          'annotation-xml',
+          'svg',
+          'path',
+          'img'
+        ],
+        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+      })
     }
 
-    const wrapSelection = (before: string, after: string) => {
-      const el = textareaRef.value
-      if (!el) return
-      const start = el.selectionStart ?? 0
-      const end = el.selectionEnd ?? 0
-      const selected = el.value.slice(start, end)
-      const next = `${el.value.slice(0, start)}${before}${selected}${after}${el.value.slice(end)}`
-      el.value = next
-      const cursor = end + before.length + after.length
-      el.setSelectionRange(cursor, cursor)
-      syncValue(next)
-      el.focus()
+    const renderMarkdown = (input: string) => {
+      if (!input) return ''
+      const withEmoji = parseEmojiShortcodeToMarkdown(input)
+      const blocks: Array<{ tex: string; display: boolean }> = []
+      let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+        const id = blocks.length
+        blocks.push({ tex, display: true })
+        return `@@MATH_BLOCK_${id}@@`
+      })
+      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
+        const id = blocks.length
+        blocks.push({ tex, display: false })
+        return `${prefix}@@MATH_INLINE_${id}@@`
+      })
+      let html = marked.parse(source) as string
+      html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
+        const item = blocks[Number(index)]
+        if (!item) return ''
+        return katex.renderToString(item.tex, {
+          displayMode: kind === 'BLOCK',
+          throwOnError: false
+        })
+      })
+      return DOMPurify.sanitize(html, {
+        ADD_TAGS: [
+          'math',
+          'semantics',
+          'mrow',
+          'mi',
+          'mn',
+          'mo',
+          'annotation',
+          'annotation-xml',
+          'svg',
+          'path',
+          'img'
+        ],
+        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+      })
     }
 
-    const toggleBold = () => wrapSelection('[b]', '[/b]')
-    const toggleItalic = () => wrapSelection('[i]', '[/i]')
-    const toggleUnderline = () => wrapSelection('[u]', '[/u]')
-    const toggleStrike = () => wrapSelection('[s]', '[/s]')
-    const insertCode = () => wrapSelection('[code]', '[/code]')
-    const insertBlockquote = () => wrapSelection('[quote]', '[/quote]')
-    const insertOrderedList = () => insertTextAtCursor('[list=1]\n[*]item\n[/list]')
-    const insertUnorderedList = () => insertTextAtCursor('[list]\n[*]item\n[/list]')
-    const insertHeading = () => insertTextAtCursor('[size=20][b]标题[/b][/size]')
-    const undoAction = () => document.execCommand('undo')
-    const redoAction = () => document.execCommand('redo')
-
-    const insertEmojiShortcode = (name: string) => {
-      insertTextAtCursor(`:${name}:`)
+    const renderHtml = (input: string) => {
+      if (!input) return ''
+      return DOMPurify.sanitize(input, {
+        ADD_TAGS: [
+          'math',
+          'semantics',
+          'mrow',
+          'mi',
+          'mn',
+          'mo',
+          'annotation',
+          'annotation-xml',
+          'svg',
+          'path',
+          'img'
+        ],
+        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+      })
     }
 
-    const buildImageMarkup = computed(() => {
-      return (url: string, filename?: string) => {
-        const safeUrl = url
-        if (props.inputFormat === 'markdown') {
-          const alt = filename || 'image'
-          return `![${alt}](${safeUrl})`
+    const detectHtmlAst = (input: string) => {
+      if (!input || !input.includes('<')) return false
+      try {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(input, 'text/html')
+        const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT)
+        while (walker.nextNode()) {
+          const el = walker.currentNode as Element
+          const tag = el.tagName.toLowerCase()
+          if (tag !== 'br') return true
         }
-        return `[img]${safeUrl}[/img]`
+      } catch {
+        return false
       }
-    })
+      return false
+    }
+
+    const detectMarkdownAst = (input: string) => {
+      if (!input) return false
+      try {
+        const tokens = marked.lexer(input)
+        return tokens.some(token => token.type !== 'space')
+      } catch {
+        return false
+      }
+    }
+
+    const detectBbcodeAst = (input: string) => {
+      if (!input || !input.includes('[')) return false
+      const allowed = new Set([
+        'b',
+        'i',
+        'u',
+        's',
+        'img',
+        'url',
+        'quote',
+        'code',
+        'list',
+        'spoiler',
+        'size',
+        'color',
+        'center',
+        'left',
+        'right',
+        'sub',
+        'sup'
+      ])
+      const stack: string[] = []
+      const regex = /\[\/?([a-z0-9]+)(?:=[^\]]+)?\]/gi
+      let match: RegExpExecArray | null
+      let found = false
+      while ((match = regex.exec(input))) {
+        const rawTag = match[1]?.toLowerCase()
+        if (!rawTag || !allowed.has(rawTag)) continue
+        found = true
+        const isClosing = match[0].startsWith('[/')
+        if (isClosing) {
+          if (stack.length && stack[stack.length - 1] === rawTag) {
+            stack.pop()
+          }
+        } else {
+          stack.push(rawTag)
+        }
+      }
+      return found
+    }
+
+    const convertToHtml = (value: string) => {
+      if (!value) return ''
+      if (detectHtmlAst(value)) return renderHtml(value)
+      if (detectBbcodeAst(value)) return renderBBCodeWithMath(value)
+      if (detectMarkdownAst(value)) return renderMarkdown(value)
+      return renderMarkdown(value)
+    }
+
+    const isPlainTextHtml = (value: string) => {
+      if (!value) return true
+      try {
+        const container = document.createElement('div')
+        container.innerHTML = value
+        const elements = Array.from(container.querySelectorAll('*'))
+        return elements.every(el => {
+          const tag = el.tagName.toLowerCase()
+          return tag === 'br' || tag === 'div' || tag === 'p' || tag === 'span'
+        })
+      } catch {
+        return false
+      }
+    }
+
+    const readEditorHtml = () => editorRef.value?.innerHTML ?? ''
+
+    const normalizeHtml = (value: string) => {
+      const trimmed = value.trim()
+      if (trimmed === '<br>' || trimmed === '<div><br></div>') return ''
+      return value
+    }
+
+    const syncEditorHtml = (value: string) => {
+      if (!editorRef.value) return
+      const html = convertToHtml(value)
+      if (html === editorRef.value.innerHTML) return
+      editorRef.value.innerHTML = html
+    }
+
+    const handleInput = () => {
+      const html = normalizeHtml(readEditorHtml())
+      const plainText = editorRef.value?.innerText?.replace(/\u00a0/g, ' ') ?? ''
+      if (html && isPlainTextHtml(html)) {
+        const trimmed = plainText.trim()
+        if (trimmed && (detectBbcodeAst(trimmed) || detectMarkdownAst(trimmed))) {
+          const converted = convertToHtml(trimmed)
+          if (editorRef.value) {
+            editorRef.value.innerHTML = converted
+          }
+          emitValue(converted)
+          return
+        }
+      }
+      emitValue(html)
+    }
+
+    const execCommand = (command: string, value?: string) => {
+      editorRef.value?.focus()
+      document.execCommand(command, false, value)
+      handleInput()
+    }
+
+    const insertHtml = (html: string) => {
+      editorRef.value?.focus()
+      document.execCommand('insertHTML', false, html)
+      handleInput()
+    }
+
+    const insertText = (text: string) => {
+      editorRef.value?.focus()
+      document.execCommand('insertText', false, text)
+      handleInput()
+    }
+
+    const toggleBold = () => execCommand('bold')
+    const toggleItalic = () => execCommand('italic')
+    const toggleUnderline = () => execCommand('underline')
+    const toggleStrike = () => execCommand('strikeThrough')
+    const insertCode = () => execCommand('formatBlock', 'pre')
+    const insertBlockquote = () => execCommand('formatBlock', 'blockquote')
+    const insertOrderedList = () => execCommand('insertOrderedList')
+    const insertUnorderedList = () => execCommand('insertUnorderedList')
+    const insertHeading = () => execCommand('formatBlock', 'h3')
+    const undoAction = () => execCommand('undo')
+    const redoAction = () => execCommand('redo')
 
     const openLinkPanel = () => {
       showLinkPanel.value = true
@@ -135,9 +339,9 @@ export default defineComponent({
       const url = linkUrl.value.trim()
       if (!url) return
       const text = linkText.value.trim() || url
-      const markup =
-        props.inputFormat === 'markdown' ? `[${text}](${url})` : `[url=${url}]${text}[/url]`
-      insertTextAtCursor(markup)
+      const safeUrl = escapeAttr(url)
+      const safeText = escapeAttr(text)
+      insertHtml(`<a href="${safeUrl}" target="_blank" rel="nofollow noopener">${safeText}</a> `)
       closePanels()
     }
 
@@ -145,8 +349,9 @@ export default defineComponent({
       const url = imageUrl.value.trim()
       if (!url) return
       const alt = imageAlt.value.trim() || 'image'
-      const markup = props.inputFormat === 'markdown' ? `![${alt}](${url})` : `[img]${url}[/img]`
-      insertTextAtCursor(markup)
+      const safeUrl = escapeAttr(url)
+      const safeAlt = escapeAttr(alt)
+      insertHtml(`<img src="${safeUrl}" alt="${safeAlt}" /> `)
       closePanels()
     }
 
@@ -172,100 +377,27 @@ export default defineComponent({
       showPluginEmojiPicker.value = true
     }
 
-    const handleEmojiSelect = (emoji: { name: string; shortcode: string }) => {
-      insertEmojiShortcode(emoji.name)
+    const handleEmojiSelect = (emoji: { name: string; shortcode: string; url: string }) => {
+      const safeUrl = escapeAttr(emoji.url)
+      const safeAlt = escapeAttr(emoji.name)
+      insertHtml(`<img src="${safeUrl}" alt=":${safeAlt}:" /> `)
       showEmojiPicker.value = false
     }
 
     const handlePluginEmojiSelect = (emoji: { name: string; url: string }) => {
-      const markup = buildImageMarkup.value(emoji.url, emoji.name)
-      insertTextAtCursor(markup)
+      const safeUrl = escapeAttr(emoji.url)
+      const safeAlt = escapeAttr(emoji.name)
+      insertHtml(`<img src="${safeUrl}" alt=":${safeAlt}:" /> `)
       showPluginEmojiPicker.value = false
     }
 
     const { handleUploadClick, handleUploadChange, fileInputRef, uploadFile } = useDiscourseUpload({
       baseUrl: props.baseUrl,
-      inputFormat: () => props.inputFormat,
-      onInsertText: insertTextAtCursor
+      inputFormat: () => 'html',
+      onInsertText: insertHtml
     })
 
-    const updateAutocompleteForTextarea = () => {
-      const el = textareaRef.value
-      if (!el) return
-      const cursor = el.selectionStart ?? el.value.length
-      const textBefore = el.value.slice(0, cursor)
-      const match = textBefore.match(/(^|\s):([a-zA-Z0-9_\u4e00-\u9fa5+-]*)$/)
-      if (!match) {
-        showEmojiAutocomplete.value = false
-        emojiSuggestions.value = []
-        return
-      }
-      const query = match[2] || ''
-      const searched = searchEmojis(query).slice(0, 12)
-      emojiSuggestions.value = searched.map(item => ({
-        id: item.id,
-        name: item.name,
-        url: item.url
-      }))
-      if (emojiSuggestions.value.length === 0) {
-        showEmojiAutocomplete.value = false
-        return
-      }
-      const rect = el.getBoundingClientRect()
-      emojiAutocompletePos.value = { x: rect.left + 12, y: rect.bottom + 8 }
-      emojiActiveIndex.value = 0
-      showEmojiAutocomplete.value = true
-    }
-
-    const handleTextareaKeydown = (event: KeyboardEvent) => {
-      if (!showEmojiAutocomplete.value || emojiSuggestions.value.length === 0) return
-      if (event.key === 'ArrowDown') {
-        event.preventDefault()
-        emojiActiveIndex.value = (emojiActiveIndex.value + 1) % emojiSuggestions.value.length
-        requestAnimationFrame(() => {
-          const host = emojiAutocompleteRef.value
-          host
-            ?.querySelector('.emoji-autocomplete-item.active')
-            ?.scrollIntoView({ block: 'nearest' })
-        })
-      } else if (event.key === 'ArrowUp') {
-        event.preventDefault()
-        emojiActiveIndex.value =
-          (emojiActiveIndex.value - 1 + emojiSuggestions.value.length) %
-          emojiSuggestions.value.length
-        requestAnimationFrame(() => {
-          const host = emojiAutocompleteRef.value
-          host
-            ?.querySelector('.emoji-autocomplete-item.active')
-            ?.scrollIntoView({ block: 'nearest' })
-        })
-      } else if (event.key === 'Enter' || event.key === 'Tab') {
-        event.preventDefault()
-        const selected = emojiSuggestions.value[emojiActiveIndex.value]
-        if (selected) {
-          insertTextAtCursor(`:${selected.name}:`)
-          showEmojiAutocomplete.value = false
-        }
-      } else if (event.key === 'Escape') {
-        event.preventDefault()
-        showEmojiAutocomplete.value = false
-      }
-    }
-
-    const handleTextareaKeyup = (event: KeyboardEvent) => {
-      if (
-        event.key === 'ArrowDown' ||
-        event.key === 'ArrowUp' ||
-        event.key === 'Enter' ||
-        event.key === 'Tab' ||
-        event.key === 'Escape'
-      ) {
-        return
-      }
-      updateAutocompleteForTextarea()
-    }
-
-    const handleTextareaPaste = async (event: ClipboardEvent) => {
+    const handleEditorPaste = async (event: ClipboardEvent) => {
       const files = Array.from(event.clipboardData?.files || [])
       if (files.length === 0) return
       event.preventDefault()
@@ -279,23 +411,40 @@ export default defineComponent({
       }
     }
 
-    watch(
-      () => props.baseUrl,
-      async value => {
-        if (!value) return
-        await ensureEmojiShortcodesLoaded(value)
-      },
-      { immediate: true }
-    )
+    const handleEditorKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') {
+        event.preventDefault()
+        insertText('  ')
+      }
+    }
 
     watch(
       () => props.modelValue,
       value => {
-        const el = textareaRef.value
-        if (el && el.value !== value) {
-          el.value = value
+        const nextValue = value || ''
+        if (!editorRef.value) return
+        if (nextValue === lastEmittedValue) return
+        const html = convertToHtml(nextValue)
+        if (html !== nextValue) {
+          syncEditorHtml(html)
+          emitValue(html)
+          return
         }
+        syncEditorHtml(nextValue)
       }
+    )
+
+    onMounted(() => {
+      const initialValue = props.modelValue || ''
+      const html = convertToHtml(initialValue)
+      syncEditorHtml(html)
+      if (html !== initialValue) {
+        emitValue(html)
+      }
+    })
+
+    const placeholderText = computed(() =>
+      props.modelValue?.trim() ? '' : '在此处输入。所见即所得模式下将输出 HTML。'
     )
 
     return () => (
@@ -342,7 +491,7 @@ export default defineComponent({
               <button class="toolbar-btn" onClick={openImagePanel} title="插入图片">
                 <PictureOutlined />
               </button>
-              <button class="toolbar-btn" onClick={insertCode} title="行内代码">
+              <button class="toolbar-btn" onClick={insertCode} title="代码块">
                 <CodeOutlined />
               </button>
             </div>
@@ -362,18 +511,18 @@ export default defineComponent({
               </button>
             </div>
           </div>
-          <textarea
-            ref={textareaRef}
-            class="prosemirror-editor-textarea d-editor-input --markdown-monospace"
-            value={props.modelValue}
-            aria-label="在此处输入。使用 Markdown、BBCode 或 HTML 进行排版。拖放或粘贴图片以插入。"
-            placeholder="在此处输入。使用 Markdown、BBCode 或 HTML 进行排版。拖放或粘贴图片以插入。"
-            autocomplete="off"
-            onInput={event => syncValue((event.target as HTMLTextAreaElement).value)}
-            onKeydown={handleTextareaKeydown}
-            onKeyup={handleTextareaKeyup}
-            onPaste={handleTextareaPaste}
-          />
+          <div class="prosemirror-editor wysiwyg-editor">
+            <div
+              ref={editorRef}
+              class="ProseMirror wysiwyg-editor-content"
+              contenteditable
+              data-placeholder={placeholderText.value}
+              aria-label="所见即所得编辑器"
+              onInput={handleInput}
+              onPaste={handleEditorPaste}
+              onKeydown={handleEditorKeydown}
+            />
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -493,32 +642,6 @@ export default defineComponent({
                   </button>
                 </div>
               </div>
-            </div>
-          ) : null}
-          {showEmojiAutocomplete.value && emojiSuggestions.value.length ? (
-            <div
-              ref={emojiAutocompleteRef}
-              class="emoji-autocomplete"
-              style={
-                emojiAutocompletePos.value
-                  ? {
-                      left: `${emojiAutocompletePos.value.x}px`,
-                      top: `${emojiAutocompletePos.value.y}px`
-                    }
-                  : {}
-              }
-            >
-              {emojiSuggestions.value.map((emoji, index) => (
-                <button
-                  key={emoji.id}
-                  class={['emoji-autocomplete-item', { active: index === emojiActiveIndex.value }]}
-                  onMousedown={event => event.preventDefault()}
-                  onClick={() => insertTextAtCursor(`:${emoji.name}:`)}
-                >
-                  <img src={emoji.url} alt={emoji.name} />
-                  <span>:{emoji.name}:</span>
-                </button>
-              ))}
             </div>
           ) : null}
         </div>

@@ -25,5 +25,23 @@
       "createdAt": "2025-11-29T05:02:00.301",
       "updatedAt": "2025-11-29T05:02:00.301"
     }
+  ],
+  "src/options/components/discourse/WysiwygEditor.tsx": [
+    {
+      "id": "notebook-1770097037340_41sjk8lld",
+      "filePath": "src/options/components/discourse/WysiwygEditor.tsx",
+      "note": "WYSIWYG 编辑器基于 contenteditable + execCommand，输出 HTML 并直接写入 raw/modelValue；上传/表情插入走 HTML 片段。若需切换为 Markdown/BBCode 或禁用 HTML，必须同步调整 inputFormat + 插入逻辑。",
+      "createdAt": "2026-02-03T13:37:17.340",
+      "updatedAt": "2026-02-03T13:37:17.340"
+    }
+  ],
+  "src/options/components/discourse/composables/useDiscourseUpload.ts": [
+    {
+      "id": "notebook-1770097037341_lvzevc2s9",
+      "filePath": "src/options/components/discourse/composables/useDiscourseUpload.ts",
+      "note": "上传插入文本支持 html/markdown/bbcode 三种格式；html 分支会生成 <img>/<a> 标签并进行属性转义。修改上传输出时需保持三种格式一致性。",
+      "createdAt": "2026-02-03T13:37:17.341",
+      "updatedAt": "2026-02-03T13:37:17.341"
+    }
   ]
 }

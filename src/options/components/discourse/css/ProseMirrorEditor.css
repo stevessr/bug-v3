@@ -72,6 +72,15 @@
   word-break: break-word;
 }
 
+.wysiwyg-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+
+.wysiwyg-editor-content:focus::before {
+  content: '';
+}
+
 .prosemirror-editor-textarea {
   width: 100%;
   min-height: 220px;
@@ -122,9 +131,8 @@
   background: #1f2937;
   padding: 0.1rem 0.25rem;
   border-radius: 0.25rem;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
   font-size: 0.875em;
 }
 
@@ -163,6 +171,125 @@
 
 .hidden-upload-field {
   display: none;
+}
+
+.editor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.editor-modal-card {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor-modal-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.editor-modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-modal-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.editor-modal-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.editor-modal-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.editor-modal-preview {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-modal-preview-label {
+  flex-shrink: 0;
+}
+
+.editor-modal-preview-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.editor-modal-preview-placeholder {
+  color: #9ca3af;
+}
+
+.editor-modal-preview-image {
+  max-height: 120px;
+  max-width: 220px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.editor-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.editor-modal-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.2s;
+}
+
+.editor-modal-btn:hover {
+  background: #f3f4f6;
+}
+
+.editor-modal-btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.editor-modal-btn.primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.editor-modal-btn:disabled,
+.editor-modal-btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .toolbar-panel {
