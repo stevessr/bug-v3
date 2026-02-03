@@ -314,26 +314,6 @@ export default defineComponent({
                     </svg>
                   </button>
                 </Dropdown>
-                {showIgnore.value && (
-                  <button
-                    class="btn btn-icon-text post-action-menu__ignore btn-flat"
-                    title={isTopicMuted.value ? '已忽略此话题通知' : '忽略此话题通知'}
-                    type="button"
-                    disabled={isTopicMuted.value}
-                    onClick={handleIgnoreTopic}
-                  >
-                    <svg
-                      class="fa d-icon d-icon-bell-slash svg-icon fa-width-auto svg-string"
-                      width="1em"
-                      height="1em"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <use href="#discourse-bell-slash"></use>
-                    </svg>
-                    <span class="d-button-label">{isTopicMuted.value ? '已忽略' : '忽略'}</span>
-                  </button>
-                )}
                 <button
                   class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
                   title="开始撰写对此帖子的回复"
