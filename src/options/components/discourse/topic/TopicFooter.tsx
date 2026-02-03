@@ -35,9 +35,11 @@ export default defineComponent({
     notificationLevel: { type: Number as () => number | null, default: null },
     bookmarked: { type: Boolean, default: false },
     canAssign: { type: Boolean, default: false },
-    loading: { type: Boolean, default: false }
+    loading: { type: Boolean, default: false },
+    aiAvailable: { type: Boolean, default: true },
+    aiLoading: { type: Boolean, default: false }
   },
-  emits: ['changeLevel', 'bookmark', 'flag', 'assign', 'reply'],
+  emits: ['changeLevel', 'bookmark', 'flag', 'assign', 'reply', 'aiSummary'],
   setup(props, { emit }) {
     const levelOption = computed(() => {
       const level = props.notificationLevel ?? 1
@@ -76,6 +78,11 @@ export default defineComponent({
           {props.canAssign && (
             <Button size="small" onClick={() => emit('assign')} disabled={props.loading}>
               指定
+            </Button>
+          )}
+          {props.aiAvailable && (
+            <Button size="small" onClick={() => emit('aiSummary')} loading={props.aiLoading}>
+              AI 总结
             </Button>
           )}
           <Tooltip title="回复此话题">

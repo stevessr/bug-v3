@@ -10,6 +10,14 @@
 .topic-aside__inner {
   position: sticky;
   top: 16px;
+  align-self: flex-start;
+  max-height: calc(100vh - 32px);
+}
+
+.topic-aside {
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
 }
 
 .topic-timeline {
@@ -55,14 +63,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 180px;
+  height: 220px;
+  width: 18px;
+  position: relative;
 }
 
-.topic-timeline__track input[type='range'] {
-  -webkit-appearance: slider-vertical;
-  writing-mode: bt-lr;
-  height: 180px;
-  width: 18px;
+.topic-timeline__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 999px;
+}
+
+.topic-timeline__thumb {
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  cursor: grab;
+}
+
+.topic-timeline__thumb.is-dragging {
+  cursor: grabbing;
+  background: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .topic-timeline__current {
