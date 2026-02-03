@@ -144,6 +144,10 @@
   background: #3b82f6;
 }
 
+.hidden-upload-field {
+  display: none;
+}
+
 .emoji-autocomplete {
   position: fixed;
   z-index: 10000;

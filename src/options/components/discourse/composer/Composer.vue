@@ -14,7 +14,7 @@ import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import TagPill from '../layout/TagPill.vue'
-import ProseMirrorEditor from '../ProseMirrorEditor.vue'
+import ProseMirrorEditor from '../ProseMirrorEditor'
 
 type ComposerMode = 'topic' | 'reply' | 'edit'
 type EditMode = 'edit' | 'preview' | 'split'

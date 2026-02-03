@@ -8,6 +8,7 @@ export function setupDiscourseUploadHandler() {
     ;(window as any).chrome.runtime.onMessage.addListener(async (message: any) => {
       if (message && message.action === 'uploadBlobToDiscourse') {
         try {
+          const requestId = message.requestId || null
           const filename = message.filename || 'image.jpg'
           const mimeType = message.mimeType || 'image/jpeg'
           const arrayBuffer = message.arrayBuffer
@@ -48,21 +49,24 @@ export function setupDiscourseUploadHandler() {
             ;(window as any).chrome.runtime.sendMessage({
               type: 'UPLOAD_RESULT',
               success: false,
-              details: data
+              details: data,
+              requestId
             })
           } else {
             const data = await resp.json()
             ;(window as any).chrome.runtime.sendMessage({
               type: 'UPLOAD_RESULT',
               success: true,
-              data
+              data,
+              requestId
             })
           }
         } catch (e) {
           ;(window as any).chrome.runtime.sendMessage({
             type: 'UPLOAD_RESULT',
             success: false,
-            error: String(e)
+            error: String(e),
+            requestId: message?.requestId || null
           })
         }
       }
