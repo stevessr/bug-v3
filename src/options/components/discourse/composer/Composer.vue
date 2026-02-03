@@ -48,7 +48,7 @@ const tagsLoading = ref(false)
 const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
 const editMode = ref<EditMode>('edit')
 const editReason = ref('')
-const inputFormat = ref<'markdown' | 'bbcode'>('bbcode')
+const inputFormat = ref<'markdown' | 'bbcode'>('markdown')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -90,6 +90,12 @@ watch(
 
 const showEditor = computed(() => editMode.value !== 'preview')
 const showPreview = computed(() => editMode.value !== 'edit')
+const previewFormat = computed(() => {
+  const value = raw.value || ''
+  const hasBbcode =
+    /\\[(?:b|i|u|s|img|url|quote|code|list|spoiler|size|color)(?:=[^\\]]+)?\\]/i.test(value)
+  return hasBbcode ? 'bbcode' : 'markdown'
+})
 
 const getImageUrl = (url?: string | null) => {
   if (!url) return ''
@@ -212,7 +218,7 @@ const normalizeTreeNode = (node: any) => {
 
 const previewHtml = computed(() => {
   emojiReadyToken.value
-  if (inputFormat.value === 'bbcode') {
+  if (previewFormat.value === 'bbcode') {
     return renderBBCodeWithMath(raw.value)
   } else {
     return renderMarkdown(raw.value)
@@ -423,10 +429,6 @@ watch(categoryId, () => {
         </template>
       </div>
       <div class="flex items-center gap-2">
-        <a-select v-model:value="inputFormat" size="small" style="width: 100px">
-          <a-select-option value="bbcode">BBCode</a-select-option>
-          <a-select-option value="markdown">Markdown</a-select-option>
-        </a-select>
         <a-button
           size="small"
           type="text"

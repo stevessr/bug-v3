@@ -365,8 +365,11 @@ export default defineComponent({
           </div>
           <textarea
             ref={textareaRef}
-            class="prosemirror-editor-textarea"
+            class="prosemirror-editor-textarea d-editor-input --markdown-monospace"
             value={props.modelValue}
+            aria-label="在此处输入。使用 Markdown、BBCode 或 HTML 进行排版。拖放或粘贴图片以插入。"
+            placeholder="在此处输入。使用 Markdown、BBCode 或 HTML 进行排版。拖放或粘贴图片以插入。"
+            autocomplete="off"
             onInput={event => syncValue((event.target as HTMLTextAreaElement).value)}
             onKeydown={handleTextareaKeydown}
             onKeyup={handleTextareaKeyup}
