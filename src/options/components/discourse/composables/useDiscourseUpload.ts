@@ -103,27 +103,8 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
-    isUploading.value = true
     try {
-      const arrayBuffer = await file.arrayBuffer()
-      const response = await sendUploadMessage({
-        filename: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        arrayBuffer,
-        discourseBase: options.baseUrl
-      })
-      const url =
-        response?.url && response.url.startsWith('http')
-          ? response.url
-          : response?.url
-            ? `${options.baseUrl?.replace(/\\$/, '')}${response.url}`
-            : response?.short_url || ''
-      if (!url) {
-        throw new Error('上传成功，但未返回 URL')
-      }
-      const isImage = file.type.startsWith('image/')
-      const markup = isImage ? buildImageMarkup(url, file.name) : buildFileMarkup(url, file.name)
-      options.onInsertText(markup)
+      await uploadFile(file)
     } catch (error) {
       console.error('Upload failed:', error)
     } finally {
@@ -132,10 +113,34 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
     }
   }
 
+  const uploadFile = async (file: File) => {
+    isUploading.value = true
+    const arrayBuffer = await file.arrayBuffer()
+    const response = await sendUploadMessage({
+      filename: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      arrayBuffer,
+      discourseBase: options.baseUrl
+    })
+    const url =
+      response?.url && response.url.startsWith('http')
+        ? response.url
+        : response?.url
+          ? `${options.baseUrl?.replace(/\\$/, '')}${response.url}`
+          : response?.short_url || ''
+    if (!url) {
+      throw new Error('上传成功，但未返回 URL')
+    }
+    const isImage = file.type.startsWith('image/')
+    const markup = isImage ? buildImageMarkup(url, file.name) : buildFileMarkup(url, file.name)
+    options.onInsertText(markup)
+  }
+
   return {
     fileInputRef,
     isUploading,
     handleUploadClick,
-    handleUploadChange
+    handleUploadChange,
+    uploadFile
   }
 }

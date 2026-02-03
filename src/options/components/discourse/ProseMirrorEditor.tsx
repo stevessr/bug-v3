@@ -1,5 +1,5 @@
 import { defineComponent, ref, watch, computed } from 'vue'
-import { EditorState } from 'prosemirror-state'
+import { EditorState, Plugin } from 'prosemirror-state'
 import { schema as basicSchema } from 'prosemirror-schema-basic'
 import {
   toggleMark,
@@ -242,7 +242,7 @@ export default defineComponent({
       }
     })
 
-    const { handleUploadClick, handleUploadChange, fileInputRef } = useDiscourseUpload({
+    const { handleUploadClick, handleUploadChange, fileInputRef, uploadFile } = useDiscourseUpload({
       baseUrl: props.baseUrl,
       inputFormat: () => props.inputFormat,
       onInsertText: insertTextAtCursor
@@ -276,6 +276,25 @@ export default defineComponent({
       return EditorState.create({
         doc: docNode,
         plugins: [
+          new Plugin({
+            props: {
+              handlePaste: (_view, event) => {
+                const files = Array.from(event.clipboardData?.files || [])
+                if (files.length === 0) return false
+                event.preventDefault()
+                void (async () => {
+                  for (const file of files) {
+                    try {
+                      await uploadFile(file)
+                    } catch (error) {
+                      console.error('Paste upload failed:', error)
+                    }
+                  }
+                })()
+                return true
+              }
+            }
+          }),
           history(),
           keymap({
             'Mod-z': undo,
