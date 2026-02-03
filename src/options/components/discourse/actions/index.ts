@@ -1,6 +1,6 @@
 // Topic actions
 export * from './topic'
-export { createTopic, replyToTopic } from './topic'
+export { createTopic, replyToTopic, setTopicNotificationLevel } from './topic'
 export type { CreateTopicPayload, ReplyPayload } from './topic'
 
 // Post actions

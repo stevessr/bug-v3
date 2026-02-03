@@ -58,3 +58,24 @@ export async function replyToTopic(baseUrl: string, payload: ReplyPayload) {
   }
   return data
 }
+
+export async function setTopicNotificationLevel(baseUrl: string, topicId: number, level: number) {
+  const params = new URLSearchParams()
+  params.append('notification_level', String(level))
+
+  const result = await pageFetch<any>(`${baseUrl}/t/${topicId}/notifications`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Discourse-Logged-In': 'true'
+    },
+    body: params.toString()
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    const message = data?.errors?.join(', ') || data?.error || '设置通知级别失败'
+    throw new Error(message)
+  }
+  return data
+}

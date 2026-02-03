@@ -292,9 +292,12 @@ export interface DiscourseTopicDetail {
   title: string
   fancy_title: string
   posts_count: number
+  highest_post_number?: number
   views: number
   like_count: number
   created_at: string
+  last_posted_at?: string
+  notification_level?: number
   post_stream: {
     posts: DiscoursePost[]
     stream: number[]

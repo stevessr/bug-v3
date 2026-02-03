@@ -24,10 +24,9 @@ import {
   togglePostLike,
   toggleBookmark,
   flagPost,
-  assignPost,
-  editPost,
   deletePost,
-  toggleWiki
+  toggleWiki,
+  setTopicNotificationLevel
 } from '../actions'
 
 import TopicHeader from './TopicHeader'
@@ -335,7 +334,8 @@ export default defineComponent({
       }
     }
 
-    const handleAssign = async (post: DiscoursePost) => {
+    const handleAssign = async (_post: DiscoursePost) => {
+      void _post
       message.info('指定功能需要选择用户，请在 Web 界面中使用')
     }
 
@@ -372,6 +372,17 @@ export default defineComponent({
       } catch (error) {
         console.warn('[DiscourseBrowser] wiki failed:', error)
         message.error('Wiki 操作失败')
+      }
+    }
+
+    const handleIgnoreTopic = async () => {
+      try {
+        await setTopicNotificationLevel(props.baseUrl, props.topic.id, 0)
+        props.topic.notification_level = 0
+        message.success('已忽略此话题通知')
+      } catch (error) {
+        console.warn('[DiscourseBrowser] ignore topic failed:', error)
+        message.error('忽略话题通知失败')
       }
     }
 
@@ -667,6 +678,7 @@ export default defineComponent({
                   isLiking={likingPostIds.value.has(post.id)}
                   currentUser={props.currentUser}
                   currentUsername={props.currentUsername}
+                  topicNotificationLevel={props.topic.notification_level ?? null}
                   onOpenUser={handleUserClick}
                   onReplyTo={handleReplyClick}
                   onToggleLike={toggleLike}
@@ -679,6 +691,7 @@ export default defineComponent({
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onWiki={handleWiki}
+                  onIgnoreTopic={handleIgnoreTopic}
                 />
                 {isRepliesExpanded(post.post_number) && (
                   <div class="pl-6 mt-3 space-y-3">

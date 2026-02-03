@@ -815,6 +815,7 @@ export function useDiscourseBrowser() {
     loadMoreTopics,
     switchActivityTab,
     loadMoreActivity,
+    loadActivityData,
     switchMessagesTab,
     loadMoreMessages,
     loadMoreFollowFeed,

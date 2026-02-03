@@ -26,7 +26,8 @@ export default defineComponent({
       required: true
     },
     isLiking: { type: Boolean, required: true },
-    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null }
+    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
+    topicNotificationLevel: { type: Number as () => number | null, default: null }
   },
   emits: [
     'openUser',
@@ -40,7 +41,8 @@ export default defineComponent({
     'assign',
     'edit',
     'delete',
-    'wiki'
+    'wiki',
+    'ignoreTopic'
   ],
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
@@ -61,6 +63,9 @@ export default defineComponent({
     const canAssign = computed(() => {
       return props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
     })
+
+    const isTopicMuted = computed(() => props.topicNotificationLevel === 0)
+    const showIgnore = computed(() => props.post.post_number === 1)
 
     const handleUserClick = (username: string) => {
       emit('openUser', username)
@@ -128,6 +133,10 @@ export default defineComponent({
 
     const handleWiki = () => {
       emit('wiki', props.post)
+    }
+
+    const handleIgnoreTopic = () => {
+      emit('ignoreTopic')
     }
 
     return () => (
@@ -314,6 +323,26 @@ export default defineComponent({
                     </svg>
                   </button>
                 </Dropdown>
+                {showIgnore.value && (
+                  <button
+                    class="btn btn-icon-text post-action-menu__ignore btn-flat"
+                    title={isTopicMuted.value ? '已忽略此话题通知' : '忽略此话题通知'}
+                    type="button"
+                    disabled={isTopicMuted.value}
+                    onClick={handleIgnoreTopic}
+                  >
+                    <svg
+                      class="fa d-icon d-icon-bell-slash svg-icon fa-width-auto svg-string"
+                      width="1em"
+                      height="1em"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <use href="#discourse-bell-slash"></use>
+                    </svg>
+                    <span class="d-button-label">{isTopicMuted.value ? '已忽略' : '忽略'}</span>
+                  </button>
+                )}
                 <button
                   class="btn btn-icon-text post-action-menu__reply reply create fade-out btn-flat"
                   title="开始撰写对此帖子的回复"
