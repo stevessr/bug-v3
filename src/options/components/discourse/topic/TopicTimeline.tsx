@@ -39,13 +39,13 @@ export default defineComponent({
 
     return () => (
       <div class="topic-timeline">
-        <div class="topic-timeline__header">
-          <div class="topic-timeline__title">时间轴</div>
-          <div class="topic-timeline__meta">
-            #{localValue.value} / {props.maxPostNumber}
-          </div>
+        <div class="topic-timeline__icon">
+          <svg class="topic-timeline__icon-svg" viewBox="0 0 24 24" fill="currentColor">
+            <use href="#bookmark" />
+          </svg>
         </div>
-        <div class="topic-timeline__range">
+        <div class="topic-timeline__label topic-timeline__label--top">{maxLabel.value}</div>
+        <div class="topic-timeline__track">
           <input
             type="range"
             min={1}
@@ -58,18 +58,17 @@ export default defineComponent({
             }}
           />
         </div>
-        <div class="topic-timeline__labels">
-          <span>{minLabel.value}</span>
-          <span>{maxLabel.value}</span>
-        </div>
-        {currentPost.value && (
-          <div class="topic-timeline__current">
-            <div class="topic-timeline__current-label">当前帖时间</div>
+        <div class="topic-timeline__current">
+          <div class="topic-timeline__current-count">
+            {localValue.value} / {props.maxPostNumber}
+          </div>
+          {currentPost.value && (
             <div class="topic-timeline__current-time">
               {formatTime(currentPost.value.created_at)}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        <div class="topic-timeline__label topic-timeline__label--bottom">{minLabel.value}</div>
       </div>
     )
   }
