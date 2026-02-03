@@ -30,9 +30,9 @@
     {
       "id": "notebook-1770097037340_41sjk8lld",
       "filePath": "src/options/components/discourse/WysiwygEditor.tsx",
-      "note": "WYSIWYG 编辑器基于 contenteditable + execCommand，输出 HTML 并直接写入 raw/modelValue；上传/表情插入走 HTML 片段。若需切换为 Markdown/BBCode 或禁用 HTML，必须同步调整 inputFormat + 插入逻辑。",
+      "note": "WYSIWYG 编辑器基于 contenteditable + execCommand，输出 HTML 并直接写入 raw/modelValue；目前链接/图片/上传默认插入 Markdown 文本，表情仍插入 HTML img 片段。如需调整输出格式，需同步调整 inputFormat 与对应插入逻辑。",
       "createdAt": "2026-02-03T13:37:17.340",
-      "updatedAt": "2026-02-03T13:37:17.340"
+      "updatedAt": "2026-02-03T15:33:46.750"
     }
   ],
   "src/options/components/discourse/composables/useDiscourseUpload.ts": [

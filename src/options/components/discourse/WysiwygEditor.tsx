@@ -308,15 +308,92 @@ export default defineComponent({
       handleInput()
     }
 
-    const toggleBold = () => execCommand('bold')
-    const toggleItalic = () => execCommand('italic')
-    const toggleUnderline = () => execCommand('underline')
-    const toggleStrike = () => execCommand('strikeThrough')
+    const wrapSelection = (prefix: string, suffix: string) => {
+      const editor = editorRef.value
+      if (!editor) {
+        insertText(`${prefix}${suffix}`)
+        return
+      }
+      editor.focus()
+      const selection = window.getSelection()
+      if (
+        !selection ||
+        selection.rangeCount === 0 ||
+        !selection.anchorNode ||
+        !editor.contains(selection.anchorNode)
+      ) {
+        insertText(`${prefix}${suffix}`)
+        return
+      }
+      const range = selection.getRangeAt(0)
+      const selectedText = range.toString()
+      const textNode = document.createTextNode(`${prefix}${selectedText}${suffix}`)
+      range.deleteContents()
+      range.insertNode(textNode)
+      const newRange = document.createRange()
+      const cursorPosition = selectedText ? (textNode.nodeValue?.length ?? 0) : prefix.length
+      newRange.setStart(textNode, cursorPosition)
+      newRange.setEnd(textNode, cursorPosition)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+      handleInput()
+    }
+
+    const toggleBold = () => wrapSelection('**', '**')
+    const toggleItalic = () => wrapSelection('*', '*')
+    const toggleUnderline = () => wrapSelection('<u>', '</u>')
+    const toggleStrike = () => wrapSelection('~~', '~~')
     const insertCode = () => execCommand('formatBlock', 'pre')
     const insertBlockquote = () => execCommand('formatBlock', 'blockquote')
+
     const insertOrderedList = () => execCommand('insertOrderedList')
     const insertUnorderedList = () => execCommand('insertUnorderedList')
-    const insertHeading = () => execCommand('formatBlock', 'h3')
+
+    const insertHeadingLevel = (level: number) => {
+      const hashes = '#'.repeat(level)
+      wrapSelection(`\n${hashes} `, '\n')
+    }
+
+    const insertTable = () => {
+      insertText(`\n| 列 1 | 列 2 |\n| --- | --- |\n| 内容 1 | 内容 2 |\n`)
+    }
+
+    const insertDetails = () => {
+      wrapSelection('[details="详细信息"]\n', '\n[/details]')
+    }
+
+    const insertSpoiler = () => {
+      wrapSelection('[spoiler]', '[/spoiler]')
+    }
+
+    const insertPoll = () => {
+      insertText(`\n[poll]\n* 选项一\n* 选项二\n[/poll]\n`)
+    }
+
+    const insertFootnote = () => {
+      wrapSelection('^[', ']')
+    }
+
+    const insertMathInline = () => {
+      wrapSelection('$', '$')
+    }
+
+    const insertMathBlock = () => {
+      insertText(`\n$$\nE=mc^2\n$$\n`)
+    }
+
+    const insertMermaid = () => {
+      insertText(`\n\`\`\`mermaid height=200\ngraph TD;\n  A --> B;\n\`\`\`\n`)
+    }
+
+    const insertScrollable = () => {
+      insertText(`\n[wrap=scrollable]\n在这里填写内容\n[/wrap]\n`)
+    }
+
+    const insertAppWrap = () => {
+      insertText(`\n[wrap=app]\n在这里填写内容\n[/wrap]\n`)
+    }
+
     const undoAction = () => execCommand('undo')
     const redoAction = () => execCommand('redo')
 
@@ -339,9 +416,7 @@ export default defineComponent({
       const url = linkUrl.value.trim()
       if (!url) return
       const text = linkText.value.trim() || url
-      const safeUrl = escapeAttr(url)
-      const safeText = escapeAttr(text)
-      insertHtml(`<a href="${safeUrl}" target="_blank" rel="nofollow noopener">${safeText}</a> `)
+      insertText(`[${text}](${url}) `)
       closePanels()
     }
 
@@ -349,9 +424,7 @@ export default defineComponent({
       const url = imageUrl.value.trim()
       if (!url) return
       const alt = imageAlt.value.trim() || 'image'
-      const safeUrl = escapeAttr(url)
-      const safeAlt = escapeAttr(alt)
-      insertHtml(`<img src="${safeUrl}" alt="${safeAlt}" /> `)
+      insertText(`![${alt}](${url}) `)
       closePanels()
     }
 
@@ -393,8 +466,8 @@ export default defineComponent({
 
     const { handleUploadClick, handleUploadChange, fileInputRef, uploadFile } = useDiscourseUpload({
       baseUrl: props.baseUrl,
-      inputFormat: () => 'html',
-      onInsertText: insertHtml
+      inputFormat: () => 'markdown',
+      onInsertText: insertText
     })
 
     const handleEditorPaste = async (event: ClipboardEvent) => {
@@ -506,8 +579,49 @@ export default defineComponent({
               <button class="toolbar-btn" onClick={insertUnorderedList} title="无序列表">
                 <UnorderedListOutlined />
               </button>
-              <button class="toolbar-btn" onClick={insertHeading} title="标题">
-                <BgColorsOutlined />
+            </div>
+            <div class="toolbar-divider" />
+            <div class="toolbar-group">
+              <button class="toolbar-btn" onClick={() => insertHeadingLevel(1)} title="一级标题">
+                H1
+              </button>
+              <button class="toolbar-btn" onClick={() => insertHeadingLevel(2)} title="二级标题">
+                H2
+              </button>
+              <button class="toolbar-btn" onClick={() => insertHeadingLevel(3)} title="三级标题">
+                H3
+              </button>
+              <button class="toolbar-btn" onClick={insertTable} title="表格">
+                表格
+              </button>
+              <button class="toolbar-btn" onClick={insertDetails} title="隐藏详细信息">
+                详情
+              </button>
+              <button class="toolbar-btn" onClick={insertSpoiler} title="剧透">
+                剧透
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-btn" onClick={insertPoll} title="投票">
+                投票
+              </button>
+              <button class="toolbar-btn" onClick={insertFootnote} title="脚注">
+                脚注
+              </button>
+              <button class="toolbar-btn" onClick={insertMathInline} title="公式（行内）">
+                公式
+              </button>
+              <button class="toolbar-btn" onClick={insertMathBlock} title="公式（块）">
+                公式块
+              </button>
+              <button class="toolbar-btn" onClick={insertMermaid} title="Mermaid 图表">
+                Mermaid
+              </button>
+              <button class="toolbar-btn" onClick={insertScrollable} title="滚动内容">
+                滚动
+              </button>
+              <button class="toolbar-btn" onClick={insertAppWrap} title="应用包装">
+                应用
               </button>
             </div>
           </div>
@@ -523,6 +637,7 @@ export default defineComponent({
               onKeydown={handleEditorKeydown}
             />
           </div>
+
           <input
             ref={fileInputRef}
             type="file"
