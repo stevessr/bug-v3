@@ -317,8 +317,6 @@ function renderMarkdown(input: string) {
   })
 }
 
-
-
 function renderHtml(input: string) {
   if (!input) return ''
   return DOMPurify.sanitize(input, {
@@ -642,16 +640,6 @@ watch(categoryId, () => {
           :baseUrl="props.baseUrl"
           class="composer-editor-input"
         />
-        <div class="text-xs text-gray-500">
-          <template v-if="inputFormat === 'bbcode'">
-            BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]
-            图片地址 [/img] [quote] 引用 [/quote] [spoiler] 剧透模糊 [/spoiler]
-          </template>
-          <template v-else>
-            Markdown: **粗体** *斜体* ~~删除~~ `代码` [链接](url) ![图片](url)
-          </template>
-          · LaTeX: $...$ 行内 / $$...$$ 块级
-        </div>
       </div>
 
       <div
@@ -667,11 +655,7 @@ watch(categoryId, () => {
     </div>
 
     <div class="composer-footer px-4 pb-4 space-y-2">
-      <a-input
-        v-if="mode === 'edit'"
-        v-model:value="editReason"
-        placeholder="编辑原因（可选）"
-      />
+      <a-input v-if="mode === 'edit'" v-model:value="editReason" placeholder="编辑原因（可选）" />
       <div v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</div>
       <div v-if="successMessage" class="text-sm text-green-600">{{ successMessage }}</div>
       <div class="flex items-center justify-end gap-2">
