@@ -92,9 +92,9 @@ const showEditor = computed(() => editMode.value !== 'preview')
 const showPreview = computed(() => editMode.value !== 'edit')
 const previewFormat = computed(() => {
   const value = raw.value || ''
-  const hasBbcode =
-    /\\[(?:b|i|u|s|img|url|quote|code|list|spoiler|size|color)(?:=[^\\]]+)?\\]/i.test(value)
-  return hasBbcode ? 'bbcode' : 'markdown'
+  if (detectHtmlAst(value)) return 'html'
+  if (detectBbcodeAst(value)) return 'bbcode'
+  return 'markdown'
 })
 
 const getImageUrl = (url?: string | null) => {
@@ -220,6 +220,8 @@ const previewHtml = computed(() => {
   emojiReadyToken.value
   if (previewFormat.value === 'bbcode') {
     return renderBBCodeWithMath(raw.value)
+  } else if (previewFormat.value === 'html') {
+    return renderHtml(raw.value)
   } else {
     return renderMarkdown(raw.value)
   }
@@ -315,6 +317,85 @@ function renderMarkdown(input: string) {
   })
 }
 
+
+
+function renderHtml(input: string) {
+  if (!input) return ''
+  return DOMPurify.sanitize(input, {
+    ADD_TAGS: [
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mn',
+      'mo',
+      'annotation',
+      'annotation-xml',
+      'svg',
+      'path',
+      'img'
+    ],
+    ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+  })
+}
+
+function detectHtmlAst(input: string) {
+  if (!input || !input.includes('<')) return false
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(input, 'text/html')
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT)
+    while (walker.nextNode()) {
+      const el = walker.currentNode
+      const tag = (el as Element).tagName.toLowerCase()
+      if (tag !== 'br') return true
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+function detectBbcodeAst(input: string) {
+  if (!input || !input.includes('[')) return false
+  const allowed = new Set([
+    'b',
+    'i',
+    'u',
+    's',
+    'img',
+    'url',
+    'quote',
+    'code',
+    'list',
+    'spoiler',
+    'size',
+    'color',
+    'center',
+    'left',
+    'right',
+    'sub',
+    'sup'
+  ])
+  const stack: string[] = []
+  const regex = /\[\/?([a-z0-9]+)(?:=[^\]]+)?\]/gi
+  let match: RegExpExecArray | null
+  let found = false
+  while ((match = regex.exec(input))) {
+    const rawTag = match[1]?.toLowerCase()
+    if (!rawTag || !allowed.has(rawTag)) continue
+    found = true
+    const isClosing = match[0].startsWith('[/')
+    if (isClosing) {
+      if (stack.length && stack[stack.length - 1] === rawTag) {
+        stack.pop()
+      }
+    } else {
+      stack.push(rawTag)
+    }
+  }
+  return found
+}
 async function handleSubmit() {
   if (!raw.value.trim()) {
     errorMessage.value = '请输入内容'
