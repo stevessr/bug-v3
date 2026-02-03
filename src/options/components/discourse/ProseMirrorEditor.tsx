@@ -1,16 +1,4 @@
 import { defineComponent, ref, watch, computed } from 'vue'
-import { EditorState, Plugin } from 'prosemirror-state'
-import { schema as basicSchema } from 'prosemirror-schema-basic'
-import {
-  toggleMark,
-  selectParentNode,
-  lift,
-  wrapIn,
-  setBlockType
-} from 'prosemirror-commands'
-import { baseKeymap } from 'prosemirror-commands'
-import { history, undo, redo } from 'prosemirror-history'
-import { keymap } from 'prosemirror-keymap'
 import {
   RollbackOutlined,
   RedoOutlined,
@@ -31,8 +19,7 @@ import {
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
 import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
-import { useProseMirrorView } from './composables/useProseMirrorView'
-import { useEmojiAutocomplete } from './composables/useEmojiAutocomplete'
+import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
 import './css/EmojiPicker.css'
 import './css/PluginEmojiPicker.css'
@@ -53,7 +40,7 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
-    const editorViewRef = ref<ReturnType<typeof useProseMirrorView>['editorView']['value']>(null)
+    const textareaRef = ref<HTMLTextAreaElement | null>(null)
     const showEmojiPicker = ref(false)
     const emojiPickerPos = ref<{ x: number; y: number } | null>(null)
     const showPluginEmojiPicker = ref(false)
@@ -65,40 +52,69 @@ export default defineComponent({
     const imageUrl = ref('https://')
     const imageAlt = ref('')
 
-    const toggleBold = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      toggleMark(basicSchema.marks.strong)(editorView.state, editorView.dispatch)
-      editorView.focus()
+    const showEmojiAutocomplete = ref(false)
+    const emojiSuggestions = ref<Array<{ id: string; name: string; url: string }>>([])
+    const emojiActiveIndex = ref(0)
+    const emojiAutocompletePos = ref<{ x: number; y: number } | null>(null)
+    const emojiAutocompleteRef = ref<HTMLElement | null>(null)
+
+    const syncValue = (value: string) => {
+      emit('update:modelValue', value)
     }
 
-    const toggleItalic = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      toggleMark(basicSchema.marks.em)(editorView.state, editorView.dispatch)
-      editorView.focus()
+    const insertTextAtCursor = (text: string) => {
+      const el = textareaRef.value
+      if (!el) return
+      const start = el.selectionStart ?? el.value.length
+      const end = el.selectionEnd ?? el.value.length
+      const next = `${el.value.slice(0, start)}${text}${el.value.slice(end)}`
+      el.value = next
+      const cursor = start + text.length
+      el.setSelectionRange(cursor, cursor)
+      syncValue(next)
+      el.focus()
     }
 
-    const toggleUnderline = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      toggleMark(basicSchema.marks.underline)(editorView.state, editorView.dispatch)
-      editorView.focus()
+    const wrapSelection = (before: string, after: string) => {
+      const el = textareaRef.value
+      if (!el) return
+      const start = el.selectionStart ?? 0
+      const end = el.selectionEnd ?? 0
+      const selected = el.value.slice(start, end)
+      const next = `${el.value.slice(0, start)}${before}${selected}${after}${el.value.slice(end)}`
+      el.value = next
+      const cursor = end + before.length + after.length
+      el.setSelectionRange(cursor, cursor)
+      syncValue(next)
+      el.focus()
     }
 
-    const toggleStrike = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      toggleMark(basicSchema.marks.strike)(editorView.state, editorView.dispatch)
-      editorView.focus()
+    const toggleBold = () => wrapSelection('[b]', '[/b]')
+    const toggleItalic = () => wrapSelection('[i]', '[/i]')
+    const toggleUnderline = () => wrapSelection('[u]', '[/u]')
+    const toggleStrike = () => wrapSelection('[s]', '[/s]')
+    const insertCode = () => wrapSelection('[code]', '[/code]')
+    const insertBlockquote = () => wrapSelection('[quote]', '[/quote]')
+    const insertOrderedList = () => insertTextAtCursor('[list=1]\n[*]item\n[/list]')
+    const insertUnorderedList = () => insertTextAtCursor('[list]\n[*]item\n[/list]')
+    const insertHeading = () => insertTextAtCursor('[size=20][b]标题[/b][/size]')
+    const undoAction = () => document.execCommand('undo')
+    const redoAction = () => document.execCommand('redo')
+
+    const insertEmojiShortcode = (name: string) => {
+      insertTextAtCursor(`:${name}:`)
     }
 
-    const insertCode = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      toggleMark(basicSchema.marks.code)(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
+    const buildImageMarkup = computed(() => {
+      return (url: string, filename?: string) => {
+        const safeUrl = url
+        if (props.inputFormat === 'markdown') {
+          const alt = filename || 'image'
+          return `![${alt}](${safeUrl})`
+        }
+        return `[img]${safeUrl}[/img]`
+      }
+    })
 
     const openLinkPanel = () => {
       showLinkPanel.value = true
@@ -135,69 +151,6 @@ export default defineComponent({
       closePanels()
     }
 
-    const insertBlockquote = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      wrapIn(basicSchema.nodes.blockquote)(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const insertOrderedList = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      wrapIn(basicSchema.nodes.ordered_list)(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const insertUnorderedList = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      wrapIn(basicSchema.nodes.bullet_list)(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const insertHeading = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      setBlockType(basicSchema.nodes.heading, { level: 1 })(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const undoAction = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      undo(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const redoAction = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      redo(editorView.state, editorView.dispatch)
-      editorView.focus()
-    }
-
-    const insertEmojiShortcode = (name: string) => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      const shortcode = `:${name}:`
-      const { state, dispatch } = editorView
-      const { from, to } = state.selection
-      const tr = state.tr.insertText(shortcode, from, to)
-      dispatch(tr)
-      editorView.focus()
-    }
-
-    const insertTextAtCursor = (text: string) => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      const { state, dispatch } = editorView
-      const { from, to } = state.selection
-      const tr = state.tr.insertText(text, from, to)
-      dispatch(tr)
-      editorView.focus()
-    }
-
     const handleEmojiPickerOpen = (event: MouseEvent) => {
       const target = event.currentTarget as HTMLElement | null
       if (target) {
@@ -231,111 +184,101 @@ export default defineComponent({
       showPluginEmojiPicker.value = false
     }
 
-    const buildImageMarkup = computed(() => {
-      return (url: string, filename?: string) => {
-        const safeUrl = url
-        if (props.inputFormat === 'markdown') {
-          const alt = filename || 'image'
-          return `![${alt}](${safeUrl})`
-        }
-        return `[img]${safeUrl}[/img]`
-      }
-    })
-
     const { handleUploadClick, handleUploadChange, fileInputRef, uploadFile } = useDiscourseUpload({
       baseUrl: props.baseUrl,
       inputFormat: () => props.inputFormat,
       onInsertText: insertTextAtCursor
     })
 
-    const {
-      showEmojiAutocomplete,
-      emojiSuggestions,
-      emojiActiveIndex,
-      emojiAutocompletePos,
-      emojiAutocompleteRef,
-      handleEditorKeydown,
-      handleEditorKeyup,
-      insertEmojiFromAutocomplete
-    } = useEmojiAutocomplete({
-      getEditorView: () => editorViewRef.value,
-      insertEmojiShortcode
-    })
-
-    const createEditorState = (content: string): EditorState => {
-      const textContent = (content || '').toString()
-      let docNode
-      if (textContent) {
-        const paragraphNode = basicSchema.node('paragraph', null, [basicSchema.text(textContent)])
-        docNode = basicSchema.node('doc', null, [paragraphNode])
-      } else {
-        const paragraphNode = basicSchema.node('paragraph')
-        docNode = basicSchema.node('doc', null, [paragraphNode])
+    const updateAutocompleteForTextarea = () => {
+      const el = textareaRef.value
+      if (!el) return
+      const cursor = el.selectionStart ?? el.value.length
+      const textBefore = el.value.slice(0, cursor)
+      const match = textBefore.match(/(^|\s):([a-zA-Z0-9_\u4e00-\u9fa5+-]*)$/)
+      if (!match) {
+        showEmojiAutocomplete.value = false
+        emojiSuggestions.value = []
+        return
       }
-
-      return EditorState.create({
-        doc: docNode,
-        plugins: [
-          new Plugin({
-            props: {
-              handlePaste: (_view, event) => {
-                const files = Array.from(event.clipboardData?.files || [])
-                if (files.length === 0) return false
-                event.preventDefault()
-                void (async () => {
-                  for (const file of files) {
-                    try {
-                      await uploadFile(file)
-                    } catch (error) {
-                      console.error('Paste upload failed:', error)
-                    }
-                  }
-                })()
-                return true
-              }
-            }
-          }),
-          history(),
-          keymap({
-            'Mod-z': undo,
-            'Mod-y': redo,
-            'Mod-Shift-z': redo,
-            'Mod-b': toggleMark(basicSchema.marks.strong),
-            'Mod-i': toggleMark(basicSchema.marks.em),
-            'Mod-u': toggleMark(basicSchema.marks.underline),
-            'Mod-Alt-s': toggleMark(basicSchema.marks.strike),
-            'Mod-[': lift,
-            Escape: selectParentNode
-          }),
-          keymap(baseKeymap)
-        ]
-      })
+      const query = match[2] || ''
+      const searched = searchEmojis(query).slice(0, 12)
+      emojiSuggestions.value = searched.map(item => ({
+        id: item.id,
+        name: item.name,
+        url: item.url
+      }))
+      if (emojiSuggestions.value.length === 0) {
+        showEmojiAutocomplete.value = false
+        return
+      }
+      const rect = el.getBoundingClientRect()
+      emojiAutocompletePos.value = { x: rect.left + 12, y: rect.bottom + 8 }
+      emojiActiveIndex.value = 0
+      showEmojiAutocomplete.value = true
     }
 
-    const { editorContainer, editorView } = useProseMirrorView({
-      modelValue: () => props.modelValue,
-      createState: createEditorState,
-      onUpdate: value => emit('update:modelValue', value),
-      onViewCreated: view => {
-        editorViewRef.value = view
-        view.dom.addEventListener('keydown', handleEditorKeydown)
-        view.dom.addEventListener('keyup', handleEditorKeyup)
-        view.dom.addEventListener('click', handleEditorKeyup)
-      },
-      onBeforeDestroy: view => {
-        view.dom.removeEventListener('keydown', handleEditorKeydown)
-        view.dom.removeEventListener('keyup', handleEditorKeyup)
-        view.dom.removeEventListener('click', handleEditorKeyup)
+    const handleTextareaKeydown = (event: KeyboardEvent) => {
+      if (!showEmojiAutocomplete.value || emojiSuggestions.value.length === 0) return
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        emojiActiveIndex.value = (emojiActiveIndex.value + 1) % emojiSuggestions.value.length
+        requestAnimationFrame(() => {
+          const host = emojiAutocompleteRef.value
+          host
+            ?.querySelector('.emoji-autocomplete-item.active')
+            ?.scrollIntoView({ block: 'nearest' })
+        })
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        emojiActiveIndex.value =
+          (emojiActiveIndex.value - 1 + emojiSuggestions.value.length) %
+          emojiSuggestions.value.length
+        requestAnimationFrame(() => {
+          const host = emojiAutocompleteRef.value
+          host
+            ?.querySelector('.emoji-autocomplete-item.active')
+            ?.scrollIntoView({ block: 'nearest' })
+        })
+      } else if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault()
+        const selected = emojiSuggestions.value[emojiActiveIndex.value]
+        if (selected) {
+          insertTextAtCursor(`:${selected.name}:`)
+          showEmojiAutocomplete.value = false
+        }
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        showEmojiAutocomplete.value = false
       }
-    })
+    }
 
-    watch(
-      editorView,
-      view => {
-        editorViewRef.value = view
-      },
-      { immediate: true }
-    )
+    const handleTextareaKeyup = (event: KeyboardEvent) => {
+      if (
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'Enter' ||
+        event.key === 'Tab' ||
+        event.key === 'Escape'
+      ) {
+        return
+      }
+      updateAutocompleteForTextarea()
+    }
+
+    const handleTextareaPaste = async (event: ClipboardEvent) => {
+      const files = Array.from(event.clipboardData?.files || [])
+      if (files.length === 0) return
+      event.preventDefault()
+      event.stopPropagation()
+      for (const file of files) {
+        try {
+          await uploadFile(file)
+        } catch (error) {
+          console.error('Paste upload failed:', error)
+        }
+      }
+    }
 
     watch(
       () => props.baseUrl,
@@ -344,6 +287,16 @@ export default defineComponent({
         await ensureEmojiShortcodesLoaded(value)
       },
       { immediate: true }
+    )
+
+    watch(
+      () => props.modelValue,
+      value => {
+        const el = textareaRef.value
+        if (el && el.value !== value) {
+          el.value = value
+        }
+      }
     )
 
     return () => (
@@ -410,7 +363,15 @@ export default defineComponent({
               </button>
             </div>
           </div>
-          <div ref={editorContainer} class="prosemirror-editor" />
+          <textarea
+            ref={textareaRef}
+            class="prosemirror-editor-textarea"
+            value={props.modelValue}
+            onInput={event => syncValue((event.target as HTMLTextAreaElement).value)}
+            onKeydown={handleTextareaKeydown}
+            onKeyup={handleTextareaKeyup}
+            onPaste={handleTextareaPaste}
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -515,7 +476,7 @@ export default defineComponent({
                   key={emoji.id}
                   class={['emoji-autocomplete-item', { active: index === emojiActiveIndex.value }]}
                   onMousedown={event => event.preventDefault()}
-                  onClick={() => insertEmojiFromAutocomplete(emoji.name)}
+                  onClick={() => insertTextAtCursor(`:${emoji.name}:`)}
                 >
                   <img src={emoji.url} alt={emoji.name} />
                   <span>:{emoji.name}:</span>

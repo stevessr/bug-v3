@@ -1,11 +1,13 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import type { EditorState } from 'prosemirror-state'
+import type { EditorState, Schema } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 
 type UseProseMirrorViewOptions = {
   modelValue: () => string
   createState: (content: string) => EditorState
   onUpdate: (value: string) => void
+  serializeDoc?: (state: EditorState) => string
+  parseDoc?: (value: string, schema: Schema) => EditorState
   onViewCreated?: (view: EditorView) => void
   onBeforeDestroy?: (view: EditorView) => void
 }
@@ -14,6 +16,7 @@ export function useProseMirrorView(options: UseProseMirrorViewOptions) {
   const editorContainer = ref<HTMLElement | null>(null)
   const editorView = ref<EditorView | null>(null)
   let isInternalUpdate = false
+  let lastEmittedValue = ''
 
   onMounted(() => {
     if (!editorContainer.value) {
@@ -34,7 +37,10 @@ export function useProseMirrorView(options: UseProseMirrorViewOptions) {
           const newState = editorView.value.state.apply(transaction)
           editorView.value.updateState(newState)
           if (transaction.docChanged && !isInternalUpdate) {
-            const content = newState.doc.textContent
+            const content = options.serializeDoc
+              ? options.serializeDoc(newState)
+              : newState.doc.textContent
+            lastEmittedValue = content
             options.onUpdate(content)
           }
         }
@@ -58,29 +64,36 @@ export function useProseMirrorView(options: UseProseMirrorViewOptions) {
     () => options.modelValue(),
     newValue => {
       if (!editorView.value || isInternalUpdate) return
-      const currentContent = editorView.value.state.doc.textContent
-      if (newValue === currentContent) return
+      const currentContent = options.serializeDoc
+        ? options.serializeDoc(editorView.value.state)
+        : editorView.value.state.doc.textContent
+      if (newValue === currentContent || newValue === lastEmittedValue) return
       isInternalUpdate = true
       try {
-        const textContent = (newValue || '').toString()
-        let newDoc
-        if (textContent) {
-          newDoc = editorView.value.state.schema.node('doc', null, [
-            editorView.value.state.schema.node('paragraph', null, [
-              editorView.value.state.schema.text(textContent)
-            ])
-          ])
+        if (options.parseDoc) {
+          const nextState = options.parseDoc(newValue || '', editorView.value.state.schema)
+          editorView.value.updateState(nextState)
         } else {
-          newDoc = editorView.value.state.schema.node('doc', null, [
-            editorView.value.state.schema.node('paragraph')
-          ])
+          const textContent = (newValue || '').toString()
+          let newDoc
+          if (textContent) {
+            newDoc = editorView.value.state.schema.node('doc', null, [
+              editorView.value.state.schema.node('paragraph', null, [
+                editorView.value.state.schema.text(textContent)
+              ])
+            ])
+          } else {
+            newDoc = editorView.value.state.schema.node('doc', null, [
+              editorView.value.state.schema.node('paragraph')
+            ])
+          }
+          const tr = editorView.value.state.tr.replaceWith(
+            0,
+            editorView.value.state.doc.content.size,
+            newDoc
+          )
+          editorView.value.dispatch(tr)
         }
-        const tr = editorView.value.state.tr.replaceWith(
-          0,
-          editorView.value.state.doc.content.size,
-          newDoc
-        )
-        editorView.value.dispatch(tr)
       } catch (error) {
         console.error('Failed to update editor:', error)
       }

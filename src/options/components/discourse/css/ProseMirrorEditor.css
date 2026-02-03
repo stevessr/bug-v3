@@ -68,6 +68,21 @@
   outline: none;
   min-height: 180px;
   cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prosemirror-editor-textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0 0 0.375rem 0.375rem;
+  background: #ffffff;
+  outline: none;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .prosemirror-editor .ProseMirror-focused {
