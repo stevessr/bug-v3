@@ -184,6 +184,7 @@ async function handleResolved(conflict, resolution) {
 记录数据变更。
 
 **参数：**
+
 - `operation`: 操作类型 (CREATE, UPDATE, DELETE, MOVE, REORDER)
 - `entityType`: 实体类型 (emoji, group, settings, favorites)
 - `entityId`: 实体 ID
@@ -193,16 +194,19 @@ async function handleResolved(conflict, resolution) {
 **返回：** `Promise<void>`
 
 **示例：**
+
 ```typescript
 await changeTracker.trackChange({
   operation: OperationType.CREATE,
   entityType: 'emoji',
   entityId: 'new-emoji-123',
-  changes: [{
-    field: 'emojis',
-    oldValue: null,
-    newValue: { id: 'new-emoji-123', name: 'New Emoji', url: '...' }
-  }]
+  changes: [
+    {
+      field: 'emojis',
+      oldValue: null,
+      newValue: { id: 'new-emoji-123', name: 'New Emoji', url: '...' }
+    }
+  ]
 })
 ```
 
@@ -225,6 +229,7 @@ await changeTracker.trackChange({
 执行同步操作。
 
 **参数：**
+
 - `provider`: 同步提供商 (cloudflare, chrome)
 - `fullSync`: 是否强制全量同步 (可选)
 - `conflictStrategy`: 冲突解决策略 (可选)
@@ -232,6 +237,7 @@ await changeTracker.trackChange({
 **返回：** `Promise<SyncResult>`
 
 **示例：**
+
 ```typescript
 const result = await incrementalSyncService.sync({
   provider: 'cloudflare',
@@ -258,6 +264,7 @@ const result = await incrementalSyncService.sync({
 检测冲突。
 
 **参数：**
+
 - `localDeltas`: 本地变更数组
 - `remoteDeltas`: 远程变更数组
 
@@ -268,6 +275,7 @@ const result = await incrementalSyncService.sync({
 自动解决冲突。
 
 **参数：**
+
 - `conflicts`: 冲突数组
 - `strategy`: 解决策略 (auto, manual, local-first, remote-first, newest-wins)
 
@@ -278,6 +286,7 @@ const result = await incrementalSyncService.sync({
 手动解决冲突。
 
 **参数：**
+
 - `conflictId`: 冲突 ID
 - `resolution`: 解决方案 (local, remote, merged)
 - `mergedData`: 合并后的数据 (可选)
@@ -289,6 +298,7 @@ const result = await incrementalSyncService.sync({
 三方合并。
 
 **参数：**
+
 - `base`: 基础版本
 - `local`: 本地版本
 - `remote`: 远程版本
@@ -303,6 +313,7 @@ const result = await incrementalSyncService.sync({
 尝试智能合并，失败则使用最新的版本。
 
 **适用场景：**
+
 - 大部分常规同步
 - 非关键数据
 
@@ -311,6 +322,7 @@ const result = await incrementalSyncService.sync({
 检测到冲突时暂停同步，等待用户手动解决。
 
 **适用场景：**
+
 - 重要数据修改
 - 需要人工判断的情况
 
@@ -319,6 +331,7 @@ const result = await incrementalSyncService.sync({
 始终使用本地版本。
 
 **适用场景：**
+
 - 离线编辑后的首次同步
 - 确信本地数据正确
 
@@ -327,6 +340,7 @@ const result = await incrementalSyncService.sync({
 始终使用远程版本。
 
 **适用场景：**
+
 - 从云端恢复数据
 - 多设备间以服务器为准
 
@@ -335,6 +349,7 @@ const result = await incrementalSyncService.sync({
 比较时间戳，使用最新的版本。
 
 **适用场景：**
+
 - 默认策略
 - 大部分场景的合理选择
 
@@ -348,7 +363,7 @@ let syncTimer: NodeJS.Timeout | null = null
 
 function scheduleSyncfunction scheduleSync() {
   if (syncTimer) clearTimeout(syncTimer)
-  
+
   syncTimer = setTimeout(async () => {
     await incrementalSyncService.sync({
       provider: 'cloudflare',
@@ -403,10 +418,13 @@ if (status.queueLength > 0) {
 import { changeTracker } from '@/services/change-tracker'
 
 // 每周清理一次超过 30 天的记录
-setInterval(async () => {
-  const removed = await changeTracker.cleanupOldRecords(30)
-  console.log(`清理了 ${removed} 条旧记录`)
-}, 7 * 24 * 60 * 60 * 1000)
+setInterval(
+  async () => {
+    const removed = await changeTracker.cleanupOldRecords(30)
+    console.log(`清理了 ${removed} 条旧记录`)
+  },
+  7 * 24 * 60 * 60 * 1000
+)
 ```
 
 ### 5. 监控同步状态
@@ -417,11 +435,11 @@ import { incrementalSyncService } from '@/services/incremental-sync'
 // 定期检查同步状态
 setInterval(async () => {
   const stats = await incrementalSyncService.getStats()
-  
+
   if (stats.unresolvedConflicts > 0) {
     console.warn(`有 ${stats.unresolvedConflicts} 个未解决的冲突`)
   }
-  
+
   if (stats.pendingChanges > 100) {
     console.warn(`有 ${stats.pendingChanges} 个待同步变更`)
   }
@@ -433,11 +451,13 @@ setInterval(async () => {
 ### 问题：同步失败
 
 **可能原因：**
+
 1. 网络连接问题
 2. 远程存储配置错误
 3. 权限不足
 
 **解决方案：**
+
 ```typescript
 const result = await incrementalSyncService.sync({
   provider: 'cloudflare',
@@ -446,12 +466,12 @@ const result = await incrementalSyncService.sync({
 
 if (!result.success) {
   console.error('同步失败：', result.error)
-  
+
   // 检查网络
   if (!navigator.onLine) {
     console.log('网络离线，变更已加入队列')
   }
-  
+
   // 检查配置
   const config = cloudflareSyncService.getConfig()
   if (!config) {
@@ -463,10 +483,12 @@ if (!result.success) {
 ### 问题：冲突无法自动解决
 
 **可能原因：**
+
 1. 相同字段被不同设备修改
 2. 冲突解决策略不适合
 
 **解决方案：**
+
 ```typescript
 // 使用手动解决策略
 const result = await incrementalSyncService.sync({
@@ -483,18 +505,20 @@ if (result.conflicts && result.conflicts.length > 0) {
 ### 问题：IndexedDB 错误
 
 **可能原因：**
+
 1. 浏览器不支持 IndexedDB
 2. 存储空间不足
 3. 隐私模式限制
 
 **解决方案：**
+
 ```typescript
 try {
   const db = new SyncDatabase()
   await db.open()
 } catch (error) {
   console.error('IndexedDB 初始化失败：', error)
-  
+
   // 降级到 localStorage
   // 或提示用户启用 IndexedDB
 }
@@ -503,10 +527,12 @@ try {
 ### 问题：变更记录过多
 
 **可能原因：**
+
 1. 长时间未清理
 2. 频繁的小变更
 
 **解决方案：**
+
 ```typescript
 // 定期清理
 await changeTracker.cleanupOldRecords(7) // 只保留 7 天
@@ -529,11 +555,9 @@ async function customResolve(conflict: ConflictInfo): Promise<'local' | 'remote'
   // 自定义逻辑
   if (conflict.entityType === 'settings') {
     // 设置总是使用最新的
-    return conflict.localChange.timestamp > conflict.remoteChange.timestamp 
-      ? 'local' 
-      : 'remote'
+    return conflict.localChange.timestamp > conflict.remoteChange.timestamp ? 'local' : 'remote'
   }
-  
+
   if (conflict.entityType === 'emoji') {
     // Emoji 尝试合并
     const mergeResult = await conflictResolver.threeWayMerge(
@@ -542,10 +566,10 @@ async function customResolve(conflict: ConflictInfo): Promise<'local' | 'remote'
       conflict.remoteChange,
       'emoji'
     )
-    
+
     return mergeResult.success ? 'merged' : 'local'
   }
-  
+
   return 'local'
 }
 ```
@@ -559,11 +583,11 @@ class CustomSyncProvider {
   async push(deltas: DeltaRecord[]): Promise<void> {
     // 实现推送逻辑
   }
-  
+
   async pull(sinceVersion: number): Promise<DeltaRecord[]> {
     // 实现拉取逻辑
   }
-  
+
   async getRemoteVersion(): Promise<number> {
     // 实现版本获取逻辑
   }
@@ -592,7 +616,7 @@ private scheduleBatchWrite() {
 ```typescript
 // 在 sync-db.ts 中
 this.version(1).stores({
-  deltaRecords: 'id, timestamp, version, [entityType+entityId]',
+  deltaRecords: 'id, timestamp, version, [entityType+entityId]'
   // 添加复合索引以提高查询性能
 })
 ```
@@ -639,11 +663,11 @@ function decryptData(encrypted: string, key: string): any {
 // 验证用户权限
 async function syncWithAuth(options: SyncOptions) {
   const token = await getAuthToken()
-  
+
   if (!token) {
     throw new Error('未授权')
   }
-  
+
   return await incrementalSyncService.sync(options)
 }
 ```

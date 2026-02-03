@@ -5,6 +5,7 @@ This directory contains additional documentation for the Emoji Extension project
 ## User Documentation
 
 ### Main Documentation (Root Directory)
+
 - **[README.md](../README.md)** - Main project documentation
 - **[CHANGELOG.md](../CHANGELOG.md)** - Version history and release notes
 - **[PERMISSIONS.md](../PERMISSIONS.md)** - Extension permissions explanation
@@ -14,9 +15,11 @@ This directory contains additional documentation for the Emoji Extension project
 ## Developer Documentation
 
 ### Build & Development
+
 - **[BUILD_FLAGS.md](../scripts/docs/BUILD_FLAGS.md)** - Compile-time optimization flags
 
 ### Internal Documentation
+
 - **[OPTIMIZATION_PLAN.md](./internal/OPTIMIZATION_PLAN.md)** - Code optimization notes
 - **[REFACTOR_SUMMARY.md](./internal/REFACTOR_SUMMARY.md)** - Refactoring history
 - **[URL_MODE_DETECTION_FIX.md](./internal/URL_MODE_DETECTION_FIX.md)** - URL mode detection fix notes
@@ -25,6 +28,7 @@ This directory contains additional documentation for the Emoji Extension project
 - **[QWEN.md](./internal/QWEN.md)** - Qwen AI assistant context
 
 ### Additional Resources
+
 - **[EMOJI_MERGE_REPORT.md](../scripts/docs/EMOJI_MERGE_REPORT.md)** - Emoji merging implementation report
 - **[HTML_OUTPUT_FORMAT_REPORT.md](../scripts/docs/HTML_OUTPUT_FORMAT_REPORT.md)** - HTML output format report
 - **[REFACTORING_REPORT.md](../scripts/docs/REFACTORING_REPORT.md)** - Refactoring report

@@ -3,6 +3,7 @@
 ## 📋 概述
 
 当前代码库中有 **477 个 console 调用**分布在 94 个文件中：
+
 - Content scripts: 268 个调用 (47 个文件)
 - Background scripts: 44 个调用 (11 个文件)
 - Options pages: 165 个调用 (36 个文件)
@@ -10,6 +11,7 @@
 ## 🎯 目标
 
 使用统一的 `logger.ts` 替代直接的 `console.*` 调用，以实现：
+
 - ✅ 统一的日志格式
 - ✅ 可配置的日志级别
 - ✅ 生产环境自动过滤
@@ -21,6 +23,7 @@
 ### 渐进式迁移（推荐）
 
 采用**渐进式迁移**而非一次性全部替换：
+
 1. ✅ 新代码强制使用 logger
 2. 📝 逐步迁移高频文件
 3. 🔧 保留低优先级文件的 console
@@ -28,17 +31,20 @@
 ### 优先级
 
 #### 🔴 高优先级（建议迁移）
+
 - [x] 新创建的文件（platformDetector.ts, platformLoader.ts 等）
-- [ ] content/discourse/* (17 个调用 - 核心功能)
-- [ ] background/handlers/* (核心业务逻辑)
+- [ ] content/discourse/\* (17 个调用 - 核心功能)
+- [ ] background/handlers/\* (核心业务逻辑)
 - [ ] stores/emojiStore.ts (状态管理)
 
 #### 🟡 中优先级（可选）
-- [ ] content/pixiv/* (10+ 调用)
-- [ ] content/bilibili/* (10+ 调用)
-- [ ] options/pages/* (UI 逻辑)
+
+- [ ] content/pixiv/\* (10+ 调用)
+- [ ] content/bilibili/\* (10+ 调用)
+- [ ] options/pages/\* (UI 逻辑)
 
 #### 🟢 低优先级（保持现状）
+
 - [ ] 工具函数（一次性调用）
 - [ ] 测试/调试代码
 - [ ] 第三方集成代码
@@ -48,6 +54,7 @@
 ### 1. 标准迁移模板
 
 **迁移前:**
+
 ```typescript
 console.log('[MyFeature] Initialization started')
 console.warn('[MyFeature] Config missing, using defaults')
@@ -55,6 +62,7 @@ console.error('[MyFeature] Failed to load', error)
 ```
 
 **迁移后:**
+
 ```typescript
 import { createLogger } from '@/utils/logger'
 
@@ -68,6 +76,7 @@ log.error('Failed to load', error)
 ### 2. Vue 组件迁移
 
 **迁移前:**
+
 ```vue
 <script setup lang="ts">
 const handleClick = () => {
@@ -77,6 +86,7 @@ const handleClick = () => {
 ```
 
 **迁移后:**
+
 ```vue
 <script setup lang="ts">
 import { createLogger } from '@/utils/logger'
@@ -111,14 +121,18 @@ pnpm lint:fix
 ## 🎨 日志级别使用指南
 
 ### DEBUG (开发环境)
+
 用于详细的调试信息：
+
 ```typescript
 log.debug('Processing emoji', { id, name, url })
 log.debug('Cache hit', cacheKey)
 ```
 
 ### INFO (默认)
+
 用于重要的状态变更：
+
 ```typescript
 log.info('Platform detected: pixiv')
 log.info('Module loaded successfully')
@@ -126,7 +140,9 @@ log.info('User logged in')
 ```
 
 ### WARN (警告)
+
 用于非致命错误或降级处理：
+
 ```typescript
 log.warn('Failed to load cache, using defaults')
 log.warn('Deprecated API used')
@@ -134,7 +150,9 @@ log.warn('Rate limit approaching')
 ```
 
 ### ERROR (错误)
+
 用于需要关注的错误：
+
 ```typescript
 log.error('Failed to save data', error)
 log.error('Network request failed', { url, status })
@@ -146,31 +164,35 @@ log.error('Initialization failed', error)
 ### 1. 上下文命名
 
 **好的上下文名称:**
+
 ```typescript
-createLogger('DiscourseContent')  // 明确的功能
-createLogger('EmojiStore')        // 清晰的模块
-createLogger('PixivDetector')     // 具体的组件
+createLogger('DiscourseContent') // 明确的功能
+createLogger('EmojiStore') // 清晰的模块
+createLogger('PixivDetector') // 具体的组件
 ```
 
 **避免:**
+
 ```typescript
-createLogger('utils')     // 太宽泛
-createLogger('file1')     // 无意义
-createLogger('temp')      // 临时名称
+createLogger('utils') // 太宽泛
+createLogger('file1') // 无意义
+createLogger('temp') // 临时名称
 ```
 
 ### 2. 结构化日志
 
 **推荐:**
+
 ```typescript
 log.info('User action', { action: 'click', target: 'button', userId })
 log.error('API call failed', { endpoint, statusCode, error })
 ```
 
 **避免:**
+
 ```typescript
-log.info(`User ${userId} clicked button`)  // 难以解析
-log.error('Error: ' + error.toString())    // 丢失结构
+log.info(`User ${userId} clicked button`) // 难以解析
+log.error('Error: ' + error.toString()) // 丢失结构
 ```
 
 ### 3. 性能考虑
@@ -190,11 +212,13 @@ log.debug('Expensive operation', computeExpensiveData())
 Logger 会自动根据环境调整行为：
 
 **开发环境 (`NODE_ENV=development`):**
+
 - 日志级别: DEBUG
 - 所有日志输出到 console
 - 保留详细信息
 
 **生产环境 (`NODE_ENV=production`):**
+
 - 日志级别: WARN
 - 只输出警告和错误
 - 自动过滤 debug/info 日志
@@ -202,15 +226,18 @@ Logger 会自动根据环境调整行为：
 ## 📈 迁移进度追踪
 
 ### 已完成 ✅
+
 - [x] platformDetector.ts
 - [x] platformLoader.ts
 - [x] content.ts (部分)
 
 ### 进行中 🔄
-- [ ] content/discourse/*
-- [ ] background/handlers/*
+
+- [ ] content/discourse/\*
+- [ ] background/handlers/\*
 
 ### 待迁移 📋
+
 - [ ] 其他 content scripts
 - [ ] options pages
 - [ ] stores
@@ -220,25 +247,29 @@ Logger 会自动根据环境调整行为：
 迁移后，确保进行以下检查：
 
 ### 1. 类型检查
+
 ```bash
 pnpm type-check
 ```
 
 ### 2. 构建测试
+
 ```bash
 pnpm build
 ```
 
 ### 3. 手动测试
+
 - [ ] 在开发模式下查看日志输出
 - [ ] 在生产模式下验证日志级别
 - [ ] 测试所有迁移的功能
 
 ### 4. 日志质量检查
+
 ```typescript
 // 在浏览器 console 中
-logger.getLogs()         // 查看最近日志
-logger.exportLogs()      // 导出所有日志
+logger.getLogs() // 查看最近日志
+logger.exportLogs() // 导出所有日志
 ```
 
 ## 📝 注意事项
@@ -246,6 +277,7 @@ logger.exportLogs()      // 导出所有日志
 ### 1. 保留的 console 调用
 
 以下情况**可以保留** console:
+
 - 关键错误处理（fallback）
 - 第三方库集成
 - 临时调试代码（应该加 TODO 注释）
@@ -275,7 +307,7 @@ console.log('Starting')
 log.info('Started')
 
 // ❌ 无上下文的日志
-log.info('Error')  // 什么错误？
+log.info('Error') // 什么错误？
 
 // ❌ 过度日志
 log.info('Step 1')
@@ -308,6 +340,7 @@ log.info('Batch completed', { processed, failed })
 ### 示例代码
 
 参考已迁移的文件：
+
 - [platformDetector.ts](../../src/content/utils/platformDetector.ts)
 - [platformLoader.ts](../../src/content/utils/platformLoader.ts)
 - [content.ts](../../src/content/content.ts)

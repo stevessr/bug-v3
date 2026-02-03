@@ -5,6 +5,7 @@
 ## 功能概述
 
 自托管更新功能允许扩展在不依赖官方扩展商店的情况下自动检查和安装更新。这对于：
+
 - 开发版本测试
 - 企业内部分发
 - 绕过商店审核延迟
@@ -28,11 +29,13 @@ scripts/cfworker/public/
 ### 1. 获取扩展 ID
 
 #### Chrome 扩展
+
 1. 在 Chrome 中加载未打包的扩展
 2. 记下扩展 ID（32 位字符串）
 3. 更新 `scripts/update-extension-version.js` 中的 `CONFIG.extensionId`
 
 #### Firefox 扩展
+
 1. 构建 XPI 文件
 2. 使用 Firefox 的临时安装功能加载
 3. 记下扩展 ID
@@ -40,6 +43,7 @@ scripts/cfworker/public/
 ### 2. 更新 manifest.json
 
 manifest.json 已配置了更新 URL：
+
 ```json
 {
   "update_url": "https://s.pwsh.us.kg/updates.xml",
@@ -55,6 +59,7 @@ manifest.json 已配置了更新 URL：
 ### 3. 发布新版本
 
 #### 自动化流程
+
 ```bash
 # 1. 构建扩展
 npm run build:prod
@@ -70,6 +75,7 @@ node scripts/update-extension-version.js
 ```
 
 #### 手动流程
+
 1. 构建并打包扩展
 2. 将 CRX/XPI 文件复制到 `scripts/cfworker/public/updates/`
 3. 更新 `updates.xml` 和 `updates.json` 中的版本号
@@ -78,6 +84,7 @@ node scripts/update-extension-version.js
 ## 更新文件格式
 
 ### Chrome updates.xml
+
 ```xml
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
@@ -88,6 +95,7 @@ node scripts/update-extension-version.js
 ```
 
 ### Firefox updates.json
+
 ```json
 {
   "addons": {
@@ -114,17 +122,21 @@ node scripts/update-extension-version.js
 ## 更新检查机制
 
 ### 自动检查
+
 - 每 24 小时检查一次更新
 - 扩展启动时检查
 - 浏览器定期检查（频率因浏览器而异）
 
 ### 手动检查
+
 用户可以通过以下方式手动检查：
+
 1. 扩展设置中的"检查更新"按钮
 2. 开发者工具中的更新检查
 3. 调用 `chrome.runtime.requestUpdateCheck()`
 
 ### 通知机制
+
 - 发现更新时显示桌面通知
 - 提供立即更新和稍后提醒选项
 - 点击通知跳转到下载页面
@@ -134,16 +146,19 @@ node scripts/update-extension-version.js
 ### 常见问题
 
 #### 1. 更新检查失败
+
 - 检查网络连接
 - 验证更新 URL 是否可访问
 - 确认 XML/JSON 格式正确
 
 #### 2. 版本号不更新
+
 - 确保新版本号高于当前版本
 - 检查版本号格式（x.y.z）
 - 清除扩展缓存
 
 #### 3. 下载失败
+
 - 验证 CRX/XPI 文件是否存在
 - 检查文件权限
 - 确认服务器配置正确

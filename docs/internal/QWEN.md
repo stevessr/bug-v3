@@ -19,6 +19,7 @@ This is a modern emoji extension built with Vue 3, Vite, and TypeScript. It feat
 ## Project Architecture
 
 ### Directory Structure
+
 ```
 src/
 ├── background/     # Service worker
@@ -32,13 +33,16 @@ src/
 ```
 
 ### Core Components
+
 - **Background Script**: Handles storage synchronization
 - **Content Script**: Injects emoji picker into web pages
 - **Popup**: Quick emoji access and favorites
 - **Options**: Full emoji management and settings
 
 ### Storage System
+
 The extension uses a sophisticated progressive multi-layer storage system:
+
 1. Local Storage (immediate access, 0ms)
 2. Session Storage (session-based, 100ms delay)
 3. Extension Storage (Chrome API, 500ms delay)
@@ -47,7 +51,9 @@ The extension uses a sophisticated progressive multi-layer storage system:
 With conflict resolution based on timestamps (newer data wins).
 
 ### State Management
+
 Uses Pinia for state management with `useEmojiStore` as the main store that manages:
+
 - Emoji groups and emojis
 - User settings
 - Favorites
@@ -56,10 +62,12 @@ Uses Pinia for state management with `useEmojiStore` as the main store that mana
 ## Building and Running
 
 ### Prerequisites
+
 - Node.js 18+
 - pnpm (preferred) or npm
 
 ### Setup
+
 ```bash
 # Install dependencies
 pnpm install
@@ -96,25 +104,28 @@ pnpm run build:minimal
 
 ```
 
-
 ## Development Conventions
 
 ### TypeScript
+
 - Strict TypeScript configuration
 - Type definitions for Chrome APIs included
 - Path aliases using `@/*` mapping to `src/*`
 
 ### Vue 3 Composition API
+
 - Uses Composition API with `<script setup>` syntax
 - Pinia for state management
 - Vue Router for navigation
 
 ### Code Quality
+
 - ESLint with custom rules
 - Prettier for code formatting
 - Type checking with vue-tsc
 
 ### Storage Patterns
+
 - Progressive writes with timed delays
 - Conflict resolution with timestamp-based logic
 - Cross-context synchronization with debounced updates
@@ -122,6 +133,7 @@ pnpm run build:minimal
 ## Testing
 
 ### Playwright Tests
+
 ```bash
 # Run all tests
 pnpm run test
@@ -137,7 +149,9 @@ pnpm run test:extension:debug
 ## Deployment
 
 ### Automated Release (Recommended)
+
 1. Tag and push:
+
    ```bash
    git tag v1.0.1
    git push origin v1.0.1
@@ -149,6 +163,7 @@ pnpm run test:extension:debug
    - Uploads to Microsoft Edge Store
 
 ### Manual Release
+
 ```bash
 # Using the release script
 pnpm run release 1.0.1

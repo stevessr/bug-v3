@@ -16,16 +16,19 @@
 ### 1. 启用功能
 
 在扩展的 Options 页面：
+
 1. 进入「设置」→「自动下载」标签页
 2. 开启「启用自动下载」开关
 
 ### 2. 配置监控后缀
 
 默认监控以下后缀：
+
 - `name=large` - 大图
 - `name=orig` - 原图
 
 你可以添加或删除自定义后缀，例如：
+
 - `name=4096x4096` - 4K 图
 - `format=jpg&name=large` - 大图 JPG
 - 任何包含在 URL 中的字符串
@@ -33,6 +36,7 @@
 ### 3. 工作原理
 
 当你在 X.com 浏览时：
+
 1. 系统扫描页面中的图片
 2. 检查图片 URL 是否包含配置的后缀
 3. 如果匹配且未下载过，自动触发下载
@@ -63,6 +67,7 @@
 ### 配置存储
 
 配置保存在 `chrome.storage.local` 的 `settings` 对象中：
+
 ```typescript
 {
   enableAutoDownload: boolean
@@ -80,10 +85,12 @@
 ## 文件变更
 
 ### 新增文件
+
 - `src/utils/autoDownloadManager.ts` - 自动下载管理器
 - `src/options/components/AutoDownloadSettings.vue` - 设置 UI 组件
 
 ### 修改文件
+
 - `src/types/type.ts` - 添加配置类型定义
 - `src/types/defaultSettings.ts` - 添加默认配置
 - `src/content/x/image/carousel.ts` - 集成自动下载检测

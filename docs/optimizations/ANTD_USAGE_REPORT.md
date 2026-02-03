@@ -82,6 +82,7 @@
 ### Alert
 
 Used in 4 file(s):
+
 - `src/options/components/ChatMultiReactorSettings.vue`
 - `src/options/components/ImageCropper.vue`
 - `src/options/modals/BatchRenameModal.vue`
@@ -90,11 +91,13 @@ Used in 4 file(s):
 ### Badge
 
 Used in 1 file(s):
+
 - `src/options/components/FavoritesTab.vue`
 
 ### Button
 
 Used in 49 file(s):
+
 - `src/options/components/AISettings.vue`
 - `src/options/components/BatchActionsBar.vue`
 - `src/options/components/BatchTagOperations.vue`
@@ -148,6 +151,7 @@ Used in 49 file(s):
 ### Card
 
 Used in 5 file(s):
+
 - `src/options/components/FileListDisplay.vue`
 - `src/options/components/GroupsCardView.vue`
 - `src/options/modals/AddEmojiModal.vue`
@@ -157,6 +161,7 @@ Used in 5 file(s):
 ### Checkbox
 
 Used in 8 file(s):
+
 - `src/options/components/ImageCropper.vue`
 - `src/options/components/UngroupedTab.vue`
 - `src/options/modals/BatchRenameModal.vue`
@@ -169,24 +174,28 @@ Used in 8 file(s):
 ### Collapse
 
 Used in 2 file(s):
+
 - `src/options/components/ImageCropper.vue`
 - `src/options/pages/BufferPage.vue`
 
 ### CollapsePanel
 
 Used in 2 file(s):
+
 - `src/options/components/ImageCropper.vue`
 - `src/options/pages/BufferPage.vue`
 
 ### ConfigProvider
 
 Used in 2 file(s):
+
 - `src/options/Options.vue`
 - `src/popup/Popup.vue`
 
 ### Dropdown
 
 Used in 7 file(s):
+
 - `src/options/components/FeatureSwitchSettings.vue`
 - `src/options/components/GridColumnsSelector.vue`
 - `src/options/components/GroupActionsDropdown.vue`
@@ -198,6 +207,7 @@ Used in 7 file(s):
 ### Image
 
 Used in 5 file(s):
+
 - `src/options/components/ExportProgressModal.vue`
 - `src/options/components/FileListDisplay.vue`
 - `src/options/modals/AddEmojiModal.vue`
@@ -207,6 +217,7 @@ Used in 5 file(s):
 ### Input
 
 Used in 19 file(s):
+
 - `src/options/components/AISettings.vue`
 - `src/options/components/BatchTagOperations.vue`
 - `src/options/components/ChatMultiReactorSettings.vue`
@@ -230,6 +241,7 @@ Used in 19 file(s):
 ### InputNumber
 
 Used in 3 file(s):
+
 - `src/options/components/FeatureSwitchSettings.vue`
 - `src/options/components/ImageCropper.vue`
 - `src/options/pages/BilibiliImportPage.vue`
@@ -237,6 +249,7 @@ Used in 3 file(s):
 ### Menu
 
 Used in 8 file(s):
+
 - `src/options/Options.vue`
 - `src/options/components/FeatureSwitchSettings.vue`
 - `src/options/components/GridColumnsSelector.vue`
@@ -249,6 +262,7 @@ Used in 8 file(s):
 ### MenuItem
 
 Used in 7 file(s):
+
 - `src/options/components/FeatureSwitchSettings.vue`
 - `src/options/components/GridColumnsSelector.vue`
 - `src/options/components/GroupActionsDropdown.vue`
@@ -260,6 +274,7 @@ Used in 7 file(s):
 ### Modal
 
 Used in 13 file(s):
+
 - `src/options/components/CloudDataPreview.vue`
 - `src/options/components/CreateGroupModal.vue`
 - `src/options/components/DomainManager.vue`
@@ -277,6 +292,7 @@ Used in 13 file(s):
 ### Progress
 
 Used in 10 file(s):
+
 - `src/options/components/CollaborativeUploadSettings.vue`
 - `src/options/components/ExportProgressModal.vue`
 - `src/options/components/GroupsTab.vue`
@@ -291,6 +307,7 @@ Used in 10 file(s):
 ### Radio
 
 Used in 3 file(s):
+
 - `src/options/modals/TelegramStickerModal.vue`
 - `src/options/pages/StatsPage.vue`
 - `src/options/pages/TelegramImportPage.vue`
@@ -298,6 +315,7 @@ Used in 3 file(s):
 ### Select
 
 Used in 4 file(s):
+
 - `src/options/components/AISettings.vue`
 - `src/options/components/ChatMultiReactorSettings.vue`
 - `src/options/components/GroupSelector.vue`
@@ -306,6 +324,7 @@ Used in 4 file(s):
 ### Slider
 
 Used in 3 file(s):
+
 - `src/options/components/AISettings.vue`
 - `src/options/components/UISettings.vue`
 - `src/options/pages/StatsPage.vue`
@@ -313,11 +332,13 @@ Used in 3 file(s):
 ### Space
 
 Used in 1 file(s):
+
 - `src/options/components/ImageCropper.vue`
 
 ### Spin
 
 Used in 6 file(s):
+
 - `src/options/components/ChatMultiReactorSettings.vue`
 - `src/options/components/CloudDataPreview.vue`
 - `src/options/components/ImageCropper.vue`
@@ -328,34 +349,39 @@ Used in 6 file(s):
 ### Switch
 
 Used in 2 file(s):
+
 - `src/options/components/AISettings.vue`
 - `src/options/components/SettingSwitch.vue`
 
 ### TabPane
 
 Used in 2 file(s):
+
 - `src/options/modals/AddEmojiModal.vue`
 - `src/options/pages/SettingsPage.vue`
 
 ### Tabs
 
 Used in 2 file(s):
+
 - `src/options/modals/AddEmojiModal.vue`
 - `src/options/pages/SettingsPage.vue`
 
 ### Tag
 
 Used in 1 file(s):
+
 - `src/options/components/ChatMultiReactorSettings.vue`
 
 ### Tooltip
 
 Used in 2 file(s):
+
 - `src/options/modals/TelegramStickerModal.vue`
 - `src/options/pages/BufferPage.vue`
 
 ### Transfer
 
 Used in 1 file(s):
-- `src/options/components/DomainManager.vue`
 
+- `src/options/components/DomainManager.vue`

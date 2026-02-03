@@ -5,10 +5,12 @@
 ### 体积对比
 
 **优化前:**
+
 - content.js: **357KB** (未压缩)
 - 所有平台模块静态导入
 
 **优化后:**
+
 - content.js: **161KB** (未压缩) ✅
 - 压缩后: **44.67KB** (gzip)
 - **减少 196KB** (54.9% 体积减少)
@@ -30,6 +32,7 @@
 ### 1. 静态导入 → 动态导入
 
 **优化前 (Uninject.ts):**
+
 ```typescript
 import { initPixiv } from '../pixiv/detector'
 import { initBilibili } from '../bilibili/bilibili'
@@ -41,6 +44,7 @@ import { initReddit } from '../reddit/reddit'
 ```
 
 **优化后 (platformLoader.ts):**
+
 ```typescript
 // 根据平台按需加载
 case 'pixiv':
@@ -64,6 +68,7 @@ if (platformInfo.shouldLoadModule) {
 ### 3. 代码分割
 
 Vite 自动将动态导入的模块分割成独立的 chunk：
+
 - detector.js (Pixiv): 12.06KB
 - bilibili.js: 12.55KB
 - reddit.js: 3.01KB
@@ -74,10 +79,12 @@ Vite 自动将动态导入的模块分割成独立的 chunk：
 ### 初始加载
 
 **优化前:**
+
 - 加载所有平台代码（357KB）
 - 即使用户从不访问某些平台
 
 **优化后:**
+
 - 只加载核心代码 + Discourse (161KB)
 - 其他平台按需加载
 - **首次加载速度提升 ~54%**
@@ -95,6 +102,7 @@ Vite 自动将动态导入的模块分割成独立的 chunk：
 ### 向后兼容
 
 保留了旧 API 以确保兼容性：
+
 - `Uninject()` 函数仍然可用（标记为 deprecated）
 - `DISCOURSE_DOMAINS` 常量可访问
 - 现有功能不受影响
@@ -113,6 +121,7 @@ try {
 ### 日志改进
 
 使用统一的 logger 替代 console：
+
 ```typescript
 const log = createLogger('ContentScript')
 log.info('Platform detected: pixiv')
@@ -121,15 +130,18 @@ log.info('Platform detected: pixiv')
 ## 🎯 最佳实践
 
 ### 1. 按需加载
+
 - 核心功能保持静态导入（如 Discourse）
 - 平台特定功能使用动态导入
 
 ### 2. 智能检测
+
 - 基于 hostname 快速判断
 - 支持 meta 标签检测
 - 支持 DOM 元素检测
 
 ### 3. 性能优先
+
 - 避免重复加载（使用 Set 跟踪）
 - 并行加载多个模块（Promise.allSettled）
 - 最小化初始 bundle 体积
@@ -137,16 +149,19 @@ log.info('Platform detected: pixiv')
 ## 📈 后续优化建议
 
 ### 1. 进一步减小 vendor-ui.js (683KB)
+
 - 检查 Ant Design Vue 组件使用
 - 移除未使用的组件
 - 考虑按页面加载 UI 组件
 
 ### 2. 图片资源优化
+
 - 使用现代图片格式 (WebP, AVIF)
 - 实现渐进式加载
 - 压缩静态资源
 
 ### 3. 缓存策略
+
 - 利用 Service Worker 缓存
 - 实现版本化资源
 - 长期缓存策略
@@ -154,6 +169,7 @@ log.info('Platform detected: pixiv')
 ## ✅ 结论
 
 通过实现动态加载，我们成功：
+
 - ✅ 减少 content.js 体积 **54.9%**
 - ✅ 提升初始加载速度
 - ✅ 保持向后兼容
