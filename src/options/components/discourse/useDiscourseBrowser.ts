@@ -11,7 +11,8 @@ import type {
   ActivityTabType,
   MessagesTabType,
   TopicListType,
-  DiscourseNotificationFilter
+  DiscourseNotificationFilter,
+  DiscourseSearchFilters
 } from './types'
 import { generateId, pageFetch, extractData } from './utils'
 import {
@@ -24,6 +25,7 @@ import {
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
 import { loadNotifications as loadNotificationsRoute } from './routes/notifications'
+import { loadSearch as loadSearchRoute } from './routes/search'
 import {
   loadCategory as loadCategoryRoute,
   loadMoreTopics as loadMoreTopicsRoute
@@ -133,7 +135,25 @@ export function useDiscourseBrowser() {
       lastTimingTopicId: undefined,
       chatState: null,
       pendingTopics: null,
-      pendingTopicsCount: 0
+      pendingTopicsCount: 0,
+      searchState: {
+        query: '',
+        filters: {
+          inTitle: false,
+          inFirst: false,
+          status: '',
+          order: '',
+          category: '',
+          tags: ''
+        },
+        posts: [],
+        topics: [],
+        users: [],
+        page: 0,
+        hasMore: false,
+        loading: false,
+        errorMessage: ''
+      }
     }
     tabs.value.push(newTab)
     activeTabId.value = id
@@ -341,6 +361,11 @@ export function useDiscourseBrowser() {
         await loadTag(tab, tagName)
         tab.title = `标签：${tagName}`
         tab.viewType = 'tag'
+      } else if (pathname === '/search' || pathname === '/search.json') {
+        const query = urlObj.searchParams.get('q') || ''
+        await loadSearch(tab, query)
+        tab.title = '搜索'
+        tab.viewType = 'search'
       } else if (pathname === '/posted') {
         await loadPosted(tab)
         tab.title = '我的帖子'
@@ -405,6 +430,11 @@ export function useDiscourseBrowser() {
 
   async function loadNotifications(tab: BrowserTab, filter: DiscourseNotificationFilter) {
     await loadNotificationsRoute(tab, baseUrl, filter)
+  }
+
+  async function loadSearch(tab: BrowserTab, query: string) {
+    if (!tab.searchState) return
+    await loadSearchRoute(tab, baseUrl, users, query, tab.searchState.filters, 0)
   }
 
   async function checkTopicListUpdates(tab: BrowserTab) {
@@ -596,6 +626,28 @@ export function useDiscourseBrowser() {
   // Load more messages
   async function loadMoreMessages() {
     await loadMoreMessagesRoute(activeTab, baseUrl, users, isLoadingMore)
+  }
+
+  async function searchDiscourse(query: string, filters: DiscourseSearchFilters) {
+    const tab = activeTab.value
+    if (!tab || !tab.searchState) return
+    tab.searchState.filters = { ...filters }
+    await loadSearchRoute(tab, baseUrl, users, query, filters, 0)
+    tab.viewType = 'search'
+  }
+
+  async function loadMoreSearchResults() {
+    const tab = activeTab.value
+    if (!tab || !tab.searchState || tab.searchState.loading || !tab.searchState.hasMore) return
+    const nextPage = tab.searchState.page + 1
+    await loadSearchRoute(
+      tab,
+      baseUrl,
+      users,
+      tab.searchState.query,
+      tab.searchState.filters,
+      nextPage
+    )
   }
 
   // Open user messages
@@ -826,6 +878,8 @@ export function useDiscourseBrowser() {
     loadNotifications,
     checkTopicListUpdates,
     applyPendingTopics,
-    pollTopicUpdates
+    pollTopicUpdates,
+    searchDiscourse,
+    loadMoreSearchResults
   }
 }

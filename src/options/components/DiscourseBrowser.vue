@@ -10,7 +10,8 @@ import type {
   SuggestedTopic,
   ActivityTabType,
   MessagesTabType,
-  DiscoursePost
+  DiscoursePost,
+  DiscourseSearchFilters
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import CategoryGrid from './discourse/layout/CategoryGrid'
@@ -29,6 +30,7 @@ import MessagesView from './discourse/user/MessagesView'
 import BrowserToolbar from './discourse/browser/BrowserToolbar'
 import BrowserTabs from './discourse/browser/BrowserTabs'
 import ChatView from './discourse/chat/ChatView'
+import SearchView from './discourse/search/SearchView'
 import { pageFetch, extractData } from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 
@@ -78,7 +80,9 @@ const {
   loadNotifications,
   checkTopicListUpdates,
   applyPendingTopics,
-  pollTopicUpdates
+  pollTopicUpdates,
+  searchDiscourse,
+  loadMoreSearchResults
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -527,6 +531,19 @@ const handleApplyPendingTopics = () => {
   const tab = activeTab.value
   if (!tab) return
   applyPendingTopics(tab)
+}
+
+const handleOpenSearchResult = (path: string) => {
+  if (!path) return
+  navigateTo(path)
+}
+
+const handleSearch = (query: string, filters: DiscourseSearchFilters) => {
+  searchDiscourse(query, filters)
+}
+
+const handleLoadMoreSearch = () => {
+  loadMoreSearchResults()
 }
 
 const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 'followers') => {
@@ -1258,6 +1275,15 @@ onUnmounted(() => {
         @openUser="handleUserClick"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
+      />
+
+      <SearchView
+        v-else-if="activeTab?.viewType === 'search' && activeTab.searchState"
+        :state="activeTab.searchState"
+        :baseUrl="baseUrl"
+        @search="handleSearch"
+        @loadMore="handleLoadMoreSearch"
+        @open="handleOpenSearchResult"
       />
     </div>
   </div>

@@ -62,6 +62,7 @@ export interface BrowserTab {
   chatState: ChatState | null
   pendingTopics?: DiscourseTopic[] | null
   pendingTopicsCount?: number
+  searchState: SearchState | null
 }
 
 export type ViewType =
@@ -80,6 +81,7 @@ export type ViewType =
   | 'followFeed'
   | 'following'
   | 'followers'
+  | 'search'
   | 'error'
 
 export interface DiscourseTopic {
@@ -305,9 +307,56 @@ export interface DiscourseTopicDetail {
   details: {
     created_by: DiscourseUser
     participants: DiscourseUser[]
+    notification_level?: number
   }
   suggested_topics?: SuggestedTopic[]
   related_topics?: SuggestedTopic[]
+}
+
+export interface DiscourseSearchPost {
+  id: number
+  topic_id: number
+  topic_slug?: string
+  post_number: number
+  created_at: string
+  blurb?: string
+  username?: string
+  name?: string
+}
+
+export interface DiscourseSearchTopic {
+  id: number
+  title: string
+  fancy_title?: string
+  slug: string
+  posts_count?: number
+  reply_count?: number
+  views?: number
+  like_count?: number
+  created_at?: string
+  last_posted_at?: string
+  category_id?: number
+}
+
+export interface DiscourseSearchFilters {
+  inTitle: boolean
+  inFirst: boolean
+  status: 'open' | 'closed' | ''
+  order: 'latest' | 'likes' | 'views' | ''
+  category: string
+  tags: string
+}
+
+export interface SearchState {
+  query: string
+  filters: DiscourseSearchFilters
+  posts: DiscourseSearchPost[]
+  topics: DiscourseSearchTopic[]
+  users: DiscourseUser[]
+  page: number
+  hasMore: boolean
+  loading: boolean
+  errorMessage: string
 }
 
 export interface ChatChannelMembership {

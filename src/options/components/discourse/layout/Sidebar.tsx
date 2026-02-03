@@ -26,6 +26,7 @@ export default defineComponent({
     ]
 
     const quickLinks: Array<{ path: string; label: string; icon: string }> = [
+      { path: '/search', label: '搜索', icon: 'discourse-chat-search' },
       { path: '/categories', label: '分类', icon: 'folder' },
       { path: '/tags', label: '标签', icon: 'tags' },
       { path: '/posted', label: '我的帖子', icon: 'edit' },

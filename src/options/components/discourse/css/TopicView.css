@@ -3,6 +3,145 @@
   margin-bottom: 8px;
 }
 
+.topic-view {
+  align-items: flex-start;
+}
+
+.topic-aside__inner {
+  position: sticky;
+  top: 16px;
+}
+
+.topic-timeline {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dark .topic-timeline {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.topic-timeline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.topic-timeline__title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dark .topic-timeline__title {
+  color: #e2e8f0;
+}
+
+.topic-timeline__range input[type='range'] {
+  width: 100%;
+}
+
+.topic-timeline__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.topic-timeline__current {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topic-footer {
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topic-footer__left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+
+.topic-footer__level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topic-footer__label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.topic-footer__analysis {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.topic-footer__analysis-title {
+  color: #64748b;
+}
+
+.topic-footer__right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-extras {
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 16px;
+}
+
+.topic-extras__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.topic-extras__tab {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #475569;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topic-extras__tab.is-active {
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.topic-extras__count {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 @media (max-width: 640px) {
   .post-parent-outer {
     margin-left: 36px;

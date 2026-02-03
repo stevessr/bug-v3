@@ -26,8 +26,7 @@ export default defineComponent({
       required: true
     },
     isLiking: { type: Boolean, required: true },
-    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
-    topicNotificationLevel: { type: Number as () => number | null, default: null }
+    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null }
   },
   emits: [
     'openUser',
@@ -41,8 +40,7 @@ export default defineComponent({
     'assign',
     'edit',
     'delete',
-    'wiki',
-    'ignoreTopic'
+    'wiki'
   ],
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
@@ -63,9 +61,6 @@ export default defineComponent({
     const canAssign = computed(() => {
       return props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
     })
-
-    const isTopicMuted = computed(() => props.topicNotificationLevel === 0)
-    const showIgnore = computed(() => props.post.post_number === 1)
 
     const handleUserClick = (username: string) => {
       emit('openUser', username)
@@ -133,10 +128,6 @@ export default defineComponent({
 
     const handleWiki = () => {
       emit('wiki', props.post)
-    }
-
-    const handleIgnoreTopic = () => {
-      emit('ignoreTopic')
     }
 
     return () => (
