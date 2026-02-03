@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 import QuickTagEditor from './QuickTagEditor.vue'
 import VirtualList from './VirtualList.vue'
@@ -63,9 +63,22 @@ const measureItemHeight = async () => {
   }
 }
 
+let resizeObserver: ResizeObserver | null = null
+
 // 组件挂载后进行测量
 onMounted(() => {
   measureItemHeight()
+  if (measurementRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      measureItemHeight()
+    })
+    resizeObserver.observe(measurementRef.value)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
 })
 
 // 当 gridColumns 变化时重新测量
@@ -109,24 +122,19 @@ const emojiRows = computed(() => {
       ref="measurementRef"
       class="measurement-row emoji-row"
       :style="{
-        visibility: 'hidden',
-        position: 'absolute',
-        pointerEvents: 'none',
-        gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-        padding: '0 4px',
-        width: '100%'
+        gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`
       }"
     >
       <div class="emoji-item">
-        <div class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden">
-          <CachedImage
-            :src="getImageSrcSync(emojis[0])"
-            :alt="emojis[0].name"
-            class="w-full h-full object-cover"
-          />
-        </div>
-        <div class="text-xs text-center text-gray-600 mt-1 truncate">{{ emojis[0].name }}</div>
-        <EmojiTags :tags="emojis[0].tags || []" :max-display="2" />
+        <EmojiCard
+          :emoji="emojis[0]"
+          :group-id="groupId"
+          :index="0"
+          :image-src="getImageSrcSync(emojis[0])"
+          @quickTag="() => undefined"
+          @edit="() => undefined"
+          @remove="() => undefined"
+        />
       </div>
     </div>
 
