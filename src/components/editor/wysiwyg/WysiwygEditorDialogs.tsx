@@ -1,6 +1,6 @@
 import { defineComponent, PropType } from 'vue'
 
-type DialogState = {
+export type DialogState = {
   showLinkPanel: boolean
   showImagePanel: boolean
   linkUrl: string
@@ -9,7 +9,7 @@ type DialogState = {
   imageAlt: string
 }
 
-type DialogActions = {
+export type DialogActions = {
   openLinkPanel: () => void
   openImagePanel: () => void
   closePanels: () => void

@@ -1,6 +1,6 @@
 import { defineComponent, ref, computed, watch, onMounted, Teleport, Transition } from 'vue'
 
-import { pageFetch, extractData } from './utils'
+import { pageFetch, extractData } from '@/options/components/discourse/utils'
 
 type EmojiPickerProps = {
   show?: boolean
@@ -119,9 +119,7 @@ export default defineComponent({
 
       const query = searchQuery.value.toLowerCase()
       return emojiGroups.value.flatMap(g =>
-        g.emojis.filter(
-          e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query)
-        )
+        g.emojis.filter(e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query))
       )
     })
 
@@ -243,7 +241,7 @@ export default defineComponent({
                 </div>
 
                 <div class="emoji-picker-footer">
-                  <span class="emoji-hint">使用 :表情名称: 格式输入表情</span>
+                  <span class="emoji-hint">使用 :表情名称：格式输入表情</span>
                 </div>
               </div>
             </div>

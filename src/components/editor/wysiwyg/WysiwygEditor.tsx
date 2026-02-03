@@ -5,13 +5,17 @@ import katex from 'katex'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
-import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from './bbcode'
-import { useDiscourseUpload } from './composables/useDiscourseUpload'
+import {
+  parseEmojiShortcodeToBBCode,
+  parseEmojiShortcodeToMarkdown,
+  renderBBCode
+} from '@/options/components/discourse/bbcode'
+import { useDiscourseUpload } from '@/options/components/discourse/composables/useDiscourseUpload'
 import WysiwygEditorToolbar from './WysiwygEditorToolbar'
 import WysiwygEditorDialogs from './WysiwygEditorDialogs'
-import './css/EmojiPicker.css'
-import './css/PluginEmojiPicker.css'
-import './css/ProseMirrorEditor.css'
+import './styles/EmojiPicker.css'
+import './styles/PluginEmojiPicker.css'
+import './styles/ProseMirrorEditor.css'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -317,7 +321,7 @@ export default defineComponent({
       range.deleteContents()
       range.insertNode(textNode)
       const newRange = document.createRange()
-      const cursorPosition = selectedText ? textNode.nodeValue?.length ?? 0 : prefix.length
+      const cursorPosition = selectedText ? (textNode.nodeValue?.length ?? 0) : prefix.length
       newRange.setStart(textNode, cursorPosition)
       newRange.setEnd(textNode, cursorPosition)
       selection.removeAllRanges()

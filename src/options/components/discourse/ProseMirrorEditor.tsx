@@ -16,14 +16,13 @@ import {
   UploadOutlined
 } from '@ant-design/icons-vue'
 
-import EmojiPicker from './EmojiPicker'
-import PluginEmojiPicker from './PluginEmojiPicker'
+import { EmojiPicker, PluginEmojiPicker } from '@/components/editor/wysiwyg'
 import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
 import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
-import './css/EmojiPicker.css'
-import './css/PluginEmojiPicker.css'
-import './css/ProseMirrorEditor.css'
+import '@/components/editor/wysiwyg/styles/EmojiPicker.css'
+import '@/components/editor/wysiwyg/styles/PluginEmojiPicker.css'
+import '@/components/editor/wysiwyg/styles/ProseMirrorEditor.css'
 
 type Props = {
   modelValue: string
@@ -97,7 +96,7 @@ export default defineComponent({
     const insertBlockquote = () => wrapSelection('[quote]', '[/quote]')
     const insertOrderedList = () => insertTextAtCursor('[list=1]\n[*]item\n[/list]')
     const insertUnorderedList = () => insertTextAtCursor('[list]\n[*]item\n[/list]')
-    const insertHeading = () => insertTextAtCursor('[size=20][b]标题[/b][/size]')
+    const insertHeading = () => insertTextAtCursor('[size=20][b] 标题 [/b][/size]')
     const undoAction = () => document.execCommand('undo')
     const redoAction = () => document.execCommand('redo')
 

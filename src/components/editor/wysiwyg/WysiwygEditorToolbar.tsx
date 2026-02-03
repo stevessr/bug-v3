@@ -12,7 +12,6 @@ import {
   BlockOutlined,
   OrderedListOutlined,
   UnorderedListOutlined,
-  BgColorsOutlined,
   UploadOutlined
 } from '@ant-design/icons-vue'
 export type ToolbarActions = {
