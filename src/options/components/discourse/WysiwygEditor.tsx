@@ -2,27 +2,13 @@ import { defineComponent, ref, watch, computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
-import {
-  RollbackOutlined,
-  RedoOutlined,
-  BoldOutlined,
-  ItalicOutlined,
-  UnderlineOutlined,
-  StrikethroughOutlined,
-  LinkOutlined,
-  PictureOutlined,
-  CodeOutlined,
-  BlockOutlined,
-  OrderedListOutlined,
-  UnorderedListOutlined,
-  BgColorsOutlined,
-  UploadOutlined
-} from '@ant-design/icons-vue'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
 import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
+import WysiwygEditorToolbar from './WysiwygEditorToolbar'
+import WysiwygEditorDialogs from './WysiwygEditorDialogs'
 import './css/EmojiPicker.css'
 import './css/PluginEmojiPicker.css'
 import './css/ProseMirrorEditor.css'
@@ -331,7 +317,7 @@ export default defineComponent({
       range.deleteContents()
       range.insertNode(textNode)
       const newRange = document.createRange()
-      const cursorPosition = selectedText ? (textNode.nodeValue?.length ?? 0) : prefix.length
+      const cursorPosition = selectedText ? textNode.nodeValue?.length ?? 0 : prefix.length
       newRange.setStart(textNode, cursorPosition)
       newRange.setEnd(textNode, cursorPosition)
       selection.removeAllRanges()
@@ -520,111 +506,60 @@ export default defineComponent({
       props.modelValue?.trim() ? '' : '在此处输入。所见即所得模式下将输出 HTML。'
     )
 
+    const toolbarActions = {
+      undo: undoAction,
+      redo: redoAction,
+      toggleBold,
+      toggleItalic,
+      toggleUnderline,
+      toggleStrike,
+      openEmojiPicker: handleEmojiPickerOpen,
+      openPluginEmojiPicker: handlePluginEmojiPickerOpen,
+      handleUploadClick,
+      openLinkPanel,
+      openImagePanel,
+      insertCode,
+      insertBlockquote,
+      insertOrderedList,
+      insertUnorderedList,
+      insertHeadingLevel,
+      insertTable,
+      insertDetails,
+      insertSpoiler,
+      insertPoll,
+      insertFootnote,
+      insertMathInline,
+      insertMathBlock,
+      insertMermaid,
+      insertScrollable,
+      insertAppWrap
+    }
+
+    const dialogState = computed(() => ({
+      showLinkPanel: showLinkPanel.value,
+      showImagePanel: showImagePanel.value,
+      linkUrl: linkUrl.value,
+      linkText: linkText.value,
+      imageUrl: imageUrl.value,
+      imageAlt: imageAlt.value
+    }))
+
+    const dialogActions = {
+      openLinkPanel,
+      openImagePanel,
+      closePanels,
+      insertLink: insertLinkMarkup,
+      insertImage: insertImageMarkup,
+      onLinkInput: value => (linkUrl.value = value),
+      onLinkTextInput: value => (linkText.value = value),
+      onImageInput: value => (imageUrl.value = value),
+      onImageAltInput: value => (imageAlt.value = value)
+    }
+
     return () => (
       <>
         <div class="prosemirror-editor-wrapper">
-          <div class="prosemirror-toolbar">
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={undoAction} title="撤销 (Ctrl+Z)">
-                <RollbackOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={redoAction} title="重做 (Ctrl+Y)">
-                <RedoOutlined />
-              </button>
-            </div>
-            <div class="toolbar-divider" />
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={toggleBold} title="粗体 (Ctrl+B)">
-                <BoldOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={toggleItalic} title="斜体 (Ctrl+I)">
-                <ItalicOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={toggleUnderline} title="下划线 (Ctrl+U)">
-                <UnderlineOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={toggleStrike} title="删除线 (Ctrl+Alt+S)">
-                <StrikethroughOutlined />
-              </button>
-            </div>
-            <div class="toolbar-divider" />
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={handleEmojiPickerOpen} title="表情">
-                🙂
-              </button>
-              <button class="toolbar-btn" onClick={handlePluginEmojiPickerOpen} title="插件表情">
-                ⭐
-              </button>
-              <button class="toolbar-btn" onClick={handleUploadClick} title="上传文件">
-                <UploadOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={openLinkPanel} title="插入链接">
-                <LinkOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={openImagePanel} title="插入图片">
-                <PictureOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={insertCode} title="代码块">
-                <CodeOutlined />
-              </button>
-            </div>
-            <div class="toolbar-divider" />
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={insertBlockquote} title="引用">
-                <BlockOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={insertOrderedList} title="有序列表">
-                <OrderedListOutlined />
-              </button>
-              <button class="toolbar-btn" onClick={insertUnorderedList} title="无序列表">
-                <UnorderedListOutlined />
-              </button>
-            </div>
-            <div class="toolbar-divider" />
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={() => insertHeadingLevel(1)} title="一级标题">
-                H1
-              </button>
-              <button class="toolbar-btn" onClick={() => insertHeadingLevel(2)} title="二级标题">
-                H2
-              </button>
-              <button class="toolbar-btn" onClick={() => insertHeadingLevel(3)} title="三级标题">
-                H3
-              </button>
-              <button class="toolbar-btn" onClick={insertTable} title="表格">
-                表格
-              </button>
-              <button class="toolbar-btn" onClick={insertDetails} title="隐藏详细信息">
-                详情
-              </button>
-              <button class="toolbar-btn" onClick={insertSpoiler} title="剧透">
-                剧透
-              </button>
-            </div>
-            <div class="toolbar-group">
-              <button class="toolbar-btn" onClick={insertPoll} title="投票">
-                投票
-              </button>
-              <button class="toolbar-btn" onClick={insertFootnote} title="脚注">
-                脚注
-              </button>
-              <button class="toolbar-btn" onClick={insertMathInline} title="公式（行内）">
-                公式
-              </button>
-              <button class="toolbar-btn" onClick={insertMathBlock} title="公式（块）">
-                公式块
-              </button>
-              <button class="toolbar-btn" onClick={insertMermaid} title="Mermaid 图表">
-                Mermaid
-              </button>
-              <button class="toolbar-btn" onClick={insertScrollable} title="滚动内容">
-                滚动
-              </button>
-              <button class="toolbar-btn" onClick={insertAppWrap} title="应用包装">
-                应用
-              </button>
-            </div>
-          </div>
+          <WysiwygEditorToolbar actions={toolbarActions} />
           <div class="prosemirror-editor wysiwyg-editor">
             <div
               ref={editorRef}
@@ -637,129 +572,15 @@ export default defineComponent({
               onKeydown={handleEditorKeydown}
             />
           </div>
-
           <input
             ref={fileInputRef}
             type="file"
             class="hidden-upload-field"
             onChange={handleUploadChange}
           />
-          {showLinkPanel.value ? (
-            <div class="editor-modal-backdrop" onClick={closePanels}>
-              <div class="editor-modal-card" onClick={event => event.stopPropagation()}>
-                <div class="editor-modal-header">
-                  <span>插入链接</span>
-                </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">链接地址</label>
-                  <input
-                    class="editor-modal-input"
-                    value={linkUrl.value}
-                    onInput={event => {
-                      linkUrl.value = (event.target as HTMLInputElement).value
-                    }}
-                    placeholder="https://"
-                  />
-                </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">显示文本（可选）</label>
-                  <input
-                    class="editor-modal-input"
-                    value={linkText.value}
-                    onInput={event => {
-                      linkText.value = (event.target as HTMLInputElement).value
-                    }}
-                    placeholder="显示文本（可选）"
-                  />
-                </div>
-                <div class="editor-modal-preview">
-                  <span class="editor-modal-preview-label">预览：</span>
-                  {linkUrl.value.trim() ? (
-                    <a
-                      href={linkUrl.value.trim()}
-                      target="_blank"
-                      rel="nofollow noopener"
-                      class="editor-modal-preview-link"
-                    >
-                      {linkText.value.trim() || linkUrl.value.trim()}
-                    </a>
-                  ) : (
-                    <span class="editor-modal-preview-placeholder">未填写链接</span>
-                  )}
-                </div>
-                <div class="editor-modal-actions">
-                  <button class="editor-modal-btn" onClick={closePanels} title="取消">
-                    取消
-                  </button>
-                  <button
-                    class="editor-modal-btn primary"
-                    onClick={insertLinkMarkup}
-                    title="插入"
-                    disabled={!linkUrl.value.trim()}
-                  >
-                    插入
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {showImagePanel.value ? (
-            <div class="editor-modal-backdrop" onClick={closePanels}>
-              <div class="editor-modal-card" onClick={event => event.stopPropagation()}>
-                <div class="editor-modal-header">
-                  <span>插入图片</span>
-                </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">图片地址</label>
-                  <input
-                    class="editor-modal-input"
-                    value={imageUrl.value}
-                    onInput={event => {
-                      imageUrl.value = (event.target as HTMLInputElement).value
-                    }}
-                    placeholder="https://"
-                  />
-                </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">描述（可选）</label>
-                  <input
-                    class="editor-modal-input"
-                    value={imageAlt.value}
-                    onInput={event => {
-                      imageAlt.value = (event.target as HTMLInputElement).value
-                    }}
-                    placeholder="描述（可选）"
-                  />
-                </div>
-                <div class="editor-modal-preview">
-                  <span class="editor-modal-preview-label">预览：</span>
-                  {imageUrl.value.trim() ? (
-                    <img
-                      src={imageUrl.value.trim()}
-                      alt={imageAlt.value.trim() || 'image'}
-                      class="editor-modal-preview-image"
-                    />
-                  ) : (
-                    <span class="editor-modal-preview-placeholder">未填写图片地址</span>
-                  )}
-                </div>
-                <div class="editor-modal-actions">
-                  <button class="editor-modal-btn" onClick={closePanels} title="取消">
-                    取消
-                  </button>
-                  <button
-                    class="editor-modal-btn primary"
-                    onClick={insertImageMarkup}
-                    title="插入"
-                    disabled={!imageUrl.value.trim()}
-                  >
-                    插入
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
+
+        <WysiwygEditorDialogs state={dialogState.value} actions={dialogActions} />
 
         <EmojiPicker
           show={showEmojiPicker.value}
