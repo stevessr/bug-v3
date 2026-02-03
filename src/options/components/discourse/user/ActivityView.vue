@@ -11,6 +11,7 @@ import type {
   ActivityTabType
 } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{

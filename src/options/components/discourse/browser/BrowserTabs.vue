@@ -29,7 +29,10 @@ const emit = defineEmits<{
     >
       <LoadingOutlined v-if="tab.loading" class="text-blue-500" />
       <span class="flex-1 truncate text-sm dark:text-white">{{ tab.title }}</span>
-      <CloseOutlined class="text-gray-400 hover:text-red-500 text-xs" @click.stop="emit('closeTab', tab.id)" />
+      <CloseOutlined
+        class="text-gray-400 hover:text-red-500 text-xs"
+        @click.stop="emit('closeTab', tab.id)"
+      />
     </div>
     <a-button type="text" size="small" class="ml-1" @click="emit('createTab')">
       <template #icon><PlusOutlined /></template>

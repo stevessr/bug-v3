@@ -31,10 +31,7 @@ const renderCarousel = (images: LightboxImage[]) => {
   `
 }
 
-const renderImageGrid = (
-  columns: LightboxImage[][],
-  columnsCount?: number
-): string => {
+const renderImageGrid = (columns: LightboxImage[][], columnsCount?: number): string => {
   const count = columnsCount || columns.length || 2
   const items = columns.flat().map(img => {
     const image = renderImg(img, 'post-image-grid-image')

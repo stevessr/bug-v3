@@ -1,4 +1,5 @@
 import { defineComponent, ref, computed, watch, onMounted, Teleport, Transition } from 'vue'
+
 import { pageFetch, extractData } from './utils'
 
 type EmojiPickerProps = {

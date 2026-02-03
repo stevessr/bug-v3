@@ -145,8 +145,7 @@ export default defineComponent({
       const url = imageUrl.value.trim()
       if (!url) return
       const alt = imageAlt.value.trim() || 'image'
-      const markup =
-        props.inputFormat === 'markdown' ? `![${alt}](${url})` : `[img]${url}[/img]`
+      const markup = props.inputFormat === 'markdown' ? `![${alt}](${url})` : `[img]${url}[/img]`
       insertTextAtCursor(markup)
       closePanels()
     }

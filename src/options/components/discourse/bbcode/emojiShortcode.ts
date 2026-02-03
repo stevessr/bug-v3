@@ -108,7 +108,7 @@ export function parseEmojiShortcodeToHTML(text: string, imageScale: number = 30)
  * @returns 包含表情短码的文本
  */
 export function convertBBCodeToEmojiShortcode(text: string): string {
-  return text.replace(/\[img\]([^\[]+?)\[\/img\]/g, (match, url) => {
+  return text.replace(/\[img\]([^[]+?)\[\/img\]/g, (match, url) => {
     // 查找匹配的 URL
     for (const [name, emoji] of emojiMap.entries()) {
       if (emoji.url === url) {
@@ -125,7 +125,7 @@ export function convertBBCodeToEmojiShortcode(text: string): string {
  * @returns 包含表情短码的文本
  */
 export function convertMarkdownToEmojiShortcode(text: string): string {
-  return text.replace(/!\[([^\]]*?)\]\([^\)]+\)/g, (match, alt) => {
+  return text.replace(/!\[([^\]]*?)\]\([^)]+\)/g, (match, alt) => {
     // 从 alt 文本中提取表情名称
     // 格式可能是 `name` 或 `name|widthxheight`
     const name = alt.split('|')[0]

@@ -254,10 +254,7 @@ export async function loadChatMessages(
   if (merged.length > 0) {
     const minId = merged.reduce((min, item) => (item.id < min ? item.id : min), merged[0].id)
     state.beforeMessageIdByChannel[channelId] = minId
-    const maxMessage = merged.reduce(
-      (max, item) => (item.id > max.id ? item : max),
-      merged[0]
-    )
+    const maxMessage = merged.reduce((max, item) => (item.id > max.id ? item : max), merged[0])
     const channel = state.channels.find(item => item.id === channelId)
     if (channel) {
       channel.last_message_id = maxMessage.id

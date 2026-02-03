@@ -197,7 +197,7 @@
   transition: all 0.3s ease-in-out;
 }
 
-.composer-body > div[style*="display: none"],
-.composer-body > div[style*="display: none"] ~ * {
+.composer-body > div[style*='display: none'],
+.composer-body > div[style*='display: none'] ~ * {
   animation: none;
 }

@@ -20,8 +20,9 @@ const emit = defineEmits<{
   (e: 'navigate', url: string): void
 }>()
 
-const activeChannel = computed(() =>
-  props.chatState.channels.find(channel => channel.id === props.chatState.activeChannelId) || null
+const activeChannel = computed(
+  () =>
+    props.chatState.channels.find(channel => channel.id === props.chatState.activeChannelId) || null
 )
 
 const activeChannelTitle = computed(() => {
@@ -105,10 +106,7 @@ const handleNavigate = (url: string) => {
       />
       <div v-else class="chat-empty">请选择一个频道开始聊天</div>
 
-      <ChatComposer
-        :disabled="!activeChannel || chatState.sendingMessage"
-        @send="handleSend"
-      />
+      <ChatComposer :disabled="!activeChannel || chatState.sendingMessage" @send="handleSend" />
     </div>
   </div>
 </template>

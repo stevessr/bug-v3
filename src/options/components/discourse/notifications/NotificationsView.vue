@@ -43,11 +43,7 @@ const formatFilter = (n: DiscourseNotification) => {
 const getCategoryMeta = (n: DiscourseNotification) => {
   const data = n.data || {}
   const id =
-    data.category_id ??
-    data.categoryId ??
-    data.category?.id ??
-    data.category_id?.id ??
-    null
+    data.category_id ?? data.categoryId ?? data.category?.id ?? data.category_id?.id ?? null
   const name =
     data.category_name ??
     data.categoryName ??
@@ -137,9 +133,7 @@ const handleOpen = (n: DiscourseNotification) => {
       正在加载通知...
     </div>
 
-    <div v-else-if="filteredNotifications.length === 0" class="text-gray-500">
-      暂无通知
-    </div>
+    <div v-else-if="filteredNotifications.length === 0" class="text-gray-500">暂无通知</div>
 
     <div v-else class="space-y-2">
       <div
@@ -164,7 +158,9 @@ const handleOpen = (n: DiscourseNotification) => {
 <style scoped>
 .notification-item {
   cursor: pointer;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .notification-item.unread {

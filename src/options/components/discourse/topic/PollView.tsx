@@ -26,11 +26,16 @@ export default defineComponent({
     pollData: { type: Object as () => DiscoursePoll | undefined, default: undefined },
     baseUrl: { type: String, required: true },
     postId: { type: Number, required: true },
-    requestPollVote: { type: Function as () => (method: 'PUT' | 'DELETE', body: URLSearchParams) => Promise<any>, required: true },
+    requestPollVote: {
+      type: Function as () => (method: 'PUT' | 'DELETE', body: URLSearchParams) => Promise<any>,
+      required: true
+    },
     pollMeta: { type: Object as () => PollMeta, required: true }
   },
   setup(props) {
-    const viewMode = ref<'vote' | 'results'>(props.pollMeta.results === 'always' ? 'results' : 'vote')
+    const viewMode = ref<'vote' | 'results'>(
+      props.pollMeta.results === 'always' ? 'results' : 'vote'
+    )
     const selected = ref<string[]>([])
     const ranks = ref<Record<string, number>>({})
     const hasVoted = ref(false)
@@ -258,7 +263,10 @@ export default defineComponent({
               {rounds.map((round: any) => {
                 const eliminated = Array.isArray(round?.eliminated) ? round.eliminated : []
                 const eliminatedText = eliminated.length
-                  ? eliminated.map((item: any) => item?.html || '').filter(Boolean).join('、')
+                  ? eliminated
+                      .map((item: any) => item?.html || '')
+                      .filter(Boolean)
+                      .join('、')
                   : '—'
                 return (
                   <div class="poll-tsx-round" key={round?.round ?? Math.random()}>
@@ -289,14 +297,19 @@ export default defineComponent({
             {props.options.map(option => {
               const pollOption = pollState.value?.options?.find(item => item.id === option.id)
               const voteCount = pollOption?.votes || 0
-              const percent = totalVotes.value > 0 ? Math.round((voteCount / totalVotes.value) * 100) : 0
+              const percent =
+                totalVotes.value > 0 ? Math.round((voteCount / totalVotes.value) * 100) : 0
               const barPercent = Math.round((voteCount / maxVotes.value) * 100)
 
               return (
                 <div key={option.id} class="poll-tsx-bar-row">
                   <div class="poll-tsx-label">{option.label}</div>
                   <div class="poll-tsx-bar">
-                    <Progress percent={barPercent} showInfo={false} strokeColor="rgba(59,130,246,0.7)" />
+                    <Progress
+                      percent={barPercent}
+                      showInfo={false}
+                      strokeColor="rgba(59,130,246,0.7)"
+                    />
                   </div>
                   <div class="poll-tsx-percent">{percent}%</div>
                 </div>
@@ -314,7 +327,12 @@ export default defineComponent({
         <div class="poll-tsx-footer">
           <div class="poll-tsx-actions">
             {!hasVoted.value && (
-              <Button type="primary" disabled={!canSubmit.value} loading={isSubmitting.value} onClick={submitVote}>
+              <Button
+                type="primary"
+                disabled={!canSubmit.value}
+                loading={isSubmitting.value}
+                onClick={submitVote}
+              >
                 提交投票
               </Button>
             )}
@@ -323,7 +341,9 @@ export default defineComponent({
                 撤销
               </Button>
             )}
-            <Button onClick={toggleResults}>{viewMode.value === 'results' ? '投票' : '结果'}</Button>
+            <Button onClick={toggleResults}>
+              {viewMode.value === 'results' ? '投票' : '结果'}
+            </Button>
           </div>
           <div class="poll-tsx-info">
             {voters.value != null && <span>{voters.value} 投票人</span>}

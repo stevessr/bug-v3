@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DiscoursePost, ParsedContent } from '../types'
+
 import PostReplyItem from './PostReplyItem.vue'
 
 defineOptions({ name: 'PostRepliesTree' })

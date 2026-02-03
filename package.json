@@ -48,6 +48,7 @@
     "ant-design-vue": "^4.2.6",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.1",
+    "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
     "katex": "^0.16.27",
     "libavif-wasm": "^0.1.13",

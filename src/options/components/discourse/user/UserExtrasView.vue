@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
 import UserTabs from './UserTabs.vue'
 
 type ExtrasTab = 'badges' | 'followFeed' | 'following' | 'followers'

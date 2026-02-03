@@ -1,6 +1,13 @@
 import type { Node, Parent, Element } from 'hast'
 
-import { getPropString, hasClass, isElement, isParent, removeNode, stringifyChildren } from './astUtils'
+import {
+  getPropString,
+  hasClass,
+  isElement,
+  isParent,
+  removeNode,
+  stringifyChildren
+} from './astUtils'
 import { traverse } from './traverse'
 import type { ParseContext } from './context'
 

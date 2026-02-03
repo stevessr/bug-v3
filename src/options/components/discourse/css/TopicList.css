@@ -58,7 +58,9 @@
   height: 24px;
   border-radius: 50%;
   border: 1px solid rgba(156, 163, 175, 0.3);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .poster-avatar:hover .avatar {

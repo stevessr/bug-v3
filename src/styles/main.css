@@ -44,7 +44,7 @@
     border-bottom: 3px solid transparent !important;
   }
 
-  .high-contrast .group-tab-button[aria-selected="true"] {
+  .high-contrast .group-tab-button[aria-selected='true'] {
     border-bottom: 3px solid var(--hc-border-color) !important;
   }
 }

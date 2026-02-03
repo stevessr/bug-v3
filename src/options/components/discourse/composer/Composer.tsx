@@ -1,7 +1,8 @@
-import { computed, ref, watch, defineComponent } from 'vue'
+import { computed, ref, watch, defineComponent, onMounted, nextTick } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
+import hljs from 'highlight.js'
 import { Input, Button, Select, TreeSelect } from 'ant-design-vue'
 
 import type { DiscourseCategory } from '../types'
@@ -16,6 +17,7 @@ import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import TagPill from '../layout/TagPill.vue'
 import ProseMirrorEditor from '../ProseMirrorEditor'
 import '../css/Composer.css'
+import '../css/highlight.css'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -67,6 +69,7 @@ export default defineComponent({
     let tagSearchTimer: number | null = null
     const preloadedCategoriesReadyToken = ref(0)
     const emojiReadyToken = ref(0)
+    const previewContentRef = ref<HTMLElement | null>(null)
 
     watch(
       () => props.defaultCategoryId,
@@ -74,6 +77,37 @@ export default defineComponent({
         if (value) categoryId.value = value
       }
     )
+
+    const applyHighlighting = () => {
+      if (!previewContentRef.value) return
+      const codeBlocks = previewContentRef.value.querySelectorAll('pre code')
+      codeBlocks.forEach(block => {
+        const el = block as HTMLElement
+        if (el.dataset.highlighted) return
+
+        const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
+        if (langMatch) {
+          const lang = langMatch.replace('lang-', '')
+          if (hljs.getLanguage(lang)) {
+            el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
+            el.classList.add('hljs')
+            el.dataset.highlighted = 'true'
+            return
+          }
+        }
+        hljs.highlightElement(el)
+        el.dataset.highlighted = 'true'
+      })
+    }
+
+    watch(previewHtml, async () => {
+      await nextTick()
+      applyHighlighting()
+    })
+
+    onMounted(() => {
+      applyHighlighting()
+    })
 
     watch(
       () => [props.mode, props.postId, props.initialRaw] as const,
@@ -688,6 +722,7 @@ export default defineComponent({
             <div class="preview border rounded-md dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800">
               <div class="text-xs text-gray-400 mb-2">预览</div>
               <div
+                ref={previewContentRef}
                 class="preview-content prose dark:prose-invert max-w-none text-sm"
                 innerHTML={previewHtml.value}
               />

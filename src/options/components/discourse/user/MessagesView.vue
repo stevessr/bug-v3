@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
 import UserTabs from './UserTabs.vue'
 
 const props = defineProps<{

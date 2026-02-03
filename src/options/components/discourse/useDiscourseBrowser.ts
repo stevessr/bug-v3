@@ -458,10 +458,9 @@ export function useDiscourseBrowser() {
     const newPosts = postData?.post_stream?.posts || []
     if (!Array.isArray(newPosts) || newPosts.length === 0) return
 
-    tab.currentTopic.post_stream.posts = [
-      ...tab.currentTopic.post_stream.posts,
-      ...newPosts
-    ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
+    tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...newPosts].sort(
+      (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
+    )
     newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
     tab.currentTopic.post_stream.stream = stream
     tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count

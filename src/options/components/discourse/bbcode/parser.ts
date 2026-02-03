@@ -14,26 +14,29 @@ export function parseBBCode(bbcode: string): string {
 
   // Parse tags in order (from most specific to least specific)
 
-  // [code]...[/code] - Code blocks (must be parsed first to avoid parsing inside)
-  html = html.replace(/\[code\]([\s\S]*?)\[\/code\]/g, (_, code) => {
-    return `<pre><code>${code.trim()}</code></pre>`
+  // [code]...[/code] or [code=lang]...[/code] - Code blocks (must be parsed first to avoid parsing inside)
+  html = html.replace(/\[code(?:=([^\]]+))?\]([\s\S]*?)\[\/code\]/g, (_, lang, code) => {
+    const safeLang = lang ? escapeHtml(lang) : ''
+    const dataAttr = safeLang ? ` data-code-wrap="${safeLang}"` : ''
+    const classAttr = safeLang ? ` class="lang-${safeLang}"` : ''
+    return `<pre${dataAttr}><code${classAttr}>${code.trim()}</code></pre>`
   })
 
   // [url=...]...[/url] - Links with URL
-  html = html.replace(/\[url=([^\]]+)\]([^\[]*?)\[\/url\]/g, (_, url, text) => {
+  html = html.replace(/\[url=([^\]]+)\]([^[]*?)\[\/url\]/g, (_, url, text) => {
     const safeUrl = escapeHtml(url)
     const safeText = escapeHtml(text)
     return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeText}</a>`
   })
 
   // [url]...[/url] - Links without URL parameter
-  html = html.replace(/\[url\]([^\[]*?)\[\/url\]/g, (_, url) => {
+  html = html.replace(/\[url\]([^[]*?)\[\/url\]/g, (_, url) => {
     const safeUrl = escapeHtml(url)
     return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`
   })
 
   // [img]...[/img] - Images
-  html = html.replace(/\[img\]([^\[]*?)\[\/img\]/g, (_, src) => {
+  html = html.replace(/\[img\]([^[]*?)\[\/img\]/g, (_, src) => {
     const safeSrc = escapeHtml(src)
     return `<img src="${safeSrc}" alt="image" loading="lazy" />`
   })
@@ -72,42 +75,39 @@ export function parseBBCode(bbcode: string): string {
   })
 
   // [color=...]...[/color] - Text color
-  html = html.replace(/\[color=([^\]]+)\]([^\[]*?)\[\/color\]/g, (_, color, text) => {
+  html = html.replace(/\[color=([^\]]+)\]([^[]*?)\[\/color\]/g, (_, color, text) => {
     const safeColor = escapeHtml(color)
     return `<span style="color: ${safeColor}">${text}</span>`
   })
 
   // [size=...]...[/size] - Text size
-  html = html.replace(/\[size=([^\]]+)\]([^\[]*?)\[\/size\]/g, (_, size, text) => {
+  html = html.replace(/\[size=([^\]]+)\]([^[]*?)\[\/size\]/g, (_, size, text) => {
     const safeSize = escapeHtml(size)
     return `<span style="font-size: ${safeSize}px">${text}</span>`
   })
 
   // [left]...[/left], [center]...[/center], [right]...[/right] - Text alignment
-  html = html.replace(/\[left\]([^\[]*?)\[\/left\]/g, '<div style="text-align: left">$1</div>')
-  html = html.replace(
-    /\[center\]([^\[]*?)\[\/center\]/g,
-    '<div style="text-align: center">$1</div>'
-  )
-  html = html.replace(/\[right\]([^\[]*?)\[\/right\]/g, '<div style="text-align: right">$1</div>')
+  html = html.replace(/\[left\]([^[]*?)\[\/left\]/g, '<div style="text-align: left">$1</div>')
+  html = html.replace(/\[center\]([^[]*?)\[\/center\]/g, '<div style="text-align: center">$1</div>')
+  html = html.replace(/\[right\]([^[]*?)\[\/right\]/g, '<div style="text-align: right">$1</div>')
 
   // [b]...[/b] - Bold
-  html = html.replace(/\[b\]([^\[]*?)\[\/b\]/g, '<b>$1</b>')
+  html = html.replace(/\[b\]([^[]*?)\[\/b\]/g, '<b>$1</b>')
 
   // [i]...[/i] - Italic
-  html = html.replace(/\[i\]([^\[]*?)\[\/i\]/g, '<i>$1</i>')
+  html = html.replace(/\[i\]([^[]*?)\[\/i\]/g, '<i>$1</i>')
 
   // [u]...[/u] - Underline
-  html = html.replace(/\[u\]([^\[]*?)\[\/u\]/g, '<u>$1</u>')
+  html = html.replace(/\[u\]([^[]*?)\[\/u\]/g, '<u>$1</u>')
 
   // [s]...[/s] - Strikethrough
-  html = html.replace(/\[s\]([^\[]*?)\[\/s\]/g, '<s>$1</s>')
+  html = html.replace(/\[s\]([^[]*?)\[\/s\]/g, '<s>$1</s>')
 
   // [sub]...[/sub] - Subscript
-  html = html.replace(/\[sub\]([^\[]*?)\[\/sub\]/g, '<sub>$1</sub>')
+  html = html.replace(/\[sub\]([^[]*?)\[\/sub\]/g, '<sub>$1</sub>')
 
   // [sup]...[/sup] - Superscript
-  html = html.replace(/\[sup\]([^\[]*?)\[\/sup\]/g, '<sup>$1</sup>')
+  html = html.replace(/\[sup\]([^[]*?)\[\/sup\]/g, '<sup>$1</sup>')
 
   // [spoiler]...[/spoiler] - Spoiler/blur
   html = html.replace(/\[spoiler\]([\s\S]*?)\[\/spoiler\]/g, (_, content) => {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, shallowRef, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
+import hljs from 'highlight.js'
+import '../css/highlight.css'
 
 import type {
   DiscourseTopicDetail,
@@ -153,7 +155,7 @@ const fetchRepliesForPost = async (post: DiscoursePost) => {
   const localReplies =
     props.topic.post_stream?.posts?.filter(p => p.reply_to_post_number === postNumber) || []
 
-  let replies = [...localReplies]
+  const replies = [...localReplies]
 
   if (post.reply_count && replies.length < post.reply_count) {
     try {
@@ -572,6 +574,22 @@ const handleQuoteToggle = async (event: Event) => {
     if (data?.cooked) {
       const parsed = parsePostContent(data.cooked, props.baseUrl)
       blockquote.innerHTML = parsed.html
+
+      // Apply highlighting to code blocks in the expanded quote
+      const codeBlocks = blockquote.querySelectorAll('pre code')
+      codeBlocks.forEach(block => {
+        const el = block as HTMLElement
+        const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
+        if (langMatch) {
+          const lang = langMatch.replace('lang-', '')
+          if (hljs.getLanguage(lang)) {
+            el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
+            el.classList.add('hljs')
+            return
+          }
+        }
+        hljs.highlightElement(el)
+      })
     } else if (result.ok === false) {
       const statusText = result.status ? ` (${result.status})` : ''
       blockquote.innerHTML = `<div class="quote-error">引用内容加载失败${statusText}</div>`
