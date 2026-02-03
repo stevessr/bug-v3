@@ -100,11 +100,6 @@ export default defineComponent({
       })
     }
 
-    watch(previewHtml, async () => {
-      await nextTick()
-      applyHighlighting()
-    })
-
     onMounted(() => {
       applyHighlighting()
     })
@@ -274,6 +269,11 @@ export default defineComponent({
         return renderMarkdown(raw.value)
       }
       return renderBBCodeWithMath(raw.value)
+    })
+
+    watch(previewHtml, async () => {
+      await nextTick()
+      applyHighlighting()
     })
 
     function renderBBCodeWithMath(input: string) {

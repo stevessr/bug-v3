@@ -95,16 +95,17 @@ export default defineConfig(({ mode }) => {
       exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/oxipng', '@jsquash/webp']
     },
     build: {
-      sourcemap: process.env.BUILD_SOURCEMAP === 'true',
-      manifest: process.env.BUILD_MANIFEST === 'true',
-      minify: process.env.BUILD_MINIFIED === 'false' ? false : minifier,
+      sourcemap: !isFastBuild && process.env.BUILD_SOURCEMAP === 'true',
+      manifest: !isFastBuild && process.env.BUILD_MANIFEST === 'true',
+      minify: isFastBuild ? false : process.env.BUILD_MINIFIED === 'false' ? false : minifier,
       reportCompressedSize: false, // Skip gzip/brotli size calculation for faster builds
       chunkSizeWarningLimit: 1000, // Increase limit to 1000 kB since this is a feature-rich extension
       // 优化：目标现代浏览器
       target: 'esnext',
       // 优化：启用 CSS 代码分割
-      cssCodeSplit: true,
+      cssCodeSplit: !isFastBuild,
       cssMinify: isFastBuild ? false : undefined,
+      emptyOutDir: !isFastBuild,
       terserOptions:
         process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
           ? undefined
