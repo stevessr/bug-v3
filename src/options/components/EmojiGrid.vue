@@ -119,7 +119,7 @@ const emojiRows = computed(() => {
       }"
     >
       <div class="emoji-item">
-        <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden">
+        <div class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden">
           <CachedImage
             :src="getImageSrcSync(emojis[0])"
             :alt="emojis[0].name"
@@ -162,7 +162,7 @@ const emojiRows = computed(() => {
             "
           >
             <div
-              class="aspect-square bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
+              class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <CachedImage
                 :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
