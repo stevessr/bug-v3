@@ -9,7 +9,8 @@ export default defineComponent({
     text: { type: String, default: '' },
     description: { type: String, default: null },
     clickable: { type: Boolean, default: false },
-    compact: { type: Boolean, default: false }
+    compact: { type: Boolean, default: false },
+    truncate: { type: Boolean, default: false }
   },
   setup(props) {
     const visual = computed(() => getTagVisual(props.name, props.text))
@@ -46,7 +47,7 @@ export default defineComponent({
             <use href={`#${visual.value.icon}`} />
           </svg>
         )}
-        <span class="truncate">{props.text || props.name}</span>
+        <span class={props.truncate ? 'truncate' : ''}>{props.text || props.name}</span>
       </span>
     )
   }

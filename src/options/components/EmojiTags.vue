@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import TagPill from '@/options/components/discourse/layout/TagPill'
+
 interface Props {
   tags: string[]
   maxDisplay?: number // 最多显示的标签数量
@@ -35,35 +37,27 @@ const handleTagClick = (tag: string) => {
 </script>
 
 <template>
-  <div class="emoji-tags">
+  <div class="emoji-tags min-h-[20px]">
     <div class="flex flex-wrap gap-1 mt-1">
-      <span
+      <button
         v-for="tag in displayedTags"
         :key="tag"
-        class="tag-item"
+        type="button"
+        class="inline-flex"
+        :disabled="!clickable"
+        :class="{ 'cursor-default': !clickable }"
         :title="`标签: ${tag}`"
-        :class="{ 'cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800': clickable }"
         @click="handleTagClick(tag)"
       >
-        {{ tag }}
-      </span>
-      <span v-if="hiddenCount > 0" class="tag-more" :title="`还有 ${hiddenCount} 个标签`">
-        +{{ hiddenCount }}
-      </span>
+        <TagPill :name="tag" :text="tag" :clickable="clickable" compact />
+      </button>
+      <TagPill
+        v-if="hiddenCount > 0"
+        :name="`+${hiddenCount}`"
+        :text="`+${hiddenCount}`"
+        :description="`还有 ${hiddenCount} 个标签`"
+        compact
+      />
     </div>
   </div>
 </template>
-
-<style scoped>
-.emoji-tags {
-  @apply min-h-[20px];
-}
-
-.tag-item {
-  @apply inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded transition-colors;
-}
-
-.tag-more {
-  @apply inline-block px-2 py-0.5 text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded;
-}
-</style>
