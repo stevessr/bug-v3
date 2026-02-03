@@ -11,7 +11,8 @@ import {
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
-import { renderBBCode } from '../bbcode'
+import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import TagPill from '../layout/TagPill.vue'
 import ProseMirrorEditor from '../ProseMirrorEditor.vue'
 
@@ -53,6 +54,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 let tagSearchTimer: number | null = null
 const preloadedCategoriesReadyToken = ref(0)
+const emojiReadyToken = ref(0)
 
 watch(
   () => props.defaultCategoryId,
@@ -80,6 +82,8 @@ watch(
     if (!isLinuxDoUrl(value)) return
     await ensurePreloadedCategoriesLoaded()
     preloadedCategoriesReadyToken.value++
+    await ensureEmojiShortcodesLoaded(value)
+    emojiReadyToken.value++
   },
   { immediate: true }
 )
@@ -207,6 +211,7 @@ const normalizeTreeNode = (node: any) => {
 }
 
 const previewHtml = computed(() => {
+  emojiReadyToken.value
   if (inputFormat.value === 'bbcode') {
     return renderBBCodeWithMath(raw.value)
   } else {
@@ -217,9 +222,11 @@ const previewHtml = computed(() => {
 function renderBBCodeWithMath(input: string) {
   if (!input) return ''
 
+  const withEmoji = parseEmojiShortcodeToBBCode(input)
+
   // Parse math blocks
   const mathBlocks: Array<{ tex: string; display: boolean }> = []
-  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+  let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
     const id = mathBlocks.length
     mathBlocks.push({ tex, display: true })
     return `@@MATH_BLOCK_${id}@@`
@@ -263,8 +270,9 @@ function renderBBCodeWithMath(input: string) {
 
 function renderMarkdown(input: string) {
   if (!input) return ''
+  const withEmoji = parseEmojiShortcodeToMarkdown(input)
   const blocks: Array<{ tex: string; display: boolean }> = []
-  let source = input.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+  let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
     const id = blocks.length
     blocks.push({ tex, display: true })
     return `@@MATH_BLOCK_${id}@@`
@@ -545,7 +553,12 @@ watch(categoryId, () => {
     >
       <div v-if="showEditor" class="composer-editor space-y-2">
         <!-- ProseMirror Editor -->
-        <ProseMirrorEditor v-model="raw" :inputFormat="inputFormat" class="composer-editor-input" />
+        <ProseMirrorEditor
+          v-model="raw"
+          :inputFormat="inputFormat"
+          :baseUrl="props.baseUrl"
+          class="composer-editor-input"
+        />
         <div class="text-xs text-gray-500">
           <template v-if="inputFormat === 'bbcode'">
             BBCode: [b] 粗体 [/b] [i] 斜体 [/i] [u] 下划线 [/u] [url=链接] 文字 [/url] [img]

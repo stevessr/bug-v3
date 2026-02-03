@@ -17,9 +17,15 @@ import { baseKeymap } from 'prosemirror-commands'
 import { history, undo, redo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 
+import EmojiPicker from './EmojiPicker'
+import './css/EmojiPicker.css'
+import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
+import { searchEmojis, type EmojiShortcode } from './bbcode'
+
 interface Props {
   modelValue: string
   inputFormat: 'markdown' | 'bbcode'
+  baseUrl?: string
 }
 
 const props = defineProps<Props>()
@@ -31,6 +37,13 @@ const emit = defineEmits<{
 const editorContainer = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
 let isInternalUpdate = false
+const showEmojiPicker = ref(false)
+const emojiPickerPos = ref<{ x: number; y: number } | null>(null)
+const showEmojiAutocomplete = ref(false)
+const emojiSuggestions = ref<EmojiShortcode[]>([])
+const emojiQuery = ref('')
+const emojiActiveIndex = ref(0)
+const emojiAutocompletePos = ref<{ x: number; y: number } | null>(null)
 
 // Toolbar functions
 const toggleBold = () => {
@@ -125,6 +138,105 @@ const redoAction = () => {
   editorView.focus()
 }
 
+const insertEmojiShortcode = (name: string) => {
+  if (!editorView) return
+  const shortcode = `:${name}:`
+  const { state, dispatch } = editorView
+  const { from, to } = state.selection
+  const tr = state.tr.insertText(shortcode, from, to)
+  dispatch(tr)
+  editorView.focus()
+}
+
+const insertEmojiFromAutocomplete = (name: string) => {
+  if (!editorView) return
+  const { state, dispatch } = editorView
+  const { from } = state.selection
+  const textBefore = state.doc.textBetween(0, from, '\n', '\n')
+  const match = textBefore.match(/(^|\\s):([a-zA-Z0-9_\\u4e00-\\u9fa5+-]*)$/)
+  if (!match) {
+    insertEmojiShortcode(name)
+    return
+  }
+  const tokenLength = match[2].length + 1
+  const start = from - tokenLength
+  const tr = state.tr.replaceWith(start, from, state.schema.text(`:${name}:`))
+  dispatch(tr)
+  editorView.focus()
+}
+
+const updateEmojiAutocomplete = () => {
+  if (!editorView) return
+  const { state } = editorView
+  const { from } = state.selection
+  const textBefore = state.doc.textBetween(0, from, '\n', '\n')
+  const match = textBefore.match(/(^|\\s):([a-zA-Z0-9_\\u4e00-\\u9fa5+-]*)$/)
+  if (!match) {
+    showEmojiAutocomplete.value = false
+    emojiSuggestions.value = []
+    emojiQuery.value = ''
+    return
+  }
+  const query = match[2] || ''
+  emojiQuery.value = query
+  const results = searchEmojis(query).slice(0, 12)
+  emojiSuggestions.value = results
+  emojiActiveIndex.value = 0
+  if (results.length === 0) {
+    showEmojiAutocomplete.value = false
+    return
+  }
+  try {
+    const coords = editorView.coordsAtPos(from)
+    emojiAutocompletePos.value = { x: coords.left, y: coords.bottom + 8 }
+  } catch {
+    emojiAutocompletePos.value = null
+  }
+  showEmojiAutocomplete.value = true
+}
+
+const handleEditorKeydown = (event: KeyboardEvent) => {
+  if (!showEmojiAutocomplete.value || emojiSuggestions.value.length === 0) return
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    emojiActiveIndex.value = (emojiActiveIndex.value + 1) % emojiSuggestions.value.length
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    emojiActiveIndex.value =
+      (emojiActiveIndex.value - 1 + emojiSuggestions.value.length) % emojiSuggestions.value.length
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault()
+    const selected = emojiSuggestions.value[emojiActiveIndex.value]
+    if (selected) {
+      insertEmojiFromAutocomplete(selected.name)
+      showEmojiAutocomplete.value = false
+    }
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    showEmojiAutocomplete.value = false
+  }
+}
+
+const handleEditorKeyup = () => {
+  updateEmojiAutocomplete()
+}
+
+const handleEmojiPickerOpen = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement | null
+  if (target) {
+    const rect = target.getBoundingClientRect()
+    emojiPickerPos.value = { x: rect.left, y: rect.bottom + 8 }
+  } else {
+    emojiPickerPos.value = null
+  }
+  showEmojiPicker.value = true
+}
+
+const handleEmojiSelect = (emoji: { name: string; shortcode: string }) => {
+  insertEmojiShortcode(emoji.name)
+  showEmojiPicker.value = false
+}
+
 function createEditorState(content: string): EditorState {
   // Ensure content exists and is a string
   const textContent = (content || '').toString()
@@ -192,6 +304,9 @@ onMounted(() => {
     })
 
     console.log('ProseMirror editor initialized successfully')
+    editorView.dom.addEventListener('keydown', handleEditorKeydown)
+    editorView.dom.addEventListener('keyup', handleEditorKeyup)
+    editorView.dom.addEventListener('click', handleEditorKeyup)
   } catch (error) {
     console.error('Failed to initialize ProseMirror editor:', error)
   }
@@ -199,6 +314,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (editorView) {
+    editorView.dom.removeEventListener('keydown', handleEditorKeydown)
+    editorView.dom.removeEventListener('keyup', handleEditorKeyup)
+    editorView.dom.removeEventListener('click', handleEditorKeyup)
     editorView.destroy()
     editorView = null
   }
@@ -239,6 +357,15 @@ watch(
   },
   { immediate: false }
 )
+
+watch(
+  () => props.baseUrl,
+  async value => {
+    if (!value) return
+    await ensureEmojiShortcodesLoaded(value)
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -269,6 +396,9 @@ watch(
       </div>
       <div class="toolbar-divider"></div>
       <div class="toolbar-group">
+        <button class="toolbar-btn" @click="handleEmojiPickerOpen" title="表情">
+          🙂
+        </button>
         <button class="toolbar-btn" @click="insertLink" title="插入链接">
           <LinkOutlined />
         </button>
@@ -296,7 +426,36 @@ watch(
       </div>
     </div>
     <div ref="editorContainer" class="prosemirror-editor"></div>
+    <div
+      v-if="showEmojiAutocomplete && emojiSuggestions.length"
+      class="emoji-autocomplete"
+      :style="
+        emojiAutocompletePos
+          ? { left: `${emojiAutocompletePos.x}px`, top: `${emojiAutocompletePos.y}px` }
+          : {}
+      "
+    >
+      <button
+        v-for="(emoji, index) in emojiSuggestions"
+        :key="emoji.id"
+        class="emoji-autocomplete-item"
+        :class="{ active: index === emojiActiveIndex }"
+        @mousedown.prevent
+        @click="insertEmojiFromAutocomplete(emoji.name)"
+      >
+        <img :src="emoji.url" :alt="emoji.name" />
+        <span> :{{ emoji.name }}: </span>
+      </button>
+    </div>
   </div>
+
+  <EmojiPicker
+    :show="showEmojiPicker"
+    :position="emojiPickerPos"
+    :baseUrl="props.baseUrl"
+    @select="handleEmojiSelect"
+    @close="showEmojiPicker = false"
+  />
 </template>
 
 <style scoped src="./css/ProseMirrorEditor.css"></style>

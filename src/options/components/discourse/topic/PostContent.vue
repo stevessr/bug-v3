@@ -2,8 +2,10 @@
 import { ref, onMounted, onUnmounted, nextTick, watch, createApp } from 'vue'
 
 import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
+import { parseEmojiShortcodeToHTML } from '../bbcode'
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 
 import PollView from './PollView'
 import HashtagCooked from './HashtagCooked'
@@ -35,7 +37,10 @@ const getLightboxPreview = (image: LightboxImage) => {
   return true
 }
 
-const processHtmlContent = (html: string) => html
+const processHtmlContent = (html: string) => {
+  emojiReadyToken.value
+  return replaceEmojiShortcodesInHtml(html)
+}
 
 let activeFootnoteRoot: HTMLElement | null = null
 let activeFootnoteContainer: HTMLDivElement | null = null
@@ -425,6 +430,36 @@ const handleMouseOut = (event: MouseEvent) => {
 
 const mounted = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
+const emojiReadyToken = ref(0)
+
+const replaceEmojiShortcodesInHtml = (html: string) => {
+  if (!html || !emojiReadyToken.value) return html
+  if (!html.includes(':')) return html
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html')
+  const root = doc.body
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text
+    if (node.nodeValue && node.nodeValue.includes(':')) {
+      textNodes.push(node)
+    }
+  }
+
+  textNodes.forEach(node => {
+    const text = node.nodeValue || ''
+    const converted = parseEmojiShortcodeToHTML(text, 100)
+    if (converted === text) return
+    const wrapper = doc.createElement('span')
+    wrapper.innerHTML = converted
+    node.replaceWith(...Array.from(wrapper.childNodes))
+  })
+
+  return root.innerHTML
+}
 
 onMounted(() => {
   mounted.value = true
@@ -442,6 +477,10 @@ onMounted(() => {
     }
   })
   window.addEventListener('resize', updateFootnotePosition, { passive: true })
+
+  void ensureEmojiShortcodesLoaded(props.baseUrl).then(count => {
+    if (count > 0) emojiReadyToken.value++
+  })
 })
 
 onUnmounted(() => {
@@ -465,6 +504,20 @@ watch(
     await nextTick()
     setupPollEnhancements()
     setupHashtagEnhancements()
+  }
+)
+
+watch(
+  () => props.baseUrl,
+  async value => {
+    if (!value) return
+    const count = await ensureEmojiShortcodesLoaded(value)
+    if (count > 0) {
+      emojiReadyToken.value++
+      await nextTick()
+      setupPollEnhancements()
+      setupHashtagEnhancements()
+    }
   }
 )
 </script>

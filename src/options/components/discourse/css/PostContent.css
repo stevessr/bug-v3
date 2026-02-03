@@ -200,6 +200,12 @@
   vertical-align: middle;
 }
 
+.post-content :deep(img.emoji-inline) {
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: middle;
+}
+
 /* Quote styles */
 .post-content :deep(aside.quote) {
   margin-top: 1em;
