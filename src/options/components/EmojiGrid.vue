@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick } from 'vue'
-import { QuestionCircleOutlined, TagOutlined } from '@ant-design/icons-vue'
 
-import EmojiTags from './EmojiTags.vue'
 import QuickTagEditor from './QuickTagEditor.vue'
 import VirtualList from './VirtualList.vue'
+import EmojiCard from './EmojiCard'
 
 import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
@@ -108,7 +107,7 @@ const emojiRows = computed(() => {
     <div
       v-if="emojis.length > 0"
       ref="measurementRef"
-      class="measurement-row"
+      class="measurement-row emoji-row"
       :style="{
         visibility: 'hidden',
         position: 'absolute',
@@ -141,10 +140,10 @@ const emojiRows = computed(() => {
     >
       <template #default="{ item: row, index: rowIndex }">
         <div
-          class="grid gap-3"
+          class="emoji-row grid gap-4"
           :style="{
             gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-            padding: '0 4px'
+            padding: '0 8px'
           }"
         >
           <div
@@ -161,53 +160,15 @@ const emojiRows = computed(() => {
                 addEmojiTouchEvents(el as HTMLElement, emoji, rowIndex * gridColumns + colIndex)
             "
           >
-            <div
-              class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-            >
-              <CachedImage
-                :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
-                :alt="emoji.name"
-                class="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-              {{ emoji.name }}
-            </div>
-            <!-- 標籤顯示 -->
-            <EmojiTags :tags="emoji.tags || []" :max-display="2" />
-
-            <!-- 快速標籤編輯按鈕 -->
-            <button
-              @click="openQuickTagEditor(emoji)"
-              class="absolute bottom-1 left-1 w-6 h-6 bg-green-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-green-600"
-              title="快速編輯標籤"
-            >
-              <TagOutlined class="text-xs" />
-            </button>
-
-            <!-- Edit button -->
-            <a-button
-              @click="$emit('editEmoji', emoji, groupId, rowIndex * gridColumns + colIndex)"
-              class="absolute bottom-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              title="编辑表情"
-            >
-              ✎
-            </a-button>
-            <!-- Remove button -->
-            <a-popconfirm
-              title="确认移除此表情？"
-              @confirm="$emit('removeEmoji', groupId, rowIndex * gridColumns + colIndex)"
-            >
-              <template #icon>
-                <QuestionCircleOutlined style="color: red" />
-              </template>
-              <a-button
-                class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                ×
-              </a-button>
-            </a-popconfirm>
+            <EmojiCard
+              :emoji="emoji"
+              :group-id="groupId"
+              :index="rowIndex * gridColumns + colIndex"
+              :image-src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
+              @quickTag="openQuickTagEditor"
+              @edit="(e, g, i) => $emit('editEmoji', e, g, i)"
+              @remove="(g, i) => $emit('removeEmoji', g, i)"
+            />
           </div>
         </div>
       </template>
