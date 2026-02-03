@@ -650,8 +650,7 @@
           const groupName = (group.name || '').toLowerCase()
           const groupDetail = (group.detail || '').toLowerCase()
           return (
-            !selectedIds.has(group.id) &&
-            (groupName.includes(query) || groupDetail.includes(query))
+            !selectedIds.has(group.id) && (groupName.includes(query) || groupDetail.includes(query))
           )
         })
         .forEach(group => {
@@ -1895,7 +1894,8 @@
     btn.className = 'btn no-text btn-icon market-emoji-toolbar-btn'
     btn.title = '市场表情包'
     btn.type = 'button'
-    btn.innerHTML = '<svg class="fa d-icon d-icon-far-face-smile svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-face-smile"></use></svg>'
+    btn.innerHTML =
+      '<svg class="fa d-icon d-icon-far-face-smile svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-face-smile"></use></svg>'
     btn.style.color = 'var(--tertiary)'
 
     btn.onclick = e => {

@@ -63,6 +63,7 @@ git checkout -b fix/your-bug-fix
 ```
 
 Branch naming conventions:
+
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `docs/` - Documentation updates
@@ -85,6 +86,7 @@ git commit -m "feat: add new feature description"
 ```
 
 Commit message format:
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `docs:` - Documentation changes
@@ -272,6 +274,7 @@ When contributing, update documentation if:
 - Adding configuration options
 
 Documentation locations:
+
 - Main features: `README.md`
 - API changes: Relevant source files
 - Detailed guides: `docs/` directory
@@ -289,6 +292,7 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Recognition
 
 Contributors will be recognized in:
+
 - Release notes
 - Contributors section
 - Special thanks for significant contributions

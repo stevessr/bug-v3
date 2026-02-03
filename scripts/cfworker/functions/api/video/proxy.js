@@ -32,9 +32,10 @@ export async function onRequestGet(context) {
 
     if (!response.ok) {
       return new Response(`Remote server error: ${response.status} ${response.statusText}`, {
-              status: response.status,
-              headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
-            })    }
+        status: response.status,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
+      })
+    }
 
     // Get the content type from the response
     let contentType = response.headers.get('content-type') || ''

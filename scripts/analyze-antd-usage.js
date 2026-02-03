@@ -25,18 +25,76 @@ const stats = {
  * Ant Design Vue 组件列表（常用的）
  */
 const antdComponents = [
-  'Button', 'Input', 'Select', 'Modal', 'Table', 'Form', 'FormItem',
-  'Switch', 'Checkbox', 'Radio', 'DatePicker', 'Upload', 'Dropdown',
-  'Menu', 'MenuItem', 'Tabs', 'TabPane', 'Card', 'Spin', 'Space',
-  'Row', 'Col', 'Divider', 'Tag', 'Badge', 'Tooltip', 'Popover',
-  'Message', 'Notification', 'Drawer', 'Layout', 'Header', 'Content',
-  'Footer', 'Sider', 'Breadcrumb', 'BreadcrumbItem', 'Pagination',
-  'Steps', 'Step', 'Progress', 'Alert', 'Tree', 'TreeSelect',
-  'Cascader', 'AutoComplete', 'Rate', 'Slider', 'InputNumber',
-  'Collapse', 'CollapsePanel', 'Timeline', 'TimelineItem', 'Transfer',
-  'Anchor', 'AnchorLink', 'BackTop', 'Avatar', 'List', 'ListItem',
-  'Statistic', 'Skeleton', 'Empty', 'Result', 'Descriptions',
-  'DescriptionsItem', 'Calendar', 'Image', 'ConfigProvider', 'Affix'
+  'Button',
+  'Input',
+  'Select',
+  'Modal',
+  'Table',
+  'Form',
+  'FormItem',
+  'Switch',
+  'Checkbox',
+  'Radio',
+  'DatePicker',
+  'Upload',
+  'Dropdown',
+  'Menu',
+  'MenuItem',
+  'Tabs',
+  'TabPane',
+  'Card',
+  'Spin',
+  'Space',
+  'Row',
+  'Col',
+  'Divider',
+  'Tag',
+  'Badge',
+  'Tooltip',
+  'Popover',
+  'Message',
+  'Notification',
+  'Drawer',
+  'Layout',
+  'Header',
+  'Content',
+  'Footer',
+  'Sider',
+  'Breadcrumb',
+  'BreadcrumbItem',
+  'Pagination',
+  'Steps',
+  'Step',
+  'Progress',
+  'Alert',
+  'Tree',
+  'TreeSelect',
+  'Cascader',
+  'AutoComplete',
+  'Rate',
+  'Slider',
+  'InputNumber',
+  'Collapse',
+  'CollapsePanel',
+  'Timeline',
+  'TimelineItem',
+  'Transfer',
+  'Anchor',
+  'AnchorLink',
+  'BackTop',
+  'Avatar',
+  'List',
+  'ListItem',
+  'Statistic',
+  'Skeleton',
+  'Empty',
+  'Result',
+  'Descriptions',
+  'DescriptionsItem',
+  'Calendar',
+  'Image',
+  'ConfigProvider',
+  'Affix'
 ]
 
 /**
@@ -50,9 +108,7 @@ function extractComponents(content, filePath) {
   const templateComponentRegex = /<a-([a-z-]+)|<A([A-Z][a-zA-Z]*)/g
   let match
   while ((match = templateComponentRegex.exec(content)) !== null) {
-    const componentName = match[1]
-      ? kebabToPascal(match[1])
-      : match[2]
+    const componentName = match[1] ? kebabToPascal(match[1]) : match[2]
 
     if (antdComponents.includes(componentName)) {
       components.add(componentName)
@@ -157,7 +213,7 @@ function generateReport() {
   console.log(`🎨 Icons Used: ${stats.iconsUsed.size}`)
   console.log(`📦 Direct Imports: ${stats.directImports.size}\n`)
 
-  console.log('=' .repeat(60))
+  console.log('='.repeat(60))
   console.log('🧩 Components Used:')
   console.log('='.repeat(60))
 
@@ -198,7 +254,9 @@ function generateReport() {
   const totalPossibleComponents = antdComponents.length
   const usagePercentage = ((stats.componentsUsed.size / totalPossibleComponents) * 100).toFixed(1)
 
-  console.log(`\n✅ Current Usage: ${stats.componentsUsed.size}/${totalPossibleComponents} components (${usagePercentage}%)`)
+  console.log(
+    `\n✅ Current Usage: ${stats.componentsUsed.size}/${totalPossibleComponents} components (${usagePercentage}%)`
+  )
 
   if (usagePercentage < 50) {
     console.log(`\n🎯 Good news! You're using less than 50% of common Ant Design Vue components.`)
@@ -257,10 +315,12 @@ function saveDetailedReport() {
     if (files && files.size > 0) {
       content += `### ${component}\n\n`
       content += `Used in ${files.size} file(s):\n`
-      Array.from(files).sort().forEach(file => {
-        const relativePath = path.relative(path.join(__dirname, '..'), file)
-        content += `- \`${relativePath}\`\n`
-      })
+      Array.from(files)
+        .sort()
+        .forEach(file => {
+          const relativePath = path.relative(path.join(__dirname, '..'), file)
+          content += `- \`${relativePath}\`\n`
+        })
       content += `\n`
     }
   })

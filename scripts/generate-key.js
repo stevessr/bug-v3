@@ -24,19 +24,19 @@ function generateOrLoadKey() {
   const { privateKey } = crypto.generateKeyPairSync('rsa', {
     modulusLength: 2048,
     publicExponent: 0x10001,
-    privateKeyEncoding: { 
-      type: 'pkcs8', 
-      format: 'pem' 
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem'
     },
-    publicKeyEncoding: { 
-      type: 'spki', 
-      format: 'pem' 
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem'
     }
   })
 
   // 保存私钥（只有所有者可读写）
   fs.writeFileSync(KEY_PATH, privateKey, { mode: 0o600 })
-  
+
   // 保存公钥（参考用）
   const publicKeyPath = path.join(__dirname, '../extension-public.pem')
   const { publicKey } = crypto.generateKeyPairSync('rsa', {

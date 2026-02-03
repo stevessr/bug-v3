@@ -67,7 +67,7 @@ function ensureKey(keyPath) {
   fs.writeFileSync(fixedKeyPath, privateKey, { mode: 0o600 })
   console.log('✅ 固定密钥已生成:', fixedKeyPath)
   console.log('⚠️  请备份此密钥文件，丢失将无法更新扩展！')
-  
+
   return fixedKeyPath
 }
 
@@ -78,12 +78,12 @@ async function packWithCrx(distPath, keyPath, outPath) {
   try {
     // crx3 需要文件列表，我们传入 dist 目录下的 manifest.json
     const manifestPath = path.join(distPath, 'manifest.json')
-    
+
     await crx3([manifestPath], {
       keyPath: keyPath,
       crxPath: outFile
     })
-    
+
     console.log('✅ .crx created at', outFile)
   } catch (error) {
     console.error('Failed to pack using crx3:', error.message)

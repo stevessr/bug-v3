@@ -44,6 +44,7 @@ npm start
 ```
 
 服务器启动后会显示：
+
 - WebSocket 地址：`ws://localhost:9527`
 - 状态页面：`http://localhost:9527`
 
@@ -68,28 +69,28 @@ npm start
 
 ### 客户端 → 服务器
 
-| 类型 | 说明 |
-|------|------|
-| `WORKER_REGISTER` | 注册为工作者 |
-| `WORKER_HEARTBEAT` | 工作者心跳 |
-| `CREATE_SESSION` | 创建上传会话（主控端） |
-| `SUBMIT_TASKS` | 提交上传任务 |
-| `TASK_COMPLETED` | 报告任务完成 |
-| `TASK_FAILED` | 报告任务失败 |
-| `GET_STATS` | 获取服务器状态 |
+| 类型               | 说明                   |
+| ------------------ | ---------------------- |
+| `WORKER_REGISTER`  | 注册为工作者           |
+| `WORKER_HEARTBEAT` | 工作者心跳             |
+| `CREATE_SESSION`   | 创建上传会话（主控端） |
+| `SUBMIT_TASKS`     | 提交上传任务           |
+| `TASK_COMPLETED`   | 报告任务完成           |
+| `TASK_FAILED`      | 报告任务失败           |
+| `GET_STATS`        | 获取服务器状态         |
 
 ### 服务器 → 客户端
 
-| 类型 | 说明 |
-|------|------|
-| `WORKER_REGISTERED` | 工作者注册成功 |
-| `SESSION_CREATED` | 会话创建成功 |
-| `TASKS_SUBMITTED` | 任务提交确认 |
-| `TASK_ASSIGNED` | 任务分配（发给工作者） |
-| `TASK_COMPLETED` | 任务完成通知（发给主控端） |
-| `TASK_FAILED` | 任务失败通知 |
-| `SESSION_COMPLETED` | 会话完成 |
-| `STATS_UPDATE` | 状态更新 |
+| 类型                | 说明                       |
+| ------------------- | -------------------------- |
+| `WORKER_REGISTERED` | 工作者注册成功             |
+| `SESSION_CREATED`   | 会话创建成功               |
+| `TASKS_SUBMITTED`   | 任务提交确认               |
+| `TASK_ASSIGNED`     | 任务分配（发给工作者）     |
+| `TASK_COMPLETED`    | 任务完成通知（发给主控端） |
+| `TASK_FAILED`       | 任务失败通知               |
+| `SESSION_COMPLETED` | 会话完成                   |
+| `STATS_UPDATE`      | 状态更新                   |
 
 ## 安全注意事项
 

@@ -29,7 +29,7 @@ const corsHeaders = {
 
 type AccessLevel = 'readonly' | 'readwrite' | 'none'
 
-export const onRequest: PagesFunction<Env> = async (context) => {
+export const onRequest: PagesFunction<Env> = async context => {
   const { request, env, params } = context
 
   // Handle CORS preflight

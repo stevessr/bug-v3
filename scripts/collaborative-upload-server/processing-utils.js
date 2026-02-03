@@ -71,7 +71,9 @@ export function getImageSize(inputPath) {
   if (result.status !== 0) {
     return { width: null, height: null }
   }
-  const [w, h] = String(result.stdout || '').trim().split(/\s+/)
+  const [w, h] = String(result.stdout || '')
+    .trim()
+    .split(/\s+/)
   const width = Number.parseInt(w, 10)
   const height = Number.parseInt(h, 10)
   if (Number.isNaN(width) || Number.isNaN(height)) {
@@ -191,7 +193,11 @@ export function runCommand(command, args, options = {}) {
         combined && combined.length > 4000 ? `${combined.slice(0, 4000)}\n...[truncated]` : combined
       const detail = truncated ? `\n${truncated}` : ''
       const signalText = signal ? ` (signal: ${signal})` : ''
-      reject(new Error(`Command failed (exit: ${code})${signalText}: ${command} ${args.join(' ')}${detail}`))
+      reject(
+        new Error(
+          `Command failed (exit: ${code})${signalText}: ${command} ${args.join(' ')}${detail}`
+        )
+      )
     })
   })
 }

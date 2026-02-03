@@ -341,9 +341,7 @@ async function main() {
     while (uploadQueue.length > 0) {
       const batch = uploadQueue.splice(0, batchSize)
       console.log(
-        `Uploading ${batch.length} file(s) for ${groupName} (remaining: ${
-          uploadQueue.length
-        })`
+        `Uploading ${batch.length} file(s) for ${groupName} (remaining: ${uploadQueue.length})`
       )
 
       const batchFiles = batch.map(file => ({

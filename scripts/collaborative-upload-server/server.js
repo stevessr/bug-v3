@@ -120,7 +120,10 @@ function validateTaskData(taskData, binaryMode = false) {
       return { valid: false, error: 'Empty binary data' }
     }
   } else {
-    return { valid: false, error: 'Missing or invalid data (expected dataBase64 string or binaryData buffer)' }
+    return {
+      valid: false,
+      error: 'Missing or invalid data (expected dataBase64 string or binaryData buffer)'
+    }
   }
 
   return { valid: true }
@@ -188,7 +191,7 @@ function assignTaskToWorker(task, worker) {
   // 构建任务元数据
   const taskPayload = {
     id: task.id,
-    taskId: task.id,  // 冗余字段，用于二进制模式识别
+    taskId: task.id, // 冗余字段，用于二进制模式识别
     filename: task.filename,
     mimeType: task.mimeType,
     size: task.size
@@ -211,7 +214,9 @@ function assignTaskToWorker(task, worker) {
     const frame = Buffer.concat([lengthBuffer, taskIdBuffer, task.binaryData])
     if (worker.ws.readyState === WebSocket.OPEN) {
       worker.ws.send(frame)
-      log(`Sent binary data for task ${task.id} to worker ${worker.id} (${task.binaryData.length} bytes)`)
+      log(
+        `Sent binary data for task ${task.id} to worker ${worker.id} (${task.binaryData.length} bytes)`
+      )
     }
   } else if (task.dataBase64) {
     // Base64 模式
@@ -234,11 +239,13 @@ function assignTaskToWorker(task, worker) {
 function getAllIdleWorkers() {
   const idleWorkers = []
   const now = Date.now()
-  
+
   for (const worker of workers.values()) {
-    if (worker.status === 'idle' && 
-        worker.healthStatus !== 'unhealthy' &&
-        (!worker.cooldownUntil || now >= worker.cooldownUntil)) {
+    if (
+      worker.status === 'idle' &&
+      worker.healthStatus !== 'unhealthy' &&
+      (!worker.cooldownUntil || now >= worker.cooldownUntil)
+    ) {
       idleWorkers.push(worker)
     }
   }
@@ -254,27 +261,29 @@ function scheduleNextTask() {
 
   // 按成功率排序工作者（成功率高的优先）
   idleWorkers.sort((a, b) => {
-    const aSuccessRate = a.stats.completed + a.stats.failed > 0 
-      ? a.stats.completed / (a.stats.completed + a.stats.failed) 
-      : 1
-    const bSuccessRate = b.stats.completed + b.stats.failed > 0 
-      ? b.stats.completed / (b.stats.completed + b.stats.failed) 
-      : 1
+    const aSuccessRate =
+      a.stats.completed + a.stats.failed > 0
+        ? a.stats.completed / (a.stats.completed + a.stats.failed)
+        : 1
+    const bSuccessRate =
+      b.stats.completed + b.stats.failed > 0
+        ? b.stats.completed / (b.stats.completed + b.stats.failed)
+        : 1
     return bSuccessRate - aSuccessRate
   })
 
   // 将待处理任务按优先级排序：考虑重试延迟，只选择状态为 'pending' 的任务
   const now = Date.now()
-  const availableTasks = Array.from(pendingTasks.values()).filter(task =>
-    task.status === 'pending' && (!task.retryAfter || now >= task.retryAfter)
+  const availableTasks = Array.from(pendingTasks.values()).filter(
+    task => task.status === 'pending' && (!task.retryAfter || now >= task.retryAfter)
   )
-  
+
   const sortedTasks = availableTasks.sort((a, b) => {
     // 重试任务优先，但考虑延迟
     if (a.retryCount > 0 && b.retryCount === 0) return -1
     if (a.retryCount === 0 && b.retryCount > 0) return 1
     if (a.retryCount !== b.retryCount) return b.retryCount - a.retryCount
-    
+
     // 相同重试次数按创建时间排序（早的优先）
     return a.createdAt - b.createdAt
   })
@@ -283,9 +292,9 @@ function scheduleNextTask() {
   let taskIndex = 0
   for (const worker of idleWorkers) {
     if (taskIndex >= sortedTasks.length) break
-    
+
     const task = sortedTasks[taskIndex]
-    
+
     // 检查工作者是否适合处理这个任务（避免重复分配给之前失败的工作者）
     if (task.lastFailedWorker === worker.id && sortedTasks.length > idleWorkers.length) {
       // 尝试找下一个任务
@@ -304,11 +313,13 @@ function scheduleNextTask() {
     } else {
       assignTaskToWorker(task, worker)
     }
-    
+
     taskIndex++
   }
 
-  log(`Scheduled tasks: ${idleWorkers.length} workers, ${pendingTasks.size} remaining (retry tasks: ${Array.from(pendingTasks.values()).filter(t => t.retryCount > 0).length})`)
+  log(
+    `Scheduled tasks: ${idleWorkers.length} workers, ${pendingTasks.size} remaining (retry tasks: ${Array.from(pendingTasks.values()).filter(t => t.retryCount > 0).length})`
+  )
 }
 
 function handleTaskComplete(workerId, taskId, resultUrl) {
@@ -324,7 +335,7 @@ function handleTaskComplete(workerId, taskId, resultUrl) {
     worker.currentTaskId = null
     worker.stats.completed++
     worker.stats.totalBytes += task.size
-    
+
     // 恢复工作者健康状态
     if (worker.consecutiveFailures > 0) {
       worker.consecutiveFailures = 0
@@ -385,16 +396,18 @@ function handleTaskFailed(workerId, taskId, error) {
     worker.status = 'idle'
     worker.currentTaskId = null
     worker.stats.failed++
-    
+
     // 更新工作者健康状态
     worker.consecutiveFailures = (worker.consecutiveFailures || 0) + 1
     worker.lastFailureTime = Date.now()
-    
+
     // 如果工作者连续失败太多，暂时降低其优先级
     if (worker.consecutiveFailures >= 3) {
       worker.healthStatus = 'unhealthy'
-      worker.cooldownUntil = Date.now() + (worker.consecutiveFailures * 10000) // 10 秒 * 连续失败次数
-      log(`Worker ${workerId} marked as unhealthy, cooldown until ${new Date(worker.cooldownUntil)}`)
+      worker.cooldownUntil = Date.now() + worker.consecutiveFailures * 10000 // 10 秒 * 连续失败次数
+      log(
+        `Worker ${workerId} marked as unhealthy, cooldown until ${new Date(worker.cooldownUntil)}`
+      )
     }
   }
 
@@ -406,13 +419,13 @@ function handleTaskFailed(workerId, taskId, error) {
 
   // 智能重试逻辑
   const maxRetries = Math.min(3 + Math.floor(task.retryCount / 2), 8) // 动态调整最大重试次数
-  
+
   if (task.retryCount < maxRetries) {
     task.status = 'pending'
     task.assignedWorker = null
     activeTasks.delete(taskId)
     pendingTasks.set(taskId, task)
-    
+
     // 根据错误类型调整重试延迟
     let retryDelay = 1000 // 基础延迟1秒
     if (error.includes('429') || error.includes('rate limit')) {
@@ -420,7 +433,7 @@ function handleTaskFailed(workerId, taskId, error) {
     } else if (error.includes('timeout') || error.includes('network')) {
       retryDelay = 2000 * task.retryCount // 网络错误
     }
-    
+
     task.retryAfter = Date.now() + retryDelay
     log(`Task ${taskId} queued for retry #${task.retryCount}, delay ${retryDelay}ms`)
   } else {
@@ -482,9 +495,13 @@ function handleBinaryMessage(ws, clientId, buffer) {
 
     // 使用 Buffer 的 readUInt32BE 方法读取前4字节（大端序）
     const potentialTaskIdLength = buf.readUInt32BE(0)
-    
+
     // 如果是合理的taskId长度（通常小于100），使用客户端协议
-    if (potentialTaskIdLength > 0 && potentialTaskIdLength < 100 && buf.length >= 4 + potentialTaskIdLength) {
+    if (
+      potentialTaskIdLength > 0 &&
+      potentialTaskIdLength < 100 &&
+      buf.length >= 4 + potentialTaskIdLength
+    ) {
       handleClientBinaryFrame(ws, clientId, buf)
     } else {
       // 尝试服务器协议
@@ -570,7 +587,8 @@ function handleServerBinaryFrame(ws, clientId, buffer) {
   const binaryData = buf.subarray(offset)
 
   // 处理二进制任务提交
-  if (messageType === 0x01) { // 任务提交
+  if (messageType === 0x01) {
+    // 任务提交
     const session = sessions.get(sessionId)
     if (!session) {
       log(`Session ${sessionId} not found for binary task from ${clientId}`)
@@ -611,7 +629,7 @@ function handleServerBinaryFrame(ws, clientId, buffer) {
     session.totalTasks++
 
     log(`Binary task submitted: ${filename} (${binaryData.length} bytes)`)
-    
+
     // 通知主控端任务已提交
     sendToClient(session.ws, {
       type: 'TASK_SUBMITTED',
@@ -727,8 +745,6 @@ function handleMessage(ws, clientId, message) {
         break
       }
 
-      
-
       // 主控端提交上传任务
       case 'SUBMIT_TASKS': {
         const session = sessions.get(data.sessionId)
@@ -789,7 +805,9 @@ function handleMessage(ws, clientId, message) {
           validTasks++
         }
 
-        log(`Session ${data.sessionId}: ${tasks.length} tasks submitted (binaryMode: ${binaryMode})`)
+        log(
+          `Session ${data.sessionId}: ${tasks.length} tasks submitted (binaryMode: ${binaryMode})`
+        )
 
         sendToClient(ws, {
           type: 'TASKS_SUBMITTED',
@@ -855,7 +873,7 @@ function handleMessage(ws, clientId, message) {
     if (error instanceof SyntaxError) {
       log(`JSON parsing error from ${clientId}: ${error.message}`)
       log(`Problematic message: ${message.toString().substring(0, 200)}...`)
-      
+
       // Send error feedback to client
       sendToClient(ws, {
         type: 'ERROR',
@@ -865,7 +883,7 @@ function handleMessage(ws, clientId, message) {
     } else {
       log(`Error handling message from ${clientId}: ${error.message}`)
       log(`Stack trace: ${error.stack}`)
-      
+
       // Send generic error to client
       sendToClient(ws, {
         type: 'ERROR',
@@ -880,7 +898,7 @@ function handleDisconnect(clientId) {
   // 查找对应的WebSocket连接
   let ws = null
   let clientType = 'unknown'
-  
+
   for (const worker of workers.values()) {
     if (worker.id === clientId) {
       ws = worker.ws
@@ -888,7 +906,7 @@ function handleDisconnect(clientId) {
       break
     }
   }
-  
+
   if (!ws) {
     for (const session of sessions.values()) {
       if (session.ws.clientId === clientId) {
@@ -1006,7 +1024,7 @@ const server = createServer((req, res) => {
 
 const wss = new WebSocketServer({ server })
 
-wss.on('connection', (ws) => {
+wss.on('connection', ws => {
   const clientId = randomUUID()
   ws.clientId = clientId
   ws.clientType = 'unknown' // 将在首次消息时确定
@@ -1033,7 +1051,7 @@ wss.on('connection', (ws) => {
     handleDisconnect(clientId)
   })
 
-  ws.on('error', (error) => {
+  ws.on('error', error => {
     log(`WebSocket error for ${clientId}: ${error.message}`)
   })
 })
@@ -1049,9 +1067,13 @@ setInterval(() => {
       worker.ws.terminate()
       handleDisconnect(id)
     }
-    
+
     // 恢复冷却期的工作者
-    if (worker.healthStatus === 'unhealthy' && worker.cooldownUntil && now >= worker.cooldownUntil) {
+    if (
+      worker.healthStatus === 'unhealthy' &&
+      worker.cooldownUntil &&
+      now >= worker.cooldownUntil
+    ) {
       worker.healthStatus = 'healthy'
       worker.cooldownUntil = null
       log(`Worker ${id} cooldown ended, health restored`)
@@ -1065,7 +1087,7 @@ setInterval(() => {
       handleTaskFailed(task.assignedWorker, id, 'Task timeout')
     }
   }
-  
+
   // 检查是否有延迟的重试任务可以调度
   let hasDelayedTasks = false
   for (const [id, task] of pendingTasks.entries()) {
@@ -1074,7 +1096,7 @@ setInterval(() => {
       break
     }
   }
-  
+
   if (hasDelayedTasks) {
     scheduleNextTask()
   }

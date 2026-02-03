@@ -24,16 +24,7 @@
         "filename": "api-developer.md",
         "name": "api-developer",
         "description": "Backend API development specialist for creating robust, scalable REST and GraphQL APIs with best practices",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob",
-          "Task"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob", "Task"],
         "category": "agents",
         "type": "agent",
         "size": 7809,
@@ -62,14 +53,7 @@
         "filename": "api-documenter.md",
         "name": "api-documenter",
         "description": "API documentation specialist for creating OpenAPI/Swagger specifications, API reference docs, and integration guides",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 8530,
@@ -98,9 +82,7 @@
         "filename": "debug.md",
         "name": "debug",
         "description": "Debug an error or issue",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 279,
@@ -115,12 +97,7 @@
         "filename": "code-reviewer.md",
         "name": "code-reviewer",
         "description": "Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
-        "tools": [
-          "Read",
-          "Grep",
-          "Glob",
-          "Bash"
-        ],
+        "tools": ["Read", "Grep", "Glob", "Bash"],
         "category": "agents",
         "type": "agent",
         "size": 4254,
@@ -149,13 +126,7 @@
         "filename": "debugger.md",
         "name": "debugger",
         "description": "Expert debugging specialist for analyzing errors, stack traces, and unexpected behavior. Use proactively when encountering any errors or test failures.",
-        "tools": [
-          "Read",
-          "Edit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Edit", "Bash", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 6229,
@@ -184,15 +155,7 @@
         "filename": "devops-engineer.md",
         "name": "devops-engineer",
         "description": "DevOps specialist for CI/CD pipelines, deployment automation, infrastructure as code, and monitoring",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 10532,
@@ -207,9 +170,7 @@
         "filename": "document.md",
         "name": "document",
         "description": "Generate or update documentation",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 359,
@@ -224,13 +185,7 @@
         "filename": "doc-writer.md",
         "name": "doc-writer",
         "description": "Documentation specialist for creating comprehensive technical documentation, API references, and README files. Automatically generates and updates documentation from code.",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 7550,
@@ -259,16 +214,7 @@
         "filename": "frontend-developer.md",
         "name": "frontend-developer",
         "description": "Frontend development specialist for creating modern, responsive web applications using React, Vue, and other frameworks",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob",
-          "Task"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob", "Task"],
         "category": "agents",
         "type": "agent",
         "size": 7071,
@@ -297,15 +243,7 @@
         "filename": "marketing-writer.md",
         "name": "marketing-writer",
         "description": "Marketing content specialist for product descriptions, landing pages, blog posts, and technical marketing materials",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "WebSearch",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "WebSearch", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 10002,
@@ -334,14 +272,7 @@
         "filename": "product-manager.md",
         "name": "product-manager",
         "description": "Product management specialist for requirements gathering, user stories, product roadmaps, and feature prioritization",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob",
-          "TodoWrite"
-        ],
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "TodoWrite"],
         "category": "agents",
         "type": "agent",
         "size": 8709,
@@ -370,15 +301,7 @@
         "filename": "project-planner.md",
         "name": "project-planner",
         "description": "Strategic planning specialist for breaking down complex projects into actionable tasks and managing development workflows",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "Grep",
-          "Glob",
-          "TodoWrite",
-          "Task"
-        ],
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "TodoWrite", "Task"],
         "category": "agents",
         "type": "agent",
         "size": 9421,
@@ -393,9 +316,7 @@
         "filename": "refactor.md",
         "name": "refactor",
         "description": "Refactor code for better structure and maintainability",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 336,
@@ -410,13 +331,7 @@
         "filename": "refactor.md",
         "name": "refactor",
         "description": "Code refactoring specialist. Expert at improving code structure, applying design patterns, and enhancing maintainability without changing functionality.",
-        "tools": [
-          "Read",
-          "Edit",
-          "MultiEdit",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Edit", "MultiEdit", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 7529,
@@ -445,9 +360,7 @@
         "filename": "review.md",
         "name": "review",
         "description": "Trigger code review on recent changes",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 286,
@@ -462,12 +375,7 @@
         "filename": "security-scanner.md",
         "name": "security-scanner",
         "description": "Security vulnerability scanner that proactively detects security issues, exposed secrets, and suggests remediation. Use after code changes or for security audits.",
-        "tools": [
-          "Read",
-          "Grep",
-          "Glob",
-          "Bash"
-        ],
+        "tools": ["Read", "Grep", "Glob", "Bash"],
         "category": "agents",
         "type": "agent",
         "size": 5537,
@@ -482,9 +390,7 @@
         "filename": "security-scan.md",
         "name": "security-scan",
         "description": "Scan for security vulnerabilities",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 354,
@@ -538,15 +444,7 @@
         "filename": "tdd-specialist.md",
         "name": "tdd-specialist",
         "description": "Test-Driven Development specialist for creating comprehensive test suites, implementing TDD workflows, and ensuring code quality",
-        "tools": [
-          "Read",
-          "Write",
-          "Edit",
-          "MultiEdit",
-          "Bash",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 8020,
@@ -575,13 +473,7 @@
         "filename": "test-runner.md",
         "name": "test-runner",
         "description": "Automated test execution specialist. Use proactively to run tests and fix failures. Automatically detects test frameworks and ensures all tests pass.",
-        "tools": [
-          "Bash",
-          "Read",
-          "Edit",
-          "Grep",
-          "Glob"
-        ],
+        "tools": ["Bash", "Read", "Edit", "Grep", "Glob"],
         "category": "agents",
         "type": "agent",
         "size": 5262,
@@ -610,9 +502,7 @@
         "filename": "test.md",
         "name": "test",
         "description": "Run tests and fix failures",
-        "allowed_tools": [
-          "Task"
-        ],
+        "allowed_tools": ["Task"],
         "category": "commands",
         "type": "command",
         "size": 325,

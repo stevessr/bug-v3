@@ -5,24 +5,28 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 ## ✨ Key Features
 
 ### 🎯 Core Functionality
+
 - **Universal Emoji Picker**: Insert custom emojis on any website with a single click
 - **Smart Organization**: Group emojis by category with drag-and-drop reordering
 - **Quick Search**: Fast emoji search across all groups
 - **Favorites System**: Mark frequently used emojis for quick access
 
 ### 🤖 AI-Powered Features
+
 - **AI Naming**: Automatic emoji naming using Google Gemini API ([Details](./GEMINI_FEATURES.md))
 - **Batch Rename**: Intelligently rename multiple emojis at once with AI assistance
 - **Duplicate Detection**: Find similar emojis across groups using perceptual hashing
 - **Smart References**: Reduce storage by referencing duplicate emojis instead of storing copies
 
 ### 🔄 Synchronization
+
 - **Chrome Sync**: Automatic backup to Chrome sync storage
 - **WebDAV Support**: Manual push/pull sync with any WebDAV server (Nextcloud, ownCloud, etc.)
 - **S3 Compatible**: Sync with AWS S3, MinIO, Backblaze B2, and other S3-compatible storage
 - **Multi-Device**: Keep your emojis in sync across all your devices ([Sync Guide](./SYNC_DOCUMENTATION.md))
 
 ### 🎨 User Experience
+
 - **Modern UI**: Built with Vue 3, Ant Design Vue, and Tailwind CSS
 - **Touch Optimized**: Responsive design with mobile support
 - **Drag & Drop**: Intuitive emoji management with drag-and-drop
@@ -30,12 +34,14 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 - **Dark Mode**: (Future) Automatic theme switching
 
 ### 📦 Advanced Storage
+
 - **Progressive Multi-Layer Storage**: Intelligent data synchronization across storage layers
 - **Split Group Storage**: Individual storage for each group for better performance
 - **Conflict Resolution**: Timestamp-based automatic conflict resolution
 - **Cross-Context Sync**: Real-time updates between popup, options, and content scripts
 
 ### ⚡ Performance
+
 - **Compile-Time Optimization**: Multiple build configurations for different use cases
 - **Bundle Size Options**: Build with/without logging and IndexedDB support
 - **Lazy Rendering**: Only render visible emojis for better performance
@@ -46,7 +52,8 @@ A modern, feature-rich browser extension for managing and using custom emojis ac
 ### Installation
 
 #### From Chrome Web Store / Edge Add-ons
-*(Coming soon)*
+
+_(Coming soon)_
 
 #### Manual Installation
 
@@ -124,12 +131,12 @@ npm run build:minimal
 
 Different build configurations offer different trade-offs:
 
-| Build Type       | Logging | IndexedDB | Use Case                        |
-| ---------------- | ------- | --------- | ------------------------------- |
-| Development      | ✅      | ✅        | Development and debugging       |
-| Standard         | ✅      | ✅        | General production use          |
-| Production       | ❌      | ✅        | Production with smaller size    |
-| Minimal          | ❌      | ❌        | Smallest bundle, basic features |
+| Build Type  | Logging | IndexedDB | Use Case                        |
+| ----------- | ------- | --------- | ------------------------------- |
+| Development | ✅      | ✅        | Development and debugging       |
+| Standard    | ✅      | ✅        | General production use          |
+| Production  | ❌      | ✅        | Production with smaller size    |
+| Minimal     | ❌      | ❌        | Smallest bundle, basic features |
 
 **Size Reduction**: Minimal build is approximately 15-40% smaller than standard build.
 
@@ -222,12 +229,14 @@ For automated Edge Store uploads, see [Edge Store Setup Guide](.github/EDGE_STOR
 The extension uses a sophisticated progressive multi-layer storage system:
 
 **Storage Priority Chain:**
+
 1. **Local Storage** - Immediate access (0ms latency)
 2. **Session Storage** - Session-based cache (100ms delay)
 3. **Extension Storage** - Chrome API storage (500ms delay)
 4. **IndexedDB** - Persistent fallback (1000ms delay)
 
 **Key Features:**
+
 - Timestamp-based conflict resolution (newer data wins)
 - Split emoji storage (individual groups instead of monolithic storage)
 - Progressive writes with timed delays across layers
@@ -271,6 +280,7 @@ We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md)
 This project is licensed under GPL-3.0 with additional attribution requirements. See [LICENSE.md](./LICENSE.md) for details.
 
 Key points:
+
 - Free to use, modify, and distribute
 - Attribution to original source required
 - Derivative works must also be GPL-3.0

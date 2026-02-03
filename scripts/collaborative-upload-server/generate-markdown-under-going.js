@@ -86,7 +86,9 @@ function buildMarkdown(groupJson) {
 }
 
 function sanitizeFileBase(name) {
-  const cleaned = String(name || '').trim().replace(/[\\/]/g, '_')
+  const cleaned = String(name || '')
+    .trim()
+    .replace(/[\\/]/g, '_')
   return cleaned || 'group'
 }
 

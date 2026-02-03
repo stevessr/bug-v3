@@ -15,7 +15,7 @@
 // @run-at       document-end
 // ==/UserScript==
 
-(function () {
+;(function () {
   'use strict'
 
   // ===== Utility Functions =====
@@ -222,8 +222,8 @@
     const replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : ''
 
     const el = createEl('div', {
-        className: 'timer-item',
-        innerHTML: `
+      className: 'timer-item',
+      innerHTML: `
             <div style="font-weight:bold;margin-bottom:4px">Topic #${topicId} 定时回复 ${replyInfo}</div>
             <div class="timer-status">等待中：<span class="countdown">${seconds}</span>s</div>
             <div class="timer-content" style="font-size:12px;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${raw}</div>
@@ -233,68 +233,67 @@
 
     let remaining = seconds
     const interval = setInterval(async () => {
-        remaining--
-        const cd = el.querySelector('.countdown')
-        if (cd) cd.textContent = remaining
+      remaining--
+      const cd = el.querySelector('.countdown')
+      if (cd) cd.textContent = remaining
 
-        if (remaining <= 0) {
-            clearInterval(interval)
-            el.querySelector('.timer-status').textContent = '正在发送...'
+      if (remaining <= 0) {
+        clearInterval(interval)
+        el.querySelector('.timer-status').textContent = '正在发送...'
 
-            try {
-                // Get token afresh in case it changed
-                const token = document.querySelector('meta[name="csrf-token"]')?.content
-                if (!token) throw new Error('Token not found')
+        try {
+          // Get token afresh in case it changed
+          const token = document.querySelector('meta[name="csrf-token"]')?.content
+          if (!token) throw new Error('Token not found')
 
-                const fd = new URLSearchParams()
-                fd.append('raw', raw)
-                fd.append('topic_id', topicId)
-                fd.append('archetype', 'regular')
-                fd.append('nested_post', 'true')
-                if (replyToPostNumber) {
-                    fd.append('reply_to_post_number', replyToPostNumber)
-                }
+          const fd = new URLSearchParams()
+          fd.append('raw', raw)
+          fd.append('topic_id', topicId)
+          fd.append('archetype', 'regular')
+          fd.append('nested_post', 'true')
+          if (replyToPostNumber) {
+            fd.append('reply_to_post_number', replyToPostNumber)
+          }
 
-                const res = await fetch('/posts', {
-                    method: 'POST',
-                    headers: {
-                        'x-csrf-token': token,
-                        'x-requested-with': 'XMLHttpRequest',
-                        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                    },
-                    body: fd.toString()
-                })
+          const res = await fetch('/posts', {
+            method: 'POST',
+            headers: {
+              'x-csrf-token': token,
+              'x-requested-with': 'XMLHttpRequest',
+              'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            },
+            body: fd.toString()
+          })
 
-                if (!res.ok) {
-                    const txt = await res.text()
-                    throw new Error(txt || res.statusText)
-                }
+          if (!res.ok) {
+            const txt = await res.text()
+            throw new Error(txt || res.statusText)
+          }
 
-                // Success
-                el.classList.add('success')
-                el.innerHTML = `
+          // Success
+          el.classList.add('success')
+          el.innerHTML = `
                     <div style="font-weight:bold">✅ 发送成功</div>
                     <div style="font-size:12px">Topic #${topicId}</div>
                 `
-                setTimeout(() => {
-                    el.style.opacity = '0'
-                    el.style.transform = 'translateY(20px)'
-                    setTimeout(() => el.remove(), 300)
-                }, 3000)
-
-            } catch (err) {
-                // Error
-                el.classList.add('error')
-                el.innerHTML = `
+          setTimeout(() => {
+            el.style.opacity = '0'
+            el.style.transform = 'translateY(20px)'
+            setTimeout(() => el.remove(), 300)
+          }, 3000)
+        } catch (err) {
+          // Error
+          el.classList.add('error')
+          el.innerHTML = `
                     <div style="font-weight:bold">❌ 发送失败 (点击查看)</div>
                     <div style="font-size:12px">Topic #${topicId}</div>
                 `
-                el.onclick = () => {
-                    alert(`发送失败\n\nTopic: ${topicId}\nContent: ${raw}\nError: ${err.message}`)
-                    el.remove()
-                }
-            }
+          el.onclick = () => {
+            alert(`发送失败\n\nTopic: ${topicId}\nContent: ${raw}\nError: ${err.message}`)
+            el.remove()
+          }
         }
+      }
     }, 1000)
 
     timers.set(timerId, { interval, el })
@@ -321,7 +320,9 @@
   function initOverlay() {
     if (overlay) return
 
-    overlay = createEl('div', { className: `raw-preview-overlay ${isDockRight ? 'dock-right' : ''}` })
+    overlay = createEl('div', {
+      className: `raw-preview-overlay ${isDockRight ? 'dock-right' : ''}`
+    })
     const modal = createEl('div', { className: 'raw-preview-modal' })
 
     // 1. Sidebar
@@ -340,25 +341,36 @@
 
     // Sidebar Footer (Dock & Min & Close)
     const sbFooter = createEl('div', { className: 'sidebar-footer' })
-    const btnDock = createEl('button', { className: 'raw-preview-btn btn-dock-toggle', text: isDockRight ? '◫ 居中' : '◫ 侧边', style: 'flex:1' })
+    const btnDock = createEl('button', {
+      className: 'raw-preview-btn btn-dock-toggle',
+      text: isDockRight ? '◫ 居中' : '◫ 侧边',
+      style: 'flex:1'
+    })
     btnDock.onclick = toggleDockMode
     const btnMin = createEl('button', { className: 'raw-preview-btn', text: '—', title: '最小化' })
     btnMin.onclick = () => toggleMinimize(true)
-    const btnCloseAll = createEl('button', { className: 'raw-preview-btn close-btn', text: '✕', title: '关闭所有' })
+    const btnCloseAll = createEl('button', {
+      className: 'raw-preview-btn close-btn',
+      text: '✕',
+      title: '关闭所有'
+    })
     btnCloseAll.onclick = closeOverlay
 
     sbFooter.append(btnDock, btnMin, btnCloseAll)
     sidebar.append(sbHeader, sbList, sbFooter)
 
     // 2. Content Area
-    const contentArea = createEl('div', { className: 'preview-layout-content', id: 'preview-content-area' })
+    const contentArea = createEl('div', {
+      className: 'preview-layout-content',
+      id: 'preview-content-area'
+    })
 
     modal.append(sidebar, contentArea)
     overlay.appendChild(modal)
     document.body.appendChild(overlay)
 
     // Events
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener('click', e => {
       if (e.target === overlay && !isDockRight) closeOverlay()
     })
     window.addEventListener('keydown', handleKeydown)
@@ -409,13 +421,13 @@
   }
 
   function closeAllTabs() {
-      tabs = []
-      views = {}
-      activeTabId = null
-      const list = document.getElementById('preview-sidebar-list')
-      const area = document.getElementById('preview-content-area')
-      if(list) list.innerHTML = ''
-      if(area) area.innerHTML = ''
+    tabs = []
+    views = {}
+    activeTabId = null
+    const list = document.getElementById('preview-sidebar-list')
+    const area = document.getElementById('preview-content-area')
+    if (list) list.innerHTML = ''
+    if (area) area.innerHTML = ''
   }
 
   function handleKeydown(e) {
@@ -448,35 +460,52 @@
     const area = document.getElementById('preview-content-area')
     if (!area) return
 
-    const wrapper = createEl('div', { className: 'topic-view-wrapper hidden', id: `view-${tab.id}` })
+    const wrapper = createEl('div', {
+      className: 'topic-view-wrapper hidden',
+      id: `view-${tab.id}`
+    })
 
     const viewState = {
-        id: tab.id,
-        page: 1,
-        mode: 'iframe',
-        slug: tab.slug,
-        jsonIsLoading: false,
-        jsonReachedEnd: false
+      id: tab.id,
+      page: 1,
+      mode: 'iframe',
+      slug: tab.slug,
+      jsonIsLoading: false,
+      jsonReachedEnd: false
     }
 
     // --- Header ---
     const header = createEl('div', { className: 'raw-preview-header' })
     const titleEl = createEl('div', { className: 'raw-preview-title', text: tab.title })
-    const ctrls = createEl('div', { className: 'raw-preview-ctrls', style: 'display:flex;gap:6px;' })
+    const ctrls = createEl('div', {
+      className: 'raw-preview-ctrls',
+      style: 'display:flex;gap:6px;'
+    })
 
     const modeSelect = createEl('select', { className: 'raw-preview-select' })
-    modeSelect.append(createEl('option', { text: 'Raw 视图', value: 'iframe' }), createEl('option', { text: 'JSON 视图', value: 'json' }))
+    modeSelect.append(
+      createEl('option', { text: 'Raw 视图', value: 'iframe' }),
+      createEl('option', { text: 'JSON 视图', value: 'json' })
+    )
     modeSelect.value = 'iframe'
-    modeSelect.onchange = (e) => {
-        viewState.mode = e.target.value
-        viewState.page = 1
-        loadContent(viewState, iframe)
+    modeSelect.onchange = e => {
+      viewState.mode = e.target.value
+      viewState.page = 1
+      loadContent(viewState, iframe)
     }
 
     const btnPrev = createEl('button', { className: 'raw-preview-btn', text: '◀' })
-    btnPrev.onclick = () => { if (viewState.page > 1) { viewState.page--; loadContent(viewState, iframe) } }
+    btnPrev.onclick = () => {
+      if (viewState.page > 1) {
+        viewState.page--
+        loadContent(viewState, iframe)
+      }
+    }
     const btnNext = createEl('button', { className: 'raw-preview-btn', text: '▶' })
-    btnNext.onclick = () => { viewState.page++; loadContent(viewState, iframe) }
+    btnNext.onclick = () => {
+      viewState.page++
+      loadContent(viewState, iframe)
+    }
 
     ctrls.append(modeSelect, btnPrev, btnNext)
     header.append(titleEl, ctrls)
@@ -488,10 +517,10 @@
     })
 
     // --- Quick Reply ---
-    const qrPanel = createQuickReplyUI(tab.id, (isJsonMode) => {
-        if(isJsonMode && viewState.mode === 'json') {
-             loadContent(viewState, iframe)
-        }
+    const qrPanel = createQuickReplyUI(tab.id, isJsonMode => {
+      if (isJsonMode && viewState.mode === 'json') {
+        loadContent(viewState, iframe)
+      }
     })
 
     wrapper.append(header, iframe, qrPanel)
@@ -507,16 +536,16 @@
 
     const allTabs = document.querySelectorAll('.sidebar-tab')
     allTabs.forEach(t => {
-        if (t.dataset.id == topicId) t.classList.add('active')
-        else t.classList.remove('active')
+      if (t.dataset.id == topicId) t.classList.add('active')
+      else t.classList.remove('active')
     })
 
     for (const tid in views) {
-        if (tid == topicId) {
-            views[tid].wrapper.classList.remove('hidden')
-        } else {
-            views[tid].wrapper.classList.add('hidden')
-        }
+      if (tid == topicId) {
+        views[tid].wrapper.classList.remove('hidden')
+      } else {
+        views[tid].wrapper.classList.add('hidden')
+      }
     }
   }
 
@@ -526,14 +555,14 @@
     tabs = tabs.filter(t => t.id !== topicId)
 
     if (views[topicId]) {
-        views[topicId].wrapper.remove()
-        delete views[topicId]
+      views[topicId].wrapper.remove()
+      delete views[topicId]
     }
 
     if (tabs.length === 0) {
-        closeOverlay()
+      closeOverlay()
     } else if (activeTabId === topicId) {
-        activateTopic(tabs[tabs.length - 1].id)
+      activateTopic(tabs[tabs.length - 1].id)
     }
 
     renderSidebar()
@@ -545,18 +574,18 @@
     list.innerHTML = ''
 
     tabs.forEach(tab => {
-        const item = createEl('div', {
-            className: `sidebar-tab ${tab.id === activeTabId ? 'active' : ''}`,
-            dataset: { id: tab.id }
-        })
-        item.onclick = () => activateTopic(tab.id)
+      const item = createEl('div', {
+        className: `sidebar-tab ${tab.id === activeTabId ? 'active' : ''}`,
+        dataset: { id: tab.id }
+      })
+      item.onclick = () => activateTopic(tab.id)
 
-        const t = createEl('span', { className: 'tab-title', text: tab.title })
-        const c = createEl('span', { className: 'tab-close', text: '✕', title: '关闭' })
-        c.onclick = (e) => closeTopic(e, tab.id)
+      const t = createEl('span', { className: 'tab-title', text: tab.title })
+      const c = createEl('span', { className: 'tab-close', text: '✕', title: '关闭' })
+      c.onclick = e => closeTopic(e, tab.id)
 
-        item.append(t, c)
-        list.appendChild(item)
+      item.append(t, c)
+      list.appendChild(item)
     })
   }
 
@@ -564,9 +593,9 @@
 
   function loadContent(viewState, iframeEl) {
     if (viewState.mode === 'iframe') {
-        iframeEl.src = rawUrl(viewState.id, viewState.page)
+      iframeEl.src = rawUrl(viewState.id, viewState.page)
     } else {
-        renderJsonView(viewState, iframeEl)
+      renderJsonView(viewState, iframeEl)
     }
   }
 
@@ -642,26 +671,31 @@
     `)
     doc.close()
 
-    doc.addEventListener('click', (e) => {
-        // Handle Reply Button Click
-        const replyBtn = e.target.closest('.reply-btn');
-        if (replyBtn) {
-            e.stopPropagation();
-            const postNumber = replyBtn.dataset.postNumber;
-            const username = replyBtn.dataset.username;
-            // Send message to parent
-            window.parent.postMessage({ type: 'reply-to-post', topicId: viewState.id, postNumber, username }, '*');
-            return;
-        }
+    doc.addEventListener('click', e => {
+      // Handle Reply Button Click
+      const replyBtn = e.target.closest('.reply-btn')
+      if (replyBtn) {
+        e.stopPropagation()
+        const postNumber = replyBtn.dataset.postNumber
+        const username = replyBtn.dataset.username
+        // Send message to parent
+        window.parent.postMessage(
+          { type: 'reply-to-post', topicId: viewState.id, postNumber, username },
+          '*'
+        )
+        return
+      }
 
-        const header = e.target.closest('.post-meta');
-        if (header) {
-            const item = header.closest('.post-item');
-            if (item) item.classList.toggle('collapsed');
-        }
-        // 阻止点击 lightbox 跳转
-        const lb = e.target.closest('.lightbox');
-        if (lb) { e.preventDefault(); }
+      const header = e.target.closest('.post-meta')
+      if (header) {
+        const item = header.closest('.post-item')
+        if (item) item.classList.toggle('collapsed')
+      }
+      // 阻止点击 lightbox 跳转
+      const lb = e.target.closest('.lightbox')
+      if (lb) {
+        e.preventDefault()
+      }
     })
 
     viewState.jsonReachedEnd = false
@@ -673,7 +707,7 @@
       win.addEventListener('scroll', () => {
         if (viewState.jsonIsLoading || viewState.jsonReachedEnd) return
         const d = win.document
-        if ((win.innerHeight + win.scrollY) >= d.body.offsetHeight - 100) {
+        if (win.innerHeight + win.scrollY >= d.body.offsetHeight - 100) {
           viewState.page++
           fetchAndAppendJson(viewState, iframeEl, false)
         }
@@ -702,9 +736,10 @@
         return
       }
 
-      const html = posts.map(p => {
-        const body = p.cooked || '<p><em>Content unavailable</em></p>'
-        return `
+      const html = posts
+        .map(p => {
+          const body = p.cooked || '<p><em>Content unavailable</em></p>'
+          return `
           <div class="post-item" id="post-${p.post_number}">
             <div class="post-meta" title="点击折叠/展开">
               <span class="post-toggle">▼</span>
@@ -717,7 +752,8 @@
             <div class="post-body">${body}</div>
           </div>
         `
-      }).join('')
+        })
+        .join('')
 
       container.insertAdjacentHTML('beforeend', html)
       if (indicator) indicator.style.display = 'none'
@@ -736,130 +772,176 @@
     const listContainer = createEl('div', { className: 'quick-reply-list-container' })
     const inputArea = createEl('div', { className: 'quick-reply-input-area' })
 
-    const input = createEl('textarea', { className: 'quick-reply-input', placeholder: '输入回复 (Ctrl+Enter 发送)', rows: 1 })
+    const input = createEl('textarea', {
+      className: 'quick-reply-input',
+      placeholder: '输入回复 (Ctrl+Enter 发送)',
+      rows: 1
+    })
     const sendBtn = createEl('button', { className: 'qr-send-btn', text: '发送' })
 
     // Reply state
     let replyingTo = null // { postNumber, username }
 
     // Listen for reply events from iframe
-    window.addEventListener('message', (e) => {
-        if (e.data && e.data.type === 'reply-to-post' && e.data.topicId === topicId) {
-            replyingTo = { postNumber: e.data.postNumber, username: e.data.username }
-            updateInputState()
-            input.focus()
-        }
+    window.addEventListener('message', e => {
+      if (e.data && e.data.type === 'reply-to-post' && e.data.topicId === topicId) {
+        replyingTo = { postNumber: e.data.postNumber, username: e.data.username }
+        updateInputState()
+        input.focus()
+      }
     })
 
-    const statusEl = createEl('div', { className: 'reply-status', style: 'font-size:12px;color:#0088cc;margin-bottom:4px;display:none;align-items:center;' })
+    const statusEl = createEl('div', {
+      className: 'reply-status',
+      style: 'font-size:12px;color:#0088cc;margin-bottom:4px;display:none;align-items:center;'
+    })
     panel.appendChild(statusEl)
 
     function updateInputState() {
-        if (replyingTo) {
-            statusEl.style.display = 'flex'
-            statusEl.innerHTML = `<span>回复 <span style="font-weight:bold">@${replyingTo.username}</span> (#${replyingTo.postNumber})</span>`
-            const cancelBtn = createEl('span', { text: '取消', style: 'margin-left:8px;cursor:pointer;color:#999' })
-            cancelBtn.onclick = () => { replyingTo = null; updateInputState() }
-            statusEl.appendChild(cancelBtn)
-            input.placeholder = `回复 @${replyingTo.username}...`
-        } else {
-            statusEl.style.display = 'none'
-            input.placeholder = '输入回复 (Ctrl+Enter 发送)'
+      if (replyingTo) {
+        statusEl.style.display = 'flex'
+        statusEl.innerHTML = `<span>回复 <span style="font-weight:bold">@${replyingTo.username}</span> (#${replyingTo.postNumber})</span>`
+        const cancelBtn = createEl('span', {
+          text: '取消',
+          style: 'margin-left:8px;cursor:pointer;color:#999'
+        })
+        cancelBtn.onclick = () => {
+          replyingTo = null
+          updateInputState()
         }
+        statusEl.appendChild(cancelBtn)
+        input.placeholder = `回复 @${replyingTo.username}...`
+      } else {
+        statusEl.style.display = 'none'
+        input.placeholder = '输入回复 (Ctrl+Enter 发送)'
+      }
     }
 
     const timeBtn = createEl('button', {
-        className: 'raw-preview-btn', innerHTML: '⏱️', title: '定时回复', style: 'height:38px;width:38px;border-radius:50%;font-size:16px;'
+      className: 'raw-preview-btn',
+      innerHTML: '⏱️',
+      title: '定时回复',
+      style: 'height:38px;width:38px;border-radius:50%;font-size:16px;'
     })
     timeBtn.onclick = () => {
-        const raw = input.value.trim()
-        if (!raw) return alert('请输入回复内容')
-        const secStr = prompt('请输入倒计时秒数:', '10')
-        if (!secStr) return
-        const seconds = parseInt(secStr, 10)
-        if (isNaN(seconds) || seconds <= 0) return alert('无效的秒数')
+      const raw = input.value.trim()
+      if (!raw) return alert('请输入回复内容')
+      const secStr = prompt('请输入倒计时秒数:', '10')
+      if (!secStr) return
+      const seconds = parseInt(secStr, 10)
+      if (isNaN(seconds) || seconds <= 0) return alert('无效的秒数')
 
-        addTimer(topicId, raw, seconds, replyingTo?.postNumber)
-        input.value = ''
-        replyingTo = null
-        updateInputState()
+      addTimer(topicId, raw, seconds, replyingTo?.postNumber)
+      input.value = ''
+      replyingTo = null
+      updateInputState()
     }
 
     const toggleBtn = createEl('button', {
-        className: 'raw-preview-btn', innerHTML: '☰', title: '预设', style: 'height:38px;width:38px;border-radius:50%;'
+      className: 'raw-preview-btn',
+      innerHTML: '☰',
+      title: '预设',
+      style: 'height:38px;width:38px;border-radius:50%;'
     })
 
     // Presets
-    let presets = JSON.parse(localStorage.getItem('preview_quick_replies') || '["感谢分享！","学到了。","Mark。"]')
+    let presets = JSON.parse(
+      localStorage.getItem('preview_quick_replies') || '["感谢分享！","学到了。","Mark。"]'
+    )
     let isExpanded = false
 
     function renderPresets() {
-        listContainer.innerHTML = ''
-        presets.forEach((txt, idx) => {
-            const item = createEl('div', { className: 'quick-reply-item' })
-            const t = createEl('span', { text: txt, style: 'flex:1' })
-            t.onclick = () => { input.value = txt; input.focus() }
-            const d = createEl('span', { text: '×', style: 'color:#999;padding:0 5px' })
-            d.onclick = (e) => {
-                e.stopPropagation()
-                presets.splice(idx, 1)
-                localStorage.setItem('preview_quick_replies', JSON.stringify(presets))
-                renderPresets()
-            }
-            item.append(t, d)
-            listContainer.appendChild(item)
-        })
-        if (input.value.trim()) {
-            const saveBtn = createEl('div', { className: 'quick-reply-item', text: '+ 保存当前输入为预设', style: 'justify-content:center;color:#0088cc;font-weight:bold' })
-            saveBtn.onclick = () => {
-                const v = input.value.trim()
-                if (v && !presets.includes(v)) {
-                    presets.push(v)
-                    localStorage.setItem('preview_quick_replies', JSON.stringify(presets))
-                    renderPresets()
-                }
-            }
-            listContainer.appendChild(saveBtn)
+      listContainer.innerHTML = ''
+      presets.forEach((txt, idx) => {
+        const item = createEl('div', { className: 'quick-reply-item' })
+        const t = createEl('span', { text: txt, style: 'flex:1' })
+        t.onclick = () => {
+          input.value = txt
+          input.focus()
         }
+        const d = createEl('span', { text: '×', style: 'color:#999;padding:0 5px' })
+        d.onclick = e => {
+          e.stopPropagation()
+          presets.splice(idx, 1)
+          localStorage.setItem('preview_quick_replies', JSON.stringify(presets))
+          renderPresets()
+        }
+        item.append(t, d)
+        listContainer.appendChild(item)
+      })
+      if (input.value.trim()) {
+        const saveBtn = createEl('div', {
+          className: 'quick-reply-item',
+          text: '+ 保存当前输入为预设',
+          style: 'justify-content:center;color:#0088cc;font-weight:bold'
+        })
+        saveBtn.onclick = () => {
+          const v = input.value.trim()
+          if (v && !presets.includes(v)) {
+            presets.push(v)
+            localStorage.setItem('preview_quick_replies', JSON.stringify(presets))
+            renderPresets()
+          }
+        }
+        listContainer.appendChild(saveBtn)
+      }
     }
 
     toggleBtn.onclick = () => {
-        isExpanded = !isExpanded
-        listContainer.classList.toggle('expanded', isExpanded)
-        if (isExpanded) renderPresets()
+      isExpanded = !isExpanded
+      listContainer.classList.toggle('expanded', isExpanded)
+      if (isExpanded) renderPresets()
     }
-    input.addEventListener('input', () => { if (isExpanded) renderPresets() })
+    input.addEventListener('input', () => {
+      if (isExpanded) renderPresets()
+    })
 
     const doSend = async () => {
-        const raw = input.value.trim()
-        if (!raw) return
-        sendBtn.disabled = true; sendBtn.text = '...'
-        const token = document.querySelector('meta[name="csrf-token"]')?.content
-        if (!token) { alert('未登录'); return }
+      const raw = input.value.trim()
+      if (!raw) return
+      sendBtn.disabled = true
+      sendBtn.text = '...'
+      const token = document.querySelector('meta[name="csrf-token"]')?.content
+      if (!token) {
+        alert('未登录')
+        return
+      }
 
-        try {
-            const fd = new URLSearchParams()
-            fd.append('raw', raw); fd.append('topic_id', topicId); fd.append('archetype', 'regular'); fd.append('nested_post', 'true')
-            if (replyingTo) {
-                fd.append('reply_to_post_number', replyingTo.postNumber)
-            }
-            await fetch('/posts', {
-                method: 'POST', headers: { 'x-csrf-token': token, 'x-requested-with': 'XMLHttpRequest', 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                body: fd.toString()
-            })
-            input.value = ''; sendBtn.text = '发送'
-            replyingTo = null; updateInputState() // Clear reply state
-            if(onSuccess) onSuccess(true)
-        } catch(e) {
-            alert('发送失败')
-            sendBtn.text = '重试'
-        } finally {
-            sendBtn.disabled = false
+      try {
+        const fd = new URLSearchParams()
+        fd.append('raw', raw)
+        fd.append('topic_id', topicId)
+        fd.append('archetype', 'regular')
+        fd.append('nested_post', 'true')
+        if (replyingTo) {
+          fd.append('reply_to_post_number', replyingTo.postNumber)
         }
+        await fetch('/posts', {
+          method: 'POST',
+          headers: {
+            'x-csrf-token': token,
+            'x-requested-with': 'XMLHttpRequest',
+            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+          },
+          body: fd.toString()
+        })
+        input.value = ''
+        sendBtn.text = '发送'
+        replyingTo = null
+        updateInputState() // Clear reply state
+        if (onSuccess) onSuccess(true)
+      } catch (e) {
+        alert('发送失败')
+        sendBtn.text = '重试'
+      } finally {
+        sendBtn.disabled = false
+      }
     }
 
     sendBtn.onclick = doSend
-    input.onkeydown = (e) => { if (e.ctrlKey && e.key === 'Enter') doSend() }
+    input.onkeydown = e => {
+      if (e.ctrlKey && e.key === 'Enter') doSend()
+    }
     inputArea.append(toggleBtn, input, timeBtn, sendBtn)
     panel.append(listContainer, statusEl, inputArea)
     return panel
@@ -878,33 +960,37 @@
       let slug = 'topic'
       let title = `话题 #${tid}`
       if (link) {
-          const m = link.href.match(/\/t\/([^/]+)\/(\d+)/)
-          if (m) slug = m[1]
-          title = link.innerText || title
+        const m = link.href.match(/\/t\/([^/]+)\/(\d+)/)
+        if (m) slug = m[1]
+        title = link.innerText || title
       }
 
       // 改动 1: 样式改为右边距，因为按钮在文字左侧
-      const btn = createEl('button', { className: 'raw-preview-btn raw-preview-trigger', text: '预览', style: 'margin-right:8px;font-size:11px;' })
-      btn.onclick = (e) => {
-        e.preventDefault(); e.stopPropagation()
+      const btn = createEl('button', {
+        className: 'raw-preview-btn raw-preview-trigger',
+        text: '预览',
+        style: 'margin-right:8px;font-size:11px;'
+      })
+      btn.onclick = e => {
+        e.preventDefault()
+        e.stopPropagation()
         openTopic(tid, slug, title)
       }
 
       if (link && link.parentElement) {
-          link.parentElement.style.display = 'flex'
-          link.parentElement.style.alignItems = 'center'
-          link.style.flex = '1'
-          // 改动 2: 使用 insertBefore 将按钮插入到 link (标题) 之前
-          link.parentElement.insertBefore(btn, link)
+        link.parentElement.style.display = 'flex'
+        link.parentElement.style.alignItems = 'center'
+        link.style.flex = '1'
+        // 改动 2: 使用 insertBefore 将按钮插入到 link (标题) 之前
+        link.parentElement.insertBefore(btn, link)
       } else {
-          row.appendChild(btn)
+        row.appendChild(btn)
       }
     })
   }
 
   if (document.querySelector('meta[name*="discourse"]')) {
-      setInterval(inject, 2000)
-      setTimeout(inject, 500)
+    setInterval(inject, 2000)
+    setTimeout(inject, 500)
   }
-
 })()

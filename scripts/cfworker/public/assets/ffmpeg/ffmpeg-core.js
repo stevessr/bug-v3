@@ -2933,7 +2933,7 @@ var createFFmpegCore = (() => {
           return fd < 32 ? low & val : high & val
         }
         for (var fd = 0; fd < nfds; fd++) {
-          var mask = 1 << fd % 32
+          var mask = 1 << (fd % 32)
           if (!check(fd, allLow, allHigh, mask)) {
             continue
           }

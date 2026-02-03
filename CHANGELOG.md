@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.6] - 2024-11-14
 
 ### Added
+
 - AI-powered emoji batch renaming feature with Gemini API integration
 - Dedicated AI batch renaming tab in the options page
 - Cross-group duplicate detection based on perceptual hashing
@@ -18,12 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Perceptual hash-based image similarity detection
 
 ### Changed
+
 - Split settings into organized tabs for better UX
 - Optimized emoji selector with improved icon and name display logic
 - Enhanced duplicate detection with filter query capabilities
 - Improved group navigation and routing in options page
 
 ### Fixed
+
 - Resolved 'computed value is readonly' warning in Options.vue
 - Fixed router history import (createWebHashHistory)
 - Corrected navigation issues in options page
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - Previous Release
 
 ### Added
+
 - Complete storage architecture rewrite
 - Progressive multi-layer storage system (Local Storage → Session Storage → Extension Storage → IndexedDB)
 - Enhanced cross-context synchronization

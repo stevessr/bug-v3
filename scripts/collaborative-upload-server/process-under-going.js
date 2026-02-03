@@ -186,7 +186,20 @@ async function convertGifToAvif(inputPath, outputPath) {
   console.log(`Converting GIF (animated) via ffmpeg: ${inputPath} -> ${outputPath}`)
   await runCommand(
     'ffmpeg',
-    ['-i', inputPath, '-c:v', 'libaom-av1', '-crf', '30', '-b:v', '0', '-fps_mode', 'passthrough', '-y', outputPath],
+    [
+      '-i',
+      inputPath,
+      '-c:v',
+      'libaom-av1',
+      '-crf',
+      '30',
+      '-b:v',
+      '0',
+      '-fps_mode',
+      'passthrough',
+      '-y',
+      outputPath
+    ],
     { stdio: 'inherit' }
   )
 }
@@ -204,7 +217,9 @@ function getImageSize(inputPath) {
   if (result.status !== 0) {
     return { width: null, height: null }
   }
-  const [w, h] = String(result.stdout || '').trim().split(/\s+/)
+  const [w, h] = String(result.stdout || '')
+    .trim()
+    .split(/\s+/)
   const width = Number.parseInt(w, 10)
   const height = Number.parseInt(h, 10)
   if (Number.isNaN(width) || Number.isNaN(height)) {
@@ -640,9 +655,7 @@ async function main() {
     while (uploadQueue.length > 0) {
       const batch = uploadQueue.splice(0, batchSize)
       console.log(
-        `Uploading ${batch.length} file(s) for ${zipName} (remaining: ${
-          uploadQueue.length
-        })`
+        `Uploading ${batch.length} file(s) for ${zipName} (remaining: ${uploadQueue.length})`
       )
       const batchFiles = batch.map(file => ({
         taskId: randomUUID(),

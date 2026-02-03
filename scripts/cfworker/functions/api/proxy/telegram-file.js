@@ -51,8 +51,9 @@ export async function onRequestGet(context) {
   } catch (error) {
     console.error('Proxy error:', error)
     return new Response(`Proxy error: ${error.message}`, {
-              status: 500,
-              headers: { 'Content-Type': 'text/plain; charset=UTF-8' }    })
+      status: 500,
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
+    })
   }
 }
 

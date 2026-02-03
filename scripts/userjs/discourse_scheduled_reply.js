@@ -15,29 +15,29 @@
 // @run-at       document-end
 // ==/UserScript==
 
-(function() {
-    'use strict';
+;(function () {
+  'use strict'
 
-    // Utility: Create Element
-    function createEl(tag, opts) {
-        const el = document.createElement(tag)
-        if (!opts) return el
-        if (opts.className) el.className = opts.className
-        if (opts.text) el.textContent = opts.text
-        if (opts.innerHTML) el.innerHTML = opts.innerHTML
-        if (opts.title) el.title = opts.title
-        if (opts.style) el.style.cssText = opts.style
-        if (opts.attrs) for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
-        if (opts.on) {
-            for (const [evt, handler] of Object.entries(opts.on)) {
-                el.addEventListener(evt, handler)
-            }
-        }
-        return el
+  // Utility: Create Element
+  function createEl(tag, opts) {
+    const el = document.createElement(tag)
+    if (!opts) return el
+    if (opts.className) el.className = opts.className
+    if (opts.text) el.textContent = opts.text
+    if (opts.innerHTML) el.innerHTML = opts.innerHTML
+    if (opts.title) el.title = opts.title
+    if (opts.style) el.style.cssText = opts.style
+    if (opts.attrs) for (const k in opts.attrs) el.setAttribute(k, opts.attrs[k])
+    if (opts.on) {
+      for (const [evt, handler] of Object.entries(opts.on)) {
+        el.addEventListener(evt, handler)
+      }
     }
+    return el
+  }
 
-    // Styles
-    const STYLES = `
+  // Styles
+  const STYLES = `
     .timer-btn-wrapper {
         margin-left: 8px;
         display: inline-flex;
@@ -84,37 +84,37 @@
     .timer-btn-cancel { background: #eee; color: #333; }
     .timer-btn-confirm { background: var(--tertiary, #0088cc); color: #fff; }
     `
-    const styleEl = document.createElement('style')
-    styleEl.textContent = STYLES
-    document.head.appendChild(styleEl)
+  const styleEl = document.createElement('style')
+  styleEl.textContent = STYLES
+  document.head.appendChild(styleEl)
 
-    let timerContainer = null
-    const timers = new Map()
+  let timerContainer = null
+  const timers = new Map()
 
-    function getTimerContainer() {
-        if (!timerContainer) {
-            timerContainer = createEl('div', { className: 'timer-container' })
-            document.body.appendChild(timerContainer)
-        }
-        return timerContainer
+  function getTimerContainer() {
+    if (!timerContainer) {
+      timerContainer = createEl('div', { className: 'timer-container' })
+      document.body.appendChild(timerContainer)
     }
+    return timerContainer
+  }
 
-    function showTimePicker(onConfirm) {
-        const overlay = createEl('div', { className: 'timer-picker-overlay' })
-        const modal = createEl('div', { className: 'timer-picker-modal' })
+  function showTimePicker(onConfirm) {
+    const overlay = createEl('div', { className: 'timer-picker-overlay' })
+    const modal = createEl('div', { className: 'timer-picker-modal' })
 
-        // Tabs
-        const tabs = createEl('div', { className: 'timer-picker-tabs' })
-        const tabCountdown = createEl('div', { className: 'timer-picker-tab active', text: '倒计时' })
-        const tabSchedule = createEl('div', { className: 'timer-picker-tab', text: '定时发送' })
-        tabs.append(tabCountdown, tabSchedule)
+    // Tabs
+    const tabs = createEl('div', { className: 'timer-picker-tabs' })
+    const tabCountdown = createEl('div', { className: 'timer-picker-tab active', text: '倒计时' })
+    const tabSchedule = createEl('div', { className: 'timer-picker-tab', text: '定时发送' })
+    tabs.append(tabCountdown, tabSchedule)
 
-        // Content Container
-        const content = createEl('div', { className: 'timer-picker-content' })
+    // Content Container
+    const content = createEl('div', { className: 'timer-picker-content' })
 
-        // Countdown View
-        const viewCountdown = createEl('div', { className: 'timer-view-countdown' })
-        viewCountdown.innerHTML = `
+    // Countdown View
+    const viewCountdown = createEl('div', { className: 'timer-view-countdown' })
+    viewCountdown.innerHTML = `
             <div class="timer-field-group">
                 <span class="timer-label">秒后:</span>
                 <input type="number" class="timer-input inp-sec" value="10" min="1">
@@ -125,12 +125,17 @@
             </div>
         `
 
-        // Schedule View (Hidden by default)
-        const viewSchedule = createEl('div', { className: 'timer-view-schedule', style: 'display:none' })
-        const now = new Date()
-        now.setMinutes(now.getMinutes() + 5) // Default 5 mins later
-        const defaultStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16)
-        viewSchedule.innerHTML = `
+    // Schedule View (Hidden by default)
+    const viewSchedule = createEl('div', {
+      className: 'timer-view-schedule',
+      style: 'display:none'
+    })
+    const now = new Date()
+    now.setMinutes(now.getMinutes() + 5) // Default 5 mins later
+    const defaultStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16)
+    viewSchedule.innerHTML = `
             <div class="timer-field-group">
                 <span class="timer-label">时间:</span>
                 <input type="datetime-local" class="timer-input inp-datetime" value="${defaultStr}">
@@ -138,324 +143,341 @@
             <div style="font-size:12px;color:#999;margin-top:4px">请选择将来的时间</div>
         `
 
-        content.append(viewCountdown, viewSchedule)
+    content.append(viewCountdown, viewSchedule)
 
-        // Tab Switching
-        tabCountdown.onclick = () => {
-            tabCountdown.classList.add('active'); tabSchedule.classList.remove('active')
-            viewCountdown.style.display = 'block'; viewSchedule.style.display = 'none'
-        }
-        tabSchedule.onclick = () => {
-            tabSchedule.classList.add('active'); tabCountdown.classList.remove('active')
-            viewSchedule.style.display = 'block'; viewCountdown.style.display = 'none'
-        }
-
-        // Actions
-        const actions = createEl('div', { className: 'timer-actions' })
-        const btnCancel = createEl('button', { className: 'timer-btn timer-btn-cancel', text: '取消' })
-        const btnConfirm = createEl('button', { className: 'timer-btn timer-btn-confirm', text: '确认' })
-
-        btnCancel.onclick = () => overlay.remove()
-        btnConfirm.onclick = () => {
-            let seconds = 0
-            if (tabCountdown.classList.contains('active')) {
-                const s = parseInt(viewCountdown.querySelector('.inp-sec').value || 0)
-                const m = parseInt(viewCountdown.querySelector('.inp-min').value || 0)
-                seconds = s + (m * 60)
-            } else {
-                const dtStr = viewSchedule.querySelector('.inp-datetime').value
-                if (!dtStr) return alert('请选择时间')
-                const target = new Date(dtStr)
-                const diff = target.getTime() - Date.now()
-                if (diff <= 0) return alert('请选择未来的时间')
-                seconds = Math.floor(diff / 1000)
-            }
-
-            if (seconds <= 0) return alert('无效的时间')
-            onConfirm(seconds)
-            overlay.remove()
-        }
-
-        actions.append(btnCancel, btnConfirm)
-        modal.append(tabs, content, actions)
-        overlay.appendChild(modal)
-        document.body.appendChild(overlay)
+    // Tab Switching
+    tabCountdown.onclick = () => {
+      tabCountdown.classList.add('active')
+      tabSchedule.classList.remove('active')
+      viewCountdown.style.display = 'block'
+      viewSchedule.style.display = 'none'
+    }
+    tabSchedule.onclick = () => {
+      tabSchedule.classList.add('active')
+      tabCountdown.classList.remove('active')
+      viewSchedule.style.display = 'block'
+      viewCountdown.style.display = 'none'
     }
 
-    // Logic: Discard Draft
-    function discardDraft() {
-        // 1. Click Discard Button
-        const discardBtn = document.querySelector('.discard-button');
-        if (discardBtn) {
-            discardBtn.click();
-            // 2. Wait for Modal and Click Confirm
-            setTimeout(() => {
-                const confirmBtn = document.querySelector('.discard-draft-modal__discard-btn');
-                if (confirmBtn) {
-                    confirmBtn.click();
-                } else {
-                    console.warn('Timer script: Confirm discard button not found');
-                }
-            }, 300); // Wait 300ms for modal animation
-        } else {
-             // Fallback: Close composer via API if button not found (though button simulation is requested)
-             console.warn('Timer script: Discard button not found');
-             try {
-                window.Discourse.__container__.lookup('controller:composer').cancel();
-             } catch(e) {}
-        }
+    // Actions
+    const actions = createEl('div', { className: 'timer-actions' })
+    const btnCancel = createEl('button', { className: 'timer-btn timer-btn-cancel', text: '取消' })
+    const btnConfirm = createEl('button', {
+      className: 'timer-btn timer-btn-confirm',
+      text: '确认'
+    })
+
+    btnCancel.onclick = () => overlay.remove()
+    btnConfirm.onclick = () => {
+      let seconds = 0
+      if (tabCountdown.classList.contains('active')) {
+        const s = parseInt(viewCountdown.querySelector('.inp-sec').value || 0)
+        const m = parseInt(viewCountdown.querySelector('.inp-min').value || 0)
+        seconds = s + m * 60
+      } else {
+        const dtStr = viewSchedule.querySelector('.inp-datetime').value
+        if (!dtStr) return alert('请选择时间')
+        const target = new Date(dtStr)
+        const diff = target.getTime() - Date.now()
+        if (diff <= 0) return alert('请选择未来的时间')
+        seconds = Math.floor(diff / 1000)
+      }
+
+      if (seconds <= 0) return alert('无效的时间')
+      onConfirm(seconds)
+      overlay.remove()
     }
 
-    // Logic: Add Timer
-    function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags) {
-        const container = getTimerContainer()
-        const timerId = Date.now() + Math.random().toString()
+    actions.append(btnCancel, btnConfirm)
+    modal.append(tabs, content, actions)
+    overlay.appendChild(modal)
+    document.body.appendChild(overlay)
+  }
 
-        let replyInfo = ''
-        if (title) {
-            replyInfo = `(发布主题：${title.substring(0, 10)}...)`
+  // Logic: Discard Draft
+  function discardDraft() {
+    // 1. Click Discard Button
+    const discardBtn = document.querySelector('.discard-button')
+    if (discardBtn) {
+      discardBtn.click()
+      // 2. Wait for Modal and Click Confirm
+      setTimeout(() => {
+        const confirmBtn = document.querySelector('.discard-draft-modal__discard-btn')
+        if (confirmBtn) {
+          confirmBtn.click()
         } else {
-            replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : `(回复 Topic #${topicId})`
+          console.warn('Timer script: Confirm discard button not found')
         }
+      }, 300) // Wait 300ms for modal animation
+    } else {
+      // Fallback: Close composer via API if button not found (though button simulation is requested)
+      console.warn('Timer script: Discard button not found')
+      try {
+        window.Discourse.__container__.lookup('controller:composer').cancel()
+      } catch (e) {}
+    }
+  }
 
-        const el = createEl('div', {
-            className: 'timer-item',
-            innerHTML: `
+  // Logic: Add Timer
+  function addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags) {
+    const container = getTimerContainer()
+    const timerId = Date.now() + Math.random().toString()
+
+    let replyInfo = ''
+    if (title) {
+      replyInfo = `(发布主题：${title.substring(0, 10)}...)`
+    } else {
+      replyInfo = replyToPostNumber ? `(回复 #${replyToPostNumber})` : `(回复 Topic #${topicId})`
+    }
+
+    const el = createEl('div', {
+      className: 'timer-item',
+      innerHTML: `
                 <div style="font-weight:bold;margin-bottom:4px">定时发送 ${replyInfo}</div>
                 <div class="timer-status">等待中：<span class="countdown">${seconds}</span>s</div>
                 <div class="timer-content" style="font-size:12px;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${raw}</div>
             `
-        })
-        container.appendChild(el)
+    })
+    container.appendChild(el)
 
-        // Close Composer Immediately
-        discardDraft()
+    // Close Composer Immediately
+    discardDraft()
 
-        let remaining = seconds
-        const interval = setInterval(async () => {
-            remaining--
-            const cd = el.querySelector('.countdown')
-            if (cd) cd.textContent = remaining
+    let remaining = seconds
+    const interval = setInterval(async () => {
+      remaining--
+      const cd = el.querySelector('.countdown')
+      if (cd) cd.textContent = remaining
 
-            if (remaining <= 0) {
-                clearInterval(interval)
-                el.querySelector('.timer-status').textContent = '正在发送...'
+      if (remaining <= 0) {
+        clearInterval(interval)
+        el.querySelector('.timer-status').textContent = '正在发送...'
 
-                try {
-                    const token = document.querySelector('meta[name="csrf-token"]')?.content
-                    if (!token) throw new Error('Token not found')
+        try {
+          const token = document.querySelector('meta[name="csrf-token"]')?.content
+          if (!token) throw new Error('Token not found')
 
-                    const fd = new URLSearchParams()
-                    fd.append('raw', raw)
+          const fd = new URLSearchParams()
+          fd.append('raw', raw)
 
-                    if (title) {
-                        // New Topic
-                        fd.append('title', title)
-                        if (categoryId) fd.append('category', categoryId)
-                        if (tags && Array.isArray(tags)) {
-                            tags.forEach(tag => fd.append('tags[]', tag))
-                        }
-                        fd.append('archetype', 'regular')
-                    } else {
-                        // Reply
-                        fd.append('topic_id', topicId)
-                        fd.append('archetype', 'regular')
-                        fd.append('nested_post', 'true')
-                        if (replyToPostNumber) {
-                            fd.append('reply_to_post_number', replyToPostNumber)
-                        }
-                    }
+          if (title) {
+            // New Topic
+            fd.append('title', title)
+            if (categoryId) fd.append('category', categoryId)
+            if (tags && Array.isArray(tags)) {
+              tags.forEach(tag => fd.append('tags[]', tag))
+            }
+            fd.append('archetype', 'regular')
+          } else {
+            // Reply
+            fd.append('topic_id', topicId)
+            fd.append('archetype', 'regular')
+            fd.append('nested_post', 'true')
+            if (replyToPostNumber) {
+              fd.append('reply_to_post_number', replyToPostNumber)
+            }
+          }
 
-                    const res = await fetch('/posts', {
-                        method: 'POST',
-                        headers: {
-                            'x-csrf-token': token,
-                            'x-requested-with': 'XMLHttpRequest',
-                            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                        },
-                        body: fd.toString()
-                    })
+          const res = await fetch('/posts', {
+            method: 'POST',
+            headers: {
+              'x-csrf-token': token,
+              'x-requested-with': 'XMLHttpRequest',
+              'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            },
+            body: fd.toString()
+          })
 
-                    if (!res.ok) {
-                        const txt = await res.text()
-                        throw new Error(txt || res.statusText)
-                    }
+          if (!res.ok) {
+            const txt = await res.text()
+            throw new Error(txt || res.statusText)
+          }
 
-                    // Success
-                    const json = await res.json()
-                    const successTopicId = json.topic_id || topicId
-                    const postUrl = json.post_url ? `<a href="${json.post_url}" target="_blank" style="color:#fff;text-decoration:underline">查看帖子</a>` : ''
+          // Success
+          const json = await res.json()
+          const successTopicId = json.topic_id || topicId
+          const postUrl = json.post_url
+            ? `<a href="${json.post_url}" target="_blank" style="color:#fff;text-decoration:underline">查看帖子</a>`
+            : ''
 
-                    el.classList.add('success')
-                    el.innerHTML = `
+          el.classList.add('success')
+          el.innerHTML = `
                         <div style="font-weight:bold">✅ 发送成功</div>
                         <div style="font-size:12px">Topic #${successTopicId} ${postUrl}</div>
                     `
-                    setTimeout(() => {
-                        el.style.opacity = '0'
-                        el.style.transform = 'translateY(20px)'
-                        setTimeout(() => el.remove(), 300)
-                    }, 5000)
-
-                } catch (err) {
-                    el.classList.add('error')
-                    el.innerHTML = `
+          setTimeout(() => {
+            el.style.opacity = '0'
+            el.style.transform = 'translateY(20px)'
+            setTimeout(() => el.remove(), 300)
+          }, 5000)
+        } catch (err) {
+          el.classList.add('error')
+          el.innerHTML = `
                         <div style="font-weight:bold">❌ 发送失败 (点击查看)</div>
                         <div style="font-size:12px">Topic #${topicId}</div>
                     `
-                    el.onclick = () => {
-                        alert(`发送失败\n\nTopic: ${topicId}\nContent: ${raw}\nError: ${err.message}`)
-                        el.remove()
-                    }
-                }
-            }
-        }, 1000)
+          el.onclick = () => {
+            alert(`发送失败\n\nTopic: ${topicId}\nContent: ${raw}\nError: ${err.message}`)
+            el.remove()
+          }
+        }
+      }
+    }, 1000)
 
-        timers.set(timerId, { interval, el })
+    timers.set(timerId, { interval, el })
+  }
+
+  // Find internal Discourse controller
+  function getComposerModel() {
+    try {
+      // Discourse 3.x+ usually exposes containers/services differently
+      // We can try to find the composer view from the DOM
+      // This is a heuristic approach
+      // A reliable way is often via `Discourse.__container__` if available, or probing the window.
+      // Let's try standard container lookup
+      if (window.Discourse && window.Discourse.__container__) {
+        const controller = window.Discourse.__container__.lookup('controller:composer')
+        if (controller && controller.model) return controller.model
+      }
+
+      // Fallback: legacy
+      // or we can read from DOM if model access fails (but DOM reading is fragile for hidden fields)
+    } catch (e) {
+      console.error('Failed to get composer model', e)
     }
+    return null
+  }
 
-    // Find internal Discourse controller
-    function getComposerModel() {
-        try {
-            // Discourse 3.x+ usually exposes containers/services differently
-            // We can try to find the composer view from the DOM
-            // This is a heuristic approach
-            // A reliable way is often via `Discourse.__container__` if available, or probing the window.
-            // Let's try standard container lookup
-            if (window.Discourse && window.Discourse.__container__) {
-                const controller = window.Discourse.__container__.lookup('controller:composer')
-                if (controller && controller.model) return controller.model
-            }
-
-            // Fallback: legacy
-            // or we can read from DOM if model access fails (but DOM reading is fragile for hidden fields)
-        } catch(e) {
-            console.error('Failed to get composer model', e)
-        }
-        return null
+  // Inject Button
+  function injectTimerButton() {
+    // Target: .save-or-cancel button container usually
+    // Specifically look for the reply button: button.create
+    // Update: User report shows button is inside .save-or-cancel
+    const replyBtn =
+      document.querySelector('.save-or-cancel .create') ||
+      document.querySelector('.composer-controls .create')
+    if (!replyBtn) {
+      console.log('Timer script: Reply button not found yet')
+      return
     }
+    if (replyBtn.parentNode.querySelector('.timer-btn-wrapper')) return // already injected
 
-    // Inject Button
-    function injectTimerButton() {
-        // Target: .save-or-cancel button container usually
-        // Specifically look for the reply button: button.create
-        // Update: User report shows button is inside .save-or-cancel
-        const replyBtn = document.querySelector('.save-or-cancel .create') || document.querySelector('.composer-controls .create');
-        if (!replyBtn) {
-            console.log('Timer script: Reply button not found yet')
-            return
-        }
-        if (replyBtn.parentNode.querySelector('.timer-btn-wrapper')) return // already injected
+    console.log('Timer script: Injecting button...')
+    const wrapper = createEl('div', { className: 'timer-btn-wrapper' })
 
-        console.log('Timer script: Injecting button...')
-        const wrapper = createEl('div', { className: 'timer-btn-wrapper' })
-
-        const btn = createEl('button', {
-            className: 'btn btn-icon-text btn-default',
-            title: '定时发送',
-            innerHTML: `<span class="d-button-label">⏱️</span>`
-        })
-
-        btn.onclick = (e) => {
-            e.preventDefault()
-            const model = getComposerModel()
-            if (!model) {
-                alert('无法获取编辑器状态，Discourse 版本可能不兼容。')
-                return
-            }
-
-            const raw = model.reply || model.replyText // standard property for content
-            const topicId = model.topic ? model.topic.id : model.topicId
-            const title = model.title
-
-            let categoryId = model.categoryId
-            if (!categoryId && model.get) {
-                categoryId = model.get('categoryId')
-            }
-
-            // Get tags from model
-            let tags = model.tags
-            if (!tags && model.get) {
-                tags = model.get('tags')
-            }
-
-            // Try to get replyToPostNumber correctly from Ember model
-            // It might be 'replyToPostNumber' or inside 'action' or 'reply'
-            let replyToPostNumber = model.replyToPostNumber
-            if (!replyToPostNumber && model.get) {
-                replyToPostNumber = model.get('replyToPostNumber')
-            }
-            // If we are replying to a post, we need that ID.
-
-            // Fallback: Try to extract from DOM if model is missing data (common in some Discourse setups)
-            // 1. Extract replyToPostNumber from user link in reply area
-            if (!replyToPostNumber) {
-                const userLink = document.querySelector('.reply-details .user-link');
-                if (userLink) {
-                    const match = userLink.href.match(/\/(\d+)$/);
-                    if (match) replyToPostNumber = match[1];
-                }
-            }
-            // 2. Extract topicId from URL if missing
-            if (!topicId) {
-                // If we are on a topic page, get ID from URL
-                const match = window.location.pathname.match(/\/t\/[^/]+\/(\d+)/);
-                if (match) {
-                    // But wait, if we are in a composer for a NEW topic, we shouldn't grab current topic ID.
-                    // Only grab if the composer is NOT creating a new topic.
-                    const isNewTopic = document.querySelector('.reply-details .composer-action-title .action-title')?.textContent.includes('Create Topic');
-                    if (!isNewTopic) {
-                        // Actually, better to check if composer has a title input visible
-                        // But relying on model.title is safer. If model.title is present, it's likely a new topic.
-                    }
-                }
-            }
-
-
-            console.log('Timer script: Model state:', { topicId, replyToPostNumber, title, categoryId, tags, raw: raw?.substring(0, 20) })
-
-            if (!raw || !raw.trim()) {
-                alert('请输入回复内容')
-                return
-            }
-            // Logic change: Allow if topicId exists OR title exists (new topic)
-            if (!topicId && !title) {
-                alert('无法获取话题 ID 或 标题')
-                return
-            }
-
-            showTimePicker((seconds) => {
-                addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags)
-            })
-
-            // Optional: Close composer or clear it?
-            // Usually scheduled reply means "send later", so we might want to discard the current draft locally?
-            // Or just leave it. Let's leave it for now, user can cancel if they want.
-            // If we want to simulate "sent", we'd need to close the composer.
-            // window.Discourse.__container__.lookup('controller:composer').cancel()
-        }
-
-        wrapper.appendChild(btn)
-
-        // Insert after the reply button
-        if (replyBtn.nextSibling) {
-            replyBtn.parentNode.insertBefore(wrapper, replyBtn.nextSibling)
-        } else {
-            replyBtn.parentNode.appendChild(wrapper)
-        }
-    }
-
-    // Observer to detect composer opening
-    const observer = new MutationObserver(() => {
-        injectTimerButton()
+    const btn = createEl('button', {
+      className: 'btn btn-icon-text btn-default',
+      title: '定时发送',
+      innerHTML: `<span class="d-button-label">⏱️</span>`
     })
 
-    observer.observe(document.body, { childList: true, subtree: true })
+    btn.onclick = e => {
+      e.preventDefault()
+      const model = getComposerModel()
+      if (!model) {
+        alert('无法获取编辑器状态，Discourse 版本可能不兼容。')
+        return
+      }
 
-    // Polling fallback (in case MutationObserver misses dynamic updates inside shadow DOM or similar)
-    setInterval(injectTimerButton, 1000)
+      const raw = model.reply || model.replyText // standard property for content
+      const topicId = model.topic ? model.topic.id : model.topicId
+      const title = model.title
 
-    // Initial check
+      let categoryId = model.categoryId
+      if (!categoryId && model.get) {
+        categoryId = model.get('categoryId')
+      }
+
+      // Get tags from model
+      let tags = model.tags
+      if (!tags && model.get) {
+        tags = model.get('tags')
+      }
+
+      // Try to get replyToPostNumber correctly from Ember model
+      // It might be 'replyToPostNumber' or inside 'action' or 'reply'
+      let replyToPostNumber = model.replyToPostNumber
+      if (!replyToPostNumber && model.get) {
+        replyToPostNumber = model.get('replyToPostNumber')
+      }
+      // If we are replying to a post, we need that ID.
+
+      // Fallback: Try to extract from DOM if model is missing data (common in some Discourse setups)
+      // 1. Extract replyToPostNumber from user link in reply area
+      if (!replyToPostNumber) {
+        const userLink = document.querySelector('.reply-details .user-link')
+        if (userLink) {
+          const match = userLink.href.match(/\/(\d+)$/)
+          if (match) replyToPostNumber = match[1]
+        }
+      }
+      // 2. Extract topicId from URL if missing
+      if (!topicId) {
+        // If we are on a topic page, get ID from URL
+        const match = window.location.pathname.match(/\/t\/[^/]+\/(\d+)/)
+        if (match) {
+          // But wait, if we are in a composer for a NEW topic, we shouldn't grab current topic ID.
+          // Only grab if the composer is NOT creating a new topic.
+          const isNewTopic = document
+            .querySelector('.reply-details .composer-action-title .action-title')
+            ?.textContent.includes('Create Topic')
+          if (!isNewTopic) {
+            // Actually, better to check if composer has a title input visible
+            // But relying on model.title is safer. If model.title is present, it's likely a new topic.
+          }
+        }
+      }
+
+      console.log('Timer script: Model state:', {
+        topicId,
+        replyToPostNumber,
+        title,
+        categoryId,
+        tags,
+        raw: raw?.substring(0, 20)
+      })
+
+      if (!raw || !raw.trim()) {
+        alert('请输入回复内容')
+        return
+      }
+      // Logic change: Allow if topicId exists OR title exists (new topic)
+      if (!topicId && !title) {
+        alert('无法获取话题 ID 或 标题')
+        return
+      }
+
+      showTimePicker(seconds => {
+        addTimer(topicId, raw, seconds, replyToPostNumber, title, categoryId, tags)
+      })
+
+      // Optional: Close composer or clear it?
+      // Usually scheduled reply means "send later", so we might want to discard the current draft locally?
+      // Or just leave it. Let's leave it for now, user can cancel if they want.
+      // If we want to simulate "sent", we'd need to close the composer.
+      // window.Discourse.__container__.lookup('controller:composer').cancel()
+    }
+
+    wrapper.appendChild(btn)
+
+    // Insert after the reply button
+    if (replyBtn.nextSibling) {
+      replyBtn.parentNode.insertBefore(wrapper, replyBtn.nextSibling)
+    } else {
+      replyBtn.parentNode.appendChild(wrapper)
+    }
+  }
+
+  // Observer to detect composer opening
+  const observer = new MutationObserver(() => {
     injectTimerButton()
+  })
 
-})();
+  observer.observe(document.body, { childList: true, subtree: true })
+
+  // Polling fallback (in case MutationObserver misses dynamic updates inside shadow DOM or similar)
+  setInterval(injectTimerButton, 1000)
+
+  // Initial check
+  injectTimerButton()
+})()

@@ -1,11 +1,13 @@
 # AutoDownload 功能迁移完成
 
 ## 概述
+
 已成功将 AutoDownload 功能从后台设置迁移到 X.com 页面内的自助设置菜单。
 
 ## 完成的工作
 
 ### 1. 移除后台设置
+
 - ✅ 从 `src/types/type.ts` 中移除了 `enableAutoDownload` 和 `autoDownloadSuffixes` 字段
 - ✅ 从 `src/types/defaultSettings.ts` 中移除了默认的自动下载设置
 - ✅ 从 `src/options/pages/SettingsPage.vue` 中移除了 AutoDownload 相关导入和组件使用
@@ -13,6 +15,7 @@
 - ✅ 删除了 `src/options/components/AutoDownloadSettings.vue` 组件文件
 
 ### 2. 创建 X.com 页面内设置菜单
+
 - ✅ 创建了 `src/content/x/autoDownloadSettings.ts` 文件，实现了完整的设置菜单界面
 - ✅ 设置菜单功能包括：
   - 固定在页面右上角的齿轮按钮 (⚙️)
@@ -23,11 +26,13 @@
   - 友好的通知提示
 
 ### 3. 更新 autoDownloadManager
+
 - ✅ 重构了 `src/utils/autoDownloadManager.ts`，移除了复杂的消息传递逻辑
 - ✅ 现在直接从 localStorage 读取设置 (`x-autodownload-settings`)
 - ✅ 简化了代码结构，提高了性能
 
 ### 4. 集成到 X.com 主页面
+
 - ✅ 在 `src/content/x/xMain.ts` 中添加了设置菜单的初始化
 - ✅ 确保设置菜单只在 X.com 域名下加载
 
