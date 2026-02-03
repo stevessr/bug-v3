@@ -58,6 +58,12 @@ export default defineComponent({
     const emojiPickerPos = ref<{ x: number; y: number } | null>(null)
     const showPluginEmojiPicker = ref(false)
     const pluginEmojiPickerPos = ref<{ x: number; y: number } | null>(null)
+    const showLinkPanel = ref(false)
+    const linkUrl = ref('https://')
+    const linkText = ref('')
+    const showImagePanel = ref(false)
+    const imageUrl = ref('https://')
+    const imageAlt = ref('')
 
     const toggleBold = () => {
       const editorView = editorViewRef.value
@@ -94,32 +100,39 @@ export default defineComponent({
       editorView.focus()
     }
 
-    const insertLink = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      const url = prompt('请输入链接地址：', 'https://')
-      if (url) {
-        const tr = editorView.state.tr.addMark(
-          editorView.state.selection.from,
-          editorView.state.selection.to,
-          basicSchema.marks.link.create({ href: url })
-        )
-        editorView.dispatch(tr)
-        editorView.focus()
-      }
+    const openLinkPanel = () => {
+      showLinkPanel.value = true
+      showImagePanel.value = false
     }
 
-    const insertImage = () => {
-      const editorView = editorViewRef.value
-      if (!editorView) return
-      const url = prompt('请输入图片地址：', 'https://')
-      if (url) {
-        const tr = editorView.state.tr.replaceSelectionWith(
-          basicSchema.nodes.image.create({ src: url })
-        )
-        editorView.dispatch(tr)
-        editorView.focus()
-      }
+    const openImagePanel = () => {
+      showImagePanel.value = true
+      showLinkPanel.value = false
+    }
+
+    const closePanels = () => {
+      showLinkPanel.value = false
+      showImagePanel.value = false
+    }
+
+    const insertLinkMarkup = () => {
+      const url = linkUrl.value.trim()
+      if (!url) return
+      const text = linkText.value.trim() || url
+      const markup =
+        props.inputFormat === 'markdown' ? `[${text}](${url})` : `[url=${url}]${text}[/url]`
+      insertTextAtCursor(markup)
+      closePanels()
+    }
+
+    const insertImageMarkup = () => {
+      const url = imageUrl.value.trim()
+      if (!url) return
+      const alt = imageAlt.value.trim() || 'image'
+      const markup =
+        props.inputFormat === 'markdown' ? `![${alt}](${url})` : `[img]${url}[/img]`
+      insertTextAtCursor(markup)
+      closePanels()
     }
 
     const insertBlockquote = () => {
@@ -352,10 +365,10 @@ export default defineComponent({
               <button class="toolbar-btn" onClick={handleUploadClick} title="上传文件">
                 <UploadOutlined />
               </button>
-              <button class="toolbar-btn" onClick={insertLink} title="插入链接">
+              <button class="toolbar-btn" onClick={openLinkPanel} title="插入链接">
                 <LinkOutlined />
               </button>
-              <button class="toolbar-btn" onClick={insertImage} title="插入图片">
+              <button class="toolbar-btn" onClick={openImagePanel} title="插入图片">
                 <PictureOutlined />
               </button>
               <button class="toolbar-btn" onClick={insertCode} title="行内代码">
@@ -385,6 +398,86 @@ export default defineComponent({
             class="hidden-upload-field"
             onChange={handleUploadChange}
           />
+          {showLinkPanel.value ? (
+            <div class="toolbar-panel">
+              <div class="toolbar-panel-title">插入链接</div>
+              <div class="toolbar-panel-row">
+                <input
+                  class="toolbar-panel-input"
+                  value={linkUrl.value}
+                  onInput={event => {
+                    linkUrl.value = (event.target as HTMLInputElement).value
+                  }}
+                  placeholder="https://"
+                />
+              </div>
+              <div class="toolbar-panel-row">
+                <input
+                  class="toolbar-panel-input"
+                  value={linkText.value}
+                  onInput={event => {
+                    linkText.value = (event.target as HTMLInputElement).value
+                  }}
+                  placeholder="显示文本（可选）"
+                />
+              </div>
+              <div class="toolbar-panel-preview">
+                预览：
+                <span class="toolbar-panel-preview-content">
+                  {linkText.value.trim() || linkUrl.value.trim() || '链接文本'}
+                </span>
+              </div>
+              <div class="toolbar-panel-actions">
+                <button class="toolbar-btn" onClick={closePanels} title="取消">
+                  取消
+                </button>
+                <button class="toolbar-btn primary" onClick={insertLinkMarkup} title="插入">
+                  插入
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {showImagePanel.value ? (
+            <div class="toolbar-panel">
+              <div class="toolbar-panel-title">插入图片</div>
+              <div class="toolbar-panel-row">
+                <input
+                  class="toolbar-panel-input"
+                  value={imageUrl.value}
+                  onInput={event => {
+                    imageUrl.value = (event.target as HTMLInputElement).value
+                  }}
+                  placeholder="https://"
+                />
+              </div>
+              <div class="toolbar-panel-row">
+                <input
+                  class="toolbar-panel-input"
+                  value={imageAlt.value}
+                  onInput={event => {
+                    imageAlt.value = (event.target as HTMLInputElement).value
+                  }}
+                  placeholder="描述（可选）"
+                />
+              </div>
+              <div class="toolbar-panel-preview">
+                预览：
+                {imageUrl.value.trim() ? (
+                  <img src={imageUrl.value.trim()} alt={imageAlt.value.trim() || 'image'} />
+                ) : (
+                  <span class="toolbar-panel-preview-content">未填写图片地址</span>
+                )}
+              </div>
+              <div class="toolbar-panel-actions">
+                <button class="toolbar-btn" onClick={closePanels} title="取消">
+                  取消
+                </button>
+                <button class="toolbar-btn primary" onClick={insertImageMarkup} title="插入">
+                  插入
+                </button>
+              </div>
+            </div>
+          ) : null}
           {showEmojiAutocomplete.value && emojiSuggestions.value.length ? (
             <div
               ref={emojiAutocompleteRef}
