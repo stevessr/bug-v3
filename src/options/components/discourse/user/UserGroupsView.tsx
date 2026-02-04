@@ -44,7 +44,9 @@ export default defineComponent({
           active="groups"
           showSettings={props.showSettings}
           showGroups={true}
-          onSwitchTab={tab => emit('switchMainTab', tab)}
+          onSwitchTab={(
+            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
+          ) => emit('switchMainTab', tab)}
         />
 
         <div class="flex items-center justify-between">

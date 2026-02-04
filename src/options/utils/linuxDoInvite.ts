@@ -19,7 +19,7 @@ async function pageFetch<T>(
   return await new Promise((resolve, reject) => {
     chromeAPI.runtime.sendMessage(
       {
-        type: 'PAGE_FETCH',
+        type: 'LINUX_DO_PAGE_FETCH',
         options: {
           url,
           method: options?.method || 'GET',
@@ -41,36 +41,6 @@ async function pageFetch<T>(
       }
     )
   })
-}
-
-async function getCsrfToken(): Promise<string | null> {
-  try {
-    const chromeAPI = (globalThis as any).chrome
-    if (!chromeAPI?.runtime?.sendMessage) return null
-
-    const resp = await new Promise<any>(resolve => {
-      chromeAPI.runtime.sendMessage({ type: 'REQUEST_LINUX_DO_AUTH' }, resolve)
-    })
-
-    if (resp?.success && resp?.csrfToken) {
-      return resp.csrfToken as string
-    }
-  } catch {
-    // ignore
-  }
-
-  try {
-    const res = await pageFetch<string>(
-      `${HOST}/`,
-      { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
-      'text'
-    )
-    if (!res.ok || !res.data) return null
-    const match = res.data.match(/<meta name="csrf-token" content="([^"]+)"/)
-    return match ? match[1] : null
-  } catch {
-    return null
-  }
 }
 
 async function getCurrentUsername(): Promise<string | null> {
@@ -128,11 +98,6 @@ export async function createInvite(options: {
   skipEmail?: boolean
   customMessage?: string
 }): Promise<LinuxDoInvite> {
-  const csrfToken = await getCsrfToken()
-  if (!csrfToken) {
-    throw new Error('Failed to get CSRF token')
-  }
-
   const url = `${HOST}/invites`
   const formData = new URLSearchParams()
   formData.append('max_redemptions_allowed', String(options.maxRedemptionsAllowed))
@@ -151,9 +116,6 @@ export async function createInvite(options: {
       headers: {
         Accept: '*/*',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Discourse-Logged-In': 'true',
-        'Discourse-Present': 'true',
-        'X-Csrf-Token': csrfToken,
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: formData.toString()
@@ -177,11 +139,6 @@ export async function updateInvite(options: {
   skipEmail?: boolean
   customMessage?: string
 }): Promise<LinuxDoInvite> {
-  const csrfToken = await getCsrfToken()
-  if (!csrfToken) {
-    throw new Error('Failed to get CSRF token')
-  }
-
   const url = `${HOST}/invites/${options.inviteId}`
   const formData = new URLSearchParams()
   if (options.description !== undefined) formData.append('description', options.description)
@@ -204,9 +161,6 @@ export async function updateInvite(options: {
       headers: {
         Accept: '*/*',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Discourse-Logged-In': 'true',
-        'Discourse-Present': 'true',
-        'X-Csrf-Token': csrfToken,
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: formData.toString()

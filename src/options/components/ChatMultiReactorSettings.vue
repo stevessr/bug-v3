@@ -105,6 +105,9 @@ const inviteStatus = shallowRef('')
 const inviteList = ref<LinuxDoInvite[]>([])
 const inviteCounts = ref<LinuxDoInvitesResponse['counts'] | null>(null)
 
+const showCreateInvite = shallowRef(false)
+const showEditInvite = shallowRef(false)
+
 const inviteDescription = shallowRef('')
 const inviteMaxRedemptions = shallowRef(1)
 const inviteExpiresAt = shallowRef(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
@@ -294,6 +297,7 @@ const handleCreateInvite = async () => {
     })
     inviteStatus.value = `✅ 创建成功：${result.link || result.invite_key || result.id}`
     await loadPendingInvites()
+    showCreateInvite.value = false
   } catch (e) {
     inviteStatus.value = `❌ 创建失败：${e instanceof Error ? e.message : String(e)}`
   } finally {
@@ -324,11 +328,32 @@ const handleUpdateInvite = async () => {
     })
     inviteStatus.value = `✅ 更新成功：${result.link || result.invite_key || result.id}`
     await loadPendingInvites()
+    showEditInvite.value = false
   } catch (e) {
     inviteStatus.value = `❌ 更新失败：${e instanceof Error ? e.message : String(e)}`
   } finally {
     inviteLoading.value = false
   }
+}
+
+const resetCreateInviteForm = () => {
+  inviteDescription.value = ''
+  inviteMaxRedemptions.value = 1
+  inviteExpiresAt.value = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  inviteEmail.value = ''
+  inviteSkipEmail.value = true
+  inviteCustomMessage.value = ''
+}
+
+const selectInviteForEdit = (invite: LinuxDoInvite) => {
+  showEditInvite.value = true
+  editInviteId.value = String(invite.id)
+  editInviteDescription.value = invite.description || ''
+  editInviteMaxRedemptions.value = invite.max_redemptions_allowed || 1
+  editInviteExpiresAt.value = invite.expires_at || ''
+  editInviteEmail.value = invite.email || ''
+  editInviteSkipEmail.value = true
+  editInviteCustomMessage.value = ''
 }
 
 // 当前选中的表情列表
@@ -687,9 +712,14 @@ watch(
             创建或编辑 linux.do 邀请链接（需要已登录且有权限）
           </p>
         </div>
-        <a-button size="small" :loading="inviteLoading" @click="loadPendingInvites">
-          刷新待处理
-        </a-button>
+        <div class="flex items-center gap-2">
+          <a-button size="small" @click="((showCreateInvite = true), resetCreateInviteForm())">
+            生成新邀请
+          </a-button>
+          <a-button size="small" :loading="inviteLoading" @click="loadPendingInvites">
+            刷新待处理
+          </a-button>
+        </div>
       </div>
 
       <a-alert
@@ -701,91 +731,6 @@ watch(
         @close="inviteError = ''"
       />
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
-          <a-input v-model:value="inviteDescription" placeholder="例如：shop" />
-        </div>
-        <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
-          <a-input-number v-model:value="inviteMaxRedemptions" :min="1" class="w-full" />
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间</div>
-          <a-input v-model:value="inviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
-        </div>
-        <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
-          <a-input v-model:value="inviteEmail" placeholder="user@example.com" />
-        </div>
-      </div>
-
-      <div class="mt-4 flex items-center gap-3">
-        <a-checkbox v-model:checked="inviteSkipEmail" :disabled="!inviteEmail">
-          跳过发送邮件
-        </a-checkbox>
-        <a-button type="primary" :loading="inviteLoading" @click="handleCreateInvite">
-          创建邀请
-        </a-button>
-      </div>
-
-      <div class="mt-4">
-        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
-        <a-textarea v-model:value="inviteCustomMessage" :rows="2" placeholder="custom_message" />
-      </div>
-
-      <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-        <h4 class="text-sm font-semibold dark:text-white mb-3">编辑邀请</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邀请 ID</div>
-            <a-input v-model:value="editInviteId" placeholder="257221" />
-          </div>
-          <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
-            <a-input-number v-model:value="editInviteMaxRedemptions" :min="1" class="w-full" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
-            <a-input v-model:value="editInviteDescription" placeholder="shop" />
-          </div>
-          <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间（可选）</div>
-            <a-input v-model:value="editInviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
-            <a-input v-model:value="editInviteEmail" placeholder="user@example.com" />
-          </div>
-          <div class="flex items-center gap-3 mt-5">
-            <a-checkbox v-model:checked="editInviteSkipEmail" :disabled="!editInviteEmail">
-              跳过发送邮件
-            </a-checkbox>
-            <a-button type="primary" :loading="inviteLoading" @click="handleUpdateInvite">
-              更新邀请
-            </a-button>
-          </div>
-        </div>
-
-        <div class="mt-4">
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
-          <a-textarea
-            v-model:value="editInviteCustomMessage"
-            :rows="2"
-            placeholder="custom_message"
-          />
-        </div>
-      </div>
-
       <div class="mt-4 text-xs text-gray-500">
         <div v-if="inviteCounts">
           待处理 {{ inviteCounts.pending || 0 }} • 已过期 {{ inviteCounts.expired || 0 }} • 已兑换
@@ -796,16 +741,33 @@ watch(
 
       <div v-if="inviteList.length" class="mt-3">
         <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">待处理邀请</div>
-        <div class="space-y-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <div
             v-for="invite in inviteList"
             :key="invite.id"
-            class="text-xs font-mono bg-black text-green-400 p-2 rounded whitespace-pre-wrap"
+            class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/30"
           >
-            [{{ invite.id }}] {{ invite.link }}\n次数 {{ invite.redemption_count || 0 }}/{{
-              invite.max_redemptions_allowed || 0
-            }}
-            • 过期 {{ invite.expires_at || '-' }}\n描述 {{ invite.description || '-' }}
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邀请链接</div>
+            <div class="text-xs font-mono break-all text-gray-800 dark:text-gray-200">
+              {{ invite.link }}
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              ID {{ invite.id }} • 次数 {{ invite.redemption_count || 0 }}/{{
+                invite.max_redemptions_allowed || 0
+              }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              过期 {{ invite.expires_at || '-' }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              描述 {{ invite.description || '-' }}
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <a-button size="small" @click="selectInviteForEdit(invite)">编辑邀请</a-button>
+              <a-button size="small" @click="((showCreateInvite = true), resetCreateInviteForm())">
+                生成新邀请
+              </a-button>
+            </div>
           </div>
         </div>
       </div>
@@ -817,6 +779,98 @@ watch(
         > {{ inviteStatus }}
       </div>
     </div>
+
+    <a-modal
+      v-model:open="showCreateInvite"
+      title="生成新邀请"
+      :footer="null"
+      width="640px"
+      @cancel="showCreateInvite = false"
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
+          <a-input v-model:value="inviteDescription" placeholder="例如：shop" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
+          <a-input-number v-model:value="inviteMaxRedemptions" :min="1" class="w-full" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间</div>
+          <a-input v-model:value="inviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
+          <a-input v-model:value="inviteEmail" placeholder="user@example.com" />
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <a-checkbox v-model:checked="inviteSkipEmail" :disabled="!inviteEmail">
+          跳过发送邮件
+        </a-checkbox>
+        <a-button type="primary" :loading="inviteLoading" @click="handleCreateInvite">
+          创建邀请
+        </a-button>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
+        <a-textarea v-model:value="inviteCustomMessage" :rows="2" placeholder="custom_message" />
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:open="showEditInvite"
+      title="编辑邀请"
+      :footer="null"
+      width="640px"
+      @cancel="showEditInvite = false"
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邀请 ID</div>
+          <a-input v-model:value="editInviteId" placeholder="257221" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
+          <a-input-number v-model:value="editInviteMaxRedemptions" :min="1" class="w-full" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
+          <a-input v-model:value="editInviteDescription" placeholder="shop" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间（可选）</div>
+          <a-input v-model:value="editInviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
+          <a-input v-model:value="editInviteEmail" placeholder="user@example.com" />
+        </div>
+        <div class="flex items-center gap-3 mt-5">
+          <a-checkbox v-model:checked="editInviteSkipEmail" :disabled="!editInviteEmail">
+            跳过发送邮件
+          </a-checkbox>
+          <a-button type="primary" :loading="inviteLoading" @click="handleUpdateInvite">
+            更新邀请
+          </a-button>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
+        <a-textarea
+          v-model:value="editInviteCustomMessage"
+          :rows="2"
+          placeholder="custom_message"
+        />
+      </div>
+    </a-modal>
 
     <!-- 功能开关 -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
