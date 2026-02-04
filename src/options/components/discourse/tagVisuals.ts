@@ -5,7 +5,19 @@ export type TagVisual = {
   color: string
 }
 
-const toKey = (value?: string | null) => (value || '').trim().toLocaleLowerCase()
+export const stripHtml = (value?: string | null) => {
+  if (!value) return ''
+  return value.replace(/<[^>]+>/g, '').trim()
+}
+
+const toKey = (value?: string | null) => {
+  const cleaned = stripHtml(value)
+    .replace(/^#+/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase()
+  return cleaned
+}
 
 const tagVisualMap = (() => {
   const map = new Map<string, TagVisual>()
@@ -23,11 +35,6 @@ const tagVisualMap = (() => {
 
 export const getTagVisual = (name?: string | null, text?: string | null) => {
   return tagVisualMap.get(toKey(name)) || tagVisualMap.get(toKey(text)) || null
-}
-
-export const stripHtml = (value?: string | null) => {
-  if (!value) return ''
-  return value.replace(/<[^>]+>/g, '').trim()
 }
 
 export const hexToRgba = (hex: string, alpha: number) => {

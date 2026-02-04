@@ -5,20 +5,48 @@ import type {
   SearchState,
   DiscourseSearchFilters,
   DiscourseSearchPost,
-  DiscourseSearchTopic
+  DiscourseSearchTopic,
+  DiscourseCategory
 } from '../types'
+import { searchTags } from '../actions'
 import { formatTime } from '../utils'
+import TagPill from '../layout/TagPill'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories,
+  isLinuxDoUrl
+} from '../linux.do/preloadedCategories'
 
 export default defineComponent({
   name: 'SearchView',
   props: {
     state: { type: Object as () => SearchState, required: true },
-    baseUrl: { type: String, required: true }
+    baseUrl: { type: String, required: true },
+    categories: { type: Array as () => DiscourseCategory[], default: () => [] },
+    currentCategory: { type: Object as () => DiscourseCategory | null, default: null }
   },
   emits: ['search', 'loadMore', 'open'],
   setup(props, { emit }) {
     const localQuery = ref(props.state.query)
     const localFilters = ref<DiscourseSearchFilters>({ ...props.state.filters })
+    const selectedTags = ref<string[]>([])
+    const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
+    const tagsLoading = ref(false)
+    let tagSearchTimer: number | null = null
+    const preloadedCategoriesReadyToken = ref(0)
+
+    const normalizeTagList = (value: string) => {
+      return String(value || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+    }
+
+    const syncTagsFromFilters = (filters: DiscourseSearchFilters) => {
+      selectedTags.value = normalizeTagList(filters.tags)
+    }
+
+    syncTagsFromFilters(localFilters.value)
 
     watch(
       () => props.state.query,
@@ -33,6 +61,148 @@ export default defineComponent({
       () => props.state.filters,
       value => {
         localFilters.value = { ...value }
+        syncTagsFromFilters(value)
+      }
+    )
+
+    watch(
+      () => props.baseUrl,
+      async value => {
+        if (!isLinuxDoUrl(value)) return
+        await ensurePreloadedCategoriesLoaded()
+        preloadedCategoriesReadyToken.value++
+      },
+      { immediate: true }
+    )
+
+    const mergedCategories = computed(() => {
+      const readyToken = preloadedCategoriesReadyToken.value
+      const localMap = new Map<number, DiscourseCategory>()
+      const usingLinuxDo = isLinuxDoUrl(props.baseUrl) && readyToken >= 0
+
+      if (usingLinuxDo) {
+        getAllPreloadedCategories().forEach(raw => {
+          if (typeof raw.id !== 'number') return
+          localMap.set(raw.id, {
+            id: raw.id,
+            name: raw.name || `category-${raw.id}`,
+            slug: raw.slug || String(raw.id),
+            color: raw.color || '0088CC',
+            text_color: raw.text_color || 'FFFFFF',
+            topic_count: 0,
+            parent_category_id: raw.parent_category_id ?? null,
+            style_type: raw.style_type ?? null,
+            icon: raw.icon ?? null,
+            emoji: raw.emoji ?? null,
+            uploaded_logo: raw.uploaded_logo ?? null,
+            uploaded_logo_dark: raw.uploaded_logo_dark ?? null
+          })
+        })
+      }
+
+      ;(props.categories || []).forEach(cat => {
+        localMap.set(cat.id, { ...localMap.get(cat.id), ...cat })
+      })
+
+      if (props.currentCategory?.id) {
+        localMap.set(props.currentCategory.id, {
+          ...localMap.get(props.currentCategory.id),
+          ...props.currentCategory
+        })
+      }
+
+      return Array.from(localMap.values())
+    })
+
+    const categoryOptions = computed(() => {
+      return mergedCategories.value.map(cat => {
+        const slug = cat.slug || String(cat.id)
+        const label = cat.name
+          ? cat.slug && cat.slug !== cat.name
+            ? `${cat.name} (${cat.slug})`
+            : cat.name
+          : slug
+        return {
+          value: slug,
+          label,
+          id: cat.id
+        }
+      })
+    })
+
+    const filterCategoryOption = (
+      input: string,
+      option?: { label?: string; value?: string; id?: number }
+    ) => {
+      const keyword = input.trim().toLowerCase()
+      if (!keyword) return true
+      const label = String(option?.label || '').toLowerCase()
+      const value = String(option?.value || '').toLowerCase()
+      const id = option?.id != null ? String(option.id) : ''
+      return label.includes(keyword) || value.includes(keyword) || id.includes(keyword)
+    }
+
+    const categoryIdForTagSearch = computed(() => {
+      const raw = localFilters.value.category?.trim()
+      if (!raw) return null
+      const numeric = Number(raw)
+      if (!Number.isNaN(numeric) && String(numeric) === raw) return numeric
+      const keyword = raw.toLowerCase()
+      const match = mergedCategories.value.find(cat => {
+        const slug = cat.slug?.toLowerCase()
+        const name = cat.name?.toLowerCase()
+        return slug === keyword || name === keyword
+      })
+      return match?.id ?? null
+    })
+
+    const updateSelectedTags = (value: string[]) => {
+      const normalized = value.map(item => item.trim()).filter(Boolean)
+      selectedTags.value = normalized
+      localFilters.value.tags = normalized.join(',')
+    }
+
+    const getTagOption = (value: string) => {
+      return tagOptions.value.find(option => option.value === value) || null
+    }
+
+    const runTagSearch = async (query: string) => {
+      const trimmed = query.trim()
+      tagsLoading.value = true
+      try {
+        const results = await searchTags(props.baseUrl, trimmed, categoryIdForTagSearch.value)
+        tagOptions.value = results
+          .map(item => ({
+            value: item.name || item.text || '',
+            label: item.text || item.name || '',
+            description: item.description || null
+          }))
+          .filter(option => option.value)
+      } catch {
+        tagOptions.value = []
+      } finally {
+        tagsLoading.value = false
+      }
+    }
+
+    const handleTagSearch = (query: string) => {
+      if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+      tagSearchTimer = window.setTimeout(() => runTagSearch(query), 250)
+    }
+
+    const handleTagDropdown = (open: boolean) => {
+      if (open && tagOptions.value.length === 0) {
+        runTagSearch('')
+      }
+    }
+
+    watch(
+      () => localFilters.value.category,
+      () => {
+        tagOptions.value = []
+        if (selectedTags.value.length === 0) {
+          runTagSearch('')
+        }
       }
     )
 
@@ -130,23 +300,68 @@ export default defineComponent({
             </div>
             <div class="flex items-center gap-2">
               <span class="text-gray-500">分类</span>
-              <Input
+              <Select
                 size="small"
-                value={localFilters.value.category}
+                mode="combobox"
+                showSearch
+                allowClear
+                class="w-full"
+                value={localFilters.value.category || undefined}
                 placeholder="分类 ID 或 slug"
-                onUpdate:value={(value: string) => {
-                  localFilters.value.category = value
+                options={categoryOptions.value}
+                filterOption={filterCategoryOption}
+                onUpdate:value={(value: string | undefined) => {
+                  localFilters.value.category = value ? value.trim() : ''
                 }}
               />
             </div>
             <div class="flex items-center gap-2">
               <span class="text-gray-500">标签</span>
-              <Input
+              <Select
                 size="small"
-                value={localFilters.value.tags}
-                placeholder="tag1,tag2"
-                onUpdate:value={(value: string) => {
-                  localFilters.value.tags = value
+                class="w-full"
+                mode="tags"
+                showSearch
+                value={selectedTags.value}
+                filterOption={false}
+                notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
+                placeholder="搜索或输入标签"
+                tokenSeparators={[',', ' ']}
+                onSearch={handleTagSearch}
+                onDropdownVisibleChange={handleTagDropdown}
+                onUpdate:value={(value: string[]) => updateSelectedTags(value)}
+                v-slots={{
+                  tagRender: ({ value, closable, onClose }: any) => (
+                    <span class="inline-flex items-center gap-1 mr-1">
+                      <TagPill
+                        name={String(value)}
+                        text={getTagOption(String(value))?.label || String(value)}
+                        description={getTagOption(String(value))?.description || null}
+                        compact
+                      />
+                      {closable ? (
+                        <button
+                          type="button"
+                          class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          onMousedown={(event: Event) => event.preventDefault()}
+                          onClick={onClose}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </span>
+                  ),
+                  default: () =>
+                    tagOptions.value.map(tag => (
+                      <Select.Option key={tag.value} value={tag.value}>
+                        <TagPill
+                          name={tag.value}
+                          text={tag.label}
+                          description={tag.description || null}
+                          compact
+                        />
+                      </Select.Option>
+                    ))
                 }}
               />
             </div>

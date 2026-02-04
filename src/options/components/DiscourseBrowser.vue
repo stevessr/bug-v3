@@ -1315,6 +1315,8 @@ onUnmounted(() => {
         v-else-if="activeTab?.viewType === 'search' && activeTab.searchState"
         :state="activeTab.searchState"
         :baseUrl="baseUrl"
+        :categories="activeTab?.categories || []"
+        :currentCategory="currentCategoryOption"
         @search="handleSearch"
         @loadMore="handleLoadMoreSearch"
         @open="handleOpenSearchResult"
