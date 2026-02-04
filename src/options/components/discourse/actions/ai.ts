@@ -23,3 +23,18 @@ export async function fetchAiTopicSummary(baseUrl: string, topicId: number) {
     summary: (data?.ai_topic_summary || null) as AiTopicSummary | null
   }
 }
+
+export async function requestAiTopicSummaryRegenerate(baseUrl: string, topicId: number) {
+  const url = `${baseUrl}/discourse-ai/summarization/t/${topicId}?stream=true&skip_age_check=true`
+  const result = await pageFetch<any>(url, {
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  const data = extractData(result)
+  return {
+    status: result.status,
+    ok: result.ok,
+    data
+  }
+}

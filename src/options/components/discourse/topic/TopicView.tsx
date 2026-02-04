@@ -8,7 +8,7 @@ import {
   shallowRef,
   nextTick
 } from 'vue'
-import { message, Spin } from 'ant-design-vue'
+import { message, Spin, Modal } from 'ant-design-vue'
 import hljs from 'highlight.js'
 import '../css/highlight.css'
 
@@ -28,7 +28,8 @@ import {
   deletePost,
   toggleWiki,
   setTopicNotificationLevel,
-  fetchAiTopicSummary
+  fetchAiTopicSummary,
+  requestAiTopicSummaryRegenerate
 } from '../actions'
 
 import TopicHeader from './TopicHeader'
@@ -74,10 +75,17 @@ export default defineComponent({
     const timelinePostNumber = ref(1)
     const timelineTicking = ref(false)
     const aiSummary = ref<string | null>(null)
-    const aiMeta = ref<{ algorithm?: string; updatedAt?: string; outdated?: boolean } | null>(null)
+    const aiMeta = ref<{
+      algorithm?: string
+      updatedAt?: string
+      outdated?: boolean
+      canRegenerate?: boolean
+      newPosts?: number
+    } | null>(null)
     const aiLoading = ref(false)
     const aiAvailable = ref(true)
     const aiErrorMessage = ref('')
+    const showAiSummaryModal = ref(false)
     const isArchiving = ref(false)
 
     // Parse posts and cache results
@@ -572,43 +580,72 @@ export default defineComponent({
       }
     }
 
+    const fetchAiSummaryData = async () => {
+      const fetchOnce = async () => {
+        return await fetchAiTopicSummary(props.baseUrl, props.topic.id)
+      }
+      let result = await fetchOnce()
+      let summary = result.summary
+      if (!summary?.summarized_text) {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        result = await fetchOnce()
+        summary = result.summary
+      }
+
+      if (result.status === 404) {
+        aiAvailable.value = false
+        message.info('当前站点未启用 AI 总结')
+        return
+      }
+
+      if (!summary?.summarized_text) {
+        aiErrorMessage.value = 'AI 总结暂不可用，请稍后再试'
+        message.warning(aiErrorMessage.value)
+        return
+      }
+
+      aiSummary.value = summary.summarized_text
+      aiMeta.value = {
+        algorithm: summary.algorithm,
+        updatedAt: summary.updated_at,
+        outdated: summary.outdated,
+        canRegenerate: summary.can_regenerate,
+        newPosts: summary.new_posts_since_summary
+      }
+    }
+
     const handleAiSummary = async () => {
+      if (aiLoading.value) return
+      aiErrorMessage.value = ''
+      showAiSummaryModal.value = true
+      aiLoading.value = true
+      try {
+        await fetchAiSummaryData()
+      } catch (error) {
+        console.warn('[DiscourseBrowser] ai summary failed:', error)
+        aiErrorMessage.value = 'AI 总结获取失败'
+        message.error(aiErrorMessage.value)
+      } finally {
+        aiLoading.value = false
+      }
+    }
+
+    const handleAiRegenerate = async () => {
       if (aiLoading.value) return
       aiErrorMessage.value = ''
       aiLoading.value = true
       try {
-        const fetchOnce = async () => {
-          return await fetchAiTopicSummary(props.baseUrl, props.topic.id)
-        }
-        let result = await fetchOnce()
-        let summary = result.summary
-        if (!summary?.summarized_text) {
-          await new Promise(resolve => setTimeout(resolve, 1500))
-          result = await fetchOnce()
-          summary = result.summary
-        }
-
+        const result = await requestAiTopicSummaryRegenerate(props.baseUrl, props.topic.id)
         if (result.status === 404) {
           aiAvailable.value = false
           message.info('当前站点未启用 AI 总结')
           return
         }
-
-        if (!summary?.summarized_text) {
-          aiErrorMessage.value = 'AI 总结暂不可用，请稍后再试'
-          message.warning(aiErrorMessage.value)
-          return
-        }
-
-        aiSummary.value = summary.summarized_text
-        aiMeta.value = {
-          algorithm: summary.algorithm,
-          updatedAt: summary.updated_at,
-          outdated: summary.outdated
-        }
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        await fetchAiSummaryData()
       } catch (error) {
-        console.warn('[DiscourseBrowser] ai summary failed:', error)
-        aiErrorMessage.value = 'AI 总结获取失败'
+        console.warn('[DiscourseBrowser] ai summary regenerate failed:', error)
+        aiErrorMessage.value = 'AI 总结重新生成失败'
         message.error(aiErrorMessage.value)
       } finally {
         aiLoading.value = false
@@ -1015,23 +1052,6 @@ export default defineComponent({
             onAiSummary={handleAiSummary}
           />
 
-          {(aiSummary.value || aiErrorMessage.value) && (
-            <div class="topic-ai-summary">
-              <div class="topic-ai-summary__title">AI 总结</div>
-              {aiSummary.value && <div class="topic-ai-summary__content">{aiSummary.value}</div>}
-              {aiErrorMessage.value && (
-                <div class="topic-ai-summary__error">{aiErrorMessage.value}</div>
-              )}
-              {aiMeta.value && (
-                <div class="topic-ai-summary__meta">
-                  {aiMeta.value.outdated ? '内容已过期' : '已更新'}
-                  {aiMeta.value.algorithm && ` · ${aiMeta.value.algorithm}`}
-                  {aiMeta.value.updatedAt && ` · ${aiMeta.value.updatedAt}`}
-                </div>
-              )}
-            </div>
-          )}
-
           <TopicExtras
             suggested={props.topic.suggested_topics || []}
             related={props.topic.related_topics || []}
@@ -1050,6 +1070,49 @@ export default defineComponent({
             />
           </div>
         </div>
+
+        <Modal
+          open={showAiSummaryModal.value}
+          title="AI 总结"
+          footer={null}
+          width="720px"
+          onCancel={() => {
+            showAiSummaryModal.value = false
+          }}
+        >
+          <div class="space-y-3">
+            {aiLoading.value && <div class="text-sm text-gray-500">生成中...</div>}
+            {aiSummary.value && (
+              <div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                {aiSummary.value}
+              </div>
+            )}
+            {aiErrorMessage.value && (
+              <div class="text-sm text-red-500">{aiErrorMessage.value}</div>
+            )}
+            {aiMeta.value && (
+              <div class="text-xs text-gray-500">
+                {aiMeta.value.outdated ? '内容已过期' : '已更新'}
+                {aiMeta.value.algorithm && ` · ${aiMeta.value.algorithm}`}
+                {aiMeta.value.updatedAt && ` · ${aiMeta.value.updatedAt}`}
+                {typeof aiMeta.value.newPosts === 'number' &&
+                  ` · 新增 ${aiMeta.value.newPosts} 条`}
+              </div>
+            )}
+            {(aiMeta.value?.outdated || aiMeta.value?.canRegenerate) && (
+              <div>
+                <button
+                  type="button"
+                  class="px-3 py-1 text-sm bg-blue-600 text-white rounded"
+                  disabled={aiLoading.value}
+                  onClick={handleAiRegenerate}
+                >
+                  重新生成
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
     )
   }
