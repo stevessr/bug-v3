@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, isRef, onMounted, watch, type Ref } from 'vue'
+import { ref, shallowRef, computed, isRef, onMounted, watch, type Ref } from 'vue'
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/type'
@@ -16,6 +16,13 @@ import {
   type LinuxDoGroupSummary,
   type LinuxDoGroupDetail
 } from '../utils/linuxDoGroup'
+import {
+  createInvite,
+  updateInvite,
+  fetchInvites,
+  type LinuxDoInvite,
+  type LinuxDoInvitesResponse
+} from '../utils/linuxDoInvite'
 
 import SettingSwitch from './SettingSwitch.vue'
 
@@ -90,6 +97,28 @@ const groupUsernames = ref('')
 const groupActionStatus = ref('')
 const isGroupRunning = ref(false)
 const groupDetailCache = new Map<string, LinuxDoGroupDetail>()
+
+// Invite manager state
+const inviteLoading = shallowRef(false)
+const inviteError = shallowRef('')
+const inviteStatus = shallowRef('')
+const inviteList = ref<LinuxDoInvite[]>([])
+const inviteCounts = ref<LinuxDoInvitesResponse['counts'] | null>(null)
+
+const inviteDescription = shallowRef('')
+const inviteMaxRedemptions = shallowRef(1)
+const inviteExpiresAt = shallowRef(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
+const inviteEmail = shallowRef('')
+const inviteSkipEmail = shallowRef(true)
+const inviteCustomMessage = shallowRef('')
+
+const editInviteId = shallowRef('')
+const editInviteDescription = shallowRef('')
+const editInviteMaxRedemptions = shallowRef(1)
+const editInviteExpiresAt = shallowRef('')
+const editInviteEmail = shallowRef('')
+const editInviteSkipEmail = shallowRef(true)
+const editInviteCustomMessage = shallowRef('')
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
@@ -227,6 +256,78 @@ const handleAddGroupMembers = async () => {
     groupActionStatus.value = `❌ 添加失败：${e instanceof Error ? e.message : String(e)}`
   } finally {
     isGroupRunning.value = false
+  }
+}
+
+const loadPendingInvites = async () => {
+  inviteLoading.value = true
+  inviteError.value = ''
+  try {
+    const result = await fetchInvites({ filter: 'pending', offset: 0 })
+    inviteList.value = result.invites || []
+    inviteCounts.value = result.counts || null
+  } catch (e) {
+    inviteError.value = `获取邀请失败：${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    inviteLoading.value = false
+  }
+}
+
+const handleCreateInvite = async () => {
+  if (inviteLoading.value) return
+  if (!inviteExpiresAt.value) {
+    inviteStatus.value = '请填写过期时间'
+    return
+  }
+
+  inviteLoading.value = true
+  inviteStatus.value = '正在创建邀请...'
+  inviteError.value = ''
+  try {
+    const result = await createInvite({
+      maxRedemptionsAllowed: Number(inviteMaxRedemptions.value || 1),
+      expiresAt: inviteExpiresAt.value,
+      description: inviteDescription.value.trim() || undefined,
+      email: inviteEmail.value.trim() || undefined,
+      skipEmail: inviteEmail.value.trim() ? inviteSkipEmail.value : undefined,
+      customMessage: inviteCustomMessage.value.trim() || undefined
+    })
+    inviteStatus.value = `✅ 创建成功：${result.link || result.invite_key || result.id}`
+    await loadPendingInvites()
+  } catch (e) {
+    inviteStatus.value = `❌ 创建失败：${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    inviteLoading.value = false
+  }
+}
+
+const handleUpdateInvite = async () => {
+  if (inviteLoading.value) return
+  const id = Number(editInviteId.value)
+  if (!id) {
+    inviteStatus.value = '请输入有效的邀请 ID'
+    return
+  }
+
+  inviteLoading.value = true
+  inviteStatus.value = '正在更新邀请...'
+  inviteError.value = ''
+  try {
+    const result = await updateInvite({
+      inviteId: id,
+      maxRedemptionsAllowed: Number(editInviteMaxRedemptions.value || 1),
+      expiresAt: editInviteExpiresAt.value || undefined,
+      description: editInviteDescription.value.trim() || undefined,
+      email: editInviteEmail.value.trim() || undefined,
+      skipEmail: editInviteEmail.value.trim() ? editInviteSkipEmail.value : undefined,
+      customMessage: editInviteCustomMessage.value.trim() || undefined
+    })
+    inviteStatus.value = `✅ 更新成功：${result.link || result.invite_key || result.id}`
+    await loadPendingInvites()
+  } catch (e) {
+    inviteStatus.value = `❌ 更新失败：${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    inviteLoading.value = false
   }
 }
 
@@ -411,6 +512,7 @@ onMounted(() => {
 
   // 自动加载 linux.do 群组列表（通过页面代理请求）
   loadGroups()
+  loadPendingInvites()
 })
 
 watch(
@@ -573,6 +675,146 @@ watch(
         class="mt-3 text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap"
       >
         > {{ groupActionStatus }}
+      </div>
+    </div>
+
+    <!-- 邀请链接管理 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-md font-semibold dark:text-white">邀请链接管理</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            创建或编辑 linux.do 邀请链接（需要已登录且有权限）
+          </p>
+        </div>
+        <a-button size="small" :loading="inviteLoading" @click="loadPendingInvites">
+          刷新待处理
+        </a-button>
+      </div>
+
+      <a-alert
+        v-if="inviteError"
+        :message="inviteError"
+        type="error"
+        class="mb-4"
+        closable
+        @close="inviteError = ''"
+      />
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
+          <a-input v-model:value="inviteDescription" placeholder="例如：shop" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
+          <a-input-number v-model:value="inviteMaxRedemptions" :min="1" class="w-full" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间</div>
+          <a-input v-model:value="inviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
+          <a-input v-model:value="inviteEmail" placeholder="user@example.com" />
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <a-checkbox v-model:checked="inviteSkipEmail" :disabled="!inviteEmail">
+          跳过发送邮件
+        </a-checkbox>
+        <a-button type="primary" :loading="inviteLoading" @click="handleCreateInvite">
+          创建邀请
+        </a-button>
+      </div>
+
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
+        <a-textarea v-model:value="inviteCustomMessage" :rows="2" placeholder="custom_message" />
+      </div>
+
+      <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h4 class="text-sm font-semibold dark:text-white mb-3">编辑邀请</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邀请 ID</div>
+            <a-input v-model:value="editInviteId" placeholder="257221" />
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">最大次数</div>
+            <a-input-number v-model:value="editInviteMaxRedemptions" :min="1" class="w-full" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
+            <a-input v-model:value="editInviteDescription" placeholder="shop" />
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间（可选）</div>
+            <a-input v-model:value="editInviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
+            <a-input v-model:value="editInviteEmail" placeholder="user@example.com" />
+          </div>
+          <div class="flex items-center gap-3 mt-5">
+            <a-checkbox v-model:checked="editInviteSkipEmail" :disabled="!editInviteEmail">
+              跳过发送邮件
+            </a-checkbox>
+            <a-button type="primary" :loading="inviteLoading" @click="handleUpdateInvite">
+              更新邀请
+            </a-button>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">自定义消息（可选）</div>
+          <a-textarea
+            v-model:value="editInviteCustomMessage"
+            :rows="2"
+            placeholder="custom_message"
+          />
+        </div>
+      </div>
+
+      <div class="mt-4 text-xs text-gray-500">
+        <div v-if="inviteCounts">
+          待处理 {{ inviteCounts.pending || 0 }} • 已过期 {{ inviteCounts.expired || 0 }} • 已兑换
+          {{ inviteCounts.redeemed || 0 }}
+        </div>
+        <div v-else>暂无统计数据</div>
+      </div>
+
+      <div v-if="inviteList.length" class="mt-3">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">待处理邀请</div>
+        <div class="space-y-2">
+          <div
+            v-for="invite in inviteList"
+            :key="invite.id"
+            class="text-xs font-mono bg-black text-green-400 p-2 rounded whitespace-pre-wrap"
+          >
+            [{{ invite.id }}] {{ invite.link }}\n次数 {{ invite.redemption_count || 0 }}/{{
+              invite.max_redemptions_allowed || 0
+            }}
+            • 过期 {{ invite.expires_at || '-' }}\n描述 {{ invite.description || '-' }}
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="inviteStatus"
+        class="mt-3 text-xs font-mono bg-black text-green-400 p-2 rounded max-h-40 overflow-y-auto whitespace-pre-wrap"
+      >
+        > {{ inviteStatus }}
       </div>
     </div>
 
