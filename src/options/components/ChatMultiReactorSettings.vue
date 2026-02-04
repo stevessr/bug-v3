@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, isRef, onMounted, watch, type Ref } from 'vue'
-import { TimePicker as ATimePicker } from 'ant-design-vue'
-import dayjs, { type Dayjs } from 'dayjs'
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons-vue'
 
 import type { AppSettings } from '../../types/type'
@@ -25,6 +23,7 @@ import {
   type LinuxDoInvite,
   type LinuxDoInvitesResponse
 } from '../utils/linuxDoInvite'
+import InviteExpireDropdown from './InviteExpireDropdown'
 
 import SettingSwitch from './SettingSwitch.vue'
 
@@ -113,19 +112,19 @@ const showEditInvite = shallowRef(false)
 const inviteDescription = shallowRef('')
 const inviteMaxRedemptions = shallowRef(1)
 const inviteExpiresAt = shallowRef(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
-const inviteExpireTime = shallowRef<Dayjs | null>(dayjs(inviteExpiresAt.value))
 const inviteEmail = shallowRef('')
 const inviteSkipEmail = shallowRef(true)
 const inviteCustomMessage = shallowRef('')
+const showInviteExpirePicker = shallowRef(false)
 
 const editInviteId = shallowRef('')
 const editInviteDescription = shallowRef('')
 const editInviteMaxRedemptions = shallowRef(1)
 const editInviteExpiresAt = shallowRef('')
-const editInviteExpireTime = shallowRef<Dayjs | null>(null)
 const editInviteEmail = shallowRef('')
 const editInviteSkipEmail = shallowRef(true)
 const editInviteCustomMessage = shallowRef('')
+const showEditInviteExpirePicker = shallowRef(false)
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
   try {
@@ -344,7 +343,6 @@ const resetCreateInviteForm = () => {
   inviteDescription.value = ''
   inviteMaxRedemptions.value = 1
   inviteExpiresAt.value = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-  inviteExpireTime.value = dayjs(inviteExpiresAt.value)
   inviteEmail.value = ''
   inviteSkipEmail.value = true
   inviteCustomMessage.value = ''
@@ -356,52 +354,10 @@ const selectInviteForEdit = (invite: LinuxDoInvite) => {
   editInviteDescription.value = invite.description || ''
   editInviteMaxRedemptions.value = invite.max_redemptions_allowed || 1
   editInviteExpiresAt.value = invite.expires_at || ''
-  editInviteExpireTime.value = invite.expires_at ? dayjs(invite.expires_at) : null
   editInviteEmail.value = invite.email || ''
   editInviteSkipEmail.value = true
   editInviteCustomMessage.value = ''
 }
-
-const applyTimeToIso = (baseIso: string, time: Dayjs | null) => {
-  if (!time) return baseIso
-  const base = dayjs(baseIso || new Date())
-  if (!base.isValid()) return baseIso
-  return base
-    .set('hour', time.hour())
-    .set('minute', time.minute())
-    .set('second', time.second())
-    .set('millisecond', 0)
-    .toISOString()
-}
-
-watch(inviteExpireTime, value => {
-  if (!value) return
-  inviteExpiresAt.value = applyTimeToIso(inviteExpiresAt.value, value)
-})
-
-watch(
-  inviteExpiresAt,
-  value => {
-    const parsed = dayjs(value)
-    if (parsed.isValid()) {
-      inviteExpireTime.value = parsed
-    }
-  },
-  { immediate: true }
-)
-
-watch(editInviteExpireTime, value => {
-  if (!value) return
-  editInviteExpiresAt.value = applyTimeToIso(editInviteExpiresAt.value, value)
-})
-
-watch(editInviteExpiresAt, value => {
-  if (!value) return
-  const parsed = dayjs(value)
-  if (parsed.isValid()) {
-    editInviteExpireTime.value = parsed
-  }
-})
 
 // 当前选中的表情列表
 const selectedEmojis = computed(() => {
@@ -845,13 +801,22 @@ watch(
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div>
+        <div class="relative">
           <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间</div>
-          <a-input v-model:value="inviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+          <a-input
+            v-model:value="inviteExpiresAt"
+            placeholder="2026-02-05T03:17:00.000Z"
+            @focus="showInviteExpirePicker = true"
+            @click="showInviteExpirePicker = true"
+          />
+          <InviteExpireDropdown
+            v-model:open="showInviteExpirePicker"
+            v-model:value="inviteExpiresAt"
+          />
         </div>
         <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时刻</div>
-          <ATimePicker v-model:value="inviteExpireTime" class="w-full" format="HH:mm:ss" />
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
+          <a-input v-model:value="inviteEmail" placeholder="user@example.com" />
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -896,16 +861,21 @@ watch(
           <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">描述（可选）</div>
           <a-input v-model:value="editInviteDescription" placeholder="shop" />
         </div>
-        <div>
+        <div class="relative">
           <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时间（可选）</div>
-          <a-input v-model:value="editInviteExpiresAt" placeholder="2026-02-05T03:17:00.000Z" />
+          <a-input
+            v-model:value="editInviteExpiresAt"
+            placeholder="2026-02-05T03:17:00.000Z"
+            @focus="showEditInviteExpirePicker = true"
+            @click="showEditInviteExpirePicker = true"
+          />
+          <InviteExpireDropdown
+            v-model:open="showEditInviteExpirePicker"
+            v-model:value="editInviteExpiresAt"
+          />
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">过期时刻</div>
-          <ATimePicker v-model:value="editInviteExpireTime" class="w-full" format="HH:mm:ss" />
-        </div>
         <div>
           <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">邮箱（可选）</div>
           <a-input v-model:value="editInviteEmail" placeholder="user@example.com" />

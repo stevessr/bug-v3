@@ -1,9 +1,23 @@
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref, watch } from 'vue'
+import { Button, Switch, message } from 'ant-design-vue'
 
 import type { DiscourseUserPreferences, DiscourseUserProfile } from '../types'
+import { pageFetch, extractData } from '../utils'
 
 import UserTabs from './UserTabs'
 import '../css/UserExtrasView.css'
+
+type PreferencesPayload = Pick<
+  DiscourseUserPreferences,
+  | 'email_digests'
+  | 'email_private_messages'
+  | 'email_direct'
+  | 'email_always'
+  | 'mailing_list_mode'
+  | 'enable_quoting'
+  | 'enable_defer'
+  | 'external_links_in_new_tab'
+>
 
 export default defineComponent({
   name: 'UserSettingsView',
@@ -13,13 +27,74 @@ export default defineComponent({
         _preferences?: DiscourseUserPreferences | null
       },
       required: true
-    }
+    },
+    baseUrl: { type: String, required: true }
   },
   emits: ['switchMainTab', 'goToProfile'],
   setup(props, { emit }) {
     const preferences = computed(() => props.user._preferences)
+    const saving = ref(false)
+    const form = ref<PreferencesPayload>({
+      email_digests: false,
+      email_private_messages: false,
+      email_direct: false,
+      email_always: false,
+      mailing_list_mode: false,
+      enable_quoting: false,
+      enable_defer: false,
+      external_links_in_new_tab: false
+    })
 
-    const formatBool = (value?: boolean) => (value ? '开启' : '关闭')
+    watch(
+      preferences,
+      value => {
+        if (!value) return
+        form.value = {
+          email_digests: !!value.email_digests,
+          email_private_messages: !!value.email_private_messages,
+          email_direct: !!value.email_direct,
+          email_always: !!value.email_always,
+          mailing_list_mode: !!value.mailing_list_mode,
+          enable_quoting: !!value.enable_quoting,
+          enable_defer: !!value.enable_defer,
+          external_links_in_new_tab: !!value.external_links_in_new_tab
+        }
+      },
+      { immediate: true }
+    )
+
+    const handleSave = async () => {
+      if (!preferences.value || saving.value) return
+      saving.value = true
+      try {
+        const payload = { user: { ...form.value } }
+        const result = await pageFetch<any>(
+          `${props.baseUrl}/u/${props.user.username}/preferences.json`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+          }
+        )
+        const data = extractData(result)
+        if (result.ok === false) {
+          const msg = data?.errors?.join(', ') || '保存失败'
+          throw new Error(msg)
+        }
+        ;(props.user as any)._preferences = {
+          ...(preferences.value || {}),
+          ...form.value
+        }
+        message.success('设置已保存')
+      } catch (e: any) {
+        message.error(e?.message || '设置保存失败')
+      } finally {
+        saving.value = false
+      }
+    }
 
     return () => (
       <div class="user-extras space-y-4">
@@ -27,7 +102,9 @@ export default defineComponent({
           active="settings"
           showSettings={true}
           showGroups={true}
-          onSwitchTab={tab => emit('switchMainTab', tab)}
+          onSwitchTab={(
+            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
+          ) => emit('switchMainTab', tab)}
         />
 
         <div class="flex items-center justify-between">
@@ -52,29 +129,35 @@ export default defineComponent({
                 <div class="dark:text-gray-300">{preferences.value.locale || '-'}</div>
                 <div class="text-gray-500">时区</div>
                 <div class="dark:text-gray-300">{preferences.value.timezone || '-'}</div>
-                <div class="text-gray-500">主题</div>
-                <div class="dark:text-gray-300">
-                  {preferences.value.theme_ids?.length
-                    ? preferences.value.theme_ids.join(', ')
-                    : '-'}
-                </div>
               </div>
 
               <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
                 <div class="text-xs font-semibold text-gray-400 mb-2">通知</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   <div class="text-gray-500">邮件摘要</div>
-                  <div class="dark:text-gray-300">
-                    {formatBool(preferences.value.email_digests)}
-                  </div>
+                  <Switch
+                    size="small"
+                    checked={form.value.email_digests}
+                    onChange={(val: boolean) => (form.value.email_digests = val)}
+                  />
                   <div class="text-gray-500">私信邮件</div>
-                  <div class="dark:text-gray-300">
-                    {formatBool(preferences.value.email_private_messages)}
-                  </div>
+                  <Switch
+                    size="small"
+                    checked={form.value.email_private_messages}
+                    onChange={(val: boolean) => (form.value.email_private_messages = val)}
+                  />
                   <div class="text-gray-500">邮件提醒</div>
-                  <div class="dark:text-gray-300">{formatBool(preferences.value.email_direct)}</div>
+                  <Switch
+                    size="small"
+                    checked={form.value.email_direct}
+                    onChange={(val: boolean) => (form.value.email_direct = val)}
+                  />
                   <div class="text-gray-500">邮件总是</div>
-                  <div class="dark:text-gray-300">{formatBool(preferences.value.email_always)}</div>
+                  <Switch
+                    size="small"
+                    checked={form.value.email_always}
+                    onChange={(val: boolean) => (form.value.email_always = val)}
+                  />
                 </div>
               </div>
 
@@ -82,20 +165,36 @@ export default defineComponent({
                 <div class="text-xs font-semibold text-gray-400 mb-2">行为</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   <div class="text-gray-500">引用回复</div>
-                  <div class="dark:text-gray-300">
-                    {formatBool(preferences.value.enable_quoting)}
-                  </div>
+                  <Switch
+                    size="small"
+                    checked={form.value.enable_quoting}
+                    onChange={(val: boolean) => (form.value.enable_quoting = val)}
+                  />
                   <div class="text-gray-500">延迟加载</div>
-                  <div class="dark:text-gray-300">{formatBool(preferences.value.enable_defer)}</div>
+                  <Switch
+                    size="small"
+                    checked={form.value.enable_defer}
+                    onChange={(val: boolean) => (form.value.enable_defer = val)}
+                  />
                   <div class="text-gray-500">新标签页打开外链</div>
-                  <div class="dark:text-gray-300">
-                    {formatBool(preferences.value.external_links_in_new_tab)}
-                  </div>
+                  <Switch
+                    size="small"
+                    checked={form.value.external_links_in_new_tab}
+                    onChange={(val: boolean) => (form.value.external_links_in_new_tab = val)}
+                  />
                   <div class="text-gray-500">邮件列表模式</div>
-                  <div class="dark:text-gray-300">
-                    {formatBool(preferences.value.mailing_list_mode)}
-                  </div>
+                  <Switch
+                    size="small"
+                    checked={form.value.mailing_list_mode}
+                    onChange={(val: boolean) => (form.value.mailing_list_mode = val)}
+                  />
                 </div>
+              </div>
+
+              <div class="flex justify-end">
+                <Button type="primary" size="small" onClick={handleSave} loading={saving.value}>
+                  保存设置
+                </Button>
               </div>
             </>
           )}
