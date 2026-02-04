@@ -417,21 +417,20 @@ export async function loadMoreFollowFeed(
 }
 
 export async function loadUserPreferences(tab: BrowserTab, username: string, baseUrl: Ref<string>) {
-  if (!tab.currentUser || tab.currentUser.username !== username) {
-    const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
-    const userData = extractData(userResult)
-    if (userData?.user) {
-      tab.currentUser = userData.user
-    }
-  }
-
   try {
-    const result = await pageFetch<any>(`${baseUrl.value}/u/${username}/preferences.json`)
-    const data = extractData(result)
-    if (data?.user) {
-      const userOption = data.user_option || data.user?.user_option
+    let userData = tab.currentUser?.username === username ? tab.currentUser : null
+
+    if (!userData) {
+      const result = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
+      const data = extractData(result)
+      userData = data?.user || null
+    }
+
+    if (userData) {
+      const userOption = userData.user_option
+      tab.currentUser = userData
       ;(tab.currentUser as any)._preferences = {
-        ...data.user,
+        ...userData,
         ...(userOption || {})
       }
     }

@@ -484,6 +484,7 @@ export interface DiscourseUserProfile {
   flair_color?: string
   card_background_upload_url?: string
   profile_background_upload_url?: string
+  user_option?: DiscourseUserPreferences
   featured_topic?: {
     id: number
     title: string
@@ -516,28 +517,59 @@ export interface DiscourseUserPreferences {
   enable_quoting?: boolean
   enable_defer?: boolean
   external_links_in_new_tab?: boolean
+  enable_smart_lists?: boolean
+  enable_markdown_monospace_font?: boolean
+  automatically_unpin_topics?: boolean
+  dynamic_favicon?: boolean
   email_digests?: boolean
   email_private_messages?: boolean
   email_direct?: boolean
   email_always?: boolean
   mailing_list_mode?: boolean
+  mailing_list_mode_frequency?: number
   email_level?: number
   email_messages_level?: number
   email_previous_replies?: number
+  email_in_reply_to?: boolean
   like_notification_frequency?: number
+  notify_on_linked_posts?: boolean
   digest_after_minutes?: number
+  include_tl0_in_digests?: boolean
   auto_track_topics_after_msecs?: number
+  notification_level_when_replying?: number
   new_topic_duration_minutes?: number
+  topics_unread_when_closed?: boolean
+  watched_precedence_over_muted?: boolean
   theme_ids?: number[]
   text_size?: string
   title_count_mode?: string
+  homepage_id?: number
+  allow_private_messages?: boolean
+  enable_allowed_pm_users?: boolean
+  hide_profile?: boolean
+  hide_presence?: boolean
+  bookmark_auto_delete_preference?: number
+  default_calendar?: number
+  interface_color_mode?: number | string
+  composition_mode?: number
   default_categories_watching?: number[]
   default_categories_tracking?: number[]
   default_categories_muted?: number[]
   default_categories_watching_first_post?: number[]
+  watched_category_ids?: number[]
+  tracked_category_ids?: number[]
+  watched_first_post_category_ids?: number[]
+  muted_category_ids?: number[]
+  regular_category_ids?: number[]
   default_tags_watching?: string[]
   default_tags_tracking?: string[]
   default_tags_muted?: string[]
+  watched_tags?: string[]
+  watching_first_post_tags?: string[]
+  tracked_tags?: string[]
+  muted_tags?: string[]
+  allowed_pm_usernames?: string | string[]
+  muted_usernames?: string | string[]
 }
 
 export interface DiscourseUserSummary {
