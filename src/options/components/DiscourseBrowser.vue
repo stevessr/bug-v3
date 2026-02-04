@@ -1296,6 +1296,7 @@ onUnmounted(() => {
       <UserGroupsView
         v-else-if="activeTab?.viewType === 'groups' && activeTab.currentUser"
         :user="activeTab.currentUser"
+        :baseUrl="baseUrl"
         :showSettings="isViewingSelf"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
@@ -1304,6 +1305,7 @@ onUnmounted(() => {
       <UserSettingsView
         v-else-if="activeTab?.viewType === 'preferences' && activeTab.currentUser"
         :user="activeTab.currentUser"
+        :baseUrl="baseUrl"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
       />

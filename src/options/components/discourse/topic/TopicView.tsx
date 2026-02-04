@@ -78,6 +78,7 @@ export default defineComponent({
     const aiLoading = ref(false)
     const aiAvailable = ref(true)
     const aiErrorMessage = ref('')
+    const isArchiving = ref(false)
 
     // Parse posts and cache results
     const parsedPosts = computed(() => {
@@ -385,6 +386,117 @@ export default defineComponent({
       } catch (error) {
         console.warn('[DiscourseBrowser] wiki failed:', error)
         message.error('Wiki 操作失败')
+      }
+    }
+
+    const captureVisibleTab = async (): Promise<string> => {
+      if (!chrome?.runtime?.sendMessage) {
+        throw new Error('无法截图')
+      }
+      return await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT', format: 'png' }, (resp: any) => {
+          if (resp?.success && resp?.data) {
+            resolve(resp.data as string)
+            return
+          }
+          reject(new Error(resp?.error || '截图失败'))
+        })
+      })
+    }
+
+    const loadImage = (dataUrl: string): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = () => reject(new Error('图片加载失败'))
+        img.src = dataUrl
+      })
+    }
+
+    const archiveTopicAsWebp = async () => {
+      if (isArchiving.value) return
+      const target = postsListRef.value?.closest('.topic-main') as HTMLElement | null
+      if (!target) {
+        message.error('无法定位主题内容')
+        return
+      }
+      const container = target.closest('.content-area') as HTMLElement | null
+      if (!container) {
+        message.error('无法定位滚动容器')
+        return
+      }
+
+      const originalScrollTop = container.scrollTop
+      const targetTop = target.offsetTop
+      const totalHeight = target.scrollHeight
+      const viewportHeight = container.clientHeight
+      const maxScroll = Math.max(0, targetTop + totalHeight - viewportHeight)
+      const hide = message.loading('正在生成主题存档...', 0)
+      isArchiving.value = true
+
+      try {
+        const shots: Array<{ dataUrl: string; rect: DOMRect; scrollTop: number }> = []
+        for (let scrollTop = 0; scrollTop <= maxScroll; scrollTop += viewportHeight) {
+          container.scrollTop = scrollTop
+          await nextTick()
+          await new Promise(resolve => setTimeout(resolve, 120))
+          const rect = target.getBoundingClientRect()
+          const dataUrl = await captureVisibleTab()
+          shots.push({ dataUrl, rect, scrollTop })
+        }
+
+        if (!shots.length) {
+          throw new Error('未能获取截图')
+        }
+
+        const firstImg = await loadImage(shots[0].dataUrl)
+        const scale = firstImg.width / window.innerWidth
+        const canvas = document.createElement('canvas')
+        const canvasWidth = Math.max(1, Math.round(shots[0].rect.width * scale))
+        const canvasHeight = Math.max(1, Math.round(totalHeight * scale))
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('无法创建画布')
+        }
+
+        for (const shot of shots) {
+          const img = await loadImage(shot.dataUrl)
+          const rect = shot.rect
+          const visibleStart = Math.max(0, shot.scrollTop - targetTop)
+          const remaining = totalHeight - visibleStart
+          const drawHeight = Math.min(rect.height, remaining)
+          if (drawHeight <= 0) continue
+          const cropX = rect.left * scale
+          const cropY = rect.top * scale
+          const cropW = rect.width * scale
+          const cropH = drawHeight * scale
+          const destY = visibleStart * scale
+          ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, destY, cropW, cropH)
+        }
+
+        const blob = await new Promise<Blob | null>(resolve =>
+          canvas.toBlob(resolve, 'image/webp', 0.92)
+        )
+        if (!blob) {
+          throw new Error('生成图片失败')
+        }
+
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `topic-${props.topic.id}.webp`
+        a.click()
+        URL.revokeObjectURL(url)
+        message.success('主题存档已下载')
+      } catch (error: any) {
+        console.warn('[DiscourseBrowser] archive failed:', error)
+        message.error(error?.message || '生成存档失败')
+      } finally {
+        container.scrollTop = originalScrollTop
+        isArchiving.value = false
+        hide()
       }
     }
 
@@ -846,6 +958,8 @@ export default defineComponent({
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onWiki={handleWiki}
+                    onArchiveTopic={archiveTopicAsWebp}
+                    isArchiving={isArchiving.value}
                   />
                   {isRepliesExpanded(post.post_number) && (
                     <div class="pl-6 mt-3 space-y-3">

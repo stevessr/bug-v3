@@ -17,6 +17,7 @@ export default defineComponent({
     parsed: { type: Object as () => ParsedContent, required: true },
     isParentExpanded: { type: Boolean, required: true },
     currentUsername: { type: String, default: null },
+    isArchiving: { type: Boolean, default: false },
     isPostLiked: {
       type: Function as unknown as () => (post: DiscoursePost, reactionId: string) => boolean,
       required: true
@@ -40,7 +41,8 @@ export default defineComponent({
     'assign',
     'edit',
     'delete',
-    'wiki'
+    'wiki',
+    'archiveTopic'
   ],
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
@@ -128,6 +130,10 @@ export default defineComponent({
 
     const handleWiki = () => {
       emit('wiki', props.post)
+    }
+
+    const handleArchiveTopic = () => {
+      emit('archiveTopic', props.post)
     }
 
     return () => (
@@ -236,6 +242,23 @@ export default defineComponent({
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <use href="#link"></use>
+                  </svg>
+                </button>
+                <button
+                  class="btn no-text btn-icon post-action-menu__archive btn-flat"
+                  title="生成主题存档"
+                  type="button"
+                  disabled={props.isArchiving}
+                  onClick={handleArchiveTopic}
+                >
+                  <svg
+                    class="fa d-icon d-icon-box-archive svg-icon fa-width-auto svg-string"
+                    width="1em"
+                    height="1em"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <use href="#box-archive"></use>
                   </svg>
                 </button>
                 <div class="double-button">
