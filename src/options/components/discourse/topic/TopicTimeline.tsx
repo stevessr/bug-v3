@@ -25,8 +25,14 @@ export default defineComponent({
       }
     )
 
+    const roundedValue = computed(() => {
+      const max = props.maxPostNumber || 1
+      const value = Math.round(localValue.value)
+      return clamp(value, 1, max)
+    })
+
     const currentPost = computed(() =>
-      props.posts.find(post => post.post_number === localValue.value)
+      props.posts.find(post => post.post_number === roundedValue.value)
     )
 
     const minLabel = computed(() => {
@@ -48,13 +54,13 @@ export default defineComponent({
       const ratio = clamp((clientY - rect.top) / rect.height, 0, 1)
       const range = props.maxPostNumber - 1
       if (range <= 0) return 1
-      return Math.round(props.maxPostNumber - ratio * range)
+      return 1 + ratio * range
     }
 
     const updateValue = (clientY: number) => {
       const value = getValueFromClientY(clientY)
       localValue.value = value
-      emit('jump', value)
+      emit('jump', roundedValue.value)
     }
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -84,7 +90,7 @@ export default defineComponent({
     const handleTop = computed(() => {
       const range = props.maxPostNumber - 1
       if (range <= 0) return 0
-      const ratio = (props.maxPostNumber - localValue.value) / range
+      const ratio = (localValue.value - 1) / range
       return clamp(ratio * 100, 0, 100)
     })
 
@@ -95,7 +101,7 @@ export default defineComponent({
             <use href="#bookmark" />
           </svg>
         </div>
-        <div class="topic-timeline__label topic-timeline__label--top">{maxLabel.value}</div>
+        <div class="topic-timeline__label topic-timeline__label--top">{minLabel.value}</div>
         <div
           class="topic-timeline__track"
           ref={trackRef}
@@ -110,7 +116,7 @@ export default defineComponent({
         </div>
         <div class="topic-timeline__current">
           <div class="topic-timeline__current-count">
-            {localValue.value} / {props.maxPostNumber}
+            {roundedValue.value} / {props.maxPostNumber}
           </div>
           {currentPost.value && (
             <div class="topic-timeline__current-time">
@@ -118,7 +124,7 @@ export default defineComponent({
             </div>
           )}
         </div>
-        <div class="topic-timeline__label topic-timeline__label--bottom">{minLabel.value}</div>
+        <div class="topic-timeline__label topic-timeline__label--bottom">{maxLabel.value}</div>
       </div>
     )
   }

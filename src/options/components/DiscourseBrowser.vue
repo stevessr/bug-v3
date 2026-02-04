@@ -22,6 +22,8 @@ import TopicView from './discourse/topic/TopicView'
 import Composer from './discourse/composer/Composer'
 import UserView from './discourse/user/UserView'
 import UserExtrasView from './discourse/user/UserExtrasView'
+import UserGroupsView from './discourse/user/UserGroupsView'
+import UserSettingsView from './discourse/user/UserSettingsView'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import Sidebar from './discourse/layout/Sidebar'
 import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
@@ -64,6 +66,8 @@ const {
   openUserFollowFeed,
   openUserFollowing,
   openUserFollowers,
+  openUserGroups,
+  openUserPreferences,
   openChat,
   openQuote,
   loadMorePosts,
@@ -494,7 +498,7 @@ const getTopicListTitle = (type?: string) => {
 }
 
 const handleUserMainTabSwitch = (
-  tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow'
+  tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
 ) => {
   if (!activeTab.value?.currentUser) return
   const username = activeTab.value.currentUser.username
@@ -506,6 +510,10 @@ const handleUserMainTabSwitch = (
     openUserMessages(username)
   } else if (tab === 'badges') {
     openUserBadges(username)
+  } else if (tab === 'groups') {
+    openUserGroups(username)
+  } else if (tab === 'settings') {
+    openUserPreferences(username)
   } else {
     openUserFollowFeed(username)
   }
@@ -1212,6 +1220,8 @@ onUnmounted(() => {
         v-else-if="activeTab?.viewType === 'user' && activeTab.currentUser"
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
+        :showSettings="isViewingSelf"
+        :showGroups="true"
         @openTopic="handleUserTopicClick"
         @openActivity="handleOpenUserActivity"
         @openMessages="handleOpenUserMessages"
@@ -1236,6 +1246,8 @@ onUnmounted(() => {
         :tab="userExtrasTab"
         :isLoadingMore="isLoadingMore"
         :hasMore="activeTab.followFeedHasMore"
+        :showSettings="isViewingSelf"
+        :showGroups="true"
         @switchTab="handleUserExtrasTabSwitch"
         @openUser="handleUserClick"
         @openTopic="handleUserTopicClick"
@@ -1253,6 +1265,8 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :isLoadingMore="isLoadingMore"
         :showReadTab="isViewingSelf"
+        :showSettings="isViewingSelf"
+        :showGroups="true"
         @switchTab="handleActivityTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
@@ -1270,9 +1284,26 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :users="users"
         :isLoadingMore="isLoadingMore"
+        :showSettings="isViewingSelf"
+        :showGroups="true"
         @switchTab="handleMessagesTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
+        @goToProfile="handleGoToProfile"
+        @switchMainTab="handleUserMainTabSwitch"
+      />
+
+      <UserGroupsView
+        v-else-if="activeTab?.viewType === 'groups' && activeTab.currentUser"
+        :user="activeTab.currentUser"
+        :showSettings="isViewingSelf"
+        @goToProfile="handleGoToProfile"
+        @switchMainTab="handleUserMainTabSwitch"
+      />
+
+      <UserSettingsView
+        v-else-if="activeTab?.viewType === 'preferences' && activeTab.currentUser"
+        :user="activeTab.currentUser"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
       />

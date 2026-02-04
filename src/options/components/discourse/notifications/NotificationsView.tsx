@@ -99,13 +99,45 @@ export default defineComponent({
       return n.data?.display_username || n.data?.username || n.data?.original_username || ''
     }
 
+    const isBadgeNotification = (n: DiscourseNotification) =>
+      n.notification_type === 12 || !!n.data?.badge_id
+
+    const buildBadgePath = (n: DiscourseNotification) => {
+      const badgeId = n.data?.badge_id || n.data?.badgeId
+      if (!badgeId) return ''
+      const slug = n.data?.badge_slug || n.data?.badge_name || n.data?.badgeName || 'badge'
+      return `/badges/${badgeId}/${encodeURIComponent(String(slug))}`
+    }
+
     const buildPath = (n: DiscourseNotification) => {
+      if (isBadgeNotification(n)) return buildBadgePath(n)
       const topicId = n.topic_id || n.data?.topic_id
       const slug = n.slug || n.data?.slug || 'topic'
       const postNumber = n.post_number || n.data?.post_number
       if (topicId && postNumber) return `/t/${slug}/${topicId}/${postNumber}`
       if (topicId) return `/t/${slug}/${topicId}`
       return ''
+    }
+
+    const formatTypeText = (n: DiscourseNotification) => {
+      const mapping: Record<number, string> = {
+        1: '提及了你',
+        2: '回复了你',
+        3: '引用了你',
+        5: '提到你',
+        6: '点赞了你',
+        7: '点赞了你的帖子',
+        8: '点赞了你的话题',
+        9: '给你发了私信',
+        12: '获得了徽章'
+      }
+      return mapping[n.notification_type] || '通知'
+    }
+
+    const formatBadgeTitle = (n: DiscourseNotification) => {
+      return (
+        n.data?.badge_name || n.data?.badgeName || n.data?.badge_slug || n.data?.badgeSlug || '徽章'
+      )
     }
 
     const handleOpen = (n: DiscourseNotification) => {
@@ -158,12 +190,24 @@ export default defineComponent({
                 ]}
                 onClick={() => handleOpen(item)}
               >
-                <div class="flex items-center justify-between">
-                  <div class="font-medium dark:text-white" innerHTML={formatTitle(item)} />
-                  <span class="text-xs text-gray-400">{item.created_at}</span>
-                </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  {formatActor(item) && <span>@{formatActor(item)}</span>}
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1">
+                    {isBadgeNotification(item) ? (
+                      <div class="font-medium dark:text-white">
+                        获得徽章 · {formatBadgeTitle(item)}
+                      </div>
+                    ) : (
+                      <div class="font-medium dark:text-white" innerHTML={formatTitle(item)} />
+                    )}
+                    <div class="text-xs text-gray-500 mt-1">
+                      {formatActor(item) && <span>@{formatActor(item)} </span>}
+                      <span>{formatTypeText(item)}</span>
+                    </div>
+                    {isBadgeNotification(item) && item.data?.badge_description && (
+                      <div class="text-xs text-gray-400 mt-1">{item.data?.badge_description}</div>
+                    )}
+                  </div>
+                  <span class="text-xs text-gray-400 whitespace-nowrap">{item.created_at}</span>
                 </div>
               </div>
             ))}

@@ -14,7 +14,9 @@ export default defineComponent({
     messagesState: { type: Object as () => MessagesState, required: true },
     baseUrl: { type: String, required: true },
     isLoadingMore: { type: Boolean, required: true },
-    users: { type: Object as () => Map<number, DiscourseUser>, required: true }
+    users: { type: Object as () => Map<number, DiscourseUser>, required: true },
+    showSettings: { type: Boolean, default: false },
+    showGroups: { type: Boolean, default: true }
   },
   emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab'],
   setup(props, { emit }) {
@@ -50,7 +52,14 @@ export default defineComponent({
           </div>
         </div>
 
-        <UserTabs active="messages" onSwitchTab={tab => emit('switchMainTab', tab)} />
+        <UserTabs
+          active="messages"
+          showSettings={props.showSettings}
+          showGroups={props.showGroups}
+          onSwitchTab={(
+            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
+          ) => emit('switchMainTab', tab)}
+        />
 
         {/* Tab navigation */}
         <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">

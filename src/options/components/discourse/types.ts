@@ -81,6 +81,8 @@ export type ViewType =
   | 'followFeed'
   | 'following'
   | 'followers'
+  | 'groups'
+  | 'preferences'
   | 'search'
   | 'error'
 
@@ -496,6 +498,48 @@ export interface DiscourseUserProfile {
   }
 }
 
+export interface DiscourseGroup {
+  id: number
+  name: string
+  full_name?: string
+  title?: string
+  description?: string
+  visibility_level?: number
+  user_count?: number
+  primary_group?: boolean
+}
+
+export interface DiscourseUserPreferences {
+  email?: string
+  locale?: string
+  timezone?: string
+  enable_quoting?: boolean
+  enable_defer?: boolean
+  external_links_in_new_tab?: boolean
+  email_digests?: boolean
+  email_private_messages?: boolean
+  email_direct?: boolean
+  email_always?: boolean
+  mailing_list_mode?: boolean
+  email_level?: number
+  email_messages_level?: number
+  email_previous_replies?: number
+  like_notification_frequency?: number
+  digest_after_minutes?: number
+  auto_track_topics_after_msecs?: number
+  new_topic_duration_minutes?: number
+  theme_ids?: number[]
+  text_size?: string
+  title_count_mode?: string
+  default_categories_watching?: number[]
+  default_categories_tracking?: number[]
+  default_categories_muted?: number[]
+  default_categories_watching_first_post?: number[]
+  default_tags_watching?: string[]
+  default_tags_tracking?: string[]
+  default_tags_muted?: string[]
+}
+
 export interface DiscourseUserSummary {
   likes_given: number
   likes_received: number
@@ -529,6 +573,8 @@ export interface DiscourseUserProfileData {
   follow_feed?: DiscourseFollowPost[]
   following?: DiscourseUser[]
   followers?: DiscourseUser[]
+  groups?: DiscourseGroup[]
+  preferences?: DiscourseUserPreferences
 }
 
 export interface DiscourseBadge {

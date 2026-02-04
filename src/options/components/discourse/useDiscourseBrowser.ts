@@ -39,7 +39,8 @@ import {
   loadMessages as loadMessagesRoute,
   loadMessagesData as loadMessagesDataRoute,
   loadMoreMessages as loadMoreMessagesRoute,
-  loadMoreFollowFeed as loadMoreFollowFeedRoute
+  loadMoreFollowFeed as loadMoreFollowFeedRoute,
+  loadUserPreferences as loadUserPreferencesRoute
 } from './routes/user'
 import { loadUsernameFromExtension } from './routes/session'
 import { loadChat as loadChatRoute, loadChatMessages, sendChatMessage } from './routes/chat'
@@ -315,6 +316,14 @@ export function useDiscourseBrowser() {
           await loadNotifications(tab, notificationFilter)
           tab.title = `${username} - 通知`
           tab.viewType = 'notifications'
+        } else if (pathParts[1] === 'preferences') {
+          await loadUserPreferences(tab, username)
+          tab.title = `${username} - 设置`
+          tab.viewType = 'preferences'
+        } else if (pathParts[1] === 'groups') {
+          await loadUser(tab, username)
+          tab.title = `${username} - 用户组`
+          tab.viewType = 'groups'
         } else if (pathParts[1] === 'badges') {
           await loadUser(tab, username)
           tab.title = `${username} - 徽章`
@@ -548,6 +557,10 @@ export function useDiscourseBrowser() {
     await loadUserRoute(tab, username, baseUrl, users)
   }
 
+  async function loadUserPreferences(tab: BrowserTab, username: string) {
+    await loadUserPreferencesRoute(tab, username, baseUrl)
+  }
+
   // Load user activity
   async function loadUserActivity(
     tab: BrowserTab,
@@ -653,6 +666,14 @@ export function useDiscourseBrowser() {
   // Open user messages
   function openUserMessages(username: string) {
     navigateTo(`${baseUrl.value}/u/${username}/messages`)
+  }
+
+  function openUserGroups(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/groups`)
+  }
+
+  function openUserPreferences(username: string) {
+    navigateTo(`${baseUrl.value}/u/${username}/preferences`)
   }
 
   function openChat() {
@@ -860,6 +881,8 @@ export function useDiscourseBrowser() {
     openUserFollowFeed,
     openUserFollowing,
     openUserFollowers,
+    openUserGroups,
+    openUserPreferences,
     openChat,
     openChatChannel,
     openQuote,

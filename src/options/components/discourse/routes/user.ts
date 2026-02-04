@@ -22,14 +22,16 @@ export async function loadUser(
     badgesResult,
     followFeedResult,
     followingResult,
-    followersResult
+    followersResult,
+    groupsResult
   ] = await Promise.all([
     pageFetch<any>(`${baseUrl.value}/u/${username}.json`),
     pageFetch<any>(`${baseUrl.value}/u/${username}/summary.json`).catch(() => null),
     pageFetch<any>(`${baseUrl.value}/user-badges/${username}.json?grouped=true`).catch(() => null),
     pageFetch<any>(`${baseUrl.value}/follow/posts/${username}.json`).catch(() => null),
     pageFetch<any>(`${baseUrl.value}/u/${username}/follow/following.json`).catch(() => null),
-    pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null)
+    pageFetch<any>(`${baseUrl.value}/u/${username}/follow/followers.json`).catch(() => null),
+    pageFetch<any>(`${baseUrl.value}/u/${username}/groups.json`).catch(() => null)
   ])
 
   const userData = extractData(userResult)
@@ -38,6 +40,7 @@ export async function loadUser(
   const followFeedData = followFeedResult ? extractData(followFeedResult) : null
   const followingData = followingResult ? extractData(followingResult) : null
   const followersData = followersResult ? extractData(followersResult) : null
+  const groupsData = groupsResult ? extractData(groupsResult) : null
 
   if (userData?.user) {
     const profileData: DiscourseUserProfileData = {
@@ -47,15 +50,18 @@ export async function loadUser(
       badges: badgesData?.badges || badgesData?.user_badges || [],
       follow_feed: followFeedData?.posts || [],
       following: Array.isArray(followingData) ? followingData : followingData?.users || [],
-      followers: Array.isArray(followersData) ? followersData : followersData?.users || []
+      followers: Array.isArray(followersData) ? followersData : followersData?.users || [],
+      groups: groupsData?.groups || []
     }
     tab.currentUser = profileData.user
+    users.value.set(profileData.user.id, profileData.user)
     ;(tab.currentUser as any)._summary = summaryData?.user_summary
     ;(tab.currentUser as any)._topics = summaryData?.topics
     ;(tab.currentUser as any)._badges = profileData.badges
     ;(tab.currentUser as any)._follow_feed = profileData.follow_feed
     ;(tab.currentUser as any)._following = profileData.following
     ;(tab.currentUser as any)._followers = profileData.followers
+    ;(tab.currentUser as any)._groups = profileData.groups
     tab.followFeedPage = 0
     tab.followFeedHasMore = !!followFeedData?.extras?.has_more
     tab.title = `${userData.user.username} - 用户主页`
@@ -407,5 +413,26 @@ export async function loadMoreFollowFeed(
     tab.followFeedHasMore = false
   } finally {
     isLoadingMore.value = false
+  }
+}
+
+export async function loadUserPreferences(tab: BrowserTab, username: string, baseUrl: Ref<string>) {
+  if (!tab.currentUser || tab.currentUser.username !== username) {
+    const userResult = await pageFetch<any>(`${baseUrl.value}/u/${username}.json`)
+    const userData = extractData(userResult)
+    if (userData?.user) {
+      tab.currentUser = userData.user
+    }
+  }
+
+  try {
+    const result = await pageFetch<any>(`${baseUrl.value}/u/${username}/preferences.json`)
+    const data = extractData(result)
+    if (data?.user) {
+      ;(tab.currentUser as any)._preferences = data.user
+    }
+  } catch (e) {
+    console.error('[DiscourseBrowser] loadUserPreferences error:', e)
+    ;(tab.currentUser as any)._preferences = null
   }
 }

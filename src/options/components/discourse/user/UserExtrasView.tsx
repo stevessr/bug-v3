@@ -39,7 +39,9 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     tab: { type: String as () => ExtrasTab, required: true },
     isLoadingMore: { type: Boolean, default: false },
-    hasMore: { type: Boolean, default: false }
+    hasMore: { type: Boolean, default: false },
+    showSettings: { type: Boolean, default: false },
+    showGroups: { type: Boolean, default: true }
   },
   emits: ['switchTab', 'switchMainTab', 'openUser', 'openTopic', 'goToProfile'],
   setup(props, { emit }) {
@@ -47,7 +49,11 @@ export default defineComponent({
       <div class="user-extras space-y-4">
         <UserTabs
           active={props.tab === 'badges' ? 'badges' : 'follow'}
-          onSwitchTab={tab => emit('switchMainTab', tab)}
+          showSettings={props.showSettings}
+          showGroups={props.showGroups}
+          onSwitchTab={(
+            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
+          ) => emit('switchMainTab', tab)}
         />
 
         <div class="flex items-center justify-between">

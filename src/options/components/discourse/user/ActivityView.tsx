@@ -1,15 +1,7 @@
 import { defineComponent, computed } from 'vue'
 import { Spin } from 'ant-design-vue'
 
-import type {
-  DiscourseUserProfile,
-  UserActivityState,
-  DiscourseUserAction,
-  DiscourseTopic,
-  DiscourseReaction,
-  DiscourseSolvedPost,
-  ActivityTabType
-} from '../types'
+import type { DiscourseUserProfile, UserActivityState, ActivityTabType } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
@@ -22,7 +14,9 @@ export default defineComponent({
     activityState: { type: Object as () => UserActivityState, required: true },
     baseUrl: { type: String, required: true },
     isLoadingMore: { type: Boolean, required: true },
-    showReadTab: { type: Boolean, default: false }
+    showReadTab: { type: Boolean, default: false },
+    showSettings: { type: Boolean, default: false },
+    showGroups: { type: Boolean, default: true }
   },
   emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab'],
   setup(props, { emit }) {
@@ -108,7 +102,12 @@ export default defineComponent({
           </div>
         </div>
 
-        <UserTabs active="activity" onSwitchTab={tab => emit('switchMainTab', tab)} />
+        <UserTabs
+          active="activity"
+          showSettings={props.showSettings}
+          showGroups={props.showGroups}
+          onSwitchTab={tab => emit('switchMainTab', tab)}
+        />
 
         {/* Tab navigation */}
         <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">

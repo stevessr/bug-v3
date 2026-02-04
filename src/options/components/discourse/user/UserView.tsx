@@ -61,7 +61,9 @@ export default defineComponent({
       },
       required: true
     },
-    baseUrl: { type: String, required: true }
+    baseUrl: { type: String, required: true },
+    showSettings: { type: Boolean, default: false },
+    showGroups: { type: Boolean, default: true }
   },
   emits: [
     'openTopic',
@@ -160,7 +162,12 @@ export default defineComponent({
           </div>
         </div>
 
-        <UserTabs active="summary" onSwitchTab={tab => emit('switchMainTab', tab)} />
+        <UserTabs
+          active="summary"
+          showSettings={props.showSettings}
+          showGroups={props.showGroups}
+          onSwitchTab={tab => emit('switchMainTab', tab)}
+        />
 
         {props.user.bio_cooked && (
           <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
