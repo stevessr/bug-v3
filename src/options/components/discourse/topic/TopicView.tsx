@@ -20,7 +20,7 @@ import TopicHeader from './TopicHeader'
 import TopicPostsList from './TopicPostsList'
 import TopicExtras from './TopicExtras'
 import TopicFooter from './TopicFooter'
-import TopicTimeline from './TopicTimeline'
+import TopicAside from './TopicAside'
 import { useAiSummary } from './useAiSummary'
 import { usePostActions } from './usePostActions'
 import { useTopicArchive } from './useTopicArchive'
@@ -331,16 +331,12 @@ export default defineComponent({
           />
         </div>
 
-        <div class="topic-aside hidden lg:block w-56">
-          <div class="topic-aside__inner">
-            <TopicTimeline
-              posts={props.topic.post_stream?.posts || []}
-              maxPostNumber={maxPostNumber.value}
-              currentPostNumber={timelinePostNumber.value}
-              onJump={scrollToPost}
-            />
-          </div>
-        </div>
+        <TopicAside
+          posts={props.topic.post_stream?.posts || []}
+          maxPostNumber={maxPostNumber.value}
+          currentPostNumber={timelinePostNumber.value}
+          onJump={scrollToPost}
+        />
 
         <AiSummaryModal
           open={showAiSummaryModal.value}
