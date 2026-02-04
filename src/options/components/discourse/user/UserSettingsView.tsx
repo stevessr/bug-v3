@@ -30,6 +30,14 @@ type PreferencesPayload = Pick<
   | 'default_tags_watching'
   | 'default_tags_tracking'
   | 'default_tags_muted'
+  | 'default_categories_watching_first_post'
+  | 'email_level'
+  | 'email_messages_level'
+  | 'email_previous_replies'
+  | 'like_notification_frequency'
+  | 'digest_after_minutes'
+  | 'auto_track_topics_after_msecs'
+  | 'new_topic_duration_minutes'
 >
 
 export default defineComponent({
@@ -64,9 +72,17 @@ export default defineComponent({
       default_categories_watching: [],
       default_categories_tracking: [],
       default_categories_muted: [],
+      default_categories_watching_first_post: [],
       default_tags_watching: [],
       default_tags_tracking: [],
-      default_tags_muted: []
+      default_tags_muted: [],
+      email_level: undefined,
+      email_messages_level: undefined,
+      email_previous_replies: undefined,
+      like_notification_frequency: undefined,
+      digest_after_minutes: undefined,
+      auto_track_topics_after_msecs: undefined,
+      new_topic_duration_minutes: undefined
     })
 
     watch(
@@ -173,6 +189,31 @@ export default defineComponent({
       }
     }
 
+    const emailLevelOptions = [
+      { value: 0, label: '从不' },
+      { value: 1, label: '仅离线时' },
+      { value: 2, label: '始终' }
+    ]
+
+    const emailPreviousRepliesOptions = [0, 1, 2, 3].map(value => ({
+      value,
+      label: value === 0 ? '不包含' : `包含 ${value} 条`
+    }))
+
+    const likeNotificationOptions = [
+      { value: 0, label: '从不' },
+      { value: 1, label: '仅离线时' },
+      { value: 2, label: '始终' }
+    ]
+
+    const handleNumberInput = (
+      key: 'digest_after_minutes' | 'auto_track_topics_after_msecs' | 'new_topic_duration_minutes',
+      raw: string
+    ) => {
+      const trimmed = raw.trim()
+      form.value[key] = trimmed === '' ? undefined : Number(trimmed)
+    }
+
     watch(
       preferences,
       value => {
@@ -189,9 +230,17 @@ export default defineComponent({
           default_categories_watching: value.default_categories_watching || [],
           default_categories_tracking: value.default_categories_tracking || [],
           default_categories_muted: value.default_categories_muted || [],
+          default_categories_watching_first_post: value.default_categories_watching_first_post || [],
           default_tags_watching: value.default_tags_watching || [],
           default_tags_tracking: value.default_tags_tracking || [],
-          default_tags_muted: value.default_tags_muted || []
+          default_tags_muted: value.default_tags_muted || [],
+          email_level: value.email_level ?? undefined,
+          email_messages_level: value.email_messages_level ?? undefined,
+          email_previous_replies: value.email_previous_replies ?? undefined,
+          like_notification_frequency: value.like_notification_frequency ?? undefined,
+          digest_after_minutes: value.digest_after_minutes ?? undefined,
+          auto_track_topics_after_msecs: value.auto_track_topics_after_msecs ?? undefined,
+          new_topic_duration_minutes: value.new_topic_duration_minutes ?? undefined
         }
       },
       { immediate: true }
@@ -201,7 +250,7 @@ export default defineComponent({
       if (!preferences.value || saving.value) return
       saving.value = true
       try {
-        const payload = { user: { ...form.value } }
+        const payload = { user: { ...form.value }, user_option: { ...form.value } }
         const result = await pageFetch<any>(
           `${props.baseUrl}/u/${props.user.username}/preferences.json`,
           {
@@ -292,6 +341,50 @@ export default defineComponent({
                     checked={form.value.email_always}
                     onChange={(val: boolean) => (form.value.email_always = val)}
                   />
+                  <div class="text-gray-500">邮件通知级别</div>
+                  <Select
+                    allowClear
+                    size="small"
+                    class="w-full"
+                    placeholder="选择级别"
+                    options={emailLevelOptions}
+                    value={form.value.email_level}
+                    onUpdate:value={(value: number | undefined) => (form.value.email_level = value)}
+                  />
+                  <div class="text-gray-500">私信邮件级别</div>
+                  <Select
+                    allowClear
+                    size="small"
+                    class="w-full"
+                    placeholder="选择级别"
+                    options={emailLevelOptions}
+                    value={form.value.email_messages_level}
+                    onUpdate:value={(value: number | undefined) => (form.value.email_messages_level = value)}
+                  />
+                  <div class="text-gray-500">邮件包含回复</div>
+                  <Select
+                    allowClear
+                    size="small"
+                    class="w-full"
+                    placeholder="选择数量"
+                    options={emailPreviousRepliesOptions}
+                    value={form.value.email_previous_replies}
+                    onUpdate:value={(value: number | undefined) =>
+                      (form.value.email_previous_replies = value)
+                    }
+                  />
+                  <div class="text-gray-500">点赞通知频率</div>
+                  <Select
+                    allowClear
+                    size="small"
+                    class="w-full"
+                    placeholder="选择频率"
+                    options={likeNotificationOptions}
+                    value={form.value.like_notification_frequency}
+                    onUpdate:value={(value: number | undefined) =>
+                      (form.value.like_notification_frequency = value)
+                    }
+                  />
                 </div>
               </div>
 
@@ -326,6 +419,51 @@ export default defineComponent({
               </div>
 
               <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
+                <div class="text-xs font-semibold text-gray-400 mb-2">摘要与追踪</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
+                  <div class="text-gray-500">摘要发送间隔（分钟）</div>
+                  <input
+                    type="number"
+                    min="0"
+                    class="w-full px-2 py-1 text-xs border rounded dark:bg-gray-900 dark:border-gray-700"
+                    value={form.value.digest_after_minutes ?? ''}
+                    onInput={(event: Event) =>
+                      handleNumberInput(
+                        'digest_after_minutes',
+                        (event.target as HTMLInputElement).value
+                      )
+                    }
+                  />
+                  <div class="text-gray-500">自动追踪话题延迟（毫秒）</div>
+                  <input
+                    type="number"
+                    min="0"
+                    class="w-full px-2 py-1 text-xs border rounded dark:bg-gray-900 dark:border-gray-700"
+                    value={form.value.auto_track_topics_after_msecs ?? ''}
+                    onInput={(event: Event) =>
+                      handleNumberInput(
+                        'auto_track_topics_after_msecs',
+                        (event.target as HTMLInputElement).value
+                      )
+                    }
+                  />
+                  <div class="text-gray-500">新话题时长（分钟）</div>
+                  <input
+                    type="number"
+                    min="0"
+                    class="w-full px-2 py-1 text-xs border rounded dark:bg-gray-900 dark:border-gray-700"
+                    value={form.value.new_topic_duration_minutes ?? ''}
+                    onInput={(event: Event) =>
+                      handleNumberInput(
+                        'new_topic_duration_minutes',
+                        (event.target as HTMLInputElement).value
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
                 <div class="text-xs font-semibold text-gray-400 mb-2">默认分类</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
                   <div class="text-gray-500">关注</div>
@@ -352,6 +490,19 @@ export default defineComponent({
                     filterOption={filterCategoryOption}
                     onUpdate:value={(value: number[]) =>
                       (form.value.default_categories_tracking = value || [])
+                    }
+                  />
+                  <div class="text-gray-500">关注首帖</div>
+                  <Select
+                    mode="multiple"
+                    size="small"
+                    class="w-full"
+                    placeholder="选择分类"
+                    options={categoryOptions.value}
+                    value={form.value.default_categories_watching_first_post}
+                    filterOption={filterCategoryOption}
+                    onUpdate:value={(value: number[]) =>
+                      (form.value.default_categories_watching_first_post = value || [])
                     }
                   />
                   <div class="text-gray-500">静音</div>

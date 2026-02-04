@@ -429,7 +429,11 @@ export async function loadUserPreferences(tab: BrowserTab, username: string, bas
     const result = await pageFetch<any>(`${baseUrl.value}/u/${username}/preferences.json`)
     const data = extractData(result)
     if (data?.user) {
-      ;(tab.currentUser as any)._preferences = data.user
+      const userOption = data.user_option || data.user?.user_option
+      ;(tab.currentUser as any)._preferences = {
+        ...data.user,
+        ...(userOption || {})
+      }
     }
   } catch (e) {
     console.error('[DiscourseBrowser] loadUserPreferences error:', e)
