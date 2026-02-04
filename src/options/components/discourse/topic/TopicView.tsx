@@ -27,7 +27,8 @@ import {
   assignPost,
   deletePost,
   toggleWiki,
-  setTopicNotificationLevel
+  setTopicNotificationLevel,
+  fetchAiTopicSummary
 } from '../actions'
 
 import TopicHeader from './TopicHeader'
@@ -72,6 +73,11 @@ export default defineComponent({
     const parentLoading = shallowRef<Set<number>>(new Set())
     const timelinePostNumber = ref(1)
     const timelineTicking = ref(false)
+    const aiSummary = ref<string | null>(null)
+    const aiMeta = ref<{ algorithm?: string; updatedAt?: string; outdated?: boolean } | null>(null)
+    const aiLoading = ref(false)
+    const aiAvailable = ref(true)
+    const aiErrorMessage = ref('')
 
     // Parse posts and cache results
     const parsedPosts = computed(() => {
@@ -451,6 +457,49 @@ export default defineComponent({
       } catch (error) {
         console.warn('[DiscourseBrowser] update notification level failed:', error)
         message.error('通知等级更新失败')
+      }
+    }
+
+    const handleAiSummary = async () => {
+      if (aiLoading.value) return
+      aiErrorMessage.value = ''
+      aiLoading.value = true
+      try {
+        const fetchOnce = async () => {
+          return await fetchAiTopicSummary(props.baseUrl, props.topic.id)
+        }
+        let result = await fetchOnce()
+        let summary = result.summary
+        if (!summary?.summarized_text) {
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          result = await fetchOnce()
+          summary = result.summary
+        }
+
+        if (result.status === 404) {
+          aiAvailable.value = false
+          message.info('当前站点未启用 AI 总结')
+          return
+        }
+
+        if (!summary?.summarized_text) {
+          aiErrorMessage.value = 'AI 总结暂不可用，请稍后再试'
+          message.warning(aiErrorMessage.value)
+          return
+        }
+
+        aiSummary.value = summary.summarized_text
+        aiMeta.value = {
+          algorithm: summary.algorithm,
+          updatedAt: summary.updated_at,
+          outdated: summary.outdated
+        }
+      } catch (error) {
+        console.warn('[DiscourseBrowser] ai summary failed:', error)
+        aiErrorMessage.value = 'AI 总结获取失败'
+        message.error(aiErrorMessage.value)
+      } finally {
+        aiLoading.value = false
       }
     }
 
@@ -842,12 +891,32 @@ export default defineComponent({
             canAssign={
               !!props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
             }
+            aiAvailable={aiAvailable.value}
+            aiLoading={aiLoading.value}
             onChangeLevel={handleChangeNotificationLevel}
             onBookmark={handleTopicBookmark}
             onFlag={handleTopicFlag}
             onAssign={handleTopicAssign}
             onReply={handleTopicReply}
+            onAiSummary={handleAiSummary}
           />
+
+          {(aiSummary.value || aiErrorMessage.value) && (
+            <div class="topic-ai-summary">
+              <div class="topic-ai-summary__title">AI 总结</div>
+              {aiSummary.value && <div class="topic-ai-summary__content">{aiSummary.value}</div>}
+              {aiErrorMessage.value && (
+                <div class="topic-ai-summary__error">{aiErrorMessage.value}</div>
+              )}
+              {aiMeta.value && (
+                <div class="topic-ai-summary__meta">
+                  {aiMeta.value.outdated ? '内容已过期' : '已更新'}
+                  {aiMeta.value.algorithm && ` · ${aiMeta.value.algorithm}`}
+                  {aiMeta.value.updatedAt && ` · ${aiMeta.value.updatedAt}`}
+                </div>
+              )}
+            </div>
+          )}
 
           <TopicExtras
             suggested={props.topic.suggested_topics || []}
