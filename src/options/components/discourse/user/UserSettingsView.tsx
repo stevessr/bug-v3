@@ -1,8 +1,15 @@
 import { defineComponent, computed, ref, watch } from 'vue'
-import { Button, Switch, message } from 'ant-design-vue'
+import { Button, Select, Switch, message } from 'ant-design-vue'
 
-import type { DiscourseUserPreferences, DiscourseUserProfile } from '../types'
+import type { DiscourseCategory, DiscourseUserPreferences, DiscourseUserProfile } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { searchTags } from '../actions'
+import TagPill from '../layout/TagPill'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories,
+  isLinuxDoUrl
+} from '../linux.do/preloadedCategories'
 
 import UserTabs from './UserTabs'
 import '../css/UserExtrasView.css'
@@ -17,6 +24,12 @@ type PreferencesPayload = Pick<
   | 'enable_quoting'
   | 'enable_defer'
   | 'external_links_in_new_tab'
+  | 'default_categories_watching'
+  | 'default_categories_tracking'
+  | 'default_categories_muted'
+  | 'default_tags_watching'
+  | 'default_tags_tracking'
+  | 'default_tags_muted'
 >
 
 export default defineComponent({
@@ -28,12 +41,17 @@ export default defineComponent({
       },
       required: true
     },
-    baseUrl: { type: String, required: true }
+    baseUrl: { type: String, required: true },
+    categories: { type: Array as () => DiscourseCategory[], default: () => [] }
   },
   emits: ['switchMainTab', 'goToProfile'],
   setup(props, { emit }) {
     const preferences = computed(() => props.user._preferences)
     const saving = ref(false)
+    const preloadedCategoriesReadyToken = ref(0)
+    const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
+    const tagsLoading = ref(false)
+    let tagSearchTimer: number | null = null
     const form = ref<PreferencesPayload>({
       email_digests: false,
       email_private_messages: false,
@@ -42,8 +60,118 @@ export default defineComponent({
       mailing_list_mode: false,
       enable_quoting: false,
       enable_defer: false,
-      external_links_in_new_tab: false
+      external_links_in_new_tab: false,
+      default_categories_watching: [],
+      default_categories_tracking: [],
+      default_categories_muted: [],
+      default_tags_watching: [],
+      default_tags_tracking: [],
+      default_tags_muted: []
     })
+
+    watch(
+      () => props.baseUrl,
+      async value => {
+        if (!isLinuxDoUrl(value)) return
+        await ensurePreloadedCategoriesLoaded()
+        preloadedCategoriesReadyToken.value++
+      },
+      { immediate: true }
+    )
+
+    const mergedCategories = computed(() => {
+      const readyToken = preloadedCategoriesReadyToken.value
+      const localMap = new Map<number, DiscourseCategory>()
+      const usingLinuxDo = isLinuxDoUrl(props.baseUrl) && readyToken >= 0
+
+      if (usingLinuxDo) {
+        getAllPreloadedCategories().forEach(raw => {
+          if (typeof raw.id !== 'number') return
+          localMap.set(raw.id, {
+            id: raw.id,
+            name: raw.name || `category-${raw.id}`,
+            slug: raw.slug || String(raw.id),
+            color: raw.color || '0088CC',
+            text_color: raw.text_color || 'FFFFFF',
+            topic_count: 0,
+            parent_category_id: raw.parent_category_id ?? null,
+            style_type: raw.style_type ?? null,
+            icon: raw.icon ?? null,
+            emoji: raw.emoji ?? null,
+            uploaded_logo: raw.uploaded_logo ?? null,
+            uploaded_logo_dark: raw.uploaded_logo_dark ?? null
+          })
+        })
+      }
+
+      ;(props.categories || []).forEach(cat => {
+        localMap.set(cat.id, { ...localMap.get(cat.id), ...cat })
+      })
+
+      return Array.from(localMap.values())
+    })
+
+    const categoryOptions = computed(() => {
+      return mergedCategories.value.map(cat => {
+        const slug = cat.slug || String(cat.id)
+        const label = cat.name
+          ? cat.slug && cat.slug !== cat.name
+            ? `${cat.name} (${cat.slug})`
+            : cat.name
+          : slug
+        return {
+          value: cat.id,
+          label,
+          slug
+        }
+      })
+    })
+
+    const filterCategoryOption = (
+      input: string,
+      option?: { label?: string; value?: number; slug?: string }
+    ) => {
+      const keyword = input.trim().toLowerCase()
+      if (!keyword) return true
+      const label = String(option?.label || '').toLowerCase()
+      const slug = String(option?.slug || '').toLowerCase()
+      const id = option?.value != null ? String(option.value) : ''
+      return label.includes(keyword) || slug.includes(keyword) || id.includes(keyword)
+    }
+
+    const getTagOption = (value: string) => {
+      return tagOptions.value.find(option => option.value === value) || null
+    }
+
+    const runTagSearch = async (query: string) => {
+      const trimmed = query.trim()
+      tagsLoading.value = true
+      try {
+        const results = await searchTags(props.baseUrl, trimmed)
+        tagOptions.value = results
+          .map(item => ({
+            value: item.name || item.text || '',
+            label: item.text || item.name || '',
+            description: item.description || null
+          }))
+          .filter(option => option.value)
+      } catch {
+        tagOptions.value = []
+      } finally {
+        tagsLoading.value = false
+      }
+    }
+
+    const handleTagSearch = (query: string) => {
+      if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+      tagSearchTimer = window.setTimeout(() => runTagSearch(query), 250)
+    }
+
+    const handleTagDropdown = (open: boolean) => {
+      if (open && tagOptions.value.length === 0) {
+        runTagSearch('')
+      }
+    }
 
     watch(
       preferences,
@@ -57,7 +185,13 @@ export default defineComponent({
           mailing_list_mode: !!value.mailing_list_mode,
           enable_quoting: !!value.enable_quoting,
           enable_defer: !!value.enable_defer,
-          external_links_in_new_tab: !!value.external_links_in_new_tab
+          external_links_in_new_tab: !!value.external_links_in_new_tab,
+          default_categories_watching: value.default_categories_watching || [],
+          default_categories_tracking: value.default_categories_tracking || [],
+          default_categories_muted: value.default_categories_muted || [],
+          default_tags_watching: value.default_tags_watching || [],
+          default_tags_tracking: value.default_tags_tracking || [],
+          default_tags_muted: value.default_tags_muted || []
         }
       },
       { immediate: true }
@@ -187,6 +321,201 @@ export default defineComponent({
                     size="small"
                     checked={form.value.mailing_list_mode}
                     onChange={(val: boolean) => (form.value.mailing_list_mode = val)}
+                  />
+                </div>
+              </div>
+
+              <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
+                <div class="text-xs font-semibold text-gray-400 mb-2">默认分类</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
+                  <div class="text-gray-500">关注</div>
+                  <Select
+                    mode="multiple"
+                    size="small"
+                    class="w-full"
+                    placeholder="选择分类"
+                    options={categoryOptions.value}
+                    value={form.value.default_categories_watching}
+                    filterOption={filterCategoryOption}
+                    onUpdate:value={(value: number[]) =>
+                      (form.value.default_categories_watching = value || [])
+                    }
+                  />
+                  <div class="text-gray-500">追踪</div>
+                  <Select
+                    mode="multiple"
+                    size="small"
+                    class="w-full"
+                    placeholder="选择分类"
+                    options={categoryOptions.value}
+                    value={form.value.default_categories_tracking}
+                    filterOption={filterCategoryOption}
+                    onUpdate:value={(value: number[]) =>
+                      (form.value.default_categories_tracking = value || [])
+                    }
+                  />
+                  <div class="text-gray-500">静音</div>
+                  <Select
+                    mode="multiple"
+                    size="small"
+                    class="w-full"
+                    placeholder="选择分类"
+                    options={categoryOptions.value}
+                    value={form.value.default_categories_muted}
+                    filterOption={filterCategoryOption}
+                    onUpdate:value={(value: number[]) =>
+                      (form.value.default_categories_muted = value || [])
+                    }
+                  />
+                </div>
+              </div>
+
+              <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
+                <div class="text-xs font-semibold text-gray-400 mb-2">默认标签</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
+                  <div class="text-gray-500">关注</div>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    class="w-full"
+                    placeholder="搜索或输入标签"
+                    value={form.value.default_tags_watching}
+                    filterOption={false}
+                    notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
+                    onSearch={handleTagSearch}
+                    onDropdownVisibleChange={handleTagDropdown}
+                    onUpdate:value={(value: string[]) =>
+                      (form.value.default_tags_watching = value || [])
+                    }
+                    v-slots={{
+                      tagRender: ({ value, closable, onClose }: any) => (
+                        <span class="inline-flex items-center gap-1 mr-1">
+                          <TagPill
+                            name={String(value)}
+                            text={getTagOption(String(value))?.label || String(value)}
+                            description={getTagOption(String(value))?.description || null}
+                            compact
+                          />
+                          {closable ? (
+                            <button
+                              type="button"
+                              class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              onMousedown={(event: Event) => event.preventDefault()}
+                              onClick={onClose}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </span>
+                      ),
+                      default: () =>
+                        tagOptions.value.map(tag => (
+                          <Select.Option key={tag.value} value={tag.value}>
+                            <TagPill
+                              name={tag.value}
+                              text={tag.label}
+                              description={tag.description || null}
+                              compact
+                            />
+                          </Select.Option>
+                        ))
+                    }}
+                  />
+                  <div class="text-gray-500">追踪</div>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    class="w-full"
+                    placeholder="搜索或输入标签"
+                    value={form.value.default_tags_tracking}
+                    filterOption={false}
+                    notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
+                    onSearch={handleTagSearch}
+                    onDropdownVisibleChange={handleTagDropdown}
+                    onUpdate:value={(value: string[]) =>
+                      (form.value.default_tags_tracking = value || [])
+                    }
+                    v-slots={{
+                      tagRender: ({ value, closable, onClose }: any) => (
+                        <span class="inline-flex items-center gap-1 mr-1">
+                          <TagPill
+                            name={String(value)}
+                            text={getTagOption(String(value))?.label || String(value)}
+                            description={getTagOption(String(value))?.description || null}
+                            compact
+                          />
+                          {closable ? (
+                            <button
+                              type="button"
+                              class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              onMousedown={(event: Event) => event.preventDefault()}
+                              onClick={onClose}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </span>
+                      ),
+                      default: () =>
+                        tagOptions.value.map(tag => (
+                          <Select.Option key={tag.value} value={tag.value}>
+                            <TagPill
+                              name={tag.value}
+                              text={tag.label}
+                              description={tag.description || null}
+                              compact
+                            />
+                          </Select.Option>
+                        ))
+                    }}
+                  />
+                  <div class="text-gray-500">静音</div>
+                  <Select
+                    mode="tags"
+                    size="small"
+                    class="w-full"
+                    placeholder="搜索或输入标签"
+                    value={form.value.default_tags_muted}
+                    filterOption={false}
+                    notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
+                    onSearch={handleTagSearch}
+                    onDropdownVisibleChange={handleTagDropdown}
+                    onUpdate:value={(value: string[]) =>
+                      (form.value.default_tags_muted = value || [])
+                    }
+                    v-slots={{
+                      tagRender: ({ value, closable, onClose }: any) => (
+                        <span class="inline-flex items-center gap-1 mr-1">
+                          <TagPill
+                            name={String(value)}
+                            text={getTagOption(String(value))?.label || String(value)}
+                            description={getTagOption(String(value))?.description || null}
+                            compact
+                          />
+                          {closable ? (
+                            <button
+                              type="button"
+                              class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              onMousedown={(event: Event) => event.preventDefault()}
+                              onClick={onClose}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </span>
+                      ),
+                      default: () =>
+                        tagOptions.value.map(tag => (
+                          <Select.Option key={tag.value} value={tag.value}>
+                            <TagPill
+                              name={tag.value}
+                              text={tag.label}
+                              description={tag.description || null}
+                              compact
+                            />
+                          </Select.Option>
+                        ))
+                    }}
                   />
                 </div>
               </div>

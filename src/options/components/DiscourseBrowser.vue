@@ -230,6 +230,12 @@ const handleOpenNotifications = () => {
   navigateTo('/my/notifications')
 }
 
+const handleOpenMyProfile = () => {
+  const username = currentUsername.value
+  if (!username) return
+  openUser(username)
+}
+
 const handleNotificationsOpenChange = async (open: boolean) => {
   notificationsOpen.value = open
   if (!open) return
@@ -954,6 +960,9 @@ onUnmounted(() => {
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
             <div class="flex items-center gap-2">
               <a-button size="small" @click="() => handleNavigate('/search')">搜索</a-button>
+              <a-button v-if="currentUsername" size="small" @click="handleOpenMyProfile">
+                我的主页
+              </a-button>
               <a-button size="small" @click="toggleTopicComposer">
                 {{ composerMode === 'topic' ? '收起' : '发帖' }}
               </a-button>
@@ -1307,6 +1316,7 @@ onUnmounted(() => {
         v-else-if="activeTab?.viewType === 'preferences' && activeTab.currentUser"
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
+        :categories="activeTab.categories"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
       />
