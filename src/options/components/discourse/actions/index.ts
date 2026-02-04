@@ -1,7 +1,7 @@
 // Topic actions
 export * from './topic'
 export { createTopic, replyToTopic, setTopicNotificationLevel } from './topic'
-export { fetchAiTopicSummary } from './ai'
+export { fetchAiTopicSummary, requestAiTopicSummaryRegenerate } from './ai'
 export type { CreateTopicPayload, ReplyPayload } from './topic'
 
 // Post actions
