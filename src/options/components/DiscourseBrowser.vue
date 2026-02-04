@@ -953,6 +953,7 @@ onUnmounted(() => {
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
             <div class="flex items-center gap-2">
+              <a-button size="small" @click="() => handleNavigate('/search')">搜索</a-button>
               <a-button size="small" @click="toggleTopicComposer">
                 {{ composerMode === 'topic' ? '收起' : '发帖' }}
               </a-button>

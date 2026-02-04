@@ -20,17 +20,7 @@ import type {
   DiscourseUserProfile
 } from '../types'
 import { parsePostContent, pageFetch, extractData } from '../utils'
-import {
-  togglePostLike,
-  toggleBookmark,
-  flagPost,
-  assignPost,
-  deletePost,
-  toggleWiki,
-  setTopicNotificationLevel,
-  fetchAiTopicSummary,
-  requestAiTopicSummaryRegenerate
-} from '../actions'
+import { assignPost, setTopicNotificationLevel } from '../actions'
 
 import TopicHeader from './TopicHeader'
 import PostItem from './PostItem'
@@ -39,6 +29,9 @@ import PostRepliesTree from './PostRepliesTree'
 import TopicExtras from './TopicExtras'
 import TopicFooter from './TopicFooter'
 import TopicTimeline from './TopicTimeline'
+import { useAiSummary } from './useAiSummary'
+import { usePostActions } from './usePostActions'
+import { useTopicArchive } from './useTopicArchive'
 import '../css/TopicView.css'
 
 export default defineComponent({
@@ -63,8 +56,6 @@ export default defineComponent({
   ],
   setup(props, { emit }) {
     const postsListRef = ref<HTMLElement | null>(null)
-    const likedPostIds = ref<Set<number>>(new Set())
-    const likingPostIds = ref<Set<number>>(new Set())
     const expandedReplies = shallowRef<Set<number>>(new Set())
     const replyMap = shallowRef<Map<number, DiscoursePost[]>>(new Map())
     const replyParsedCache = new Map<number, ParsedContent>()
@@ -74,19 +65,20 @@ export default defineComponent({
     const parentLoading = shallowRef<Set<number>>(new Set())
     const timelinePostNumber = ref(1)
     const timelineTicking = ref(false)
-    const aiSummary = ref<string | null>(null)
-    const aiMeta = ref<{
-      algorithm?: string
-      updatedAt?: string
-      outdated?: boolean
-      canRegenerate?: boolean
-      newPosts?: number
-    } | null>(null)
-    const aiLoading = ref(false)
-    const aiAvailable = ref(true)
-    const aiErrorMessage = ref('')
-    const showAiSummaryModal = ref(false)
-    const isArchiving = ref(false)
+    const {
+      aiSummary,
+      aiMeta,
+      aiLoading,
+      aiAvailable,
+      aiErrorMessage,
+      showAiSummaryModal,
+      handleAiSummary,
+      handleAiRegenerate
+    } = useAiSummary({
+      baseUrl: props.baseUrl,
+      topicId: props.topic.id,
+      notify: message
+    })
 
     // Parse posts and cache results
     const parsedPosts = computed(() => {
@@ -257,358 +249,27 @@ export default defineComponent({
       emit('navigate', url)
     }
 
-    const isPostLiked = (post: DiscoursePost, reactionId: string) => {
-      if (likedPostIds.value.has(post.id)) return true
-      const postAny = post as any
-      const currentUserReaction = postAny?.current_user_reaction
-      if (currentUserReaction) {
-        if (typeof currentUserReaction === 'string') {
-          return currentUserReaction === reactionId
-        } else if (typeof currentUserReaction === 'object' && currentUserReaction.id) {
-          return currentUserReaction.id === reactionId
-        }
-      }
-      const summary = postAny?.actions_summary || []
-      if (Array.isArray(summary)) {
-        if (reactionId === 'heart' && summary.some((item: any) => item?.id === 2 && item?.acted))
-          return true
-      }
-      const reactions = postAny?.reactions
-      if (Array.isArray(reactions)) {
-        const item = reactions.find((r: any) => r?.id === reactionId)
-        if (item?.reacted) return true
-      } else if (reactions && typeof reactions === 'object') {
-        const items = Object.values(reactions) as any[]
-        if (items.some(item => item?.id === reactionId && item?.reacted)) return true
-      }
-      return false
-    }
-
-    const getReactionCount = (post: DiscoursePost, reactionId: string): number => {
-      const postAny = post as any
-      const reactions = postAny?.reactions
-      if (Array.isArray(reactions)) {
-        const item = reactions.find((r: any) => r?.id === reactionId)
-        if (item && typeof item.count === 'number') {
-          return item.count
-        }
-      } else if (reactions && typeof reactions === 'object') {
-        const item = reactions[reactionId]
-        if (item && typeof item === 'object' && typeof item.count === 'number') {
-          return item.count
-        }
-      }
-      return 0
-    }
-
-    const toggleLike = async (post: DiscoursePost, reactionId: string) => {
-      if (likingPostIds.value.has(post.id)) return
-      likingPostIds.value.add(post.id)
-      try {
-        const data = await togglePostLike(props.baseUrl, post.id, reactionId)
-        const postAny = post as any
-        if (data) {
-          postAny.reactions = data.reactions || []
-          postAny.current_user_reaction = data.current_user_reaction
-          postAny.reaction_users_count = data.reaction_users_count || 0
-        }
-        if (data?.current_user_reaction) {
-          likedPostIds.value.add(post.id)
-        } else {
-          likedPostIds.value.delete(post.id)
-        }
-      } catch (error) {
-        console.warn('[DiscourseBrowser] toggle like failed:', error)
-      } finally {
-        likingPostIds.value.delete(post.id)
-      }
-    }
-
-    const handleBookmark = async (post: DiscoursePost) => {
-      try {
-        const postAny = post as any
-        const currentBookmarked = postAny.bookmarked || false
-        const bookmarkId = postAny.bookmark_id || postAny.bookmarkId || null
-        await toggleBookmark(props.baseUrl, {
-          postId: post.id,
-          bookmarked: !currentBookmarked,
-          bookmark_id: bookmarkId
-        })
-        postAny.bookmarked = !currentBookmarked
-        message.success(postAny.bookmarked ? '已添加书签' : '已删除书签')
-      } catch (error) {
-        console.warn('[DiscourseBrowser] bookmark failed:', error)
-        message.error('书签操作失败')
-      }
-    }
-
-    const handleFlag = async (post: DiscoursePost) => {
-      try {
-        await flagPost(props.baseUrl, {
-          postId: post.id,
-          flagType: '6', // Post action type ID 6: inappropriate content
-          message: ''
-        })
-        message.success('举报成功')
-      } catch (error) {
-        console.warn('[DiscourseBrowser] flag failed:', error)
-        message.error('举报失败')
-      }
-    }
-
-    const handleAssign = async (_post: DiscoursePost) => {
-      void _post
-      message.info('指定功能需要选择用户，请在 Web 界面中使用')
-    }
+    const {
+      likedPostIds,
+      likingPostIds,
+      isPostLiked,
+      getReactionCount,
+      toggleLike,
+      handleBookmark,
+      handleFlag,
+      handleAssign,
+      handleDelete,
+      handleWiki
+    } = usePostActions({
+      baseUrl: props.baseUrl,
+      pageFetch,
+      extractData,
+      notify: message,
+      onRefresh: () => emit('refresh')
+    })
 
     const handleEdit = (post: DiscoursePost) => {
       emit('editPost', post)
-    }
-
-    const handleDelete = async (post: DiscoursePost) => {
-      try {
-        await deletePost(props.baseUrl, post.id)
-        const postAny = post as any
-        postAny.hidden = true
-        message.success('删除成功')
-        emit('refresh')
-      } catch (error) {
-        console.warn('[DiscourseBrowser] delete failed:', error)
-        message.error('删除失败')
-      }
-    }
-
-    const handleWiki = async (post: DiscoursePost) => {
-      try {
-        const postAny = post as any
-        const currentWiki = postAny.wiki || false
-        await toggleWiki(props.baseUrl, post.id, !currentWiki)
-        const postResult = await pageFetch<any>(`${props.baseUrl}/posts/${post.id}.json`)
-        const postData = extractData(postResult)
-        if (postData && typeof postData === 'object') {
-          Object.assign(postAny, postData)
-        } else {
-          postAny.wiki = !currentWiki
-        }
-        message.success(postAny.wiki ? '已启用 Wiki' : '已禁用 Wiki')
-      } catch (error) {
-        console.warn('[DiscourseBrowser] wiki failed:', error)
-        message.error('Wiki 操作失败')
-      }
-    }
-
-    const extractTextFromHtml = (html: string): string => {
-      if (!html) return ''
-      const wrapper = document.createElement('div')
-      wrapper.innerHTML = html
-      const text = wrapper.innerText || wrapper.textContent || ''
-      return text.replace(/\n{3,}/g, '\n\n').trim()
-    }
-
-    const loadImageFromUrl = async (url: string): Promise<HTMLImageElement | null> => {
-      try {
-        const result = await pageFetch<Blob>(
-          url,
-          { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
-          'blob'
-        )
-        if (!result.ok || !result.data) return null
-        const objectUrl = URL.createObjectURL(result.data)
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image()
-          image.onload = () => resolve(image)
-          image.onerror = () => reject(new Error('图片加载失败'))
-          image.src = objectUrl
-        })
-        URL.revokeObjectURL(objectUrl)
-        return img
-      } catch {
-        return null
-      }
-    }
-
-    const archiveTopicAsWebp = async () => {
-      if (isArchiving.value) return
-      const posts = props.topic?.post_stream?.posts || []
-      if (!posts.length) {
-        message.error('暂无帖子可导出')
-        return
-      }
-
-      const hide = message.loading('正在生成主题存档...', 0)
-      isArchiving.value = true
-
-      try {
-        const canvasWidth = 1200
-        const padding = 40
-        const contentWidth = canvasWidth - padding * 2
-        const blocks: Array<
-          | { type: 'text'; lines: string[]; font: string; lineHeight: number; color: string }
-          | { type: 'image'; img: HTMLImageElement; width: number; height: number }
-        > = []
-
-        const pushTextBlock = (text: string, font: string, lineHeight: number, color: string) => {
-          if (!text) return
-          const lines: string[] = []
-          const ctx = document.createElement('canvas').getContext('2d')
-          if (!ctx) return
-          ctx.font = font
-          const paragraphs = text.split('\n')
-          for (const paragraph of paragraphs) {
-            const words = paragraph.split(/\s+/)
-            let line = ''
-            for (const word of words) {
-              const testLine = line ? `${line} ${word}` : word
-              const { width } = ctx.measureText(testLine)
-              if (width > contentWidth && line) {
-                lines.push(line)
-                line = word
-              } else {
-                line = testLine
-              }
-            }
-            if (line) lines.push(line)
-            lines.push('')
-          }
-          while (lines.length && lines[lines.length - 1] === '') lines.pop()
-          if (lines.length) {
-            blocks.push({ type: 'text', lines, font, lineHeight, color })
-          }
-        }
-
-        pushTextBlock(props.topic.title || '未命名主题', 'bold 28px sans-serif', 36, '#111')
-
-        for (const post of posts) {
-          const header = `${post.username} · #${post.post_number} · ${new Date(
-            post.created_at
-          ).toLocaleString('zh-CN')}`
-          pushTextBlock(header, 'bold 16px sans-serif', 24, '#333')
-
-          const parsed = getParsedPost(post.id)
-          for (const segment of parsed.segments) {
-            if (segment.type === 'html') {
-              pushTextBlock(
-                extractTextFromHtml(segment.html),
-                '14px sans-serif',
-                22,
-                '#222'
-              )
-            } else if (segment.type === 'lightbox') {
-              const imageUrl =
-                segment.image.downloadHref ||
-                segment.image.href ||
-                segment.image.thumbSrc ||
-                ''
-              if (!imageUrl) continue
-              const img = await loadImageFromUrl(imageUrl)
-              if (!img) continue
-              const scale = Math.min(1, contentWidth / img.width)
-              blocks.push({
-                type: 'image',
-                img,
-                width: img.width * scale,
-                height: img.height * scale
-              })
-            } else if (segment.type === 'carousel') {
-              for (const image of segment.images) {
-                const imageUrl = image.downloadHref || image.href || image.thumbSrc || ''
-                if (!imageUrl) continue
-                const img = await loadImageFromUrl(imageUrl)
-                if (!img) continue
-                const scale = Math.min(1, contentWidth / img.width)
-                blocks.push({
-                  type: 'image',
-                  img,
-                  width: img.width * scale,
-                  height: img.height * scale
-                })
-              }
-            } else if (segment.type === 'image-grid') {
-              for (const column of segment.columns) {
-                for (const image of column) {
-                  const imageUrl = image.downloadHref || image.href || image.thumbSrc || ''
-                  if (!imageUrl) continue
-                  const img = await loadImageFromUrl(imageUrl)
-                  if (!img) continue
-                  const scale = Math.min(1, contentWidth / img.width)
-                  blocks.push({
-                    type: 'image',
-                    img,
-                    width: img.width * scale,
-                    height: img.height * scale
-                  })
-                }
-              }
-            }
-          }
-        }
-
-        const spacing = 16
-        let totalHeight = padding
-        for (const block of blocks) {
-          if (block.type === 'text') {
-            totalHeight += block.lines.length * block.lineHeight + spacing
-          } else {
-            totalHeight += block.height + spacing
-          }
-        }
-        totalHeight += padding
-
-        const MAX_HEIGHT = 60000
-        if (totalHeight > MAX_HEIGHT) {
-          throw new Error('主题过长，导出失败（超出高度限制）')
-        }
-
-        const canvas = document.createElement('canvas')
-        canvas.width = canvasWidth
-        canvas.height = Math.max(1, Math.round(totalHeight))
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          throw new Error('无法创建画布')
-        }
-
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-        let cursorY = padding
-        for (const block of blocks) {
-          if (block.type === 'text') {
-            ctx.font = block.font
-            ctx.fillStyle = block.color
-            for (const line of block.lines) {
-              if (line) {
-                ctx.fillText(line, padding, cursorY)
-              }
-              cursorY += block.lineHeight
-            }
-            cursorY += spacing
-          } else {
-            ctx.drawImage(block.img, padding, cursorY, block.width, block.height)
-            cursorY += block.height + spacing
-          }
-        }
-
-        const blob = await new Promise<Blob | null>(resolve =>
-          canvas.toBlob(resolve, 'image/webp', 0.92)
-        )
-        if (!blob) {
-          throw new Error('生成图片失败')
-        }
-
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `topic-${props.topic.id}.webp`
-        a.click()
-        URL.revokeObjectURL(url)
-        message.success('主题存档已下载')
-      } catch (error: any) {
-        console.warn('[DiscourseBrowser] archive failed:', error)
-        message.error(error?.message || '生成存档失败')
-      } finally {
-        isArchiving.value = false
-        hide()
-      }
     }
 
     const firstPost = computed(() => {
@@ -683,77 +344,15 @@ export default defineComponent({
       }
     }
 
-    const fetchAiSummaryData = async () => {
-      const fetchOnce = async () => {
-        return await fetchAiTopicSummary(props.baseUrl, props.topic.id)
-      }
-      let result = await fetchOnce()
-      let summary = result.summary
-      if (!summary?.summarized_text) {
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        result = await fetchOnce()
-        summary = result.summary
-      }
-
-      if (result.status === 404) {
-        aiAvailable.value = false
-        message.info('当前站点未启用 AI 总结')
-        return
-      }
-
-      if (!summary?.summarized_text) {
-        aiErrorMessage.value = 'AI 总结暂不可用，请稍后再试'
-        message.warning(aiErrorMessage.value)
-        return
-      }
-
-      aiSummary.value = summary.summarized_text
-      aiMeta.value = {
-        algorithm: summary.algorithm,
-        updatedAt: summary.updated_at,
-        outdated: summary.outdated,
-        canRegenerate: summary.can_regenerate,
-        newPosts: summary.new_posts_since_summary
-      }
-    }
-
-    const handleAiSummary = async () => {
-      if (aiLoading.value) return
-      aiErrorMessage.value = ''
-      showAiSummaryModal.value = true
-      aiLoading.value = true
-      try {
-        await fetchAiSummaryData()
-      } catch (error) {
-        console.warn('[DiscourseBrowser] ai summary failed:', error)
-        aiErrorMessage.value = 'AI 总结获取失败'
-        message.error(aiErrorMessage.value)
-      } finally {
-        aiLoading.value = false
-      }
-    }
-
-    const handleAiRegenerate = async () => {
-      if (aiLoading.value) return
-      aiErrorMessage.value = ''
-      aiLoading.value = true
-      try {
-        const result = await requestAiTopicSummaryRegenerate(props.baseUrl, props.topic.id)
-        if (result.status === 404) {
-          aiAvailable.value = false
-          message.info('当前站点未启用 AI 总结')
-          return
-        }
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        await fetchAiSummaryData()
-      } catch (error) {
-        console.warn('[DiscourseBrowser] ai summary regenerate failed:', error)
-        aiErrorMessage.value = 'AI 总结重新生成失败'
-        message.error(aiErrorMessage.value)
-      } finally {
-        aiLoading.value = false
-      }
-    }
+    const { isArchiving, archiveTopicAsWebp } = useTopicArchive({
+      baseUrl: props.baseUrl,
+      topicId: props.topic.id,
+      topicTitle: props.topic?.title,
+      getPosts: () => props.topic?.post_stream?.posts || [],
+      getParsedPost,
+      pageFetch,
+      notify: message
+    })
 
     const lastAutoScrollKey = ref<string | null>(null)
 
