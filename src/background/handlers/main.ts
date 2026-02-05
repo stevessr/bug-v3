@@ -19,3 +19,4 @@ export {
   invalidateCache
 } from './handlersImpl'
 export { setupScheduledLikes, cleanupScheduledLikes } from './scheduledLikes'
+export { setupScheduledBrowse, cleanupScheduledBrowse } from './scheduledBrowse'

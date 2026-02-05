@@ -7,7 +7,8 @@ import {
   setupContextMenu,
   setupPeriodicCleanup,
   setupMcpBridge,
-  setupScheduledLikes
+  setupScheduledLikes,
+  setupScheduledBrowse
 } from './utils/handlers'
 
 console.log('Emoji Extension Background script loaded.')
@@ -20,3 +21,4 @@ setupContextMenu()
 setupPeriodicCleanup()
 setupMcpBridge()
 setupScheduledLikes()
+setupScheduledBrowse()

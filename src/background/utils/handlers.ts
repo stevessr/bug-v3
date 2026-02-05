@@ -18,7 +18,8 @@ import {
   handleGetEmojiSetting,
   handleProxyFetchRequest,
   handleProxyImageRequest,
-  setupScheduledLikes
+  setupScheduledLikes,
+  setupScheduledBrowse
 } from '../handlers/main.ts'
 import {
   setMcpBridgeDisabled,
@@ -37,7 +38,14 @@ import type {
 } from '@/types/messages'
 
 // Re-export setup functions so background entry can import them from ./handlers
-export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup, setupMcpBridge, setupScheduledLikes }
+export {
+  setupStorageChangeListener,
+  setupContextMenu,
+  setupPeriodicCleanup,
+  setupMcpBridge,
+  setupScheduledLikes,
+  setupScheduledBrowse
+}
 
 export function setupMessageListener() {
   const chromeAPI = getChromeAPI()

@@ -17,6 +17,7 @@ import CollaborativeUploadSettings from '../components/CollaborativeUploadSettin
 import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
 import ScheduledLikesSettings from '../components/ScheduledLikesSettings.vue'
+import ScheduledBrowseSettings from '../components/ScheduledBrowseSettings.vue'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
@@ -252,6 +253,15 @@ onMounted(async () => {
               "
               @update:scheduledLikeTasks="
                 (v: any[]) => emojiStore.updateSettings({ scheduledLikeTasks: v })
+              "
+            />
+            <ScheduledBrowseSettings
+              :settings="emojiStore.settings"
+              @update:enableScheduledBrowse="
+                (v: boolean) => emojiStore.updateSettings({ enableScheduledBrowse: v })
+              "
+              @update:scheduledBrowseTasks="
+                (v: any[]) => emojiStore.updateSettings({ scheduledBrowseTasks: v })
               "
             />
           </div>

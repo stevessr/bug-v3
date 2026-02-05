@@ -72,6 +72,9 @@ export interface AppSettings {
   // 计划任务：定时点赞功能（试验性功能）
   enableScheduledLikes?: boolean // 启用计划任务点赞功能
   scheduledLikeTasks?: ScheduledLikeTask[] // 计划任务列表
+  // 计划任务：自动浏览功能（试验性功能）
+  enableScheduledBrowse?: boolean // 启用自动浏览功能
+  scheduledBrowseTasks?: ScheduledBrowseTask[] // 自动浏览任务列表
 }
 
 export interface EmojiGroup {
@@ -139,6 +142,37 @@ export interface ScheduledLikeTask {
   maxLikesPerRun: number // 每次执行最多点赞数
   lastRunAt?: number // 上次执行时间戳
   nextRunAt?: number // 下次执行时间戳
+  totalLikes: number // 累计点赞数
+  createdAt: number
+  updatedAt: number
+}
+
+// 浏览策略
+export type BrowseStrategy = 'latest' | 'new' | 'unread' | 'top'
+
+// 计划任务：自动浏览任务
+export interface ScheduledBrowseTask {
+  id: string
+  name: string // 任务名称
+  baseUrl: string // Discourse 站点 URL
+  enabled: boolean
+  intervalMinutes: number // 执行间隔（分钟）
+  browseStrategy: BrowseStrategy // 浏览策略
+  minTopicsPerRun: number // 每次最少浏览话题数
+  maxTopicsPerRun: number // 每次最多浏览话题数
+  minReadTime: number // 每个话题最小阅读时间（秒）
+  maxReadTime: number // 每个话题最大阅读时间（秒）
+  // 点赞设置
+  enableRandomLike: boolean // 是否启用随机点赞
+  likeChance: number // 点赞概率 0-100
+  maxLikesPerRun: number // 每次执行最多点赞数
+  // 延迟设置
+  minDelayBetweenTopics: number // 话题间最小延迟（秒）
+  maxDelayBetweenTopics: number // 话题间最大延迟（秒）
+  // 统计
+  lastRunAt?: number
+  nextRunAt?: number
+  totalTopicsRead: number // 累计浏览话题数
   totalLikes: number // 累计点赞数
   createdAt: number
   updatedAt: number

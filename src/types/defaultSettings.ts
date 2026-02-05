@@ -61,5 +61,8 @@ export const defaultSettings: AppSettings = {
   enableLinuxDoLikeCounter: false, // 默认禁用 LinuxDo 点赞计数器
   // 计划任务：定时点赞功能（试验性功能）
   enableScheduledLikes: false, // 默认禁用计划任务点赞
-  scheduledLikeTasks: [] // 默认空任务列表
+  scheduledLikeTasks: [], // 默认空任务列表
+  // 计划任务：自动浏览功能（试验性功能）
+  enableScheduledBrowse: false, // 默认禁用自动浏览
+  scheduledBrowseTasks: [] // 默认空任务列表
 }
