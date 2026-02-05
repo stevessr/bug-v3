@@ -16,6 +16,7 @@ export default defineComponent({
     topicId: { type: Number, required: true },
     parsed: { type: Object as () => ParsedContent, required: true },
     isParentExpanded: { type: Boolean, required: true },
+    isHighlighted: { type: Boolean, default: false },
     currentUsername: { type: String, default: null },
     isArchiving: { type: Boolean, default: false },
     isPostLiked: {
@@ -139,7 +140,10 @@ export default defineComponent({
     return () => (
       <div
         data-post-number={props.post.post_number}
-        class="post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+        class={[
+          'post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800',
+          props.isHighlighted ? 'post-item--highlighted' : ''
+        ]}
       >
         <div class="post-header mb-3">
           <img

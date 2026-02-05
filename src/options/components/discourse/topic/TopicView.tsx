@@ -326,7 +326,7 @@ export default defineComponent({
       notify: message
     })
 
-    const { timelinePostNumber, scrollToPost } = useTopicNavigation({
+    const { timelinePostNumber, highlightedPostNumber, scrollToPost } = useTopicNavigation({
       baseUrl: props.baseUrl,
       topicId: props.topic.id,
       postsListRef,
@@ -372,6 +372,7 @@ export default defineComponent({
                 topicId={activeTopic.value.id}
                 currentUser={props.currentUser}
                 currentUsername={props.currentUsername}
+                highlightedPostNumber={highlightedPostNumber.value}
                 getParsedPost={getParsedPost}
                 isParentExpanded={isParentExpanded}
                 isParentLoading={isParentLoading}

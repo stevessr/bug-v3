@@ -12,6 +12,7 @@ export default defineComponent({
     topicId: { type: Number, required: true },
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
     currentUsername: { type: String, default: null },
+    highlightedPostNumber: { type: Number as () => number | null, default: null },
     getParsedPost: { type: Function as () => (postId: number) => ParsedContent, required: true },
     isParentExpanded: { type: Function as () => (postNumber: number) => boolean, required: true },
     isParentLoading: { type: Function as () => (postNumber: number) => boolean, required: true },
@@ -92,6 +93,7 @@ export default defineComponent({
               topicId={props.topicId}
               parsed={props.getParsedPost(post.id)}
               isParentExpanded={props.isParentExpanded(post.post_number)}
+              isHighlighted={props.highlightedPostNumber === post.post_number}
               isPostLiked={props.isPostLiked}
               getReactionCount={props.getReactionCount}
               isLiking={props.isLiking(post.id)}

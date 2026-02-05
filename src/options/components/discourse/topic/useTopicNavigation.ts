@@ -24,6 +24,10 @@ export function useTopicNavigation(options: {
   const timelinePostNumber = ref(1)
   const timelineTicking = ref(false)
   const lastAutoScrollKey = ref<string | null>(null)
+  const highlightedPostNumber = ref<number | null>(null)
+  const highlightTimeoutId = ref<number | null>(null)
+
+  const HIGHLIGHT_DURATION_MS = 2000
 
   const scrollElementIntoView = (
     el: HTMLElement,
@@ -75,10 +79,25 @@ export function useTopicNavigation(options: {
     const container = list.closest('.content-area') as HTMLElement | null
     if (target) {
       scrollElementIntoView(target, container, behavior)
+      triggerHighlight(postNumber)
       return
     }
     const nearest = findNearestPostElement(postNumber)
-    if (nearest) scrollElementIntoView(nearest, container, behavior)
+    if (nearest) {
+      scrollElementIntoView(nearest, container, behavior)
+      triggerHighlight(postNumber)
+    }
+  }
+
+  const triggerHighlight = (postNumber: number) => {
+    if (highlightTimeoutId.value !== null) {
+      clearTimeout(highlightTimeoutId.value)
+    }
+    highlightedPostNumber.value = postNumber
+    highlightTimeoutId.value = window.setTimeout(() => {
+      highlightedPostNumber.value = null
+      highlightTimeoutId.value = null
+    }, HIGHLIGHT_DURATION_MS)
   }
 
   const updateTimelineFromScroll = () => {
@@ -259,6 +278,7 @@ export function useTopicNavigation(options: {
 
   return {
     timelinePostNumber,
+    highlightedPostNumber,
     scrollToPost,
     updateTimelineFromScroll
   }
