@@ -1,6 +1,7 @@
 import { getCurrentThemeMode } from './antdTheme'
+import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR } from './md3Theme'
 
-import { storageGet } from '@/utils/simpleStorage'
+import { getSettings, storageGet } from '@/utils/simpleStorage'
 
 async function applyTheme() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -10,7 +11,7 @@ async function applyTheme() {
   const theme = (await storageGet<string>('theme')) || 'system'
   const root = document.documentElement
 
-  function apply(theme: string) {
+  async function apply(theme: string) {
     let finalTheme = theme
     if (theme === 'system') {
       finalTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
@@ -35,15 +36,34 @@ async function applyTheme() {
         }
       })
     )
+
+    const settings = await getSettings()
+    const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
+    applyMd3ThemeToRoot(primaryColor, finalTheme)
   }
 
-  apply(theme)
+  void apply(theme)
+
+  window.addEventListener('theme-colors-changed', event => {
+    const detail = (event as CustomEvent).detail as { primaryColor?: string } | undefined
+    const mode =
+      (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light'
+    applyMd3ThemeToRoot(detail?.primaryColor || DEFAULT_PRIMARY_COLOR, mode)
+  })
+
+  window.addEventListener('theme-changed', async event => {
+    const detail = (event as CustomEvent).detail as { mode?: 'light' | 'dark' } | undefined
+    const settings = await getSettings()
+    const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
+    const mode = detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
+    applyMd3ThemeToRoot(primaryColor, mode || 'light')
+  })
 
   // 监听系统主题变化
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
     const currentTheme = (await storageGet<string>('theme')) || 'system'
     if (currentTheme === 'system') {
-      apply('system')
+      void apply('system')
     }
   })
 }

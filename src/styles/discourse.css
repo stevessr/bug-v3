@@ -3,15 +3,39 @@ body,
 #app {
   height: 100%;
   margin: 0;
+  background: var(--theme-background);
+  color: var(--theme-on-background);
 }
 
 .discourse-standalone {
   height: 100%;
-  background: #f8fafc;
+  background: var(--theme-background);
+  color: var(--theme-on-background);
   padding: 0;
   box-sizing: border-box;
 }
 
 .discourse-standalone__browser {
   height: 100%;
+}
+
+.discourse-browser {
+  background: var(--theme-background);
+  color: var(--theme-on-background);
+  border-color: var(--theme-outline-variant);
+}
+
+.discourse-browser a {
+  color: var(--theme-primary);
+}
+
+.discourse-browser a:hover {
+  color: var(--theme-primary);
+}
+
+.discourse-browser .ant-btn-primary,
+.discourse-browser .is-primary {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: var(--theme-on-primary);
 }

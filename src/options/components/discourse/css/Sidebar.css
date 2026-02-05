@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  background: rgba(148, 163, 184, 0.15);
+  background: color-mix(in srgb, var(--theme-on-surface-variant) 12%, transparent);
   flex-shrink: 0;
 }
 
@@ -37,58 +37,58 @@
   padding: 6px 12px;
   font-size: 13px;
   border-radius: 6px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  color: #6b7280;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-outline-variant);
+  color: var(--theme-on-surface-variant);
   cursor: pointer;
   transition: all 0.15s;
   font-weight: 500;
 }
 
 .topic-type-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  color: #374151;
+  background: var(--theme-surface-variant);
+  border-color: var(--theme-outline);
+  color: var(--theme-on-surface);
 }
 
 .topic-type-btn.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: var(--theme-on-primary);
 }
 
 .dark .topic-type-btn {
-  background: #374151;
-  border-color: #4b5563;
-  color: #d1d5db;
+  background: var(--theme-surface);
+  border-color: var(--theme-outline-variant);
+  color: var(--theme-on-surface-variant);
 }
 
 .dark .topic-type-btn:hover {
-  background: #4b5563;
-  border-color: #6b7280;
-  color: #f3f4f6;
+  background: var(--theme-surface-variant);
+  border-color: var(--theme-outline);
+  color: var(--theme-on-surface);
 }
 
 .dark .topic-type-btn.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: var(--theme-on-primary);
 }
 
 /* Quick links */
 .quick-link {
-  color: #6b7280;
+  color: var(--theme-on-surface-variant);
   transition: color 0.15s;
 }
 
 .quick-link:hover {
-  color: #1d4ed8;
+  color: var(--theme-primary);
 }
 
 .dark .quick-link {
-  color: #cbd5f5;
+  color: var(--theme-on-surface-variant);
 }
 
 .dark .quick-link:hover {
-  color: #93c5fd;
+  color: var(--theme-primary);
 }

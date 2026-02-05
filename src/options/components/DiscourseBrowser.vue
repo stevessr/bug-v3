@@ -171,6 +171,40 @@ const homeNavItems: Array<{ key: string; label: string; type: 'path' | 'list'; v
   { key: 'bookmarks', label: '书签', type: 'list', value: 'bookmarks' }
 ]
 
+const topicSortKey = ref<'replies' | 'views' | 'activity' | null>(null)
+const topicSortOrder = ref<'asc' | 'desc'>('desc')
+
+const getTopicActivityTime = (topic: DiscourseTopic | SuggestedTopic) => {
+  const value =
+    (topic as DiscourseTopic).last_posted_at ||
+    (topic as DiscourseTopic).bumped_at ||
+    (topic as DiscourseTopic).created_at
+  return value ? new Date(value).getTime() : 0
+}
+
+const getTopicReplies = (topic: DiscourseTopic | SuggestedTopic) => {
+  const count = (topic as DiscourseTopic).posts_count ?? 0
+  return Math.max(count - 1, 0)
+}
+
+const sortedTopics = computed(() => {
+  const topics = activeTab.value?.topics || []
+  if (!topicSortKey.value) return topics
+  const order = topicSortOrder.value === 'asc' ? 1 : -1
+  const keyed = topics.map((topic, index) => ({ topic, index }))
+  const getValue = (topic: DiscourseTopic | SuggestedTopic) => {
+    if (topicSortKey.value === 'replies') return getTopicReplies(topic)
+    if (topicSortKey.value === 'views') return topic.views || 0
+    return getTopicActivityTime(topic)
+  }
+  keyed.sort((a, b) => {
+    const diff = getValue(a.topic) - getValue(b.topic)
+    if (diff === 0) return a.index - b.index
+    return diff * order
+  })
+  return keyed.map(item => item.topic)
+})
+
 const isHomeNavActive = (item: (typeof homeNavItems)[number]) => {
   const tab = activeTab.value
   if (!tab) return false
@@ -188,6 +222,15 @@ const handleHomeNavClick = (item: (typeof homeNavItems)[number]) => {
     return
   }
   handleChangeTopicListType(item.value as TopicListType)
+}
+
+const handleTopicSort = (key: 'replies' | 'views' | 'activity') => {
+  if (topicSortKey.value === key) {
+    topicSortOrder.value = topicSortOrder.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  topicSortKey.value = key
+  topicSortOrder.value = 'desc'
 }
 
 // Scroll event handler (infinite loading for all view types)
@@ -1004,10 +1047,13 @@ onUnmounted(() => {
 
           <div v-if="activeTab.topics.length > 0" class="space-y-4">
             <TopicList
-              :topics="activeTab.topics"
+              :topics="sortedTopics"
               :baseUrl="baseUrl"
               :categories="activeTab.categories"
               :users="activeTab.activeUsers"
+              :sortKey="topicSortKey"
+              :sortOrder="topicSortOrder"
+              @sort="handleTopicSort"
               @click="handleTopicClick"
               @middleClick="handleMiddleClick"
               @openUser="handleUserClick"
@@ -1128,10 +1174,13 @@ onUnmounted(() => {
             </a-button>
           </div>
           <TopicList
-            :topics="activeTab.topics"
+            :topics="sortedTopics"
             :baseUrl="baseUrl"
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
+            :sortKey="topicSortKey"
+            :sortOrder="topicSortOrder"
+            @sort="handleTopicSort"
             @click="handleTopicClick"
             @middleClick="handleMiddleClick"
             @openUser="handleUserClick"
@@ -1178,10 +1227,13 @@ onUnmounted(() => {
           </div>
 
           <TopicList
-            :topics="activeTab.topics"
+            :topics="sortedTopics"
             :baseUrl="baseUrl"
             :categories="activeTab.categories"
             :users="activeTab.activeUsers"
+            :sortKey="topicSortKey"
+            :sortOrder="topicSortOrder"
+            @sort="handleTopicSort"
             @click="handleTopicClick"
             @middleClick="handleMiddleClick"
             @openUser="handleUserClick"
@@ -1416,12 +1468,12 @@ onUnmounted(() => {
 }
 
 .discourse-body {
-  background: #f8f3e6;
+  background: var(--theme-background);
   padding: 16px;
 }
 
 .dark .discourse-body {
-  background: #0f172a;
+  background: var(--theme-background);
 }
 
 .home-nav {
@@ -1430,14 +1482,14 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 12px;
-  background: #fff7e8;
-  border: 1px solid #e6dcc9;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-outline-variant);
   border-radius: 10px;
 }
 
 .dark .home-nav {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--theme-surface);
+  border-color: var(--theme-outline-variant);
 }
 
 .home-nav-links {
@@ -1449,7 +1501,7 @@ onUnmounted(() => {
 .home-nav-link {
   border: 1px solid transparent;
   background: transparent;
-  color: #4b5563;
+  color: var(--theme-on-surface-variant);
   font-size: 13px;
   padding: 6px 12px;
   border-radius: 9999px;
@@ -1458,28 +1510,28 @@ onUnmounted(() => {
 }
 
 .home-nav-link:hover {
-  background: #f1e7d3;
+  background: var(--theme-surface-variant);
 }
 
 .home-nav-link.active {
-  background: #e6d3af;
-  border-color: #e0c89c;
-  color: #7c4a12;
+  background: var(--theme-primary-container);
+  border-color: var(--theme-primary);
+  color: var(--theme-on-primary-container);
   font-weight: 600;
 }
 
 .dark .home-nav-link {
-  color: #d1d5db;
+  color: var(--theme-on-surface-variant);
 }
 
 .dark .home-nav-link:hover {
-  background: rgba(148, 163, 184, 0.2);
+  background: var(--theme-surface-variant);
 }
 
 .dark .home-nav-link.active {
-  background: rgba(59, 130, 246, 0.35);
-  border-color: rgba(59, 130, 246, 0.6);
-  color: #f8fafc;
+  background: var(--theme-primary-container);
+  border-color: var(--theme-primary);
+  color: var(--theme-on-primary-container);
 }
 
 .home-nav-actions {
@@ -1509,16 +1561,16 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-outline-variant);
   border-radius: 12px;
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.2);
   overflow: hidden;
 }
 
 .dark .floating-shell {
-  background: #111827;
-  border-color: #374151;
+  background: var(--theme-surface);
+  border-color: var(--theme-outline-variant);
 }
 
 .floating-bar {
@@ -1527,14 +1579,14 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 8px 12px;
   font-size: 12px;
-  color: #6b7280;
-  background: rgba(148, 163, 184, 0.12);
+  color: var(--theme-on-surface-variant);
+  background: var(--theme-surface-variant);
   cursor: move;
 }
 
 .dark .floating-bar {
-  color: #cbd5f5;
-  background: rgba(30, 41, 59, 0.6);
+  color: var(--theme-on-surface-variant);
+  background: var(--theme-surface-variant);
 }
 
 .floating-close {
@@ -1556,6 +1608,6 @@ onUnmounted(() => {
   height: 16px;
   align-self: flex-end;
   cursor: se-resize;
-  background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.8) 50%);
+  background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--theme-outline) 80%, transparent) 50%);
 }
 </style>

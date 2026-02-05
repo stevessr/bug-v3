@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 
 import type {
   DiscourseTopic,
@@ -18,9 +18,17 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     categories: { type: Array as () => DiscourseCategory[], default: undefined },
     users: { type: Array as () => DiscourseUser[], default: undefined },
-    showHeader: { type: Boolean, default: true }
+    showHeader: { type: Boolean, default: true },
+    sortKey: {
+      type: String as PropType<'replies' | 'views' | 'activity' | null>,
+      default: null
+    },
+    sortOrder: {
+      type: String as PropType<'asc' | 'desc'>,
+      default: 'desc'
+    }
   },
-  emits: ['click', 'middleClick', 'openUser', 'openTag'],
+  emits: ['click', 'middleClick', 'openUser', 'openTag', 'sort'],
   setup(props, { emit }) {
     const handleClick = (topic: DiscourseTopic | SuggestedTopic) => {
       emit('click', topic)
@@ -100,15 +108,39 @@ export default defineComponent({
       emit('openTag', label)
     }
 
+    const handleSortClick = (key: 'replies' | 'views' | 'activity') => {
+      emit('sort', key)
+    }
+
+    const getSortIndicator = (key: 'replies' | 'views' | 'activity') => {
+      if (props.sortKey !== key) return ''
+      return props.sortOrder === 'asc' ? '↑' : '↓'
+    }
+
     return () => (
       <div class="topic-list">
         {props.showHeader && (
           <div class="topic-list-header">
             <div class="topic-list-header-main">主题</div>
             <div class="topic-list-header-stats">
-              <span>回复</span>
-              <span>浏览</span>
-              <span>活动</span>
+              <button
+                class={['topic-sort-btn', props.sortKey === 'replies' ? 'active' : '']}
+                onClick={() => handleSortClick('replies')}
+              >
+                回复 {getSortIndicator('replies')}
+              </button>
+              <button
+                class={['topic-sort-btn', props.sortKey === 'views' ? 'active' : '']}
+                onClick={() => handleSortClick('views')}
+              >
+                浏览 {getSortIndicator('views')}
+              </button>
+              <button
+                class={['topic-sort-btn', props.sortKey === 'activity' ? 'active' : '']}
+                onClick={() => handleSortClick('activity')}
+              >
+                活动 {getSortIndicator('activity')}
+              </button>
             </div>
           </div>
         )}

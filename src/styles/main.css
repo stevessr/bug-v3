@@ -7,6 +7,24 @@
     --scrollbar-track-color: #f9fafb;
     --scrollbar-thumb-color: #e5e7eb;
     --scrollbar-thumb-hover-color: #d1d5db;
+    --theme-primary: #1890ff;
+    --theme-on-primary: #ffffff;
+    --theme-primary-container: #d9ecff;
+    --theme-on-primary-container: #001d36;
+    --theme-secondary: #4f6fad;
+    --theme-on-secondary: #ffffff;
+    --theme-surface: #fdfbff;
+    --theme-on-surface: #1a1c1e;
+    --theme-surface-variant: #e6e0e9;
+    --theme-on-surface-variant: #48454e;
+    --theme-outline: #79747e;
+    --theme-outline-variant: #cac4d0;
+    --theme-background: #fdfbff;
+    --theme-on-background: #1a1c1e;
+    --theme-accent: #1890ff;
+    --theme-accent-strong: #d9ecff;
+    --theme-danger: #b3261e;
+    --theme-on-danger: #ffffff;
   }
 
   .dark {

@@ -1,13 +1,13 @@
 .topic-list {
-  border: 1px solid #e6dcc9;
+  border: 1px solid var(--theme-outline-variant);
   border-radius: 10px;
   overflow: hidden;
-  background: #fffdf7;
+  background: var(--theme-surface);
 }
 
 .dark .topic-list {
-  background: #111827;
-  border-color: #374151;
+  background: var(--theme-surface);
+  border-color: var(--theme-outline-variant);
 }
 
 .topic-list-header {
@@ -16,9 +16,9 @@
   justify-content: space-between;
   padding: 10px 16px;
   font-size: 12px;
-  color: #6b7280;
-  background: #f5f0e6;
-  border-bottom: 1px solid #e6dcc9;
+  color: var(--theme-on-surface-variant);
+  background: var(--theme-surface-variant);
+  border-bottom: 1px solid var(--theme-outline-variant);
 }
 
 .topic-list-header-main {
@@ -26,9 +26,9 @@
 }
 
 .dark .topic-list-header {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: #374151;
-  color: #cbd5f5;
+  background: var(--theme-surface-variant);
+  border-color: var(--theme-outline-variant);
+  color: var(--theme-on-surface-variant);
 }
 
 .topic-list-header-stats {
@@ -38,13 +38,35 @@
   justify-content: flex-end;
 }
 
+.topic-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--theme-on-surface-variant);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.topic-sort-btn:hover {
+  color: var(--theme-primary);
+}
+
+.topic-sort-btn.active {
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+
 .topic-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 14px 16px;
-  border-bottom: 1px solid #efe5d4;
+  border-bottom: 1px solid var(--theme-outline-variant);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -54,11 +76,11 @@
 }
 
 .topic-row:hover {
-  background: #fff9ee;
+  background: var(--theme-primary-container);
 }
 
 .dark .topic-row:hover {
-  background: rgba(30, 41, 59, 0.4);
+  background: var(--theme-primary-container);
 }
 
 .topic-main {
@@ -74,7 +96,7 @@
 
 .topic-title {
   font-weight: 600;
-  color: #1f2937;
+  color: var(--theme-on-surface);
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
@@ -82,7 +104,7 @@
 }
 
 .dark .topic-title {
-  color: #f3f4f6;
+  color: var(--theme-on-surface);
 }
 
 .topic-meta {
@@ -104,13 +126,13 @@
   align-items: center;
   gap: 32px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-on-surface-variant);
   min-width: 220px;
   justify-content: flex-end;
 }
 
 .dark .topic-numbers {
-  color: #cbd5f5;
+  color: var(--theme-on-surface-variant);
 }
 
 .topic-stat-time {
@@ -123,15 +145,15 @@
   align-items: center;
   padding: 0 6px;
   border-radius: 9999px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
+  background: color-mix(in srgb, var(--theme-primary) 16%, transparent);
+  color: var(--theme-primary);
   font-weight: 600;
   font-size: 12px;
 }
 
 .dark .topic-unread {
-  background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
+  background: color-mix(in srgb, var(--theme-primary) 24%, transparent);
+  color: var(--theme-primary);
 }
 
 .topic-category {
@@ -156,11 +178,11 @@
 }
 
 .topic-tag:hover {
-  background-color: rgba(156, 163, 175, 0.2);
+  background-color: color-mix(in srgb, var(--theme-on-surface-variant) 12%, transparent);
 }
 
 .dark .topic-tag:hover {
-  background-color: rgba(75, 85, 99, 0.3);
+  background-color: color-mix(in srgb, var(--theme-on-surface-variant) 18%, transparent);
 }
 
 .poster-avatar {
@@ -174,7 +196,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1px solid rgba(156, 163, 175, 0.3);
+  border: 1px solid var(--theme-outline-variant);
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -183,11 +205,11 @@
 .poster-avatar:hover .avatar {
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-color: rgba(59, 130, 246, 0.5);
+  border-color: var(--theme-primary);
 }
 
 .poster-avatar.latest-poster .avatar {
-  border-color: rgba(59, 130, 246, 0.8);
+  border-color: var(--theme-primary);
 }
 
 .topic-posters {

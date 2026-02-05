@@ -1,3 +1,4 @@
+import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR } from '@/styles/md3Theme'
 import { storageGet, storageSet } from '@/utils/simpleStorage'
 import type { AppSettings } from '@/types/type'
 
@@ -63,8 +64,10 @@ export function useThemeManager(options: {
   const updateCustomPrimaryColor = async (color: string) => {
     updateSettings({ customPrimaryColor: color })
 
-    // 触发主题变化事件以更新 Ant Design Vue 主题
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    applyMd3ThemeToRoot(color || DEFAULT_PRIMARY_COLOR, currentMode)
+
+    // 触发主题变化事件以更新 Ant Design Vue 主题
     const savedTheme = (await storageGet<string>('theme')) || 'system'
 
     window.dispatchEvent(
@@ -72,6 +75,14 @@ export function useThemeManager(options: {
         detail: {
           mode: currentMode,
           theme: savedTheme
+        }
+      })
+    )
+
+    window.dispatchEvent(
+      new CustomEvent('theme-colors-changed', {
+        detail: {
+          primaryColor: color
         }
       })
     )
