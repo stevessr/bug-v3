@@ -243,10 +243,11 @@ export default defineComponent({
     }
 
     const runEmojiSearch = async (query: string) => {
+      const normalizedQuery = query.trim().replace(/^:+|:+$/g, '')
       emojiLoading.value = true
       try {
         await ensureEmojiShortcodesLoaded(props.baseUrl)
-        emojiOptions.value = searchEmojis(query).slice(0, 200)
+        emojiOptions.value = searchEmojis(normalizedQuery).slice(0, 200)
       } catch {
         emojiOptions.value = []
       } finally {
