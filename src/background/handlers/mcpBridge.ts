@@ -48,6 +48,61 @@ let connectionListeners: Array<(status: McpConnectionStatus) => void> = []
 export type McpConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
 let currentStatus: McpConnectionStatus = 'disconnected'
 
+async function getDiscourseCsrfToken(baseUrl: string): Promise<string> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI) return ''
+
+  let host = ''
+  let origin = ''
+  try {
+    const parsed = new URL(baseUrl)
+    host = parsed.hostname
+    origin = parsed.origin
+  } catch {
+    return ''
+  }
+
+  try {
+    if (chromeAPI.cookies?.getAll) {
+      const cookies = await chromeAPI.cookies.getAll({ domain: host })
+      const tokenCookie = cookies.find((cookie: any) =>
+        ['csrf_token', 'XSRF-TOKEN', '_csrf'].includes(cookie.name)
+      )
+      if (tokenCookie?.value) return tokenCookie.value
+    }
+  } catch {
+    // ignore cookie failures
+  }
+
+  try {
+    if (chromeAPI.tabs?.query) {
+      const tabs = await chromeAPI.tabs.query({ url: `${origin}/*` })
+      for (const tab of tabs) {
+        if (!tab.id) continue
+        try {
+          const resp = await chromeAPI.tabs.sendMessage(tab.id, { type: 'GET_CSRF_TOKEN' })
+          if (resp?.csrfToken) return resp.csrfToken
+        } catch {
+          continue
+        }
+      }
+    }
+  } catch {
+    // ignore tab failures
+  }
+
+  return ''
+}
+
+async function buildDiscourseHeaders(
+  baseUrl: string,
+  headers: Record<string, string>
+): Promise<Record<string, string>> {
+  const csrfToken = await getDiscourseCsrfToken(baseUrl)
+  if (csrfToken) headers['X-CSRF-Token'] = csrfToken
+  return headers
+}
+
 function getWsUrl(): string {
   return `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`
 }
@@ -782,14 +837,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       const reactionId = String(args.reactionId || 'heart')
 
       const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
+      const headers = await buildDiscourseHeaders(baseUrl, {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'Discourse-Logged-In': 'true'
+      })
       const response = await fetch(url, {
         method: 'PUT',
         credentials: 'include',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/json',
-          'Discourse-Logged-In': 'true'
-        }
+        headers
       })
 
       if (!response.ok) {
@@ -891,14 +947,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       })
 
       const url = `${baseUrl}/topics/timings`
+      const headers = await buildDiscourseHeaders(baseUrl, {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      })
       const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Discourse-Logged-In': 'true'
-        },
+        headers,
         body: new URLSearchParams({
           topic_id: String(topicId),
           topic_time: String(timeMs),
@@ -927,14 +984,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         body.reply_to_post_number = replyToPostNumber
       }
 
+      const headers = await buildDiscourseHeaders(baseUrl, {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      })
       const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Discourse-Logged-In': 'true'
-        },
+        headers,
         body: JSON.stringify(body)
       })
 
@@ -960,10 +1018,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       const username = String(args.username || '')
       const filter = String(args.filter || '4,5')
       const limit = Number(args.limit || 20)
+      const offset = Number(args.offset || 0)
 
       if (!username) throw new Error('缺少 username')
 
-      const url = `${baseUrl}/user_actions.json?username=${encodeURIComponent(username)}&filter=${filter}&limit=${limit}`
+      const url = new URL(`${baseUrl}/user_actions.json`)
+      url.searchParams.set('username', username)
+      url.searchParams.set('filter', filter)
+      url.searchParams.set('limit', String(limit))
+      if (offset > 0) url.searchParams.set('offset', String(offset))
       const response = await fetch(url, {
         credentials: 'include',
         headers: { Accept: 'application/json' }
@@ -975,6 +1038,9 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
 
       const data = await response.json()
       return {
+        success: true,
+        offset,
+        limit,
         user_actions: (data.user_actions || []).map((a: any) => ({
           post_id: a.post_id,
           post_number: a.post_number,
@@ -1016,14 +1082,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         timings[String(pn)] = readTimeMs
       })
 
+      const timingsHeaders = await buildDiscourseHeaders(baseUrl, {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      })
       await fetch(`${baseUrl}/topics/timings`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Discourse-Logged-In': 'true'
-        },
+        headers: timingsHeaders,
         body: new URLSearchParams({
           topic_id: String(topicId),
           topic_time: String(readTimeMs),
@@ -1045,14 +1112,15 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
 
         if (unlikedPost) {
           const likeUrl = `${baseUrl}/discourse-reactions/posts/${unlikedPost.id}/custom-reactions/heart/toggle.json`
+          const likeHeaders = await buildDiscourseHeaders(baseUrl, {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            'Discourse-Logged-In': 'true'
+          })
           const likeResponse = await fetch(likeUrl, {
             method: 'PUT',
             credentials: 'include',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest',
-              'Content-Type': 'application/json',
-              'Discourse-Logged-In': 'true'
-            }
+            headers: likeHeaders
           })
           liked = likeResponse.ok
         }
@@ -1067,6 +1135,57 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         },
         readTimeMs,
         liked
+      }
+    }
+
+    case 'discourse.search': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const query = String(args.q || args.query || '').trim()
+      const page = Number(args.page || 0)
+      const type = args.type ? String(args.type) : ''
+
+      if (!query) throw new Error('缺少搜索关键词 q')
+
+      const searchUrl = new URL(`${baseUrl}/search.json`)
+      searchUrl.searchParams.set('q', query)
+      if (page > 0) searchUrl.searchParams.set('page', String(page))
+      if (type) searchUrl.searchParams.set('type', type)
+
+      const response = await fetch(searchUrl.toString(), {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`搜索失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      const topics = (data.topics || []).map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        slug: t.slug,
+        posts_count: t.posts_count,
+        views: t.views,
+        like_count: t.like_count,
+        created_at: t.created_at,
+        last_posted_at: t.last_posted_at
+      }))
+      const posts = (data.posts || []).map((p: any) => ({
+        id: p.id,
+        topic_id: p.topic_id,
+        post_number: p.post_number,
+        username: p.username,
+        created_at: p.created_at,
+        blurb: p.blurb
+      }))
+
+      return {
+        success: true,
+        query,
+        page,
+        topics,
+        posts
       }
     }
 

@@ -128,6 +128,20 @@ const TOOLS = [
     }
   },
   {
+    name: 'discourse_search',
+    description: '搜索 Discourse 内容',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
+        q: { type: 'string', description: '搜索关键词' },
+        page: { type: 'number', description: '页码', default: 0 },
+        type: { type: 'string', description: '搜索类型（可选）' }
+      },
+      required: ['q']
+    }
+  },
+  {
     name: 'discourse_get_user_activity',
     description: '获取用户活动记录',
     inputSchema: {
@@ -136,7 +150,8 @@ const TOOLS = [
         baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
         username: { type: 'string', description: '用户名' },
         filter: { type: 'string', description: '过滤类型', default: '4,5' },
-        limit: { type: 'number', description: '数量限制', default: 20 }
+        limit: { type: 'number', description: '数量限制', default: 20 },
+        offset: { type: 'number', description: '偏移量（跳过数量）', default: 0 }
       },
       required: ['username']
     }
