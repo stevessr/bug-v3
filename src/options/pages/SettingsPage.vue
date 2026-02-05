@@ -16,6 +16,7 @@ import CloudDataPreview from '../components/CloudDataPreview.vue'
 import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
 import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
+import ScheduledLikesSettings from '../components/ScheduledLikesSettings.vue'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
@@ -235,13 +236,22 @@ onMounted(async () => {
           key="experimentalFeatures"
           tab="试验性特性"
         >
-          <div class="py-4">
+          <div class="py-4 space-y-6">
             <ChatMultiReactorSettings
               :settings="emojiStore.settings"
               @update:enableChatMultiReactor="updateEnableChatMultiReactor"
               @update:chatMultiReactorEmojis="updateChatMultiReactorEmojis"
               @update:enableLinuxDoLikeCounter="
                 (v: boolean) => emojiStore.updateSettings({ enableLinuxDoLikeCounter: v })
+              "
+            />
+            <ScheduledLikesSettings
+              :settings="emojiStore.settings"
+              @update:enableScheduledLikes="
+                (v: boolean) => emojiStore.updateSettings({ enableScheduledLikes: v })
+              "
+              @update:scheduledLikeTasks="
+                (v: any[]) => emojiStore.updateSettings({ scheduledLikeTasks: v })
               "
             />
           </div>

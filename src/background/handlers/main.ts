@@ -18,3 +18,4 @@ export {
   setupPeriodicCleanup,
   invalidateCache
 } from './handlersImpl'
+export { setupScheduledLikes, cleanupScheduledLikes } from './scheduledLikes'

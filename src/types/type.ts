@@ -69,6 +69,9 @@ export interface AppSettings {
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器（试验性功能）
   enableLinuxDoLikeCounter?: boolean // 启用 LinuxDo 点赞计数器（显示当日剩余点赞次数）
+  // 计划任务：定时点赞功能（试验性功能）
+  enableScheduledLikes?: boolean // 启用计划任务点赞功能
+  scheduledLikeTasks?: ScheduledLikeTask[] // 计划任务列表
 }
 
 export interface EmojiGroup {
@@ -123,4 +126,20 @@ export interface Tag {
   color?: string // 标签颜色
   createdAt: number
   usageCount?: number // 标签使用次数
+}
+
+// 计划任务：定时点赞任务
+export interface ScheduledLikeTask {
+  id: string
+  username: string // 目标用户名
+  baseUrl: string // Discourse 站点 URL (如 https://linux.do)
+  enabled: boolean // 是否启用
+  cronExpression?: string // Cron 表达式（预留，暂不使用）
+  intervalMinutes: number // 执行间隔（分钟）
+  maxLikesPerRun: number // 每次执行最多点赞数
+  lastRunAt?: number // 上次执行时间戳
+  nextRunAt?: number // 下次执行时间戳
+  totalLikes: number // 累计点赞数
+  createdAt: number
+  updatedAt: number
 }
