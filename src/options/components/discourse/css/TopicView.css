@@ -9,12 +9,12 @@
 
 .topic-aside__card {
   border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.9);
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .dark .topic-aside__card {
@@ -176,14 +176,14 @@
 
 .topic-timeline {
   border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.9);
-  padding: 14px 12px;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  min-height: 360px;
+  gap: 10px;
+  min-height: 280px;
 }
 
 .dark .topic-timeline {
@@ -192,9 +192,9 @@
 }
 
 .topic-timeline__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   background: rgba(148, 163, 184, 0.2);
   display: flex;
   align-items: center;
@@ -202,8 +202,8 @@
 }
 
 .topic-timeline__icon-svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   color: #64748b;
 }
 
@@ -217,8 +217,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 220px;
-  width: 18px;
+  height: 160px;
+  width: 14px;
   position: relative;
 }
 
@@ -236,8 +236,8 @@
 .topic-timeline__thumb {
   position: absolute;
   left: 50%;
-  width: 10px;
-  height: 42px;
+  width: 8px;
+  height: 32px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
   background: #93c5fd;
@@ -260,7 +260,7 @@
 }
 
 .topic-timeline__current-count {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #0f172a;
 }
@@ -270,7 +270,7 @@
 }
 
 .topic-timeline__current-time {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
 }
 

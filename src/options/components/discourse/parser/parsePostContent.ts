@@ -19,12 +19,10 @@ import { renderSegmentsToHtml } from './renderSegmentsToHtml'
 export const parsePostContent = (cooked: string, baseUrl?: string): ParsedContent => {
   if (!cooked) return { html: '', images: [], segments: [] }
 
-  // console.log('[parsePostContent] Input length:', cooked.length)
-
-  // console.log(
-  //   '[parsePostContent] Contains carousel grid?',
-  //   cooked.includes('d-image-grid--carousel')
-  // )
+  const hasSpoiler = cooked.includes('spoiled') || cooked.includes('spoiler-blurred')
+  if (hasSpoiler) {
+    console.log('[parsePostContent] Input contains spoiler:', cooked.substring(0, 500))
+  }
 
   const processor = unified().use(rehypeStringify)
 
@@ -48,26 +46,16 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   cleanupMediaNodes(tree)
 
-  // console.log(
-  //   '[parsePostContent] After extraction - carousels:',
-  //   ctx.carousels.length,
-  //   'lightboxes:',
-  //   ctx.lightboxes.length
-  // )
-
   const html = String(processor.stringify(tree))
 
-  // console.log(
-  //   '[parsePostContent] HTML contains carousel markers:',
-  //   html.includes('__DISCOURSE_CAROUSEL_')
-  // )
+  if (hasSpoiler) {
+    console.log('[parsePostContent] Output HTML:', html.substring(0, 500))
+    console.log('[parsePostContent] Lightboxes extracted:', ctx.lightboxes.length)
+  }
 
   const segments = buildSegments(html, ctx.lightboxes, ctx.carousels, ctx.imageGrids)
 
   const fullHtml = renderSegmentsToHtml(segments)
-  const carouselSegments = segments.filter(s => s.type === 'carousel').length
-
-  // console.log('[parsePostContent] Carousel segments:', carouselSegments)
 
   return { html: fullHtml, images: ctx.images, segments, footnotes }
 }
