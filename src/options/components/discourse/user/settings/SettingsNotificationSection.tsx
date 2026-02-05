@@ -38,6 +38,7 @@ export default defineComponent({
           <div class="text-gray-500">引用回复提醒</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.notify_on_linked_posts}
             onChange={(val: boolean) => (props.form.value.notify_on_linked_posts = val)}
           />

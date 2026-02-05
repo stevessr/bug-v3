@@ -70,12 +70,14 @@ export default defineComponent({
           <div class="text-gray-500">关闭话题仍显示未读</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.topics_unread_when_closed}
             onChange={(val: boolean) => (props.form.value.topics_unread_when_closed = val)}
           />
           <div class="text-gray-500">关注优先于静音</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.watched_precedence_over_muted}
             onChange={(val: boolean) => (props.form.value.watched_precedence_over_muted = val)}
           />

@@ -18,6 +18,7 @@ import SettingsTrackingSection from './settings/SettingsTrackingSection'
 import SettingsCategorySection from './settings/SettingsCategorySection'
 import SettingsTagSection from './settings/SettingsTagSection'
 import SettingsInterfaceSection from './settings/SettingsInterfaceSection'
+import SettingsEmojiSection from './settings/SettingsEmojiSection'
 import SettingsPrivacySection from './settings/SettingsPrivacySection'
 import SettingsSaveActions from './settings/SettingsSaveActions'
 import {
@@ -31,8 +32,11 @@ import {
   notificationLevelOptions,
   titleCountModeOptions,
   textSizeOptions,
-  homepageOptions
+  homepageOptions,
+  chatQuickReactionTypeOptions
 } from './settings/options'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
+import { findEmojiByName, searchEmojis, type EmojiShortcode } from '../bbcode'
 import type { CategoryOption, PreferencesPayload, TagOption } from './settings/types'
 import '../css/UserExtrasView.css'
 
@@ -56,6 +60,9 @@ export default defineComponent({
     const tagOptions = ref<TagOption[]>([])
     const tagsLoading = ref(false)
     let tagSearchTimer: number | null = null
+    const emojiOptions = ref<EmojiShortcode[]>([])
+    const emojiLoading = ref(false)
+    let emojiSearchTimer: number | null = null
     const form = ref<PreferencesPayload>({
       email_digests: false,
       email_level: undefined,
@@ -94,7 +101,9 @@ export default defineComponent({
       watched_tags: [],
       tracked_tags: [],
       watching_first_post_tags: [],
-      muted_tags: []
+      muted_tags: [],
+      chat_quick_reaction_type: undefined,
+      chat_quick_reactions_custom: []
     })
 
     watch(
@@ -210,6 +219,18 @@ export default defineComponent({
         .filter(Boolean)
     }
 
+    const normalizeDelimitedArray = (
+      value?: string[] | string | null,
+      delimiter: string = ','
+    ) => {
+      if (!value) return []
+      if (Array.isArray(value)) return value.filter(Boolean)
+      return value
+        .split(delimiter)
+        .map(item => item.trim())
+        .filter(Boolean)
+    }
+
     const normalizeNumberArray = (value?: number[] | string | null) => {
       if (!value) return []
       if (Array.isArray(value)) {
@@ -220,6 +241,31 @@ export default defineComponent({
         .map(item => Number(item.trim()))
         .filter(item => !Number.isNaN(item))
     }
+
+    const runEmojiSearch = async (query: string) => {
+      emojiLoading.value = true
+      try {
+        await ensureEmojiShortcodesLoaded(props.baseUrl)
+        emojiOptions.value = searchEmojis(query).slice(0, 200)
+      } catch {
+        emojiOptions.value = []
+      } finally {
+        emojiLoading.value = false
+      }
+    }
+
+    const handleEmojiSearch = (query: string) => {
+      if (emojiSearchTimer) window.clearTimeout(emojiSearchTimer)
+      emojiSearchTimer = window.setTimeout(() => runEmojiSearch(query), 250)
+    }
+
+    const handleEmojiDropdown = (open: boolean) => {
+      if (open && emojiOptions.value.length === 0) {
+        runEmojiSearch('')
+      }
+    }
+
+    const getEmojiOption = (value: string) => findEmojiByName(value) || null
 
     watch(
       preferences,
@@ -263,7 +309,12 @@ export default defineComponent({
           watched_tags: normalizeStringArray(value.watched_tags),
           tracked_tags: normalizeStringArray(value.tracked_tags),
           watching_first_post_tags: normalizeStringArray(value.watching_first_post_tags),
-          muted_tags: normalizeStringArray(value.muted_tags)
+          muted_tags: normalizeStringArray(value.muted_tags),
+          chat_quick_reaction_type: value.chat_quick_reaction_type ?? undefined,
+          chat_quick_reactions_custom: normalizeDelimitedArray(
+            value.chat_quick_reactions_custom,
+            '|'
+          )
         }
       },
       { immediate: true }
@@ -284,11 +335,11 @@ export default defineComponent({
           return sanitized.length === 0 ? [-1] : sanitized
         }
 
-        const encodeTags = (tags?: string[]) =>
-          (tags || [])
-            .map(tag => tag.trim())
+        const encodeDelimited = (values?: string[], delimiter: string = ',') =>
+          (values || [])
+            .map(value => value.trim())
             .filter(Boolean)
-            .join(',')
+            .join(delimiter)
 
         const payload: Record<string, any> = {
           ...form.value,
@@ -298,10 +349,14 @@ export default defineComponent({
             form.value.watched_first_post_category_ids
           ),
           muted_category_ids: encodeCategoryIds(form.value.muted_category_ids),
-          watched_tags: encodeTags(form.value.watched_tags),
-          tracked_tags: encodeTags(form.value.tracked_tags),
-          watching_first_post_tags: encodeTags(form.value.watching_first_post_tags),
-          muted_tags: encodeTags(form.value.muted_tags)
+          watched_tags: encodeDelimited(form.value.watched_tags),
+          tracked_tags: encodeDelimited(form.value.tracked_tags),
+          watching_first_post_tags: encodeDelimited(form.value.watching_first_post_tags),
+          muted_tags: encodeDelimited(form.value.muted_tags),
+          chat_quick_reactions_custom: encodeDelimited(
+            form.value.chat_quick_reactions_custom,
+            '|'
+          )
         }
 
         Object.keys(payload).forEach(key => {
@@ -395,6 +450,15 @@ export default defineComponent({
                 titleCountModeOptions={titleCountModeOptions}
                 textSizeOptions={textSizeOptions}
                 homepageOptions={homepageOptions}
+              />
+              <SettingsEmojiSection
+                form={form}
+                reactionTypeOptions={chatQuickReactionTypeOptions}
+                emojiOptions={emojiOptions}
+                emojiLoading={emojiLoading}
+                getEmojiOption={getEmojiOption}
+                onEmojiSearch={handleEmojiSearch}
+                onEmojiDropdown={handleEmojiDropdown}
               />
               <SettingsPrivacySection form={form} />
               <SettingsSaveActions saving={saving.value} onSave={handleSave} />

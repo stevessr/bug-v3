@@ -34,42 +34,49 @@ export default defineComponent({
           <div class="text-gray-500">新标签页打开外链</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.external_links_in_new_tab}
             onChange={(val: boolean) => (props.form.value.external_links_in_new_tab = val)}
           />
           <div class="text-gray-500">引用回复</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_quoting}
             onChange={(val: boolean) => (props.form.value.enable_quoting = val)}
           />
           <div class="text-gray-500">智能列表</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_smart_lists}
             onChange={(val: boolean) => (props.form.value.enable_smart_lists = val)}
           />
           <div class="text-gray-500">延迟加载</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_defer}
             onChange={(val: boolean) => (props.form.value.enable_defer = val)}
           />
           <div class="text-gray-500">等宽字体显示 Markdown</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_markdown_monospace_font}
             onChange={(val: boolean) => (props.form.value.enable_markdown_monospace_font = val)}
           />
           <div class="text-gray-500">自动取消置顶</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.automatically_unpin_topics}
             onChange={(val: boolean) => (props.form.value.automatically_unpin_topics = val)}
           />
           <div class="text-gray-500">动态图标</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.dynamic_favicon}
             onChange={(val: boolean) => (props.form.value.dynamic_favicon = val)}
           />

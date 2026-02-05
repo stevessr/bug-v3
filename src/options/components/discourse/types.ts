@@ -570,6 +570,8 @@ export interface DiscourseUserPreferences {
   muted_tags?: string[]
   allowed_pm_usernames?: string | string[]
   muted_usernames?: string | string[]
+  chat_quick_reaction_type?: string
+  chat_quick_reactions_custom?: string | string[]
 }
 
 export interface DiscourseUserSummary {

@@ -20,12 +20,14 @@ export default defineComponent({
           <div class="text-gray-500">允许私信</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.allow_private_messages}
             onChange={(val: boolean) => (props.form.value.allow_private_messages = val)}
           />
           <div class="text-gray-500">仅允许指定用户私信</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_allowed_pm_users}
             disabled={!props.form.value.allow_private_messages}
             onChange={(val: boolean) => (props.form.value.enable_allowed_pm_users = val)}
@@ -33,12 +35,14 @@ export default defineComponent({
           <div class="text-gray-500">隐藏个人资料</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.hide_profile}
             onChange={(val: boolean) => (props.form.value.hide_profile = val)}
           />
           <div class="text-gray-500">隐藏在线状态</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.hide_presence}
             onChange={(val: boolean) => (props.form.value.hide_presence = val)}
           />

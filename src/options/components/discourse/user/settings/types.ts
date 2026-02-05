@@ -1,6 +1,6 @@
 import type { DiscourseUserPreferences } from '../../types'
 
-export type PreferencesPayload = Pick<
+type PreferencesPayloadBase = Pick<
   DiscourseUserPreferences,
   | 'email_digests'
   | 'email_level'
@@ -40,7 +40,13 @@ export type PreferencesPayload = Pick<
   | 'tracked_tags'
   | 'watching_first_post_tags'
   | 'muted_tags'
+  | 'chat_quick_reaction_type'
+  | 'chat_quick_reactions_custom'
 >
+
+export type PreferencesPayload = Omit<PreferencesPayloadBase, 'chat_quick_reactions_custom'> & {
+  chat_quick_reactions_custom?: string[]
+}
 
 export type CategoryOption = {
   value: number

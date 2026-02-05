@@ -72,12 +72,14 @@ export default defineComponent({
           <div class="text-gray-500">邮件中包含回复指向链接</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.email_in_reply_to}
             onChange={(val: boolean) => (props.form.value.email_in_reply_to = val)}
           />
           <div class="text-gray-500">邮件摘要</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.email_digests}
             onChange={(val: boolean) => (props.form.value.email_digests = val)}
           />
@@ -97,6 +99,7 @@ export default defineComponent({
           <div class="text-gray-500">摘要包含 TL0</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.include_tl0_in_digests}
             disabled={!props.form.value.email_digests}
             onChange={(val: boolean) => (props.form.value.include_tl0_in_digests = val)}
@@ -104,6 +107,7 @@ export default defineComponent({
           <div class="text-gray-500">邮件列表模式</div>
           <Switch
             size="small"
+            class="justify-self-start md:justify-self-end"
             checked={props.form.value.mailing_list_mode}
             onChange={(val: boolean) => (props.form.value.mailing_list_mode = val)}
           />

@@ -81,3 +81,8 @@ export const homepageOptions = [
   { value: 7, label: '未看' },
   { value: 8, label: '热帖' }
 ]
+
+export const chatQuickReactionTypeOptions = [
+  { value: 'frequent', label: '常用' },
+  { value: 'custom', label: '自定义' }
+]
