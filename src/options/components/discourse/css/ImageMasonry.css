@@ -18,6 +18,22 @@
   border-radius: 8px;
   overflow: hidden;
   background: rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.post-masonry-link-tsx:hover .post-masonry-frame-tsx {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.dark .post-masonry-frame-tsx {
+  border-color: rgba(100, 116, 139, 0.4);
+}
+
+.dark .post-masonry-link-tsx:hover .post-masonry-frame-tsx {
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
 }
 
 .post-masonry-image-tsx {

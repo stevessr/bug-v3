@@ -30,6 +30,10 @@ const isInsideQuote = (ancestors: Element[]) => {
   return ancestors.some(el => hasClass(el, 'quote'))
 }
 
+const isInsideSpoiler = (ancestors: Element[]) => {
+  return ancestors.some(el => hasClass(el, 'spoiled') || hasClass(el, 'spoiler-blurred'))
+}
+
 export const extractCarousels = (root: Node, ctx: ParseContext) => {
   //console.log('[extractCarousels] Starting carousel extraction')
   let foundCount = 0
@@ -38,6 +42,7 @@ export const extractCarousels = (root: Node, ctx: ParseContext) => {
     if (!isElement(node)) return
     if (isInsideOnebox(ancestors)) return
     if (isInsideQuote(ancestors)) return
+    if (isInsideSpoiler(ancestors)) return
 
     const isCarousel = isCarouselContainer(node)
     /*

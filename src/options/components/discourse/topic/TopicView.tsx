@@ -66,7 +66,14 @@ export default defineComponent({
     const summaryMode = ref(false)
     const summaryLoading = ref(false)
     const viewStats = ref<{ views: number | null; users: number | null } | null>(null)
+    const viewDetails = ref<{
+      views: Array<Record<string, any>>
+      users: Array<Record<string, any>>
+    } | null>(null)
     const likeStats = ref<number | null>(null)
+    const likeDetails = ref<
+      Array<{ postNumber: number; likeCount: number; username: string; blurb?: string }>
+    >([])
 
     const activeTopic = computed(() => topicOverride.value ?? props.topic)
 
@@ -93,9 +100,14 @@ export default defineComponent({
           views,
           users
         }
+        viewDetails.value = {
+          views: (data?.views ?? data?.view_stats ?? []) as Array<Record<string, any>>,
+          users: (data?.users ?? data?.unique_users ?? data?.stats ?? []) as Array<Record<string, any>>
+        }
       } catch (error) {
         console.warn('[DiscourseBrowser] load view stats failed:', error)
         viewStats.value = null
+        viewDetails.value = null
       }
     }
 
@@ -110,9 +122,16 @@ export default defineComponent({
           return total + (Number.isNaN(value) ? 0 : value)
         }, 0)
         likeStats.value = totalLikes || null
+        likeDetails.value = posts.slice(0, 8).map(post => ({
+          postNumber: Number(post?.post_number ?? post?.postNumber ?? 0),
+          likeCount: Number(post?.like_count ?? post?.likeCount ?? 0),
+          username: String(post?.username ?? post?.user?.username ?? ''),
+          blurb: post?.blurb ?? post?.excerpt ?? ''
+        }))
       } catch (error) {
         console.warn('[DiscourseBrowser] load like stats failed:', error)
         likeStats.value = null
+        likeDetails.value = []
       }
     }
 
@@ -353,14 +372,6 @@ export default defineComponent({
         <div class="topic-main flex-1 min-w-0 space-y-4">
           <TopicHeader
             topic={activeTopic.value}
-            baseUrl={props.baseUrl}
-            viewCount={viewCount.value}
-            likeCount={likeCount.value}
-            userCount={userCount.value}
-            participants={participants.value}
-            summaryMode={summaryMode.value}
-            summaryLoading={summaryLoading.value}
-            onToggleSummary={handleToggleSummary}
           />
 
           {/* Posts list */}
@@ -450,9 +461,19 @@ export default defineComponent({
 
         <TopicAside
           posts={activeTopic.value.post_stream?.posts || []}
+          baseUrl={props.baseUrl}
           maxPostNumber={maxPostNumber.value}
           currentPostNumber={timelinePostNumber.value}
           onJump={scrollToPost}
+          viewCount={viewCount.value}
+          likeCount={likeCount.value}
+          userCount={userCount.value}
+          viewDetails={viewDetails.value}
+          likeDetails={likeDetails.value}
+          participants={participants.value}
+          summaryMode={summaryMode.value}
+          summaryLoading={summaryLoading.value}
+          onToggleSummary={handleToggleSummary}
         />
 
         <AiSummaryModal
