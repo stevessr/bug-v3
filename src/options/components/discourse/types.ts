@@ -52,6 +52,8 @@ export interface BrowserTab {
   followFeedHasMore: boolean
   // Topic jump
   targetPostNumber: number | null
+  // Topic summary mode
+  topicSummaryMode: boolean
   // Cache topic extras from initial topic JSON
   topicExtras: {
     suggested_topics?: SuggestedTopic[]

@@ -1,9 +1,4 @@
-import {
-  defineComponent,
-  computed,
-  ref,
-  watch
-} from 'vue'
+import { defineComponent, computed, ref, watch } from 'vue'
 import { message, Spin } from 'ant-design-vue'
 
 import type {
@@ -47,7 +42,8 @@ export default defineComponent({
     'replyTo',
     'openQuote',
     'navigate',
-    'editPost'
+    'editPost',
+    'toggleSummaryMode'
   ],
   setup(props, { emit }) {
     const postsListRef = ref<HTMLElement | null>(null)
@@ -66,12 +62,116 @@ export default defineComponent({
       notify: message
     })
 
+    const topicOverride = ref<DiscourseTopicDetail | null>(null)
+    const summaryMode = ref(false)
+    const summaryLoading = ref(false)
+    const viewStats = ref<{ views: number | null; users: number | null } | null>(null)
+    const likeStats = ref<number | null>(null)
+
+    const activeTopic = computed(() => topicOverride.value ?? props.topic)
+
+    const viewCount = computed(() => viewStats.value?.views ?? activeTopic.value?.views ?? null)
+    const likeCount = computed(() => likeStats.value ?? activeTopic.value?.like_count ?? null)
+    const participants = computed(() => activeTopic.value?.details?.participants || [])
+
+    const sumStats = (items?: Array<Record<string, any>> | null) => {
+      if (!items?.length) return null
+      return items.reduce((total, item) => {
+        const value = Number(item?.count ?? item?.views ?? item?.value ?? 0)
+        return total + (Number.isNaN(value) ? 0 : value)
+      }, 0)
+    }
+
+    const fetchViewStats = async (topicId: number) => {
+      try {
+        const result = await pageFetch<any>(`${props.baseUrl}/t/${topicId}/view-stats.json`)
+        const data = extractData(result)
+        const views = sumStats(data?.views ?? data?.view_stats ?? null)
+        const users = sumStats(data?.users ?? data?.unique_users ?? data?.stats ?? null)
+        viewStats.value = {
+          views,
+          users
+        }
+      } catch (error) {
+        console.warn('[DiscourseBrowser] load view stats failed:', error)
+        viewStats.value = null
+      }
+    }
+
+    const fetchLikeStats = async (topicId: number) => {
+      try {
+        const query = encodeURIComponent(`" " topic:${topicId} order:likes`)
+        const result = await pageFetch<any>(`${props.baseUrl}/search.json?q=${query}`)
+        const data = extractData(result)
+        const posts = (data?.posts || []) as Array<Record<string, any>>
+        const totalLikes = posts.reduce((total, post) => {
+          const value = Number(post?.like_count ?? post?.likeCount ?? 0)
+          return total + (Number.isNaN(value) ? 0 : value)
+        }, 0)
+        likeStats.value = totalLikes || null
+      } catch (error) {
+        console.warn('[DiscourseBrowser] load like stats failed:', error)
+        likeStats.value = null
+      }
+    }
+
+    const fetchTopicStats = async (topicId: number) => {
+      await Promise.all([fetchViewStats(topicId), fetchLikeStats(topicId)])
+    }
+
+    const updateTopicOverride = (data: DiscourseTopicDetail | null, mode: 'summary' | 'full') => {
+      topicOverride.value = data
+      summaryMode.value = mode === 'summary'
+      emit('toggleSummaryMode', summaryMode.value)
+    }
+
+    const handleToggleSummary = async () => {
+      if (summaryLoading.value) return
+      summaryLoading.value = true
+      try {
+        if (summaryMode.value) {
+          const targetPostNumber = props.targetPostNumber ?? props.topic.last_read_post_number ?? 1
+          const endpoint = `${props.baseUrl}/t/${props.topic.id}/${targetPostNumber}.json?forceLoad=true`
+          const result = await pageFetch<any>(endpoint)
+          const data = extractData(result)
+          if (data?.id) {
+            updateTopicOverride(data as DiscourseTopicDetail, 'full')
+          } else {
+            updateTopicOverride(null, 'full')
+          }
+        } else {
+          const endpoint = `${props.baseUrl}/t/${props.topic.id}.json?filter=summary`
+          const result = await pageFetch<any>(endpoint)
+          const data = extractData(result)
+          if (data?.id) {
+            updateTopicOverride(data as DiscourseTopicDetail, 'summary')
+          }
+        }
+      } catch (error) {
+        console.warn('[DiscourseBrowser] toggle summary failed:', error)
+        message.error('切换热门回复失败')
+      } finally {
+        summaryLoading.value = false
+      }
+    }
+
+    watch(
+      () => props.topic.id,
+      topicId => {
+        topicOverride.value = null
+        summaryMode.value = false
+        emit('toggleSummaryMode', false)
+        void fetchTopicStats(topicId)
+      },
+      { immediate: true }
+    )
+
     // Parse posts and cache results
     const parsedPosts = computed(() => {
-      if (!props.topic?.post_stream?.posts) return new Map<number, ParsedContent>()
+      if (!activeTopic.value?.post_stream?.posts) return new Map<number, ParsedContent>()
 
       const map = new Map<number, ParsedContent>()
-      for (const post of props.topic.post_stream.posts) {
+      for (const post of activeTopic.value.post_stream.posts) {
         map.set(post.id, parsePostContent(post.cooked, props.baseUrl))
       }
       return map
@@ -95,7 +195,7 @@ export default defineComponent({
     } = usePostRelations({
       baseUrl: props.baseUrl,
       topicId: props.topic.id,
-      posts: props.topic.post_stream?.posts || [],
+      getPosts: () => activeTopic.value?.post_stream?.posts || [],
       pageFetch,
       extractData,
       parsePostContent
@@ -141,20 +241,20 @@ export default defineComponent({
     }
 
     const firstPost = computed(() => {
-      if (!props.topic?.post_stream?.posts) return null
+      if (!activeTopic.value?.post_stream?.posts) return null
       return (
-        props.topic.post_stream.posts.find((item: DiscoursePost) => item.post_number === 1) ||
-        props.topic.post_stream.posts[0] ||
+        activeTopic.value.post_stream.posts.find((item: DiscoursePost) => item.post_number === 1) ||
+        activeTopic.value.post_stream.posts[0] ||
         null
       )
     })
 
     const maxPostNumber = computed(() => {
       return (
-        props.topic?.highest_post_number ||
-        props.topic?.posts_count ||
-        props.topic?.post_stream?.stream?.length ||
-        props.topic?.post_stream?.posts?.length ||
+        activeTopic.value?.highest_post_number ||
+        activeTopic.value?.posts_count ||
+        activeTopic.value?.post_stream?.stream?.length ||
+        activeTopic.value?.post_stream?.posts?.length ||
         1
       )
     })
@@ -205,6 +305,9 @@ export default defineComponent({
       try {
         await setTopicNotificationLevel(props.baseUrl, props.topic.id, level)
         props.topic.notification_level = level
+        if (topicOverride.value) {
+          topicOverride.value.notification_level = level
+        }
         message.success('通知等级已更新')
       } catch (error) {
         console.warn('[DiscourseBrowser] update notification level failed:', error)
@@ -247,15 +350,24 @@ export default defineComponent({
     return () => (
       <div class="topic-view flex gap-4">
         <div class="topic-main flex-1 min-w-0 space-y-4">
-          <TopicHeader topic={props.topic} />
+          <TopicHeader
+            topic={activeTopic.value}
+            baseUrl={props.baseUrl}
+            viewCount={viewCount.value}
+            likeCount={likeCount.value}
+            participants={participants.value}
+            summaryMode={summaryMode.value}
+            summaryLoading={summaryLoading.value}
+            onToggleSummary={handleToggleSummary}
+          />
 
           {/* Posts list */}
-          {props.topic.post_stream?.posts ? (
+          {activeTopic.value.post_stream?.posts ? (
             <div ref={postsListRef}>
               <TopicPostsList
-                posts={props.topic.post_stream.posts}
+                posts={activeTopic.value.post_stream.posts}
                 baseUrl={props.baseUrl}
-                topicId={props.topic.id}
+                topicId={activeTopic.value.id}
                 currentUser={props.currentUser}
                 currentUsername={props.currentUsername}
                 getParsedPost={getParsedPost}
@@ -291,7 +403,7 @@ export default defineComponent({
           )}
 
           {/* Loading more indicator */}
-          {props.isLoadingMore && (
+          {!summaryMode.value && props.isLoadingMore && (
             <div class="flex items-center justify-center py-4">
               <Spin />
               <span class="ml-2 text-gray-500">加载更多帖子...</span>
@@ -299,15 +411,17 @@ export default defineComponent({
           )}
 
           {/* End of posts indicator */}
-          {!props.hasMorePosts && props.topic.post_stream?.posts?.length && (
-            <div class="text-center text-gray-400 py-4 text-sm">
-              已加载全部 {props.topic.post_stream.posts.length} 条帖子
-            </div>
-          )}
+          {!summaryMode.value &&
+            !props.hasMorePosts &&
+            activeTopic.value.post_stream?.posts?.length && (
+              <div class="text-center text-gray-400 py-4 text-sm">
+                已加载全部 {activeTopic.value.post_stream.posts.length} 条帖子
+              </div>
+            )}
 
           <TopicFooter
             notificationLevel={
-              props.topic.notification_level ?? props.topic.details?.notification_level ?? null
+              activeTopic.value.notification_level ?? activeTopic.value.details?.notification_level ?? null
             }
             bookmarked={!!firstPost.value?.bookmarked}
             canAssign={
@@ -324,15 +438,15 @@ export default defineComponent({
           />
 
           <TopicExtras
-            suggested={props.topic.suggested_topics || []}
-            related={props.topic.related_topics || []}
+            suggested={activeTopic.value.suggested_topics || []}
+            related={activeTopic.value.related_topics || []}
             baseUrl={props.baseUrl}
             onOpen={handleSuggestedClick}
           />
         </div>
 
         <TopicAside
-          posts={props.topic.post_stream?.posts || []}
+          posts={activeTopic.value.post_stream?.posts || []}
           maxPostNumber={maxPostNumber.value}
           currentPostNumber={timelinePostNumber.value}
           onJump={scrollToPost}

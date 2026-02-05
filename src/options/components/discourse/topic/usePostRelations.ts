@@ -9,7 +9,7 @@ type ParsePost = typeof import('../utils').parsePostContent
 export function usePostRelations(options: {
   baseUrl: string
   topicId: number
-  posts: DiscoursePost[]
+  getPosts: () => DiscoursePost[]
   pageFetch: PageFetch
   extractData: ExtractData
   parsePostContent: ParsePost
@@ -39,7 +39,7 @@ export function usePostRelations(options: {
   }
 
   const getParentPostByNumber = (postNumber: number): DiscoursePost | null => {
-    const local = options.posts.find(post => post.post_number === postNumber)
+    const local = options.getPosts().find(post => post.post_number === postNumber)
     if (local) return local
     return parentPostCache.value.get(postNumber) || null
   }
@@ -100,7 +100,7 @@ export function usePostRelations(options: {
   const fetchRepliesForPost = async (post: DiscoursePost) => {
     if (!options.topicId) return
     const postNumber = post.post_number
-    const localReplies = options.posts.filter(p => p.reply_to_post_number === postNumber) || []
+    const localReplies = options.getPosts().filter(p => p.reply_to_post_number === postNumber) || []
 
     const replies = [...localReplies]
 

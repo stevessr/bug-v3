@@ -131,6 +131,7 @@ export function useDiscourseBrowser() {
       followFeedPage: 0,
       followFeedHasMore: false,
       targetPostNumber: null,
+      topicSummaryMode: false,
       topicExtras: null,
       lastTimingSentAt: undefined,
       lastTimingTopicId: undefined,

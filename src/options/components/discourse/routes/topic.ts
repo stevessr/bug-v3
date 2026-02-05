@@ -26,6 +26,7 @@ export async function loadTopic(
 
   if (data) {
     tab.currentTopic = data as DiscourseTopicDetail
+    tab.topicSummaryMode = false
     tab.topicExtras = {
       suggested_topics: tab.currentTopic.suggested_topics,
       related_topics: tab.currentTopic.related_topics
@@ -144,7 +145,9 @@ export async function loadMorePosts(
   direction: 'up' | 'down' = 'down'
 ) {
   const tab = activeTab.value
-  if (!tab || !tab.currentTopic || isLoadingMore.value || !tab.hasMorePosts) return
+  if (!tab || !tab.currentTopic || tab.topicSummaryMode || isLoadingMore.value || !tab.hasMorePosts) {
+    return
+  }
 
   const stream = tab.currentTopic.post_stream?.stream || []
   if (stream.length === 0) {

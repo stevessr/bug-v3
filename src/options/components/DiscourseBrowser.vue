@@ -690,6 +690,11 @@ const handleReplyTo = (payload: { postNumber: number; username: string }) => {
   composerMode.value = 'reply'
 }
 
+const handleToggleTopicSummaryMode = (isSummary: boolean) => {
+  if (!activeTab.value) return
+  activeTab.value.topicSummaryMode = isSummary
+}
+
 const handleReplyPosted = () => {
   composerMode.value = null
   replyTarget.value = null
@@ -1183,6 +1188,7 @@ onUnmounted(() => {
         @openQuote="handleQuoteClick"
         @navigate="handleContentNavigation"
         @editPost="handleEditPost"
+        @toggleSummaryMode="handleToggleTopicSummaryMode"
       />
 
       <!-- User profile view -->
