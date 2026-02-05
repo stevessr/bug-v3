@@ -2,7 +2,7 @@ import { getChromeAPI } from '../utils/main'
 
 import type { BrowseStrategy } from '@/types/type'
 
-const HOST_NAME = 'com.bugv3.mcp'
+const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 7465
 
 type McpToolCallMessage = {
@@ -19,20 +19,13 @@ type McpToolResultMessage = {
   error?: string
 }
 
-type McpConfigMessage = {
-  type: 'MCP_CONFIG'
-  port: number
-}
-
-type McpHelloMessage = {
-  type: 'MCP_HELLO'
-  extensionId: string
-  version: string
-}
-
-let port: chrome.runtime.Port | null = null
-let reconnectTimer: number | null = null
+let ws: WebSocket | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let disabled = false
+
+function getWsUrl(): string {
+  return `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`
+}
 
 function clearReconnectTimer() {
   if (reconnectTimer !== null) {
@@ -46,62 +39,40 @@ function scheduleReconnect() {
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
     connect()
-  }, 2000)
+  }, 5000)
 }
 
 export function setMcpBridgeDisabled(value: boolean) {
   disabled = value
-  if (disabled && port) {
+  if (disabled && ws) {
     try {
-      port.disconnect()
+      ws.close()
     } catch {
       // ignore
     }
-    port = null
+    ws = null
   }
 }
 
 export async function testMcpBridge(): Promise<{ ok: boolean; error?: string }> {
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI?.runtime?.connectNative) {
-    return { ok: false, error: 'Native Messaging 不可用' }
-  }
   if (disabled) {
     return { ok: false, error: 'MCP 桥接已关闭' }
   }
+
+  // Test HTTP health endpoint
   try {
-    const testPort = chromeAPI.runtime.connectNative(HOST_NAME)
-    let finished = false
-    return await new Promise(resolve => {
-      const timer = setTimeout(() => {
-        if (finished) return
-        finished = true
-        try {
-          testPort.disconnect()
-        } catch {
-          // ignore
-        }
-        resolve({ ok: true })
-      }, 800)
-      testPort.onMessage.addListener(() => {
-        if (finished) return
-        finished = true
-        clearTimeout(timer)
-        try {
-          testPort.disconnect()
-        } catch {
-          // ignore
-        }
-        resolve({ ok: true })
-      })
-      testPort.onDisconnect.addListener(() => {
-        if (finished) return
-        finished = true
-        clearTimeout(timer)
-        const err = chromeAPI.runtime.lastError?.message
-        resolve({ ok: false, error: err || 'Native host 断开' })
-      })
+    const healthUrl = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/health`
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000)
     })
+
+    if (!response.ok) {
+      return { ok: false, error: `HTTP ${response.status}` }
+    }
+
+    const data = await response.json()
+    return { ok: data.ok === true, error: data.ok ? undefined : 'MCP Server 未就绪' }
   } catch (error: any) {
     return { ok: false, error: error?.message || '连接失败' }
   }
@@ -961,66 +932,90 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
   }
 }
 
-function postConfig(port: chrome.runtime.Port, chromeAPI: typeof chrome) {
-  const config: McpConfigMessage = {
-    type: 'MCP_CONFIG',
-    port: DEFAULT_PORT
-  }
-  port.postMessage(config)
-
-  const hello: McpHelloMessage = {
-    type: 'MCP_HELLO',
-    extensionId: chromeAPI.runtime.id,
-    version: chromeAPI.runtime.getManifest().version
-  }
-  port.postMessage(hello)
-}
-
 async function connect() {
   const chromeAPI = getChromeAPI()
-  if (!chromeAPI?.runtime?.connectNative) return
+  if (!chromeAPI) return
   if (disabled) return
 
   clearReconnectTimer()
+
+  // Close existing connection if any
+  if (ws) {
+    try {
+      ws.close()
+    } catch {
+      // ignore
+    }
+    ws = null
+  }
+
+  const wsUrl = getWsUrl()
+  console.log('[MCP] Connecting to WebSocket:', wsUrl)
+
   try {
-    port = chromeAPI.runtime.connectNative(HOST_NAME)
+    ws = new WebSocket(wsUrl)
   } catch (error) {
-    console.warn('[MCP] failed to connect native host', error)
-    setMcpBridgeDisabled(true)
+    console.warn('[MCP] Failed to create WebSocket connection', error)
+    scheduleReconnect()
     return
   }
 
-  if (!port) return
+  ws.onopen = () => {
+    console.log('[MCP] WebSocket connected')
+  }
 
-  postConfig(port, chromeAPI)
+  ws.onmessage = async (event) => {
+    try {
+      const message: McpToolCallMessage = JSON.parse(event.data)
+      if (!message || message.type !== 'MCP_TOOL_CALL') return
 
-  port.onMessage.addListener(async (message: McpToolCallMessage) => {
-    if (!message || message.type !== 'MCP_TOOL_CALL') return
-    const response: McpToolResultMessage = {
-      type: 'MCP_TOOL_RESULT',
-      id: message.id
-    }
-    try {
-      response.result = await handleToolCall(chromeAPI, message)
-    } catch (error: any) {
-      response.error = error?.message || 'Tool call failed'
-    }
-    try {
-      port?.postMessage(response)
+      console.log('[MCP] Received tool call:', message.tool)
+
+      const response: McpToolResultMessage = {
+        type: 'MCP_TOOL_RESULT',
+        id: message.id
+      }
+
+      try {
+        response.result = await handleToolCall(chromeAPI, message)
+      } catch (error: any) {
+        response.error = error?.message || 'Tool call failed'
+        console.warn('[MCP] Tool call error:', response.error)
+      }
+
+      try {
+        ws?.send(JSON.stringify(response))
+      } catch (error) {
+        console.warn('[MCP] Failed to send tool response', error)
+      }
     } catch (error) {
-      console.warn('[MCP] failed to send tool response', error)
+      console.warn('[MCP] Failed to parse WebSocket message', error)
     }
-  })
+  }
 
-  port.onDisconnect.addListener(() => {
-    if (chromeAPI.runtime.lastError) {
-      setMcpBridgeDisabled(true)
-    }
-    port = null
+  ws.onclose = () => {
+    console.log('[MCP] WebSocket disconnected')
+    ws = null
     scheduleReconnect()
-  })
+  }
+
+  ws.onerror = (error) => {
+    console.warn('[MCP] WebSocket error:', error)
+  }
 }
 
 export function setupMcpBridge() {
   void connect()
+}
+
+export function getMcpConnectionStatus(): 'connected' | 'connecting' | 'disconnected' {
+  if (!ws) return 'disconnected'
+  switch (ws.readyState) {
+    case WebSocket.CONNECTING:
+      return 'connecting'
+    case WebSocket.OPEN:
+      return 'connected'
+    default:
+      return 'disconnected'
+  }
 }

@@ -85,6 +85,11 @@ const copyToolName = (name: string) => {
   message.success(`已复制: ${name}`)
 }
 
+const copyCommand = (cmd: string) => {
+  navigator.clipboard.writeText(cmd)
+  message.success('命令已复制')
+}
+
 onMounted(() => {
   testMcpBridge()
 })
@@ -131,12 +136,32 @@ onMounted(() => {
         <p class="text-sm text-red-600 dark:text-red-400">{{ bridgeError }}</p>
       </div>
 
+      <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <h4 class="text-sm font-medium mb-2 dark:text-white">启动 MCP 服务器</h4>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          运行以下命令启动本地 MCP 服务器：
+        </p>
+        <div class="flex items-center gap-2">
+          <code class="flex-1 px-3 py-2 bg-gray-800 text-green-400 rounded font-mono text-sm">
+            pnpm mcp
+          </code>
+          <a-button size="small" @click="copyCommand('pnpm mcp')">
+            <template #icon>
+              <CopyOutlined />
+            </template>
+          </a-button>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          服务器默认运行在 http://127.0.0.1:7465
+        </p>
+      </div>
+
       <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-        <h4 class="text-sm font-medium mb-2 dark:text-white">安装说明</h4>
+        <h4 class="text-sm font-medium mb-2 dark:text-white">使用方式</h4>
         <ol class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-          <li>下载并安装 MCP Native Host 程序</li>
-          <li>确保 Native Messaging 配置正确</li>
-          <li>重启浏览器后测试连接</li>
+          <li>运行 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code> 启动服务器</li>
+          <li>扩展自动通过 WebSocket 连接 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">ws://127.0.0.1:7465/ws</code></li>
+          <li>MCP 客户端通过 Streamable HTTP 调用 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">POST http://127.0.0.1:7465/mcp</code></li>
         </ol>
       </div>
     </div>

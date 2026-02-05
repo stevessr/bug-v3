@@ -38,6 +38,8 @@
     "share": "node ./scripts/collaborative-upload-server/server.js",
     "avif": "node ./scripts/webm-to-avif-backend/server.js",
     "share:stop": "kill $(lsof -t -i:9527) 2>/dev/null || echo 'Server not running'",
+    "mcp": "node ./scripts/mcp-server.js",
+    "mcp:stop": "kill $(lsof -t -i:7465) 2>/dev/null || echo 'MCP server not running'",
     "check:all": "pnpm lint && pnpm format:check && pnpm type-check"
   },
   "dependencies": {
@@ -74,6 +76,7 @@
     "unist-util-visit": "^5.1.0",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4",
+    "ws": "^8.19.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
@@ -83,6 +86,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/chrome": "^0.1.33",
     "@types/node": "^24.10.7",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-vue": "^6.0.3",
