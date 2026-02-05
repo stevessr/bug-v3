@@ -1,5 +1,7 @@
 import { getChromeAPI } from '../utils/main'
 
+import type { BrowseStrategy } from '@/types/type'
+
 const HOST_NAME = 'com.bugv3.mcp'
 const DEFAULT_PORT = 7465
 
@@ -657,8 +659,305 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       return { success: true, waitedMs: ms }
     }
 
+    // ========== Discourse 工具 ==========
+
+    case 'discourse.like_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      if (!postId) throw new Error('缺少 postId')
+      const reactionId = String(args.reactionId || 'heart')
+
+      const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
+      const response = await fetch(url, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/json',
+          'Discourse-Logged-In': 'true'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`点赞失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      return { success: true, data }
+    }
+
+    case 'discourse.get_topic_list': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const strategy = (args.strategy || 'latest') as BrowseStrategy
+      const page = Number(args.page || 0)
+
+      const endpoints: Record<string, string> = {
+        latest: '/latest.json',
+        new: '/new.json',
+        unread: '/unread.json',
+        top: '/top.json'
+      }
+
+      const endpoint = endpoints[strategy] || endpoints.latest
+      const url = `${baseUrl}${endpoint}?page=${page}`
+
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`获取话题列表失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      const topics = data.topic_list?.topics || []
+      return {
+        topics: topics.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          slug: t.slug,
+          posts_count: t.posts_count,
+          views: t.views,
+          like_count: t.like_count,
+          created_at: t.created_at,
+          last_posted_at: t.last_posted_at
+        }))
+      }
+    }
+
+    case 'discourse.get_topic': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      if (!topicId) throw new Error('缺少 topicId')
+
+      const url = `${baseUrl}/t/${topicId}.json`
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`获取话题失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      return {
+        id: data.id,
+        title: data.title,
+        slug: data.slug,
+        posts_count: data.posts_count,
+        views: data.views,
+        like_count: data.like_count,
+        posts:
+          data.post_stream?.posts?.map((p: any) => ({
+            id: p.id,
+            post_number: p.post_number,
+            username: p.username,
+            created_at: p.created_at,
+            cooked: p.cooked,
+            liked: !!(
+              p.current_user_reaction || p.actions_summary?.find((a: any) => a.id === 2 && a.acted)
+            )
+          })) || []
+      }
+    }
+
+    case 'discourse.send_timings': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      const timeMs = Number(args.timeMs || 10000)
+      const postNumbers = Array.isArray(args.postNumbers) ? args.postNumbers : [1]
+
+      if (!topicId) throw new Error('缺少 topicId')
+
+      const timings: Record<string, number> = {}
+      postNumbers.forEach((pn: number) => {
+        timings[String(pn)] = timeMs
+      })
+
+      const url = `${baseUrl}/topics/timings`
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Discourse-Logged-In': 'true'
+        },
+        body: new URLSearchParams({
+          topic_id: String(topicId),
+          topic_time: String(timeMs),
+          timings: JSON.stringify(timings)
+        }).toString()
+      })
+
+      return { success: response.ok }
+    }
+
+    case 'discourse.create_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      const raw = String(args.raw || '')
+      const replyToPostNumber = args.replyToPostNumber ? Number(args.replyToPostNumber) : undefined
+
+      if (!topicId) throw new Error('缺少 topicId')
+      if (!raw.trim()) throw new Error('缺少回复内容 raw')
+
+      const url = `${baseUrl}/posts.json`
+      const body: Record<string, any> = {
+        topic_id: topicId,
+        raw: raw
+      }
+      if (replyToPostNumber) {
+        body.reply_to_post_number = replyToPostNumber
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Discourse-Logged-In': 'true'
+        },
+        body: JSON.stringify(body)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.errors?.join(', ') || `回复失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      return {
+        success: true,
+        post: {
+          id: data.id,
+          post_number: data.post_number,
+          topic_id: data.topic_id,
+          created_at: data.created_at
+        }
+      }
+    }
+
+    case 'discourse.get_user_activity': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const username = String(args.username || '')
+      const filter = String(args.filter || '4,5')
+      const limit = Number(args.limit || 20)
+
+      if (!username) throw new Error('缺少 username')
+
+      const url = `${baseUrl}/user_actions.json?username=${encodeURIComponent(username)}&filter=${filter}&limit=${limit}`
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`获取用户活动失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      return {
+        user_actions: (data.user_actions || []).map((a: any) => ({
+          post_id: a.post_id,
+          post_number: a.post_number,
+          topic_id: a.topic_id,
+          topic_title: a.title,
+          action_type: a.action_type,
+          created_at: a.created_at
+        }))
+      }
+    }
+
+    case 'discourse.browse_topic': {
+      // 综合浏览话题：获取详情 + 发送阅读时间 + 可选点赞
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      const readTimeMs = Number(args.readTimeMs || 10000)
+      const shouldLike = Boolean(args.like)
+
+      if (!topicId) throw new Error('缺少 topicId')
+
+      // 获取话题详情
+      const topicUrl = `${baseUrl}/t/${topicId}.json`
+      const topicResponse = await fetch(topicUrl, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!topicResponse.ok) {
+        throw new Error(`获取话题失败：HTTP ${topicResponse.status}`)
+      }
+
+      const topicData = await topicResponse.json()
+      const posts = topicData.post_stream?.posts || []
+      const postNumbers = posts.map((p: any) => p.post_number)
+
+      // 发送阅读时间
+      const timings: Record<string, number> = {}
+      postNumbers.forEach((pn: number) => {
+        timings[String(pn)] = readTimeMs
+      })
+
+      await fetch(`${baseUrl}/topics/timings`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Discourse-Logged-In': 'true'
+        },
+        body: new URLSearchParams({
+          topic_id: String(topicId),
+          topic_time: String(readTimeMs),
+          timings: JSON.stringify(timings)
+        }).toString()
+      })
+
+      let liked = false
+      if (shouldLike && posts.length > 0) {
+        // 找一个未点赞的帖子
+        const unlikedPost = posts.find((p: any) => {
+          if (p.current_user_reaction) return false
+          if (Array.isArray(p.actions_summary)) {
+            const likeAction = p.actions_summary.find((a: any) => a.id === 2)
+            if (likeAction?.acted) return false
+          }
+          return true
+        })
+
+        if (unlikedPost) {
+          const likeUrl = `${baseUrl}/discourse-reactions/posts/${unlikedPost.id}/custom-reactions/heart/toggle.json`
+          const likeResponse = await fetch(likeUrl, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Content-Type': 'application/json',
+              'Discourse-Logged-In': 'true'
+            }
+          })
+          liked = likeResponse.ok
+        }
+      }
+
+      return {
+        success: true,
+        topic: {
+          id: topicData.id,
+          title: topicData.title,
+          posts_count: topicData.posts_count
+        },
+        readTimeMs,
+        liked
+      }
+    }
+
     default:
-      throw new Error(`未知工具: ${message.tool}`)
+      throw new Error(`未知工具：${message.tool}`)
   }
 }
 

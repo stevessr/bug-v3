@@ -18,6 +18,7 @@ import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue
 import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
 import ScheduledLikesSettings from '../components/ScheduledLikesSettings.vue'
 import ScheduledBrowseSettings from '../components/ScheduledBrowseSettings.vue'
+import McpSettings from '../components/McpSettings.vue'
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
@@ -283,6 +284,12 @@ onMounted(async () => {
               @update:linuxDoSeekingActionFilter="updateLinuxDoSeekingActionFilter"
               @update:enableLinuxDoCredit="updateEnableLinuxDoCredit"
             />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="mcp" tab="MCP">
+          <div class="py-4">
+            <McpSettings />
           </div>
         </a-tab-pane>
 
