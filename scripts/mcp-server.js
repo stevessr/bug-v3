@@ -158,8 +158,9 @@ const TOOLS = [
 ]
 
 // Convert tool name: discourse_like_post -> discourse.like_post
+// Only replace the first underscore (namespace separator)
 function toExtensionToolName(name) {
-  return name.replace(/_/g, '.')
+  return name.replace(/_/, '.')
 }
 
 // State

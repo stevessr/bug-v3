@@ -30,12 +30,12 @@ const testMcpBridge = async () => {
     } else {
       bridgeStatus.value = 'disconnected'
       bridgeError.value = response?.data?.error || response?.error || '连接失败'
-      message.error(`MCP 桥接测试失败: ${bridgeError.value}`)
+      message.error(`MCP 桥接测试失败：${bridgeError.value}`)
     }
   } catch (err) {
     bridgeStatus.value = 'disconnected'
     bridgeError.value = err instanceof Error ? err.message : '未知错误'
-    message.error(`MCP 桥接测试失败: ${bridgeError.value}`)
+    message.error(`MCP 桥接测试失败：${bridgeError.value}`)
   } finally {
     bridgeTesting.value = false
   }
@@ -55,7 +55,7 @@ const reconnectBridge = async () => {
     }, 1000)
   } catch (err) {
     bridgeError.value = err instanceof Error ? err.message : '重连失败'
-    message.error(`重连失败: ${bridgeError.value}`)
+    message.error(`重连失败：${bridgeError.value}`)
     bridgeTesting.value = false
   }
 }
@@ -118,7 +118,7 @@ const mcpTools = [
 
 const copyToolName = (name: string) => {
   navigator.clipboard.writeText(name)
-  message.success(`已复制: ${name}`)
+  message.success(`已复制：${name}`)
 }
 
 const copyCommand = (cmd: string) => {
@@ -272,7 +272,7 @@ onUnmounted(() => {
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ tool.desc }}</p>
                 <p v-if="'params' in tool && tool.params" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  参数: {{ tool.params }}
+                  参数：{{ tool.params }}
                 </p>
               </div>
             </div>

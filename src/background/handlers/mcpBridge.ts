@@ -6,10 +6,10 @@ const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 7465
 
 // 连接保活配置
-const HEARTBEAT_INTERVAL = 30000 // 心跳间隔：30秒
-const HEARTBEAT_TIMEOUT = 10000 // 心跳超时：10秒
-const RECONNECT_BASE_DELAY = 1000 // 重连基础延迟：1秒
-const RECONNECT_MAX_DELAY = 30000 // 重连最大延迟：30秒
+const HEARTBEAT_INTERVAL = 30000 // 心跳间隔：30 秒
+const HEARTBEAT_TIMEOUT = 10000 // 心跳超时：10 秒
+const RECONNECT_BASE_DELAY = 1000 // 重连基础延迟：1 秒
+const RECONNECT_MAX_DELAY = 30000 // 重连最大延迟：30 秒
 const RECONNECT_MULTIPLIER = 1.5 // 重连延迟倍数
 
 type McpToolCallMessage = {
