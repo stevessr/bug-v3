@@ -2,7 +2,7 @@ import { defineComponent } from 'vue'
 import type { PropType, Ref } from 'vue'
 import { Select } from 'ant-design-vue'
 
-import TagPill from '../layout/TagPill'
+import TagPill from '../../layout/TagPill'
 import type { PreferencesPayload, TagOption } from './types'
 
 export default defineComponent({
@@ -65,57 +65,64 @@ export default defineComponent({
     const renderOptions = () =>
       props.tagOptions.value.map(tag => (
         <Select.Option key={tag.value} value={tag.value}>
-          <TagPill name={tag.value} text={tag.label} description={tag.description || null} compact />
+          <TagPill
+            name={tag.value}
+            text={tag.label}
+            description={tag.description || null}
+            compact
+          />
         </Select.Option>
       ))
 
-    const commonProps = {
-      mode: 'tags' as const,
-      size: 'small' as const,
-      class: 'w-full',
-      placeholder: '搜索或输入标签',
-      filterOption: false,
-      notFoundContent: props.tagsLoading.value ? '加载中...' : '无结果',
-      onSearch: props.onTagSearch,
-      onDropdownVisibleChange: props.onTagDropdown,
-      vSlots: {
-        tagRender: renderTag,
-        default: renderOptions
+    return () => {
+      const commonProps = {
+        mode: 'tags' as const,
+        size: 'small' as const,
+        class: 'w-full',
+        placeholder: '搜索或输入标签',
+        filterOption: false,
+        notFoundContent: props.tagsLoading.value ? '加载中...' : '无结果',
+        onSearch: props.onTagSearch,
+        onDropdownVisibleChange: props.onTagDropdown,
+        'v-slots': {
+          tagRender: renderTag,
+          default: renderOptions
+        }
       }
-    }
 
-    return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">标签偏好</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">关注</div>
-          <Select
-            {...commonProps}
-            value={props.form.value.watched_tags}
-            onUpdate:value={(value: string[]) => (props.form.value.watched_tags = value || [])}
-          />
-          <div class="text-gray-500">追踪</div>
-          <Select
-            {...commonProps}
-            value={props.form.value.tracked_tags}
-            onUpdate:value={(value: string[]) => (props.form.value.tracked_tags = value || [])}
-          />
-          <div class="text-gray-500">关注首帖</div>
-          <Select
-            {...commonProps}
-            value={props.form.value.watching_first_post_tags}
-            onUpdate:value={(value: string[]) =>
-              (props.form.value.watching_first_post_tags = value || [])
-            }
-          />
-          <div class="text-gray-500">静音</div>
-          <Select
-            {...commonProps}
-            value={props.form.value.muted_tags}
-            onUpdate:value={(value: string[]) => (props.form.value.muted_tags = value || [])}
-          />
+      return (
+        <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
+          <div class="text-xs font-semibold text-gray-400 mb-2">标签偏好</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
+            <div class="text-gray-500">关注</div>
+            <Select
+              {...commonProps}
+              value={props.form.value.watched_tags}
+              onUpdate:value={(value: string[]) => (props.form.value.watched_tags = value || [])}
+            />
+            <div class="text-gray-500">追踪</div>
+            <Select
+              {...commonProps}
+              value={props.form.value.tracked_tags}
+              onUpdate:value={(value: string[]) => (props.form.value.tracked_tags = value || [])}
+            />
+            <div class="text-gray-500">关注首帖</div>
+            <Select
+              {...commonProps}
+              value={props.form.value.watching_first_post_tags}
+              onUpdate:value={(value: string[]) =>
+                (props.form.value.watching_first_post_tags = value || [])
+              }
+            />
+            <div class="text-gray-500">静音</div>
+            <Select
+              {...commonProps}
+              value={props.form.value.muted_tags}
+              onUpdate:value={(value: string[]) => (props.form.value.muted_tags = value || [])}
+            />
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
   }
 })
