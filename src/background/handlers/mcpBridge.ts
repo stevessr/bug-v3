@@ -5,6 +5,13 @@ import type { BrowseStrategy } from '@/types/type'
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 7465
 
+// 连接保活配置
+const HEARTBEAT_INTERVAL = 30000 // 心跳间隔：30秒
+const HEARTBEAT_TIMEOUT = 10000 // 心跳超时：10秒
+const RECONNECT_BASE_DELAY = 1000 // 重连基础延迟：1秒
+const RECONNECT_MAX_DELAY = 30000 // 重连最大延迟：30秒
+const RECONNECT_MULTIPLIER = 1.5 // 重连延迟倍数
+
 type McpToolCallMessage = {
   type: 'MCP_TOOL_CALL'
   id: string
@@ -19,12 +26,53 @@ type McpToolResultMessage = {
   error?: string
 }
 
+type McpPingMessage = {
+  type: 'MCP_PING'
+  timestamp: number
+}
+
+type McpPongMessage = {
+  type: 'MCP_PONG'
+  timestamp: number
+}
+
 let ws: WebSocket | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+let heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 let disabled = false
+let reconnectAttempts = 0
+let lastPongTime = 0
+let connectionListeners: Array<(status: McpConnectionStatus) => void> = []
+
+export type McpConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
+let currentStatus: McpConnectionStatus = 'disconnected'
 
 function getWsUrl(): string {
   return `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`
+}
+
+function updateStatus(status: McpConnectionStatus) {
+  if (currentStatus !== status) {
+    currentStatus = status
+    console.log('[MCP] Status changed:', status)
+    connectionListeners.forEach((listener) => {
+      try {
+        listener(status)
+      } catch {
+        // ignore listener errors
+      }
+    })
+  }
+}
+
+export function onMcpConnectionChange(listener: (status: McpConnectionStatus) => void): () => void {
+  connectionListeners.push(listener)
+  // 立即通知当前状态
+  listener(currentStatus)
+  return () => {
+    connectionListeners = connectionListeners.filter((l) => l !== listener)
+  }
 }
 
 function clearReconnectTimer() {
@@ -34,23 +82,118 @@ function clearReconnectTimer() {
   }
 }
 
+function clearHeartbeatTimers() {
+  if (heartbeatTimer !== null) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+  if (heartbeatTimeoutTimer !== null) {
+    clearTimeout(heartbeatTimeoutTimer)
+    heartbeatTimeoutTimer = null
+  }
+}
+
+function calculateReconnectDelay(): number {
+  const delay = Math.min(
+    RECONNECT_BASE_DELAY * Math.pow(RECONNECT_MULTIPLIER, reconnectAttempts),
+    RECONNECT_MAX_DELAY
+  )
+  return delay + Math.random() * 1000 // 添加随机抖动
+}
+
 function scheduleReconnect() {
   if (reconnectTimer !== null || disabled) return
+
+  const delay = calculateReconnectDelay()
+  reconnectAttempts++
+  updateStatus('reconnecting')
+
+  console.log(`[MCP] Scheduling reconnect in ${Math.round(delay)}ms (attempt ${reconnectAttempts})`)
+
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
     connect()
-  }, 5000)
+  }, delay)
 }
 
-export function setMcpBridgeDisabled(value: boolean) {
-  disabled = value
-  if (disabled && ws) {
+function startHeartbeat() {
+  clearHeartbeatTimers()
+  lastPongTime = Date.now()
+
+  heartbeatTimer = setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      clearHeartbeatTimers()
+      return
+    }
+
+    // 发送心跳
+    const ping: McpPingMessage = {
+      type: 'MCP_PING',
+      timestamp: Date.now()
+    }
+
+    try {
+      ws.send(JSON.stringify(ping))
+      console.log('[MCP] Heartbeat ping sent')
+    } catch (error) {
+      console.warn('[MCP] Failed to send heartbeat:', error)
+      handleConnectionLost()
+      return
+    }
+
+    // 设置心跳超时检测
+    heartbeatTimeoutTimer = setTimeout(() => {
+      const timeSinceLastPong = Date.now() - lastPongTime
+      if (timeSinceLastPong > HEARTBEAT_INTERVAL + HEARTBEAT_TIMEOUT) {
+        console.warn('[MCP] Heartbeat timeout, connection may be dead')
+        handleConnectionLost()
+      }
+    }, HEARTBEAT_TIMEOUT)
+  }, HEARTBEAT_INTERVAL)
+}
+
+function handlePong(message: McpPongMessage) {
+  lastPongTime = Date.now()
+  const latency = lastPongTime - message.timestamp
+  console.log(`[MCP] Heartbeat pong received, latency: ${latency}ms`)
+
+  if (heartbeatTimeoutTimer) {
+    clearTimeout(heartbeatTimeoutTimer)
+    heartbeatTimeoutTimer = null
+  }
+}
+
+function handleConnectionLost() {
+  clearHeartbeatTimers()
+
+  if (ws) {
     try {
       ws.close()
     } catch {
       // ignore
     }
     ws = null
+  }
+
+  updateStatus('disconnected')
+  scheduleReconnect()
+}
+
+export function setMcpBridgeDisabled(value: boolean) {
+  disabled = value
+  if (disabled) {
+    clearReconnectTimer()
+    clearHeartbeatTimers()
+    if (ws) {
+      try {
+        ws.close()
+      } catch {
+        // ignore
+      }
+      ws = null
+    }
+    updateStatus('disconnected')
+    reconnectAttempts = 0
   }
 }
 
@@ -938,6 +1081,8 @@ async function connect() {
   if (disabled) return
 
   clearReconnectTimer()
+  clearHeartbeatTimers()
+  updateStatus('connecting')
 
   // Close existing connection if any
   if (ws) {
@@ -956,46 +1101,60 @@ async function connect() {
     ws = new WebSocket(wsUrl)
   } catch (error) {
     console.warn('[MCP] Failed to create WebSocket connection', error)
+    updateStatus('disconnected')
     scheduleReconnect()
     return
   }
 
   ws.onopen = () => {
     console.log('[MCP] WebSocket connected')
+    reconnectAttempts = 0 // 重置重连计数
+    updateStatus('connected')
+    startHeartbeat() // 启动心跳
   }
 
   ws.onmessage = async (event) => {
     try {
-      const message: McpToolCallMessage = JSON.parse(event.data)
-      if (!message || message.type !== 'MCP_TOOL_CALL') return
+      const message = JSON.parse(event.data)
 
-      console.log('[MCP] Received tool call:', message.tool)
-
-      const response: McpToolResultMessage = {
-        type: 'MCP_TOOL_RESULT',
-        id: message.id
+      // 处理心跳响应
+      if (message.type === 'MCP_PONG') {
+        handlePong(message as McpPongMessage)
+        return
       }
 
-      try {
-        response.result = await handleToolCall(chromeAPI, message)
-      } catch (error: any) {
-        response.error = error?.message || 'Tool call failed'
-        console.warn('[MCP] Tool call error:', response.error)
-      }
+      // 处理工具调用
+      if (message.type === 'MCP_TOOL_CALL') {
+        console.log('[MCP] Received tool call:', message.tool)
 
-      try {
-        ws?.send(JSON.stringify(response))
-      } catch (error) {
-        console.warn('[MCP] Failed to send tool response', error)
+        const response: McpToolResultMessage = {
+          type: 'MCP_TOOL_RESULT',
+          id: message.id
+        }
+
+        try {
+          response.result = await handleToolCall(chromeAPI, message as McpToolCallMessage)
+        } catch (error: any) {
+          response.error = error?.message || 'Tool call failed'
+          console.warn('[MCP] Tool call error:', response.error)
+        }
+
+        try {
+          ws?.send(JSON.stringify(response))
+        } catch (error) {
+          console.warn('[MCP] Failed to send tool response', error)
+        }
       }
     } catch (error) {
       console.warn('[MCP] Failed to parse WebSocket message', error)
     }
   }
 
-  ws.onclose = () => {
-    console.log('[MCP] WebSocket disconnected')
+  ws.onclose = (event) => {
+    console.log('[MCP] WebSocket disconnected, code:', event.code, 'reason:', event.reason)
+    clearHeartbeatTimers()
     ws = null
+    updateStatus('disconnected')
     scheduleReconnect()
   }
 
@@ -1008,14 +1167,12 @@ export function setupMcpBridge() {
   void connect()
 }
 
-export function getMcpConnectionStatus(): 'connected' | 'connecting' | 'disconnected' {
-  if (!ws) return 'disconnected'
-  switch (ws.readyState) {
-    case WebSocket.CONNECTING:
-      return 'connecting'
-    case WebSocket.OPEN:
-      return 'connected'
-    default:
-      return 'disconnected'
-  }
+export function reconnectMcpBridge() {
+  reconnectAttempts = 0
+  clearReconnectTimer()
+  void connect()
+}
+
+export function getMcpConnectionStatus(): McpConnectionStatus {
+  return currentStatus
 }

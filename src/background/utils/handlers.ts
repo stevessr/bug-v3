@@ -25,7 +25,9 @@ import {
   setMcpBridgeDisabled,
   setupMcpBridge,
   testMcpBridge,
-  testMcpServer
+  testMcpServer,
+  reconnectMcpBridge,
+  getMcpConnectionStatus
 } from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
@@ -179,6 +181,13 @@ export function setupMessageListener() {
                 .catch((error: any) =>
                   sendResponse({ success: false, error: error?.message || 'MCP 服务测试失败' })
                 )
+              return true
+            case 'MCP_BRIDGE_RECONNECT':
+              reconnectMcpBridge()
+              sendResponse({ success: true })
+              return true
+            case 'MCP_GET_STATUS':
+              sendResponse({ success: true, data: { status: getMcpConnectionStatus() } })
               return true
 
             default:

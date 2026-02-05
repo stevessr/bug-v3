@@ -390,6 +390,15 @@ wss.on('connection', (ws) => {
     try {
       const message = JSON.parse(data.toString())
 
+      // Handle ping from extension (heartbeat)
+      if (message.type === 'MCP_PING') {
+        ws.send(JSON.stringify({
+          type: 'MCP_PONG',
+          timestamp: message.timestamp
+        }))
+        return
+      }
+
       // Handle tool result from extension
       if (message.type === 'MCP_TOOL_RESULT') {
         const pending = pendingCalls.get(message.id)

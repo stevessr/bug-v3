@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import {
   ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
-  CopyOutlined
+  CopyOutlined,
+  SyncOutlined,
+  LoadingOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
-const bridgeStatus = ref<'unknown' | 'connected' | 'disconnected'>('unknown')
+type ConnectionStatus = 'unknown' | 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
+
+const bridgeStatus = ref<ConnectionStatus>('unknown')
 const bridgeTesting = ref(false)
 const bridgeError = ref('')
+const reconnectCount = ref(0)
 
 const testMcpBridge = async () => {
   bridgeTesting.value = true
@@ -33,6 +38,37 @@ const testMcpBridge = async () => {
     message.error(`MCP 桥接测试失败: ${bridgeError.value}`)
   } finally {
     bridgeTesting.value = false
+  }
+}
+
+const reconnectBridge = async () => {
+  bridgeTesting.value = true
+  bridgeError.value = ''
+  reconnectCount.value = 0
+
+  try {
+    await chrome.runtime.sendMessage({ type: 'MCP_BRIDGE_RECONNECT' })
+    message.info('正在重新连接...')
+    // 延迟后测试连接
+    setTimeout(() => {
+      testMcpBridge()
+    }, 1000)
+  } catch (err) {
+    bridgeError.value = err instanceof Error ? err.message : '重连失败'
+    message.error(`重连失败: ${bridgeError.value}`)
+    bridgeTesting.value = false
+  }
+}
+
+// 获取连接状态
+const fetchConnectionStatus = async () => {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'MCP_GET_STATUS' })
+    if (response?.success) {
+      bridgeStatus.value = response.data?.status || 'unknown'
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -90,8 +126,34 @@ const copyCommand = (cmd: string) => {
   message.success('命令已复制')
 }
 
+const statusLabel: Record<ConnectionStatus, string> = {
+  unknown: '未知',
+  connected: '已连接',
+  connecting: '连接中',
+  disconnected: '未连接',
+  reconnecting: '重连中'
+}
+
+const statusColor: Record<ConnectionStatus, string> = {
+  unknown: 'text-gray-500',
+  connected: 'text-green-600 dark:text-green-400',
+  connecting: 'text-blue-600 dark:text-blue-400',
+  disconnected: 'text-red-600 dark:text-red-400',
+  reconnecting: 'text-yellow-600 dark:text-yellow-400'
+}
+
+let statusInterval: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   testMcpBridge()
+  // 定期更新状态
+  statusInterval = setInterval(fetchConnectionStatus, 5000)
+})
+
+onUnmounted(() => {
+  if (statusInterval) {
+    clearInterval(statusInterval)
+  }
 })
 </script>
 
@@ -113,21 +175,29 @@ onMounted(() => {
           <div class="flex items-center gap-2">
             <template v-if="bridgeStatus === 'connected'">
               <CheckCircleOutlined class="text-green-500" />
-              <span class="text-green-600 dark:text-green-400">已连接</span>
+            </template>
+            <template v-else-if="bridgeStatus === 'connecting' || bridgeStatus === 'reconnecting'">
+              <LoadingOutlined class="text-blue-500 animate-spin" />
             </template>
             <template v-else-if="bridgeStatus === 'disconnected'">
               <CloseCircleOutlined class="text-red-500" />
-              <span class="text-red-600 dark:text-red-400">未连接</span>
             </template>
             <template v-else>
-              <span class="text-gray-500">未知</span>
+              <SyncOutlined class="text-gray-500" />
             </template>
+            <span :class="statusColor[bridgeStatus]">{{ statusLabel[bridgeStatus] }}</span>
           </div>
           <a-button :loading="bridgeTesting" @click="testMcpBridge">
             <template #icon>
               <ReloadOutlined />
             </template>
             测试连接
+          </a-button>
+          <a-button @click="reconnectBridge" :disabled="bridgeTesting">
+            <template #icon>
+              <SyncOutlined />
+            </template>
+            重新连接
           </a-button>
         </div>
       </div>
