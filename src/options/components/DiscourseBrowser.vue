@@ -11,7 +11,8 @@ import type {
   ActivityTabType,
   MessagesTabType,
   DiscoursePost,
-  DiscourseSearchFilters
+  DiscourseSearchFilters,
+  TopicListType
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import CategoryGrid from './discourse/layout/CategoryGrid'
@@ -157,6 +158,37 @@ const unreadNotificationsCount = computed(
   () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
 )
 const notificationsOpen = ref(false)
+
+const homeNavItems: Array<{ key: string; label: string; type: 'path' | 'list'; value: string }> = [
+  { key: 'categories', label: '类别', type: 'path', value: '/categories' },
+  { key: 'tags', label: '标签', type: 'path', value: '/tags' },
+  { key: 'latest', label: '最新', type: 'list', value: 'latest' },
+  { key: 'new', label: '新', type: 'list', value: 'new' },
+  { key: 'unread', label: '未读', type: 'list', value: 'unread' },
+  { key: 'top', label: '排行', type: 'list', value: 'top' },
+  { key: 'hot', label: '热门', type: 'list', value: 'hot' },
+  { key: 'posted', label: '我的帖子', type: 'list', value: 'posted' },
+  { key: 'bookmarks', label: '书签', type: 'list', value: 'bookmarks' }
+]
+
+const isHomeNavActive = (item: (typeof homeNavItems)[number]) => {
+  const tab = activeTab.value
+  if (!tab) return false
+  if (item.type === 'path') {
+    if (item.value === '/categories') return tab.viewType === 'categories'
+    if (item.value === '/tags') return tab.viewType === 'tags'
+    return false
+  }
+  return tab.viewType === 'home' && tab.topicListType === item.value
+}
+
+const handleHomeNavClick = (item: (typeof homeNavItems)[number]) => {
+  if (item.type === 'path') {
+    handleNavigate(item.value)
+    return
+  }
+  handleChangeTopicListType(item.value as TopicListType)
+}
 
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
@@ -479,9 +511,7 @@ const handleSendChatMessage = (payload: { channelId: number; message: string }) 
   sendChat(payload.channelId, payload.message)
 }
 
-const handleChangeTopicListType = (
-  type: 'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'bookmarks'
-) => {
+const handleChangeTopicListType = (type: TopicListType) => {
   changeTopicListType(type)
 }
 
@@ -489,19 +519,6 @@ const handleNavigate = (path: string) => {
   navigateTo(path)
 }
 
-const getTopicListTitle = (type?: string) => {
-  const titles: Record<string, string> = {
-    latest: '最新话题',
-    new: '新话题',
-    unread: '未读话题',
-    unseen: '未见话题',
-    top: '顶流话题',
-    hot: '火热话题',
-    posted: '我的帖子',
-    bookmarks: '我的书签'
-  }
-  return type ? titles[type] || '话题列表' : '话题列表'
-}
 
 const handleUserMainTabSwitch = (
   tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
@@ -934,7 +951,7 @@ onUnmounted(() => {
     <!-- Content area -->
     <div
       ref="contentAreaRef"
-      class="content-area flex-1 overflow-y-auto bg-white dark:bg-gray-900 p-4"
+      class="content-area flex-1 overflow-y-auto discourse-body"
     >
       <!-- Loading -->
       <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
@@ -955,31 +972,37 @@ onUnmounted(() => {
       <!-- Home view -->
       <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
         <!-- Main content -->
-        <div class="flex-1 min-w-0 space-y-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold dark:text-white">发布新话题</h3>
-            <div class="flex items-center gap-2">
-              <a-button size="small" @click="() => handleNavigate('/search')">搜索</a-button>
+        <div class="flex-1 min-w-0 space-y-4">
+          <div class="home-nav">
+            <div class="home-nav-links">
+              <button
+                v-for="item in homeNavItems"
+                :key="item.key"
+                class="home-nav-link"
+                :class="{ active: isHomeNavActive(item) }"
+                @click="() => handleHomeNavClick(item)"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+            <div class="home-nav-actions">
+              <a-button size="small" @click="handleOpenChat">聊天</a-button>
               <a-button v-if="currentUsername" size="small" @click="handleOpenMyProfile">
                 我的主页
               </a-button>
-              <a-button size="small" @click="toggleTopicComposer">
-                {{ composerMode === 'topic' ? '收起' : '发帖' }}
+              <a-button type="primary" size="small" @click="toggleTopicComposer">
+                {{ composerMode === 'topic' ? '收起' : '新建话题' }}
               </a-button>
-              <a-button size="small" @click="handleOpenChat">聊天</a-button>
             </div>
           </div>
 
-          <!-- Latest topics -->
-          <div v-if="activeTab.topics.length > 0">
-            <h3 class="text-lg font-semibold mb-3 dark:text-white">
-              {{ getTopicListTitle(activeTab.topicListType) }}
-            </h3>
-            <div v-if="activeTab.pendingTopicsCount" class="mb-3">
-              <a-button type="primary" size="small" @click="handleApplyPendingTopics">
-                发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
-              </a-button>
-            </div>
+          <div v-if="activeTab.pendingTopicsCount" class="pending-topics">
+            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
+              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
+            </a-button>
+          </div>
+
+          <div v-if="activeTab.topics.length > 0" class="space-y-4">
             <TopicList
               :topics="activeTab.topics"
               :baseUrl="baseUrl"
@@ -1005,6 +1028,7 @@ onUnmounted(() => {
               已加载全部话题
             </div>
           </div>
+          <div v-else class="text-center text-gray-400 py-12">暂无话题</div>
         </div>
 
         <!-- Sidebar -->
@@ -1389,6 +1413,84 @@ onUnmounted(() => {
     -apple-system,
     sans-serif;
   position: relative;
+}
+
+.discourse-body {
+  background: #f8f3e6;
+  padding: 16px;
+}
+
+.dark .discourse-body {
+  background: #0f172a;
+}
+
+.home-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  background: #fff7e8;
+  border: 1px solid #e6dcc9;
+  border-radius: 10px;
+}
+
+.dark .home-nav {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.home-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-nav-link {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #4b5563;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.home-nav-link:hover {
+  background: #f1e7d3;
+}
+
+.home-nav-link.active {
+  background: #e6d3af;
+  border-color: #e0c89c;
+  color: #7c4a12;
+  font-weight: 600;
+}
+
+.dark .home-nav-link {
+  color: #d1d5db;
+}
+
+.dark .home-nav-link:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.dark .home-nav-link.active {
+  background: rgba(59, 130, 246, 0.35);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #f8fafc;
+}
+
+.home-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pending-topics {
+  display: flex;
+  justify-content: center;
 }
 
 .tab-item {

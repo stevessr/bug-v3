@@ -1,8 +1,16 @@
 import { defineComponent } from 'vue'
-import { LeftOutlined, RightOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons-vue'
+import {
+  LeftOutlined,
+  RightOutlined,
+  ReloadOutlined,
+  HomeOutlined,
+  MenuOutlined,
+  SearchOutlined
+} from '@ant-design/icons-vue'
 import { Button, Input } from 'ant-design-vue'
 
 import type { BrowserTab } from '../types'
+import '../css/BrowserToolbar.css'
 
 export default defineComponent({
   name: 'BrowserToolbar',
@@ -17,41 +25,19 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="toolbar bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 p-2 flex items-center gap-2">
-        <div class="flex items-center gap-1">
-          <Button
-            size="small"
-            disabled={!props.activeTab || props.activeTab.historyIndex <= 0}
-            onClick={() => emit('goBack')}
-            v-slots={{ icon: () => <LeftOutlined /> }}
-          />
-          <Button
-            size="small"
-            disabled={
-              !props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1
-            }
-            onClick={() => emit('goForward')}
-            v-slots={{ icon: () => <RightOutlined /> }}
-          />
-          <Button
-            size="small"
-            onClick={() => emit('refresh')}
-            loading={props.activeTab?.loading}
-            v-slots={{ icon: () => <ReloadOutlined /> }}
-          />
-          <Button
-            size="small"
-            onClick={() => emit('goHome')}
-            v-slots={{ icon: () => <HomeOutlined /> }}
-          />
+      <div class="discourse-toolbar">
+        <div class="toolbar-left">
+          <Button size="small" type="text" class="toolbar-icon" v-slots={{ icon: () => <MenuOutlined /> }} />
+          <span class="toolbar-brand">Discourse</span>
         </div>
 
-        <div class="flex-1 flex items-center gap-2">
+        <div class="toolbar-search">
           <Input
             value={props.modelValue}
-            placeholder="输入 Discourse 论坛地址"
-            size="small"
-            class="flex-1"
+            placeholder="搜索"
+            size="middle"
+            class="toolbar-search-input"
+            prefix={<SearchOutlined />}
             onUpdate:value={handleInput}
             onPressEnter={() => emit('updateBaseUrl')}
           />
@@ -60,7 +46,40 @@ export default defineComponent({
           </Button>
         </div>
 
-        <div class="toolbar-right flex items-center gap-2">{slots.right?.()}</div>
+        <div class="toolbar-actions">
+          <Button
+            size="small"
+            type="text"
+            class="toolbar-icon"
+            disabled={!props.activeTab || props.activeTab.historyIndex <= 0}
+            onClick={() => emit('goBack')}
+            v-slots={{ icon: () => <LeftOutlined /> }}
+          />
+          <Button
+            size="small"
+            type="text"
+            class="toolbar-icon"
+            disabled={!props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1}
+            onClick={() => emit('goForward')}
+            v-slots={{ icon: () => <RightOutlined /> }}
+          />
+          <Button
+            size="small"
+            type="text"
+            class="toolbar-icon"
+            onClick={() => emit('refresh')}
+            loading={props.activeTab?.loading}
+            v-slots={{ icon: () => <ReloadOutlined /> }}
+          />
+          <Button
+            size="small"
+            type="text"
+            class="toolbar-icon"
+            onClick={() => emit('goHome')}
+            v-slots={{ icon: () => <HomeOutlined /> }}
+          />
+          <div class="toolbar-right">{slots.right?.()}</div>
+        </div>
       </div>
     )
   }

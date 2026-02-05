@@ -1,0 +1,59 @@
+.discourse-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: #f7f1e3;
+  border-bottom: 1px solid #e6dcc9;
+}
+
+.dark .discourse-toolbar {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dark .toolbar-left {
+  color: #f3f4f6;
+}
+
+.toolbar-brand {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.toolbar-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.toolbar-search-input {
+  flex: 1;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-icon {
+  color: #6b7280;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

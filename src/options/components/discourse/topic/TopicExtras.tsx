@@ -67,6 +67,7 @@ export default defineComponent({
             <TopicList
               topics={activeList.value}
               baseUrl={props.baseUrl}
+              showHeader={false}
               onClick={(topic: SuggestedTopic) => emit('open', topic)}
             />
           </div>
