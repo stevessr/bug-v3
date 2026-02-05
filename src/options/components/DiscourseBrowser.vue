@@ -15,23 +15,25 @@ import type {
   TopicListType
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
-import CategoryGrid from './discourse/layout/CategoryGrid'
-import TagGrid from './discourse/layout/TagGrid'
 import Icon from './discourse/layout/Icon'
-import TopicList from './discourse/topic/TopicList'
 import TopicView from './discourse/topic/TopicView'
-import Composer from './discourse/composer/Composer'
 import UserView from './discourse/user/UserView'
 import UserExtrasView from './discourse/user/UserExtrasView'
 import UserGroupsView from './discourse/user/UserGroupsView'
 import UserSettingsView from './discourse/user/UserSettingsView'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
-import Sidebar from './discourse/layout/Sidebar'
 import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
 import ActivityView from './discourse/user/ActivityView'
 import MessagesView from './discourse/user/MessagesView'
 import BrowserToolbar from './discourse/browser/BrowserToolbar'
 import BrowserTabs from './discourse/browser/BrowserTabs'
+import FloatingComposer from './discourse/browser/FloatingComposer.vue'
+import HomeView from './discourse/browser/views/HomeView.vue'
+import CategoriesView from './discourse/browser/views/CategoriesView.vue'
+import TagsView from './discourse/browser/views/TagsView.vue'
+import NotificationsPanel from './discourse/browser/views/NotificationsPanel.vue'
+import TagTopicsView from './discourse/browser/views/TagTopicsView.vue'
+import CategoryTopicsView from './discourse/browser/views/CategoryTopicsView.vue'
 import ChatView from './discourse/chat/ChatView'
 import SearchView from './discourse/search/SearchView'
 import { pageFetch, extractData } from './discourse/utils'
@@ -158,6 +160,45 @@ const unreadNotificationsCount = computed(
   () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
 )
 const notificationsOpen = ref(false)
+
+const composerTopicId = computed(() => {
+  if (composerMode.value === 'edit') {
+    return editTarget.value?.topic_id || activeTab.value?.currentTopic?.id
+  }
+  return activeTab.value?.currentTopic?.id
+})
+
+const composerPostId = computed(() =>
+  composerMode.value === 'edit' ? editTarget.value?.id : undefined
+)
+
+const composerInitialRaw = computed(() =>
+  composerMode.value === 'edit' ? editInitialRaw.value : null
+)
+
+const composerOriginalRaw = computed(() =>
+  composerMode.value === 'edit' ? editOriginalRaw.value : null
+)
+
+const composerReplyPostNumber = computed(() =>
+  composerMode.value === 'reply' ? replyTarget.value?.postNumber ?? null : null
+)
+
+const composerReplyUsername = computed(() =>
+  composerMode.value === 'reply' ? replyTarget.value?.username ?? null : null
+)
+
+const composerCategories = computed(() =>
+  composerMode.value === 'topic' ? activeTab.value?.categories || [] : []
+)
+
+const composerDefaultCategoryId = computed(() =>
+  composerMode.value === 'topic' ? activeTab.value?.currentCategoryId || null : null
+)
+
+const composerCurrentCategory = computed(() =>
+  composerMode.value === 'topic' ? currentCategoryOption.value : null
+)
 
 const homeNavItems: Array<{ key: string; label: string; type: 'path' | 'list'; value: string }> = [
   { key: 'categories', label: '类别', type: 'path', value: '/categories' },
@@ -1012,263 +1053,106 @@ onUnmounted(() => {
         <a-button type="primary" class="mt-4" @click="refresh">重试</a-button>
       </div>
 
-      <!-- Home view -->
-      <div v-else-if="activeTab?.viewType === 'home'" class="flex gap-4">
-        <!-- Main content -->
-        <div class="flex-1 min-w-0 space-y-4">
-          <div class="home-nav">
-            <div class="home-nav-links">
-              <button
-                v-for="item in homeNavItems"
-                :key="item.key"
-                class="home-nav-link"
-                :class="{ active: isHomeNavActive(item) }"
-                @click="() => handleHomeNavClick(item)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
-            <div class="home-nav-actions">
-              <a-button size="small" @click="handleOpenChat">聊天</a-button>
-              <a-button v-if="currentUsername" size="small" @click="handleOpenMyProfile">
-                我的主页
-              </a-button>
-              <a-button type="primary" size="small" @click="toggleTopicComposer">
-                {{ composerMode === 'topic' ? '收起' : '新建话题' }}
-              </a-button>
-            </div>
-          </div>
+      <HomeView
+        v-else-if="activeTab?.viewType === 'home' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        :sortedTopics="sortedTopics"
+        :homeNavItems="homeNavItems"
+        :isHomeNavActive="isHomeNavActive"
+        :topicSortKey="topicSortKey"
+        :topicSortOrder="topicSortOrder"
+        :isLoadingMore="isLoadingMore"
+        :currentUsername="currentUsername"
+        :composerMode="composerMode"
+        @homeNavClick="handleHomeNavClick"
+        @openChat="handleOpenChat"
+        @openMyProfile="handleOpenMyProfile"
+        @toggleComposer="toggleTopicComposer"
+        @applyPendingTopics="handleApplyPendingTopics"
+        @topicSort="handleTopicSort"
+        @topicClick="handleTopicClick"
+        @topicMiddleClick="handleMiddleClick"
+        @openUser="handleUserClick"
+        @openTag="handleOpenTopicTag"
+        @categoryClick="handleCategoryClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
-          <div v-if="activeTab.pendingTopicsCount" class="pending-topics">
-            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
-              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
-            </a-button>
-          </div>
+      <CategoriesView
+        v-else-if="activeTab?.viewType === 'categories' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        @categoryClick="handleCategoryClick"
+        @topicClick="handleTopicClick"
+        @openUser="handleUserClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
-          <div v-if="activeTab.topics.length > 0" class="space-y-4">
-            <TopicList
-              :topics="sortedTopics"
-              :baseUrl="baseUrl"
-              :categories="activeTab.categories"
-              :users="activeTab.activeUsers"
-              :sortKey="topicSortKey"
-              :sortOrder="topicSortOrder"
-              @sort="handleTopicSort"
-              @click="handleTopicClick"
-              @middleClick="handleMiddleClick"
-              @openUser="handleUserClick"
-              @openTag="handleOpenTopicTag"
-            />
+      <TagsView
+        v-else-if="activeTab?.viewType === 'tags' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        @tagClick="handleTagClick"
+        @categoryClick="handleCategoryClick"
+        @openUser="handleUserClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
-            <!-- Loading more indicator -->
-            <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
-              <a-spin />
-              <span class="ml-2 text-gray-500">加载更多话题...</span>
-            </div>
+      <NotificationsPanel
+        v-else-if="activeTab?.viewType === 'notifications' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        @changeFilter="handleNotificationFilterChange"
+        @openNotification="handleOpenNotification"
+        @categoryClick="handleCategoryClick"
+        @openUser="handleUserClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
-            <!-- End indicator -->
-            <div
-              v-if="!activeTab.hasMoreTopics && !isLoadingMore"
-              class="text-center text-gray-400 py-4 text-sm"
-            >
-              已加载全部话题
-            </div>
-          </div>
-          <div v-else class="text-center text-gray-400 py-12">暂无话题</div>
-        </div>
+      <TagTopicsView
+        v-else-if="activeTab?.viewType === 'tag' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        :sortedTopics="sortedTopics"
+        :topicSortKey="topicSortKey"
+        :topicSortOrder="topicSortOrder"
+        :isLoadingMore="isLoadingMore"
+        @applyPendingTopics="handleApplyPendingTopics"
+        @topicSort="handleTopicSort"
+        @topicClick="handleTopicClick"
+        @topicMiddleClick="handleMiddleClick"
+        @openUser="handleUserClick"
+        @openTag="handleOpenTopicTag"
+        @categoryClick="handleCategoryClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
-        <!-- Sidebar -->
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="[]"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
-
-      <!-- Categories view -->
-      <div v-else-if="activeTab?.viewType === 'categories'" class="flex gap-4">
-        <div class="flex-1 min-w-0">
-          <h3 class="text-lg font-semibold mb-6 dark:text-white">分类目录</h3>
-          <CategoryGrid
-            :categories="activeTab.categories"
-            :baseUrl="baseUrl"
-            layout="directory"
-            @click="handleCategoryClick"
-            @topicClick="handleTopicClick"
-          />
-        </div>
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="activeTab.categories"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
-
-      <!-- Tags view -->
-      <div v-else-if="activeTab?.viewType === 'tags'" class="flex gap-4">
-        <div class="flex-1 min-w-0">
-          <TagGrid :tags="activeTab.tags" :groups="activeTab.tagGroups" @click="handleTagClick" />
-        </div>
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="activeTab.categories"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
-
-      <!-- Notifications view -->
-      <div v-else-if="activeTab?.viewType === 'notifications'" class="flex gap-4">
-        <div class="flex-1 min-w-0">
-          <h3 class="text-lg font-semibold mb-3 dark:text-white">通知</h3>
-          <NotificationsView
-            :notifications="activeTab.notifications"
-            :filter="activeTab.notificationsFilter"
-            @changeFilter="handleNotificationFilterChange"
-            @open="handleOpenNotification"
-          />
-        </div>
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="[]"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
-
-      <!-- Tag topics view -->
-      <div v-else-if="activeTab?.viewType === 'tag'" class="flex gap-4">
-        <div class="flex-1 min-w-0">
-          <h3 class="text-lg font-semibold mb-3 dark:text-white">
-            标签：{{ activeTab.currentTagName }}
-          </h3>
-          <div v-if="activeTab.pendingTopicsCount" class="mb-3">
-            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
-              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
-            </a-button>
-          </div>
-          <TopicList
-            :topics="sortedTopics"
-            :baseUrl="baseUrl"
-            :categories="activeTab.categories"
-            :users="activeTab.activeUsers"
-            :sortKey="topicSortKey"
-            :sortOrder="topicSortOrder"
-            @sort="handleTopicSort"
-            @click="handleTopicClick"
-            @middleClick="handleMiddleClick"
-            @openUser="handleUserClick"
-            @openTag="handleOpenTopicTag"
-          />
-        </div>
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="[]"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
-
-      <!-- Category view -->
-      <div v-else-if="activeTab?.viewType === 'category'" class="flex gap-4">
-        <!-- Main content -->
-        <div class="flex-1 min-w-0 space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
-            <a-button size="small" @click="toggleTopicComposer">
-              {{ composerMode === 'topic' ? '收起' : '发帖' }}
-            </a-button>
-          </div>
-
-          <CategoryGrid
-            v-if="activeTab.categories.length > 0"
-            :categories="activeTab.categories"
-            :baseUrl="baseUrl"
-            title="子分类"
-            @click="handleCategoryClick"
-          />
-
-          <div v-if="activeTab.pendingTopicsCount" class="mb-3">
-            <a-button type="primary" size="small" @click="handleApplyPendingTopics">
-              发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
-            </a-button>
-          </div>
-
-          <TopicList
-            :topics="sortedTopics"
-            :baseUrl="baseUrl"
-            :categories="activeTab.categories"
-            :users="activeTab.activeUsers"
-            :sortKey="topicSortKey"
-            :sortOrder="topicSortOrder"
-            @sort="handleTopicSort"
-            @click="handleTopicClick"
-            @middleClick="handleMiddleClick"
-            @openUser="handleUserClick"
-            @openTag="handleOpenTopicTag"
-          />
-
-          <!-- Loading more indicator -->
-          <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
-            <a-spin />
-            <span class="ml-2 text-gray-500">加载更多话题...</span>
-          </div>
-
-          <!-- End indicator -->
-          <div
-            v-if="!activeTab.hasMoreTopics && !isLoadingMore && activeTab.topics.length > 0"
-            class="text-center text-gray-400 py-4 text-sm"
-          >
-            已加载全部话题
-          </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="w-64 flex-shrink-0 hidden lg:block">
-          <Sidebar
-            :categories="activeTab.categories"
-            :users="activeTab.activeUsers"
-            :baseUrl="baseUrl"
-            :topicListType="activeTab.topicListType"
-            @clickCategory="handleCategoryClick"
-            @clickUser="handleUserClick"
-            @changeTopicListType="handleChangeTopicListType"
-            @navigateTo="handleNavigate"
-          />
-        </div>
-      </div>
+      <CategoryTopicsView
+        v-else-if="activeTab?.viewType === 'category' && activeTab"
+        :activeTab="activeTab"
+        :baseUrl="baseUrl"
+        :sortedTopics="sortedTopics"
+        :topicSortKey="topicSortKey"
+        :topicSortOrder="topicSortOrder"
+        :isLoadingMore="isLoadingMore"
+        :composerMode="composerMode"
+        @toggleComposer="toggleTopicComposer"
+        @applyPendingTopics="handleApplyPendingTopics"
+        @topicSort="handleTopicSort"
+        @topicClick="handleTopicClick"
+        @topicMiddleClick="handleMiddleClick"
+        @openUser="handleUserClick"
+        @openTag="handleOpenTopicTag"
+        @categoryClick="handleCategoryClick"
+        @changeTopicListType="handleChangeTopicListType"
+        @navigate="handleNavigate"
+      />
 
       <!-- Chat view -->
       <ChatView
@@ -1410,52 +1294,28 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div v-if="composerMode" class="floating-composer" :style="floatingStyle">
-    <div class="floating-shell">
-      <div class="floating-bar" @mousedown="startDrag" @touchstart.prevent="startDrag">
-        <span>
-          {{
-            composerMode === 'topic'
-              ? '发帖编辑器'
-              : composerMode === 'edit'
-                ? '编辑帖子'
-                : '回复编辑器'
-          }}
-        </span>
-        <button class="floating-close" @click="handleComposerClose">×</button>
-      </div>
-      <div class="floating-body">
-        <Composer
-          :mode="composerMode"
-          :baseUrl="baseUrl"
-          :topicId="
-            composerMode === 'edit'
-              ? editTarget?.topic_id || activeTab?.currentTopic?.id
-              : activeTab?.currentTopic?.id
-          "
-          :postId="composerMode === 'edit' ? editTarget?.id : undefined"
-          :initialRaw="composerMode === 'edit' ? editInitialRaw : undefined"
-          :originalRaw="composerMode === 'edit' ? editOriginalRaw : undefined"
-          :replyToPostNumber="composerMode === 'reply' ? replyTarget?.postNumber || null : null"
-          :replyToUsername="composerMode === 'reply' ? replyTarget?.username || null : null"
-          :categories="composerMode === 'topic' ? activeTab?.categories || [] : []"
-          :defaultCategoryId="
-            composerMode === 'topic' ? activeTab?.currentCategoryId || null : null
-          "
-          :currentCategory="composerMode === 'topic' ? currentCategoryOption : null"
-          @posted="
-            composerMode === 'topic'
-              ? handleTopicPosted
-              : composerMode === 'edit'
-                ? handleEditPosted
-                : handleReplyPosted
-          "
-          @clearReply="handleClearReply"
-        />
-      </div>
-      <div class="floating-resize" @mousedown="startResize" @touchstart.prevent="startResize" />
-    </div>
-  </div>
+  <FloatingComposer
+    v-if="composerMode"
+    :composerMode="composerMode!"
+    :baseUrl="baseUrl"
+    :floatingStyle="floatingStyle"
+    :topicId="composerTopicId"
+    :postId="composerPostId"
+    :initialRaw="composerInitialRaw"
+    :originalRaw="composerOriginalRaw"
+    :replyToPostNumber="composerReplyPostNumber"
+    :replyToUsername="composerReplyUsername"
+    :categories="composerCategories"
+    :defaultCategoryId="composerDefaultCategoryId"
+    :currentCategory="composerCurrentCategory"
+    @close="handleComposerClose"
+    @startDrag="startDrag"
+    @startResize="startResize"
+    @topicPosted="handleTopicPosted"
+    @editPosted="handleEditPosted"
+    @replyPosted="handleReplyPosted"
+    @clearReply="handleClearReply"
+  />
 </template>
 
 <style scoped>
@@ -1476,138 +1336,9 @@ onUnmounted(() => {
   background: var(--theme-background);
 }
 
-.home-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 10px 12px;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-outline-variant);
-  border-radius: 10px;
-}
-
-.dark .home-nav {
-  background: var(--theme-surface);
-  border-color: var(--theme-outline-variant);
-}
-
-.home-nav-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.home-nav-link {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--theme-on-surface-variant);
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.home-nav-link:hover {
-  background: var(--theme-surface-variant);
-}
-
-.home-nav-link.active {
-  background: var(--theme-primary-container);
-  border-color: var(--theme-primary);
-  color: var(--theme-on-primary-container);
-  font-weight: 600;
-}
-
-.dark .home-nav-link {
-  color: var(--theme-on-surface-variant);
-}
-
-.dark .home-nav-link:hover {
-  background: var(--theme-surface-variant);
-}
-
-.dark .home-nav-link.active {
-  background: var(--theme-primary-container);
-  border-color: var(--theme-primary);
-  color: var(--theme-on-primary-container);
-}
-
-.home-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pending-topics {
-  display: flex;
-  justify-content: center;
-}
 
 .tab-item {
   transition: background-color 0.15s;
 }
 
-.floating-composer {
-  position: fixed;
-  right: 20px;
-  bottom: 24px;
-  width: min(420px, calc(100vw - 40px));
-  z-index: 50;
-}
-
-.floating-shell {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-outline-variant);
-  border-radius: 12px;
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.2);
-  overflow: hidden;
-}
-
-.dark .floating-shell {
-  background: var(--theme-surface);
-  border-color: var(--theme-outline-variant);
-}
-
-.floating-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--theme-on-surface-variant);
-  background: var(--theme-surface-variant);
-  cursor: move;
-}
-
-.dark .floating-bar {
-  color: var(--theme-on-surface-variant);
-  background: var(--theme-surface-variant);
-}
-
-.floating-close {
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-}
-
-.floating-body {
-  flex: 1;
-  overflow: auto;
-}
-
-.floating-resize {
-  width: 16px;
-  height: 16px;
-  align-self: flex-end;
-  cursor: se-resize;
-  background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--theme-outline) 80%, transparent) 50%);
-}
 </style>
