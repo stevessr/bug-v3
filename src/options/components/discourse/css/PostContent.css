@@ -171,25 +171,40 @@
   cursor: pointer;
 }
 
-.post-content :deep(.spoiled.spoiler-blurred > *) {
+.post-content :deep(.spoiled.spoiler-blurred > *:not(.spoiler-mask-host)) {
   filter: blur(10px);
   pointer-events: none;
 }
 
-.post-content :deep(.spoiled.spoiler-blurred::after) {
-  content: '点击显示隐藏内容';
+.post-content :deep(.spoiler-mask-host) {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+}
+
+.post-content :deep(.spoiled:not(.spoiler-blurred) > .spoiler-mask-host) {
+  display: none;
+}
+
+.post-content :deep(.spoiler-mask) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   font-size: 12px;
   color: #6b7280;
   background: rgba(15, 23, 42, 0.08);
   border-radius: 6px;
+  text-align: center;
+  padding: 0 12px;
+  box-sizing: border-box;
 }
 
-.dark .post-content :deep(.spoiled.spoiler-blurred::after) {
+.dark .post-content :deep(.spoiler-mask) {
   color: #cbd5f5;
   background: rgba(15, 23, 42, 0.5);
 }

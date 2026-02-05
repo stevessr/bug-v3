@@ -11,6 +11,7 @@ import PollView from './PollView'
 import HashtagCooked from './HashtagCooked'
 import ImageCarousel from './ImageCarousel'
 import ImageMasonry from './ImageMasonry'
+import SpoilerMask from './SpoilerMask'
 import '../css/PostContent.css'
 
 type ImageGridSegment = Extract<ParsedContent['segments'][number], { type: 'image-grid' }>
@@ -35,6 +36,7 @@ export default defineComponent({
     let scrollContainer: HTMLElement | null = null
     let pollCleanupFns: Array<() => void> = []
     let hashtagCleanupFns: Array<() => void> = []
+    let spoilerCleanupFns: Array<() => void> = []
 
     const getLightboxThumb = (image: LightboxImage) => {
       return image.thumbSrc || image.href
@@ -217,6 +219,41 @@ export default defineComponent({
     const teardownHashtagEnhancements = () => {
       hashtagCleanupFns.forEach(fn => fn())
       hashtagCleanupFns = []
+    }
+
+    const teardownSpoilerMasks = () => {
+      spoilerCleanupFns.forEach(fn => fn())
+      spoilerCleanupFns = []
+      const host = contentRef.value
+      host?.querySelectorAll('.spoiler-mask-host').forEach(node => {
+        node.remove()
+      })
+    }
+
+    const getSpoilerLabel = (spoiler: HTMLElement) => {
+      const label = spoiler.getAttribute('aria-label')
+      if (label && label.trim()) return label.trim()
+      return '点击显示隐藏内容'
+    }
+
+    const setupSpoilerMasks = () => {
+      teardownSpoilerMasks()
+      const host = contentRef.value
+      if (!host) return
+
+      const spoilers = Array.from(host.querySelectorAll<HTMLElement>('.spoiled'))
+      spoilers.forEach(spoiler => {
+        spoiler.querySelectorAll(':scope > .spoiler-mask-host').forEach(node => node.remove())
+        const mountRoot = document.createElement('span')
+        mountRoot.className = 'spoiler-mask-host'
+        spoiler.appendChild(mountRoot)
+
+        const app = createApp(SpoilerMask, {
+          label: getSpoilerLabel(spoiler)
+        })
+        app.mount(mountRoot)
+        spoilerCleanupFns.push(() => app.unmount())
+      })
     }
 
     const getHashtagLabel = (anchor: HTMLAnchorElement) => {
@@ -476,6 +513,7 @@ export default defineComponent({
           scrollContainer?.addEventListener('scroll', updateFootnotePosition, { passive: true })
           setupPollEnhancements()
           setupHashtagEnhancements()
+          setupSpoilerMasks()
         }
       })
       window.addEventListener('resize', updateFootnotePosition, { passive: true })
@@ -498,6 +536,7 @@ export default defineComponent({
       hideActiveFootnote()
       teardownPollEnhancements()
       teardownHashtagEnhancements()
+      teardownSpoilerMasks()
     })
 
     watch(
@@ -506,6 +545,7 @@ export default defineComponent({
         await nextTick()
         setupPollEnhancements()
         setupHashtagEnhancements()
+        setupSpoilerMasks()
       }
     )
 
@@ -519,6 +559,7 @@ export default defineComponent({
           await nextTick()
           setupPollEnhancements()
           setupHashtagEnhancements()
+          setupSpoilerMasks()
         }
       }
     )
