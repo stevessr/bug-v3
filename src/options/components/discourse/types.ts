@@ -303,6 +303,7 @@ export interface DiscourseTopicDetail {
   like_count: number
   created_at: string
   last_posted_at?: string
+  last_read_post_number?: number
   notification_level?: number
   post_stream: {
     posts: DiscoursePost[]

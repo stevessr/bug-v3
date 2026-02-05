@@ -10,6 +10,7 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     viewCount: { type: Number as () => number | null, default: null },
     likeCount: { type: Number as () => number | null, default: null },
+    userCount: { type: Number as () => number | null, default: null },
     participants: { type: Array as () => DiscourseUser[], default: () => [] },
     summaryMode: { type: Boolean, default: false },
     summaryLoading: { type: Boolean, default: false }
@@ -18,9 +19,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const maxAvatars = 6
     const visibleParticipants = computed(() => props.participants.slice(0, maxAvatars))
-    const extraParticipants = computed(() =>
-      Math.max(props.participants.length - maxAvatars, 0)
-    )
+    const extraParticipants = computed(() => Math.max(props.participants.length - maxAvatars, 0))
     const formatNumber = (value: number | null | undefined) => {
       if (value === null || typeof value === 'undefined') return '-'
       return new Intl.NumberFormat('zh-CN').format(value)
@@ -48,7 +47,7 @@ export default defineComponent({
             <div class="topic-header__stat">
               <span class="topic-header__stat-label">用户</span>
               <span class="topic-header__stat-value">
-                {formatNumber(props.participants.length)}
+                {formatNumber(props.userCount ?? props.participants.length)}
               </span>
             </div>
           </div>

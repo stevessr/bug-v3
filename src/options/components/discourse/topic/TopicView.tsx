@@ -73,6 +73,7 @@ export default defineComponent({
     const viewCount = computed(() => viewStats.value?.views ?? activeTopic.value?.views ?? null)
     const likeCount = computed(() => likeStats.value ?? activeTopic.value?.like_count ?? null)
     const participants = computed(() => activeTopic.value?.details?.participants || [])
+    const userCount = computed(() => viewStats.value?.users ?? participants.value.length)
 
     const sumStats = (items?: Array<Record<string, any>> | null) => {
       if (!items?.length) return null
@@ -355,6 +356,7 @@ export default defineComponent({
             baseUrl={props.baseUrl}
             viewCount={viewCount.value}
             likeCount={likeCount.value}
+            userCount={userCount.value}
             participants={participants.value}
             summaryMode={summaryMode.value}
             summaryLoading={summaryLoading.value}
@@ -380,7 +382,7 @@ export default defineComponent({
                 getParsedReply={getParsedReply}
                 isPostLiked={isPostLiked}
                 getReactionCount={getReactionCount}
-                isLiking={postId => likingPostIds.value.has(postId)}
+                isLiking={(postId: number) => likingPostIds.value.has(postId)}
                 onOpenUser={handleUserClick}
                 onReplyTo={handleReplyClick}
                 onToggleLike={toggleLike}
