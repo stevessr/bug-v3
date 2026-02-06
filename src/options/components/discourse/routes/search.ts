@@ -13,12 +13,44 @@ const buildSearchQuery = (query: string, filters: DiscourseSearchFilters) => {
   const tokens: string[] = []
   const trimmed = query.trim()
   if (trimmed) tokens.push(trimmed)
+
+  // In-filters (boolean)
   if (filters.inTitle) tokens.push('in:title')
   if (filters.inFirst) tokens.push('in:first')
+  if (filters.inPinned) tokens.push('in:pinned')
+  if (filters.inWiki) tokens.push('in:wiki')
+  if (filters.inBookmarks) tokens.push('in:bookmarks')
+  if (filters.inLikes) tokens.push('in:likes')
+  if (filters.inPosted) tokens.push('in:posted')
+  if (filters.inSeen) tokens.push('in:seen')
+  if (filters.inUnseen) tokens.push('in:unseen')
+  if (filters.inWatching) tokens.push('in:watching')
+  if (filters.inTracking) tokens.push('in:tracking')
+  if (filters.inMessages) tokens.push('in:messages')
+
+  // Status and order
   if (filters.status) tokens.push(`status:${filters.status}`)
   if (filters.order) tokens.push(`order:${filters.order}`)
+
+  // Category and tags
   if (filters.category) tokens.push(`category:${filters.category}`)
   if (filters.tags) tokens.push(`tags:${filters.tags}`)
+
+  // User filters
+  if (filters.postedBy) tokens.push(`@${filters.postedBy.replace(/^@/, '')}`)
+  if (filters.assignedTo) tokens.push(`assigned:${filters.assignedTo}`)
+  if (filters.group) tokens.push(`group:${filters.group}`)
+
+  // Date filters
+  if (filters.before) tokens.push(`before:${filters.before}`)
+  if (filters.after) tokens.push(`after:${filters.after}`)
+
+  // Post/view count filters
+  if (filters.minPosts) tokens.push(`min_posts:${filters.minPosts}`)
+  if (filters.maxPosts) tokens.push(`max_posts:${filters.maxPosts}`)
+  if (filters.minViews) tokens.push(`min_views:${filters.minViews}`)
+  if (filters.maxViews) tokens.push(`max_views:${filters.maxViews}`)
+
   return tokens.join(' ').trim()
 }
 

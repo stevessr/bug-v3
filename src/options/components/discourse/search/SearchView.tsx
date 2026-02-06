@@ -1,5 +1,5 @@
 import { defineComponent, ref, computed, watch } from 'vue'
-import { Button, Input, Select, Switch, Tag } from 'ant-design-vue'
+import { Button, Input, Select, Switch, Tag, Collapse, DatePicker, InputNumber } from 'ant-design-vue'
 
 import type {
   SearchState,
@@ -32,6 +32,7 @@ export default defineComponent({
     const selectedTags = ref<string[]>([])
     const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
     const tagsLoading = ref(false)
+    const showAdvanced = ref(false)
     let tagSearchTimer: number | null = null
     const preloadedCategoriesReadyToken = ref(0)
 
@@ -244,70 +245,72 @@ export default defineComponent({
               搜索
             </Button>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+
+          {/* Basic filters row */}
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div class="flex items-center gap-2">
-              <span class="text-gray-500">标题内</span>
-              <Switch
-                size="small"
-                checked={localFilters.value.inTitle}
-                onChange={(checked: boolean) => {
-                  localFilters.value.inTitle = checked
-                }}
-              />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">仅首帖</span>
-              <Switch
-                size="small"
-                checked={localFilters.value.inFirst}
-                onChange={(checked: boolean) => {
-                  localFilters.value.inFirst = checked
-                }}
-              />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">状态</span>
-              <Select
-                size="small"
-                value={localFilters.value.status}
-                class="w-28"
-                options={[
-                  { value: '', label: '不限' },
-                  { value: 'open', label: '开放' },
-                  { value: 'closed', label: '已关闭' }
-                ]}
-                onChange={(value: 'open' | 'closed' | '') => {
-                  localFilters.value.status = value
-                }}
-              />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">排序</span>
+              <span class="text-gray-500 shrink-0">排序</span>
               <Select
                 size="small"
                 value={localFilters.value.order}
-                class="w-28"
+                class="flex-1"
                 options={[
                   { value: '', label: '默认' },
-                  { value: 'latest', label: '最新' },
-                  { value: 'likes', label: '点赞' },
-                  { value: 'views', label: '浏览' }
+                  { value: 'latest', label: '最新回复' },
+                  { value: 'created', label: '创建时间' },
+                  { value: 'activity', label: '最近活动' },
+                  { value: 'likes', label: '点赞数' },
+                  { value: 'views', label: '浏览量' },
+                  { value: 'hot', label: '热门' }
                 ]}
-                onChange={(value: 'latest' | 'likes' | 'views' | '') => {
+                onChange={(value: any) => {
                   localFilters.value.order = value
                 }}
               />
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-gray-500">分类</span>
+              <span class="text-gray-500 shrink-0">发帖人</span>
+              <Input
+                size="small"
+                value={localFilters.value.postedBy}
+                placeholder="用户名"
+                class="flex-1"
+                onUpdate:value={(value: string) => {
+                  localFilters.value.postedBy = value
+                }}
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 shrink-0">状态</span>
+              <Select
+                size="small"
+                value={localFilters.value.status}
+                class="flex-1"
+                options={[
+                  { value: '', label: '不限' },
+                  { value: 'open', label: '开放' },
+                  { value: 'closed', label: '已关闭' },
+                  { value: 'archived', label: '已归档' },
+                  { value: 'listed', label: '可见' },
+                  { value: 'unlisted', label: '隐藏' },
+                  { value: 'noreplies', label: '无回复' },
+                  { value: 'single_user', label: '单用户' }
+                ]}
+                onChange={(value: any) => {
+                  localFilters.value.status = value
+                }}
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 shrink-0">分类</span>
               <Select
                 size="small"
                 mode="combobox"
                 showSearch
                 allowClear
-                class="w-full"
+                class="flex-1"
                 value={localFilters.value.category || undefined}
-                placeholder="分类 ID 或 slug"
+                placeholder="选择分类"
                 options={categoryOptions.value}
                 filterOption={filterCategoryOption}
                 onUpdate:value={(value: string | undefined) => {
@@ -315,60 +318,334 @@ export default defineComponent({
                 }}
               />
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">标签</span>
-              <Select
-                size="small"
-                class="w-full"
-                mode="tags"
-                showSearch
-                value={selectedTags.value}
-                filterOption={false}
-                notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
-                placeholder="搜索或输入标签"
-                tokenSeparators={[',', ' ']}
-                onSearch={handleTagSearch}
-                onDropdownVisibleChange={handleTagDropdown}
-                onUpdate:value={(value: string[]) => updateSelectedTags(value)}
-                v-slots={{
-                  tagRender: ({ value, closable, onClose }: any) => (
-                    <span class="inline-flex items-center gap-1 mr-1">
+          </div>
+
+          {/* Tags row */}
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-gray-500 shrink-0">标签</span>
+            <Select
+              size="small"
+              class="flex-1"
+              mode="tags"
+              showSearch
+              value={selectedTags.value}
+              filterOption={false}
+              notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
+              placeholder="搜索或输入标签"
+              tokenSeparators={[',', ' ']}
+              onSearch={handleTagSearch}
+              onDropdownVisibleChange={handleTagDropdown}
+              onUpdate:value={(value: string[]) => updateSelectedTags(value)}
+              v-slots={{
+                tagRender: ({ value, closable, onClose }: any) => (
+                  <span class="inline-flex items-center gap-1 mr-1">
+                    <TagPill
+                      name={String(value)}
+                      text={getTagOption(String(value))?.label || String(value)}
+                      description={getTagOption(String(value))?.description || null}
+                      compact
+                    />
+                    {closable ? (
+                      <button
+                        type="button"
+                        class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        onMousedown={(event: Event) => event.preventDefault()}
+                        onClick={onClose}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </span>
+                ),
+                default: () =>
+                  tagOptions.value.map(tag => (
+                    <Select.Option key={tag.value} value={tag.value}>
                       <TagPill
-                        name={String(value)}
-                        text={getTagOption(String(value))?.label || String(value)}
-                        description={getTagOption(String(value))?.description || null}
+                        name={tag.value}
+                        text={tag.label}
+                        description={tag.description || null}
                         compact
                       />
-                      {closable ? (
-                        <button
-                          type="button"
-                          class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          onMousedown={(event: Event) => event.preventDefault()}
-                          onClick={onClose}
-                        >
-                          ×
-                        </button>
-                      ) : null}
-                    </span>
-                  ),
-                  default: () =>
-                    tagOptions.value.map(tag => (
-                      <Select.Option key={tag.value} value={tag.value}>
-                        <TagPill
-                          name={tag.value}
-                          text={tag.label}
-                          description={tag.description || null}
-                          compact
-                        />
-                      </Select.Option>
-                    ))
-                }}
-              />
-            </div>
+                    </Select.Option>
+                  ))
+              }}
+            />
           </div>
+
+          {/* Toggle advanced filters */}
+          <div class="flex items-center justify-between">
+            <button
+              type="button"
+              class="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+              onClick={() => {
+                showAdvanced.value = !showAdvanced.value
+              }}
+            >
+              <span>{showAdvanced.value ? '收起' : '展开'}高级筛选</span>
+              <svg
+                class={['w-3 h-3 transition-transform', showAdvanced.value ? 'rotate-180' : '']}
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Advanced filters */}
+          {showAdvanced.value && (
+            <div class="space-y-3 pt-2 border-t dark:border-gray-700">
+              {/* Search type toggles */}
+              <div class="text-xs text-gray-500 font-medium">搜索类型</div>
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inTitle}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inTitle = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">标题内</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inFirst}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inFirst = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">仅首帖</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inPinned}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inPinned = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">置顶</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inWiki}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inWiki = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">Wiki</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inMessages}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inMessages = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">私信</span>
+                </div>
+              </div>
+
+              {/* My activity toggles */}
+              <div class="text-xs text-gray-500 font-medium">仅回访话题/帖子</div>
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inPosted}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inPosted = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">我发布的</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inBookmarks}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inBookmarks = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">我的书签</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inLikes}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inLikes = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">我点赞的</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inWatching}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inWatching = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">关注中</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inTracking}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inTracking = checked
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">跟踪中</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inSeen}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inSeen = checked
+                      if (checked) localFilters.value.inUnseen = false
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">已读</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Switch
+                    size="small"
+                    checked={localFilters.value.inUnseen}
+                    onChange={(checked: boolean) => {
+                      localFilters.value.inUnseen = checked
+                      if (checked) localFilters.value.inSeen = false
+                    }}
+                  />
+                  <span class="text-gray-600 dark:text-gray-400">未读</span>
+                </div>
+              </div>
+
+              {/* User filters */}
+              <div class="text-xs text-gray-500 font-medium">用户筛选</div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">已指定给</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.assignedTo}
+                    placeholder="用户名"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.assignedTo = value
+                    }}
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">群组</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.group}
+                    placeholder="群组名称"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.group = value
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Date filters */}
+              <div class="text-xs text-gray-500 font-medium">时间范围</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">早于</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.before}
+                    placeholder="YYYY-MM-DD"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.before = value
+                    }}
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">晚于</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.after}
+                    placeholder="YYYY-MM-DD"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.after = value
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Count filters */}
+              <div class="text-xs text-gray-500 font-medium">数量筛选</div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">最少帖子</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.minPosts}
+                    placeholder="数量"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.minPosts = value
+                    }}
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">最多帖子</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.maxPosts}
+                    placeholder="数量"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.maxPosts = value
+                    }}
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">最少浏览</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.minViews}
+                    placeholder="数量"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.minViews = value
+                    }}
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500 shrink-0">最多浏览</span>
+                  <Input
+                    size="small"
+                    value={localFilters.value.maxViews}
+                    placeholder="数量"
+                    class="flex-1"
+                    onUpdate:value={(value: string) => {
+                      localFilters.value.maxViews = value
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div class="text-xs text-gray-400">
-            支持 Discourse 高级语法（如
-            in:title、order:latest、tags:tag）。以上筛选会自动追加到查询。
+            支持 Discourse 高级语法（如 in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
           </div>
         </div>
 

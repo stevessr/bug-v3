@@ -346,10 +346,29 @@ export interface DiscourseSearchTopic {
 export interface DiscourseSearchFilters {
   inTitle: boolean
   inFirst: boolean
-  status: 'open' | 'closed' | ''
-  order: 'latest' | 'likes' | 'views' | ''
+  inPinned: boolean
+  inWiki: boolean
+  inBookmarks: boolean
+  inLikes: boolean
+  inPosted: boolean
+  inSeen: boolean
+  inUnseen: boolean
+  inWatching: boolean
+  inTracking: boolean
+  inMessages: boolean
+  status: 'open' | 'closed' | 'archived' | 'listed' | 'unlisted' | 'noreplies' | 'single_user' | ''
+  order: 'latest' | 'likes' | 'views' | 'latest_topic' | 'activity' | 'created' | 'hot' | ''
   category: string
   tags: string
+  postedBy: string
+  assignedTo: string
+  group: string
+  before: string
+  after: string
+  minPosts: string
+  maxPosts: string
+  minViews: string
+  maxViews: string
 }
 
 export interface SearchState {
