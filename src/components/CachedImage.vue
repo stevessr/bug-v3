@@ -166,15 +166,20 @@ const handleImageError = async () => {
     }
   }
 
-  // Force-source 模式下不尝试缓存，直接显示占位图
   const strategy = resolveImageCacheStrategy(emojiStore.settings)
+
+  // Force-source 模式：在扩展页仍允许回退到缓存，否则容易被 CORP 阻断
   if (strategy === 'force-source') {
+    if (props.src && isExtensionPage()) {
+      await loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+      return
+    }
     displaySrc.value = ERROR_PLACEHOLDER
     isError.value = true
     return
   }
 
-  // 失败后尝试缓存加载（auto/adaptive）
+  // 失败后尝试缓存加载（auto/adaptive/force-indexeddb）
   if (props.src) {
     await loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
     return
@@ -259,13 +264,16 @@ onMounted(() => {
 <style scoped>
 .cached-image-wrapper {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .cached-image-img {
   width: 100%;
   height: 100%;
   object-fit: inherit;
+  display: block;
 }
 
 .cached-image-loading {
