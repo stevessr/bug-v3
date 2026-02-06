@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
@@ -149,6 +150,8 @@ onMounted(() => {
             class="emoji-item relative group"
           >
             <a-badge
+              class="block w-full"
+              :style="{ width: '100%' }"
               :count="emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0"
               :overflow-count="99"
               :show-zero="false"
