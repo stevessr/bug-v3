@@ -39,8 +39,9 @@ const handleSettingUpdate = (key: string, value: any) => {
 
 const getOutputFormat = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.outputFormat) || 'markdown'
-    return (settings && (settings as AppSettings).outputFormat) || 'markdown'
+    if (isRef(props.settings))
+      return (props.settings.value && props.settings.value.outputFormat) || 'markdown'
+    return (props.settings && (props.settings as AppSettings).outputFormat) || 'markdown'
   } catch {
     return 'markdown'
   }
