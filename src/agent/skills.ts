@@ -186,6 +186,16 @@ export const BUILTIN_MCP_SERVERS: BuiltinMcpServer[] = [
     category: 'search',
     requiresApiKey: 'TAVILY_API_KEY',
     enabled: false
+  },
+  {
+    id: 'builtin-tavily-expert',
+    name: 'Tavily Expert',
+    url: 'https://tavily.api.tadata.com/mcp/tavily/$TAVILY_PATH',
+    transport: 'streamable-http',
+    description: 'Tavily Expert 搜索服务，支持更强大的搜索和内容提取功能',
+    category: 'search',
+    requiresApiKey: 'TAVILY_PATH',
+    enabled: false
   }
 ]
 
@@ -366,6 +376,65 @@ export const BUILTIN_SKILLS: Skill[] = [
       required: ['libraryName']
     },
     chainTo: ['skill-library-docs']
+  },
+  {
+    id: 'skill-expert-search',
+    name: '专家搜索',
+    description: '使用 Tavily Expert 进行深度网络搜索，支持更精确的结果',
+    category: 'search',
+    source: 'builtin',
+    mcpServerId: 'builtin-tavily-expert',
+    mcpToolName: 'tavily_search',
+    enabled: true,
+    icon: '🔬',
+    priority: 95,
+    triggers: [
+      '深度搜索(.+)',
+      '专家搜索(.+)',
+      '详细搜索(.+)',
+      'expert search(.+)'
+    ],
+    aliases: ['专家搜索', 'expert search', '深度搜索', '详细搜索'],
+    tags: ['search', 'expert', 'tavily'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '搜索查询' },
+        search_depth: { type: 'string', description: '搜索深度: basic 或 advanced' },
+        max_results: { type: 'number', description: '最大结果数量' }
+      },
+      required: ['query']
+    },
+    presets: [
+      { id: 'deep-news', name: '深度新闻', args: { query: '最新新闻', search_depth: 'advanced', max_results: 10 } },
+      { id: 'research', name: '学术研究', args: { query: '', search_depth: 'advanced', max_results: 20 } }
+    ]
+  },
+  {
+    id: 'skill-expert-extract',
+    name: '专家内容提取',
+    description: '使用 Tavily Expert 从多个 URL 提取和分析内容',
+    category: 'web',
+    source: 'builtin',
+    mcpServerId: 'builtin-tavily-expert',
+    mcpToolName: 'tavily_extract',
+    enabled: true,
+    icon: '📑',
+    priority: 75,
+    triggers: [
+      '深度提取(.+)',
+      '专家提取(.+)',
+      '分析(.+)内容'
+    ],
+    aliases: ['专家提取', 'expert extract', '深度提取'],
+    tags: ['web', 'extract', 'expert', 'tavily'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        urls: { type: 'array', items: { type: 'string' }, description: '要提取内容的 URL 列表' }
+      },
+      required: ['urls']
+    }
   }
 ]
 
@@ -472,13 +541,18 @@ export function setSkillEnabled(skillId: string, value: boolean): void {
 export function builtinMcpToConfig(builtin: BuiltinMcpServer): McpServerConfig {
   const apiKeys = loadApiKeys()
 
-  // 处理 URL 中的 API Key 占位符
+  // 处理 URL 中的变量占位符 ($VARIABLE_NAME)
   let url = builtin.url
   if (builtin.requiresApiKey) {
     const apiKey = apiKeys[builtin.requiresApiKey] || ''
-    // Tavily 特殊处理：API Key 在 URL 参数中
+    // Tavily 原版特殊处理：API Key 在 URL 参数中
     if (builtin.id === 'builtin-tavily') {
       url = `https://mcp.tavily.com/mcp?tavilyApiKey=${encodeURIComponent(apiKey)}`
+    } else {
+      // 通用处理：替换 URL 中的 $VARIABLE 占位符
+      url = url.replace(/\$([A-Z_][A-Z0-9_]*)/g, (_match, varName) => {
+        return apiKeys[varName] || ''
+      })
     }
   }
 

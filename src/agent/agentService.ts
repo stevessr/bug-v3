@@ -618,7 +618,8 @@ const buildSystemPrompt = (
       // 工具会通过 MCP 协议自动发现并作为 tool 传入
       lines.push(
         `可用 MCP 服务：${enabledServers.map(server => server.name).join(', ')}`,
-        'MCP 工具已自动注册，可直接通过 tool 调用使用。'
+        'MCP 工具已自动注册为 tool，可直接调用。工具名格式：mcp__服务ID__工具名。',
+        '当需要搜索、获取文档等功能时，请直接调用对应的 MCP 工具，不要在文本中描述工具调用。'
       )
     }
   }
@@ -1357,6 +1358,10 @@ export async function runAgentMessage(
     if (firstPass.mcpToolUses && firstPass.mcpToolUses.length > 0) {
       options?.onUpdate?.({ message: '正在执行 MCP 工具调用...' })
 
+      // 合并内置 MCP 服务和自定义 MCP 服务用于查找
+      const builtinMcpConfigs = getEnabledBuiltinMcpConfigs()
+      const allMcpServersForLookup = [...builtinMcpConfigs, ...settings.mcpServers]
+
       const mcpResults = await Promise.all(
         firstPass.mcpToolUses.map(async mcpToolUse => {
           const parsed = parseMcpToolName(mcpToolUse.name || '')
@@ -1364,7 +1369,7 @@ export async function runAgentMessage(
             return { toolUseId: mcpToolUse.id || '', error: '无效的 MCP 工具名称' }
           }
 
-          const server = findServerById(settings.mcpServers, parsed.serverId)
+          const server = findServerById(allMcpServersForLookup, parsed.serverId)
           if (!server) {
             return {
               toolUseId: mcpToolUse.id || '',
