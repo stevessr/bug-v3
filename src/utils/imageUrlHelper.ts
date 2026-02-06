@@ -21,16 +21,26 @@ const URL_CACHE_MAX_SIZE = 2000
  * Add cache-busting parameter to URL to force refresh when emoji is updated
  * 优化：使用内存缓存避免重复计算
  */
-export function addCacheBustingParam(url: string, emoji: { id: string; packet?: number }): string {
+function hashString(input: string): string {
+  let hash = 0
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash).toString(36)
+}
+
+export function addCacheBustingParam(url: string, emoji: { id?: string; packet?: number }): string {
   if (!url) return url
 
   // 检查缓存
-  const cacheKey = `${url}|${emoji.id}|${emoji.packet || ''}`
+  const safeId = emoji.id || ''
+  const cacheKey = `${url}|${safeId || 'no-id'}|${emoji.packet || ''}`
   const cached = urlCache.get(cacheKey)
   if (cached) return cached
 
   // Use packet number as version indicator, fallback to id hash if not available
-  const version = emoji.packet || emoji.id.substring(0, 8)
+  const version = emoji.packet || (safeId ? safeId.substring(0, 8) : hashString(url))
   const separator = url.includes('?') ? '&' : '?'
   const result = `${url}${separator}v=${version}`
 
@@ -57,7 +67,7 @@ function log(message: string, ...args: any[]) {
  * 优化：减少日志输出，使用更智能的重试策略
  */
 export async function getEmojiImageUrl(
-  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
+  emoji: { id?: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): Promise<string> {
   const { preferCache = true, fallbackUrl } = options
@@ -99,7 +109,7 @@ export async function getEmojiImageUrl(
  * 优化：减少日志输出
  */
 export function getEmojiImageUrlSync(
-  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
+  emoji: { id?: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): string {
   const { preferCache = true } = options
@@ -129,7 +139,7 @@ export function getEmojiImageUrlSync(
  * 优化：减少日志和重试次数
  */
 export async function getEmojiImageUrlWithLoading(
-  emoji: { id: string; displayUrl?: string; url: string; name?: string; packet?: number },
+  emoji: { id?: string; displayUrl?: string; url: string; name?: string; packet?: number },
   options: ImageUrlOptions = {}
 ): Promise<{ url: string; isLoading: boolean; isFromCache: boolean }> {
   const { preferCache = true, fallbackUrl } = options
@@ -197,7 +207,7 @@ async function triggerBackgroundCache(url: string): Promise<void> {
  * 优化：使用新的批量预加载 API
  */
 export async function preloadImages(
-  emojis: Array<{ id: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
+  emojis: Array<{ id?: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
   options: { batchSize?: number; delay?: number; toMemory?: boolean } = {}
 ): Promise<void> {
   const { batchSize = 6, delay = 50, toMemory = true } = options
@@ -246,7 +256,7 @@ export async function preloadImages(
  * 批量获取图片 URL（优化版）
  */
 export async function getEmojiImageUrls(
-  emojis: Array<{ id: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
+  emojis: Array<{ id?: string; displayUrl?: string; url: string; name?: string; packet?: number }>,
   options: ImageUrlOptions = {}
 ): Promise<Map<string, string>> {
   const { preferCache = true } = options

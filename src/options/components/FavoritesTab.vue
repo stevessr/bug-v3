@@ -20,6 +20,9 @@ const favoritesGroup = computed(() => {
   return emojiStore.sortedGroups.find(g => g.id === 'favorites')
 })
 
+const getEmojiKey = (emoji: { id?: string; url?: string }, idx: number) =>
+  emoji.id || emoji.url || `fav-${idx}`
+
 const handleClearAllFavorites = () => {
   emojiStore.clearAllFavorites()
   message.success('已清空所有常用表情')
@@ -38,13 +41,14 @@ const initializeImageSources = async () => {
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
 
-  for (const emoji of favoritesGroup.value.emojis) {
+  for (const [idx, emoji] of favoritesGroup.value.emojis.entries()) {
     try {
+      const key = getEmojiKey(emoji, idx)
       if (emojiStore.settings.useIndexedDBForImages) {
         // Use the new loading function in cache mode
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-        newSources.set(emoji.id, result.url)
-        newLoadingStates.set(emoji.id, result.isLoading)
+        newSources.set(key, result.url)
+        newLoadingStates.set(key, result.isLoading)
         console.log(
           `[FavoritesTab] Image source for ${emoji.name}:`,
           result.url,
@@ -54,14 +58,14 @@ const initializeImageSources = async () => {
       } else {
         // Direct URL mode
         const fallbackSrc = emoji.displayUrl || emoji.url
-        newSources.set(emoji.id, fallbackSrc)
+        newSources.set(key, fallbackSrc)
         console.log(`[FavoritesTab] Direct URL for ${emoji.name}:`, fallbackSrc)
       }
     } catch (error) {
       console.warn(`[FavoritesTab] Failed to get image source for ${emoji.name}:`, error)
       // Fallback to direct URL
       const fallbackSrc = emoji.displayUrl || emoji.url
-      newSources.set(emoji.id, fallbackSrc)
+      newSources.set(getEmojiKey(emoji, idx), fallbackSrc)
     }
   }
 
@@ -140,7 +144,7 @@ onMounted(() => {
         >
           <div
             v-for="(emoji, idx) in favoritesGroup.emojis"
-            :key="`fav-${emoji.id || idx}`"
+            :key="`fav-${getEmojiKey(emoji, idx)}`"
             class="emoji-item relative group"
           >
             <a-badge
@@ -153,7 +157,7 @@ onMounted(() => {
               </template>
               <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <CachedImage
-                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
+                  :src="imageSources.get(getEmojiKey(emoji, idx)) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
                   class="w-full h-full object-cover"
                 />
