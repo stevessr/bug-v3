@@ -5,6 +5,7 @@
  */
 
 import { useEmojiStore } from '@/stores'
+import { resolveImageCacheStrategy, shouldPreferCache } from '@/utils/imageCachePolicy'
 
 declare const __ENABLE_LOGGING__: boolean
 
@@ -72,13 +73,16 @@ export async function getEmojiImageUrl(
 ): Promise<string> {
   const { preferCache = true, fallbackUrl } = options
   const emojiStore = useEmojiStore()
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
   const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
+  const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
+
   // If caching is disabled or not preferred, return the direct URL
-  if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
+  if (!preferCacheNow || strategy === 'force-source') {
     return primaryUrl
   }
 
@@ -114,12 +118,15 @@ export function getEmojiImageUrlSync(
 ): string {
   const { preferCache = true } = options
   const emojiStore = useEmojiStore()
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
 
+  const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
+
   // If caching is disabled or not preferred, return the direct URL with cache-busting
-  if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
+  if (!preferCacheNow || strategy === 'force-source') {
     return primaryUrl
   }
 
@@ -144,13 +151,16 @@ export async function getEmojiImageUrlWithLoading(
 ): Promise<{ url: string; isLoading: boolean; isFromCache: boolean }> {
   const { preferCache = true, fallbackUrl } = options
   const emojiStore = useEmojiStore()
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
   const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
   const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
 
+  const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
+
   // If caching is disabled or not preferred, return direct URL with cache-busting
-  if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
+  if (!preferCacheNow || strategy === 'force-source') {
     return { url: primaryUrl, isLoading: false, isFromCache: false }
   }
 
@@ -212,8 +222,9 @@ export async function preloadImages(
 ): Promise<void> {
   const { batchSize = 6, delay = 50, toMemory = true } = options
   const emojiStore = useEmojiStore()
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
-  if (!emojiStore.settings.useIndexedDBForImages) {
+  if (strategy === 'force-source') {
     return // Skip if caching is disabled
   }
 
@@ -261,10 +272,11 @@ export async function getEmojiImageUrls(
 ): Promise<Map<string, string>> {
   const { preferCache = true } = options
   const emojiStore = useEmojiStore()
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
   const results = new Map<string, string>()
 
-  // If caching is disabled, just return direct URLs
-  if (!preferCache || !emojiStore.settings.useIndexedDBForImages) {
+  // If caching is disabled or strategy prefers source, just return direct URLs
+  if (!preferCache || strategy === 'force-source' || strategy === 'auto') {
     for (const emoji of emojis) {
       const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
       results.set(emoji.id, url)
@@ -275,6 +287,24 @@ export async function getEmojiImageUrls(
   // 批量处理
   const { cacheImages } = await import('./imageCache')
   const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+
+  if (strategy === 'adaptive') {
+    const adaptiveUrls = urls.filter(url => shouldPreferCache(emojiStore.settings, url))
+    if (adaptiveUrls.length === 0) {
+      for (let i = 0; i < emojis.length; i++) {
+        results.set(emojis[i].id, urls[i])
+      }
+      return results
+    }
+
+    const cacheResults = await cacheImages(adaptiveUrls, { concurrency: 4 })
+    for (let i = 0; i < emojis.length; i++) {
+      const url = urls[i]
+      const cachedUrl = cacheResults.get(url)
+      results.set(emojis[i].id, cachedUrl || url)
+    }
+    return results
+  }
 
   const cacheResults = await cacheImages(urls, { concurrency: 4 })
 

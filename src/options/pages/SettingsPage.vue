@@ -40,7 +40,7 @@ const {
   updateChatMultiReactorEmojis,
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
-  updateUseIndexedDBForImages,
+  updateImageCacheStrategy,
   updateEnableContentImageCache,
   updateEnableSubmenuInjector,
   updateEnableDiscourseRouterRefresh,
@@ -145,7 +145,7 @@ onMounted(async () => {
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
-              @update:useIndexedDBForImages="updateUseIndexedDBForImages"
+              @update:imageCacheStrategy="updateImageCacheStrategy"
               @update:enableContentImageCache="updateEnableContentImageCache"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:cloudMarketDomain="updateCloudMarketDomain"

@@ -262,8 +262,13 @@ export default function useOptions() {
     emojiStore.updateSettings({ syncVariantToDisplayUrl: value })
   }
 
-  const updateUseIndexedDBForImages = (value: boolean) => {
-    emojiStore.updateSettings({ useIndexedDBForImages: value })
+  const updateImageCacheStrategy = (value: string) => {
+    const strategy = value as 'auto' | 'force-indexeddb' | 'force-source' | 'adaptive'
+    emojiStore.updateSettings({
+      imageCacheStrategy: strategy,
+      // Keep legacy flag in sync for older consumers
+      useIndexedDBForImages: strategy !== 'force-source'
+    })
   }
 
   const updateEnableContentImageCache = (value: boolean) => {
@@ -819,7 +824,7 @@ export default function useOptions() {
     updateChatMultiReactorEmojis,
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
-    updateUseIndexedDBForImages,
+    updateImageCacheStrategy,
     updateEnableContentImageCache,
     updateEnableSubmenuInjector,
     updateEnableDiscourseRouterRefresh,

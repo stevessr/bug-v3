@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted, onUnmounted, inject, type PropType } from 'vue'
+import { message } from 'ant-design-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import { normalizeImageUrl } from '../../utils/isImageUrl'
+import { addCacheBustingParam } from '../../utils/imageUrlHelper'
+import { removeCacheEntries } from '../../utils/imageCache'
 import CachedImage from '../../components/CachedImage.vue'
 import ViewGroupDetailModal from '../modals/ViewGroupDetailModal.vue'
 import BatchRenameModal from '../modals/BatchRenameModal.vue'
@@ -78,6 +81,34 @@ const handleApplyBatchRename = (newNames: Record<string, string>) => {
   emojiStore.updateEmojiNames(newNames)
   isBatchRenameModalVisible.value = false
   selectedEmojis.value.clear()
+}
+
+const handleClearGroupCache = async (group: any) => {
+  const emojis = Array.isArray(group?.emojis) ? group.emojis : []
+  if (emojis.length === 0) {
+    message.info('此分组没有可清理的缓存')
+    return
+  }
+
+  const urlSet = new Set<string>()
+  for (const emoji of emojis) {
+    const baseUrl = emoji.displayUrl || emoji.url
+    if (baseUrl) {
+      urlSet.add(baseUrl)
+      urlSet.add(addCacheBustingParam(baseUrl, emoji))
+    }
+    if (emoji.url) urlSet.add(emoji.url)
+    if (emoji.displayUrl) urlSet.add(emoji.displayUrl)
+  }
+  const urls = Array.from(urlSet)
+
+  try {
+    const removed = await removeCacheEntries(urls)
+    message.success(`已清空 ${removed} 个缓存条目`)
+  } catch (error) {
+    console.warn('Failed to clear group cache:', error)
+    message.error('清空缓存失败')
+  }
 }
 
 const emit = defineEmits([
@@ -542,6 +573,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                         @batchUpdateSize="openBatchModal"
                         @archive="onArchive"
                         @copyAsMarkdown="onCopyAsMarkdown"
+                        @clearCache="handleClearGroupCache"
                       />
                     </div>
                     <div

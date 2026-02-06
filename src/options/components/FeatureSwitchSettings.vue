@@ -14,7 +14,7 @@ const emit = defineEmits([
   'update:enableCalloutSuggestions',
   'update:enableBatchParseImages',
   'update:enableExperimentalFeatures',
-  'update:useIndexedDBForImages',
+  'update:imageCacheStrategy',
   'update:enableContentImageCache',
   'update:enableSubmenuInjector',
   'update:cloudMarketDomain',
@@ -35,6 +35,16 @@ const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
 
 const handleSettingUpdate = (key: string, value: any) => {
   emit(`update:${key}` as any, value)
+}
+
+const getImageCacheStrategy = () => {
+  try {
+    if (isRef(props.settings))
+      return (props.settings.value && props.settings.value.imageCacheStrategy) || 'auto'
+    return (props.settings && (props.settings as AppSettings).imageCacheStrategy) || 'auto'
+  } catch {
+    return 'auto'
+  }
 }
 
 const getOutputFormat = () => {
@@ -62,6 +72,24 @@ const handleOutputFormatSelect = (key: string) => {
 
 const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
   handleOutputFormatSelect(String(info.key))
+}
+
+// 图片缓存策略
+const localImageCacheStrategy = ref<string>(getImageCacheStrategy())
+watch(
+  () => getImageCacheStrategy(),
+  val => {
+    localImageCacheStrategy.value = val || 'auto'
+  }
+)
+
+const handleImageCacheStrategySelect = (key: string) => {
+  localImageCacheStrategy.value = key
+  emit('update:imageCacheStrategy', key)
+}
+
+const handleImageCacheStrategySelectInfo = (info: { key: string | number }) => {
+  handleImageCacheStrategySelect(String(info.key))
 }
 
 // 云端市场域名的本地状态
@@ -185,12 +213,34 @@ const saveRouterRefreshInterval = async () => {
         description="开启后可显示与使用试验性功能 后果自负"
       />
 
-      <SettingSwitch
-        :model-value="getSetting('useIndexedDBForImages', false)"
-        @update:model-value="handleSettingUpdate('useIndexedDBForImages', $event)"
-        label="启用 IndexedDB 缓存图片"
-        description="将图片缓存在 IndexedDB 中以加快加载速度并支持离线访问"
-      />
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium dark:text-white">图片缓存策略</label>
+          <p class="text-sm dark:text-white">选择图片加载与缓存的策略</p>
+        </div>
+        <a-dropdown>
+          <template #overlay>
+            <a-menu @click="handleImageCacheStrategySelectInfo">
+              <a-menu-item key="auto">自动（失败后缓存）</a-menu-item>
+              <a-menu-item key="force-indexeddb">强制 IndexedDB</a-menu-item>
+              <a-menu-item key="force-source">强制源头</a-menu-item>
+              <a-menu-item key="adaptive">试验性自适应</a-menu-item>
+            </a-menu>
+          </template>
+          <a-button title="选择图片缓存策略">
+            {{
+              localImageCacheStrategy === 'force-indexeddb'
+                ? '强制 IndexedDB'
+                : localImageCacheStrategy === 'force-source'
+                  ? '强制源头'
+                  : localImageCacheStrategy === 'adaptive'
+                    ? '试验性自适应'
+                    : '自动（失败后缓存）'
+            }}
+            <DownOutlined />
+          </a-button>
+        </a-dropdown>
+      </div>
 
       <SettingSwitch
         :model-value="getSetting('enableContentImageCache', false)"

@@ -17,6 +17,7 @@ import { useUpload } from './composables/useUpload'
 
 import { requestConfirmation } from '@/options/utils/confirmService'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import { shouldPreferCache, shouldUseImageCache } from '@/utils/imageCachePolicy'
 import CachedImage from '@/components/CachedImage.vue'
 
 const options = inject<OptionsInject>('options')!
@@ -115,7 +116,7 @@ const initializeImageSources = async () => {
   isInitializingImageSources = true
 
   console.log('[BufferPage] Initializing image sources for buffer:', bufferEmojis.value.length)
-  console.log('[BufferPage] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+  console.log('[BufferPage] Cache enabled:', shouldUseImageCache(emojiStore.settings))
 
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
@@ -130,7 +131,7 @@ const initializeImageSources = async () => {
         }
 
         try {
-          if (emojiStore.settings.useIndexedDBForImages) {
+          if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
             // 使用缓存优先的加载函数
             const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
             return { emojiId: emoji.id, url: result.url, isLoading: result.isLoading }

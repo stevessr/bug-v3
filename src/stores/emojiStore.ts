@@ -24,6 +24,7 @@ import type { Emoji, EmojiGroup, AppSettings } from '@/types/type'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 import { defaultSettings } from '@/types/defaultSettings'
 import { createLogger } from '@/utils/logger'
+import { resolveImageCacheStrategy } from '@/utils/imageCachePolicy'
 
 const log = createLogger('EmojiStore')
 
@@ -52,6 +53,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Read-only mode: when true, only favorites updates are allowed
   // Used by popup/sidebar to prevent accidental data corruption
   const isReadOnlyMode = ref(false)
+
+  const normalizeSettings = (value: AppSettings): AppSettings => {
+    const normalized = { ...value }
+    if (!normalized.imageCacheStrategy) {
+      normalized.imageCacheStrategy =
+        normalized.useIndexedDBForImages === false ? 'force-source' : 'auto'
+    }
+    normalized.useIndexedDBForImages = resolveImageCacheStrategy(normalized) !== 'force-source'
+    return normalized
+  }
 
   // --- 直接保存 ---
   // 优化：返回 Promise 以支持 await 和错误处理
@@ -418,13 +429,16 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // No local settings - merge with remote defaults
         try {
           const packaged = await loadPackagedDefaults()
-          settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
+          settings.value = normalizeSettings({
+            ...defaultSettings,
+            ...(packaged?.settings || {})
+          })
         } catch {
-          settings.value = { ...defaultSettings }
+          settings.value = normalizeSettings({ ...defaultSettings })
         }
       } else {
         // Local settings exist - just merge with static defaults (no network request)
-        settings.value = { ...defaultSettings, ...settingsData }
+        settings.value = normalizeSettings({ ...defaultSettings, ...settingsData })
       }
 
       favorites.value = new Set(favoritesData || [])
@@ -485,10 +499,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         const packaged = await loadPackagedDefaults()
         groups.value =
           packaged && packaged.groups && packaged.groups.length > 0 ? packaged.groups : []
-        settings.value = { ...defaultSettings, ...(packaged?.settings || {}) }
+        settings.value = normalizeSettings({ ...defaultSettings, ...(packaged?.settings || {}) })
       } catch {
         groups.value = []
-        settings.value = { ...defaultSettings }
+        settings.value = normalizeSettings({ ...defaultSettings })
       }
       favorites.value = new Set()
     } finally {
@@ -746,7 +760,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       return
     }
 
-    settings.value = { ...settings.value, ...newSettings }
+    settings.value = normalizeSettings({ ...settings.value, ...newSettings })
     log.info('updateSettings', { updates: newSettings })
     // Mark settings as dirty for incremental save
     markSettingsDirty()
@@ -803,7 +817,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // Specific setting update functions
   const updateUseIndexedDBForImages = (value: boolean) => {
     if (settings.value.useIndexedDBForImages !== value) {
-      updateSettings({ useIndexedDBForImages: value })
+      updateSettings({
+        useIndexedDBForImages: value,
+        imageCacheStrategy: value ? 'auto' : 'force-source'
+      })
       log.info('updateUseIndexedDBForImages', { value })
     }
   }

@@ -6,6 +6,7 @@ import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
+import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
 import CachedImage from '../../components/CachedImage.vue'
 
 import GroupSelector from './GroupSelector.vue'
@@ -32,7 +33,7 @@ const initializeImageSources = async () => {
     '[UngroupedTab] Initializing image sources for ungrouped:',
     ungroup.value.emojis.length
   )
-  console.log('[UngroupedTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+  console.log('[UngroupedTab] Cache enabled:', shouldUseImageCache(emojiStore.settings))
 
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
@@ -41,7 +42,7 @@ const initializeImageSources = async () => {
   const results = await Promise.allSettled(
     ungroup.value.emojis.map(async emoji => {
       try {
-        if (emojiStore.settings.useIndexedDBForImages) {
+        if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
           // 使用缓存优先的加载函数
           const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
           console.log(

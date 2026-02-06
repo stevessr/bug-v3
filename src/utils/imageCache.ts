@@ -1,3 +1,5 @@
+import { markImageDomainBlocked } from '@/utils/imageCachePolicy'
+
 /**
  * Image Cache Utility using IndexedDB with Memory Cache Layer
  * 优化版本：添加内存缓存层、批量操作、更智能的预加载
@@ -228,6 +230,9 @@ async function fetchImageViaProxy(url: string): Promise<Blob> {
     }
 
     // Proxy returned an error, throw it
+    if (response?.status === 429 || String(response?.error || '').includes('HTTP 429')) {
+      markImageDomainBlocked(url)
+    }
     throw new Error(response?.error || 'Proxy fetch failed')
   }
 
@@ -239,6 +244,10 @@ async function fetchImageViaProxy(url: string): Promise<Blob> {
       Accept: 'image/*'
     }
   })
+
+  if (response.status === 429) {
+    markImageDomainBlocked(url)
+  }
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -868,6 +877,50 @@ export class ImageCache {
   }
 
   /**
+   * Remove cache entries by URL
+   */
+  async removeCacheEntries(urls: string[]): Promise<number> {
+    if (!Array.isArray(urls) || urls.length === 0) return 0
+
+    // Remove from memory cache first
+    for (const url of urls) {
+      this.memoryCache.delete(url)
+    }
+
+    try {
+      await this.ensureInitialized()
+      if (!this.db) return 0
+
+      const transaction = this.db.transaction([this.options.storeName], 'readwrite')
+      const store = transaction.objectStore(this.options.storeName)
+      let removed = 0
+
+      return await new Promise(resolve => {
+        let pending = urls.length
+        const done = () => {
+          pending--
+          if (pending <= 0) resolve(removed)
+        }
+
+        for (const url of urls) {
+          const request = store.delete(url)
+          request.onsuccess = () => {
+            removed++
+            done()
+          }
+          request.onerror = () => {
+            warnCache(`Failed to remove cache entry: ${url}`)
+            done()
+          }
+        }
+      })
+    } catch (error) {
+      errorCache(`Error removing cache entries:`, error)
+      return 0
+    }
+  }
+
+  /**
    * 手动清理缓存（基于 LRU，用于用户主动清理）
    * 优化：使用 cursor 遍历元数据，避免加载所有 Blob 到内存
    */
@@ -1162,6 +1215,10 @@ export async function getCacheStats() {
 
 export async function clearCache(): Promise<void> {
   return imageCache.clearCache()
+}
+
+export async function removeCacheEntries(urls: string[]): Promise<number> {
+  return imageCache.removeCacheEntries(urls)
 }
 
 /**

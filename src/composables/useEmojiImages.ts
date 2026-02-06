@@ -2,6 +2,11 @@ import { ref, computed, onUnmounted, watch } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import { getEmojiImageUrl, getEmojiImageUrlSync, preloadImages } from '@/utils/imageUrlHelper'
+import {
+  resolveImageCacheStrategy,
+  shouldPreferCache,
+  shouldUseImageCache
+} from '@/utils/imageCachePolicy'
 import type { Emoji } from '@/types/type'
 
 export interface UseEmojiImagesOptions {
@@ -54,20 +59,28 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
   const isActive = ref(!preloadWhenActive)
 
   // Computed property to check if image caching is enabled
-  const useCachedImages = computed(() => emojiStore.settings.useIndexedDBForImages)
+  const useCachedImages = computed(() => shouldUseImageCache(emojiStore.settings))
 
   /**
    * Get image source for an emoji with caching support
    */
   const getImageSrc = async (emoji: Emoji): Promise<string> => {
-    return getEmojiImageUrl(emoji, { preferCache: useCachedImages.value })
+    const preferCache = shouldPreferCache(
+      emojiStore.settings,
+      emoji.displayUrl || emoji.url || ''
+    )
+    return getEmojiImageUrl(emoji, { preferCache })
   }
 
   /**
    * Get image source synchronously (for immediate rendering)
    */
   const getImageSrcSync = (emoji: Emoji): string => {
-    return getEmojiImageUrlSync(emoji, { preferCache: useCachedImages.value })
+    const preferCache = shouldPreferCache(
+      emojiStore.settings,
+      emoji.displayUrl || emoji.url || ''
+    )
+    return getEmojiImageUrlSync(emoji, { preferCache })
   }
 
   /**
@@ -175,8 +188,19 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
       return
     }
 
+    const strategy = resolveImageCacheStrategy(emojiStore.settings)
+    const emojiList = emojis().filter(e =>
+      shouldPreferCache(emojiStore.settings, e.displayUrl || e.url || '')
+    )
+    if (strategy === 'auto' && emojiList.length === 0) {
+      return
+    }
+
     try {
-      await preloadImages(emojis(), { batchSize: preloadBatchSize, delay: preloadDelay })
+      await preloadImages(emojiList.length ? emojiList : emojis(), {
+        batchSize: preloadBatchSize,
+        delay: preloadDelay
+      })
     } catch (error) {
       console.warn('Failed to preload images:', error)
     }

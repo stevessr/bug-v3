@@ -8,6 +8,11 @@
 import { ref, watch, onMounted } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
+import {
+  resolveImageCacheStrategy,
+  isImageDomainBlocked,
+  shouldUseImageCache
+} from '@/utils/imageCachePolicy'
 
 const props = defineProps<{
   src: string
@@ -35,16 +40,25 @@ const isExtensionPage = () =>
 
 const shouldUseCache = (url: string) => {
   if (!url) return false
-  if (emojiStore.settings.useIndexedDBForImages) return true
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
+  if (strategy === 'force-source') return false
+  if (shouldUseImageCache(emojiStore.settings)) return true
   // Extension pages can't embed some cross-origin images due to CORP.
   return isExtensionPage() && (url.startsWith('http://') || url.startsWith('https://'))
 }
 
-// 是否强制使用缓存（启用 IndexedDB 缓存时，失败不回退到原始 URL）
-const isForceCache = () => !!emojiStore.settings.useIndexedDBForImages
+const shouldForceCache = (url: string) => {
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
+  if (strategy === 'force-indexeddb') return true
+  if (strategy === 'adaptive' && isImageDomainBlocked(url)) return true
+  return false
+}
 
 // 异步获取缓存的图片 URL
-const loadCachedImage = async (url: string) => {
+const loadCachedImage = async (
+  url: string,
+  options: { forceCache?: boolean; fallbackToSource?: boolean } = {}
+) => {
   if (!url) {
     displaySrc.value = url
     return
@@ -92,26 +106,40 @@ const loadCachedImage = async (url: string) => {
 
     // 缓存失败
     isLoading.value = false
-    if (isForceCache()) {
+    const forceCache = options.forceCache ?? false
+    const fallbackToSource = options.fallbackToSource ?? !forceCache
+
+    if (forceCache) {
       // 强制缓存模式：显示 404 占位图
       displaySrc.value = ERROR_PLACEHOLDER
       isError.value = true
       isCached.value = false
-    } else {
+    } else if (fallbackToSource) {
       // 非强制模式：回退到原始 URL
       displaySrc.value = url
+      isCached.value = false
+    } else {
+      displaySrc.value = ERROR_PLACEHOLDER
+      isError.value = true
       isCached.value = false
     }
   } catch {
     isLoading.value = false
-    if (isForceCache()) {
+    const forceCache = options.forceCache ?? false
+    const fallbackToSource = options.fallbackToSource ?? !forceCache
+
+    if (forceCache) {
       // 强制缓存模式：显示 404 占位图
       displaySrc.value = ERROR_PLACEHOLDER
       isError.value = true
       isCached.value = false
-    } else {
+    } else if (fallbackToSource) {
       // 非强制模式：回退到原始 URL
       displaySrc.value = url
+      isCached.value = false
+    } else {
+      displaySrc.value = ERROR_PLACEHOLDER
+      isError.value = true
       isCached.value = false
     }
   }
@@ -138,11 +166,22 @@ const handleImageError = async () => {
     }
   }
 
-  // 强制缓存模式下显示 404
-  if (isForceCache()) {
+  // Force-source 模式下不尝试缓存，直接显示占位图
+  const strategy = resolveImageCacheStrategy(emojiStore.settings)
+  if (strategy === 'force-source') {
     displaySrc.value = ERROR_PLACEHOLDER
     isError.value = true
+    return
   }
+
+  // 失败后尝试缓存加载（auto/adaptive）
+  if (props.src) {
+    await loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+    return
+  }
+
+  displaySrc.value = ERROR_PLACEHOLDER
+  isError.value = true
 }
 
 // 监听 src 变化
@@ -153,7 +192,12 @@ watch(
       isCached.value = false
       isError.value = false
       isLoading.value = false
-      loadCachedImage(newSrc)
+      const forceCache = shouldForceCache(newSrc)
+      if (forceCache) {
+        loadCachedImage(newSrc, { forceCache: true, fallbackToSource: false })
+      } else {
+        displaySrc.value = newSrc
+      }
     }
   },
   { immediate: false }
@@ -162,7 +206,12 @@ watch(
 // 初始加载
 onMounted(() => {
   if (props.src) {
-    loadCachedImage(props.src)
+    const forceCache = shouldForceCache(props.src)
+    if (forceCache) {
+      loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+    } else {
+      displaySrc.value = props.src
+    }
   }
 })
 </script>

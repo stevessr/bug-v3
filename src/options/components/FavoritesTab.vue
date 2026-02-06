@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
+import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
 import {
   getEmojiImageUrlWithLoading,
   getEmojiImageUrlSync,
@@ -36,7 +37,7 @@ const initializeImageSources = async () => {
     '[FavoritesTab] Initializing image sources for favorites:',
     favoritesGroup.value.emojis.length
   )
-  console.log('[FavoritesTab] Cache enabled:', emojiStore.settings.useIndexedDBForImages)
+  console.log('[FavoritesTab] Cache enabled:', shouldUseImageCache(emojiStore.settings))
 
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
@@ -44,7 +45,7 @@ const initializeImageSources = async () => {
   for (const [idx, emoji] of favoritesGroup.value.emojis.entries()) {
     try {
       const key = getEmojiKey(emoji, idx)
-      if (emojiStore.settings.useIndexedDBForImages) {
+      if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
         // Use the new loading function in cache mode
         const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
         newSources.set(key, result.url)
@@ -76,7 +77,7 @@ const initializeImageSources = async () => {
 
 // Preload favorite images for better performance
 const preloadFavoriteImages = async () => {
-  if (!favoritesGroup.value?.emojis || !emojiStore.settings.useIndexedDBForImages) {
+  if (!favoritesGroup.value?.emojis || !shouldUseImageCache(emojiStore.settings)) {
     console.log('[FavoritesTab] Skipping preload - cache disabled or no emojis')
     return
   }

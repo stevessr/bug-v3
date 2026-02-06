@@ -18,7 +18,8 @@ const emit = defineEmits([
   'viewDetail',
   'aiRename',
   'archive',
-  'copyAsMarkdown'
+  'copyAsMarkdown',
+  'clearCache'
 ])
 
 const onEdit = () => emit('edit', props.group)
@@ -32,6 +33,7 @@ const onViewDetail = () => emit('viewDetail', props.group)
 const onAIRename = () => emit('aiRename', props.group)
 const onArchive = () => emit('archive', props.group)
 const onCopyAsMarkdown = () => emit('copyAsMarkdown', props.group)
+const onClearCache = () => emit('clearCache', props.group)
 
 const isTelegramGroup = computed(() => {
   const group: any = props.group || {}
@@ -70,6 +72,15 @@ const isTelegramGroup = computed(() => {
             <a-menu-item>打包下载</a-menu-item>
           </a-popconfirm>
           <a-menu-item @click.prevent="onDedupe">去重</a-menu-item>
+          <a-popconfirm
+            placement="top"
+            title="确认清空此分组的图片缓存吗？"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="onClearCache"
+          >
+            <a-menu-item>清空缓存</a-menu-item>
+          </a-popconfirm>
           <a-popconfirm
             placement="top"
             title="确认要归档此分组吗？归档后将不在日常页面显示"

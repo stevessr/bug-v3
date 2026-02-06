@@ -107,6 +107,7 @@ declare global {
   const isEmojiGroupArray: typeof import('./utils/typeGuards')['isEmojiGroupArray']
   const isFavoritesSet: typeof import('./utils/typeGuards')['isFavoritesSet']
   const isImageCached: typeof import('./utils/imageCache')['isImageCached']
+  const isImageDomainBlocked: typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']
   const isImageUrl: typeof import('./utils/isImageUrl')['isImageUrl']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
@@ -122,6 +123,7 @@ declare global {
   const mapState: typeof import('pinia')['mapState']
   const mapStores: typeof import('pinia')['mapStores']
   const mapWritableState: typeof import('pinia')['mapWritableState']
+  const markImageDomainBlocked: typeof import('./utils/imageCachePolicy')['markImageDomainBlocked']
   const markRaw: typeof import('vue')['markRaw']
   const message: typeof import('ant-design-vue')['message']
   const nextTick: typeof import('vue')['nextTick']
@@ -152,11 +154,13 @@ declare global {
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
+  const removeCacheEntries: typeof import('./utils/imageCache')['removeCacheEntries']
   const removeDiscourseDomain: typeof import('./utils/simpleStorage')['removeDiscourseDomain']
   const removeEmojiGroup: typeof import('./utils/simpleStorage')['removeEmojiGroup']
   const repairEmptyStorage: typeof import('./utils/simpleStorage')['repairEmptyStorage']
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
+  const resolveImageCacheStrategy: typeof import('./utils/imageCachePolicy')['resolveImageCacheStrategy']
   const sanitizeEmojiGroup: typeof import('./utils/typeGuards')['sanitizeEmojiGroup']
   const sanitizeEmojiGroupArray: typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']
   const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
@@ -178,6 +182,8 @@ declare global {
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
   const shortcodeToEmoji: typeof import('./utils/emojiShortcode')['shortcodeToEmoji']
+  const shouldPreferCache: typeof import('./utils/imageCachePolicy')['shouldPreferCache']
+  const shouldUseImageCache: typeof import('./utils/imageCachePolicy')['shouldUseImageCache']
   const startWorkerMode: typeof import('./utils/collab/index')['startWorkerMode']
   const stopWorkerMode: typeof import('./utils/collab/index')['stopWorkerMode']
   const storageBatchGet: typeof import('./utils/simpleStorage')['storageBatchGet']
@@ -361,6 +367,7 @@ declare module 'vue' {
     readonly isEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroupArray']>
     readonly isFavoritesSet: UnwrapRef<typeof import('./utils/typeGuards')['isFavoritesSet']>
     readonly isImageCached: UnwrapRef<typeof import('./utils/imageCache')['isImageCached']>
+    readonly isImageDomainBlocked: UnwrapRef<typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']>
     readonly isImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['isImageUrl']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
@@ -376,6 +383,7 @@ declare module 'vue' {
     readonly mapState: UnwrapRef<typeof import('pinia')['mapState']>
     readonly mapStores: UnwrapRef<typeof import('pinia')['mapStores']>
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
+    readonly markImageDomainBlocked: UnwrapRef<typeof import('./utils/imageCachePolicy')['markImageDomainBlocked']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
@@ -406,11 +414,13 @@ declare module 'vue' {
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
+    readonly removeCacheEntries: UnwrapRef<typeof import('./utils/imageCache')['removeCacheEntries']>
     readonly removeDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['removeDiscourseDomain']>
     readonly removeEmojiGroup: UnwrapRef<typeof import('./utils/simpleStorage')['removeEmojiGroup']>
     readonly repairEmptyStorage: UnwrapRef<typeof import('./utils/simpleStorage')['repairEmptyStorage']>
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly resolveImageCacheStrategy: UnwrapRef<typeof import('./utils/imageCachePolicy')['resolveImageCacheStrategy']>
     readonly sanitizeEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroup']>
     readonly sanitizeEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']>
     readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>
@@ -432,6 +442,8 @@ declare module 'vue' {
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly shortcodeToEmoji: UnwrapRef<typeof import('./utils/emojiShortcode')['shortcodeToEmoji']>
+    readonly shouldPreferCache: UnwrapRef<typeof import('./utils/imageCachePolicy')['shouldPreferCache']>
+    readonly shouldUseImageCache: UnwrapRef<typeof import('./utils/imageCachePolicy')['shouldUseImageCache']>
     readonly startWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['startWorkerMode']>
     readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['stopWorkerMode']>
     readonly storageBatchGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchGet']>

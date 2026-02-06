@@ -5,6 +5,7 @@ import CachedImage from '@/components/CachedImage.vue'
 import type { EmojiGroup } from '@/types/type'
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import { useEmojiStore } from '@/stores/emojiStore'
+import { shouldUseImageCache } from '@/utils/imageCachePolicy'
 
 const { t } = useI18n()
 
@@ -36,7 +37,7 @@ const getGroupIconSrc = (icon: string, groupId: string): string => {
 watch(
   () => props.groups,
   async groupList => {
-    if (!emojiStore.settings.useIndexedDBForImages) return
+    if (!shouldUseImageCache(emojiStore.settings)) return
 
     const { getCachedImage } = await import('@/utils/imageCache')
     const newMap = new Map<string, string>()

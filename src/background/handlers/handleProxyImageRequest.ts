@@ -190,6 +190,7 @@ export async function handleProxyImageRequest(
     if (!response.ok) {
       sendResponse({
         success: false,
+        status: response.status,
         error: `HTTP ${response.status}: ${response.statusText}`
       })
       return
@@ -202,7 +203,8 @@ export async function handleProxyImageRequest(
       success: true,
       data: Array.from(new Uint8Array(arrayBuffer)),
       mimeType: blob.type,
-      size: blob.size
+      size: blob.size,
+      status: response.status
     })
   } catch (error: any) {
     console.error('Proxy image request failed:', error)
