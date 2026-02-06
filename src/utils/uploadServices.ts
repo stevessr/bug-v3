@@ -232,13 +232,17 @@ class DiscourseUploadService implements UploadService {
       )
     })
 
-    if (response.ok && response.data?.url) {
+    const proxyPayload = (response as any)?.data?.data ?? (response as any)?.data
+    const proxyOk = (response as any)?.data?.ok ?? (response as any)?.ok
+    const proxyStatus = (response as any)?.data?.status ?? (response as any)?.status
+
+    if (proxyOk && proxyPayload?.url) {
       onProgress?.(100)
-      return response.data.url
+      return proxyPayload.url
     }
 
-    const errorData = response.data
-    if (response.status === 429 && errorData?.extras?.wait_seconds) {
+    const errorData = proxyPayload
+    if (proxyStatus === 429 && errorData?.extras?.wait_seconds) {
       const waitTime = errorData.extras.wait_seconds * 1000
       const rateLimitError = new Error(
         `Upload failed: 429 Too Many Requests. Please wait ${errorData.extras.wait_seconds} seconds.`
@@ -249,7 +253,7 @@ class DiscourseUploadService implements UploadService {
     }
 
     throw new Error(
-      `Upload failed: ${response.status || 'unknown'} ${
+      `Upload failed: ${proxyStatus || 'unknown'} ${
         errorData?.message || errorData?.errors?.join(', ') || 'Unknown error'
       }`
     )
