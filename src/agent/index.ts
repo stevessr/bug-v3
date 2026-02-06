@@ -61,10 +61,43 @@ export {
   mcpToolToSkill,
   discoverAllSkills,
   executeSkill,
+  executeSkillWithContext,
   findSkillByName,
   filterSkillsByCategory,
   getEnabledSkills,
-  skillsToPrompt
+  skillsToPrompt,
+  // 自定义 Skills
+  loadCustomSkills,
+  saveCustomSkills,
+  addCustomSkill,
+  updateCustomSkill,
+  removeCustomSkill,
+  // Skill Chains
+  loadSkillChains,
+  saveSkillChains,
+  addSkillChain,
+  updateSkillChain,
+  removeSkillChain,
+  executeSkillChain,
+  // Skill 统计
+  loadSkillStats,
+  saveSkillStats,
+  updateSkillStats,
+  getSkillStats,
+  getPopularSkills,
+  getRecentSkills,
+  // Skill 触发器匹配
+  matchSkillsToInput,
+  getBestSkillMatch,
+  getSuggestedSkills,
+  // Skill 预设
+  loadSkillPresets,
+  saveSkillPresets,
+  addSkillPreset,
+  removeSkillPreset,
+  getSkillPresets,
+  // 智能推荐
+  recommendSkills
 } from './skills'
 
 // 记忆系统
@@ -145,5 +178,12 @@ export type {
   SkillCategory,
   SkillSource,
   SkillExecutionResult,
-  BuiltinMcpServer
+  BuiltinMcpServer,
+  SkillPreset,
+  SkillStats,
+  SkillChain,
+  SkillChainStep,
+  SkillExecutionContext,
+  CustomSkill,
+  SkillMatch
 } from './skills'

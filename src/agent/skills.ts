@@ -30,6 +30,79 @@ export interface Skill {
   shortcut?: string
   // 图标
   icon?: string
+  // 触发器模式 (正则表达式)
+  triggers?: string[]
+  // 优先级 (用于排序和冲突解决)
+  priority?: number
+  // 标签
+  tags?: string[]
+  // 别名 (用于匹配)
+  aliases?: string[]
+  // 参数预设
+  presets?: SkillPreset[]
+  // 后续 skill (链式执行)
+  chainTo?: string[]
+  // 使用统计
+  stats?: SkillStats
+}
+
+export interface SkillPreset {
+  id: string
+  name: string
+  description?: string
+  args: Record<string, unknown>
+}
+
+export interface SkillStats {
+  totalCalls: number
+  successCalls: number
+  failedCalls: number
+  avgDuration: number
+  lastUsed?: number
+}
+
+export interface SkillChain {
+  id: string
+  name: string
+  description: string
+  steps: SkillChainStep[]
+  enabled: boolean
+}
+
+export interface SkillChainStep {
+  skillId: string
+  // 参数映射：从上一步结果映射到当前参数
+  argMapping?: Record<string, string>
+  // 静态参数
+  staticArgs?: Record<string, unknown>
+  // 条件执行
+  condition?: {
+    field: string
+    operator: 'eq' | 'neq' | 'contains' | 'exists'
+    value?: unknown
+  }
+}
+
+export interface SkillExecutionContext {
+  // 前一步结果
+  previousResult?: unknown
+  // 链式执行状态
+  chainState?: Record<string, unknown>
+  // 用户输入
+  userInput?: string
+  // 会话 ID
+  sessionId?: string
+}
+
+export interface CustomSkill extends Skill {
+  // 自定义脚本（可选）
+  script?: string
+  // 模板提示词
+  promptTemplate?: string
+  // 创建时间
+  createdAt: number
+  // 更新时间
+  updatedAt: number
 }
 
 export type SkillCategory =
@@ -51,6 +124,10 @@ export interface SkillExecutionResult {
   result?: unknown
   error?: string
   duration?: number
+  // 链式执行结果
+  chainResults?: SkillExecutionResult[]
+  // 建议的后续 skill
+  suggestedNextSkills?: string[]
 }
 
 export interface BuiltinMcpServer {
@@ -70,6 +147,10 @@ export interface BuiltinMcpServer {
 const SKILLS_ENABLED_KEY = 'ai-agent-skills-enabled-v1'
 const BUILTIN_MCP_ENABLED_KEY = 'ai-agent-builtin-mcp-enabled-v1'
 const API_KEYS_KEY = 'ai-agent-api-keys-v1'
+const CUSTOM_SKILLS_KEY = 'ai-agent-custom-skills-v1'
+const SKILL_CHAINS_KEY = 'ai-agent-skill-chains-v1'
+const SKILL_STATS_KEY = 'ai-agent-skill-stats-v1'
+const SKILL_PRESETS_KEY = 'ai-agent-skill-presets-v1'
 
 // ============ 内置 MCP 服务 ============
 
@@ -121,13 +202,29 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'search',
     enabled: true,
     icon: '🔍',
+    priority: 100,
+    triggers: [
+      '搜索(.+)',
+      '查找(.+)',
+      '查询(.+)',
+      'search\\s+(.+)',
+      '帮我搜(.+)',
+      '(.+)是什么',
+      '(.+)怎么样'
+    ],
+    aliases: ['搜索', 'search', '查询', '查找', '网搜'],
+    tags: ['search', 'web', 'tavily'],
     inputSchema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: '搜索查询' }
       },
       required: ['query']
-    }
+    },
+    presets: [
+      { id: 'news', name: '最新新闻', args: { query: '最新新闻' } },
+      { id: 'tech', name: '科技动态', args: { query: '科技新闻' } }
+    ]
   },
   {
     id: 'skill-extract-content',
@@ -139,6 +236,16 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'extract',
     enabled: true,
     icon: '📄',
+    priority: 80,
+    triggers: [
+      '提取(.+)内容',
+      '获取(.+)的内容',
+      '读取(.+)',
+      'extract\\s+(.+)',
+      '抓取(.+)'
+    ],
+    aliases: ['提取', 'extract', '抓取', '获取内容'],
+    tags: ['web', 'extract', 'content'],
     inputSchema: {
       type: 'object',
       properties: {
@@ -157,13 +264,24 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'read_wiki_contents',
     enabled: true,
     icon: '📚',
+    priority: 90,
+    triggers: [
+      '(.+)仓库文档',
+      '(.+)的文档',
+      '(.+)怎么用',
+      '(.+)项目介绍',
+      'github\\s+(.+)'
+    ],
+    aliases: ['GitHub 文档', 'deepwiki', '仓库文档', '项目文档'],
+    tags: ['github', 'docs', 'knowledge'],
     inputSchema: {
       type: 'object',
       properties: {
         repoName: { type: 'string', description: 'GitHub 仓库名称 (owner/repo)' }
       },
       required: ['repoName']
-    }
+    },
+    chainTo: ['skill-ask-repo']
   },
   {
     id: 'skill-ask-repo',
@@ -175,6 +293,14 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'ask_question',
     enabled: true,
     icon: '❓',
+    priority: 85,
+    triggers: [
+      '问(.+)仓库(.+)',
+      '(.+)仓库(.+)怎么',
+      '(.+)项目(.+)如何'
+    ],
+    aliases: ['问答', 'ask', '提问仓库'],
+    tags: ['github', 'qa', 'knowledge'],
     inputSchema: {
       type: 'object',
       properties: {
@@ -194,6 +320,16 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'get-library-docs',
     enabled: true,
     icon: '📖',
+    priority: 95,
+    triggers: [
+      '(.+)文档',
+      '(.+)怎么使用',
+      '(.+)用法',
+      '(.+)示例',
+      '(.+)教程'
+    ],
+    aliases: ['库文档', 'docs', 'library docs', 'context7'],
+    tags: ['code', 'docs', 'library'],
     inputSchema: {
       type: 'object',
       properties: {
@@ -201,7 +337,8 @@ export const BUILTIN_SKILLS: Skill[] = [
         topic: { type: 'string', description: '要查询的主题' }
       },
       required: ['context7CompatibleLibraryID']
-    }
+    },
+    chainTo: ['skill-resolve-library']
   },
   {
     id: 'skill-resolve-library',
@@ -213,13 +350,22 @@ export const BUILTIN_SKILLS: Skill[] = [
     mcpToolName: 'resolve-library-id',
     enabled: true,
     icon: '🔗',
+    priority: 70,
+    triggers: [
+      '查找(.+)库',
+      '(.+)库的ID',
+      'resolve\\s+(.+)'
+    ],
+    aliases: ['查找库', 'resolve', '库ID'],
+    tags: ['code', 'library', 'resolve'],
     inputSchema: {
       type: 'object',
       properties: {
         libraryName: { type: 'string', description: '库名称 (如 react, vue, express)' }
       },
       required: ['libraryName']
-    }
+    },
+    chainTo: ['skill-library-docs']
   }
 ]
 
@@ -693,4 +839,585 @@ export function skillsToPrompt(skills: Skill[]): string {
   lines.push('\n使用 skill 时，通过 MCP 工具调用对应功能。')
 
   return lines.join('\n')
+}
+
+// ============ 自定义 Skills 管理 ============
+
+/**
+ * 加载自定义 Skills
+ */
+export function loadCustomSkills(): CustomSkill[] {
+  return loadFromStorage<CustomSkill[]>(CUSTOM_SKILLS_KEY, [])
+}
+
+/**
+ * 保存自定义 Skills
+ */
+export function saveCustomSkills(skills: CustomSkill[]): void {
+  saveToStorage(CUSTOM_SKILLS_KEY, skills)
+}
+
+/**
+ * 添加自定义 Skill
+ */
+export function addCustomSkill(skill: Omit<CustomSkill, 'id' | 'createdAt' | 'updatedAt'>): CustomSkill {
+  const skills = loadCustomSkills()
+  const now = Date.now()
+  const newSkill: CustomSkill = {
+    ...skill,
+    id: `skill-custom-${nanoid()}`,
+    source: 'custom',
+    createdAt: now,
+    updatedAt: now
+  }
+  skills.push(newSkill)
+  saveCustomSkills(skills)
+  return newSkill
+}
+
+/**
+ * 更新自定义 Skill
+ */
+export function updateCustomSkill(skillId: string, updates: Partial<CustomSkill>): CustomSkill | null {
+  const skills = loadCustomSkills()
+  const index = skills.findIndex(s => s.id === skillId)
+  if (index === -1) return null
+
+  skills[index] = {
+    ...skills[index],
+    ...updates,
+    updatedAt: Date.now()
+  }
+  saveCustomSkills(skills)
+  return skills[index]
+}
+
+/**
+ * 删除自定义 Skill
+ */
+export function removeCustomSkill(skillId: string): boolean {
+  const skills = loadCustomSkills()
+  const filtered = skills.filter(s => s.id !== skillId)
+  if (filtered.length === skills.length) return false
+  saveCustomSkills(filtered)
+  return true
+}
+
+// ============ Skill Chains 管理 ============
+
+/**
+ * 加载 Skill Chains
+ */
+export function loadSkillChains(): SkillChain[] {
+  return loadFromStorage<SkillChain[]>(SKILL_CHAINS_KEY, [])
+}
+
+/**
+ * 保存 Skill Chains
+ */
+export function saveSkillChains(chains: SkillChain[]): void {
+  saveToStorage(SKILL_CHAINS_KEY, chains)
+}
+
+/**
+ * 添加 Skill Chain
+ */
+export function addSkillChain(chain: Omit<SkillChain, 'id'>): SkillChain {
+  const chains = loadSkillChains()
+  const newChain: SkillChain = {
+    ...chain,
+    id: `chain-${nanoid()}`
+  }
+  chains.push(newChain)
+  saveSkillChains(chains)
+  return newChain
+}
+
+/**
+ * 更新 Skill Chain
+ */
+export function updateSkillChain(chainId: string, updates: Partial<SkillChain>): SkillChain | null {
+  const chains = loadSkillChains()
+  const index = chains.findIndex(c => c.id === chainId)
+  if (index === -1) return null
+
+  chains[index] = { ...chains[index], ...updates }
+  saveSkillChains(chains)
+  return chains[index]
+}
+
+/**
+ * 删除 Skill Chain
+ */
+export function removeSkillChain(chainId: string): boolean {
+  const chains = loadSkillChains()
+  const filtered = chains.filter(c => c.id !== chainId)
+  if (filtered.length === chains.length) return false
+  saveSkillChains(filtered)
+  return true
+}
+
+/**
+ * 执行 Skill Chain
+ */
+export async function executeSkillChain(
+  chain: SkillChain,
+  initialArgs: Record<string, unknown>,
+  allSkills: Skill[],
+  customMcpServers: McpServerConfig[] = [],
+  context?: SkillExecutionContext
+): Promise<SkillExecutionResult> {
+  const startTime = Date.now()
+  const chainResults: SkillExecutionResult[] = []
+  let chainState: Record<string, unknown> = { ...initialArgs, ...(context?.chainState || {}) }
+  let previousResult: unknown = context?.previousResult
+
+  for (const step of chain.steps) {
+    // 检查条件
+    if (step.condition) {
+      const fieldValue = chainState[step.condition.field]
+      let conditionMet = false
+
+      switch (step.condition.operator) {
+        case 'eq':
+          conditionMet = fieldValue === step.condition.value
+          break
+        case 'neq':
+          conditionMet = fieldValue !== step.condition.value
+          break
+        case 'contains':
+          conditionMet =
+            typeof fieldValue === 'string' &&
+            typeof step.condition.value === 'string' &&
+            fieldValue.includes(step.condition.value)
+          break
+        case 'exists':
+          conditionMet = fieldValue !== undefined && fieldValue !== null
+          break
+      }
+
+      if (!conditionMet) {
+        continue // 跳过此步骤
+      }
+    }
+
+    // 查找 skill
+    const skill = allSkills.find(s => s.id === step.skillId)
+    if (!skill) {
+      chainResults.push({
+        success: false,
+        error: `未找到 Skill: ${step.skillId}`
+      })
+      continue
+    }
+
+    // 构建参数
+    const stepArgs: Record<string, unknown> = { ...(step.staticArgs || {}) }
+
+    // 应用参数映射
+    if (step.argMapping) {
+      for (const [targetKey, sourceKey] of Object.entries(step.argMapping)) {
+        if (sourceKey === '$previous') {
+          stepArgs[targetKey] = previousResult
+        } else if (sourceKey.startsWith('$state.')) {
+          const stateKey = sourceKey.slice(7)
+          stepArgs[targetKey] = chainState[stateKey]
+        } else {
+          stepArgs[targetKey] = chainState[sourceKey]
+        }
+      }
+    }
+
+    // 执行 skill
+    const result = await executeSkill(skill, stepArgs, customMcpServers)
+    chainResults.push(result)
+
+    // 更新统计
+    updateSkillStats(skill.id, result)
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: `Chain 在步骤 ${step.skillId} 失败: ${result.error}`,
+        duration: Date.now() - startTime,
+        chainResults
+      }
+    }
+
+    // 更新状态
+    previousResult = result.result
+    chainState[step.skillId] = result.result
+  }
+
+  return {
+    success: true,
+    result: previousResult,
+    duration: Date.now() - startTime,
+    chainResults
+  }
+}
+
+// ============ Skill 统计 ============
+
+/**
+ * 加载 Skill 统计
+ */
+export function loadSkillStats(): Record<string, SkillStats> {
+  return loadFromStorage<Record<string, SkillStats>>(SKILL_STATS_KEY, {})
+}
+
+/**
+ * 保存 Skill 统计
+ */
+export function saveSkillStats(stats: Record<string, SkillStats>): void {
+  saveToStorage(SKILL_STATS_KEY, stats)
+}
+
+/**
+ * 更新 Skill 统计
+ */
+export function updateSkillStats(skillId: string, result: SkillExecutionResult): void {
+  const allStats = loadSkillStats()
+  const stats = allStats[skillId] || {
+    totalCalls: 0,
+    successCalls: 0,
+    failedCalls: 0,
+    avgDuration: 0
+  }
+
+  stats.totalCalls++
+  if (result.success) {
+    stats.successCalls++
+  } else {
+    stats.failedCalls++
+  }
+
+  // 更新平均时长
+  if (result.duration) {
+    stats.avgDuration =
+      (stats.avgDuration * (stats.totalCalls - 1) + result.duration) / stats.totalCalls
+  }
+
+  stats.lastUsed = Date.now()
+
+  allStats[skillId] = stats
+  saveSkillStats(allStats)
+}
+
+/**
+ * 获取 Skill 统计
+ */
+export function getSkillStats(skillId: string): SkillStats | undefined {
+  const allStats = loadSkillStats()
+  return allStats[skillId]
+}
+
+/**
+ * 获取热门 Skills (按使用次数排序)
+ */
+export function getPopularSkills(skills: Skill[], limit = 10): Skill[] {
+  const allStats = loadSkillStats()
+  return skills
+    .filter(s => allStats[s.id]?.totalCalls > 0)
+    .sort((a, b) => (allStats[b.id]?.totalCalls || 0) - (allStats[a.id]?.totalCalls || 0))
+    .slice(0, limit)
+}
+
+/**
+ * 获取最近使用的 Skills
+ */
+export function getRecentSkills(skills: Skill[], limit = 10): Skill[] {
+  const allStats = loadSkillStats()
+  return skills
+    .filter(s => allStats[s.id]?.lastUsed)
+    .sort((a, b) => (allStats[b.id]?.lastUsed || 0) - (allStats[a.id]?.lastUsed || 0))
+    .slice(0, limit)
+}
+
+// ============ Skill 触发器匹配 ============
+
+export interface SkillMatch {
+  skill: Skill
+  score: number
+  matchedTrigger?: string
+  extractedArgs?: Record<string, string>
+}
+
+/**
+ * 匹配用户输入到 Skills
+ */
+export function matchSkillsToInput(input: string, skills: Skill[]): SkillMatch[] {
+  const matches: SkillMatch[] = []
+  const inputLower = input.toLowerCase()
+
+  for (const skill of skills) {
+    if (!skill.enabled) continue
+
+    let bestScore = 0
+    let matchedTrigger: string | undefined
+    let extractedArgs: Record<string, string> | undefined
+
+    // 1. 触发器匹配 (最高优先级)
+    if (skill.triggers && skill.triggers.length > 0) {
+      for (const trigger of skill.triggers) {
+        try {
+          const regex = new RegExp(trigger, 'i')
+          const match = input.match(regex)
+          if (match) {
+            const score = 100 + (skill.priority || 0)
+            if (score > bestScore) {
+              bestScore = score
+              matchedTrigger = trigger
+              // 提取捕获组作为参数
+              if (match.length > 1) {
+                extractedArgs = {}
+                for (let i = 1; i < match.length; i++) {
+                  extractedArgs[`arg${i}`] = match[i]
+                }
+              }
+            }
+          }
+        } catch {
+          // 忽略无效正则
+        }
+      }
+    }
+
+    // 2. 别名匹配
+    if (skill.aliases) {
+      for (const alias of skill.aliases) {
+        if (inputLower.includes(alias.toLowerCase())) {
+          const score = 80 + (skill.priority || 0)
+          if (score > bestScore) {
+            bestScore = score
+          }
+        }
+      }
+    }
+
+    // 3. 名称匹配
+    if (inputLower.includes(skill.name.toLowerCase())) {
+      const score = 60 + (skill.priority || 0)
+      if (score > bestScore) {
+        bestScore = score
+      }
+    }
+
+    // 4. 标签匹配
+    if (skill.tags) {
+      for (const tag of skill.tags) {
+        if (inputLower.includes(tag.toLowerCase())) {
+          const score = 40 + (skill.priority || 0)
+          if (score > bestScore) {
+            bestScore = score
+          }
+        }
+      }
+    }
+
+    // 5. 描述匹配 (模糊匹配)
+    const descWords = skill.description.toLowerCase().split(/\s+/)
+    const inputWords = inputLower.split(/\s+/)
+    const matchedWords = descWords.filter(w => inputWords.some(iw => iw.includes(w) || w.includes(iw)))
+    if (matchedWords.length > 0) {
+      const score = 20 + matchedWords.length * 5 + (skill.priority || 0)
+      if (score > bestScore) {
+        bestScore = score
+      }
+    }
+
+    if (bestScore > 0) {
+      matches.push({
+        skill,
+        score: bestScore,
+        matchedTrigger,
+        extractedArgs
+      })
+    }
+  }
+
+  // 按分数排序
+  return matches.sort((a, b) => b.score - a.score)
+}
+
+/**
+ * 获取最佳匹配的 Skill
+ */
+export function getBestSkillMatch(input: string, skills: Skill[]): SkillMatch | undefined {
+  const matches = matchSkillsToInput(input, skills)
+  return matches[0]
+}
+
+/**
+ * 获取建议的 Skills (基于输入)
+ */
+export function getSuggestedSkills(input: string, skills: Skill[], limit = 5): Skill[] {
+  const matches = matchSkillsToInput(input, skills)
+  return matches.slice(0, limit).map(m => m.skill)
+}
+
+// ============ Skill 预设管理 ============
+
+/**
+ * 加载 Skill 预设
+ */
+export function loadSkillPresets(): Record<string, SkillPreset[]> {
+  return loadFromStorage<Record<string, SkillPreset[]>>(SKILL_PRESETS_KEY, {})
+}
+
+/**
+ * 保存 Skill 预设
+ */
+export function saveSkillPresets(presets: Record<string, SkillPreset[]>): void {
+  saveToStorage(SKILL_PRESETS_KEY, presets)
+}
+
+/**
+ * 添加 Skill 预设
+ */
+export function addSkillPreset(skillId: string, preset: Omit<SkillPreset, 'id'>): SkillPreset {
+  const allPresets = loadSkillPresets()
+  const skillPresets = allPresets[skillId] || []
+
+  const newPreset: SkillPreset = {
+    ...preset,
+    id: `preset-${nanoid()}`
+  }
+  skillPresets.push(newPreset)
+  allPresets[skillId] = skillPresets
+  saveSkillPresets(allPresets)
+  return newPreset
+}
+
+/**
+ * 删除 Skill 预设
+ */
+export function removeSkillPreset(skillId: string, presetId: string): boolean {
+  const allPresets = loadSkillPresets()
+  const skillPresets = allPresets[skillId] || []
+  const filtered = skillPresets.filter(p => p.id !== presetId)
+
+  if (filtered.length === skillPresets.length) return false
+
+  allPresets[skillId] = filtered
+  saveSkillPresets(allPresets)
+  return true
+}
+
+/**
+ * 获取 Skill 的所有预设 (内置 + 自定义)
+ */
+export function getSkillPresets(skill: Skill): SkillPreset[] {
+  const customPresets = loadSkillPresets()[skill.id] || []
+  const builtinPresets = skill.presets || []
+  return [...builtinPresets, ...customPresets]
+}
+
+// ============ 增强的执行 Skill ============
+
+/**
+ * 执行 Skill (带统计和链式支持)
+ */
+export async function executeSkillWithContext(
+  skill: Skill,
+  args: Record<string, unknown>,
+  customMcpServers: McpServerConfig[] = [],
+  context?: SkillExecutionContext,
+  allSkills?: Skill[]
+): Promise<SkillExecutionResult> {
+  // 执行 skill
+  const result = await executeSkill(skill, args, customMcpServers)
+
+  // 更新统计
+  updateSkillStats(skill.id, result)
+
+  // 如果成功且有链式配置，返回建议的下一步
+  if (result.success && skill.chainTo && skill.chainTo.length > 0 && allSkills) {
+    result.suggestedNextSkills = skill.chainTo.filter(id =>
+      allSkills.some(s => s.id === id && s.enabled)
+    )
+  }
+
+  return result
+}
+
+// ============ 智能 Skill 推荐 ============
+
+/**
+ * 基于上下文推荐 Skills
+ */
+export function recommendSkills(
+  context: {
+    recentSkills?: string[]
+    currentUrl?: string
+    pageContent?: string
+    userPreferences?: string[]
+  },
+  allSkills: Skill[]
+): Skill[] {
+  const recommendations: Array<{ skill: Skill; score: number }> = []
+  const stats = loadSkillStats()
+
+  for (const skill of allSkills) {
+    if (!skill.enabled) continue
+
+    let score = 0
+
+    // 基于最近使用
+    if (context.recentSkills?.includes(skill.id)) {
+      score += 20
+    }
+
+    // 基于 URL 匹配
+    if (context.currentUrl) {
+      if (skill.tags?.some(t => context.currentUrl!.includes(t))) {
+        score += 30
+      }
+      // GitHub 页面推荐 GitHub 相关 skills
+      if (context.currentUrl.includes('github.com') && skill.category === 'knowledge') {
+        score += 25
+      }
+    }
+
+    // 基于页面内容
+    if (context.pageContent) {
+      const contentLower = context.pageContent.toLowerCase()
+      if (skill.tags?.some(t => contentLower.includes(t.toLowerCase()))) {
+        score += 15
+      }
+    }
+
+    // 基于用户偏好
+    if (context.userPreferences) {
+      if (skill.tags?.some(t => context.userPreferences!.includes(t))) {
+        score += 40
+      }
+      if (context.userPreferences.includes(skill.category)) {
+        score += 20
+      }
+    }
+
+    // 基于历史使用频率
+    const skillStats = stats[skill.id]
+    if (skillStats) {
+      score += Math.min(skillStats.totalCalls * 2, 30)
+      // 成功率加权
+      if (skillStats.totalCalls > 0) {
+        const successRate = skillStats.successCalls / skillStats.totalCalls
+        score += successRate * 10
+      }
+    }
+
+    // 优先级加权
+    score += (skill.priority || 0) / 10
+
+    if (score > 0) {
+      recommendations.push({ skill, score })
+    }
+  }
+
+  return recommendations
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map(r => r.skill)
 }
