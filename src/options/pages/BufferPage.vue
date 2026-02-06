@@ -1400,3 +1400,29 @@ onBeforeUnmount(() => {
     <TelegramStickerModal v-model="showTelegramModal" />
   </div>
 </template>
+
+<style scoped>
+.emoji-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emoji-item .aspect-square {
+  width: 100%;
+  min-height: 72px;
+}
+
+.emoji-item :deep(.cached-image-wrapper) {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.emoji-item :deep(.cached-image-img) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+</style>
