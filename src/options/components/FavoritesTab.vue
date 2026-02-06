@@ -156,7 +156,7 @@ onMounted(() => {
               <template v-if="!emoji.usageCount || emoji.usageCount === 0" #count>
                 <span class="favorite-star">⭐</span>
               </template>
-              <div class="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+              <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <CachedImage
                   :src="imageSources.get(getEmojiKey(emoji, idx)) || getEmojiImageUrlSync(emoji)"
                   :alt="emoji.name"
