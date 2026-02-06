@@ -212,11 +212,26 @@ onMounted(() => {
         <div>4. 重启浏览器或重载扩展</div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div>
+          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">API 风格</label>
+          <a-select v-model:value="settings.apiFlavor" class="w-full">
+            <a-select-option value="messages">Messages API</a-select-option>
+            <a-select-option value="responses">Responses API</a-select-option>
+          </a-select>
+        </div>
         <a-input v-model:value="settings.taskModel" placeholder="任务模型"></a-input>
         <a-input v-model:value="settings.reasoningModel" placeholder="思考模型"></a-input>
         <a-input v-model:value="settings.imageModel" placeholder="图片转述模型"></a-input>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+        <template v-if="settings.apiFlavor === 'responses'">
+          Responses API 是 Anthropic 的新 API 格式，支持更好的流式响应。需要启用 Beta 功能。
+        </template>
+        <template v-else>
+          Messages API 是标准的 Claude API 格式，兼容性最好。
+        </template>
+      </p>
 
       <div class="grid grid-cols-1 gap-4">
         <a-input-number

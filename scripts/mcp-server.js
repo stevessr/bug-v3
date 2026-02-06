@@ -40,6 +40,35 @@ const TOOLS = [
     }
   },
   {
+    name: 'chrome_tab_focus',
+    description: '聚焦指定标签页',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '标签页ID' }
+      },
+      required: ['tabId']
+    }
+  },
+  {
+    name: 'chrome_tabs_group',
+    description: '将多个标签页分组',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabIds: { type: 'array', items: { type: 'number' }, description: '标签页ID列表' },
+        groupId: { type: 'number', description: '已有分组ID（可选）' },
+        title: { type: 'string', description: '分组标题（可选）' },
+        color: {
+          type: 'string',
+          description: '分组颜色（可选）',
+          enum: ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange']
+        }
+      },
+      required: ['tabIds']
+    }
+  },
+  {
     name: 'chrome_navigate',
     description: '导航到指定URL',
     inputSchema: {
@@ -97,6 +126,21 @@ const TOOLS = [
         topicId: { type: 'number', description: '话题ID' }
       },
       required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse_get_post_context',
+    description: '获取帖子上下文（定位到指定帖子附近的上下文）',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子ID' },
+        topicId: { type: 'number', description: '话题ID（可选，提供则可跳过一次查询）' },
+        postNumber: { type: 'number', description: '楼层号（可选，提供则可跳过一次查询）' },
+        includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false }
+      },
+      required: ['postId']
     }
   },
   {

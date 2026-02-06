@@ -1,5 +1,7 @@
 export type McpTransport = 'sse' | 'streamable-http'
 
+export type ApiFlavor = 'messages' | 'responses'
+
 export interface McpServerConfig {
   id: string
   name: string
@@ -36,6 +38,7 @@ export interface SubAgentConfig {
 export interface AgentSettings {
   baseUrl: string
   apiKey: string
+  apiFlavor: ApiFlavor
   taskModel: string
   reasoningModel: string
   imageModel: string

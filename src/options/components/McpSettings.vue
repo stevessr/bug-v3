@@ -108,6 +108,11 @@ const mcpTools = [
       { name: 'discourse.like_post', desc: '点赞帖子', params: 'baseUrl, postId, reactionId' },
       { name: 'discourse.get_topic_list', desc: '获取话题列表', params: 'baseUrl, strategy, page' },
       { name: 'discourse.get_topic', desc: '获取话题详情', params: 'baseUrl, topicId' },
+      {
+        name: 'discourse.get_post_context',
+        desc: '获取帖子上下文',
+        params: 'baseUrl, postId, topicId, postNumber, includeRaw'
+      },
       { name: 'discourse.send_timings', desc: '发送阅读时间', params: 'baseUrl, topicId, timeMs, postNumbers' },
       { name: 'discourse.create_post', desc: '创建回帖', params: 'baseUrl, topicId, raw, replyToPostNumber' },
       { name: 'discourse.get_user_activity', desc: '获取用户活动', params: 'baseUrl, username, filter, limit, offset' },

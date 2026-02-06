@@ -7,7 +7,8 @@ import type {
   AgentActionResult,
   AgentMessage,
   AgentSettings,
-  SubAgentConfig
+  SubAgentConfig,
+  ApiFlavor
 } from './types'
 import {
   createSubagentSession,
@@ -949,6 +950,209 @@ async function streamClaudeTools(options: {
   )
 }
 
+/**
+ * 使用 Response API 调用 Claude
+ * Response API 是 Anthropic 的新 API 格式，支持更好的流式响应和工具调用
+ */
+async function streamClaudeResponseApi(options: {
+  client: Anthropic
+  model: string
+  system: string
+  prompt: string
+  onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
+  forceTool?: boolean
+  maxTokens: number
+  mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
+}) {
+  // 合并 browser_actions 工具和 MCP 工具
+  const allTools: (typeof toolSchema)[] = [toolSchema as typeof toolSchema]
+  if (options.mcpTools && options.mcpTools.length > 0) {
+    allTools.push(...(options.mcpTools as (typeof toolSchema)[]))
+  }
+
+  const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
+    if (!options.onUpdate) return
+    if (!payload.message && !payload.thoughts && !payload.steps) return
+    options.onUpdate(payload)
+  }
+
+  const extractFromSnapshot = (snapshot: unknown) => {
+    if (!snapshot || typeof snapshot !== 'object') return
+    const record = snapshot as Record<string, unknown>
+    const message = typeof record.message === 'string' ? record.message : undefined
+    const thoughts = Array.isArray(record.thoughts)
+      ? record.thoughts.filter((item) => typeof item === 'string')
+      : undefined
+    const steps = Array.isArray(record.steps)
+      ? record.steps.filter((item) => typeof item === 'string')
+      : undefined
+    emitUpdate({ message, thoughts, steps })
+  }
+
+  return withRateLimitRetry(
+    async () => {
+      let streamedText = ''
+
+      // Response API 使用 responses.create 而不是 messages.create
+      // 但目前 @anthropic-ai/sdk 可能还不支持 responses API
+      // 我们需要使用原生 fetch 调用
+      const baseUrl = (options.client as any)._options?.baseURL || 'https://api.anthropic.com'
+      const apiKey = (options.client as any)._options?.apiKey || ''
+
+      const requestBody = {
+        model: options.model,
+        max_tokens: options.maxTokens,
+        system: [{ type: 'text', text: options.system }],
+        input: [{ role: 'user', content: options.prompt }],
+        tools: allTools.map((tool) => ({
+          type: 'function',
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.input_schema
+        })),
+        stream: true
+      }
+
+      const response = await fetch(`${baseUrl}/v1/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2024-01-01',
+          'anthropic-beta': 'responses-2025-01-01'
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Response API error: ${response.status} - ${errorText}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No response body')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let toolCalls: Array<{ id: string; name: string; input: any }> = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const event = JSON.parse(data)
+
+            // 处理不同类型的事件
+            if (event.type === 'content_block_delta') {
+              if (event.delta?.type === 'text_delta') {
+                streamedText += event.delta.text || ''
+                emitUpdate({ message: streamedText })
+              } else if (event.delta?.type === 'thinking_delta') {
+                emitUpdate({ thoughts: [event.delta.thinking || ''] })
+              } else if (event.delta?.type === 'input_json_delta') {
+                // 工具调用参数增量
+                extractFromSnapshot(event.delta.partial_json)
+              }
+            } else if (event.type === 'content_block_start') {
+              if (event.content_block?.type === 'tool_use') {
+                toolCalls.push({
+                  id: event.content_block.id,
+                  name: event.content_block.name,
+                  input: {}
+                })
+              }
+            } else if (event.type === 'content_block_stop') {
+              // 工具调用完成
+            } else if (event.type === 'message_stop') {
+              // 消息完成
+            }
+          } catch {
+            // 忽略解析错误
+          }
+        }
+      }
+
+      // 解析工具调用结果
+      const browserToolUses = toolCalls.filter((t) => t.name === 'browser_actions')
+      const mcpToolUses = toolCalls.filter((t) => t.name?.startsWith('mcp__'))
+
+      const { parsedInputs, toolUseIds } = parseToolInputs(
+        browserToolUses.map((t) => ({ id: t.id, name: t.name, input: t.input }))
+      )
+      const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
+      const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
+
+      let parsed: z.infer<typeof responseSchema> | null = null
+      if (parsedInputs.length > 0) {
+        parsed = mergeParsedPayloads(parsedInputs)
+      }
+
+      if (!parsed) {
+        const { candidate } = canParseStructured(streamedText)
+        if (candidate) {
+          const repaired = repairJson(candidate) || candidate
+          try {
+            parsed = parseResponsePayload(JSON.parse(repaired))
+          } catch {
+            parsed = null
+          }
+        }
+      }
+
+      return {
+        rawText: streamedText,
+        parsed,
+        toolUseId,
+        toolInput,
+        toolUseIds,
+        toolInputs: parsedInputs,
+        mcpToolUses: mcpToolUses.length > 0 ? mcpToolUses : undefined
+      }
+    },
+    (attempt, delayMs, error) => {
+      const message =
+        error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
+          ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
+          : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
+      emitUpdate({ message })
+    }
+  )
+}
+
+/**
+ * 根据 API 风格选择调用方法
+ */
+async function streamClaude(
+  options: {
+    client: Anthropic
+    model: string
+    system: string
+    prompt: string
+    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
+    forceTool?: boolean
+    maxTokens: number
+    mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
+  },
+  apiFlavor: ApiFlavor = 'messages'
+) {
+  if (apiFlavor === 'responses') {
+    return streamClaudeResponseApi(options)
+  }
+  return streamClaudeTools(options)
+}
+
 async function streamClaudeText(options: {
   client: Anthropic
   model: string
@@ -1113,16 +1317,19 @@ export async function runAgentMessage(
       }
     }
 
-    const firstPass = await streamClaudeTools({
-      client,
-      model: modelId,
-      system,
-      prompt: input,
-      onUpdate: update => options?.onUpdate?.(update),
-      forceTool: mcpTools.length === 0,
-      maxTokens: resolveMaxTokens(settings.maxTokens),
-      mcpTools
-    })
+    const firstPass = await streamClaude(
+      {
+        client,
+        model: modelId,
+        system,
+        prompt: input,
+        onUpdate: (update) => options?.onUpdate?.(update),
+        forceTool: mcpTools.length === 0,
+        maxTokens: resolveMaxTokens(settings.maxTokens),
+        mcpTools
+      },
+      settings.apiFlavor || 'messages'
+    )
 
     // 处理 MCP 工具调用（并行执行）
     if (firstPass.mcpToolUses && firstPass.mcpToolUses.length > 0) {

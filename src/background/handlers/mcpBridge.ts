@@ -933,6 +933,70 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       }
     }
 
+    case 'discourse.get_post_context': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      const includeRaw = Boolean(args.includeRaw)
+      let topicId = Number(args.topicId || 0)
+      let postNumber = Number(args.postNumber || 0)
+
+      if (!postId) throw new Error('缺少 postId')
+
+      if (!topicId || !postNumber) {
+        const postUrl = `${baseUrl}/posts/${postId}.json`
+        const postResp = await fetch(postUrl, {
+          credentials: 'include',
+          headers: { Accept: 'application/json' }
+        })
+        if (!postResp.ok) {
+          throw new Error(`获取帖子失败：HTTP ${postResp.status}`)
+        }
+        const postData = await postResp.json()
+        topicId = Number(postData.topic_id || 0)
+        postNumber = Number(postData.post_number || 0)
+        if (!topicId || !postNumber) {
+          throw new Error('无法解析 topicId 或 postNumber')
+        }
+      }
+
+      const topicUrl = new URL(`${baseUrl}/t/${topicId}.json`)
+      topicUrl.searchParams.set('post_number', String(postNumber))
+      if (includeRaw) topicUrl.searchParams.set('include_raw', '1')
+
+      const topicResp = await fetch(topicUrl.toString(), {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+
+      if (!topicResp.ok) {
+        throw new Error(`获取上下文失败：HTTP ${topicResp.status}`)
+      }
+
+      const data = await topicResp.json()
+      const posts = data.post_stream?.posts || []
+      return {
+        success: true,
+        topic: {
+          id: data.id,
+          title: data.title,
+          slug: data.slug,
+          posts_count: data.posts_count
+        },
+        anchor: { postId, postNumber, topicId },
+        posts: posts.map((p: any) => ({
+          id: p.id,
+          post_number: p.post_number,
+          username: p.username,
+          created_at: p.created_at,
+          cooked: p.cooked,
+          raw: includeRaw ? p.raw : undefined,
+          liked: !!(
+            p.current_user_reaction || p.actions_summary?.find((a: any) => a.id === 2 && a.acted)
+          )
+        }))
+      }
+    }
+
     case 'discourse.send_timings': {
       const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
       const topicId = Number(args.topicId)
