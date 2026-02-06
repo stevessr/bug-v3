@@ -762,3 +762,18 @@ export interface MessagesState {
   page: number
   hasMore: boolean
 }
+
+// Flag types from Discourse /site.json
+export interface DiscourseFlagType {
+  id: number
+  name_key: string
+  name: string
+  description: string
+  short_description?: string
+  is_flag: boolean
+  is_custom_flag?: boolean
+  require_message: boolean
+  enabled: boolean
+  applies_to?: string[]
+  icon?: string | null
+}

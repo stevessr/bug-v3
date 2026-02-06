@@ -22,6 +22,7 @@ import { useTopicArchive } from './useTopicArchive'
 import { usePostRelations } from './usePostRelations'
 import { useTopicNavigation } from './useTopicNavigation'
 import AiSummaryModal from './AiSummaryModal'
+import FlagModal from './FlagModal'
 import '../css/TopicView.css'
 
 export default defineComponent({
@@ -247,7 +248,15 @@ export default defineComponent({
       handleFlag,
       handleAssign,
       handleDelete,
-      handleWiki
+      handleWiki,
+      // Flag modal
+      flagModalOpen,
+      flagModalPost,
+      flagTypes,
+      flagTypesLoading,
+      flagSubmitting,
+      closeFlagModal,
+      submitFlag
     } = usePostActions({
       baseUrl: props.baseUrl,
       pageFetch,
@@ -486,6 +495,16 @@ export default defineComponent({
             showAiSummaryModal.value = false
           }}
           onRegenerate={handleAiRegenerate}
+        />
+
+        <FlagModal
+          open={flagModalOpen.value}
+          post={flagModalPost.value}
+          flagTypes={flagTypes.value}
+          loading={flagTypesLoading.value}
+          submitting={flagSubmitting.value}
+          onCancel={closeFlagModal}
+          onSubmit={submitFlag}
         />
       </div>
     )

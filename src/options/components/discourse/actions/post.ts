@@ -1,4 +1,50 @@
 import { pageFetch, extractData } from '../utils'
+import type { DiscourseFlagType } from '../types'
+
+// Cache for flag types to avoid repeated fetches
+let cachedFlagTypes: DiscourseFlagType[] | null = null
+let flagTypesFetchedAt = 0
+const FLAG_TYPES_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+export async function fetchFlagTypes(baseUrl: string): Promise<DiscourseFlagType[]> {
+  const now = Date.now()
+  if (cachedFlagTypes && now - flagTypesFetchedAt < FLAG_TYPES_CACHE_TTL) {
+    return cachedFlagTypes
+  }
+
+  const result = await pageFetch<any>(`${baseUrl}/site.json`, {
+    method: 'GET',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Discourse-Logged-In': 'true'
+    }
+  })
+  const data = extractData(result)
+  if (result.ok === false || !data) {
+    throw new Error('获取举报类型失败')
+  }
+
+  const postActionTypes: any[] = data.post_action_types || []
+  const flagTypes = postActionTypes
+    .filter((t: any) => t.is_flag && t.enabled !== false)
+    .map((t: any) => ({
+      id: t.id,
+      name_key: t.name_key || '',
+      name: t.name || '',
+      description: t.description || '',
+      short_description: t.short_description || '',
+      is_flag: true,
+      is_custom_flag: t.is_custom_flag || false,
+      require_message: t.require_message || false,
+      enabled: t.enabled !== false,
+      applies_to: t.applies_to || ['Post'],
+      icon: t.icon || null
+    }))
+
+  cachedFlagTypes = flagTypes
+  flagTypesFetchedAt = now
+  return flagTypes
+}
 
 export interface BookmarkPayload {
   postId: number
@@ -51,6 +97,7 @@ export interface FlagPayload {
   postId: number
   flagType: string
   message?: string
+  flagTopic?: boolean
 }
 
 export interface AssignPayload {
@@ -140,18 +187,23 @@ export async function toggleBookmark(baseUrl: string, payload: BookmarkPayload) 
 
 export async function flagPost(baseUrl: string, payload: FlagPayload) {
   const url = `${baseUrl}/post_actions`
+  const params = new URLSearchParams()
+  params.append('id', String(payload.postId))
+  params.append('post_action_type_id', payload.flagType)
+  params.append('flag_topic', String(payload.flagTopic ?? false))
+  if (payload.message) {
+    params.append('message', payload.message)
+  }
+
   const result = await pageFetch<any>(url, {
     method: 'POST',
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/json',
-      'Discourse-Logged-In': 'true'
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Discourse-Logged-In': 'true',
+      'Discourse-Present': 'true'
     },
-    body: JSON.stringify({
-      id: payload.postId,
-      post_action_type_id: parseInt(payload.flagType, 10),
-      message: payload.message || ''
-    })
+    body: params.toString()
   })
   const data = extractData(result)
   if (result.ok === false) {

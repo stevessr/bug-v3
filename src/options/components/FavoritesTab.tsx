@@ -1,22 +1,11 @@
 import { defineComponent, computed } from 'vue'
-import { Badge, Button, Popconfirm, message } from 'ant-design-vue'
+import { Button, Popconfirm, message } from 'ant-design-vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
 import CachedImage from '../../components/CachedImage.vue'
 import { useEmojiImages } from '../../composables/useEmojiImages'
-
-const favoriteStarStyle = {
-  fontSize: '12px',
-  background: 'linear-gradient(135deg, #ffd700 0%, #ffa500 100%)',
-  borderRadius: '50%',
-  width: '20px',
-  height: '20px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: '0 2px 4px rgba(255, 215, 0, 0.4)'
-} as const
+import './FavoritesTab.css'
 
 export default defineComponent({
   name: 'FavoritesTab',
@@ -69,63 +58,66 @@ export default defineComponent({
           <div class="p-6">
             {favoritesEmojis.value.length ? (
               <div
-                class="grid gap-3"
+                class="grid gap-4"
                 style={{
                   gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
                 }}
               >
                 {favoritesEmojis.value.map((emoji, idx) => {
-                  const showStar = !emoji.usageCount || emoji.usageCount === 0
                   const src = imageSources.value.get(emoji.id) || getImageSrcSync(emoji)
+                  const usageCount = emoji.usageCount || 0
                   return (
-                    <div key={`fav-${emoji.id || idx}`} class="emoji-item relative group">
-                      <Badge
-                        class="block w-full"
-                        count={emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0}
-                        overflowCount={99}
-                        showZero={false}
-                        v-slots={
-                          showStar
-                            ? {
-                                count: () => <span style={favoriteStarStyle}>⭐</span>
-                              }
-                            : undefined
-                        }
-                      >
-                        <div
-                          class="w-full bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden"
-                          style={{ aspectRatio: '1 / 1', minWidth: '56px', minHeight: '56px' }}
-                        >
-                          <CachedImage src={src} alt={emoji.name} class="w-full h-full object-cover" />
-                        </div>
-                      </Badge>
-                      <div class="mt-2 flex justify-center items-center">
-                        <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-2">
-                          <Button
-                            onClick={() => emit('edit', emoji, 'favorites', idx)}
-                            title="编辑"
-                            class="text-xs px-2 py-0.5 bg-white bg-opacity-90 dark:bg-gray-700 rounded hover:bg-opacity-100"
-                          >
-                            编辑
-                          </Button>
-                          <Popconfirm
-                            title="确认移除此表情？"
-                            onConfirm={() => emit('remove', 'favorites', idx)}
-                            v-slots={{
-                              icon: () => <QuestionCircleOutlined style="color: red" />
+                    <div
+                      key={`fav-${emoji.id || idx}`}
+                      class="emoji-card relative group"
+                    >
+                      <div class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 relative">
+                        <CachedImage
+                          src={src}
+                          alt={emoji.name}
+                          class="w-full h-full object-contain"
+                          loading="lazy"
+                        />
+                        {usageCount > 0 ? (
+                          <span class="absolute -top-1.5 -left-1.5 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                            {usageCount > 99 ? '99+' : usageCount}
+                          </span>
+                        ) : (
+                          <span
+                            class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                            style={{
+                              background: 'linear-gradient(135deg, #ffd700 0%, #ffa500 100%)',
+                              boxShadow: '0 2px 4px rgba(255, 215, 0, 0.4)'
                             }}
                           >
-                            <Button
-                              title="移除"
-                              class="text-xs px-2 py-0.5 bg-white bg-opacity-90 dark:bg-gray-700 rounded hover:bg-opacity-100"
-                            >
-                              移除
-                            </Button>
-                          </Popconfirm>
-                        </div>
+                            ⭐
+                          </span>
+                        )}
                       </div>
-                      <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
+
+                      <div class="emoji-name text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
                         {emoji.name}
+                      </div>
+
+                      <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          onClick={() => emit('edit', emoji, 'favorites', idx)}
+                          size="small"
+                          class="text-xs px-2 py-0.5"
+                        >
+                          编辑
+                        </Button>
+                        <Popconfirm
+                          title="确认移除此表情？"
+                          onConfirm={() => emit('remove', 'favorites', idx)}
+                          v-slots={{
+                            icon: () => <QuestionCircleOutlined style="color: red" />
+                          }}
+                        >
+                          <Button size="small" class="text-xs px-2 py-0.5">
+                            移除
+                          </Button>
+                        </Popconfirm>
                       </div>
                     </div>
                   )

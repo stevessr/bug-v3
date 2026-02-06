@@ -9,6 +9,7 @@ export type { CreateTopicPayload, ReplyPayload } from './topic'
 export * from './post'
 
 export {
+  fetchFlagTypes,
   togglePostLike,
   toggleBookmark,
   updateBookmark,

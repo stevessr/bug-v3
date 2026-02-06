@@ -1,11 +1,12 @@
 import { ref } from 'vue'
 
-import type { DiscoursePost } from '../types'
+import type { DiscoursePost, DiscourseFlagType } from '../types'
 import type { extractData, pageFetch } from '../utils'
 import {
   togglePostLike,
   toggleBookmark,
   flagPost,
+  fetchFlagTypes,
   deletePost,
   toggleWiki
 } from '../actions'
@@ -25,6 +26,13 @@ export function usePostActions(options: {
 }) {
   const likedPostIds = ref<Set<number>>(new Set())
   const likingPostIds = ref<Set<number>>(new Set())
+
+  // Flag modal state
+  const flagModalOpen = ref(false)
+  const flagModalPost = ref<DiscoursePost | null>(null)
+  const flagTypes = ref<DiscourseFlagType[]>([])
+  const flagTypesLoading = ref(false)
+  const flagSubmitting = ref(false)
 
   const isPostLiked = (post: DiscoursePost, reactionId: string) => {
     if (likedPostIds.value.has(post.id)) return true
@@ -112,16 +120,49 @@ export function usePostActions(options: {
   }
 
   const handleFlag = async (post: DiscoursePost) => {
+    flagModalPost.value = post
+    flagModalOpen.value = true
+    flagTypesLoading.value = true
+
+    try {
+      const types = await fetchFlagTypes(options.baseUrl)
+      // Filter to only show flags that apply to Post
+      flagTypes.value = types.filter(
+        t => !t.applies_to || t.applies_to.length === 0 || t.applies_to.includes('Post')
+      )
+    } catch (error) {
+      console.warn('[DiscourseBrowser] fetch flag types failed:', error)
+      options.notify.error('获取举报类型失败')
+      flagModalOpen.value = false
+    } finally {
+      flagTypesLoading.value = false
+    }
+  }
+
+  const closeFlagModal = () => {
+    flagModalOpen.value = false
+    flagModalPost.value = null
+  }
+
+  const submitFlag = async (flagTypeId: number, message: string) => {
+    if (!flagModalPost.value) return
+
+    flagSubmitting.value = true
     try {
       await flagPost(options.baseUrl, {
-        postId: post.id,
-        flagType: '6',
-        message: ''
+        postId: flagModalPost.value.id,
+        flagType: String(flagTypeId),
+        message,
+        flagTopic: false
       })
       options.notify.success('举报成功')
+      closeFlagModal()
     } catch (error) {
       console.warn('[DiscourseBrowser] flag failed:', error)
-      options.notify.error('举报失败')
+      const errMsg = error instanceof Error ? error.message : '举报失败'
+      options.notify.error(errMsg)
+    } finally {
+      flagSubmitting.value = false
     }
   }
 
@@ -172,6 +213,14 @@ export function usePostActions(options: {
     handleFlag,
     handleAssign,
     handleDelete,
-    handleWiki
+    handleWiki,
+    // Flag modal
+    flagModalOpen,
+    flagModalPost,
+    flagTypes,
+    flagTypesLoading,
+    flagSubmitting,
+    closeFlagModal,
+    submitFlag
   }
 }
