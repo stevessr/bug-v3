@@ -34,7 +34,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: '要打开的URL' },
+        url: { type: 'string', description: '要打开的 URL' },
         active: { type: 'boolean', description: '是否激活标签页' }
       }
     }
@@ -45,7 +45,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        tabId: { type: 'number', description: '标签页ID' }
+        tabId: { type: 'number', description: '标签页 ID' }
       },
       required: ['tabId']
     }
@@ -56,8 +56,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        tabIds: { type: 'array', items: { type: 'number' }, description: '标签页ID列表' },
-        groupId: { type: 'number', description: '已有分组ID（可选）' },
+        tabIds: { type: 'array', items: { type: 'number' }, description: '标签页 ID 列表' },
+        groupId: { type: 'number', description: '已有分组 ID（可选）' },
         title: { type: 'string', description: '分组标题（可选）' },
         color: {
           type: 'string',
@@ -70,12 +70,12 @@ const TOOLS = [
   },
   {
     name: 'chrome_navigate',
-    description: '导航到指定URL',
+    description: '导航到指定 URL',
     inputSchema: {
       type: 'object',
       properties: {
         url: { type: 'string', description: 'URL' },
-        tabId: { type: 'number', description: '标签页ID' }
+        tabId: { type: 'number', description: '标签页 ID' }
       },
       required: ['url']
     }
@@ -90,6 +90,17 @@ const TOOLS = [
       }
     }
   },
+  {
+    name: 'chrome_window_focus',
+    description: '聚焦指定窗口',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        windowId: { type: 'number', description: '窗口 ID' }
+      },
+      required: ['windowId']
+    }
+  },
   // Discourse tools
   {
     name: 'discourse_like_post',
@@ -97,8 +108,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        postId: { type: 'number', description: '帖子ID' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' },
         reactionId: { type: 'string', description: '表情类型', default: 'heart' }
       },
       required: ['postId']
@@ -110,7 +121,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         strategy: { type: 'string', enum: ['latest', 'new', 'unread', 'top'], description: '浏览策略' },
         page: { type: 'number', description: '页码', default: 0 }
       }
@@ -122,8 +133,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        topicId: { type: 'number', description: '话题ID' }
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' }
       },
       required: ['topicId']
     }
@@ -134,9 +145,9 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        postId: { type: 'number', description: '帖子ID' },
-        topicId: { type: 'number', description: '话题ID（可选，提供则可跳过一次查询）' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' },
+        topicId: { type: 'number', description: '话题 ID（可选，提供则可跳过一次查询）' },
         postNumber: { type: 'number', description: '楼层号（可选，提供则可跳过一次查询）' },
         includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false }
       },
@@ -149,8 +160,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        topicId: { type: 'number', description: '话题ID' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' },
         raw: { type: 'string', description: '回复内容 (Markdown)' },
         replyToPostNumber: { type: 'number', description: '回复的楼层号' }
       },
@@ -163,9 +174,9 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        topicId: { type: 'number', description: '话题ID' },
-        readTimeMs: { type: 'number', description: '阅读时间(毫秒)', default: 10000 },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' },
+        readTimeMs: { type: 'number', description: '阅读时间 (毫秒)', default: 10000 },
         like: { type: 'boolean', description: '是否点赞', default: false }
       },
       required: ['topicId']
@@ -177,7 +188,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         q: { type: 'string', description: '搜索关键词' },
         page: { type: 'number', description: '页码', default: 0 },
         type: { type: 'string', description: '搜索类型（可选）' }
@@ -191,7 +202,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         username: { type: 'string', description: '用户名' },
         filter: { type: 'string', description: '过滤类型', default: '4,5' },
         limit: { type: 'number', description: '数量限制', default: 20 },
@@ -206,9 +217,9 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点URL', default: 'https://linux.do' },
-        topicId: { type: 'number', description: '话题ID' },
-        timeMs: { type: 'number', description: '阅读时间(毫秒)', default: 10000 },
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' },
+        timeMs: { type: 'number', description: '阅读时间 (毫秒)', default: 10000 },
         postNumbers: { type: 'array', items: { type: 'number' }, description: '帖子编号列表' }
       },
       required: ['topicId']
