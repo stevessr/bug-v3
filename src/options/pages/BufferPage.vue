@@ -9,6 +9,7 @@ import FileListDisplay from '../components/FileListDisplay.vue'
 import GroupSelector from '../components/GroupSelector.vue'
 import CreateGroupModal from '../components/CreateGroupModal.vue'
 import TelegramStickerModal from '../modals/TelegramStickerModal.vue'
+import BufferEmojiGrid from '../components/BufferEmojiGrid'
 
 import { useBufferBatch } from './composables/useBufferBatch'
 import { useFilePersistence } from './composables/useFilePersistence'
@@ -1301,79 +1302,16 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="p-6">
-          <div
-            class="grid gap-3"
-            :style="{
-              gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
-            }"
-          >
-            <div
-              v-for="(emoji, idx) in bufferGroup.emojis"
-              :key="`buffer-${emoji.id || idx}`"
-              class="emoji-item relative"
-            >
-              <div
-                class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700 relative"
-                :class="{
-                  'cursor-pointer': isMultiSelectMode,
-                  'ring-2 ring-blue-500': isMultiSelectMode && selectedEmojis.has(idx)
-                }"
-                @click="handleEmojiClick(idx)"
-              >
-                <CachedImage
-                  :src="imageSources.get(emoji.id) || getEmojiImageUrlSync(emoji)"
-                  :alt="emoji.name"
-                  class="w-full h-full object-cover"
-                />
-                <div
-                  v-if="loadingStates.get(emoji.id)"
-                  class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
-                >
-                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                </div>
-              </div>
-
-              <!-- 多选模式下的选择框 -->
-              <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
-                <a-checkbox
-                  :checked="selectedEmojis.has(idx)"
-                  @change="toggleEmojiSelection(idx)"
-                  class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
-                  :title="'选择表情 ' + emoji.name"
-                />
-              </div>
-
-              <!-- 非多选模式下的编辑/删除按钮 -->
-              <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
-                <a-button
-                  type="text"
-                  size="small"
-                  @click="editEmoji(emoji, idx)"
-                  title="编辑"
-                  class="bg-white bg-opacity-80 dark:bg-black dark:text-white"
-                >
-                  编辑
-                </a-button>
-                <a-popconfirm title="确认移除此表情？" @confirm="removeEmoji(idx)">
-                  <template #icon>
-                    <QuestionCircleOutlined style="color: red" />
-                  </template>
-                  <a-button
-                    type="text"
-                    size="small"
-                    title="移除"
-                    class="bg-white bg-opacity-80 hover:bg-opacity-100 dark:bg-black dark:text-white"
-                  >
-                    移除
-                  </a-button>
-                </a-popconfirm>
-              </div>
-
-              <div class="text-xs text-center text-gray-600 mt-1 truncate dark:text-white">
-                {{ emoji.name }}
-              </div>
-            </div>
-          </div>
+          <BufferEmojiGrid
+            :emojis="bufferGroup.emojis"
+            :grid-columns="emojiStore.settings.gridColumns"
+            :is-multi-select-mode="isMultiSelectMode"
+            :selected-emojis="selectedEmojis"
+            @edit="editEmoji"
+            @remove="removeEmoji"
+            @toggle-selection="toggleEmojiSelection"
+            @click="handleEmojiClick"
+          />
         </div>
       </div>
       <div
@@ -1400,29 +1338,3 @@ onBeforeUnmount(() => {
     <TelegramStickerModal v-model="showTelegramModal" />
   </div>
 </template>
-
-<style scoped>
-.emoji-item {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.emoji-item .aspect-square {
-  width: 100%;
-  min-height: 72px;
-}
-
-.emoji-item :deep(.cached-image-wrapper) {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.emoji-item :deep(.cached-image-img) {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-</style>
