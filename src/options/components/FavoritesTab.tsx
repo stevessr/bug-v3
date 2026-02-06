@@ -1,4 +1,3 @@
-<script lang="tsx">
 import { defineComponent, computed, ref, onMounted, watch } from 'vue'
 import { Badge, Button, Popconfirm, message } from 'ant-design-vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
@@ -12,13 +11,24 @@ import {
 } from '../../utils/imageUrlHelper'
 import CachedImage from '../../components/CachedImage.vue'
 
+const favoriteStarStyle = {
+  fontSize: '12px',
+  background: 'linear-gradient(135deg, #ffd700 0%, #ffa500 100%)',
+  borderRadius: '50%',
+  width: '20px',
+  height: '20px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 2px 4px rgba(255, 215, 0, 0.4)'
+} as const
+
 export default defineComponent({
   name: 'FavoritesTab',
   emits: ['remove', 'edit'],
   setup(_, { emit }) {
     const emojiStore = useEmojiStore()
     const imageSources = ref<Map<string, string>>(new Map())
-    const loadingStates = ref<Map<string, boolean>>(new Map())
 
     const favoritesGroup = computed(() => {
       return emojiStore.sortedGroups.find(g => g.id === 'favorites')
@@ -36,7 +46,6 @@ export default defineComponent({
       if (!favoritesGroup.value?.emojis) return
 
       const newSources = new Map<string, string>()
-      const newLoadingStates = new Map<string, boolean>()
 
       for (const [idx, emoji] of favoritesGroup.value.emojis.entries()) {
         try {
@@ -44,7 +53,6 @@ export default defineComponent({
           if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
             const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
             newSources.set(key, result.url)
-            newLoadingStates.set(key, result.isLoading)
           } else {
             const fallbackSrc = emoji.displayUrl || emoji.url
             newSources.set(key, fallbackSrc)
@@ -56,7 +64,6 @@ export default defineComponent({
       }
 
       imageSources.value = newSources
-      loadingStates.value = newLoadingStates
     }
 
     const preloadFavoriteImages = async () => {
@@ -99,10 +106,7 @@ export default defineComponent({
                     icon: () => <QuestionCircleOutlined style="color: red" />
                   }}
                 >
-                  <Button danger size="small">
-                    {{
-                      icon: () => <DeleteOutlined />
-                    }}
+                  <Button danger size="small" v-slots={{ icon: () => <DeleteOutlined /> }}>
                     清空常用
                   </Button>
                 </Popconfirm>
@@ -123,28 +127,27 @@ export default defineComponent({
                   const showStar = !emoji.usageCount || emoji.usageCount === 0
                   return (
                     <div key={`fav-${key}`} class="emoji-item relative group">
-                      <div class="w-full">
-                        <Badge
-                          count={emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0}
-                          overflowCount={99}
-                          showZero={false}
-                          v-slots={
-                            showStar
-                              ? {
-                                  count: () => <span class="favorite-star">⭐</span>
-                                }
-                              : undefined
-                          }
-                        >
-                          <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                            <CachedImage
-                              src={imageSources.value.get(key) || getEmojiImageUrlSync(emoji)}
-                              alt={emoji.name}
-                              class="w-full h-full object-cover"
-                            />
-                          </div>
-                        </Badge>
-                      </div>
+                      <Badge
+                        class="block w-full"
+                        count={emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0}
+                        overflowCount={99}
+                        showZero={false}
+                        v-slots={
+                          showStar
+                            ? {
+                                count: () => <span style={favoriteStarStyle}>⭐</span>
+                              }
+                            : undefined
+                        }
+                      >
+                        <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                          <CachedImage
+                            src={imageSources.value.get(key) || getEmojiImageUrlSync(emoji)}
+                            alt={emoji.name}
+                            class="w-full h-full object-cover"
+                          />
+                        </div>
+                      </Badge>
                       <div class="mt-2 flex justify-center items-center">
                         <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-2">
                           <Button
@@ -188,18 +191,3 @@ export default defineComponent({
     )
   }
 })
-</script>
-
-<style scoped>
-.favorite-star {
-  font-size: 12px;
-  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.4);
-}
-</style>

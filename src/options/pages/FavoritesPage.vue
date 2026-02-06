@@ -2,7 +2,7 @@
 import { inject } from 'vue'
 
 import type { OptionsInject } from '../types'
-import FavoritesTab from '../components/FavoritesTab.vue'
+import FavoritesTab from '../components/FavoritesTab'
 
 const options = inject<OptionsInject>('options')!
 
