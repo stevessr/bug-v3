@@ -23,6 +23,10 @@ import {
   findServerById,
   callMcpTool
 } from './mcpClient'
+import {
+  beginContext,
+  endContext
+} from './agentContext'
 
 // Disable Zod JIT to avoid eval/new Function in CSP-restricted contexts.
 z.config({ jitless: true })
@@ -1279,6 +1283,8 @@ export async function runAgentMessage(
   context?: { tab?: TabContext },
   options?: {
     onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
+    sessionId?: string // 外部传入的会话 ID
+    isolated?: boolean // 是否隔离上下文
   }
 ): Promise<AgentRunResult> {
   if (!settings.apiKey) {
@@ -1286,6 +1292,15 @@ export async function runAgentMessage(
       error: '请先在设置中填写 Claude 的 apiKey。'
     }
   }
+
+  // 开始执行上下文
+  const contextType = subagent ? 'subagent' : 'master'
+  const executionContextId = beginContext(contextType, input, {
+    sessionId: options?.sessionId,
+    agentId: subagent?.id,
+    agentName: subagent?.name,
+    isolated: options?.isolated ?? (contextType === 'subagent')
+  })
 
   try {
     const client = new Anthropic({
@@ -1488,6 +1503,13 @@ export async function runAgentMessage(
         updateMemory(followUpParsed.memory)
       }
 
+      // 结束上下文（MCP 调用完成）
+      endContext(executionContextId, {
+        success: true,
+        output: content,
+        memoryUpdates: followUpParsed?.memory?.set
+      })
+
       return {
         message: {
           id: nanoid(),
@@ -1517,6 +1539,11 @@ export async function runAgentMessage(
 
     if (!firstPass.parsed) {
       const fallbackContent = firstPass.rawText.trim() || '已完成任务。'
+      // 结束上下文（无解析结果）
+      endContext(executionContextId, {
+        success: true,
+        output: fallbackContent
+      })
       return {
         message: {
           id: nanoid(),
@@ -1543,13 +1570,21 @@ export async function runAgentMessage(
           const key = (call.id || call.name || '').trim()
           return key ? mcpNames.has(key) : false
         })
+        const errorContent = hasMcpMatch
+          ? '当前 MCP 服务不是子代理，无法通过 subagents 调用。请在设置中的 MCP 配置里使用"测试该服务"，或直接用工具/动作完成任务。'
+          : '未找到可用的子代理，请检查子代理配置或更换任务。'
+
+        // 结束上下文（错误情况）
+        endContext(executionContextId, {
+          success: false,
+          error: errorContent
+        })
+
         return {
           message: {
             id: nanoid(),
             role: 'assistant',
-            content: hasMcpMatch
-              ? '当前 MCP 服务不是子代理，无法通过 subagents 调用。请在设置中的 MCP 配置里使用“测试该服务”，或直接用工具/动作完成任务。'
-              : '未找到可用的子代理，请检查子代理配置或更换任务。'
+            content: errorContent
           },
           actions: []
         }
@@ -1557,6 +1592,7 @@ export async function runAgentMessage(
       const sessionId = nanoid()
       createSubagentSession(sessionId, input, firstPass.parsed.subagents)
 
+      // 使用独立上下文并行执行子代理
       const subagentResults = await Promise.all(
         firstPass.parsed.subagents.map(async call => {
           const target = resolveSubagent(settings.subagents, call)
@@ -1565,6 +1601,16 @@ export async function runAgentMessage(
             updateSubagentSessionItem(sessionId, call, { error })
             return { id: call.id, name: call.name, error }
           }
+
+          // 为每个 subagent 创建独立的执行上下文
+          const subContextId = beginContext('subagent', call.prompt, {
+            sessionId,
+            parentId: executionContextId,
+            agentId: target.id,
+            agentName: target.name,
+            isolated: true // 强制隔离
+          })
+
           try {
             const output = await streamClaudeText({
               client,
@@ -1573,10 +1619,25 @@ export async function runAgentMessage(
               prompt: call.prompt,
               maxTokens: resolveMaxTokens(settings.maxTokens)
             })
+
+            // 结束 subagent 上下文（成功）
+            endContext(subContextId, {
+              success: true,
+              output,
+              memoryUpdates: { result: output.slice(0, 500) }
+            })
+
             updateSubagentSessionItem(sessionId, call, { output })
             return { id: call.id, name: call.name, output }
           } catch (error: any) {
             const message = error?.message || '子代理调用失败'
+
+            // 结束 subagent 上下文（失败）
+            endContext(subContextId, {
+              success: false,
+              error: message
+            })
+
             updateSubagentSessionItem(sessionId, call, { error: message })
             return { id: call.id, name: call.name, error: message }
           }
@@ -1605,6 +1666,11 @@ export async function runAgentMessage(
 
       if (!aggregated.parsed) {
         const fallbackContent = aggregated.rawText.trim() || '已完成任务。'
+        // 结束上下文（子代理汇总完成）
+        endContext(executionContextId, {
+          success: true,
+          output: fallbackContent
+        })
         return {
           message: {
             id: nanoid(),
@@ -1626,6 +1692,13 @@ export async function runAgentMessage(
       if (aggregated.parsed?.memory) {
         updateMemory(aggregated.parsed.memory)
       }
+
+      // 结束上下文（子代理汇总完成）
+      endContext(executionContextId, {
+        success: true,
+        output: aggregatedContent,
+        memoryUpdates: aggregated.parsed?.memory?.set
+      })
 
       return {
         message: {
@@ -1656,6 +1729,13 @@ export async function runAgentMessage(
         id: action.id || nanoid()
       })) || []
 
+    // 结束执行上下文（成功）
+    endContext(executionContextId, {
+      success: true,
+      output: content,
+      memoryUpdates: firstPass.parsed.memory?.set
+    })
+
     return {
       message: {
         id: nanoid(),
@@ -1672,6 +1752,11 @@ export async function runAgentMessage(
       steps: firstPass.parsed.steps
     }
   } catch (error: any) {
+    // 结束执行上下文（失败）
+    endContext(executionContextId, {
+      success: false,
+      error: error?.message || 'Claude Agent 请求失败。'
+    })
     return {
       error: error?.message || 'Claude Agent 请求失败。'
     }
