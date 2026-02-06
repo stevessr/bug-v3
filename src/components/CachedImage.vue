@@ -193,8 +193,13 @@ watch(
       isError.value = false
       isLoading.value = false
       const forceCache = shouldForceCache(newSrc)
-      if (forceCache) {
-        loadCachedImage(newSrc, { forceCache: true, fallbackToSource: false })
+      const preferCache =
+        shouldUseCache(newSrc) && (forceCache || isExtensionPage())
+      if (preferCache) {
+        loadCachedImage(newSrc, {
+          forceCache,
+          fallbackToSource: !forceCache
+        })
       } else {
         displaySrc.value = newSrc
       }
@@ -207,8 +212,10 @@ watch(
 onMounted(() => {
   if (props.src) {
     const forceCache = shouldForceCache(props.src)
-    if (forceCache) {
-      loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+    const preferCache =
+      shouldUseCache(props.src) && (forceCache || isExtensionPage())
+    if (preferCache) {
+      loadCachedImage(props.src, { forceCache, fallbackToSource: !forceCache })
     } else {
       displaySrc.value = props.src
     }
