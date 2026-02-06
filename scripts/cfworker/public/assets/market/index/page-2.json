@@ -2,7 +2,7 @@
   "page": 2,
   "pageSize": 50,
   "totalPages": 5,
-  "totalGroups": 238,
+  "totalGroups": 239,
   "groups": [
     {
       "id": "group-1767967939351",
@@ -317,10 +317,18 @@
       "isArchived": false
     },
     {
+      "id": "group-1770377514670",
+      "name": "X 第四十三弹",
+      "icon": "https://linux.do/uploads/default/original/4X/6/d/c/6dc2ba221d748d92a3b612af04f4e6c5bcbebbb6.avif?v=emoji-17",
+      "order": 89,
+      "emojiCount": 918,
+      "isArchived": false
+    },
+    {
       "id": "group-1770011593793",
       "name": "X 第四十二弹",
       "icon": "https://linux.do/uploads/default/original/4X/f/8/7/f87e47fdb3a50ae1a1ee9b7bc703fe6b4293cbc3.avif",
-      "order": 89,
+      "order": 90,
       "emojiCount": 682,
       "isArchived": false
     },
@@ -328,7 +336,7 @@
       "id": "group-1769597270429",
       "name": "X 第四十弹",
       "icon": "https://linux.do/uploads/default/original/4X/f/c/7/fc7a41e21bc86964dc293d0cec6f55db7b3fba6c.avif",
-      "order": 90,
+      "order": 91,
       "emojiCount": 213,
       "isArchived": false
     },
@@ -336,7 +344,7 @@
       "id": "group-1762945443494",
       "name": "X 第四弹",
       "icon": "https://linux.do/uploads/default/original/4X/0/f/8/0f866327f9cfd47635ae71752cb91c728d2a60d1.avif",
-      "order": 91,
+      "order": 92,
       "emojiCount": 171,
       "isArchived": true
     },
@@ -344,7 +352,7 @@
       "id": "group-1759672893426",
       "name": "yauyau",
       "icon": "https://linux.do/uploads/default/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
-      "order": 92,
+      "order": 93,
       "emojiCount": 77,
       "isArchived": false
     },
@@ -352,7 +360,7 @@
       "id": "group-1761442802743",
       "name": "あきゅー",
       "icon": "https://linux.do/uploads/default/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
-      "order": 93,
+      "order": 94,
       "emojiCount": 11,
       "isArchived": true
     },
@@ -360,7 +368,7 @@
       "id": "group-1759062077224",
       "name": "アマカノ 3",
       "icon": "https://linux.do/uploads/default/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
-      "order": 94,
+      "order": 95,
       "emojiCount": 4,
       "isArchived": true
     },
@@ -368,7 +376,7 @@
       "id": "group-1758290078442",
       "name": "东方大头",
       "icon": "https://linux.do/uploads/default/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
-      "order": 95,
+      "order": 96,
       "emojiCount": 30,
       "isArchived": false
     },
@@ -376,7 +384,7 @@
       "id": "group-1765974153699",
       "name": "丸山彩表情包 | 素素祥祥子",
       "icon": "https://linux.do/uploads/default/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
-      "order": 96,
+      "order": 97,
       "emojiCount": 25,
       "isArchived": false
     },
@@ -384,7 +392,7 @@
       "id": "telegram_1768793747428_99hnvqyuo",
       "name": "二四三 C @zhaxia_cn",
       "icon": "https://linux.do/uploads/default/original/4X/9/3/d/93d269214c185d209b7588f803d11715f3f388bd.webp?v=telegram",
-      "order": 97,
+      "order": 98,
       "emojiCount": 16,
       "isArchived": false
     },
@@ -392,17 +400,9 @@
       "id": "group-1762354829964",
       "name": "二阶堂希罗",
       "icon": "https://linux.do/uploads/default/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
-      "order": 98,
+      "order": 99,
       "emojiCount": 45,
       "isArchived": true
-    },
-    {
-      "id": "group-1768045118897",
-      "name": "二阶堂希罗 专题",
-      "icon": "⚔️",
-      "order": 99,
-      "emojiCount": 47,
-      "isArchived": false
     }
   ]
 }
