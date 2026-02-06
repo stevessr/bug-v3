@@ -192,7 +192,63 @@ export function getMcpBridgeSettingsSync(): McpBridgeSettings {
 
 async function getWsUrl(): Promise<string> {
   const settings = await loadMcpBridgeSettings()
-  return `ws://${settings.host}:${settings.port}${settings.path}`
+  const protocol = await detectProtocol(settings)
+  return `${protocol}://${settings.host}:${settings.port}${settings.path}`
+}
+
+// 检测应该使用的协议
+async function detectProtocol(settings: McpBridgeSettings): Promise<'ws' | 'wss'> {
+  // 如果明确指定了协议，直接使用
+  if (settings.protocol === 'ws') return 'ws'
+  if (settings.protocol === 'wss') return 'wss'
+
+  // auto 模式：根据主机判断默认协议
+  const isLocalhost =
+    settings.host === 'localhost' ||
+    settings.host === '127.0.0.1' ||
+    settings.host === '::1' ||
+    settings.host.endsWith('.local')
+
+  // 本地连接默认使用 ws，远程连接默认使用 wss
+  const defaultProtocol = isLocalhost ? 'ws' : 'wss'
+  const fallbackProtocol = isLocalhost ? 'wss' : 'ws'
+
+  // 尝试探测默认协议是否可用
+  const testUrl = `${defaultProtocol === 'ws' ? 'http' : 'https'}://${settings.host}:${settings.port}/health`
+
+  try {
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000)
+    })
+    if (response.ok) {
+      console.log(`[MCP] Protocol auto-detected: ${defaultProtocol}`)
+      return defaultProtocol
+    }
+  } catch {
+    // 默认协议不可用，尝试回退协议
+    console.log(`[MCP] Default protocol ${defaultProtocol} failed, trying ${fallbackProtocol}`)
+  }
+
+  // 尝试回退协议
+  const fallbackTestUrl = `${fallbackProtocol === 'ws' ? 'http' : 'https'}://${settings.host}:${settings.port}/health`
+
+  try {
+    const response = await fetch(fallbackTestUrl, {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000)
+    })
+    if (response.ok) {
+      console.log(`[MCP] Protocol auto-detected (fallback): ${fallbackProtocol}`)
+      return fallbackProtocol
+    }
+  } catch {
+    // 回退协议也不可用
+  }
+
+  // 都不可用时返回默认协议
+  console.log(`[MCP] Protocol detection failed, using default: ${defaultProtocol}`)
+  return defaultProtocol
 }
 
 function updateStatus(status: McpConnectionStatus) {
@@ -348,7 +404,9 @@ export async function testMcpBridge(): Promise<{ ok: boolean; error?: string }> 
   // Test HTTP health endpoint
   try {
     const settings = await loadMcpBridgeSettings()
-    const healthUrl = `http://${settings.host}:${settings.port}/health`
+    const protocol = await detectProtocol(settings)
+    const httpProtocol = protocol === 'wss' ? 'https' : 'http'
+    const healthUrl = `${httpProtocol}://${settings.host}:${settings.port}/health`
     const response = await fetch(healthUrl, {
       method: 'GET',
       signal: AbortSignal.timeout(3000)

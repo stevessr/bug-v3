@@ -14,11 +14,13 @@ import {
 import { message } from 'ant-design-vue'
 
 type ConnectionStatus = 'unknown' | 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
+type BridgeProtocol = 'auto' | 'ws' | 'wss'
 
 interface BridgeSettings {
   host: string
   port: number
   path: string
+  protocol: BridgeProtocol
   autoConnect: boolean
   reconnectOnFailure: boolean
 }
@@ -35,20 +37,37 @@ const bridgeSettings = ref<BridgeSettings>({
   host: '127.0.0.1',
   port: 7465,
   path: '/ws',
+  protocol: 'auto',
   autoConnect: true,
   reconnectOnFailure: true
+})
+
+// 判断是否本地主机
+const isLocalhost = computed(() => {
+  const host = bridgeSettings.value.host
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local')
+})
+
+// 推断当前协议
+const inferredProtocol = computed(() => {
+  if (bridgeSettings.value.protocol !== 'auto') {
+    return bridgeSettings.value.protocol
+  }
+  return isLocalhost.value ? 'ws' : 'wss'
 })
 
 // 计算 WebSocket URL
 const wsUrl = computed(() => {
   const { host, port, path } = bridgeSettings.value
-  return `ws://${host}:${port}${path}`
+  const protocol = inferredProtocol.value
+  return `${protocol}://${host}:${port}${path}`
 })
 
 // 计算 HTTP URL
 const httpUrl = computed(() => {
   const { host, port } = bridgeSettings.value
-  return `http://${host}:${port}`
+  const httpProtocol = inferredProtocol.value === 'wss' ? 'https' : 'http'
+  return `${httpProtocol}://${host}:${port}`
 })
 
 // 加载设置
@@ -377,6 +396,17 @@ onUnmounted(() => {
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">WebSocket 路径</label>
             <a-input v-model:value="bridgeSettings.path" placeholder="/ws" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 dark:text-white">协议</label>
+            <a-radio-group v-model:value="bridgeSettings.protocol" button-style="solid">
+              <a-radio-button value="auto">自动检测</a-radio-button>
+              <a-radio-button value="ws">ws://</a-radio-button>
+              <a-radio-button value="wss">wss://</a-radio-button>
+            </a-radio-group>
+            <p class="text-xs text-gray-500 mt-1">
+              自动检测：本地连接使用 ws://，远程连接使用 wss://
+            </p>
           </div>
           <div class="flex items-center gap-4">
             <a-checkbox v-model:checked="bridgeSettings.autoConnect">自动连接</a-checkbox>
