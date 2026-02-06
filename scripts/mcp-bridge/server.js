@@ -37,6 +37,17 @@ const TOOLS = [
     }
   },
   {
+    name: 'chrome.tab_focus',
+    description: 'Focus a tab by id.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number' }
+      },
+      required: ['tabId']
+    }
+  },
+  {
     name: 'chrome.tab_close',
     description: 'Close a tab by id.',
     input_schema: {
@@ -193,6 +204,23 @@ const TOOLS = [
     }
   },
   {
+    name: 'chrome.tabs_group',
+    description: 'Group tabs together with optional title/color.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabIds: { type: 'array', items: { type: 'number' } },
+        groupId: { type: 'number' },
+        title: { type: 'string' },
+        color: {
+          type: 'string',
+          enum: ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange']
+        }
+      },
+      required: ['tabIds']
+    }
+  },
+  {
     name: 'chrome.tab_ungroup',
     description: 'Ungroup tabs.',
     input_schema: {
@@ -265,6 +293,17 @@ const TOOLS = [
         top: { type: 'number' },
         width: { type: 'number' },
         height: { type: 'number' }
+      },
+      required: ['windowId']
+    }
+  },
+  {
+    name: 'chrome.window_focus',
+    description: 'Focus a window by id.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        windowId: { type: 'number' }
       },
       required: ['windowId']
     }
@@ -558,6 +597,246 @@ const TOOLS = [
         tabId: { type: 'number' }
       },
       required: ['x', 'y']
+    }
+  },
+  {
+    name: 'discourse.like_post',
+    description: 'Like a Discourse post.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' },
+        reactionId: { type: 'string', default: 'heart' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.get_topic_list',
+    description: 'Get Discourse topic list.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        strategy: { type: 'string', enum: ['latest', 'new', 'unread', 'top'] },
+        page: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'discourse.get_topic',
+    description: 'Get Discourse topic detail.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' }
+      },
+      required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse.get_post',
+    description: 'Get Discourse post detail.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' },
+        includeRaw: { type: 'boolean' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.get_topic_posts',
+    description: 'Get posts by post numbers in a topic.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' },
+        postNumbers: { type: 'array', items: { type: 'number' } },
+        includeRaw: { type: 'boolean' }
+      },
+      required: ['topicId', 'postNumbers']
+    }
+  },
+  {
+    name: 'discourse.get_category_list',
+    description: 'Get Discourse categories.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' }
+      }
+    }
+  },
+  {
+    name: 'discourse.get_tag_list',
+    description: 'Get Discourse tags.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' }
+      }
+    }
+  },
+  {
+    name: 'discourse.search_user',
+    description: 'Search users.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        term: { type: 'string' }
+      },
+      required: ['term']
+    }
+  },
+  {
+    name: 'discourse.get_notifications',
+    description: 'Get notifications.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        page: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'discourse.get_bookmarks',
+    description: 'Get bookmarks.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        page: { type: 'number' }
+      }
+    }
+  },
+  {
+    name: 'discourse.get_post_context',
+    description: 'Get post context near a specific post.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' },
+        topicId: { type: 'number' },
+        postNumber: { type: 'number' },
+        includeRaw: { type: 'boolean' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.send_timings',
+    description: 'Send read timings.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' },
+        timeMs: { type: 'number' },
+        postNumbers: { type: 'array', items: { type: 'number' } }
+      },
+      required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse.create_post',
+    description: 'Create a reply post.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' },
+        raw: { type: 'string' },
+        replyToPostNumber: { type: 'number' }
+      },
+      required: ['topicId', 'raw']
+    }
+  },
+  {
+    name: 'discourse.like_topic',
+    description: 'Like a topic (like first post).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' },
+        reactionId: { type: 'string', default: 'heart' }
+      },
+      required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse.unlike_post',
+    description: 'Unlike a post.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' },
+        reactionId: { type: 'string', default: 'heart' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.bookmark_post',
+    description: 'Bookmark a post.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' },
+        name: { type: 'string' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.unbookmark_post',
+    description: 'Remove a post bookmark.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        postId: { type: 'number' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse.browse_topic',
+    description: 'Browse a topic with optional like.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        topicId: { type: 'number' },
+        readTimeMs: { type: 'number' },
+        like: { type: 'boolean' }
+      },
+      required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse.search',
+    description: 'Search Discourse content.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        q: { type: 'string' },
+        page: { type: 'number' },
+        type: { type: 'string' }
+      },
+      required: ['q']
     }
   }
 ]

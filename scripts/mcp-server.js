@@ -140,6 +140,91 @@ const TOOLS = [
     }
   },
   {
+    name: 'discourse_get_post',
+    description: '获取 Discourse 帖子详情',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' },
+        includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse_get_topic_posts',
+    description: '获取话题内指定楼层帖子',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' },
+        postNumbers: {
+          type: 'array',
+          items: { type: 'number' },
+          description: '楼层号列表'
+        },
+        includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false }
+      },
+      required: ['topicId', 'postNumbers']
+    }
+  },
+  {
+    name: 'discourse_get_category_list',
+    description: '获取分类列表',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' }
+      }
+    }
+  },
+  {
+    name: 'discourse_get_tag_list',
+    description: '获取标签列表',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' }
+      }
+    }
+  },
+  {
+    name: 'discourse_search_user',
+    description: '搜索用户',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        term: { type: 'string', description: '搜索关键词' }
+      },
+      required: ['term']
+    }
+  },
+  {
+    name: 'discourse_get_notifications',
+    description: '获取通知列表',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        page: { type: 'number', description: '页码', default: 0 }
+      }
+    }
+  },
+  {
+    name: 'discourse_get_bookmarks',
+    description: '获取书签列表',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        page: { type: 'number', description: '页码', default: 0 }
+      }
+    }
+  },
+  {
     name: 'discourse_get_post_context',
     description: '获取帖子上下文（定位到指定帖子附近的上下文）',
     inputSchema: {
@@ -166,6 +251,57 @@ const TOOLS = [
         replyToPostNumber: { type: 'number', description: '回复的楼层号' }
       },
       required: ['topicId', 'raw']
+    }
+  },
+  {
+    name: 'discourse_like_topic',
+    description: '点赞话题（默认点赞首帖）',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        topicId: { type: 'number', description: '话题 ID' },
+        reactionId: { type: 'string', description: '表情类型', default: 'heart' }
+      },
+      required: ['topicId']
+    }
+  },
+  {
+    name: 'discourse_unlike_post',
+    description: '取消点赞帖子',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' },
+        reactionId: { type: 'string', description: '表情类型', default: 'heart' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse_bookmark_post',
+    description: '添加帖子书签',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' },
+        name: { type: 'string', description: '书签名称（可选）' }
+      },
+      required: ['postId']
+    }
+  },
+  {
+    name: 'discourse_unbookmark_post',
+    description: '取消帖子书签',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        postId: { type: 'number', description: '帖子 ID' }
+      },
+      required: ['postId']
     }
   },
   {

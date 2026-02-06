@@ -103,6 +103,47 @@ async function buildDiscourseHeaders(
   return headers
 }
 
+function isDiscoursePostLiked(post: any): boolean {
+  if (post?.current_user_reaction) return true
+  if (Array.isArray(post?.actions_summary)) {
+    const likeAction = post.actions_summary.find((a: any) => a.id === 2)
+    if (likeAction?.acted) return true
+  }
+  return false
+}
+
+async function fetchDiscoursePost(baseUrl: string, postId: number): Promise<any> {
+  const postUrl = `${baseUrl}/posts/${postId}.json`
+  const postResp = await fetch(postUrl, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' }
+  })
+  if (!postResp.ok) {
+    throw new Error(`获取帖子失败：HTTP ${postResp.status}`)
+  }
+  return postResp.json()
+}
+
+async function toggleDiscourseReaction(
+  baseUrl: string,
+  postId: number,
+  reactionId: string
+): Promise<{ ok: boolean; data?: any }> {
+  const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
+  const headers = await buildDiscourseHeaders(baseUrl, {
+    'X-Requested-With': 'XMLHttpRequest',
+    'Content-Type': 'application/json',
+    'Discourse-Logged-In': 'true'
+  })
+  const response = await fetch(url, {
+    method: 'PUT',
+    credentials: 'include',
+    headers
+  })
+  const data = await response.json().catch(() => null)
+  return { ok: response.ok, data }
+}
+
 function getWsUrl(): string {
   return `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`
 }
@@ -456,6 +497,13 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       }
     }
 
+    case 'chrome.tab_focus': {
+      if (typeof args.tabId !== 'number') throw new Error('缺少 tabId')
+      if (!chromeAPI.tabs?.update) throw new Error('无法激活标签页')
+      await chromeAPI.tabs.update(args.tabId, { active: true })
+      return { success: true }
+    }
+
     case 'chrome.tab_close': {
       if (!chromeAPI.tabs?.remove) throw new Error('无法关闭标签页')
       if (typeof args.tabId !== 'number') throw new Error('缺少 tabId')
@@ -579,6 +627,20 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       return { groupId }
     }
 
+    case 'chrome.tabs_group': {
+      if (!chromeAPI.tabs?.group) throw new Error('无法分组标签页')
+      const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
+      if (tabIds.length === 0) throw new Error('缺少 tabIds')
+      const groupId = await chromeAPI.tabs.group({ tabIds, groupId: args.groupId })
+      if (chromeAPI.tabGroups?.update && (args.title || args.color)) {
+        await chromeAPI.tabGroups.update(groupId, {
+          title: args.title,
+          color: args.color
+        })
+      }
+      return { groupId }
+    }
+
     case 'chrome.tab_ungroup': {
       if (!chromeAPI.tabs?.ungroup) throw new Error('无法取消分组标签页')
       const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
@@ -635,6 +697,13 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         width: args.width,
         height: args.height
       })
+      return mapWindow(window)
+    }
+
+    case 'chrome.window_focus': {
+      if (!chromeAPI.windows?.update) throw new Error('无法更新窗口')
+      if (typeof args.windowId !== 'number') throw new Error('缺少 windowId')
+      const window = await chromeAPI.windows.update(args.windowId, { focused: true })
       return mapWindow(window)
     }
 
@@ -933,6 +1002,167 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       }
     }
 
+    case 'discourse.get_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      const includeRaw = Boolean(args.includeRaw)
+      if (!postId) throw new Error('缺少 postId')
+
+      const data = await fetchDiscoursePost(baseUrl, postId)
+      return {
+        id: data.id,
+        topic_id: data.topic_id,
+        post_number: data.post_number,
+        username: data.username,
+        created_at: data.created_at,
+        cooked: data.cooked,
+        raw: includeRaw ? data.raw : undefined,
+        liked: isDiscoursePostLiked(data)
+      }
+    }
+
+    case 'discourse.get_topic_posts': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      const includeRaw = Boolean(args.includeRaw)
+      const postNumbers = Array.isArray(args.postNumbers) ? args.postNumbers : []
+
+      if (!topicId) throw new Error('缺少 topicId')
+      if (postNumbers.length === 0) throw new Error('缺少 postNumbers')
+
+      const requests = postNumbers.map(async (postNumber: number) => {
+        const topicUrl = new URL(`${baseUrl}/t/${topicId}.json`)
+        topicUrl.searchParams.set('post_number', String(postNumber))
+        if (includeRaw) topicUrl.searchParams.set('include_raw', '1')
+
+        const response = await fetch(topicUrl.toString(), {
+          credentials: 'include',
+          headers: { Accept: 'application/json' }
+        })
+        if (!response.ok) {
+          throw new Error(`获取楼层 ${postNumber} 失败：HTTP ${response.status}`)
+        }
+        const data = await response.json()
+        const post = (data.post_stream?.posts || []).find(
+          (p: any) => p.post_number === postNumber
+        )
+        if (!post) return null
+        return {
+          id: post.id,
+          post_number: post.post_number,
+          username: post.username,
+          created_at: post.created_at,
+          cooked: post.cooked,
+          raw: includeRaw ? post.raw : undefined,
+          liked: isDiscoursePostLiked(post)
+        }
+      })
+
+      const posts = (await Promise.all(requests)).filter(Boolean)
+      return { success: true, topicId, posts }
+    }
+
+    case 'discourse.get_category_list': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const url = `${baseUrl}/categories.json`
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!response.ok) {
+        throw new Error(`获取分类失败：HTTP ${response.status}`)
+      }
+      const data = await response.json()
+      const categories = data.category_list?.categories || []
+      return {
+        categories: categories.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          topic_count: c.topic_count,
+          post_count: c.post_count
+        }))
+      }
+    }
+
+    case 'discourse.get_tag_list': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const url = `${baseUrl}/tags.json`
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!response.ok) {
+        throw new Error(`获取标签失败：HTTP ${response.status}`)
+      }
+      const data = await response.json()
+      const tags = data.tags || []
+      return {
+        tags: tags.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          topic_count: t.topic_count
+        }))
+      }
+    }
+
+    case 'discourse.search_user': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const term = String(args.term || '').trim()
+      if (!term) throw new Error('缺少 term')
+
+      const url = `${baseUrl}/u/search/users.json?term=${encodeURIComponent(term)}`
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!response.ok) {
+        throw new Error(`搜索用户失败：HTTP ${response.status}`)
+      }
+      const data = await response.json()
+      const users = data.users || []
+      return {
+        users: users.map((u: any) => ({
+          id: u.id,
+          username: u.username,
+          name: u.name,
+          avatar_template: u.avatar_template
+        }))
+      }
+    }
+
+    case 'discourse.get_notifications': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const page = Number(args.page || 0)
+      const url = new URL(`${baseUrl}/notifications.json`)
+      if (page > 0) url.searchParams.set('page', String(page))
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!response.ok) {
+        throw new Error(`获取通知失败：HTTP ${response.status}`)
+      }
+      const data = await response.json()
+      return { notifications: data.notifications || [] }
+    }
+
+    case 'discourse.get_bookmarks': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const page = Number(args.page || 0)
+      const url = new URL(`${baseUrl}/bookmarks.json`)
+      if (page > 0) url.searchParams.set('page', String(page))
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!response.ok) {
+        throw new Error(`获取书签失败：HTTP ${response.status}`)
+      }
+      const data = await response.json()
+      return { bookmarks: data.bookmarks || [] }
+    }
+
     case 'discourse.get_post_context': {
       const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
       const postId = Number(args.postId)
@@ -1075,6 +1305,112 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
           created_at: data.created_at
         }
       }
+    }
+
+    case 'discourse.like_topic': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const topicId = Number(args.topicId)
+      const reactionId = String(args.reactionId || 'heart')
+      if (!topicId) throw new Error('缺少 topicId')
+
+      const topicUrl = `${baseUrl}/t/${topicId}.json`
+      const topicResponse = await fetch(topicUrl, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      })
+      if (!topicResponse.ok) {
+        throw new Error(`获取话题失败：HTTP ${topicResponse.status}`)
+      }
+
+      const topicData = await topicResponse.json()
+      const firstPost = topicData.post_stream?.posts?.[0]
+      if (!firstPost?.id) throw new Error('未找到首帖')
+
+      if (isDiscoursePostLiked(firstPost)) {
+        return { success: true, liked: true, alreadyLiked: true, postId: firstPost.id }
+      }
+
+      const result = await toggleDiscourseReaction(baseUrl, firstPost.id, reactionId)
+      if (!result.ok) {
+        throw new Error('点赞失败')
+      }
+      return { success: true, liked: true, postId: firstPost.id, data: result.data }
+    }
+
+    case 'discourse.unlike_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      const reactionId = String(args.reactionId || 'heart')
+      if (!postId) throw new Error('缺少 postId')
+
+      const postData = await fetchDiscoursePost(baseUrl, postId)
+      if (!isDiscoursePostLiked(postData)) {
+        return { success: true, liked: false, alreadyUnliked: true }
+      }
+
+      const result = await toggleDiscourseReaction(baseUrl, postId, reactionId)
+      if (!result.ok) {
+        throw new Error('取消点赞失败')
+      }
+      return { success: true, liked: false, data: result.data }
+    }
+
+    case 'discourse.bookmark_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      const name = args.name ? String(args.name) : undefined
+      if (!postId) throw new Error('缺少 postId')
+
+      const headers = await buildDiscourseHeaders(baseUrl, {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      })
+
+      const response = await fetch(`${baseUrl}/bookmarks.json`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: JSON.stringify({ post_id: postId, name })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.errors?.join(', ') || `书签失败：HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      return { success: true, bookmark: data }
+    }
+
+    case 'discourse.unbookmark_post': {
+      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const postId = Number(args.postId)
+      if (!postId) throw new Error('缺少 postId')
+
+      const postData = await fetchDiscoursePost(baseUrl, postId)
+      const bookmarkId = postData?.bookmark_id
+      if (!bookmarkId) {
+        return { success: true, alreadyUnbookmarked: true }
+      }
+
+      const headers = await buildDiscourseHeaders(baseUrl, {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      })
+
+      const response = await fetch(`${baseUrl}/bookmarks/${bookmarkId}.json`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers
+      })
+
+      if (!response.ok) {
+        throw new Error(`取消书签失败：HTTP ${response.status}`)
+      }
+
+      return { success: true }
     }
 
     case 'discourse.get_user_activity': {

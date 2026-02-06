@@ -79,6 +79,8 @@ const mcpTools = [
       { name: 'chrome.list_tabs', desc: '列出所有标签页' },
       { name: 'chrome.get_active_tab', desc: '获取当前活动标签页' },
       { name: 'chrome.tab_create', desc: '创建新标签页' },
+      { name: 'chrome.tab_focus', desc: '聚焦指定标签页', params: 'tabId' },
+      { name: 'chrome.tabs_group', desc: '分组标签页', params: 'tabIds, groupId, title, color' },
       { name: 'chrome.tab_close', desc: '关闭标签页' },
       { name: 'chrome.navigate', desc: '导航到指定 URL' },
       { name: 'chrome.tab_reload', desc: '刷新标签页' }
@@ -89,6 +91,7 @@ const mcpTools = [
     tools: [
       { name: 'chrome.window_list', desc: '列出所有窗口' },
       { name: 'chrome.window_create', desc: '创建新窗口' },
+      { name: 'chrome.window_focus', desc: '聚焦指定窗口', params: 'windowId' },
       { name: 'chrome.window_close', desc: '关闭窗口' }
     ]
   },
@@ -108,6 +111,17 @@ const mcpTools = [
       { name: 'discourse.like_post', desc: '点赞帖子', params: 'baseUrl, postId, reactionId' },
       { name: 'discourse.get_topic_list', desc: '获取话题列表', params: 'baseUrl, strategy, page' },
       { name: 'discourse.get_topic', desc: '获取话题详情', params: 'baseUrl, topicId' },
+      { name: 'discourse.get_post', desc: '获取帖子详情', params: 'baseUrl, postId, includeRaw' },
+      {
+        name: 'discourse.get_topic_posts',
+        desc: '获取话题指定楼层',
+        params: 'baseUrl, topicId, postNumbers, includeRaw'
+      },
+      { name: 'discourse.get_category_list', desc: '获取分类列表', params: 'baseUrl' },
+      { name: 'discourse.get_tag_list', desc: '获取标签列表', params: 'baseUrl' },
+      { name: 'discourse.search_user', desc: '搜索用户', params: 'baseUrl, term' },
+      { name: 'discourse.get_notifications', desc: '获取通知', params: 'baseUrl, page' },
+      { name: 'discourse.get_bookmarks', desc: '获取书签', params: 'baseUrl, page' },
       {
         name: 'discourse.get_post_context',
         desc: '获取帖子上下文',
@@ -115,6 +129,10 @@ const mcpTools = [
       },
       { name: 'discourse.send_timings', desc: '发送阅读时间', params: 'baseUrl, topicId, timeMs, postNumbers' },
       { name: 'discourse.create_post', desc: '创建回帖', params: 'baseUrl, topicId, raw, replyToPostNumber' },
+      { name: 'discourse.like_topic', desc: '点赞话题', params: 'baseUrl, topicId, reactionId' },
+      { name: 'discourse.unlike_post', desc: '取消点赞', params: 'baseUrl, postId, reactionId' },
+      { name: 'discourse.bookmark_post', desc: '添加书签', params: 'baseUrl, postId, name' },
+      { name: 'discourse.unbookmark_post', desc: '取消书签', params: 'baseUrl, postId' },
       { name: 'discourse.get_user_activity', desc: '获取用户活动', params: 'baseUrl, username, filter, limit, offset' },
       { name: 'discourse.browse_topic', desc: '综合浏览话题', params: 'baseUrl, topicId, readTimeMs, like' },
       { name: 'discourse.search', desc: '搜索内容', params: 'baseUrl, q, page, type' }
