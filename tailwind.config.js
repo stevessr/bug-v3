@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import aspectRatio from '@tailwindcss/aspect-ratio'
+
 export default {
   darkMode: ['class', '[data-theme="dark"]'],
   content: [
@@ -49,5 +51,5 @@ export default {
       }
     }
   },
-  plugins: []
+  plugins: [aspectRatio]
 }
