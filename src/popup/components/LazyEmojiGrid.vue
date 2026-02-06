@@ -116,7 +116,7 @@ const focusLastEmoji = () => {
     <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto" role="grid">
       <div
         class="emoji-grid overflow-y-auto"
-        :style="`column-count: ${gridColumns}; column-gap: 12px; min-height: 300px;`"
+        :style="`display: grid; grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); gap: 12px; min-height: 300px;`"
         role="row"
       >
         <a-button
@@ -125,13 +125,7 @@ const focusLastEmoji = () => {
           @click="$emit('select', emoji)"
           @keydown="handleKeyNavigation($event, index)"
           :data-emoji-index="index"
-          style="
-            display: inline-block;
-            width: 100%;
-            margin: 0 0 12px;
-            break-inside: avoid;
-            height: auto;
-          "
+          style="width: 100%; height: auto;"
           class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           :title="emoji.name"
           role="gridcell"
