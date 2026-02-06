@@ -1,15 +1,10 @@
-import { defineComponent, computed, ref, onMounted, watch } from 'vue'
+import { defineComponent, computed } from 'vue'
 import { Badge, Button, Popconfirm, message } from 'ant-design-vue'
 import { QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 import { useEmojiStore } from '../../stores/emojiStore'
-import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
-import {
-  getEmojiImageUrlWithLoading,
-  getEmojiImageUrlSync,
-  preloadImages
-} from '../../utils/imageUrlHelper'
 import CachedImage from '../../components/CachedImage.vue'
+import { useEmojiImages } from '../../composables/useEmojiImages'
 
 const favoriteStarStyle = {
   fontSize: '12px',
@@ -28,67 +23,24 @@ export default defineComponent({
   emits: ['remove', 'edit'],
   setup(_, { emit }) {
     const emojiStore = useEmojiStore()
-    const imageSources = ref<Map<string, string>>(new Map())
 
     const favoritesGroup = computed(() => {
       return emojiStore.sortedGroups.find(g => g.id === 'favorites')
     })
 
-    const getEmojiKey = (emoji: { id?: string; url?: string }, idx: number) =>
-      emoji.id || emoji.url || `fav-${idx}`
+    const favoritesEmojis = computed(() => favoritesGroup.value?.emojis || [])
+
+    const { imageSources, getImageSrcSync } = useEmojiImages(() => favoritesEmojis.value, {
+      preload: true,
+      preloadBatchSize: 3,
+      preloadDelay: 50,
+      preloadWhenActive: false
+    })
 
     const handleClearAllFavorites = () => {
       emojiStore.clearAllFavorites()
       message.success('已清空所有常用表情')
     }
-
-    const initializeImageSources = async () => {
-      if (!favoritesGroup.value?.emojis) return
-
-      const newSources = new Map<string, string>()
-
-      for (const [idx, emoji] of favoritesGroup.value.emojis.entries()) {
-        try {
-          const key = getEmojiKey(emoji, idx)
-          if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
-            const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-            newSources.set(key, result.url)
-          } else {
-            const fallbackSrc = emoji.displayUrl || emoji.url
-            newSources.set(key, fallbackSrc)
-          }
-        } catch {
-          const fallbackSrc = emoji.displayUrl || emoji.url
-          newSources.set(getEmojiKey(emoji, idx), fallbackSrc)
-        }
-      }
-
-      imageSources.value = newSources
-    }
-
-    const preloadFavoriteImages = async () => {
-      if (!favoritesGroup.value?.emojis || !shouldUseImageCache(emojiStore.settings)) {
-        return
-      }
-      try {
-        await preloadImages(favoritesGroup.value.emojis, { batchSize: 3, delay: 50 })
-      } catch {
-        // ignore
-      }
-    }
-
-    watch(
-      () => favoritesGroup.value?.emojis,
-      () => {
-        initializeImageSources()
-      },
-      { deep: true }
-    )
-
-    onMounted(() => {
-      initializeImageSources()
-      preloadFavoriteImages()
-    })
 
     return () => (
       <div class="space-y-8">
@@ -96,7 +48,7 @@ export default defineComponent({
           <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">常用表情</h2>
-              {favoritesGroup.value && favoritesGroup.value.emojis?.length ? (
+              {favoritesEmojis.value.length ? (
                 <Popconfirm
                   title="确认清空所有常用表情吗？此操作不可撤销。"
                   ok-text="确认"
@@ -115,18 +67,18 @@ export default defineComponent({
           </div>
 
           <div class="p-6">
-            {favoritesGroup.value && favoritesGroup.value.emojis?.length ? (
+            {favoritesEmojis.value.length ? (
               <div
                 class="grid gap-3"
                 style={{
                   gridTemplateColumns: `repeat(${emojiStore.settings.gridColumns}, minmax(0, 1fr))`
                 }}
               >
-                {favoritesGroup.value.emojis.map((emoji, idx) => {
-                  const key = getEmojiKey(emoji, idx)
+                {favoritesEmojis.value.map((emoji, idx) => {
                   const showStar = !emoji.usageCount || emoji.usageCount === 0
+                  const src = imageSources.value.get(emoji.id) || getImageSrcSync(emoji)
                   return (
-                    <div key={`fav-${key}`} class="emoji-item relative group">
+                    <div key={`fav-${emoji.id || idx}`} class="emoji-item relative group">
                       <Badge
                         class="block w-full"
                         count={emoji.usageCount && emoji.usageCount > 0 ? emoji.usageCount : 0}
@@ -140,12 +92,11 @@ export default defineComponent({
                             : undefined
                         }
                       >
-                        <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                          <CachedImage
-                            src={imageSources.value.get(key) || getEmojiImageUrlSync(emoji)}
-                            alt={emoji.name}
-                            class="w-full h-full object-cover"
-                          />
+                        <div
+                          class="w-full bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden"
+                          style={{ aspectRatio: '1 / 1', minWidth: '56px', minHeight: '56px' }}
+                        >
+                          <CachedImage src={src} alt={emoji.name} class="w-full h-full object-cover" />
                         </div>
                       </Badge>
                       <div class="mt-2 flex justify-center items-center">
