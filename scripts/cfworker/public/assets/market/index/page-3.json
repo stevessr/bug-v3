@@ -2,7 +2,7 @@
   "page": 3,
   "pageSize": 50,
   "totalPages": 5,
-  "totalGroups": 239,
+  "totalGroups": 241,
   "groups": [
     {
       "id": "group-1768045118897",
@@ -237,10 +237,18 @@
       "isArchived": false
     },
     {
+      "id": "telegram_1770339362573_6txoyq4pg",
+      "name": "天才猫猫明风风 @camiyoru",
+      "icon": "📁",
+      "order": 129,
+      "emojiCount": 52,
+      "isArchived": false
+    },
+    {
       "id": "group-1765895444745",
       "name": "妹红 · 上官绯樱",
       "icon": "https://linux.do/uploads/default/original/4X/0/f/6/0f64b7be701d1cd06fe53641f93116d5482a9c5b.avif",
-      "order": 129,
+      "order": 130,
       "emojiCount": 1057,
       "isArchived": true
     },
@@ -248,7 +256,7 @@
       "id": "group-1755913811947",
       "name": "始皇酱",
       "icon": "秦",
-      "order": 130,
+      "order": 131,
       "emojiCount": 16,
       "isArchived": true
     },
@@ -256,7 +264,7 @@
       "id": "group-1768974056814",
       "name": "存档喵",
       "icon": "https://linux.do/uploads/default/original/4X/2/2/4/2243cc7bc9b95d54773b22fce674d2305bd2c70d.jpeg",
-      "order": 131,
+      "order": 132,
       "emojiCount": 14,
       "isArchived": false
     },
@@ -264,7 +272,7 @@
       "id": "group-1767644662750",
       "name": "安和昴｜SUBARU AWA",
       "icon": "https://linux.do/uploads/default/original/4X/d/c/5/dc5aa318332044ae2c1cb4c89df18ea3613968b0.avif",
-      "order": 132,
+      "order": 133,
       "emojiCount": 27,
       "isArchived": false
     },
@@ -272,7 +280,7 @@
       "id": "group-1761155486316",
       "name": "家有鲨猫",
       "icon": "https://linux.do/uploads/default/original/4X/d/5/0/d50e4e34c192daf2c186d7f00e091645d62e1be9.webp",
-      "order": 133,
+      "order": 134,
       "emojiCount": 119,
       "isArchived": false
     },
@@ -280,7 +288,7 @@
       "id": "group-1756869887449",
       "name": "小 C",
       "icon": "https://linux.do/uploads/default/original/4X/c/c/a/ccacd68f1d3883b372a7c53602d8a58d246a3e96.webp",
-      "order": 134,
+      "order": 135,
       "emojiCount": 125,
       "isArchived": false
     },
@@ -288,7 +296,7 @@
       "id": "group-1761154281184",
       "name": "小火切",
       "icon": "https://linux.do/uploads/default/original/4X/7/a/f/7af9ec83b8c60264d7caee2adb74c6844fc0128c.webp",
-      "order": 135,
+      "order": 136,
       "emojiCount": 88,
       "isArchived": false
     },
@@ -296,7 +304,7 @@
       "id": "telegram_1768789754173_ja2c0nmq1",
       "name": "岚欣Q版 @zhaxia_cn",
       "icon": "https://linux.do/uploads/default/original/4X/e/3/f/e3fa9a7f624942e229b860557fba41b86301a21d.webp?v=telegram",
-      "order": 136,
+      "order": 137,
       "emojiCount": 16,
       "isArchived": false
     },
@@ -304,7 +312,7 @@
       "id": "group-1767644666485",
       "name": "平泽唯｜Hirasawa Yui",
       "icon": "https://linux.do/uploads/default/original/4X/e/5/d/e5d7fcb12b3711ef51d920ffe1bd4da22e5d0f9c.avif",
-      "order": 137,
+      "order": 138,
       "emojiCount": 20,
       "isArchived": false
     },
@@ -312,7 +320,7 @@
       "id": "group-1768998692628",
       "name": "我也要死吗",
       "icon": "https://linux.do/uploads/default/original/4X/5/b/8/5b8dd72e5fb7ad70a5329d14e33d5b8843786af6.jpeg?v=1768998697999",
-      "order": 138,
+      "order": 139,
       "emojiCount": 6,
       "isArchived": false
     },
@@ -320,7 +328,7 @@
       "id": "group-1768985215189",
       "name": "我怎么可能成为你的恋人",
       "icon": "https://linux.do/uploads/default/original/4X/2/0/4/2043ad13d670aa9c62b3632514a7a4861849ee86.gif#/",
-      "order": 139,
+      "order": 140,
       "emojiCount": 281,
       "isArchived": false
     },
@@ -328,7 +336,7 @@
       "id": "telegram_1768723757505_9z7ul5ipe",
       "name": "我怎么可能成为你的恋人 - 不行不行",
       "icon": "https://linux.do/uploads/default/original/4X/1/7/f/17f3e628be43aa75203c9def96bf89e97e2241ef.webp?v=telegram",
-      "order": 140,
+      "order": 141,
       "emojiCount": 44,
       "isArchived": false
     },
@@ -336,7 +344,7 @@
       "id": "group-1755865026150",
       "name": "扒手手",
       "icon": "https://linux.do/uploads/default/original/4X/e/2/9/e29f21239357f9879fd83c2238974e76001eba56.gif",
-      "order": 141,
+      "order": 142,
       "emojiCount": 13,
       "isArchived": false
     },
@@ -344,7 +352,7 @@
       "id": "group-1769047707353",
       "name": "新年主题包",
       "icon": "https://linux.do/uploads/default/original/4X/5/b/4/5b450cf02f4c8566a026259697678928b8bf1846.gif",
-      "order": 142,
+      "order": 143,
       "emojiCount": 12,
       "isArchived": false
     },
@@ -352,7 +360,7 @@
       "id": "telegram_1768785939238_j15zbg1a8",
       "name": "日常的备份 @zhaxia_cn",
       "icon": "https://linux.do/uploads/default/original/4X/7/4/9/749c7d09aa0f512d225709d5e939d9175cbb3857.webp?v=telegram",
-      "order": 143,
+      "order": 144,
       "emojiCount": 16,
       "isArchived": false
     },
@@ -360,7 +368,7 @@
       "id": "group-1761153964258",
       "name": "明前奶绿",
       "icon": "https://linux.do/uploads/default/original/4X/8/0/7/807e55ab43794732803a5ef83a6a98592321a4bd.webp",
-      "order": 144,
+      "order": 145,
       "emojiCount": 34,
       "isArchived": false
     },
@@ -368,7 +376,7 @@
       "id": "group-1767644842489",
       "name": "明日方舟联动",
       "icon": "https://linux.do/uploads/default/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
-      "order": 145,
+      "order": 146,
       "emojiCount": 116,
       "isArchived": false
     },
@@ -376,7 +384,7 @@
       "id": "group-1761152742132",
       "name": "明风风风",
       "icon": "https://linux.do/uploads/default/original/4X/8/9/2/89229b93f42d8d9843a01f6b71ecfffc40a2c9e5.webp",
-      "order": 146,
+      "order": 147,
       "emojiCount": 97,
       "isArchived": false
     },
@@ -384,7 +392,7 @@
       "id": "telegram_1768785247194_ge55trbbi",
       "name": "星荧璃果 01 @zhaxia_cn",
       "icon": "https://linux.do/uploads/default/original/4X/7/8/e/78e10452467000c519f05777d6c517f7773e51b5.webp?v=telegram",
-      "order": 147,
+      "order": 148,
       "emojiCount": 16,
       "isArchived": false
     },
@@ -392,16 +400,8 @@
       "id": "group-1766479646538",
       "name": "春也 Haruya",
       "icon": "https://linux.do/uploads/default/original/4X/f/f/9/ff94fddd15b87e0fd97aa543b757a7f2d632a378.avif",
-      "order": 148,
-      "emojiCount": 25,
-      "isArchived": false
-    },
-    {
-      "id": "telegram_1768786165292_zk58pe8i4",
-      "name": "是墨白 w @zhaxia_cn",
-      "icon": "https://linux.do/uploads/default/original/4X/9/4/3/943314241e43f846ef110f5e8a57e41cd3623d66.webp?v=telegram",
       "order": 149,
-      "emojiCount": 16,
+      "emojiCount": 25,
       "isArchived": false
     }
   ]
