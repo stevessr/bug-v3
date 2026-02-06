@@ -10,5 +10,5 @@ const { emojiStore, removeEmojiFromGroup, openEditEmoji } = options
 </script>
 
 <template>
-  <FavoritesTab :emojiStore="emojiStore" @remove="removeEmojiFromGroup" @edit="openEditEmoji" />
+  <FavoritesTab @remove="removeEmojiFromGroup" @edit="openEditEmoji" />
 </template>
