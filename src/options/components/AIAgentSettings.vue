@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
 import type { AgentPermissions, McpServerConfig, SubAgentConfig } from '@/agent/types'
+import SkillsSettings from './SkillsSettings.vue'
 
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
 
@@ -441,5 +442,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Skills 配置 -->
+    <SkillsSettings />
   </div>
 </template>

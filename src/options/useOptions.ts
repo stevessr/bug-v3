@@ -264,11 +264,7 @@ export default function useOptions() {
 
   const updateImageCacheStrategy = (value: string) => {
     const strategy = value as 'auto' | 'force-indexeddb' | 'force-source' | 'adaptive'
-    emojiStore.updateSettings({
-      imageCacheStrategy: strategy,
-      // Keep legacy flag in sync for older consumers
-      useIndexedDBForImages: strategy !== 'force-source'
-    })
+    emojiStore.updateSettings({ imageCacheStrategy: strategy })
   }
 
   const updateEnableContentImageCache = (value: boolean) => {

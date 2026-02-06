@@ -55,12 +55,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const isReadOnlyMode = ref(false)
 
   const normalizeSettings = (value: AppSettings): AppSettings => {
-    const normalized = { ...value }
+    const { useIndexedDBForImages, ...rest } = value
+    const normalized = { ...rest } as AppSettings
     if (!normalized.imageCacheStrategy) {
       normalized.imageCacheStrategy =
-        normalized.useIndexedDBForImages === false ? 'force-source' : 'auto'
+        useIndexedDBForImages === false ? 'force-source' : 'auto'
     }
-    normalized.useIndexedDBForImages = resolveImageCacheStrategy(normalized) !== 'force-source'
     return normalized
   }
 
@@ -441,6 +441,26 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         settings.value = normalizeSettings({ ...defaultSettings, ...settingsData })
       }
 
+      // Legacy migration: if old useIndexedDBForImages exists, migrate and drop old key
+      if (
+        settingsData &&
+        Object.prototype.hasOwnProperty.call(settingsData, 'useIndexedDBForImages')
+      ) {
+        const legacyEnabled = (settingsData as any).useIndexedDBForImages !== false
+        const needsStrategy = !Object.prototype.hasOwnProperty.call(settingsData, 'imageCacheStrategy')
+        const migratedAt = settings.value.imageCacheMigratedAt
+        settings.value = normalizeSettings({
+          ...settings.value,
+          ...(needsStrategy ? { imageCacheStrategy: legacyEnabled ? 'auto' : 'force-source' } : {}),
+          imageCacheMigratedAt: migratedAt || Date.now()
+        })
+        try {
+          await storage.setSettings(settings.value)
+        } catch (error) {
+          log.warn('Failed to persist settings during migration', error)
+        }
+      }
+
       favorites.value = new Set(favoritesData || [])
 
       log.info('Final groups after assignment:', {
@@ -816,9 +836,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
 
   // Specific setting update functions
   const updateUseIndexedDBForImages = (value: boolean) => {
-    if (settings.value.useIndexedDBForImages !== value) {
+    const current = resolveImageCacheStrategy(settings.value) !== 'force-source'
+    if (current !== value) {
       updateSettings({
-        useIndexedDBForImages: value,
         imageCacheStrategy: value ? 'auto' : 'force-source'
       })
       log.info('updateUseIndexedDBForImages', { value })

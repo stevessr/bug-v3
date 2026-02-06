@@ -27,6 +27,7 @@ import {
   beginContext,
   endContext
 } from './agentContext'
+import { getEnabledBuiltinMcpConfigs } from './skills'
 
 // Disable Zod JIT to avoid eval/new Function in CSP-restricted contexts.
 z.config({ jitless: true })
@@ -602,8 +603,11 @@ const buildSystemPrompt = (
   const memoryLine = memoryToPrompt()
   if (memoryLine) lines.push(memoryLine)
 
-  if (settings.enableMcp && settings.mcpServers.length > 0) {
-    const enabledServers = settings.mcpServers.filter(server => {
+  if (settings.enableMcp) {
+    // 合并内置 MCP 服务和自定义 MCP 服务
+    const builtinServers = getEnabledBuiltinMcpConfigs()
+    const allMcpServers = [...builtinServers, ...settings.mcpServers]
+    const enabledServers = allMcpServers.filter(server => {
       if (!server.enabled) return false
       const scope = subagent?.mcpServerIds
       if (scope && scope.length > 0) return scope.includes(server.id)
@@ -1316,8 +1320,11 @@ export async function runAgentMessage(
 
     // 发现 MCP 工具
     let mcpTools: ReturnType<typeof mcpToolToAnthropicTool>[] = []
-    if (settings.enableMcp && settings.mcpServers.length > 0) {
-      const enabledServers = settings.mcpServers.filter(server => {
+    if (settings.enableMcp) {
+      // 合并内置 MCP 服务和自定义 MCP 服务
+      const builtinServers = getEnabledBuiltinMcpConfigs()
+      const allMcpServers = [...builtinServers, ...settings.mcpServers]
+      const enabledServers = allMcpServers.filter(server => {
         if (!server.enabled) return false
         const scope = subagent?.mcpServerIds
         if (scope && scope.length > 0) return scope.includes(server.id)

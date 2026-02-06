@@ -32,6 +32,41 @@ export {
   resolveSubagent
 } from './subagentSessions'
 
+// Skills 系统
+export {
+  // 内置 MCP 服务
+  BUILTIN_MCP_SERVERS,
+  BUILTIN_SKILLS,
+  // API Keys 管理
+  loadApiKeys,
+  saveApiKeys,
+  getApiKey,
+  setApiKey,
+  removeApiKey,
+  // 内置 MCP 启用状态
+  loadBuiltinMcpEnabled,
+  saveBuiltinMcpEnabled,
+  isBuiltinMcpEnabled,
+  setBuiltinMcpEnabled,
+  isBuiltinMcpAvailable,
+  // Skills 启用状态
+  loadSkillsEnabled,
+  saveSkillsEnabled,
+  isSkillEnabled,
+  setSkillEnabled,
+  // MCP 配置转换
+  builtinMcpToConfig,
+  getEnabledBuiltinMcpConfigs,
+  // Skill 操作
+  mcpToolToSkill,
+  discoverAllSkills,
+  executeSkill,
+  findSkillByName,
+  filterSkillsByCategory,
+  getEnabledSkills,
+  skillsToPrompt
+} from './skills'
+
 // 记忆系统
 export {
   // 6层上下文
@@ -104,3 +139,11 @@ export type {
   RuntimeContextEntry,
   ContextStats
 } from './memory'
+
+export type {
+  Skill,
+  SkillCategory,
+  SkillSource,
+  SkillExecutionResult,
+  BuiltinMcpServer
+} from './skills'

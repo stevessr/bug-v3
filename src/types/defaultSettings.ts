@@ -36,7 +36,6 @@ export const defaultSettings: AppSettings = {
   // Default: keep legacy conservative behavior for backward compatibility
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
-  useIndexedDBForImages: true, // 兼容旧版开关（已被缓存策略替代）
   imageCacheStrategy: 'auto', // 图片缓存策略：auto/force-indexeddb/force-source/adaptive
   enableContentImageCache: false, // 默认禁用前端图片缓存（试验性功能）
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
