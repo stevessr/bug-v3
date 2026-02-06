@@ -137,12 +137,14 @@ const focusLastEmoji = () => {
           role="gridcell"
           tabindex="0"
         >
-          <CachedImage
-            :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
-            :alt="emoji.name"
-            class="w-full h-full object-cover"
-            loading="lazy"
-          />
+          <div class="w-full aspect-square overflow-hidden rounded">
+            <CachedImage
+              :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
+              :alt="emoji.name"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
           <!-- Activity indicator for favorites -->
           <div
             v-if="favorites.has(emoji.id) && emoji.usageCount"
