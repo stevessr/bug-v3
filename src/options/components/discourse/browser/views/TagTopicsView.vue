@@ -40,7 +40,9 @@ defineEmits([
 <template>
   <div class="flex gap-4">
     <div class="flex-1 min-w-0">
-      <h3 class="text-lg font-semibold mb-3 dark:text-white">标签：{{ activeTab.currentTagName }}</h3>
+      <h3 class="text-lg font-semibold mb-3 dark:text-white">
+        标签：{{ activeTab.currentTagName }}
+      </h3>
       <div v-if="activeTab.pendingTopicsCount" class="mb-3">
         <a-button type="primary" size="small" @click="$emit('applyPendingTopics')">
           发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新

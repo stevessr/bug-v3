@@ -103,7 +103,9 @@ export default defineComponent({
         }
         viewDetails.value = {
           views: (data?.views ?? data?.view_stats ?? []) as Array<Record<string, any>>,
-          users: (data?.users ?? data?.unique_users ?? data?.stats ?? []) as Array<Record<string, any>>
+          users: (data?.users ?? data?.unique_users ?? data?.stats ?? []) as Array<
+            Record<string, any>
+          >
         }
       } catch (error) {
         console.warn('[DiscourseBrowser] load view stats failed:', error)
@@ -379,9 +381,7 @@ export default defineComponent({
     return () => (
       <div class="topic-view flex gap-4">
         <div class="topic-main flex-1 min-w-0 space-y-4">
-          <TopicHeader
-            topic={activeTopic.value}
-          />
+          <TopicHeader topic={activeTopic.value} />
 
           {/* Posts list */}
           {activeTopic.value.post_stream?.posts ? (
@@ -444,7 +444,9 @@ export default defineComponent({
 
           <TopicFooter
             notificationLevel={
-              activeTopic.value.notification_level ?? activeTopic.value.details?.notification_level ?? null
+              activeTopic.value.notification_level ??
+              activeTopic.value.details?.notification_level ??
+              null
             }
             bookmarked={!!firstPost.value?.bookmarked}
             canAssign={

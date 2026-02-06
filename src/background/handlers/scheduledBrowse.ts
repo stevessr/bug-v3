@@ -1,4 +1,5 @@
 import { getChromeAPI } from '../utils/main'
+
 import * as storage from '@/utils/simpleStorage'
 import type { ScheduledBrowseTask, BrowseStrategy } from '@/types/type'
 
@@ -44,10 +45,7 @@ const randomBetween = (min: number, max: number) => {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 // 获取话题列表
-async function fetchTopicList(
-  baseUrl: string,
-  strategy: BrowseStrategy
-): Promise<TopicListItem[]> {
+async function fetchTopicList(baseUrl: string, strategy: BrowseStrategy): Promise<TopicListItem[]> {
   const endpoints: Record<BrowseStrategy, string> = {
     latest: '/latest.json',
     new: '/new.json',

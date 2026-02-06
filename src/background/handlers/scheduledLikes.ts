@@ -1,4 +1,5 @@
 import { getChromeAPI } from '../utils/main'
+
 import * as storage from '@/utils/simpleStorage'
 import type { ScheduledLikeTask } from '@/types/type'
 
@@ -19,16 +20,13 @@ interface UserActivityResponse {
 }
 
 // 获取用户最近活动（帖子）
-async function fetchUserActivity(
-  baseUrl: string,
-  username: string
-): Promise<UserActivity[]> {
+async function fetchUserActivity(baseUrl: string, username: string): Promise<UserActivity[]> {
   const url = `${baseUrl}/user_actions.json?username=${encodeURIComponent(username)}&filter=4,5&limit=20`
 
   const response = await fetch(url, {
     credentials: 'include',
     headers: {
-      'Accept': 'application/json'
+      Accept: 'application/json'
     }
   })
 
@@ -65,7 +63,7 @@ async function checkPostLiked(baseUrl: string, postId: number): Promise<boolean>
     const response = await fetch(url, {
       credentials: 'include',
       headers: {
-        'Accept': 'application/json'
+        Accept: 'application/json'
       }
     })
 

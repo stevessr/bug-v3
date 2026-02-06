@@ -33,10 +33,18 @@ defineEmits([
 <template>
   <div class="floating-composer" :style="floatingStyle">
     <div class="floating-shell">
-      <div class="floating-bar" @mousedown="$emit('startDrag', $event)" @touchstart.prevent="$emit('startDrag', $event)">
+      <div
+        class="floating-bar"
+        @mousedown="$emit('startDrag', $event)"
+        @touchstart.prevent="$emit('startDrag', $event)"
+      >
         <span>
           {{
-            composerMode === 'topic' ? '发帖编辑器' : composerMode === 'edit' ? '编辑帖子' : '回复编辑器'
+            composerMode === 'topic'
+              ? '发帖编辑器'
+              : composerMode === 'edit'
+                ? '编辑帖子'
+                : '回复编辑器'
           }}
         </span>
         <button class="floating-close" @click="$emit('close')">×</button>
@@ -64,7 +72,11 @@ defineEmits([
           @clearReply="$emit('clearReply')"
         />
       </div>
-      <div class="floating-resize" @mousedown="$emit('startResize', $event)" @touchstart.prevent="$emit('startResize', $event)" />
+      <div
+        class="floating-resize"
+        @mousedown="$emit('startResize', $event)"
+        @touchstart.prevent="$emit('startResize', $event)"
+      />
     </div>
   </div>
 </template>
@@ -129,6 +141,10 @@ defineEmits([
   height: 16px;
   align-self: flex-end;
   cursor: se-resize;
-  background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--theme-outline) 80%, transparent) 50%);
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    color-mix(in srgb, var(--theme-outline) 80%, transparent) 50%
+  );
 }
 </style>

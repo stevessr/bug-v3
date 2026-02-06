@@ -198,8 +198,7 @@ watch(
       isError.value = false
       isLoading.value = false
       const forceCache = shouldForceCache(newSrc)
-      const preferCache =
-        shouldUseCache(newSrc) && (forceCache || isExtensionPage())
+      const preferCache = shouldUseCache(newSrc) && (forceCache || isExtensionPage())
       if (preferCache) {
         loadCachedImage(newSrc, {
           forceCache,
@@ -217,8 +216,7 @@ watch(
 onMounted(() => {
   if (props.src) {
     const forceCache = shouldForceCache(props.src)
-    const preferCache =
-      shouldUseCache(props.src) && (forceCache || isExtensionPage())
+    const preferCache = shouldUseCache(props.src) && (forceCache || isExtensionPage())
     if (preferCache) {
       loadCachedImage(props.src, { forceCache, fallbackToSource: !forceCache })
     } else {

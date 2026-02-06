@@ -1,6 +1,7 @@
 import { defineComponent } from 'vue'
 
 import type { DiscourseCategory, DiscourseUser, TopicListType } from '../types'
+
 import SidebarTopicList from './SidebarTopicList'
 import SidebarQuickLinks from './SidebarQuickLinks'
 import SidebarCategories from './SidebarCategories'

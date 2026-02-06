@@ -2,9 +2,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { nanoid } from 'nanoid'
 
+import SkillsSettings from './SkillsSettings.vue'
+
 import { useAgentSettings } from '@/agent/useAgentSettings'
 import type { AgentPermissions, McpServerConfig, SubAgentConfig } from '@/agent/types'
-import SkillsSettings from './SkillsSettings.vue'
 
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
 
@@ -229,9 +230,7 @@ onMounted(() => {
         <template v-if="settings.apiFlavor === 'responses'">
           Responses API 是 Anthropic 的新 API 格式，支持更好的流式响应。需要启用 Beta 功能。
         </template>
-        <template v-else>
-          Messages API 是标准的 Claude API 格式，兼容性最好。
-        </template>
+        <template v-else>Messages API 是标准的 Claude API 格式，兼容性最好。</template>
       </p>
 
       <div class="grid grid-cols-1 gap-4">

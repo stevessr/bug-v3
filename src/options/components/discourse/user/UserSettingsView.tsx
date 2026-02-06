@@ -9,6 +9,8 @@ import {
   getAllPreloadedCategories,
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
+import { findEmojiByName, searchEmojis, type EmojiShortcode } from '../bbcode'
 
 import UserTabs from './UserTabs'
 import SettingsBasicInfo from './settings/SettingsBasicInfo'
@@ -35,8 +37,6 @@ import {
   homepageOptions,
   chatQuickReactionTypeOptions
 } from './settings/options'
-import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
-import { findEmojiByName, searchEmojis, type EmojiShortcode } from '../bbcode'
 import type { CategoryOption, PreferencesPayload, TagOption } from './settings/types'
 import '../css/UserExtrasView.css'
 
@@ -219,10 +219,7 @@ export default defineComponent({
         .filter(Boolean)
     }
 
-    const normalizeDelimitedArray = (
-      value?: string[] | string | null,
-      delimiter: string = ','
-    ) => {
+    const normalizeDelimitedArray = (value?: string[] | string | null, delimiter: string = ',') => {
       if (!value) return []
       if (Array.isArray(value)) return value.filter(Boolean)
       return value
@@ -305,7 +302,9 @@ export default defineComponent({
           hide_presence: !!value.hide_presence,
           watched_category_ids: normalizeNumberArray(value.watched_category_ids),
           tracked_category_ids: normalizeNumberArray(value.tracked_category_ids),
-          watched_first_post_category_ids: normalizeNumberArray(value.watched_first_post_category_ids),
+          watched_first_post_category_ids: normalizeNumberArray(
+            value.watched_first_post_category_ids
+          ),
           muted_category_ids: normalizeNumberArray(value.muted_category_ids),
           watched_tags: normalizeStringArray(value.watched_tags),
           tracked_tags: normalizeStringArray(value.tracked_tags),
@@ -330,9 +329,7 @@ export default defineComponent({
         }
 
         const encodeCategoryIds = (ids?: number[]) => {
-          const sanitized = (ids || []).filter(
-            id => typeof id === 'number' && !Number.isNaN(id)
-          )
+          const sanitized = (ids || []).filter(id => typeof id === 'number' && !Number.isNaN(id))
           return sanitized.length === 0 ? [-1] : sanitized
         }
 
@@ -354,10 +351,7 @@ export default defineComponent({
           tracked_tags: encodeDelimited(form.value.tracked_tags),
           watching_first_post_tags: encodeDelimited(form.value.watching_first_post_tags),
           muted_tags: encodeDelimited(form.value.muted_tags),
-          chat_quick_reactions_custom: encodeDelimited(
-            form.value.chat_quick_reactions_custom,
-            '|'
-          )
+          chat_quick_reactions_custom: encodeDelimited(form.value.chat_quick_reactions_custom, '|')
         }
 
         Object.keys(payload).forEach(key => {

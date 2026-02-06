@@ -55,7 +55,8 @@ async function applyTheme() {
     const detail = (event as CustomEvent).detail as { mode?: 'light' | 'dark' } | undefined
     const settings = await getSettings()
     const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
-    const mode = detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
+    const mode =
+      detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
     applyMd3ThemeToRoot(primaryColor, mode || 'light')
   })
 

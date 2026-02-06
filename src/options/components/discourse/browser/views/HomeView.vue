@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import type {
-  BrowserTab,
-  DiscourseTopic,
-  SuggestedTopic,
-  TopicListType
-} from '../../types'
+import type { BrowserTab, DiscourseTopic, SuggestedTopic, TopicListType } from '../../types'
 import TopicList from '../../topic/TopicList'
 import Sidebar from '../../layout/Sidebar'
 
@@ -98,7 +93,10 @@ defineEmits([
           <span class="ml-2 text-gray-500">加载更多话题...</span>
         </div>
 
-        <div v-if="!activeTab.hasMoreTopics && !isLoadingMore" class="text-center text-gray-400 py-4 text-sm">
+        <div
+          v-if="!activeTab.hasMoreTopics && !isLoadingMore"
+          class="text-center text-gray-400 py-4 text-sm"
+        >
           已加载全部话题
         </div>
       </div>

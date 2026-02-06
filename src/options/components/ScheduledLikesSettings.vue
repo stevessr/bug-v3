@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, isRef, type Ref } from 'vue'
-import { PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons-vue'
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { AppSettings, ScheduledLikeTask } from '../../types/type'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const emit = defineEmits([
-  'update:enableScheduledLikes',
-  'update:scheduledLikeTasks'
-])
+const emit = defineEmits(['update:enableScheduledLikes', 'update:scheduledLikeTasks'])
 
 const getSetting = <K extends keyof AppSettings>(key: K, defaultValue: AppSettings[K]) => {
   try {
@@ -127,10 +129,7 @@ const formatInterval = (minutes: number) => {
             自动为指定用户的帖子点赞（试验性功能）
           </p>
         </div>
-        <a-switch
-          :checked="enableScheduledLikes"
-          @change="handleToggleEnabled"
-        />
+        <a-switch :checked="enableScheduledLikes" @change="handleToggleEnabled" />
       </div>
     </div>
 
@@ -158,7 +157,11 @@ const formatInterval = (minutes: number) => {
                 <span class="font-medium dark:text-white">@{{ task.username }}</span>
                 <span
                   class="px-2 py-0.5 text-xs rounded-full"
-                  :class="task.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+                  :class="
+                    task.enabled
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                  "
                 >
                   {{ task.enabled ? '运行中' : '已暂停' }}
                 </span>
@@ -166,7 +169,9 @@ const formatInterval = (minutes: number) => {
               <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {{ task.baseUrl }}
               </div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <div
+                class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400"
+              >
                 <div>
                   <span class="text-gray-400">间隔:</span>
                   {{ formatInterval(task.intervalMinutes) }}
@@ -214,20 +219,13 @@ const formatInterval = (minutes: number) => {
       </div>
 
       <!-- 空状态 -->
-      <div
-        v-else
-        class="text-center py-8 text-gray-500 dark:text-gray-400"
-      >
+      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
         <p>暂无计划任务</p>
         <p class="text-sm mt-1">点击下方按钮添加新任务</p>
       </div>
 
       <!-- 添加任务按钮 -->
-      <a-button
-        type="dashed"
-        block
-        @click="showAddModal = true"
-      >
+      <a-button type="dashed" block @click="showAddModal = true">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -245,18 +243,12 @@ const formatInterval = (minutes: number) => {
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">目标用户名</label>
-            <a-input
-              v-model:value="newTask.username"
-              placeholder="输入 Discourse 用户名"
-            />
+            <a-input v-model:value="newTask.username" placeholder="输入 Discourse 用户名" />
             <p class="text-xs text-gray-500 mt-1">将自动为该用户的最新帖子点赞</p>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">站点地址</label>
-            <a-input
-              v-model:value="newTask.baseUrl"
-              placeholder="https://linux.do"
-            />
+            <a-input v-model:value="newTask.baseUrl" placeholder="https://linux.do" />
           </div>
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">执行间隔（分钟）</label>

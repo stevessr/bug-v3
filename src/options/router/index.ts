@@ -119,6 +119,14 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '论坛浏览器'
     }
+  },
+  {
+    path: '/workflows',
+    name: 'workflows',
+    component: () => import('../pages/WorkflowPage.vue'),
+    meta: {
+      title: '工作流管理'
+    }
   }
 ]
 

@@ -2,6 +2,23 @@ export type McpTransport = 'sse' | 'streamable-http'
 
 export type ApiFlavor = 'messages' | 'responses'
 
+// MCP 桥接设置（用于 WebSocket 连接）
+export interface McpBridgeSettings {
+  host: string
+  port: number
+  path: string
+  autoConnect: boolean
+  reconnectOnFailure: boolean
+}
+
+export const DEFAULT_MCP_BRIDGE_SETTINGS: McpBridgeSettings = {
+  host: '127.0.0.1',
+  port: 7465,
+  path: '/ws',
+  autoConnect: true,
+  reconnectOnFailure: true
+}
+
 export interface McpServerConfig {
   id: string
   name: string

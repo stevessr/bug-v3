@@ -6,6 +6,7 @@
  */
 
 import { nanoid } from 'nanoid'
+
 import {
   setRuntimeContext,
   getRuntimeContext,
@@ -104,7 +105,7 @@ export function beginContext(
   const parentContext = contextStack.length > 0 ? contextStack[contextStack.length - 1] : null
 
   // 如果是 subagent 且需要隔离，先保存当前上下文快照
-  const shouldIsolate = options?.isolated ?? (type === 'subagent')
+  const shouldIsolate = options?.isolated ?? type === 'subagent'
   if (shouldIsolate && parentContext) {
     saveContextSnapshot(parentContext.id)
   }

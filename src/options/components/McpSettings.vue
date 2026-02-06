@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import {
   ApiOutlined,
   CheckCircleOutlined,
@@ -7,16 +7,84 @@ import {
   ReloadOutlined,
   CopyOutlined,
   SyncOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  SettingOutlined,
+  SaveOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 type ConnectionStatus = 'unknown' | 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
 
+interface BridgeSettings {
+  host: string
+  port: number
+  path: string
+  autoConnect: boolean
+  reconnectOnFailure: boolean
+}
+
 const bridgeStatus = ref<ConnectionStatus>('unknown')
 const bridgeTesting = ref(false)
 const bridgeError = ref('')
 const reconnectCount = ref(0)
+const showSettings = ref(false)
+const settingsSaving = ref(false)
+
+// 桥接设置
+const bridgeSettings = ref<BridgeSettings>({
+  host: '127.0.0.1',
+  port: 7465,
+  path: '/ws',
+  autoConnect: true,
+  reconnectOnFailure: true
+})
+
+// 计算 WebSocket URL
+const wsUrl = computed(() => {
+  const { host, port, path } = bridgeSettings.value
+  return `ws://${host}:${port}${path}`
+})
+
+// 计算 HTTP URL
+const httpUrl = computed(() => {
+  const { host, port } = bridgeSettings.value
+  return `http://${host}:${port}`
+})
+
+// 加载设置
+const loadSettings = async () => {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'MCP_GET_BRIDGE_SETTINGS' })
+    if (response?.success && response?.data) {
+      bridgeSettings.value = { ...bridgeSettings.value, ...response.data }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+// 保存设置
+const saveSettings = async () => {
+  settingsSaving.value = true
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'MCP_SET_BRIDGE_SETTINGS',
+      data: bridgeSettings.value
+    })
+    if (response?.success) {
+      message.success('设置已保存')
+      showSettings.value = false
+      // 重新连接
+      reconnectBridge()
+    } else {
+      message.error('保存失败：' + (response?.error || '未知错误'))
+    }
+  } catch (err) {
+    message.error('保存失败：' + (err instanceof Error ? err.message : '未知错误'))
+  } finally {
+    settingsSaving.value = false
+  }
+}
 
 const testMcpBridge = async () => {
   bridgeTesting.value = true
@@ -127,14 +195,30 @@ const mcpTools = [
         desc: '获取帖子上下文',
         params: 'baseUrl, postId, topicId, postNumber, includeRaw'
       },
-      { name: 'discourse.send_timings', desc: '发送阅读时间', params: 'baseUrl, topicId, timeMs, postNumbers' },
-      { name: 'discourse.create_post', desc: '创建回帖', params: 'baseUrl, topicId, raw, replyToPostNumber' },
+      {
+        name: 'discourse.send_timings',
+        desc: '发送阅读时间',
+        params: 'baseUrl, topicId, timeMs, postNumbers'
+      },
+      {
+        name: 'discourse.create_post',
+        desc: '创建回帖',
+        params: 'baseUrl, topicId, raw, replyToPostNumber'
+      },
       { name: 'discourse.like_topic', desc: '点赞话题', params: 'baseUrl, topicId, reactionId' },
       { name: 'discourse.unlike_post', desc: '取消点赞', params: 'baseUrl, postId, reactionId' },
       { name: 'discourse.bookmark_post', desc: '添加书签', params: 'baseUrl, postId, name' },
       { name: 'discourse.unbookmark_post', desc: '取消书签', params: 'baseUrl, postId' },
-      { name: 'discourse.get_user_activity', desc: '获取用户活动', params: 'baseUrl, username, filter, limit, offset' },
-      { name: 'discourse.browse_topic', desc: '综合浏览话题', params: 'baseUrl, topicId, readTimeMs, like' },
+      {
+        name: 'discourse.get_user_activity',
+        desc: '获取用户活动',
+        params: 'baseUrl, username, filter, limit, offset'
+      },
+      {
+        name: 'discourse.browse_topic',
+        desc: '综合浏览话题',
+        params: 'baseUrl, topicId, readTimeMs, like'
+      },
       { name: 'discourse.search', desc: '搜索内容', params: 'baseUrl, q, page, type' }
     ]
   }
@@ -168,7 +252,8 @@ const statusColor: Record<ConnectionStatus, string> = {
 
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  await loadSettings()
   testMcpBridge()
   // 定期更新状态
   statusInterval = setInterval(fetchConnectionStatus, 5000)
@@ -223,6 +308,12 @@ onUnmounted(() => {
             </template>
             重新连接
           </a-button>
+          <a-button @click="showSettings = true">
+            <template #icon>
+              <SettingOutlined />
+            </template>
+            设置
+          </a-button>
         </div>
       </div>
 
@@ -245,19 +336,69 @@ onUnmounted(() => {
             </template>
           </a-button>
         </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          服务器默认运行在 http://127.0.0.1:7465
-        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">服务器运行在 {{ httpUrl }}</p>
       </div>
 
       <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
         <h4 class="text-sm font-medium mb-2 dark:text-white">使用方式</h4>
         <ol class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-          <li>运行 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code> 启动服务器</li>
-          <li>扩展自动通过 WebSocket 连接 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">ws://127.0.0.1:7465/ws</code></li>
-          <li>MCP 客户端通过 Streamable HTTP 调用 <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">POST http://127.0.0.1:7465/mcp</code></li>
+          <li>
+            运行
+            <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code>
+            启动服务器
+          </li>
+          <li>
+            扩展自动通过 WebSocket 连接
+            <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">{{ wsUrl }}</code>
+          </li>
+          <li>
+            MCP 客户端通过 Streamable HTTP 调用
+            <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">POST {{ httpUrl }}/mcp</code>
+          </li>
         </ol>
       </div>
+
+      <!-- 设置弹窗 -->
+      <a-modal v-model:open="showSettings" title="MCP 桥接设置" :footer="null" width="500px">
+        <div class="space-y-4 py-4">
+          <div>
+            <label class="block text-sm font-medium mb-1 dark:text-white">主机地址</label>
+            <a-input v-model:value="bridgeSettings.host" placeholder="127.0.0.1" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 dark:text-white">端口</label>
+            <a-input-number
+              v-model:value="bridgeSettings.port"
+              :min="1"
+              :max="65535"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 dark:text-white">WebSocket 路径</label>
+            <a-input v-model:value="bridgeSettings.path" placeholder="/ws" />
+          </div>
+          <div class="flex items-center gap-4">
+            <a-checkbox v-model:checked="bridgeSettings.autoConnect">自动连接</a-checkbox>
+            <a-checkbox v-model:checked="bridgeSettings.reconnectOnFailure">断线重连</a-checkbox>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              WebSocket:
+              <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">{{ wsUrl }}</code>
+            </p>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <a-button @click="showSettings = false">取消</a-button>
+            <a-button type="primary" :loading="settingsSaving" @click="saveSettings">
+              <template #icon>
+                <SaveOutlined />
+              </template>
+              保存并重连
+            </a-button>
+          </div>
+        </div>
+      </a-modal>
     </div>
 
     <!-- 可用工具列表 -->
@@ -280,9 +421,9 @@ onUnmounted(() => {
             >
               <div class="flex-1">
                 <div class="flex items-center gap-2">
-                  <code class="text-sm font-mono text-blue-600 dark:text-blue-400">{{
-                    tool.name
-                  }}</code>
+                  <code class="text-sm font-mono text-blue-600 dark:text-blue-400">
+                    {{ tool.name }}
+                  </code>
                   <a-button
                     type="text"
                     size="small"
@@ -295,7 +436,10 @@ onUnmounted(() => {
                   </a-button>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ tool.desc }}</p>
-                <p v-if="'params' in tool && tool.params" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                <p
+                  v-if="'params' in tool && tool.params"
+                  class="text-xs text-gray-400 dark:text-gray-500 mt-0.5"
+                >
                   参数：{{ tool.params }}
                 </p>
               </div>
@@ -312,9 +456,7 @@ onUnmounted(() => {
       <div class="space-y-4">
         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <h4 class="text-sm font-medium mb-2 dark:text-white">点赞帖子</h4>
-          <pre
-            class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"
-          ><code>{
+          <pre class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"><code>{
   "tool": "discourse.like_post",
   "args": {
     "baseUrl": "https://linux.do",
@@ -326,9 +468,7 @@ onUnmounted(() => {
 
         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <h4 class="text-sm font-medium mb-2 dark:text-white">获取话题列表</h4>
-          <pre
-            class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"
-          ><code>{
+          <pre class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"><code>{
   "tool": "discourse.get_topic_list",
   "args": {
     "baseUrl": "https://linux.do",
@@ -340,9 +480,7 @@ onUnmounted(() => {
 
         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <h4 class="text-sm font-medium mb-2 dark:text-white">创建回帖</h4>
-          <pre
-            class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"
-          ><code>{
+          <pre class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"><code>{
   "tool": "discourse.create_post",
   "args": {
     "baseUrl": "https://linux.do",
@@ -355,9 +493,7 @@ onUnmounted(() => {
 
         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <h4 class="text-sm font-medium mb-2 dark:text-white">综合浏览话题（阅读 + 点赞）</h4>
-          <pre
-            class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"
-          ><code>{
+          <pre class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto"><code>{
   "tool": "discourse.browse_topic",
   "args": {
     "baseUrl": "https://linux.do",

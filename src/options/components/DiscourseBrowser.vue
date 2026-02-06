@@ -181,11 +181,11 @@ const composerOriginalRaw = computed(() =>
 )
 
 const composerReplyPostNumber = computed(() =>
-  composerMode.value === 'reply' ? replyTarget.value?.postNumber ?? null : null
+  composerMode.value === 'reply' ? (replyTarget.value?.postNumber ?? null) : null
 )
 
 const composerReplyUsername = computed(() =>
-  composerMode.value === 'reply' ? replyTarget.value?.username ?? null : null
+  composerMode.value === 'reply' ? (replyTarget.value?.username ?? null) : null
 )
 
 const composerCategories = computed(() =>
@@ -602,7 +602,6 @@ const handleChangeTopicListType = (type: TopicListType) => {
 const handleNavigate = (path: string) => {
   navigateTo(path)
 }
-
 
 const handleUserMainTabSwitch = (
   tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
@@ -1038,10 +1037,7 @@ onUnmounted(() => {
     />
 
     <!-- Content area -->
-    <div
-      ref="contentAreaRef"
-      class="content-area flex-1 overflow-y-auto discourse-body"
-    >
+    <div ref="contentAreaRef" class="content-area flex-1 overflow-y-auto discourse-body">
       <!-- Loading -->
       <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
         <a-spin size="large" />
@@ -1342,9 +1338,7 @@ onUnmounted(() => {
   background: var(--theme-background);
 }
 
-
 .tab-item {
   transition: background-color 0.15s;
 }
-
 </style>

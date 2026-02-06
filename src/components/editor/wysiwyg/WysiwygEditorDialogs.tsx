@@ -41,7 +41,9 @@ export default defineComponent({
                 <input
                   class="editor-modal-input"
                   value={props.state.linkUrl}
-                  onInput={event => props.actions.onLinkInput((event.target as HTMLInputElement).value)}
+                  onInput={event =>
+                    props.actions.onLinkInput((event.target as HTMLInputElement).value)
+                  }
                   placeholder="https://"
                 />
               </div>
@@ -50,7 +52,9 @@ export default defineComponent({
                 <input
                   class="editor-modal-input"
                   value={props.state.linkText}
-                  onInput={event => props.actions.onLinkTextInput((event.target as HTMLInputElement).value)}
+                  onInput={event =>
+                    props.actions.onLinkTextInput((event.target as HTMLInputElement).value)
+                  }
                   placeholder="显示文本（可选）"
                 />
               </div>
@@ -96,7 +100,9 @@ export default defineComponent({
                 <input
                   class="editor-modal-input"
                   value={props.state.imageUrl}
-                  onInput={event => props.actions.onImageInput((event.target as HTMLInputElement).value)}
+                  onInput={event =>
+                    props.actions.onImageInput((event.target as HTMLInputElement).value)
+                  }
                   placeholder="https://"
                 />
               </div>
@@ -105,7 +111,9 @@ export default defineComponent({
                 <input
                   class="editor-modal-input"
                   value={props.state.imageAlt}
-                  onInput={event => props.actions.onImageAltInput((event.target as HTMLInputElement).value)}
+                  onInput={event =>
+                    props.actions.onImageAltInput((event.target as HTMLInputElement).value)
+                  }
                   placeholder="描述（可选）"
                 />
               </div>

@@ -58,8 +58,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const { useIndexedDBForImages, ...rest } = value
     const normalized = { ...rest } as AppSettings
     if (!normalized.imageCacheStrategy) {
-      normalized.imageCacheStrategy =
-        useIndexedDBForImages === false ? 'force-source' : 'auto'
+      normalized.imageCacheStrategy = useIndexedDBForImages === false ? 'force-source' : 'auto'
     }
     return normalized
   }
@@ -447,7 +446,10 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         Object.prototype.hasOwnProperty.call(settingsData, 'useIndexedDBForImages')
       ) {
         const legacyEnabled = (settingsData as any).useIndexedDBForImages !== false
-        const needsStrategy = !Object.prototype.hasOwnProperty.call(settingsData, 'imageCacheStrategy')
+        const needsStrategy = !Object.prototype.hasOwnProperty.call(
+          settingsData,
+          'imageCacheStrategy'
+        )
         const migratedAt = settings.value.imageCacheMigratedAt
         settings.value = normalizeSettings({
           ...settings.value,

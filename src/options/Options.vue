@@ -158,6 +158,7 @@ const menuItems = computed(() => {
     { key: 'stats', label: t('statistics'), route: '/stats' },
     { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
     { key: 'discourse-browser', label: '论坛浏览器', route: '/discourse-browser' },
+    { key: 'workflows', label: '工作流', route: '/workflows' },
     { key: 'about', label: t('about'), route: '/about' }
   ]
 
@@ -205,6 +206,7 @@ const handleMenuSelect = (info: any) => {
     stats: '/stats',
     'ai-rename': '/ai-rename',
     'discourse-browser': '/discourse-browser',
+    workflows: '/workflows',
     about: '/about'
   }
 

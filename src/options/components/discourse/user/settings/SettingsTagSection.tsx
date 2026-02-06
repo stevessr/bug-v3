@@ -3,6 +3,7 @@ import type { PropType, Ref } from 'vue'
 import { Select } from 'ant-design-vue'
 
 import TagPill from '../../layout/TagPill'
+
 import type { PreferencesPayload, TagOption } from './types'
 
 export default defineComponent({

@@ -274,7 +274,9 @@ const handleModalClose = () => {
                 >
                   {{ task.enabled ? '运行中' : '已暂停' }}
                 </span>
-                <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                <span
+                  class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                >
                   {{ getStrategyLabel(task.browseStrategy) }}
                 </span>
               </div>
@@ -383,30 +385,59 @@ const handleModalClose = () => {
               <div>
                 <label class="block text-sm mb-1 dark:text-white">浏览策略</label>
                 <a-select v-model:value="newTask.browseStrategy" class="w-full">
-                  <a-select-option v-for="opt in strategyOptions" :key="opt.value" :value="opt.value">
+                  <a-select-option
+                    v-for="opt in strategyOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </a-select-option>
                 </a-select>
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">执行间隔（分钟）</label>
-                <a-input-number v-model:value="newTask.intervalMinutes" :min="5" :max="1440" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.intervalMinutes"
+                  :min="5"
+                  :max="1440"
+                  class="w-full"
+                />
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">每次浏览话题数（最小）</label>
-                <a-input-number v-model:value="newTask.minTopicsPerRun" :min="1" :max="50" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.minTopicsPerRun"
+                  :min="1"
+                  :max="50"
+                  class="w-full"
+                />
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">每次浏览话题数（最大）</label>
-                <a-input-number v-model:value="newTask.maxTopicsPerRun" :min="1" :max="50" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.maxTopicsPerRun"
+                  :min="1"
+                  :max="50"
+                  class="w-full"
+                />
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">阅读时间（最小秒）</label>
-                <a-input-number v-model:value="newTask.minReadTime" :min="1" :max="300" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.minReadTime"
+                  :min="1"
+                  :max="300"
+                  class="w-full"
+                />
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">阅读时间（最大秒）</label>
-                <a-input-number v-model:value="newTask.maxReadTime" :min="1" :max="300" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.maxReadTime"
+                  :min="1"
+                  :max="300"
+                  class="w-full"
+                />
               </div>
             </div>
           </div>
@@ -426,7 +457,12 @@ const handleModalClose = () => {
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">每次最多点赞数</label>
-                <a-input-number v-model:value="newTask.maxLikesPerRun" :min="1" :max="50" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.maxLikesPerRun"
+                  :min="1"
+                  :max="50"
+                  class="w-full"
+                />
               </div>
             </div>
           </div>
@@ -437,11 +473,21 @@ const handleModalClose = () => {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm mb-1 dark:text-white">话题间最小延迟（秒）</label>
-                <a-input-number v-model:value="newTask.minDelayBetweenTopics" :min="1" :max="60" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.minDelayBetweenTopics"
+                  :min="1"
+                  :max="60"
+                  class="w-full"
+                />
               </div>
               <div>
                 <label class="block text-sm mb-1 dark:text-white">话题间最大延迟（秒）</label>
-                <a-input-number v-model:value="newTask.maxDelayBetweenTopics" :min="1" :max="120" class="w-full" />
+                <a-input-number
+                  v-model:value="newTask.maxDelayBetweenTopics"
+                  :min="1"
+                  :max="120"
+                  class="w-full"
+                />
               </div>
             </div>
             <p class="text-xs text-gray-500 mt-2">

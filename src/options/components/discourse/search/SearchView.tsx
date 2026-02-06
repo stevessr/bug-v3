@@ -1,5 +1,14 @@
 import { defineComponent, ref, computed, watch } from 'vue'
-import { Button, Input, Select, Switch, Tag, Collapse, DatePicker, InputNumber } from 'ant-design-vue'
+import {
+  Button,
+  Input,
+  Select,
+  Switch,
+  Tag,
+  Collapse,
+  DatePicker,
+  InputNumber
+} from 'ant-design-vue'
 
 import type {
   SearchState,
@@ -645,7 +654,8 @@ export default defineComponent({
           )}
 
           <div class="text-xs text-gray-400">
-            支持 Discourse 高级语法（如 in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
+            支持 Discourse 高级语法（如
+            in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
           </div>
         </div>
 

@@ -387,9 +387,7 @@ export function addCodexEnrichment(
   return id
 }
 
-export function getCodexEnrichmentForSource(
-  sourceId: string
-): CodexEnrichmentEntry | undefined {
+export function getCodexEnrichmentForSource(sourceId: string): CodexEnrichmentEntry | undefined {
   const entries = loadCodexEnrichment()
   return entries.find(e => e.sourceId === sourceId)
 }
@@ -501,8 +499,7 @@ export function searchInstitutionalKnowledge(
       if (options?.verifiedOnly && !e.verified) return false
       if (options?.minConfidence && e.confidence < options.minConfidence) return false
       return (
-        e.title.toLowerCase().includes(queryLower) ||
-        e.content.toLowerCase().includes(queryLower)
+        e.title.toLowerCase().includes(queryLower) || e.content.toLowerCase().includes(queryLower)
       )
     })
     .slice(0, limit)

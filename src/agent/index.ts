@@ -100,6 +100,9 @@ export {
   recommendSkills
 } from './skills'
 
+// 脚本执行器
+export { executeScript, validateScript, SCRIPT_TEMPLATES, SCRIPT_SKILLS } from './scriptRunner'
+
 // 记忆系统
 export {
   // 6层上下文
@@ -150,16 +153,9 @@ export type {
   ApiFlavor
 } from './types'
 
-export type {
-  AgentExecutionContext,
-  AgentContextType,
-  ContextSnapshot
-} from './agentContext'
+export type { AgentExecutionContext, AgentContextType, ContextSnapshot } from './agentContext'
 
-export type {
-  SubagentSession,
-  SubagentSessionItem
-} from './subagentSessions'
+export type { SubagentSession, SubagentSessionItem } from './subagentSessions'
 
 export type {
   ContextLayer,
@@ -187,3 +183,5 @@ export type {
   CustomSkill,
   SkillMatch
 } from './skills'
+
+export type { ScriptContext, ScriptApi, ScriptResult } from './scriptRunner'

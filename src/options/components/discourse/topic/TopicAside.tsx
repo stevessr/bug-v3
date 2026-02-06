@@ -3,6 +3,7 @@ import type { PropType } from 'vue'
 
 import type { DiscoursePost, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
 import TopicTimeline from './TopicTimeline'
 
 type ViewDetailItem = Record<string, any>
@@ -113,7 +114,9 @@ export default defineComponent({
                       viewItems.value.map((item, index) => (
                         <div key={`${formatRange(item)}-${index}`} class="topic-aside__detail-row">
                           <span class="topic-aside__detail-label">{formatRange(item)}</span>
-                          <span class="topic-aside__detail-value">{formatNumber(getCount(item))}</span>
+                          <span class="topic-aside__detail-value">
+                            {formatNumber(getCount(item))}
+                          </span>
                         </div>
                       ))
                     ) : (
@@ -133,7 +136,9 @@ export default defineComponent({
                           <span class="topic-aside__detail-label">
                             #{item.postNumber} {item.username}
                           </span>
-                          <span class="topic-aside__detail-value">{formatNumber(item.likeCount)}</span>
+                          <span class="topic-aside__detail-value">
+                            {formatNumber(item.likeCount)}
+                          </span>
                         </button>
                       ))
                     ) : (

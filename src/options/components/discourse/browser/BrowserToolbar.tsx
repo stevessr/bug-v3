@@ -27,7 +27,12 @@ export default defineComponent({
     return () => (
       <div class="discourse-toolbar">
         <div class="toolbar-left">
-          <Button size="small" type="text" class="toolbar-icon" v-slots={{ icon: () => <MenuOutlined /> }} />
+          <Button
+            size="small"
+            type="text"
+            class="toolbar-icon"
+            v-slots={{ icon: () => <MenuOutlined /> }}
+          />
           <span class="toolbar-brand">Discourse</span>
         </div>
 
@@ -59,7 +64,9 @@ export default defineComponent({
             size="small"
             type="text"
             class="toolbar-icon"
-            disabled={!props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1}
+            disabled={
+              !props.activeTab || props.activeTab.historyIndex >= props.activeTab.history.length - 1
+            }
             onClick={() => emit('goForward')}
             v-slots={{ icon: () => <RightOutlined /> }}
           />

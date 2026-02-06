@@ -3,6 +3,7 @@ import type { PropType, Ref } from 'vue'
 import { Select } from 'ant-design-vue'
 
 import type { EmojiShortcode } from '../../bbcode'
+
 import type { PreferencesPayload } from './types'
 
 export default defineComponent({

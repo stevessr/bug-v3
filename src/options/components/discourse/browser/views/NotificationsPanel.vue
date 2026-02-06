@@ -10,7 +10,14 @@ type Props = {
 
 defineProps<Props>()
 
-defineEmits(['changeFilter', 'openNotification', 'categoryClick', 'openUser', 'changeTopicListType', 'navigate'])
+defineEmits([
+  'changeFilter',
+  'openNotification',
+  'categoryClick',
+  'openUser',
+  'changeTopicListType',
+  'navigate'
+])
 </script>
 
 <template>

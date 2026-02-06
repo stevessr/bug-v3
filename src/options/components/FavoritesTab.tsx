@@ -67,10 +67,7 @@ export default defineComponent({
                   const src = imageSources.value.get(emoji.id) || getImageSrcSync(emoji)
                   const usageCount = emoji.usageCount || 0
                   return (
-                    <div
-                      key={`fav-${emoji.id || idx}`}
-                      class="emoji-card relative group"
-                    >
+                    <div key={`fav-${emoji.id || idx}`} class="emoji-card relative group">
                       <div class="emoji-thumb bg-gray-50 rounded-lg overflow-hidden hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 relative">
                         <CachedImage
                           src={src}

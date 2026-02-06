@@ -5,14 +5,15 @@ import katex from 'katex'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
+import WysiwygEditorToolbar from './WysiwygEditorToolbar'
+import WysiwygEditorDialogs from './WysiwygEditorDialogs'
+
 import {
   parseEmojiShortcodeToBBCode,
   parseEmojiShortcodeToMarkdown,
   renderBBCode
 } from '@/options/components/discourse/bbcode'
 import { useDiscourseUpload } from '@/options/components/discourse/composables/useDiscourseUpload'
-import WysiwygEditorToolbar from './WysiwygEditorToolbar'
-import WysiwygEditorDialogs from './WysiwygEditorDialogs'
 import './styles/EmojiPicker.css'
 import './styles/PluginEmojiPicker.css'
 import './styles/ProseMirrorEditor.css'

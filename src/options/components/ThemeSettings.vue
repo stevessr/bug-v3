@@ -211,7 +211,9 @@ const handleImageUpload = async (event: Event) => {
               class="block w-full text-sm text-gray-500 file:mr-4 file:rounded file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-white"
               @change="handleImageUpload"
             />
-            <div v-if="imageLoading" class="text-xs text-gray-500 dark:text-white">正在生成配色...</div>
+            <div v-if="imageLoading" class="text-xs text-gray-500 dark:text-white">
+              正在生成配色...
+            </div>
             <div v-else-if="imagePreview" class="flex items-center gap-3">
               <img
                 :src="imagePreview"
@@ -219,7 +221,8 @@ const handleImageUpload = async (event: Event) => {
                 class="w-12 h-12 rounded border border-gray-200 object-cover"
               />
               <div class="text-xs text-gray-500 dark:text-white">
-                提取主色：<span class="font-semibold">{{ imageSeedColor }}</span>
+                提取主色：
+                <span class="font-semibold">{{ imageSeedColor }}</span>
               </div>
             </div>
           </div>

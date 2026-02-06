@@ -51,7 +51,9 @@ export default defineComponent({
         return group?.emojis || []
       }
       return groups.value.flatMap(group =>
-        group.emojis.filter(e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query))
+        group.emojis.filter(
+          e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query)
+        )
       )
     })
 
@@ -109,7 +111,10 @@ export default defineComponent({
                     {groups.value.map(group => (
                       <button
                         key={group.id}
-                        class={['plugin-emoji-group-tab', { active: activeGroup.value === group.id }]}
+                        class={[
+                          'plugin-emoji-group-tab',
+                          { active: activeGroup.value === group.id }
+                        ]}
                         onClick={() => {
                           activeGroup.value = group.id
                         }}

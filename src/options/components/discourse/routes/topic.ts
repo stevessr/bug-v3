@@ -145,7 +145,13 @@ export async function loadMorePosts(
   direction: 'up' | 'down' = 'down'
 ) {
   const tab = activeTab.value
-  if (!tab || !tab.currentTopic || tab.topicSummaryMode || isLoadingMore.value || !tab.hasMorePosts) {
+  if (
+    !tab ||
+    !tab.currentTopic ||
+    tab.topicSummaryMode ||
+    isLoadingMore.value ||
+    !tab.hasMorePosts
+  ) {
     return
   }
 

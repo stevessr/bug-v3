@@ -5,8 +5,10 @@
  */
 
 import { nanoid } from 'nanoid'
+
 import type { McpServerConfig } from './types'
 import { discoverMcpTools, callMcpTool, type McpTool } from './mcpClient'
+import { executeScript, type ScriptContext } from './scriptRunner'
 
 // ============ 类型定义 ============
 
@@ -170,7 +172,7 @@ export const BUILTIN_MCP_SERVERS: BuiltinMcpServer[] = [
     url: 'https://mcp.context7.com/mcp',
     transport: 'streamable-http',
     headers: {
-      'CONTEXT7_API_KEY': '$CONTEXT7_API_KEY'
+      CONTEXT7_API_KEY: '$CONTEXT7_API_KEY'
     },
     description: '获取最新的库文档和代码示例，支持任何编程库',
     category: 'code',
@@ -247,13 +249,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📄',
     priority: 80,
-    triggers: [
-      '提取(.+)内容',
-      '获取(.+)的内容',
-      '读取(.+)',
-      'extract\\s+(.+)',
-      '抓取(.+)'
-    ],
+    triggers: ['提取(.+)内容', '获取(.+)的内容', '读取(.+)', 'extract\\s+(.+)', '抓取(.+)'],
     aliases: ['提取', 'extract', '抓取', '获取内容'],
     tags: ['web', 'extract', 'content'],
     inputSchema: {
@@ -275,13 +271,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📚',
     priority: 90,
-    triggers: [
-      '(.+)仓库文档',
-      '(.+)的文档',
-      '(.+)怎么用',
-      '(.+)项目介绍',
-      'github\\s+(.+)'
-    ],
+    triggers: ['(.+)仓库文档', '(.+)的文档', '(.+)怎么用', '(.+)项目介绍', 'github\\s+(.+)'],
     aliases: ['GitHub 文档', 'deepwiki', '仓库文档', '项目文档'],
     tags: ['github', 'docs', 'knowledge'],
     inputSchema: {
@@ -304,11 +294,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '❓',
     priority: 85,
-    triggers: [
-      '问(.+)仓库(.+)',
-      '(.+)仓库(.+)怎么',
-      '(.+)项目(.+)如何'
-    ],
+    triggers: ['问(.+)仓库(.+)', '(.+)仓库(.+)怎么', '(.+)项目(.+)如何'],
     aliases: ['问答', 'ask', '提问仓库'],
     tags: ['github', 'qa', 'knowledge'],
     inputSchema: {
@@ -331,13 +317,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📖',
     priority: 95,
-    triggers: [
-      '(.+)文档',
-      '(.+)怎么使用',
-      '(.+)用法',
-      '(.+)示例',
-      '(.+)教程'
-    ],
+    triggers: ['(.+)文档', '(.+)怎么使用', '(.+)用法', '(.+)示例', '(.+)教程'],
     aliases: ['库文档', 'docs', 'library docs', 'context7'],
     tags: ['code', 'docs', 'library'],
     inputSchema: {
@@ -361,11 +341,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🔗',
     priority: 70,
-    triggers: [
-      '查找(.+)库',
-      '(.+)库的ID',
-      'resolve\\s+(.+)'
-    ],
+    triggers: ['查找(.+)库', '(.+)库的ID', 'resolve\\s+(.+)'],
     aliases: ['查找库', 'resolve', '库ID'],
     tags: ['code', 'library', 'resolve'],
     inputSchema: {
@@ -388,12 +364,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🔬',
     priority: 95,
-    triggers: [
-      '深度搜索(.+)',
-      '专家搜索(.+)',
-      '详细搜索(.+)',
-      'expert search(.+)'
-    ],
+    triggers: ['深度搜索(.+)', '专家搜索(.+)', '详细搜索(.+)', 'expert search(.+)'],
     aliases: ['专家搜索', 'expert search', '深度搜索', '详细搜索'],
     tags: ['search', 'expert', 'tavily'],
     inputSchema: {
@@ -406,8 +377,16 @@ export const BUILTIN_SKILLS: Skill[] = [
       required: ['query']
     },
     presets: [
-      { id: 'deep-news', name: '深度新闻', args: { query: '最新新闻', search_depth: 'advanced', max_results: 10 } },
-      { id: 'research', name: '学术研究', args: { query: '', search_depth: 'advanced', max_results: 20 } }
+      {
+        id: 'deep-news',
+        name: '深度新闻',
+        args: { query: '最新新闻', search_depth: 'advanced', max_results: 10 }
+      },
+      {
+        id: 'research',
+        name: '学术研究',
+        args: { query: '', search_depth: 'advanced', max_results: 20 }
+      }
     ]
   },
   {
@@ -421,11 +400,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📑',
     priority: 75,
-    triggers: [
-      '深度提取(.+)',
-      '专家提取(.+)',
-      '分析(.+)内容'
-    ],
+    triggers: ['深度提取(.+)', '专家提取(.+)', '分析(.+)内容'],
     aliases: ['专家提取', 'expert extract', '深度提取'],
     tags: ['web', 'extract', 'expert', 'tavily'],
     inputSchema: {
@@ -435,6 +410,216 @@ export const BUILTIN_SKILLS: Skill[] = [
       },
       required: ['urls']
     }
+  },
+  // ============ 新增内置 Skills ============
+  {
+    id: 'skill-github-issue',
+    name: 'GitHub Issue',
+    description: '获取 GitHub Issue 详情和讨论内容',
+    category: 'knowledge',
+    source: 'builtin',
+    mcpServerId: 'builtin-deepwiki',
+    mcpToolName: 'ask_question',
+    enabled: true,
+    icon: '🐛',
+    priority: 88,
+    triggers: ['github\\s+issue\\s+(.+)', '(.+)的issue', '(.+)问题列表', 'issue\\s+(.+)'],
+    aliases: ['GitHub Issue', 'issue', '问题', 'bug'],
+    tags: ['github', 'issue', 'bug', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repoName: { type: 'string', description: 'GitHub 仓库名称 (owner/repo)' },
+        question: {
+          type: 'string',
+          description: '关于 Issue 的问题，如：最近的 issues、open issues、某个具体问题'
+        }
+      },
+      required: ['repoName', 'question']
+    },
+    presets: [
+      {
+        id: 'open-issues',
+        name: '开放 Issues',
+        args: { question: 'What are the recent open issues?' }
+      },
+      { id: 'bugs', name: 'Bug 列表', args: { question: 'What are the known bugs?' } }
+    ]
+  },
+  {
+    id: 'skill-github-discussion',
+    name: 'GitHub Discussion',
+    description: '获取 GitHub Discussion 讨论内容',
+    category: 'knowledge',
+    source: 'builtin',
+    mcpServerId: 'builtin-deepwiki',
+    mcpToolName: 'ask_question',
+    enabled: true,
+    icon: '💬',
+    priority: 87,
+    triggers: [
+      'github\\s+discussion\\s+(.+)',
+      '(.+)的讨论',
+      '(.+)discussion',
+      'discussion\\s+(.+)'
+    ],
+    aliases: ['GitHub Discussion', 'discussion', '讨论'],
+    tags: ['github', 'discussion', 'community', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repoName: { type: 'string', description: 'GitHub 仓库名称 (owner/repo)' },
+        question: { type: 'string', description: '关于讨论的问题' }
+      },
+      required: ['repoName', 'question']
+    },
+    presets: [
+      {
+        id: 'recent-discussions',
+        name: '最近讨论',
+        args: { question: 'What are the recent discussions?' }
+      },
+      {
+        id: 'popular-discussions',
+        name: '热门讨论',
+        args: { question: 'What are the most popular discussions?' }
+      }
+    ]
+  },
+  {
+    id: 'skill-web-screenshot',
+    name: '网页截图',
+    description: '截取当前页面的屏幕截图',
+    category: 'web',
+    source: 'builtin',
+    enabled: true,
+    icon: '📸',
+    priority: 70,
+    triggers: ['截图', '截屏', 'screenshot', '屏幕截图', '网页截图'],
+    aliases: ['截图', 'screenshot', '截屏'],
+    tags: ['web', 'screenshot', 'capture'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        format: { type: 'string', description: '图片格式: png 或 jpeg' }
+      }
+    }
+  },
+  {
+    id: 'skill-page-dom',
+    name: '页面 DOM 分析',
+    description: '获取当前页面的 DOM 结构和内容',
+    category: 'web',
+    source: 'builtin',
+    enabled: true,
+    icon: '🌳',
+    priority: 65,
+    triggers: ['获取DOM', '页面结构', '分析页面', 'DOM树', '页面内容'],
+    aliases: ['DOM', '页面结构', '页面分析'],
+    tags: ['web', 'dom', 'analysis'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        selector: { type: 'string', description: 'CSS 选择器，限定分析范围' },
+        includeMarkdown: { type: 'boolean', description: '是否包含 Markdown 格式内容' },
+        maxDepth: { type: 'number', description: '最大深度' }
+      }
+    }
+  },
+  {
+    id: 'skill-web-crawl',
+    name: '网页抓取',
+    description: '抓取指定网页的完整内容',
+    category: 'web',
+    source: 'builtin',
+    mcpServerId: 'builtin-tavily-expert',
+    mcpToolName: 'tavily_crawl',
+    enabled: true,
+    icon: '🕷️',
+    priority: 72,
+    triggers: ['抓取(.+)', '爬取(.+)', 'crawl\\s+(.+)', '网页抓取(.+)'],
+    aliases: ['抓取', 'crawl', '爬取', '网页抓取'],
+    tags: ['web', 'crawl', 'scrape'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: '要抓取的 URL' },
+        max_depth: { type: 'number', description: '最大抓取深度' },
+        max_pages: { type: 'number', description: '最大页面数量' }
+      },
+      required: ['url']
+    }
+  },
+  {
+    id: 'skill-code-explain',
+    name: '代码解释',
+    description: '解释选中的代码或页面上的代码片段',
+    category: 'code',
+    source: 'builtin',
+    enabled: true,
+    icon: '💡',
+    priority: 60,
+    triggers: ['解释(.+)代码', '(.+)代码什么意思', '代码解释', 'explain\\s+code'],
+    aliases: ['代码解释', 'explain code', '代码说明'],
+    tags: ['code', 'explain', 'analysis'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: '要解释的代码' },
+        language: { type: 'string', description: '编程语言' }
+      }
+    }
+  },
+  {
+    id: 'skill-translate',
+    name: '翻译',
+    description: '翻译选中的文本或页面内容',
+    category: 'other',
+    source: 'builtin',
+    enabled: true,
+    icon: '🌐',
+    priority: 75,
+    triggers: ['翻译(.+)', '(.+)翻译成(.+)', 'translate\\s+(.+)', '(.+)的翻译'],
+    aliases: ['翻译', 'translate', '转换'],
+    tags: ['translate', 'language'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '要翻译的文本' },
+        targetLanguage: { type: 'string', description: '目标语言' },
+        sourceLanguage: { type: 'string', description: '源语言（可选）' }
+      },
+      required: ['text']
+    },
+    presets: [
+      { id: 'to-chinese', name: '翻译成中文', args: { targetLanguage: 'zh-CN' } },
+      { id: 'to-english', name: '翻译成英文', args: { targetLanguage: 'en' } }
+    ]
+  },
+  {
+    id: 'skill-summarize',
+    name: '内容总结',
+    description: '总结网页或文档内容的要点',
+    category: 'other',
+    source: 'builtin',
+    enabled: true,
+    icon: '📝',
+    priority: 78,
+    triggers: ['总结(.+)', '概括(.+)', '(.+)的要点', 'summarize\\s+(.+)', '摘要(.+)'],
+    aliases: ['总结', 'summarize', '概括', '摘要'],
+    tags: ['summarize', 'content'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: '要总结的内容' },
+        maxLength: { type: 'number', description: '摘要最大长度' },
+        format: { type: 'string', description: '输出格式: bullets, paragraph, outline' }
+      }
+    },
+    presets: [
+      { id: 'bullets', name: '要点列表', args: { format: 'bullets' } },
+      { id: 'brief', name: '简短摘要', args: { format: 'paragraph', maxLength: 200 } }
+    ]
   }
 ]
 
@@ -668,11 +853,7 @@ function inferSkillCategory(tool: McpTool, serverName: string): SkillCategory {
   }
 
   // 自动化类
-  if (
-    name.includes('automate') ||
-    name.includes('workflow') ||
-    desc.includes('automate')
-  ) {
+  if (name.includes('automate') || name.includes('workflow') || desc.includes('automate')) {
     return 'automation'
   }
 
@@ -682,11 +863,7 @@ function inferSkillCategory(tool: McpTool, serverName: string): SkillCategory {
 /**
  * 从 MCP 工具生成 Skill
  */
-export function mcpToolToSkill(
-  serverId: string,
-  serverName: string,
-  tool: McpTool
-): Skill {
+export function mcpToolToSkill(serverId: string, serverName: string, tool: McpTool): Skill {
   const category = inferSkillCategory(tool, serverName)
 
   return {
@@ -774,14 +951,41 @@ export async function discoverAllSkills(
 export async function executeSkill(
   skill: Skill,
   args: Record<string, unknown>,
-  customMcpServers: McpServerConfig[] = []
+  customMcpServers: McpServerConfig[] = [],
+  context?: ScriptContext
 ): Promise<SkillExecutionResult> {
   const startTime = Date.now()
 
+  // 检查是否是自定义脚本 Skill
+  const customSkill = skill as CustomSkill
+  if (customSkill.script && customSkill.source === 'custom') {
+    // 执行脚本
+    const scriptContext: ScriptContext = {
+      args,
+      previousResult: context?.previousResult,
+      userInput: context?.userInput,
+      sessionId: context?.sessionId
+    }
+
+    // 合并所有 MCP 服务
+    const allMcpServers = [...getEnabledBuiltinMcpConfigs(), ...customMcpServers]
+
+    const scriptResult = await executeScript(customSkill.script, scriptContext, allMcpServers)
+    const duration = Date.now() - startTime
+
+    return {
+      success: scriptResult.success,
+      result: scriptResult.result,
+      error: scriptResult.error,
+      duration
+    }
+  }
+
+  // 如果没有 MCP 配置，可能是纯本地 Skill
   if (!skill.mcpServerId || !skill.mcpToolName) {
     return {
       success: false,
-      error: 'Skill 没有关联的 MCP 工具'
+      error: 'Skill 没有关联的 MCP 工具或脚本'
     }
   }
 
@@ -934,7 +1138,9 @@ export function saveCustomSkills(skills: CustomSkill[]): void {
 /**
  * 添加自定义 Skill
  */
-export function addCustomSkill(skill: Omit<CustomSkill, 'id' | 'createdAt' | 'updatedAt'>): CustomSkill {
+export function addCustomSkill(
+  skill: Omit<CustomSkill, 'id' | 'createdAt' | 'updatedAt'>
+): CustomSkill {
   const skills = loadCustomSkills()
   const now = Date.now()
   const newSkill: CustomSkill = {
@@ -952,7 +1158,10 @@ export function addCustomSkill(skill: Omit<CustomSkill, 'id' | 'createdAt' | 'up
 /**
  * 更新自定义 Skill
  */
-export function updateCustomSkill(skillId: string, updates: Partial<CustomSkill>): CustomSkill | null {
+export function updateCustomSkill(
+  skillId: string,
+  updates: Partial<CustomSkill>
+): CustomSkill | null {
   const skills = loadCustomSkills()
   const index = skills.findIndex(s => s.id === skillId)
   if (index === -1) return null
@@ -1043,7 +1252,7 @@ export async function executeSkillChain(
 ): Promise<SkillExecutionResult> {
   const startTime = Date.now()
   const chainResults: SkillExecutionResult[] = []
-  let chainState: Record<string, unknown> = { ...initialArgs, ...(context?.chainState || {}) }
+  const chainState: Record<string, unknown> = { ...initialArgs, ...(context?.chainState || {}) }
   let previousResult: unknown = context?.previousResult
 
   for (const step of chain.steps) {
@@ -1292,7 +1501,9 @@ export function matchSkillsToInput(input: string, skills: Skill[]): SkillMatch[]
     // 5. 描述匹配 (模糊匹配)
     const descWords = skill.description.toLowerCase().split(/\s+/)
     const inputWords = inputLower.split(/\s+/)
-    const matchedWords = descWords.filter(w => inputWords.some(iw => iw.includes(w) || w.includes(iw)))
+    const matchedWords = descWords.filter(w =>
+      inputWords.some(iw => iw.includes(w) || w.includes(iw))
+    )
     if (matchedWords.length > 0) {
       const score = 20 + matchedWords.length * 5 + (skill.priority || 0)
       if (score > bestScore) {
@@ -1396,7 +1607,7 @@ export async function executeSkillWithContext(
   skill: Skill,
   args: Record<string, unknown>,
   customMcpServers: McpServerConfig[] = [],
-  context?: SkillExecutionContext,
+  _context?: SkillExecutionContext,
   allSkills?: Skill[]
 ): Promise<SkillExecutionResult> {
   // 执行 skill

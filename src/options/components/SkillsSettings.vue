@@ -356,9 +356,7 @@ onMounted(() => {
     <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
       <div>
         <h3 class="text-base font-medium dark:text-white">API Keys 配置</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400">
-          配置内置 MCP 服务所需的 API Keys
-        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">配置内置 MCP 服务所需的 API Keys</p>
       </div>
 
       <div class="space-y-3">
@@ -462,8 +460,8 @@ onMounted(() => {
       <div class="flex items-center justify-between border-b dark:border-gray-700 pb-3">
         <div class="flex gap-4">
           <button
+            class="text-sm font-medium pb-2 border-b-2 transition-colors"
             :class="[
-              'text-sm font-medium pb-2 border-b-2 transition-colors',
               activeTab === 'skills'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
@@ -473,8 +471,8 @@ onMounted(() => {
             Skills
           </button>
           <button
+            class="text-sm font-medium pb-2 border-b-2 transition-colors"
             :class="[
-              'text-sm font-medium pb-2 border-b-2 transition-colors',
               activeTab === 'custom'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
@@ -484,8 +482,8 @@ onMounted(() => {
             自定义
           </button>
           <button
+            class="text-sm font-medium pb-2 border-b-2 transition-colors"
             :class="[
-              'text-sm font-medium pb-2 border-b-2 transition-colors',
               activeTab === 'chains'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
@@ -495,8 +493,8 @@ onMounted(() => {
             工作流
           </button>
           <button
+            class="text-sm font-medium pb-2 border-b-2 transition-colors"
             :class="[
-              'text-sm font-medium pb-2 border-b-2 transition-colors',
               activeTab === 'stats'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
@@ -506,13 +504,28 @@ onMounted(() => {
             统计
           </button>
         </div>
-        <a-button v-if="activeTab === 'skills'" size="small" :loading="skillsLoading" @click="refreshSkills">
+        <a-button
+          v-if="activeTab === 'skills'"
+          size="small"
+          :loading="skillsLoading"
+          @click="refreshSkills"
+        >
           刷新
         </a-button>
-        <a-button v-if="activeTab === 'custom'" size="small" type="primary" @click="showCustomSkillModal = true">
+        <a-button
+          v-if="activeTab === 'custom'"
+          size="small"
+          type="primary"
+          @click="showCustomSkillModal = true"
+        >
           新建
         </a-button>
-        <a-button v-if="activeTab === 'chains'" size="small" type="primary" @click="showChainModal = true">
+        <a-button
+          v-if="activeTab === 'chains'"
+          size="small"
+          type="primary"
+          @click="showChainModal = true"
+        >
           新建工作流
         </a-button>
       </div>
@@ -523,7 +536,10 @@ onMounted(() => {
           正在发现可用 Skills...
         </div>
 
-        <div v-else-if="skills.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div
+          v-else-if="skills.length === 0"
+          class="text-center py-8 text-gray-500 dark:text-gray-400"
+        >
           暂无可用 Skills，请先启用内置 MCP 服务或添加自定义 MCP 服务
         </div>
 
@@ -555,10 +571,7 @@ onMounted(() => {
                       >
                         触发器
                       </span>
-                      <span
-                        v-if="getStats(skill.id)"
-                        class="text-xs text-gray-400"
-                      >
+                      <span v-if="getStats(skill.id)" class="text-xs text-gray-400">
                         {{ getStats(skill.id)?.totalCalls || 0 }} 次调用
                       </span>
                     </div>
@@ -582,7 +595,10 @@ onMounted(() => {
 
       <!-- 自定义 Skills -->
       <div v-if="activeTab === 'custom'">
-        <div v-if="customSkills.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div
+          v-if="customSkills.length === 0"
+          class="text-center py-8 text-gray-500 dark:text-gray-400"
+        >
           暂无自定义 Skills，点击"新建"创建
         </div>
 
@@ -595,7 +611,9 @@ onMounted(() => {
             <div>
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium dark:text-white">{{ skill.name }}</span>
-                <span class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                <span
+                  class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                >
                   {{ categoryNames[skill.category] || skill.category }}
                 </span>
               </div>
@@ -624,7 +642,10 @@ onMounted(() => {
 
       <!-- Skill Chains (工作流) -->
       <div v-if="activeTab === 'chains'">
-        <div v-if="skillChains.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div
+          v-if="skillChains.length === 0"
+          class="text-center py-8 text-gray-500 dark:text-gray-400"
+        >
           暂无工作流，点击"新建工作流"创建
         </div>
 
@@ -651,7 +672,9 @@ onMounted(() => {
                 class="flex items-center gap-1"
               >
                 <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700">
-                  {{ allSelectableSkills.find(s => s.value === step.skillId)?.label || step.skillId }}
+                  {{
+                    allSelectableSkills.find(s => s.value === step.skillId)?.label || step.skillId
+                  }}
                 </span>
                 <span v-if="index < chain.steps.length - 1">→</span>
               </span>
@@ -662,12 +685,17 @@ onMounted(() => {
 
       <!-- 统计 -->
       <div v-if="activeTab === 'stats'">
-        <div v-if="Object.keys(skillStats).length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div
+          v-if="Object.keys(skillStats).length === 0"
+          class="text-center py-8 text-gray-500 dark:text-gray-400"
+        >
           暂无使用统计
         </div>
 
         <div v-else class="space-y-2">
-          <div class="grid grid-cols-4 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 pb-2 border-b dark:border-gray-700">
+          <div
+            class="grid grid-cols-4 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 pb-2 border-b dark:border-gray-700"
+          >
             <span>Skill</span>
             <span>调用次数</span>
             <span>成功率</span>
@@ -682,21 +710,23 @@ onMounted(() => {
               {{ skills.find(s => s.id === skillId)?.name || skillId }}
             </span>
             <span class="text-gray-600 dark:text-gray-300">{{ stats.totalCalls }}</span>
-            <span :class="stats.successCalls / stats.totalCalls > 0.8 ? 'text-green-600' : 'text-yellow-600'">
+            <span
+              :class="
+                stats.successCalls / stats.totalCalls > 0.8 ? 'text-green-600' : 'text-yellow-600'
+              "
+            >
               {{ ((stats.successCalls / stats.totalCalls) * 100).toFixed(1) }}%
             </span>
-            <span class="text-gray-600 dark:text-gray-300">{{ formatDuration(stats.avgDuration) }}</span>
+            <span class="text-gray-600 dark:text-gray-300">
+              {{ formatDuration(stats.avgDuration) }}
+            </span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 新建自定义 Skill Modal -->
-    <a-modal
-      v-model:open="showCustomSkillModal"
-      title="新建自定义 Skill"
-      @ok="createCustomSkill"
-    >
+    <a-modal v-model:open="showCustomSkillModal" title="新建自定义 Skill" @ok="createCustomSkill">
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium dark:text-white mb-1">名称</label>
@@ -708,7 +738,11 @@ onMounted(() => {
         </div>
         <div>
           <label class="block text-sm font-medium dark:text-white mb-1">类别</label>
-          <a-select v-model:value="newCustomSkill.category" :options="categoryOptions" class="w-full" />
+          <a-select
+            v-model:value="newCustomSkill.category"
+            :options="categoryOptions"
+            class="w-full"
+          />
         </div>
         <div>
           <label class="block text-sm font-medium dark:text-white mb-1">提示词模板</label>
@@ -726,12 +760,7 @@ onMounted(() => {
     </a-modal>
 
     <!-- 新建工作流 Modal -->
-    <a-modal
-      v-model:open="showChainModal"
-      title="新建工作流"
-      width="600px"
-      @ok="createSkillChain"
-    >
+    <a-modal v-model:open="showChainModal" title="新建工作流" width="600px" @ok="createSkillChain">
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium dark:text-white mb-1">名称</label>
@@ -756,11 +785,7 @@ onMounted(() => {
                 placeholder="选择 Skill"
                 class="flex-1"
               />
-              <a-input
-                v-model:value="step.staticArgs"
-                placeholder="参数 (JSON)"
-                class="w-32"
-              />
+              <a-input v-model:value="step.staticArgs" placeholder="参数 (JSON)" class="w-32" />
               <a-button size="small" danger @click="removeChainStep(index)">删除</a-button>
             </div>
           </div>
@@ -802,7 +827,10 @@ onMounted(() => {
             <div class="text-xs text-gray-500 dark:text-gray-400">平均耗时</div>
           </div>
         </div>
-        <div v-if="getStats(selectedSkillForStats.id)?.lastUsed" class="text-xs text-gray-500 dark:text-gray-400">
+        <div
+          v-if="getStats(selectedSkillForStats.id)?.lastUsed"
+          class="text-xs text-gray-500 dark:text-gray-400"
+        >
           最后使用: {{ new Date(getStats(selectedSkillForStats.id)!.lastUsed!).toLocaleString() }}
         </div>
       </div>
@@ -825,16 +853,16 @@ onMounted(() => {
           >
             <div>
               <div class="text-sm font-medium dark:text-white">{{ preset.name }}</div>
-              <div v-if="preset.description" class="text-xs text-gray-500">{{ preset.description }}</div>
+              <div v-if="preset.description" class="text-xs text-gray-500">
+                {{ preset.description }}
+              </div>
               <code class="text-xs text-gray-400">{{ JSON.stringify(preset.args) }}</code>
             </div>
             <a-button size="small" danger @click="deleteSkillPreset(preset.id)">删除</a-button>
           </div>
         </div>
 
-        <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-          暂无预设
-        </div>
+        <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">暂无预设</div>
 
         <!-- 添加新预设 -->
         <div class="border-t dark:border-gray-700 pt-4">

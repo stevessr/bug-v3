@@ -125,7 +125,7 @@ const focusLastEmoji = () => {
           @click="$emit('select', emoji)"
           @keydown="handleKeyNavigation($event, index)"
           :data-emoji-index="index"
-          style="width: 100%; height: auto;"
+          style="width: 100%; height: auto"
           class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           :title="emoji.name"
           role="gridcell"

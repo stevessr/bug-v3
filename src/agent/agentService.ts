@@ -23,10 +23,7 @@ import {
   findServerById,
   callMcpTool
 } from './mcpClient'
-import {
-  beginContext,
-  endContext
-} from './agentContext'
+import { beginContext, endContext } from './agentContext'
 import { getEnabledBuiltinMcpConfigs } from './skills'
 
 // Disable Zod JIT to avoid eval/new Function in CSP-restricted contexts.
@@ -990,10 +987,10 @@ async function streamClaudeResponseApi(options: {
     const record = snapshot as Record<string, unknown>
     const message = typeof record.message === 'string' ? record.message : undefined
     const thoughts = Array.isArray(record.thoughts)
-      ? record.thoughts.filter((item) => typeof item === 'string')
+      ? record.thoughts.filter(item => typeof item === 'string')
       : undefined
     const steps = Array.isArray(record.steps)
-      ? record.steps.filter((item) => typeof item === 'string')
+      ? record.steps.filter(item => typeof item === 'string')
       : undefined
     emitUpdate({ message, thoughts, steps })
   }
@@ -1013,7 +1010,7 @@ async function streamClaudeResponseApi(options: {
         max_tokens: options.maxTokens,
         system: [{ type: 'text', text: options.system }],
         input: [{ role: 'user', content: options.prompt }],
-        tools: allTools.map((tool) => ({
+        tools: allTools.map(tool => ({
           type: 'function',
           name: tool.name,
           description: tool.description,
@@ -1045,7 +1042,7 @@ async function streamClaudeResponseApi(options: {
 
       const decoder = new TextDecoder()
       let buffer = ''
-      let toolCalls: Array<{ id: string; name: string; input: any }> = []
+      const toolCalls: Array<{ id: string; name: string; input: any }> = []
 
       while (true) {
         const { done, value } = await reader.read()
@@ -1094,11 +1091,11 @@ async function streamClaudeResponseApi(options: {
       }
 
       // 解析工具调用结果
-      const browserToolUses = toolCalls.filter((t) => t.name === 'browser_actions')
-      const mcpToolUses = toolCalls.filter((t) => t.name?.startsWith('mcp__'))
+      const browserToolUses = toolCalls.filter(t => t.name === 'browser_actions')
+      const mcpToolUses = toolCalls.filter(t => t.name?.startsWith('mcp__'))
 
       const { parsedInputs, toolUseIds } = parseToolInputs(
-        browserToolUses.map((t) => ({ id: t.id, name: t.name, input: t.input }))
+        browserToolUses.map(t => ({ id: t.id, name: t.name, input: t.input }))
       )
       const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
       const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
@@ -1304,7 +1301,7 @@ export async function runAgentMessage(
     sessionId: options?.sessionId,
     agentId: subagent?.id,
     agentName: subagent?.name,
-    isolated: options?.isolated ?? (contextType === 'subagent')
+    isolated: options?.isolated ?? contextType === 'subagent'
   })
 
   try {
@@ -1346,7 +1343,7 @@ export async function runAgentMessage(
         model: modelId,
         system,
         prompt: input,
-        onUpdate: (update) => options?.onUpdate?.(update),
+        onUpdate: update => options?.onUpdate?.(update),
         forceTool: mcpTools.length === 0,
         maxTokens: resolveMaxTokens(settings.maxTokens),
         mcpTools

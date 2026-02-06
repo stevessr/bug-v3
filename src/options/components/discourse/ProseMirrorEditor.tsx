@@ -16,10 +16,11 @@ import {
   UploadOutlined
 } from '@ant-design/icons-vue'
 
-import { EmojiPicker, PluginEmojiPicker } from '@/components/editor/wysiwyg'
 import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
 import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
+
+import { EmojiPicker, PluginEmojiPicker } from '@/components/editor/wysiwyg'
 import '@/components/editor/wysiwyg/styles/EmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/PluginEmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/ProseMirrorEditor.css'

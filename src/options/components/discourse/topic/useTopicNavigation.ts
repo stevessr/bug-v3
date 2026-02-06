@@ -2,8 +2,7 @@ import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import hljs from 'highlight.js'
 import '../css/highlight.css'
 
-import type { DiscoursePost } from '../types'
-import type { ParsedContent } from '../types'
+import type { DiscoursePost, ParsedContent } from '../types'
 import type { extractData, pageFetch, parsePostContent } from '../utils'
 
 type Notify = {

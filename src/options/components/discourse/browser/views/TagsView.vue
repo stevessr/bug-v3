@@ -16,7 +16,11 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
 <template>
   <div class="flex gap-4">
     <div class="flex-1 min-w-0">
-      <TagGrid :tags="activeTab.tags" :groups="activeTab.tagGroups" @click="$emit('tagClick', $event)" />
+      <TagGrid
+        :tags="activeTab.tags"
+        :groups="activeTab.tagGroups"
+        @click="$emit('tagClick', $event)"
+      />
     </div>
     <div class="w-64 flex-shrink-0 hidden lg:block">
       <Sidebar

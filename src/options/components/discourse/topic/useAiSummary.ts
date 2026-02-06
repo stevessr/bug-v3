@@ -8,11 +8,7 @@ type Notify = {
   error: (message: string) => void
 }
 
-export function useAiSummary(options: {
-  baseUrl: string
-  topicId: number
-  notify: Notify
-}) {
+export function useAiSummary(options: { baseUrl: string; topicId: number; notify: Notify }) {
   const aiSummary = ref<string | null>(null)
   const aiMeta = ref<{
     algorithm?: string

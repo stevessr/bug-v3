@@ -27,7 +27,9 @@ import {
   testMcpBridge,
   testMcpServer,
   reconnectMcpBridge,
-  getMcpConnectionStatus
+  getMcpConnectionStatus,
+  loadMcpBridgeSettings,
+  saveMcpBridgeSettings
 } from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
@@ -188,6 +190,20 @@ export function setupMessageListener() {
               return true
             case 'MCP_GET_STATUS':
               sendResponse({ success: true, data: { status: getMcpConnectionStatus() } })
+              return true
+            case 'MCP_GET_BRIDGE_SETTINGS':
+              loadMcpBridgeSettings()
+                .then(settings => sendResponse({ success: true, data: settings }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || '获取设置失败' })
+                )
+              return true
+            case 'MCP_SET_BRIDGE_SETTINGS':
+              saveMcpBridgeSettings((typedMsg as any).data || {})
+                .then(() => sendResponse({ success: true }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || '保存设置失败' })
+                )
               return true
 
             default:

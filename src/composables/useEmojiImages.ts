@@ -65,10 +65,7 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
    * Get image source for an emoji with caching support
    */
   const getImageSrc = async (emoji: Emoji): Promise<string> => {
-    const preferCache = shouldPreferCache(
-      emojiStore.settings,
-      emoji.displayUrl || emoji.url || ''
-    )
+    const preferCache = shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')
     return getEmojiImageUrl(emoji, { preferCache })
   }
 
@@ -76,10 +73,7 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
    * Get image source synchronously (for immediate rendering)
    */
   const getImageSrcSync = (emoji: Emoji): string => {
-    const preferCache = shouldPreferCache(
-      emojiStore.settings,
-      emoji.displayUrl || emoji.url || ''
-    )
+    const preferCache = shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')
     return getEmojiImageUrlSync(emoji, { preferCache })
   }
 

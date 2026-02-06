@@ -1,9 +1,9 @@
 import { getChromeAPI } from '../utils/main'
 
 import type { BrowseStrategy } from '@/types/type'
+import { DEFAULT_MCP_BRIDGE_SETTINGS, type McpBridgeSettings } from '@/agent/types'
 
-const DEFAULT_HOST = '127.0.0.1'
-const DEFAULT_PORT = 7465
+const MCP_BRIDGE_SETTINGS_KEY = 'mcp-bridge-settings-v1'
 
 // 连接保活配置
 const HEARTBEAT_INTERVAL = 30000 // 心跳间隔：30 秒
@@ -144,15 +144,62 @@ async function toggleDiscourseReaction(
   return { ok: response.ok, data }
 }
 
-function getWsUrl(): string {
-  return `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`
+// ============ MCP 桥接设置管理 ============
+
+let cachedSettings: McpBridgeSettings | null = null
+
+export async function loadMcpBridgeSettings(): Promise<McpBridgeSettings> {
+  if (cachedSettings) return cachedSettings
+
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.storage?.local) {
+    return { ...DEFAULT_MCP_BRIDGE_SETTINGS }
+  }
+
+  try {
+    const result = await chromeAPI.storage.local.get(MCP_BRIDGE_SETTINGS_KEY)
+    const stored = result[MCP_BRIDGE_SETTINGS_KEY]
+    if (stored) {
+      const merged = { ...DEFAULT_MCP_BRIDGE_SETTINGS, ...stored }
+      cachedSettings = merged
+      return merged
+    }
+  } catch {
+    // ignore
+  }
+
+  return { ...DEFAULT_MCP_BRIDGE_SETTINGS }
+}
+
+export async function saveMcpBridgeSettings(settings: Partial<McpBridgeSettings>): Promise<void> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.storage?.local) return
+
+  const current = await loadMcpBridgeSettings()
+  const updated = { ...current, ...settings }
+  cachedSettings = updated
+
+  try {
+    await chromeAPI.storage.local.set({ [MCP_BRIDGE_SETTINGS_KEY]: updated })
+  } catch {
+    // ignore
+  }
+}
+
+export function getMcpBridgeSettingsSync(): McpBridgeSettings {
+  return cachedSettings || { ...DEFAULT_MCP_BRIDGE_SETTINGS }
+}
+
+async function getWsUrl(): Promise<string> {
+  const settings = await loadMcpBridgeSettings()
+  return `ws://${settings.host}:${settings.port}${settings.path}`
 }
 
 function updateStatus(status: McpConnectionStatus) {
   if (currentStatus !== status) {
     currentStatus = status
     console.log('[MCP] Status changed:', status)
-    connectionListeners.forEach((listener) => {
+    connectionListeners.forEach(listener => {
       try {
         listener(status)
       } catch {
@@ -167,7 +214,7 @@ export function onMcpConnectionChange(listener: (status: McpConnectionStatus) =>
   // 立即通知当前状态
   listener(currentStatus)
   return () => {
-    connectionListeners = connectionListeners.filter((l) => l !== listener)
+    connectionListeners = connectionListeners.filter(l => l !== listener)
   }
 }
 
@@ -300,7 +347,8 @@ export async function testMcpBridge(): Promise<{ ok: boolean; error?: string }> 
 
   // Test HTTP health endpoint
   try {
-    const healthUrl = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/health`
+    const settings = await loadMcpBridgeSettings()
+    const healthUrl = `http://${settings.host}:${settings.port}/health`
     const response = await fetch(healthUrl, {
       method: 'GET',
       signal: AbortSignal.timeout(3000)
@@ -1043,9 +1091,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
           throw new Error(`获取楼层 ${postNumber} 失败：HTTP ${response.status}`)
         }
         const data = await response.json()
-        const post = (data.post_stream?.posts || []).find(
-          (p: any) => p.post_number === postNumber
-        )
+        const post = (data.post_stream?.posts || []).find((p: any) => p.post_number === postNumber)
         if (!post) return null
         return {
           id: post.id,
@@ -1613,7 +1659,7 @@ async function connect() {
     ws = null
   }
 
-  const wsUrl = getWsUrl()
+  const wsUrl = await getWsUrl()
   console.log('[MCP] Connecting to WebSocket:', wsUrl)
 
   try {
@@ -1632,7 +1678,7 @@ async function connect() {
     startHeartbeat() // 启动心跳
   }
 
-  ws.onmessage = async (event) => {
+  ws.onmessage = async event => {
     try {
       const message = JSON.parse(event.data)
 
@@ -1669,7 +1715,7 @@ async function connect() {
     }
   }
 
-  ws.onclose = (event) => {
+  ws.onclose = event => {
     console.log('[MCP] WebSocket disconnected, code:', event.code, 'reason:', event.reason)
     clearHeartbeatTimers()
     ws = null
@@ -1677,7 +1723,7 @@ async function connect() {
     scheduleReconnect()
   }
 
-  ws.onerror = (error) => {
+  ws.onerror = error => {
     console.warn('[MCP] WebSocket error:', error)
   }
 }

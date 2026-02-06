@@ -1,5 +1,7 @@
 import { defineComponent } from 'vue'
+
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
+
 import PostItem from './PostItem'
 import PostParentPreview from './PostParentPreview'
 import PostRepliesTree from './PostRepliesTree'
@@ -16,7 +18,10 @@ export default defineComponent({
     getParsedPost: { type: Function as () => (postId: number) => ParsedContent, required: true },
     isParentExpanded: { type: Function as () => (postNumber: number) => boolean, required: true },
     isParentLoading: { type: Function as () => (postNumber: number) => boolean, required: true },
-    getParentPost: { type: Function as () => (post: DiscoursePost) => DiscoursePost | null, required: true },
+    getParentPost: {
+      type: Function as () => (post: DiscoursePost) => DiscoursePost | null,
+      required: true
+    },
     getParsedParent: {
       type: Function as () => (post: DiscoursePost) => ParsedContent | null,
       required: true

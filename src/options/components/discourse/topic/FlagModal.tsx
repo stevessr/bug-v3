@@ -1,5 +1,6 @@
 import { defineComponent, ref, computed, watch, type PropType } from 'vue'
 import { Modal, Radio, Input, Spin } from 'ant-design-vue'
+
 import type { DiscourseFlagType, DiscoursePost } from '../types'
 
 export default defineComponent({
@@ -71,9 +72,7 @@ export default defineComponent({
             <div class="text-center py-8 text-gray-500">无可用的举报类型</div>
           ) : (
             <>
-              <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                请选择举报理由：
-              </div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">请选择举报理由：</div>
               <Radio.Group
                 value={selectedFlagType.value}
                 onChange={(e: any) => {
@@ -126,9 +125,7 @@ export default defineComponent({
                       message.value = e.target.value
                     }}
                     placeholder={
-                      requiresMessage.value
-                        ? '请详细描述问题（必填）'
-                        : '补充说明（可选）'
+                      requiresMessage.value ? '请详细描述问题（必填）' : '补充说明（可选）'
                     }
                     rows={3}
                     maxlength={500}

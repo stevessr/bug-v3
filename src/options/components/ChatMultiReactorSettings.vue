@@ -23,8 +23,8 @@ import {
   type LinuxDoInvite,
   type LinuxDoInvitesResponse
 } from '../utils/linuxDoInvite'
-import InviteExpireDropdown from './InviteExpireDropdown'
 
+import InviteExpireDropdown from './InviteExpireDropdown'
 import SettingSwitch from './SettingSwitch.vue'
 
 import CachedImage from '@/components/CachedImage.vue'

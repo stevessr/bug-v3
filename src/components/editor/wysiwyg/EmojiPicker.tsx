@@ -119,7 +119,9 @@ export default defineComponent({
 
       const query = searchQuery.value.toLowerCase()
       return emojiGroups.value.flatMap(g =>
-        g.emojis.filter(e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query))
+        g.emojis.filter(
+          e => e.name.toLowerCase().includes(query) || e.id.toLowerCase().includes(query)
+        )
       )
     })
 

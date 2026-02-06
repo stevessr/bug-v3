@@ -1,6 +1,7 @@
 import { defineComponent, ref, computed, watch } from 'vue'
 
 import type { SuggestedTopic } from '../types'
+
 import TopicList from './TopicList'
 
 type ExtrasTab = 'suggested' | 'related'

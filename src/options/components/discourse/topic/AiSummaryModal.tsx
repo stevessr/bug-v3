@@ -73,7 +73,13 @@ export default defineComponent({
     })
 
     return () => (
-      <Modal open={props.open} title="AI 总结" footer={null} width="720px" onCancel={props.onCancel}>
+      <Modal
+        open={props.open}
+        title="AI 总结"
+        footer={null}
+        width="720px"
+        onCancel={props.onCancel}
+      >
         <div class="space-y-3">
           {props.loading && <div class="text-sm text-gray-500">生成中...</div>}
           {props.summary && (

@@ -88,7 +88,9 @@ export default defineComponent({
             placeholder="选择模式"
             options={props.titleCountModeOptions}
             value={props.form.value.title_count_mode}
-            onUpdate:value={(value: string | undefined) => (props.form.value.title_count_mode = value)}
+            onUpdate:value={(value: string | undefined) =>
+              (props.form.value.title_count_mode = value)
+            }
           />
           <div class="text-gray-500">文字大小</div>
           <Select
