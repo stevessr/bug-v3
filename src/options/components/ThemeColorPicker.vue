@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 import { UploadOutlined, BgColorsOutlined, CheckOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -12,6 +12,7 @@ import {
   type ColorSchemeCategory,
   type ExtractedColor
 } from '../../styles/md3Theme'
+import { storageGet, storageSet } from '@/utils/simpleStorage'
 
 const props = defineProps<{
   md3ColorScheme?: string
@@ -28,6 +29,13 @@ const customColor = ref<string>(props.md3SeedColor || '#6750A4')
 const extractedColors = ref<ExtractedColor[]>([])
 const isExtracting = ref(false)
 const previewUrl = ref<string | null>(null)
+const THEME_COLOR_CACHE_KEY = 'themeColorExtractCache'
+
+type ThemeColorCache = {
+  updatedAt: number
+  previewDataUrl?: string
+  colors?: Array<{ hex: string; name?: string }>
+}
 
 const parseHexColor = (hex: string) => {
   const normalized = hex.replace('#', '').trim()
@@ -44,6 +52,40 @@ const parseHexColor = (hex: string) => {
     return { r, g, b }
   }
   return null
+}
+
+const rgbToHsl = (r: number, g: number, b: number) => {
+  const rNorm = r / 255
+  const gNorm = g / 255
+  const bNorm = b / 255
+  const max = Math.max(rNorm, gNorm, bNorm)
+  const min = Math.min(rNorm, gNorm, bNorm)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case rNorm:
+        h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)
+        break
+      case gNorm:
+        h = (bNorm - rNorm) / d + 2
+        break
+      case bNorm:
+        h = (rNorm - gNorm) / d + 4
+        break
+    }
+    h /= 6
+  }
+
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100)
+  }
 }
 
 const getLuminance = (rgb: { r: number; g: number; b: number }) =>
@@ -75,8 +117,85 @@ const setPreviewFromFile = (file: File) => {
   previewUrl.value = URL.createObjectURL(file)
 }
 
+const createPreviewDataUrl = (file: File, maxSize: number = 360): Promise<string | null> => {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1)
+        canvas.width = Math.max(1, Math.round(img.width * scale))
+        canvas.height = Math.max(1, Math.round(img.height * scale))
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(null)
+          return
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = () => resolve(null)
+      img.src = reader.result as string
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(file)
+  })
+}
+
+const persistExtractionCache = async (options?: {
+  previewDataUrl?: string | null
+  colors?: ExtractedColor[]
+}) => {
+  const colors = (options?.colors || extractedColors.value).map(color => ({
+    hex: color.hex,
+    name: color.name
+  }))
+
+  const payload: ThemeColorCache = {
+    updatedAt: Date.now(),
+    previewDataUrl: options?.previewDataUrl || previewUrl.value || undefined,
+    colors
+  }
+
+  await storageSet(THEME_COLOR_CACHE_KEY, payload)
+}
+
+const buildExtractedColorsFromCache = (cache: ThemeColorCache) => {
+  if (!cache.colors || cache.colors.length === 0) return []
+  return cache.colors
+    .map(color => {
+      const rgb = parseHexColor(color.hex)
+      if (!rgb) return null
+      return {
+        hex: color.hex,
+        rgb,
+        hsl: rgbToHsl(rgb.r, rgb.g, rgb.b),
+        population: 0,
+        name: color.name || color.hex.toUpperCase()
+      } as ExtractedColor
+    })
+    .filter((item): item is ExtractedColor => !!item)
+}
+
 onBeforeUnmount(() => {
   revokePreviewUrl()
+})
+
+onMounted(async () => {
+  try {
+    const cached = await storageGet<ThemeColorCache>(THEME_COLOR_CACHE_KEY)
+    if (!cached) return
+    if (cached.previewDataUrl) {
+      previewUrl.value = cached.previewDataUrl
+    }
+    const restored = buildExtractedColorsFromCache(cached)
+    if (restored.length > 0) {
+      extractedColors.value = restored
+    }
+  } catch (error) {
+    console.warn('[ThemeColorPicker] Failed to load cached colors:', error)
+  }
 })
 
 // 监听外部属性变化
@@ -136,11 +255,21 @@ const handleFileUpload = async (event: Event) => {
   try {
     isExtracting.value = true
     setPreviewFromFile(file)
-    extractedColors.value = await extractColorsFromImage(file, 8, 'mediancut')
+    const [previewDataUrl, colors] = await Promise.all([
+      createPreviewDataUrl(file),
+      extractColorsFromImage(file, 8, 'mediancut')
+    ])
+    extractedColors.value = colors
 
     // 默认选中第一个提取的颜色
-    if (extractedColors.value.length > 0) {
-      selectCustomColor(extractedColors.value[0].hex)
+    if (colors.length > 0) {
+      selectCustomColor(colors[0].hex)
+    }
+
+    try {
+      await persistExtractionCache({ previewDataUrl, colors })
+    } catch (error) {
+      console.warn('[ThemeColorPicker] Failed to persist extraction cache:', error)
     }
   } catch (error) {
     console.error('提取颜色失败：', error)
@@ -163,9 +292,18 @@ const handlePaste = async (event: ClipboardEvent) => {
         try {
           isExtracting.value = true
           setPreviewFromFile(file)
-          extractedColors.value = await extractColorsFromImage(file, 8, 'mediancut')
-          if (extractedColors.value.length > 0) {
-            selectCustomColor(extractedColors.value[0].hex)
+          const [previewDataUrl, colors] = await Promise.all([
+            createPreviewDataUrl(file),
+            extractColorsFromImage(file, 8, 'mediancut')
+          ])
+          extractedColors.value = colors
+          if (colors.length > 0) {
+            selectCustomColor(colors[0].hex)
+          }
+          try {
+            await persistExtractionCache({ previewDataUrl, colors })
+          } catch (error) {
+            console.warn('[ThemeColorPicker] Failed to persist extraction cache:', error)
           }
         } catch (error) {
           console.error('提取颜色失败：', error)
