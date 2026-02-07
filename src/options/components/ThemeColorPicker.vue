@@ -127,11 +127,7 @@ const handlePaste = async (event: ClipboardEvent) => {
   <div class="theme-color-picker space-y-4">
     <a-tabs v-model:activeKey="activeTab" type="card" size="small">
       <!-- 预设分类 -->
-      <a-tab-pane
-        v-for="cat in categories"
-        :key="cat"
-        :tab="categoryNames[cat]"
-      >
+      <a-tab-pane v-for="cat in categories" :key="cat" :tab="categoryNames[cat]">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2">
           <div
             v-for="(scheme, key) in getSchemesByCategory(cat)"
@@ -143,21 +139,32 @@ const handlePaste = async (event: ClipboardEvent) => {
               class="flex flex-col items-center p-2 border-2 rounded-xl transition-all duration-200 h-full"
               :class="[
                 props.md3ColorScheme === key
-                  ? 'border-primary bg-primary/5 dark:bg-primary/20'
+                  ? 'dark:bg-primary/20'
                   : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800'
               ]"
+              :style="
+                props.md3ColorScheme === key
+                  ? {
+                      borderColor: 'var(--md3-primary)',
+                      backgroundColor: 'var(--md3-primary-container)'
+                    }
+                  : {}
+              "
             >
               <div
                 class="w-10 h-10 rounded-full mb-2 shadow-sm border border-gray-100 dark:border-gray-700"
                 :style="{ backgroundColor: scheme.color }"
               ></div>
-              <span class="text-xs font-medium text-gray-700 dark:text-gray-200 text-center">{{ scheme.name }}</span>
+              <span class="text-xs font-medium text-gray-700 dark:text-gray-200 text-center">
+                {{ scheme.name }}
+              </span>
             </div>
 
             <!-- 选中标记 -->
             <div
               v-if="props.md3ColorScheme === key"
-              class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-sm"
+              class="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm"
+              :style="{ backgroundColor: 'var(--md3-primary)' }"
             >
               <CheckOutlined class="text-white text-xs" />
             </div>
@@ -174,7 +181,7 @@ const handlePaste = async (event: ClipboardEvent) => {
               <input
                 type="color"
                 v-model="customColor"
-                @input="(e) => selectCustomColor((e.target as HTMLInputElement).value)"
+                @input="e => selectCustomColor((e.target as HTMLInputElement).value)"
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
               <div
@@ -203,13 +210,15 @@ const handlePaste = async (event: ClipboardEvent) => {
           <!-- 图片取色区域 -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                从图片提取配色
-              </h4>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200">从图片提取配色</h4>
             </div>
 
             <div
-              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer relative"
+              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-colors cursor-pointer relative"
+              :style="{
+                '--hover-border-color': 'var(--md3-primary)',
+                '--hover-bg-color': 'var(--md3-primary-container)'
+              }"
               @paste="handlePaste"
             >
               <input
@@ -249,13 +258,18 @@ const handlePaste = async (event: ClipboardEvent) => {
                     v-if="customColor.toLowerCase() === color.hex.toLowerCase()"
                     class="absolute inset-0 flex items-center justify-center"
                   >
-                    <div class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center" :style="{ backgroundColor: color.hex, filter: 'brightness(0.8)' }">
+                    <div
+                      class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center"
+                      :style="{ backgroundColor: color.hex, filter: 'brightness(0.8)' }"
+                    >
                       <CheckOutlined class="text-white text-xs" />
                     </div>
                   </div>
 
                   <!-- Tooltip -->
-                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                  <div
+                    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none"
+                  >
                     {{ color.name }}
                   </div>
                 </div>
@@ -276,5 +290,11 @@ const handlePaste = async (event: ClipboardEvent) => {
 /* 隐藏 Tab 内容的默认 padding */
 .theme-color-picker :deep(.ant-tabs-content) {
   min-height: 200px;
+}
+
+/* 图片上传区域 hover 效果 */
+.theme-color-picker [style*='--hover-border-color']:hover {
+  border-color: var(--hover-border-color) !important;
+  background-color: var(--hover-bg-color) !important;
 }
 </style>
