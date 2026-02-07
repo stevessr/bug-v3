@@ -3,7 +3,14 @@ import { DownOutlined, CheckOutlined } from '@ant-design/icons-vue'
 import { ref, watch, isRef, computed, type Ref } from 'vue'
 
 import type { AppSettings } from '../../types/type'
-import { generateMd3Scheme } from '../../styles/md3Theme'
+import {
+  generatePalettes,
+  generateMd3Scheme,
+  TONES,
+  PALETTES,
+  type ThemePalettes,
+  type Md3Scheme
+} from '../../styles/md3Theme'
 
 import ThemeColorPicker from './ThemeColorPicker.vue'
 
@@ -80,13 +87,14 @@ const handleCustomColorSchemeUpdate = (val: string) => {
   emit('update:customColorScheme', val)
 }
 
+// ============ 图片提取相关 ============
+
 const imagePreview = ref<string | null>(null)
 const imageSeedColor = ref<string>('')
 const imageLoading = ref(false)
-// 提取的调色板（多个颜色）
 const extractedPalette = ref<string[]>([])
-// 当前选中的调色板索引
 const selectedPaletteIndex = ref<number>(0)
+const showFullPalette = ref(false)
 
 const rgbToHex = (r: number, g: number, b: number) =>
   `#${[r, g, b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`
@@ -101,7 +109,6 @@ const hexToRgb = (hex: string) => {
   }
 }
 
-// RGB 转 HSL
 const rgbToHsl = (r: number, g: number, b: number) => {
   r /= 255
   g /= 255
@@ -129,14 +136,12 @@ const rgbToHsl = (r: number, g: number, b: number) => {
   return { h: h * 360, s: s * 100, l: l * 100 }
 }
 
-// 计算颜色饱和度和亮度，用于排序
 const getColorScore = (hex: string) => {
   const rgb = hexToRgb(hex)
   if (!rgb) return 0
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
-  // 优先选择饱和度高且亮度适中的颜色
   const satScore = hsl.s
-  const lightScore = 100 - Math.abs(hsl.l - 50) * 2 // 亮度接近50分数更高
+  const lightScore = 100 - Math.abs(hsl.l - 50) * 2
   return satScore * 0.7 + lightScore * 0.3
 }
 
@@ -156,7 +161,7 @@ const readFileAsDataUrl = (file: File) =>
     reader.readAsDataURL(file)
   })
 
-// Median Cut 算法提取多个主色
+// Median Cut 算法
 interface ColorBox {
   colors: Array<{ r: number; g: number; b: number }>
   rMin: number
@@ -190,7 +195,6 @@ const splitBox = (box: ColorBox): [ColorBox, ColorBox] => {
   const gRange = box.gMax - box.gMin
   const bRange = box.bMax - box.bMin
 
-  // 按最大范围的通道排序并分割
   let sortKey: 'r' | 'g' | 'b' = 'r'
   if (gRange >= rRange && gRange >= bRange) sortKey = 'g'
   else if (bRange >= rRange && bRange >= gRange) sortKey = 'b'
@@ -220,27 +224,24 @@ const extractColorPalette = async (dataUrl: string, count: number = 6): Promise<
   const ctx = canvas.getContext('2d')
   if (!ctx) return ['#1890ff']
 
-  const size = 128 // 采样分辨率
+  const size = 128
   canvas.width = size
   canvas.height = size
   ctx.drawImage(img, 0, 0, size, size)
   const { data } = ctx.getImageData(0, 0, size, size)
 
-  // 收集所有像素颜色（跳过透明和接近纯黑/纯白的颜色）
   const colors: Array<{ r: number; g: number; b: number }> = []
   for (let i = 0; i < data.length; i += 4) {
     const alpha = data[i + 3]
-    if (alpha < 128) continue // 跳过半透明
+    if (alpha < 128) continue
 
     const r = data[i]
     const g = data[i + 1]
     const b = data[i + 2]
 
-    // 跳过接近黑白的颜色
     const brightness = (r + g + b) / 3
     if (brightness < 20 || brightness > 235) continue
 
-    // 跳过低饱和度颜色（灰色）
     const max = Math.max(r, g, b)
     const min = Math.min(r, g, b)
     const saturation = max === 0 ? 0 : (max - min) / max
@@ -251,11 +252,9 @@ const extractColorPalette = async (dataUrl: string, count: number = 6): Promise<
 
   if (colors.length === 0) return ['#1890ff']
 
-  // Median Cut 算法
   const boxes: ColorBox[] = [createBox(colors)]
 
   while (boxes.length < count * 2) {
-    // 找到最大的盒子进行分割
     let maxVolume = 0
     let maxIndex = 0
     for (let i = 0; i < boxes.length; i++) {
@@ -274,27 +273,46 @@ const extractColorPalette = async (dataUrl: string, count: number = 6): Promise<
     boxes.splice(maxIndex, 1, box1, box2)
   }
 
-  // 获取每个盒子的平均色
   const palette = boxes.map(box => {
     const avg = getBoxAverage(box)
     return rgbToHex(avg.r, avg.g, avg.b)
   })
 
-  // 去重
   const uniquePalette = [...new Set(palette)]
-
-  // 按颜色分数排序（饱和度高且亮度适中的优先）
   uniquePalette.sort((a, b) => getColorScore(b) - getColorScore(a))
 
   return uniquePalette.slice(0, count)
 }
 
-// 根据选中颜色生成的 MD3 配色预览
-const md3Preview = computed(() => {
-  if (!imageSeedColor.value) return null
-  const mode = localTheme.value === 'dark' ? 'dark' : 'light'
-  return generateMd3Scheme(imageSeedColor.value, mode as 'light' | 'dark')
+// ============ 调色板预览 ============
+
+// 当前颜色生成的完整调色板
+const currentPalettes = computed<ThemePalettes | null>(() => {
+  const color = imageSeedColor.value || localCustomPrimaryColor.value
+  if (!color) return null
+  return generatePalettes(color)
 })
+
+// MD3 语义颜色预览
+const md3Preview = computed<Md3Scheme | null>(() => {
+  const color = imageSeedColor.value || localCustomPrimaryColor.value
+  if (!color) return null
+  const mode = localTheme.value === 'dark' ? 'dark' : 'light'
+  return generateMd3Scheme(color, mode as 'light' | 'dark')
+})
+
+// 调色板名称映射
+const paletteLabels: Record<string, string> = {
+  primary: '主色',
+  secondary: '次色',
+  tertiary: '三色',
+  error: '错误',
+  neutral: '中性',
+  'neutral-variant': '中性变体'
+}
+
+// 显示的色阶（简化版）
+const displayTones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
 
 const handleImageUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -308,7 +326,6 @@ const handleImageUpload = async (event: Event) => {
     const palette = await extractColorPalette(dataUrl, 6)
     imagePreview.value = dataUrl
     extractedPalette.value = palette
-    // 自动选择第一个（评分最高的）颜色
     if (palette.length > 0) {
       selectPaletteColor(0)
     }
@@ -337,10 +354,11 @@ const selectPaletteColor = (index: number) => {
       <h2 class="text-lg font-semibold dark:text-white">主题设置</h2>
     </div>
     <div class="p-6 space-y-6">
+      <!-- 主题模式选择 -->
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium dark:text-white">主题</label>
-          <p class="text-sm dark:text-white">选择界面主题</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">选择界面主题</p>
         </div>
         <a-dropdown>
           <template #overlay>
@@ -364,10 +382,11 @@ const selectPaletteColor = (index: number) => {
       </div>
 
       <div class="flex flex-col space-y-4">
+        <!-- 主题颜色选择器 -->
         <div class="flex items-start justify-between">
           <div>
             <label class="text-sm font-medium dark:text-white">主题颜色</label>
-            <p class="text-sm dark:text-white">自定义界面主色调</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">自定义界面主色调</p>
           </div>
           <div class="w-2/3">
             <ThemeColorPicker
@@ -379,11 +398,12 @@ const selectPaletteColor = (index: number) => {
           </div>
         </div>
 
+        <!-- 图片提取色彩 -->
         <div class="flex items-start justify-between">
           <div>
             <label class="text-sm font-medium dark:text-white">图片生成（MD3）</label>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              上传图片自动提取色系并按 Material You (MD3) 生成整套配色
+              上传图片自动提取色系并生成完整 MD3 调色板
             </p>
           </div>
           <div class="w-2/3 space-y-3">
@@ -394,10 +414,10 @@ const selectPaletteColor = (index: number) => {
               @change="handleImageUpload"
             />
             <div v-if="imageLoading" class="text-xs text-gray-500 dark:text-gray-400">
-              正在分析图片并提取色系...
+              正在分析图片并生成调色板...
             </div>
 
-            <!-- 图片预览和调色板 -->
+            <!-- 图片预览和提取的颜色 -->
             <div v-else-if="imagePreview && extractedPalette.length > 0" class="space-y-3">
               <div class="flex items-start gap-4">
                 <img
@@ -406,8 +426,7 @@ const selectPaletteColor = (index: number) => {
                   class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-600 object-cover flex-shrink-0"
                 />
                 <div class="flex-1 space-y-2">
-                  <p class="text-xs text-gray-500 dark:text-gray-400">点击选择主色调：</p>
-                  <!-- 提取的调色板 -->
+                  <p class="text-xs text-gray-500 dark:text-gray-400">点击选择种子颜色：</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="(color, index) in extractedPalette"
@@ -430,123 +449,265 @@ const selectPaletteColor = (index: number) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <!-- MD3 配色预览 -->
-              <div v-if="md3Preview" class="space-y-2">
-                <p class="text-xs text-gray-500 dark:text-gray-400">生成的 MD3 配色方案：</p>
-                <div class="grid grid-cols-4 gap-1.5">
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs font-medium"
-                    :style="{
-                      backgroundColor: md3Preview.primary,
-                      color: md3Preview.onPrimary
-                    }"
-                    title="Primary"
-                  >
-                    主色
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs font-medium"
-                    :style="{
-                      backgroundColor: md3Preview.secondary,
-                      color: md3Preview.onSecondary
-                    }"
-                    title="Secondary"
-                  >
-                    次色
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs font-medium"
-                    :style="{
-                      backgroundColor: md3Preview.tertiary,
-                      color: md3Preview.onTertiary
-                    }"
-                    title="Tertiary"
-                  >
-                    三色
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs font-medium"
-                    :style="{ backgroundColor: md3Preview.error, color: md3Preview.onError }"
-                    title="Error"
-                  >
-                    错误
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs"
-                    :style="{
-                      backgroundColor: md3Preview.primaryContainer,
-                      color: md3Preview.onPrimaryContainer
-                    }"
-                    title="Primary Container"
-                  >
-                    主容器
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs"
-                    :style="{
-                      backgroundColor: md3Preview.secondaryContainer,
-                      color: md3Preview.onSecondaryContainer
-                    }"
-                    title="Secondary Container"
-                  >
-                    次容器
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs"
-                    :style="{
-                      backgroundColor: md3Preview.tertiaryContainer,
-                      color: md3Preview.onTertiaryContainer
-                    }"
-                    title="Tertiary Container"
-                  >
-                    三容器
-                  </div>
-                  <div
-                    class="h-8 rounded flex items-center justify-center text-xs"
-                    :style="{
-                      backgroundColor: md3Preview.errorContainer,
-                      color: md3Preview.onErrorContainer
-                    }"
-                    title="Error Container"
-                  >
-                    错误容器
-                  </div>
-                </div>
-                <div class="grid grid-cols-5 gap-1">
-                  <div
-                    class="h-6 rounded"
-                    :style="{ backgroundColor: md3Preview.surface }"
-                    title="Surface"
-                  />
-                  <div
-                    class="h-6 rounded"
-                    :style="{ backgroundColor: md3Preview.surfaceVariant }"
-                    title="Surface Variant"
-                  />
-                  <div
-                    class="h-6 rounded"
-                    :style="{ backgroundColor: md3Preview.background }"
-                    title="Background"
-                  />
-                  <div
-                    class="h-6 rounded border border-gray-200 dark:border-gray-600"
-                    :style="{ backgroundColor: md3Preview.outline }"
-                    title="Outline"
-                  />
-                  <div
-                    class="h-6 rounded"
-                    :style="{ backgroundColor: md3Preview.inverseSurface }"
-                    title="Inverse Surface"
-                  />
-                </div>
-                <p class="text-xs text-gray-400 dark:text-gray-500">
-                  已选主色：
-                  <span class="font-mono">{{ imageSeedColor }}</span>
-                </p>
+      <!-- 完整调色板预览 -->
+      <div
+        v-if="currentPalettes"
+        class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-medium dark:text-white">完整调色板</h3>
+          <button
+            class="text-xs text-blue-500 hover:text-blue-600"
+            @click="showFullPalette = !showFullPalette"
+          >
+            {{ showFullPalette ? '收起' : '展开全部色阶' }}
+          </button>
+        </div>
+
+        <!-- 调色板网格 -->
+        <div class="space-y-2">
+          <div v-for="paletteName in PALETTES" :key="paletteName" class="flex items-center gap-2">
+            <span class="w-16 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+              {{ paletteLabels[paletteName] }}
+            </span>
+            <div class="flex-1 flex gap-0.5">
+              <template v-if="showFullPalette">
+                <div
+                  v-for="tone in TONES"
+                  :key="tone"
+                  class="flex-1 h-6 first:rounded-l last:rounded-r"
+                  :style="{ backgroundColor: currentPalettes[paletteName][tone] }"
+                  :title="`${paletteName}-${tone}: ${currentPalettes[paletteName][tone]}`"
+                />
+              </template>
+              <template v-else>
+                <div
+                  v-for="tone in displayTones"
+                  :key="tone"
+                  class="flex-1 h-6 first:rounded-l last:rounded-r"
+                  :style="{ backgroundColor: currentPalettes[paletteName][tone] }"
+                  :title="`${paletteName}-${tone}: ${currentPalettes[paletteName][tone]}`"
+                />
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- 色阶标注 -->
+        <div class="flex items-center gap-2">
+          <span class="w-16 flex-shrink-0"></span>
+          <div class="flex-1 flex gap-0.5">
+            <template v-if="showFullPalette">
+              <div
+                v-for="tone in TONES"
+                :key="tone"
+                class="flex-1 text-center text-[8px] text-gray-400"
+              >
+                {{ tone }}
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-for="tone in displayTones"
+                :key="tone"
+                class="flex-1 text-center text-[10px] text-gray-400"
+              >
+                {{ tone }}
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- MD3 语义颜色预览 -->
+        <div v-if="md3Preview" class="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <h4 class="text-xs font-medium text-gray-600 dark:text-gray-300">
+            MD3 语义颜色（{{ localTheme === 'dark' ? '暗色' : '亮色' }}模式）
+          </h4>
+
+          <!-- 主要颜色组 -->
+          <div class="grid grid-cols-4 gap-1.5">
+            <div
+              class="h-10 rounded flex flex-col items-center justify-center text-[10px]"
+              :style="{ backgroundColor: md3Preview.primary, color: md3Preview.onPrimary }"
+            >
+              <span class="font-medium">Primary</span>
+            </div>
+            <div
+              class="h-10 rounded flex flex-col items-center justify-center text-[10px]"
+              :style="{ backgroundColor: md3Preview.secondary, color: md3Preview.onSecondary }"
+            >
+              <span class="font-medium">Secondary</span>
+            </div>
+            <div
+              class="h-10 rounded flex flex-col items-center justify-center text-[10px]"
+              :style="{ backgroundColor: md3Preview.tertiary, color: md3Preview.onTertiary }"
+            >
+              <span class="font-medium">Tertiary</span>
+            </div>
+            <div
+              class="h-10 rounded flex flex-col items-center justify-center text-[10px]"
+              :style="{ backgroundColor: md3Preview.error, color: md3Preview.onError }"
+            >
+              <span class="font-medium">Error</span>
+            </div>
+          </div>
+
+          <!-- 容器颜色组 -->
+          <div class="grid grid-cols-4 gap-1.5">
+            <div
+              class="h-8 rounded flex items-center justify-center text-[9px]"
+              :style="{
+                backgroundColor: md3Preview.primaryContainer,
+                color: md3Preview.onPrimaryContainer
+              }"
+            >
+              Container
+            </div>
+            <div
+              class="h-8 rounded flex items-center justify-center text-[9px]"
+              :style="{
+                backgroundColor: md3Preview.secondaryContainer,
+                color: md3Preview.onSecondaryContainer
+              }"
+            >
+              Container
+            </div>
+            <div
+              class="h-8 rounded flex items-center justify-center text-[9px]"
+              :style="{
+                backgroundColor: md3Preview.tertiaryContainer,
+                color: md3Preview.onTertiaryContainer
+              }"
+            >
+              Container
+            </div>
+            <div
+              class="h-8 rounded flex items-center justify-center text-[9px]"
+              :style="{
+                backgroundColor: md3Preview.errorContainer,
+                color: md3Preview.onErrorContainer
+              }"
+            >
+              Container
+            </div>
+          </div>
+
+          <!-- Surface 颜色组 -->
+          <div class="space-y-1">
+            <p class="text-[10px] text-gray-500 dark:text-gray-400">Surface 容器层级</p>
+            <div class="flex gap-0.5">
+              <div
+                class="flex-1 h-8 rounded-l flex items-center justify-center text-[8px]"
+                :style="{
+                  backgroundColor: md3Preview.surfaceContainerLowest,
+                  color: md3Preview.onSurface
+                }"
+              >
+                Lowest
+              </div>
+              <div
+                class="flex-1 h-8 flex items-center justify-center text-[8px]"
+                :style="{
+                  backgroundColor: md3Preview.surfaceContainerLow,
+                  color: md3Preview.onSurface
+                }"
+              >
+                Low
+              </div>
+              <div
+                class="flex-1 h-8 flex items-center justify-center text-[8px]"
+                :style="{
+                  backgroundColor: md3Preview.surfaceContainer,
+                  color: md3Preview.onSurface
+                }"
+              >
+                Default
+              </div>
+              <div
+                class="flex-1 h-8 flex items-center justify-center text-[8px]"
+                :style="{
+                  backgroundColor: md3Preview.surfaceContainerHigh,
+                  color: md3Preview.onSurface
+                }"
+              >
+                High
+              </div>
+              <div
+                class="flex-1 h-8 rounded-r flex items-center justify-center text-[8px]"
+                :style="{
+                  backgroundColor: md3Preview.surfaceContainerHighest,
+                  color: md3Preview.onSurface
+                }"
+              >
+                Highest
               </div>
             </div>
           </div>
+
+          <!-- 其他颜色 -->
+          <div class="flex gap-1">
+            <div
+              class="flex-1 h-6 rounded flex items-center justify-center text-[8px]"
+              :style="{ backgroundColor: md3Preview.outline, color: '#fff' }"
+            >
+              Outline
+            </div>
+            <div
+              class="flex-1 h-6 rounded flex items-center justify-center text-[8px] border"
+              :style="{
+                backgroundColor: md3Preview.outlineVariant,
+                color: md3Preview.onSurface,
+                borderColor: md3Preview.outline
+              }"
+            >
+              Outline Variant
+            </div>
+            <div
+              class="flex-1 h-6 rounded flex items-center justify-center text-[8px]"
+              :style="{
+                backgroundColor: md3Preview.inverseSurface,
+                color: md3Preview.inverseOnSurface
+              }"
+            >
+              Inverse
+            </div>
+          </div>
+        </div>
+
+        <!-- CSS 变量说明 -->
+        <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+          <details class="text-xs">
+            <summary
+              class="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              CSS 变量使用说明
+            </summary>
+            <div
+              class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded text-gray-600 dark:text-gray-400 space-y-2"
+            >
+              <p><strong>调色板变量：</strong></p>
+              <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">
+                --palette-{name}-{tone}
+                <br />
+                例如: var(--palette-primary-40), var(--palette-neutral-90)
+              </code>
+              <p class="mt-2"><strong>语义变量：</strong></p>
+              <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">
+                --md3-{name} 或 --theme-{name}
+                <br />
+                例如: var(--md3-primary), var(--theme-surface-container)
+              </code>
+              <p class="mt-2"><strong>工具类：</strong></p>
+              <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">
+                .bg-md3-primary, .text-md3-on-primary, .border-md3-outline
+              </code>
+            </div>
+          </details>
         </div>
       </div>
     </div>

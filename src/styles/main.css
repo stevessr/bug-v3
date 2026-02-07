@@ -4,27 +4,114 @@
 
 @layer base {
   :root {
+    /* ============ 滚动条 ============ */
     --scrollbar-track-color: #f9fafb;
     --scrollbar-thumb-color: #e5e7eb;
     --scrollbar-thumb-hover-color: #d1d5db;
-    --theme-primary: #1890ff;
-    --theme-on-primary: #ffffff;
-    --theme-primary-container: #d9ecff;
-    --theme-on-primary-container: #001d36;
-    --theme-secondary: #4f6fad;
-    --theme-on-secondary: #ffffff;
-    --theme-surface: #fdfbff;
-    --theme-on-surface: #1a1c1e;
-    --theme-surface-variant: #e6e0e9;
-    --theme-on-surface-variant: #48454e;
-    --theme-outline: #79747e;
-    --theme-outline-variant: #cac4d0;
-    --theme-background: #fdfbff;
-    --theme-on-background: #1a1c1e;
-    --theme-accent: #1890ff;
-    --theme-accent-strong: #d9ecff;
-    --theme-danger: #b3261e;
-    --theme-on-danger: #ffffff;
+
+    /* ============ 调色板 CSS 变量 ============ */
+    /* 这些变量会在运行时由 md3Theme.ts 动态设置 */
+    /* 格式: --palette-{name}-{tone} */
+    /* 调色板: primary, secondary, tertiary, error, neutral, neutral-variant */
+    /* 色阶: 0, 4, 6, 10, 12, 17, 20, 22, 24, 30, 40, 50, 60, 70, 80, 87, 90, 92, 94, 95, 96, 98, 99, 100 */
+
+    /* ============ MD3 语义颜色默认值 (Light) ============ */
+    /* Primary */
+    --md3-primary: #1976d2;
+    --md3-on-primary: #ffffff;
+    --md3-primary-container: #d1e4ff;
+    --md3-on-primary-container: #001d36;
+
+    /* Secondary */
+    --md3-secondary: #535f70;
+    --md3-on-secondary: #ffffff;
+    --md3-secondary-container: #d7e3f8;
+    --md3-on-secondary-container: #101c2b;
+
+    /* Tertiary */
+    --md3-tertiary: #6b5778;
+    --md3-on-tertiary: #ffffff;
+    --md3-tertiary-container: #f3daff;
+    --md3-on-tertiary-container: #251431;
+
+    /* Error */
+    --md3-error: #ba1a1a;
+    --md3-on-error: #ffffff;
+    --md3-error-container: #ffdad6;
+    --md3-on-error-container: #410002;
+
+    /* Surface */
+    --md3-background: #fdfcff;
+    --md3-on-background: #1a1c1e;
+    --md3-surface: #fdfcff;
+    --md3-on-surface: #1a1c1e;
+    --md3-surface-dim: #ddd9de;
+    --md3-surface-bright: #fdfcff;
+    --md3-surface-container-lowest: #ffffff;
+    --md3-surface-container-low: #f7f2f7;
+    --md3-surface-container: #f1ecf1;
+    --md3-surface-container-high: #ebe6eb;
+    --md3-surface-container-highest: #e5e1e6;
+    --md3-surface-variant: #e0e2ec;
+    --md3-on-surface-variant: #43474e;
+
+    /* Outline */
+    --md3-outline: #73777f;
+    --md3-outline-variant: #c3c6cf;
+
+    /* Inverse */
+    --md3-inverse-surface: #2f3033;
+    --md3-inverse-on-surface: #f1f0f4;
+    --md3-inverse-primary: #a0cafd;
+
+    /* Others */
+    --md3-surface-tint: #1976d2;
+    --md3-shadow: #000000;
+    --md3-scrim: #000000;
+
+    /* ============ 主题语义变量 (向后兼容) ============ */
+    --theme-primary: var(--md3-primary);
+    --theme-on-primary: var(--md3-on-primary);
+    --theme-primary-container: var(--md3-primary-container);
+    --theme-on-primary-container: var(--md3-on-primary-container);
+    --theme-secondary: var(--md3-secondary);
+    --theme-on-secondary: var(--md3-on-secondary);
+    --theme-secondary-container: var(--md3-secondary-container);
+    --theme-on-secondary-container: var(--md3-on-secondary-container);
+    --theme-tertiary: var(--md3-tertiary);
+    --theme-on-tertiary: var(--md3-on-tertiary);
+    --theme-tertiary-container: var(--md3-tertiary-container);
+    --theme-on-tertiary-container: var(--md3-on-tertiary-container);
+    --theme-surface: var(--md3-surface);
+    --theme-on-surface: var(--md3-on-surface);
+    --theme-surface-dim: var(--md3-surface-dim);
+    --theme-surface-bright: var(--md3-surface-bright);
+    --theme-surface-container-lowest: var(--md3-surface-container-lowest);
+    --theme-surface-container-low: var(--md3-surface-container-low);
+    --theme-surface-container: var(--md3-surface-container);
+    --theme-surface-container-high: var(--md3-surface-container-high);
+    --theme-surface-container-highest: var(--md3-surface-container-highest);
+    --theme-surface-variant: var(--md3-surface-variant);
+    --theme-on-surface-variant: var(--md3-on-surface-variant);
+    --theme-outline: var(--md3-outline);
+    --theme-outline-variant: var(--md3-outline-variant);
+    --theme-background: var(--md3-background);
+    --theme-on-background: var(--md3-on-background);
+    --theme-error: var(--md3-error);
+    --theme-on-error: var(--md3-on-error);
+    --theme-error-container: var(--md3-error-container);
+    --theme-on-error-container: var(--md3-on-error-container);
+    --theme-inverse-surface: var(--md3-inverse-surface);
+    --theme-inverse-on-surface: var(--md3-inverse-on-surface);
+    --theme-inverse-primary: var(--md3-inverse-primary);
+    --theme-shadow: var(--md3-shadow);
+    --theme-scrim: var(--md3-scrim);
+
+    /* 兼容性别名 */
+    --theme-accent: var(--md3-primary);
+    --theme-accent-strong: var(--md3-primary-container);
+    --theme-danger: var(--md3-error);
+    --theme-on-danger: var(--md3-on-error);
   }
 
   .dark {
@@ -199,5 +286,139 @@
 
   .focus-enhanced:focus:not(:focus-visible) {
     outline: none !important;
+  }
+
+  /* ============ MD3 主题工具类 ============ */
+  /* 使用 CSS 变量的便捷类 */
+
+  /* 背景色 */
+  .bg-md3-primary {
+    background-color: var(--md3-primary);
+  }
+  .bg-md3-primary-container {
+    background-color: var(--md3-primary-container);
+  }
+  .bg-md3-secondary {
+    background-color: var(--md3-secondary);
+  }
+  .bg-md3-secondary-container {
+    background-color: var(--md3-secondary-container);
+  }
+  .bg-md3-tertiary {
+    background-color: var(--md3-tertiary);
+  }
+  .bg-md3-tertiary-container {
+    background-color: var(--md3-tertiary-container);
+  }
+  .bg-md3-error {
+    background-color: var(--md3-error);
+  }
+  .bg-md3-error-container {
+    background-color: var(--md3-error-container);
+  }
+  .bg-md3-surface {
+    background-color: var(--md3-surface);
+  }
+  .bg-md3-surface-dim {
+    background-color: var(--md3-surface-dim);
+  }
+  .bg-md3-surface-bright {
+    background-color: var(--md3-surface-bright);
+  }
+  .bg-md3-surface-container-lowest {
+    background-color: var(--md3-surface-container-lowest);
+  }
+  .bg-md3-surface-container-low {
+    background-color: var(--md3-surface-container-low);
+  }
+  .bg-md3-surface-container {
+    background-color: var(--md3-surface-container);
+  }
+  .bg-md3-surface-container-high {
+    background-color: var(--md3-surface-container-high);
+  }
+  .bg-md3-surface-container-highest {
+    background-color: var(--md3-surface-container-highest);
+  }
+  .bg-md3-surface-variant {
+    background-color: var(--md3-surface-variant);
+  }
+  .bg-md3-inverse-surface {
+    background-color: var(--md3-inverse-surface);
+  }
+
+  /* 文字色 */
+  .text-md3-primary {
+    color: var(--md3-primary);
+  }
+  .text-md3-on-primary {
+    color: var(--md3-on-primary);
+  }
+  .text-md3-on-primary-container {
+    color: var(--md3-on-primary-container);
+  }
+  .text-md3-secondary {
+    color: var(--md3-secondary);
+  }
+  .text-md3-on-secondary {
+    color: var(--md3-on-secondary);
+  }
+  .text-md3-on-secondary-container {
+    color: var(--md3-on-secondary-container);
+  }
+  .text-md3-tertiary {
+    color: var(--md3-tertiary);
+  }
+  .text-md3-on-tertiary {
+    color: var(--md3-on-tertiary);
+  }
+  .text-md3-on-tertiary-container {
+    color: var(--md3-on-tertiary-container);
+  }
+  .text-md3-error {
+    color: var(--md3-error);
+  }
+  .text-md3-on-error {
+    color: var(--md3-on-error);
+  }
+  .text-md3-on-error-container {
+    color: var(--md3-on-error-container);
+  }
+  .text-md3-on-surface {
+    color: var(--md3-on-surface);
+  }
+  .text-md3-on-surface-variant {
+    color: var(--md3-on-surface-variant);
+  }
+  .text-md3-on-background {
+    color: var(--md3-on-background);
+  }
+  .text-md3-inverse-on-surface {
+    color: var(--md3-inverse-on-surface);
+  }
+  .text-md3-inverse-primary {
+    color: var(--md3-inverse-primary);
+  }
+
+  /* 边框色 */
+  .border-md3-outline {
+    border-color: var(--md3-outline);
+  }
+  .border-md3-outline-variant {
+    border-color: var(--md3-outline-variant);
+  }
+  .border-md3-primary {
+    border-color: var(--md3-primary);
+  }
+  .border-md3-secondary {
+    border-color: var(--md3-secondary);
+  }
+  .border-md3-error {
+    border-color: var(--md3-error);
+  }
+
+  /* 阴影 */
+  .shadow-md3 {
+    box-shadow: 0 1px 3px 1px var(--md3-shadow);
   }
 }
