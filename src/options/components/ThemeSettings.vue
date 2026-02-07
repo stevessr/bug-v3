@@ -106,8 +106,10 @@ const handleMd3ColorSchemeUpdate = (val: string) => {
 
 const handleMd3SeedColorUpdate = (val: string) => {
   localMd3SeedColor.value = val
+  // 同时清空本地预设方案状态，确保 UI 立即更新
+  localMd3ColorScheme.value = ''
   emit('update:md3SeedColor', val)
-  // 清空预设方案选择，或者设置为 'custom'（如果需要）
+  // 清空预设方案选择
   emit('update:md3ColorScheme', '')
 }
 const showFullPalette = ref(false)

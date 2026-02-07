@@ -43,10 +43,14 @@ watch(
   () => props.md3ColorScheme,
   val => {
     if (val && colorSchemes[val]) {
+      // 选择了预设方案，切换到对应分类 Tab
       const category = colorSchemes[val].category
       if (category) {
         activeTab.value = category
       }
+    } else if (!val && props.md3SeedColor) {
+      // 清空了预设方案但有自定义颜色，切换到 custom Tab
+      activeTab.value = 'custom'
     }
   },
   { immediate: true }
