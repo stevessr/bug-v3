@@ -60,23 +60,15 @@ onMounted(async () => {
 })
 
 // 响应式的 Ant Design Vue 主题配置
+// 使用 CSS 变量覆盖，不再依赖 Ant Design 的 token 系统
 const antdThemeConfig = computed(() => {
-  const primaryColor = options.emojiStore.settings.customPrimaryColor || '#1890ff'
-  return generateAntdTheme(currentThemeMode.value, primaryColor)
+  return generateAntdTheme(currentThemeMode.value)
 })
 
 // 监听主题变化事件
 const handleThemeChange = (event: CustomEvent) => {
   currentThemeMode.value = event.detail.mode
 }
-
-// 监听自定义主色变化
-watch(
-  () => options.emojiStore.settings.customPrimaryColor,
-  () => {
-    // 主色变化时会自动通过 computed 更新主题
-  }
-)
 
 // pending resolver for requestConfirmation -> modal bridge
 

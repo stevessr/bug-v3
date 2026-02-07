@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ant Design 组件样式覆盖 */
+@import './antdOverrides.css';
+
 @layer base {
   :root {
     /* ============ 滚动条 ============ */
