@@ -423,4 +423,5 @@ export const themeVar = (name: string): string => {
   return `var(--theme-${toKebab(name)})`
 }
 
-export { DEFAULT_PRIMARY_COLOR }
+// 兼容性别名
+export const applyMd3ThemeToRoot = applyMd3SchemeToRoot

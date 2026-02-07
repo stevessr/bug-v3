@@ -39,7 +39,7 @@ async function applyTheme() {
 
     const settings = await getSettings()
     const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
-    applyMd3ThemeToRoot(primaryColor, finalTheme)
+    applyMd3ThemeToRoot(primaryColor, finalTheme as 'light' | 'dark')
   }
 
   void apply(theme)
