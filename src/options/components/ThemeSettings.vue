@@ -19,7 +19,7 @@ import ThemeColorPicker from './ThemeColorPicker.vue'
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 const settings = props.settings as AppSettings | Ref<AppSettings>
 
-const emit = defineEmits(['update:theme', 'update:md3ColorScheme'])
+const emit = defineEmits(['update:theme', 'update:md3ColorScheme', 'update:md3SeedColor'])
 
 const getTheme = () => {
   try {
@@ -35,10 +35,20 @@ const getMd3ColorScheme = () => {
     const raw = isRef(settings)
       ? settings.value && settings.value.md3ColorScheme
       : settings && (settings as AppSettings).md3ColorScheme
-    if (raw && Object.prototype.hasOwnProperty.call(colorSchemes, raw)) return raw
-    return 'default'
+    // 允许自定义值（不在预设中）
+    return raw || 'default'
   } catch {
     return 'default'
+  }
+}
+
+const getMd3SeedColor = () => {
+  try {
+    return isRef(settings)
+      ? settings.value && settings.value.md3SeedColor
+      : settings && (settings as AppSettings).md3SeedColor
+  } catch {
+    return undefined
   }
 }
 
@@ -58,9 +68,24 @@ watch(
   }
 )
 
+const localMd3SeedColor = ref<string | undefined>(getMd3SeedColor())
+watch(
+  () => getMd3SeedColor(),
+  val => {
+    localMd3SeedColor.value = val
+  }
+)
+
 const schemeSeedColor = computed(() => {
-  const key = localMd3ColorScheme.value as keyof typeof colorSchemes
-  return colorSchemes[key] || DEFAULT_PRIMARY_COLOR
+  // 如果有自定义种子色，优先使用
+  if (localMd3SeedColor.value) return localMd3SeedColor.value
+
+  const key = localMd3ColorScheme.value
+  // 如果 key 在预设中
+  if (key && Object.prototype.hasOwnProperty.call(colorSchemes, key)) {
+    return colorSchemes[key].color
+  }
+  return DEFAULT_PRIMARY_COLOR
 })
 
 const handleThemeSelect = (key: string) => {
@@ -73,7 +98,17 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
 }
 
 const handleMd3ColorSchemeUpdate = (val: string) => {
+  // 当选择预设方案时，清空自定义种子色
+  localMd3SeedColor.value = undefined
+  emit('update:md3SeedColor', undefined)
   emit('update:md3ColorScheme', val)
+}
+
+const handleMd3SeedColorUpdate = (val: string) => {
+  localMd3SeedColor.value = val
+  emit('update:md3SeedColor', val)
+  // 清空预设方案选择，或者设置为 'custom'（如果需要）
+  emit('update:md3ColorScheme', '')
 }
 const showFullPalette = ref(false)
 
@@ -144,10 +179,12 @@ const displayTones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
             <label class="text-sm font-medium dark:text-white">主题色系</label>
             <p class="text-sm text-gray-500 dark:text-gray-400">选择 MD3 预设色系</p>
           </div>
-          <div class="w-2/3">
+          <div class="w-full">
             <ThemeColorPicker
               :md3ColorScheme="localMd3ColorScheme"
+              :md3SeedColor="localMd3SeedColor"
               @update:md3ColorScheme="handleMd3ColorSchemeUpdate"
+              @update:md3SeedColor="handleMd3SeedColorUpdate"
             />
           </div>
         </div>

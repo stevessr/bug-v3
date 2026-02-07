@@ -1,4 +1,4 @@
-import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR, colorSchemes } from './md3Theme'
+import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR, colorSchemes, isValidColor } from './md3Theme'
 
 import { getSettings, storageGet } from '@/utils/simpleStorage'
 
@@ -37,8 +37,17 @@ async function applyTheme() {
     )
 
     const settings = await getSettings()
-    const scheme = settings?.md3ColorScheme as keyof typeof colorSchemes | undefined
-    const primaryColor = (scheme && colorSchemes[scheme]) || DEFAULT_PRIMARY_COLOR
+    let primaryColor = DEFAULT_PRIMARY_COLOR
+
+    // 优先使用预设方案
+    const schemeKey = settings?.md3ColorScheme
+    if (schemeKey && colorSchemes[schemeKey]) {
+      primaryColor = colorSchemes[schemeKey].color
+    } else if (settings?.md3SeedColor && isValidColor(settings.md3SeedColor)) {
+      // 如果没有预设方案或预设方案无效，尝试使用自定义种子色
+      primaryColor = settings.md3SeedColor
+    }
+
     applyMd3ThemeToRoot(primaryColor, finalTheme as 'light' | 'dark')
   }
 
@@ -54,8 +63,15 @@ async function applyTheme() {
   window.addEventListener('theme-changed', async event => {
     const detail = (event as CustomEvent).detail as { mode?: 'light' | 'dark' } | undefined
     const settings = await getSettings()
-    const scheme = settings?.md3ColorScheme as keyof typeof colorSchemes | undefined
-    const primaryColor = (scheme && colorSchemes[scheme]) || DEFAULT_PRIMARY_COLOR
+
+    let primaryColor = DEFAULT_PRIMARY_COLOR
+    const schemeKey = settings?.md3ColorScheme
+    if (schemeKey && colorSchemes[schemeKey]) {
+      primaryColor = colorSchemes[schemeKey].color
+    } else if (settings?.md3SeedColor && isValidColor(settings.md3SeedColor)) {
+      primaryColor = settings.md3SeedColor
+    }
+
     const mode =
       detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
     applyMd3ThemeToRoot(primaryColor, mode || 'light')
