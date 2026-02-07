@@ -892,6 +892,7 @@ export default function useOptions() {
     // theme - from themeManager composable
     updateTheme: themeManager.updateTheme,
     updateMd3ColorScheme: themeManager.updateMd3ColorScheme,
+    updateMd3SeedColor: themeManager.updateMd3SeedColor,
     // sync / settings - from syncManager composable
     resetSettings,
     syncToChrome: syncManager.syncToChrome,

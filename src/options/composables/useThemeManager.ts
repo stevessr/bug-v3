@@ -63,11 +63,27 @@ export function useThemeManager(options: {
    * 更新自定义配色方案
    */
   const updateMd3ColorScheme = (scheme: AppSettings['md3ColorScheme']) => {
-    const seed = colorSchemes[scheme as keyof typeof colorSchemes] || DEFAULT_PRIMARY_COLOR
-    updateSettings({ md3ColorScheme: scheme, md3SeedColor: seed })
+    let seed = DEFAULT_PRIMARY_COLOR
+    if (scheme && colorSchemes[scheme]) {
+      seed = colorSchemes[scheme].color
+      // 选择预设时，清空自定义种子色
+      updateSettings({ md3ColorScheme: scheme, md3SeedColor: undefined })
+    } else {
+      updateSettings({ md3ColorScheme: scheme })
+    }
 
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
     applyMd3ThemeToRoot(seed, currentMode)
+  }
+
+  /**
+   * 更新自定义种子色
+   */
+  const updateMd3SeedColor = (color: string) => {
+    updateSettings({ md3SeedColor: color, md3ColorScheme: '' })
+
+    const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    applyMd3ThemeToRoot(color, currentMode)
   }
 
   /**
@@ -101,6 +117,7 @@ export function useThemeManager(options: {
   return {
     updateTheme,
     updateMd3ColorScheme,
+    updateMd3SeedColor,
     initTheme,
     applyTheme
   }
