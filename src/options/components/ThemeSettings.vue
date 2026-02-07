@@ -79,14 +79,15 @@ watch(
 )
 
 const schemeSeedColor = computed(() => {
-  // 如果有自定义种子色，优先使用
-  if (localMd3SeedColor.value) return localMd3SeedColor.value
-
   const key = localMd3ColorScheme.value
-  // 如果 key 在预设中
+  // 预设方案优先（避免默认 seed 覆盖预设）
   if (key && Object.prototype.hasOwnProperty.call(colorSchemes, key)) {
     return colorSchemes[key].color
   }
+
+  // 自定义种子色
+  if (localMd3SeedColor.value) return localMd3SeedColor.value
+
   return DEFAULT_PRIMARY_COLOR
 })
 
