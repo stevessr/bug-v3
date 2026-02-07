@@ -912,102 +912,71 @@
 /* ============ 浮动按钮 ============ */
 /* 使用 html 前缀增加选择器优先级以覆盖 CSS-in-JS 样式 */
 
-/* Primary 类型按钮 - 基础样式 */
+/*
+ * Ant Design Float Button 的 CSS 结构：
+ * .ant-float-btn-primary          -> 外层按钮，backgroundColor
+ *   .ant-float-btn-body            -> body，backgroundColor + &:hover
+ *     .ant-float-btn-content       -> content
+ *       .ant-float-btn-icon        -> icon
+ *       .ant-float-btn-description -> description
+ */
+
+/* Primary 类型按钮 - 外层背景 */
 html .ant-float-btn-primary,
 html [class*='ant-float-btn-primary'] {
   background-color: var(--md3-primary) !important;
-  border-color: var(--md3-primary) !important;
 }
 
-/* Primary 类型按钮 - body */
+/* Primary 类型按钮 - body 背景和 hover */
 html .ant-float-btn-primary .ant-float-btn-body,
 html [class*='ant-float-btn-primary'] [class*='ant-float-btn-body'] {
   background-color: var(--md3-primary) !important;
-  transition: background-color 0.2s ease !important;
 }
 
-/* Primary 类型按钮 - hover 状态 */
-html .ant-float-btn-primary:hover,
-html [class*='ant-float-btn-primary']:hover,
 html .ant-float-btn-primary .ant-float-btn-body:hover,
 html [class*='ant-float-btn-primary'] [class*='ant-float-btn-body']:hover {
   background-color: var(--palette-primary-50) !important;
-  border-color: var(--palette-primary-50) !important;
 }
 
-/* Primary 类型按钮 - content */
+/* Primary 类型按钮 - content、icon、description 颜色 */
 html .ant-float-btn-primary .ant-float-btn-content,
-html [class*='ant-float-btn-primary'] [class*='ant-float-btn-content'] {
-  color: var(--md3-on-primary) !important;
-}
-
-/* Primary 类型按钮 - icon */
+html [class*='ant-float-btn-primary'] [class*='ant-float-btn-content'],
 html .ant-float-btn-primary .ant-float-btn-icon,
 html .ant-float-btn-primary .anticon,
 html [class*='ant-float-btn-primary'] [class*='ant-float-btn-icon'],
-html [class*='ant-float-btn-primary'] .anticon {
-  color: var(--md3-on-primary) !important;
-}
-
-/* Primary 类型按钮 - description */
+html [class*='ant-float-btn-primary'] .anticon,
 html .ant-float-btn-primary .ant-float-btn-description,
 html [class*='ant-float-btn-primary'] [class*='ant-float-btn-description'] {
   color: var(--md3-on-primary) !important;
 }
 
-/* Default 类型按钮 - 基础样式 */
+/* Default 类型按钮 - 外层背景 */
 html .ant-float-btn-default,
 html [class*='ant-float-btn-default'] {
   background-color: var(--md3-surface) !important;
-  border-color: var(--md3-outline) !important;
 }
 
-/* Default 类型按钮 - body */
+/* Default 类型按钮 - body 背景和 hover */
 html .ant-float-btn-default .ant-float-btn-body,
 html [class*='ant-float-btn-default'] [class*='ant-float-btn-body'] {
   background-color: var(--md3-surface) !important;
-  transition: background-color 0.2s ease !important;
 }
 
-/* Default 类型按钮 - hover 状态 */
-html .ant-float-btn-default:hover,
-html [class*='ant-float-btn-default']:hover,
 html .ant-float-btn-default .ant-float-btn-body:hover,
 html [class*='ant-float-btn-default'] [class*='ant-float-btn-body']:hover {
-  background-color: var(--md3-surface-container) !important;
-  border-color: var(--md3-primary) !important;
+  background-color: var(--md3-surface-container-high) !important;
 }
 
-/* Default 类型按钮 - content */
+/* Default 类型按钮 - content、icon、description 颜色 */
 html .ant-float-btn-default .ant-float-btn-content,
-html [class*='ant-float-btn-default'] [class*='ant-float-btn-content'] {
-  color: var(--md3-on-surface) !important;
-}
-
-/* Default 类型按钮 - icon */
+html [class*='ant-float-btn-default'] [class*='ant-float-btn-content'],
 html .ant-float-btn-default .ant-float-btn-icon,
 html .ant-float-btn-default .anticon,
 html [class*='ant-float-btn-default'] [class*='ant-float-btn-icon'],
-html [class*='ant-float-btn-default'] .anticon {
-  color: var(--md3-on-surface) !important;
-}
-
-/* Default 类型按钮 - description */
+html [class*='ant-float-btn-default'] .anticon,
 html .ant-float-btn-default .ant-float-btn-description,
 html [class*='ant-float-btn-default'] [class*='ant-float-btn-description'] {
   color: var(--md3-on-surface) !important;
-}
-
-/* Default 类型按钮 - hover 时的内容颜色 */
-html .ant-float-btn-default:hover .ant-float-btn-content,
-html .ant-float-btn-default:hover .ant-float-btn-icon,
-html .ant-float-btn-default:hover .anticon,
-html .ant-float-btn-default:hover .ant-float-btn-description,
-html [class*='ant-float-btn-default']:hover [class*='ant-float-btn-content'],
-html [class*='ant-float-btn-default']:hover [class*='ant-float-btn-icon'],
-html [class*='ant-float-btn-default']:hover .anticon,
-html [class*='ant-float-btn-default']:hover [class*='ant-float-btn-description'] {
-  color: var(--md3-primary) !important;
 }
 
 /* Float Button Group 样式 */
@@ -1020,12 +989,16 @@ html [class*='ant-float-btn-group'] {
 html .ant-float-btn-group .ant-float-btn-primary,
 html [class*='ant-float-btn-group'] [class*='ant-float-btn-primary'] {
   background-color: var(--md3-primary) !important;
-  border-color: var(--md3-primary) !important;
 }
 
 html .ant-float-btn-group .ant-float-btn-primary .ant-float-btn-body,
 html [class*='ant-float-btn-group'] [class*='ant-float-btn-primary'] [class*='ant-float-btn-body'] {
   background-color: var(--md3-primary) !important;
+}
+
+html .ant-float-btn-group .ant-float-btn-primary .ant-float-btn-body:hover,
+html [class*='ant-float-btn-group'] [class*='ant-float-btn-primary'] [class*='ant-float-btn-body']:hover {
+  background-color: var(--palette-primary-50) !important;
 }
 
 /* Circle 形状的 body 圆角 */

@@ -60,7 +60,12 @@ const selectScheme = (key: string) => {
 
 const selectCustomColor = (color: string) => {
   customColor.value = color
+  if (activeTab.value !== 'custom') {
+    activeTab.value = 'custom'
+  }
   emit('update:md3SeedColor', color)
+  // 清空预设方案选择
+  emit('update:md3ColorScheme', '')
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -244,7 +249,9 @@ const handlePaste = async (event: ClipboardEvent) => {
                     v-if="customColor.toLowerCase() === color.hex.toLowerCase()"
                     class="absolute inset-0 flex items-center justify-center"
                   >
-                    <div class="w-2 h-2 bg-white rounded-full shadow-sm"></div>
+                    <div class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center" :style="{ backgroundColor: color.hex, filter: 'brightness(0.8)' }">
+                      <CheckOutlined class="text-white text-xs" />
+                    </div>
                   </div>
 
                   <!-- Tooltip -->
