@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DownOutlined, CheckOutlined } from '@ant-design/icons-vue'
+import { DownOutlined } from '@ant-design/icons-vue'
 import { ref, watch, isRef, computed, type Ref } from 'vue'
 
 import type { AppSettings } from '../../types/type'
@@ -9,6 +9,7 @@ import {
   TONES,
   PALETTES,
   DEFAULT_PRIMARY_COLOR,
+  colorSchemes,
   type ThemePalettes,
   type Md3Scheme
 } from '../../styles/md3Theme'
@@ -18,7 +19,7 @@ import ThemeColorPicker from './ThemeColorPicker.vue'
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 const settings = props.settings as AppSettings | Ref<AppSettings>
 
-const emit = defineEmits(['update:theme', 'update:md3SeedColor', 'update:md3ColorScheme'])
+const emit = defineEmits(['update:theme', 'update:md3ColorScheme'])
 
 const getTheme = () => {
   try {
@@ -29,20 +30,13 @@ const getTheme = () => {
   }
 }
 
-const getMd3SeedColor = () => {
-  try {
-    if (isRef(settings))
-      return (settings.value && settings.value.md3SeedColor) || DEFAULT_PRIMARY_COLOR
-    return (settings && (settings as AppSettings).md3SeedColor) || DEFAULT_PRIMARY_COLOR
-  } catch {
-    return DEFAULT_PRIMARY_COLOR
-  }
-}
-
 const getMd3ColorScheme = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.md3ColorScheme) || 'default'
-    return (settings && (settings as AppSettings).md3ColorScheme) || 'default'
+    const raw = isRef(settings)
+      ? settings.value && settings.value.md3ColorScheme
+      : settings && (settings as AppSettings).md3ColorScheme
+    if (raw && Object.prototype.hasOwnProperty.call(colorSchemes, raw)) return raw
+    return 'default'
   } catch {
     return 'default'
   }
@@ -56,14 +50,6 @@ watch(
   }
 )
 
-const localMd3SeedColor = ref<string>(getMd3SeedColor())
-watch(
-  () => getMd3SeedColor(),
-  val => {
-    localMd3SeedColor.value = val || DEFAULT_PRIMARY_COLOR
-  }
-)
-
 const localMd3ColorScheme = ref<string>(getMd3ColorScheme())
 watch(
   () => getMd3ColorScheme(),
@@ -71,6 +57,11 @@ watch(
     localMd3ColorScheme.value = val || 'default'
   }
 )
+
+const schemeSeedColor = computed(() => {
+  const key = localMd3ColorScheme.value as keyof typeof colorSchemes
+  return colorSchemes[key] || DEFAULT_PRIMARY_COLOR
+})
 
 const handleThemeSelect = (key: string) => {
   localTheme.value = key
@@ -81,226 +72,22 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
   handleThemeSelect(String(info.key))
 }
 
-const handleMd3SeedColorUpdate = (val: string) => {
-  emit('update:md3SeedColor', val)
-}
-
 const handleMd3ColorSchemeUpdate = (val: string) => {
   emit('update:md3ColorScheme', val)
 }
-
-// ============ 图片提取相关 ============
-
-const imagePreview = ref<string | null>(null)
-const imageSeedColor = ref<string>('')
-const imageLoading = ref(false)
-const extractedPalette = ref<string[]>([])
-const selectedPaletteIndex = ref<number>(0)
 const showFullPalette = ref(false)
-
-const rgbToHex = (r: number, g: number, b: number) =>
-  `#${[r, g, b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`
-
-const hexToRgb = (hex: string) => {
-  const match = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i)
-  if (!match) return null
-  return {
-    r: parseInt(match[1], 16),
-    g: parseInt(match[2], 16),
-    b: parseInt(match[3], 16)
-  }
-}
-
-const rgbToHsl = (r: number, g: number, b: number) => {
-  r /= 255
-  g /= 255
-  b /= 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  let h = 0
-  let s = 0
-  if (max !== min) {
-    const d = max - min
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-    switch (max) {
-      case r:
-        h = ((g - b) / d + (g < b ? 6 : 0)) / 6
-        break
-      case g:
-        h = ((b - r) / d + 2) / 6
-        break
-      case b:
-        h = ((r - g) / d + 4) / 6
-        break
-    }
-  }
-  return { h: h * 360, s: s * 100, l: l * 100 }
-}
-
-const getColorScore = (hex: string) => {
-  const rgb = hexToRgb(hex)
-  if (!rgb) return 0
-  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
-  const satScore = hsl.s
-  const lightScore = 100 - Math.abs(hsl.l - 50) * 2
-  return satScore * 0.7 + lightScore * 0.3
-}
-
-const loadImage = (src: string) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = src
-  })
-
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-
-// Median Cut 算法
-interface ColorBox {
-  colors: Array<{ r: number; g: number; b: number }>
-  rMin: number
-  rMax: number
-  gMin: number
-  gMax: number
-  bMin: number
-  bMax: number
-}
-
-const createBox = (colors: Array<{ r: number; g: number; b: number }>): ColorBox => {
-  let rMin = 255,
-    rMax = 0,
-    gMin = 255,
-    gMax = 0,
-    bMin = 255,
-    bMax = 0
-  for (const c of colors) {
-    if (c.r < rMin) rMin = c.r
-    if (c.r > rMax) rMax = c.r
-    if (c.g < gMin) gMin = c.g
-    if (c.g > gMax) gMax = c.g
-    if (c.b < bMin) bMin = c.b
-    if (c.b > bMax) bMax = c.b
-  }
-  return { colors, rMin, rMax, gMin, gMax, bMin, bMax }
-}
-
-const splitBox = (box: ColorBox): [ColorBox, ColorBox] => {
-  const rRange = box.rMax - box.rMin
-  const gRange = box.gMax - box.gMin
-  const bRange = box.bMax - box.bMin
-
-  let sortKey: 'r' | 'g' | 'b' = 'r'
-  if (gRange >= rRange && gRange >= bRange) sortKey = 'g'
-  else if (bRange >= rRange && bRange >= gRange) sortKey = 'b'
-
-  const sorted = [...box.colors].sort((a, b) => a[sortKey] - b[sortKey])
-  const mid = Math.floor(sorted.length / 2)
-
-  return [createBox(sorted.slice(0, mid)), createBox(sorted.slice(mid))]
-}
-
-const getBoxAverage = (box: ColorBox): { r: number; g: number; b: number } => {
-  let r = 0,
-    g = 0,
-    b = 0
-  for (const c of box.colors) {
-    r += c.r
-    g += c.g
-    b += c.b
-  }
-  const len = box.colors.length
-  return { r: Math.round(r / len), g: Math.round(g / len), b: Math.round(b / len) }
-}
-
-const extractColorPalette = async (dataUrl: string, count: number = 6): Promise<string[]> => {
-  const img = await loadImage(dataUrl)
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return ['#1890ff']
-
-  const size = 128
-  canvas.width = size
-  canvas.height = size
-  ctx.drawImage(img, 0, 0, size, size)
-  const { data } = ctx.getImageData(0, 0, size, size)
-
-  const colors: Array<{ r: number; g: number; b: number }> = []
-  for (let i = 0; i < data.length; i += 4) {
-    const alpha = data[i + 3]
-    if (alpha < 128) continue
-
-    const r = data[i]
-    const g = data[i + 1]
-    const b = data[i + 2]
-
-    const brightness = (r + g + b) / 3
-    if (brightness < 20 || brightness > 235) continue
-
-    const max = Math.max(r, g, b)
-    const min = Math.min(r, g, b)
-    const saturation = max === 0 ? 0 : (max - min) / max
-    if (saturation < 0.15) continue
-
-    colors.push({ r, g, b })
-  }
-
-  if (colors.length === 0) return ['#1890ff']
-
-  const boxes: ColorBox[] = [createBox(colors)]
-
-  while (boxes.length < count * 2) {
-    let maxVolume = 0
-    let maxIndex = 0
-    for (let i = 0; i < boxes.length; i++) {
-      const box = boxes[i]
-      const volume =
-        (box.rMax - box.rMin) * (box.gMax - box.gMin) * (box.bMax - box.bMin) * box.colors.length
-      if (volume > maxVolume) {
-        maxVolume = volume
-        maxIndex = i
-      }
-    }
-
-    if (boxes[maxIndex].colors.length < 2) break
-
-    const [box1, box2] = splitBox(boxes[maxIndex])
-    boxes.splice(maxIndex, 1, box1, box2)
-  }
-
-  const palette = boxes.map(box => {
-    const avg = getBoxAverage(box)
-    return rgbToHex(avg.r, avg.g, avg.b)
-  })
-
-  const uniquePalette = [...new Set(palette)]
-  uniquePalette.sort((a, b) => getColorScore(b) - getColorScore(a))
-
-  return uniquePalette.slice(0, count)
-}
 
 // ============ 调色板预览 ============
 
 // 当前颜色生成的完整调色板
 const currentPalettes = computed<ThemePalettes | null>(() => {
-  const color = imageSeedColor.value || localMd3SeedColor.value
-  if (!color) return null
-  return generatePalettes(color)
+  return generatePalettes(schemeSeedColor.value)
 })
 
 // MD3 语义颜色预览
 const md3Preview = computed<Md3Scheme | null>(() => {
-  const color = imageSeedColor.value || localMd3SeedColor.value
-  if (!color) return null
   const mode = localTheme.value === 'dark' ? 'dark' : 'light'
-  return generateMd3Scheme(color, mode as 'light' | 'dark')
+  return generateMd3Scheme(schemeSeedColor.value, mode as 'light' | 'dark')
 })
 
 // 调色板名称映射
@@ -315,39 +102,6 @@ const paletteLabels: Record<string, string> = {
 
 // 显示的色阶（简化版）
 const displayTones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
-
-const handleImageUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  imageLoading.value = true
-  extractedPalette.value = []
-  selectedPaletteIndex.value = 0
-  try {
-    const dataUrl = await readFileAsDataUrl(file)
-    const palette = await extractColorPalette(dataUrl, 6)
-    imagePreview.value = dataUrl
-    extractedPalette.value = palette
-    if (palette.length > 0) {
-      selectPaletteColor(0)
-    }
-  } finally {
-    imageLoading.value = false
-    input.value = ''
-  }
-}
-
-const selectPaletteColor = (index: number) => {
-  selectedPaletteIndex.value = index
-  const color = extractedPalette.value[index]
-  if (color) {
-    imageSeedColor.value = color
-    localMd3SeedColor.value = color
-    localMd3ColorScheme.value = 'custom'
-    emit('update:md3SeedColor', color)
-    emit('update:md3ColorScheme', 'custom')
-  }
-}
 </script>
 
 <template>
@@ -388,70 +142,13 @@ const selectPaletteColor = (index: number) => {
         <div class="flex items-start justify-between">
           <div>
             <label class="text-sm font-medium dark:text-white">主题色系</label>
-            <p class="text-sm text-gray-500 dark:text-gray-400">选择 MD3 色系（种子色）</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">选择 MD3 预设色系</p>
           </div>
           <div class="w-2/3">
             <ThemeColorPicker
-              v-model="localMd3SeedColor"
               :md3ColorScheme="localMd3ColorScheme"
-              @update:modelValue="handleMd3SeedColorUpdate"
               @update:md3ColorScheme="handleMd3ColorSchemeUpdate"
             />
-          </div>
-        </div>
-
-        <!-- 图片提取色彩 -->
-        <div class="flex items-start justify-between">
-          <div>
-            <label class="text-sm font-medium dark:text-white">图片生成（MD3）</label>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              上传图片自动提取色系并生成完整 MD3 调色板
-            </p>
-          </div>
-          <div class="w-2/3 space-y-3">
-            <input
-              type="file"
-              accept="image/*"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:rounded file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-white"
-              @change="handleImageUpload"
-            />
-            <div v-if="imageLoading" class="text-xs text-gray-500 dark:text-gray-400">
-              正在分析图片并生成调色板...
-            </div>
-
-            <!-- 图片预览和提取的颜色 -->
-            <div v-else-if="imagePreview && extractedPalette.length > 0" class="space-y-3">
-              <div class="flex items-start gap-4">
-                <img
-                  :src="imagePreview"
-                  alt="theme preview"
-                  class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-600 object-cover flex-shrink-0"
-                />
-                <div class="flex-1 space-y-2">
-                  <p class="text-xs text-gray-500 dark:text-gray-400">点击选择色系种子色：</p>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="(color, index) in extractedPalette"
-                      :key="color"
-                      class="w-8 h-8 rounded-lg border-2 transition-all duration-200 flex items-center justify-center hover:scale-110"
-                      :class="[
-                        selectedPaletteIndex === index
-                          ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-400'
-                      ]"
-                      :style="{ backgroundColor: color }"
-                      :title="color"
-                      @click="selectPaletteColor(index)"
-                    >
-                      <CheckOutlined
-                        v-if="selectedPaletteIndex === index"
-                        class="text-white drop-shadow-md text-xs"
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

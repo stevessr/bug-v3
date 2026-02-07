@@ -30,7 +30,17 @@ export interface AppSettings {
   theme?: 'system' | 'light' | 'dark'
   // MD3 theme colors
   md3SeedColor?: string // MD3 种子色
-  md3ColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
+  md3ColorScheme?:
+    | 'default'
+    | 'blue'
+    | 'green'
+    | 'purple'
+    | 'orange'
+    | 'red'
+    | 'macaron'
+    | 'dopamine'
+    | 'morandi'
+    | 'matcha'
   // Custom CSS injected into pages (managed in Options)
   customCssBlocks?: CustomCssBlock[] // Array of CSS blocks with toggle functionality
   // Optional UI config for content-script upload menu (auto items, iframe modals, side iframes)

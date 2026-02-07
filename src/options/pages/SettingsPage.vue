@@ -57,7 +57,6 @@ const {
   updateLinuxDoSeekingActionFilter,
   updateEnableLinuxDoCredit,
   updateTheme,
-  updateMd3SeedColor,
   updateMd3ColorScheme,
   updateCustomCssBlocks,
   updateUploadMenuItems,
@@ -113,7 +112,6 @@ onMounted(async () => {
             <ThemeSettings
               :settings="emojiStore.settings"
               @update:theme="updateTheme"
-              @update:md3SeedColor="updateMd3SeedColor"
               @update:md3ColorScheme="updateMd3ColorScheme"
             />
           </div>

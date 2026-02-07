@@ -822,3 +822,89 @@
 .ant-descriptions-item-content {
   color: var(--md3-on-surface) !important;
 }
+
+/* ============ 分页组件 ============ */
+.ant-pagination-item {
+  background: var(--md3-surface) !important;
+  border-color: var(--md3-outline-variant) !important;
+}
+
+.ant-pagination-item a {
+  color: var(--md3-on-surface) !important;
+}
+
+.ant-pagination-item-active {
+  background: var(--md3-primary-container) !important;
+  border-color: var(--md3-primary) !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--md3-on-primary-container) !important;
+}
+
+.ant-pagination-prev .ant-pagination-item-link,
+.ant-pagination-next .ant-pagination-item-link {
+  background: var(--md3-surface) !important;
+  color: var(--md3-on-surface) !important;
+  border-color: var(--md3-outline-variant) !important;
+}
+
+/* ============ 提示/气泡 ============ */
+.ant-tooltip-inner,
+.ant-popover-inner {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-on-surface) !important;
+  border-radius: 8px;
+}
+
+.ant-popover-arrow::before,
+.ant-tooltip-arrow::before {
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* ============ 通知/消息 ============ */
+.ant-message-notice-content,
+.ant-notification-notice {
+  background: var(--md3-surface-container-low) !important;
+  color: var(--md3-on-surface) !important;
+  border: 1px solid var(--md3-outline-variant) !important;
+  border-radius: 12px;
+}
+
+/* ============ 警告提示 ============ */
+.ant-alert {
+  background: var(--md3-surface-container) !important;
+  border-color: var(--md3-outline-variant) !important;
+  color: var(--md3-on-surface) !important;
+}
+
+/* ============ 分段控制/滑块 ============ */
+.ant-segmented {
+  background: var(--md3-surface-container) !important;
+}
+
+.ant-segmented-item-selected {
+  background: var(--md3-primary-container) !important;
+  color: var(--md3-on-primary-container) !important;
+}
+
+.ant-slider-rail {
+  background: var(--md3-surface-variant) !important;
+}
+
+.ant-slider-track {
+  background: var(--md3-primary) !important;
+}
+
+.ant-slider-handle::after {
+  box-shadow: 0 0 0 4px var(--md3-primary-container) !important;
+}
+
+/* ============ 进度条 ============ */
+.ant-progress-bg {
+  background: var(--md3-primary) !important;
+}
+
+.ant-progress-text {
+  color: var(--md3-on-surface) !important;
+}

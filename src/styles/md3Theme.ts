@@ -48,7 +48,11 @@ export const colorSchemes = {
   green: '#16a34a',
   purple: '#7c3aed',
   orange: '#f97316',
-  red: '#dc2626'
+  red: '#dc2626',
+  macaron: '#f6b3c3',
+  dopamine: '#ff7a59',
+  morandi: '#8d99ae',
+  matcha: '#84cc16'
 }
 
 // 主题颜色验证函数

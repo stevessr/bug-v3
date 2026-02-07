@@ -1,4 +1,4 @@
-import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR } from '@/styles/md3Theme'
+import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR, colorSchemes } from '@/styles/md3Theme'
 import { storageGet, storageSet } from '@/utils/simpleStorage'
 import type { AppSettings } from '@/types/type'
 
@@ -58,29 +58,16 @@ export function useThemeManager(options: {
     applyTheme(theme)
   }
 
-  /**
-   * 更新自定义主色
-   */
-  const updateMd3SeedColor = async (color: string) => {
-    updateSettings({ md3SeedColor: color })
-
-    const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    applyMd3ThemeToRoot(color || DEFAULT_PRIMARY_COLOR, currentMode)
-
-    window.dispatchEvent(
-      new CustomEvent('theme-colors-changed', {
-        detail: {
-          primaryColor: color
-        }
-      })
-    )
-  }
 
   /**
    * 更新自定义配色方案
    */
   const updateMd3ColorScheme = (scheme: AppSettings['md3ColorScheme']) => {
-    updateSettings({ md3ColorScheme: scheme })
+    const seed = colorSchemes[scheme as keyof typeof colorSchemes] || DEFAULT_PRIMARY_COLOR
+    updateSettings({ md3ColorScheme: scheme, md3SeedColor: seed })
+
+    const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    applyMd3ThemeToRoot(seed, currentMode)
   }
 
   /**
@@ -113,7 +100,6 @@ export function useThemeManager(options: {
 
   return {
     updateTheme,
-    updateMd3SeedColor,
     updateMd3ColorScheme,
     initTheme,
     applyTheme

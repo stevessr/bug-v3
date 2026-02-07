@@ -548,7 +548,18 @@ export async function getSettings(): Promise<AppSettings | null> {
   return migrated
 }
 
-const md3Schemes = ['default', 'blue', 'green', 'purple', 'orange', 'red', 'custom'] as const
+const md3Schemes = [
+  'default',
+  'blue',
+  'green',
+  'purple',
+  'orange',
+  'red',
+  'macaron',
+  'dopamine',
+  'morandi',
+  'matcha'
+] as const
 const isMd3Scheme = (value?: string): value is AppSettings['md3ColorScheme'] =>
   !!value && (md3Schemes as readonly string[]).includes(value)
 

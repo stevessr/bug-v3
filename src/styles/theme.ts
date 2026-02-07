@@ -1,4 +1,4 @@
-import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR } from './md3Theme'
+import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR, colorSchemes } from './md3Theme'
 
 import { getSettings, storageGet } from '@/utils/simpleStorage'
 
@@ -37,7 +37,8 @@ async function applyTheme() {
     )
 
     const settings = await getSettings()
-    const primaryColor = settings?.md3SeedColor || DEFAULT_PRIMARY_COLOR
+    const scheme = settings?.md3ColorScheme as keyof typeof colorSchemes | undefined
+    const primaryColor = (scheme && colorSchemes[scheme]) || DEFAULT_PRIMARY_COLOR
     applyMd3ThemeToRoot(primaryColor, finalTheme as 'light' | 'dark')
   }
 
@@ -53,7 +54,8 @@ async function applyTheme() {
   window.addEventListener('theme-changed', async event => {
     const detail = (event as CustomEvent).detail as { mode?: 'light' | 'dark' } | undefined
     const settings = await getSettings()
-    const primaryColor = settings?.md3SeedColor || DEFAULT_PRIMARY_COLOR
+    const scheme = settings?.md3ColorScheme as keyof typeof colorSchemes | undefined
+    const primaryColor = (scheme && colorSchemes[scheme]) || DEFAULT_PRIMARY_COLOR
     const mode =
       detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
     applyMd3ThemeToRoot(primaryColor, mode || 'light')
