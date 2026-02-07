@@ -53,7 +53,7 @@
 
 ### 1. 标准迁移模板
 
-**迁移前:**
+**迁移前：**
 
 ```typescript
 console.log('[MyFeature] Initialization started')
@@ -61,7 +61,7 @@ console.warn('[MyFeature] Config missing, using defaults')
 console.error('[MyFeature] Failed to load', error)
 ```
 
-**迁移后:**
+**迁移后：**
 
 ```typescript
 import { createLogger } from '@/utils/logger'
@@ -75,7 +75,7 @@ log.error('Failed to load', error)
 
 ### 2. Vue 组件迁移
 
-**迁移前:**
+**迁移前：**
 
 ```vue
 <script setup lang="ts">
@@ -85,7 +85,7 @@ const handleClick = () => {
 </script>
 ```
 
-**迁移后:**
+**迁移后：**
 
 ```vue
 <script setup lang="ts">
@@ -163,7 +163,7 @@ log.error('Initialization failed', error)
 
 ### 1. 上下文命名
 
-**好的上下文名称:**
+**好的上下文名称：**
 
 ```typescript
 createLogger('DiscourseContent') // 明确的功能
@@ -171,7 +171,7 @@ createLogger('EmojiStore') // 清晰的模块
 createLogger('PixivDetector') // 具体的组件
 ```
 
-**避免:**
+**避免：**
 
 ```typescript
 createLogger('utils') // 太宽泛
@@ -181,14 +181,14 @@ createLogger('temp') // 临时名称
 
 ### 2. 结构化日志
 
-**推荐:**
+**推荐：**
 
 ```typescript
 log.info('User action', { action: 'click', target: 'button', userId })
 log.error('API call failed', { endpoint, statusCode, error })
 ```
 
-**避免:**
+**避免：**
 
 ```typescript
 log.info(`User ${userId} clicked button`) // 难以解析
@@ -198,12 +198,12 @@ log.error('Error: ' + error.toString()) // 丢失结构
 ### 3. 性能考虑
 
 ```typescript
-// ✅ 好: 条件日志
+// ✅ 好：条件日志
 if (log.level <= LogLevel.DEBUG) {
   log.debug('Expensive operation', computeExpensiveData())
 }
 
-// ❌ 差: 总是计算
+// ❌ 差：总是计算
 log.debug('Expensive operation', computeExpensiveData())
 ```
 
@@ -213,13 +213,13 @@ Logger 会自动根据环境调整行为：
 
 **开发环境 (`NODE_ENV=development`):**
 
-- 日志级别: DEBUG
+- 日志级别：DEBUG
 - 所有日志输出到 console
 - 保留详细信息
 
 **生产环境 (`NODE_ENV=production`):**
 
-- 日志级别: WARN
+- 日志级别：WARN
 - 只输出警告和错误
 - 自动过滤 debug/info 日志
 
@@ -290,8 +290,8 @@ logger.exportLogs() // 导出所有日志
 
 ### 3. 性能影响
 
-- 日志调用开销: ~0.1ms
-- 内存占用: ~100KB (100 条日志)
+- 日志调用开销：~0.1ms
+- 内存占用：~100KB (100 条日志)
 - 生产环境几乎无开销（被过滤）
 
 ## 🚫 反模式
@@ -364,7 +364,7 @@ log.info('Batch completed', { processed, failed })
 
 ---
 
-**最后更新:** 2026-01-10
-**状态:** 📋 进行中
-**负责人:** 开发团队
-**下一个里程碑:** 迁移 20% 的 console 调用
+**最后更新：** 2026-01-10
+**状态：** 📋 进行中
+**负责人：** 开发团队
+**下一个里程碑：** 迁移 20% 的 console 调用

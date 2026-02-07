@@ -308,7 +308,7 @@ export function mcpToolToAnthropicTool(
 }
 
 /**
- * 解析 MCP 工具调用名称，提取服务ID和工具名
+ * 解析 MCP 工具调用名称，提取服务 ID 和工具名
  */
 export function parseMcpToolName(
   prefixedName: string
@@ -316,7 +316,7 @@ export function parseMcpToolName(
   const cached = toolNameMap.get(prefixedName)
   if (cached) return cached
 
-  // 格式: mcp__serverId__toolName
+  // 格式：mcp__serverId__toolName
   if (!prefixedName.startsWith('mcp__')) return null
   const rest = prefixedName.slice(5)
   const sepIndex = rest.indexOf('__')

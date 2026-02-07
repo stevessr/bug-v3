@@ -320,7 +320,7 @@ function promoteSubagentResults(
     addMemory('observation', prefixedKey, `${prefix}${value}`, {
       source: 'system',
       importance: success ? 5 : 3,
-      context: `来自子代理: ${context.agentName || context.agentId || 'unknown'}`
+      context: `来自子代理：${context.agentName || context.agentId || 'unknown'}`
     })
   }
 }

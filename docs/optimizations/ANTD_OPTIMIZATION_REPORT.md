@@ -1,8 +1,8 @@
 # Ant Design Vue 优化分析报告
 
-**日期:** 2026-01-10
-**分析工具:** scripts/analyze-antd-usage.js
-**分析范围:** src/options/ 和 src/popup/
+**日期：** 2026-01-10
+**分析工具：** scripts/analyze-antd-usage.js
+**分析范围：** src/options/ 和 src/popup/
 
 ---
 
@@ -33,7 +33,7 @@
 | 9    | **Spin**     | 6 个文件  | 加载状态 |
 | 10   | **Card**     | 5 个文件  | 卡片     |
 
-**其他组件:** Alert, Badge, Collapse, ConfigProvider, Image, InputNumber, Radio, Select, Slider, Space, Switch, Tabs, Tag, Tooltip, Transfer
+**其他组件：** Alert, Badge, Collapse, ConfigProvider, Image, InputNumber, Radio, Select, Slider, Space, Switch, Tabs, Tag, Tooltip, Transfer
 
 ---
 
@@ -56,7 +56,7 @@ Components({
 })
 ```
 
-**优点:**
+**优点：**
 
 - ✅ 自动按需导入
 - ✅ Tree-shaking 已生效
@@ -75,14 +75,14 @@ Components({
 
 #### 问题 1: 直接导入 `message`
 
-**影响:** 9 个文件
-**当前做法:**
+**影响：** 9 个文件
+**当前做法：**
 
 ```typescript
 import { message } from 'ant-design-vue'
 ```
 
-**建议做法:**
+**建议做法：**
 
 ```typescript
 // vite.config.ts 中已配置
@@ -99,18 +99,18 @@ AutoImport({
 message.success('操作成功')
 ```
 
-**优化潜力:** 小（message 是单例，已优化）
+**优化潜力：** 小（message 是单例，已优化）
 
 #### 问题 2: 直接导入 `ConfigProvider`
 
-**影响:** 1 个文件 (Popup.vue)
-**当前做法:**
+**影响：** 1 个文件 (Popup.vue)
+**当前做法：**
 
 ```typescript
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 ```
 
-**分析:** ConfigProvider 需要在根组件使用，直接导入是合理的。
+**分析：** ConfigProvider 需要在根组件使用，直接导入是合理的。
 
 ---
 
@@ -118,18 +118,18 @@ import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
 ### 当前状态
 
-- **未压缩:** 683KB
+- **未压缩：** 683KB
 - **gzip:** 194KB
-- **占总体积:** ~8% (总 dist: 85MB)
+- **占总体积：** ~8% (总 dist: 85MB)
 
 ### 体积构成估算
 
 | 组件类型         | 估算占比 | 估算体积 |
 | ---------------- | -------- | -------- |
-| 核心组件 (29个)  | ~60%     | ~410KB   |
-| 图标 (33个)      | ~25%     | ~170KB   |
+| 核心组件 (29 个)  | ~60%     | ~410KB   |
+| 图标 (33 个)      | ~25%     | ~170KB   |
 | 样式/主题        | ~10%     | ~68KB    |
-| 其他 (locales等) | ~5%      | ~35KB    |
+| 其他 (locales 等) | ~5%      | ~35KB    |
 
 ### 优化潜力评估
 
@@ -150,9 +150,9 @@ import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
 #### 1. 移除直接导入 message
 
-**收益:** 代码更简洁，潜在减少 ~1-2KB
+**收益：** 代码更简洁，潜在减少 ~1-2KB
 
-**实施步骤:**
+**实施步骤：**
 
 ```bash
 # 1. 确认 vite.config.ts 已配置 (已完成)
@@ -192,7 +192,7 @@ pnpm build
 // 优化为只加载 zh-CN 和 en-US
 ```
 
-**预期收益:** ~5-10KB
+**预期收益：** ~5-10KB
 
 #### 3. 考虑按页面代码分割
 
@@ -206,7 +206,7 @@ import HeavyPage from './pages/HeavyPage.vue'
 const HeavyPage = defineAsyncComponent(() => import('./pages/HeavyPage.vue'))
 ```
 
-**预期收益:** 减少初始加载，提升首屏速度
+**预期收益：** 减少初始加载，提升首屏速度
 
 ### 低优先级 🟢
 
@@ -217,7 +217,7 @@ const HeavyPage = defineAsyncComponent(() => import('./pages/HeavyPage.vue'))
 - 只覆盖必要的变量
 - 移除未使用的样式
 
-**预期收益:** ~2-5KB
+**预期收益：** ~2-5KB
 
 ---
 
@@ -242,7 +242,7 @@ const HeavyPage = defineAsyncComponent(() => import('./pages/HeavyPage.vue'))
 3. ✅ Tree-shaking 工作正常
 4. ⚠️ 优化潜力有限 (~10-20KB，约 3% 减少)
 
-**建议:**
+**建议：**
 
 - 实施低成本优化（移除 message 导入）
 - 保持当前配置
@@ -309,6 +309,6 @@ import { Button } from 'ant-design-vue'
 
 ---
 
-**报告生成:** 2026-01-10
-**分析工具版本:** 1.0.0
-**下次审查建议:** 3-6 个月后或有重大功能更新时
+**报告生成：** 2026-01-10
+**分析工具版本：** 1.0.0
+**下次审查建议：** 3-6 个月后或有重大功能更新时

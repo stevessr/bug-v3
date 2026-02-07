@@ -124,7 +124,7 @@ export {
 
 // 记忆系统
 export {
-  // 6层上下文
+  // 6 层上下文
   loadTableUsage,
   addTableUsage,
   getTableUsage,

@@ -13,9 +13,9 @@
 
 ## 范围
 
-- **存储系统:** `src/shared/storage/` 下的逻辑。
-- **状态管理:** `src/shared/stores/` 下的 Pinia store 状态流转。
-- **UI 交互:** Popup 页面和 Options 页面的主要功能流程。
+- **存储系统：** `src/shared/storage/` 下的逻辑。
+- **状态管理：** `src/shared/stores/` 下的 Pinia store 状态流转。
+- **UI 交互：** Popup 页面和 Options 页面的主要功能流程。
 
 ## 技术方案
 

@@ -290,7 +290,7 @@ const argSourceOptions = computed(() => {
 
             <!-- 条件显示 -->
             <div v-if="step.condition" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              条件: {{ step.condition.field }} {{ step.condition.operator }}
+              条件：{{ step.condition.field }} {{ step.condition.operator }}
               {{ step.condition.value }}
             </div>
 

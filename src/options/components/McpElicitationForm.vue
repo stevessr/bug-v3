@@ -169,7 +169,7 @@ onUnmounted(() => {
         <FormOutlined class="text-2xl" />
         <div>
           <h3 class="text-lg font-semibold">MCP 服务请求输入</h3>
-          <p class="text-sm opacity-90">来自: {{ currentRequest.serverName }}</p>
+          <p class="text-sm opacity-90">来自：{{ currentRequest.serverName }}</p>
         </div>
       </div>
 

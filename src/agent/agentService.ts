@@ -615,7 +615,7 @@ const buildSystemPrompt = (
       // 工具会通过 MCP 协议自动发现并作为 tool 传入
       lines.push(
         `可用 MCP 服务：${enabledServers.map(server => server.name).join(', ')}`,
-        'MCP 工具已自动注册为 tool，可直接调用。工具名格式：mcp__服务ID__工具名。',
+        'MCP 工具已自动注册为 tool，可直接调用。工具名格式：mcp__服务 ID__工具名。',
         '当需要搜索、获取文档等功能时，请直接调用对应的 MCP 工具，不要在文本中描述工具调用。'
       )
     }

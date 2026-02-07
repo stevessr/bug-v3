@@ -831,7 +831,7 @@ onMounted(() => {
           v-if="getStats(selectedSkillForStats.id)?.lastUsed"
           class="text-xs text-gray-500 dark:text-gray-400"
         >
-          最后使用: {{ new Date(getStats(selectedSkillForStats.id)!.lastUsed!).toLocaleString() }}
+          最后使用：{{ new Date(getStats(selectedSkillForStats.id)!.lastUsed!).toLocaleString() }}
         </div>
       </div>
     </a-modal>

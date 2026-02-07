@@ -190,12 +190,12 @@ const testChain = async (chain: SkillChain) => {
     if (result.success) {
       message.success('工作流执行成功')
     } else {
-      message.error('工作流执行失败: ' + result.error)
+      message.error('工作流执行失败：' + result.error)
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     testResults.value[chain.id] = { success: false, error: errorMsg }
-    message.error('工作流执行出错: ' + errorMsg)
+    message.error('工作流执行出错：' + errorMsg)
   } finally {
     testingChainId.value = null
   }
@@ -228,7 +228,7 @@ const saveScript = () => {
 
   const validation = validateScript(scriptContent.value)
   if (!validation.valid) {
-    message.error('脚本语法错误: ' + validation.error)
+    message.error('脚本语法错误：' + validation.error)
     return
   }
 
@@ -252,7 +252,7 @@ const saveScript = () => {
           message.success('脚本已更新')
         })
         .catch(err => {
-          message.error('保存失败: ' + (err instanceof Error ? err.message : String(err)))
+          message.error('保存失败：' + (err instanceof Error ? err.message : String(err)))
         })
     }
   } else {
@@ -394,7 +394,7 @@ ${scriptContent.value}
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    message.error('AI 生成失败: ' + errorMsg)
+    message.error('AI 生成失败：' + errorMsg)
   } finally {
     aiLoading.value = false
   }

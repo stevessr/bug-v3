@@ -287,24 +287,24 @@ const handleModalClose = () => {
                 class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400"
               >
                 <div>
-                  <span class="text-gray-400">间隔:</span>
+                  <span class="text-gray-400">间隔：</span>
                   {{ formatInterval(task.intervalMinutes) }}
                 </div>
                 <div>
-                  <span class="text-gray-400">话题数:</span>
+                  <span class="text-gray-400">话题数：</span>
                   {{ task.minTopicsPerRun }}-{{ task.maxTopicsPerRun }}
                 </div>
                 <div>
-                  <span class="text-gray-400">累计浏览:</span>
+                  <span class="text-gray-400">累计浏览：</span>
                   {{ task.totalTopicsRead }}
                 </div>
                 <div>
-                  <span class="text-gray-400">累计点赞:</span>
+                  <span class="text-gray-400">累计点赞：</span>
                   {{ task.totalLikes }}
                 </div>
               </div>
               <div class="text-xs text-gray-400 mt-1">
-                下次执行: {{ formatTime(task.nextRunAt) }}
+                下次执行：{{ formatTime(task.nextRunAt) }}
               </div>
             </div>
             <div class="flex items-center gap-1 ml-4">

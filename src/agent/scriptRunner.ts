@@ -91,7 +91,7 @@ export async function executeScript(
       // 安全限制：只允许 GET 和 POST
       const method = init?.method?.toUpperCase() || 'GET'
       if (!['GET', 'POST', 'PUT', 'DELETE'].includes(method)) {
-        throw new Error(`不支持的 HTTP 方法: ${method}`)
+        throw new Error(`不支持的 HTTP 方法：${method}`)
       }
       return fetch(input, init)
     },
@@ -104,10 +104,10 @@ export async function executeScript(
       ): Promise<unknown> {
         const server = mcpServers.find(s => s.id === serverId)
         if (!server) {
-          throw new Error(`未找到 MCP 服务: ${serverId}`)
+          throw new Error(`未找到 MCP 服务：${serverId}`)
         }
         if (!server.enabled) {
-          throw new Error(`MCP 服务未启用: ${serverId}`)
+          throw new Error(`MCP 服务未启用：${serverId}`)
         }
         const result = await callMcpTool(server, toolName, args)
         if (result.error) {
@@ -349,7 +349,7 @@ const text = args.text || '';
 const chars = text.length;
 const words = text.split(/\\s+/).filter(w => w.length > 0).length;
 const lines = text.split('\\n').length;
-const sentences = text.split(/[.!?。！？]+/).filter(s => s.trim().length > 0).length;
+const sentences = text.split(/[.!?.!?]+/).filter(s => s.trim().length > 0).length;
 
 return {
   characters: chars,

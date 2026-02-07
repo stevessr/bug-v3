@@ -173,19 +173,19 @@ const formatInterval = (minutes: number) => {
                 class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400"
               >
                 <div>
-                  <span class="text-gray-400">间隔:</span>
+                  <span class="text-gray-400">间隔：</span>
                   {{ formatInterval(task.intervalMinutes) }}
                 </div>
                 <div>
-                  <span class="text-gray-400">每次最多:</span>
+                  <span class="text-gray-400">每次最多：</span>
                   {{ task.maxLikesPerRun }} 个
                 </div>
                 <div>
-                  <span class="text-gray-400">累计点赞:</span>
+                  <span class="text-gray-400">累计点赞：</span>
                   {{ task.totalLikes }}
                 </div>
                 <div>
-                  <span class="text-gray-400">下次执行:</span>
+                  <span class="text-gray-400">下次执行：</span>
                   {{ formatTime(task.nextRunAt) }}
                 </div>
               </div>

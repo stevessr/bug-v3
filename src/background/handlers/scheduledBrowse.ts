@@ -63,7 +63,7 @@ async function fetchTopicList(baseUrl: string, strategy: BrowseStrategy): Promis
   })
 
   if (!response.ok) {
-    throw new Error(`获取话题列表失败: ${response.status}`)
+    throw new Error(`获取话题列表失败：${response.status}`)
   }
 
   const data: TopicListResponse = await response.json()
@@ -261,7 +261,7 @@ async function checkAndExecuteBrowseTasks() {
       if (!task.enabled) continue
       if (task.nextRunAt && task.nextRunAt > now) continue
 
-      console.log(`[ScheduledBrowse] 执行任务: ${task.name}`)
+      console.log(`[ScheduledBrowse] 执行任务：${task.name}`)
 
       const result = await executeBrowseTask(task)
 
@@ -291,7 +291,7 @@ async function checkAndExecuteBrowseTasks() {
       })
     }
   } catch (err) {
-    console.error('[ScheduledBrowse] 检查任务失败:', err)
+    console.error('[ScheduledBrowse] 检查任务失败：', err)
   }
 }
 

@@ -31,7 +31,7 @@ async function fetchUserActivity(baseUrl: string, username: string): Promise<Use
   })
 
   if (!response.ok) {
-    throw new Error(`获取用户活动失败: ${response.status}`)
+    throw new Error(`获取用户活动失败：${response.status}`)
   }
 
   const data: UserActivityResponse = await response.json()
@@ -96,7 +96,7 @@ async function executeTask(task: ScheduledLikeTask): Promise<{ liked: number; er
     // 获取用户最近活动
     const activities = await fetchUserActivity(task.baseUrl, task.username)
 
-    // 过滤出帖子（action_type 4=点赞, 5=回复）
+    // 过滤出帖子（action_type 4=点赞，5=回复）
     const postIds = [...new Set(activities.map(a => a.post_id))]
 
     // 限制每次点赞数量
@@ -119,14 +119,14 @@ async function executeTask(task: ScheduledLikeTask): Promise<{ liked: number; er
           errors.push(`帖子 ${postId} 点赞失败`)
         }
 
-        // 添加随机延迟（1-3秒），避免触发限流
+        // 添加随机延迟（1-3 秒），避免触发限流
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
       } catch (err) {
         errors.push(`帖子 ${postId}: ${err instanceof Error ? err.message : '未知错误'}`)
       }
     }
   } catch (err) {
-    errors.push(`获取用户活动失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    errors.push(`获取用户活动失败：${err instanceof Error ? err.message : '未知错误'}`)
   }
 
   return { liked, errors }
@@ -155,7 +155,7 @@ async function checkAndExecuteTasks() {
       // 检查是否到达执行时间
       if (task.nextRunAt && task.nextRunAt > now) continue
 
-      console.log(`[ScheduledLikes] 执行任务: @${task.username}`)
+      console.log(`[ScheduledLikes] 执行任务：@${task.username}`)
 
       const result = await executeTask(task)
 
@@ -184,7 +184,7 @@ async function checkAndExecuteTasks() {
       })
     }
   } catch (err) {
-    console.error('[ScheduledLikes] 检查任务失败:', err)
+    console.error('[ScheduledLikes] 检查任务失败：', err)
   }
 }
 

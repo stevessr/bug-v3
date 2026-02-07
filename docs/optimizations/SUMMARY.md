@@ -4,41 +4,41 @@
 
 ### 🚀 Content Script 动态加载 (2026-01-10)
 
-**优化目标:** 减少 content.js 初始加载体积
+**优化目标：** 减少 content.js 初始加载体积
 
-**实施内容:**
+**实施内容：**
 
 1. 创建平台检测工具 ([platformDetector.ts](../src/content/utils/platformDetector.ts))
 2. 创建动态加载器 ([platformLoader.ts](../src/content/utils/platformLoader.ts))
 3. 重构 content.ts 使用动态导入
 4. 更新 Uninject.ts 移除静态依赖
 
-**优化成果:**
+**优化成果：**
 
-- ✅ content.js 体积: **357KB → 161KB** (减少 54.9%)
-- ✅ 压缩后: **44.67KB** (gzip)
+- ✅ content.js 体积：**357KB → 161KB** (减少 54.9%)
+- ✅ 压缩后：**44.67KB** (gzip)
 - ✅ 类型检查通过
 - ✅ 构建成功
 - ✅ 向后兼容
 
-**详细报告:** [CONTENT_SCRIPT_DYNAMIC_LOADING.md](./CONTENT_SCRIPT_DYNAMIC_LOADING.md)
+**详细报告：** [CONTENT_SCRIPT_DYNAMIC_LOADING.md](./CONTENT_SCRIPT_DYNAMIC_LOADING.md)
 
 ---
 
 ### 📝 统一日志管理基础设施 (2026-01-10)
 
-**优化目标:** 建立统一的日志管理系统，逐步替代 console 调用
+**优化目标：** 建立统一的日志管理系统，逐步替代 console 调用
 
-**实施内容:**
+**实施内容：**
 
 1. 创建迁移脚本 ([scripts/migrate-to-logger.js](../../scripts/migrate-to-logger.js))
 2. 编写详细迁移指南 ([LOGGER_MIGRATION_GUIDE.md](./LOGGER_MIGRATION_GUIDE.md))
 3. 在新代码中强制使用 logger (platformDetector, platformLoader)
 4. 建立渐进式迁移策略
 
-**当前状态:**
+**当前状态：**
 
-- 📊 Console 调用: **477 个** (94 个文件)
+- 📊 Console 调用：**477 个** (94 个文件)
   - Content: 268 个 (47 文件)
   - Background: 44 个 (11 文件)
   - Options: 165 个 (36 文件)
@@ -46,12 +46,12 @@
 - 📋 迁移指南已完成
 - 🔧 自动化迁移工具已就绪
 
-**下一步:**
+**下一步：**
 
 - 渐进式迁移高频文件
 - 优先处理 content/discourse/_ 和 background/handlers/_
 
-**详细指南:** [LOGGER_MIGRATION_GUIDE.md](./LOGGER_MIGRATION_GUIDE.md)
+**详细指南：** [LOGGER_MIGRATION_GUIDE.md](./LOGGER_MIGRATION_GUIDE.md)
 
 ---
 
@@ -62,28 +62,28 @@
 ### 🔴 高优先级
 
 - [x] **Content Script 动态加载** ✅ 已完成
-  - 预期收益: 减少 50% 初始体积
-  - 实际收益: 减少 54.9% (196KB)
+  - 预期收益：减少 50% 初始体积
+  - 实际收益：减少 54.9% (196KB)
 
 - [x] **统一日志管理基础设施** ✅ 已完成
-  - 当前状态: 477 个 console 调用分散在 94 个文件
-  - 已完成: 迁移指南、自动化工具、新代码强制使用
-  - 下一步: 渐进式迁移现有代码
-  - 预期收益: 提升开发性能 10-20%，更好的日志管理
+  - 当前状态：477 个 console 调用分散在 94 个文件
+  - 已完成：迁移指南、自动化工具、新代码强制使用
+  - 下一步：渐进式迁移现有代码
+  - 预期收益：提升开发性能 10-20%，更好的日志管理
 
 ### 🟡 中优先级
 
 - [x] **Ant Design Vue Tree Shaking 分析** ✅ 已完成
-  - 当前: vendor-ui.js **683KB** (压缩后 194KB)
-  - 分析结果: 使用 29/70 组件 (41.4%)，配置已优化
-  - 优化潜力: ~10-20KB (3%)，收益有限
-  - 结论: 当前体积合理，unplugin-vue-components 工作正常
-  - 建议: 移除 9 个 message 直接导入即可
+  - 当前：vendor-ui.js **683KB** (压缩后 194KB)
+  - 分析结果：使用 29/70 组件 (41.4%)，配置已优化
+  - 优化潜力：~10-20KB (3%)，收益有限
+  - 结论：当前体积合理，unplugin-vue-components 工作正常
+  - 建议：移除 9 个 message 直接导入即可
 
 - [ ] **innerHTML 安全审查**
   - 发现 15 个文件使用 innerHTML
   - 大部分已使用 DOMPurify，需审查 createEl.ts
-  - 预期收益: 提升安全性
+  - 预期收益：提升安全性
 
 - [ ] **代码质量改进**
   - 80 个 TODO/FIXME 注释需处理
@@ -105,15 +105,15 @@
 
 ### 当前状态 (2026-01-10)
 
-**打包体积:**
+**打包体积：**
 
-- 总计: **85MB** (dist 文件夹)
+- 总计：**85MB** (dist 文件夹)
 - content.js: **161KB** (未压缩) / **44.67KB** (gzip) ✅ 优化后
 - vendor-ui.js: **683KB** / **194KB** (gzip)
 - vendor-core.js: **116KB** / **44KB** (gzip)
 - index.js: **151KB** / **44KB** (gzip)
 
-**已实施的优化:**
+**已实施的优化：**
 
 - ✅ ShallowRef 响应式优化
 - ✅ 批量存储操作
@@ -124,7 +124,7 @@
 - ✅ 动态模块加载 (新)
 - ✅ 编译时优化 (Terser)
 
-**代码质量:**
+**代码质量：**
 
 - ✅ TypeScript 严格模式
 - ✅ ESLint + Prettier
@@ -189,9 +189,9 @@
 
 ### 🎯 移除 message 直接导入
 
-**优化目标:** 移除 9 个文件中的 `import { message } from 'ant-design-vue'` 直接导入
+**优化目标：** 移除 9 个文件中的 `import { message } from 'ant-design-vue'` 直接导入
 
-**实施内容:**
+**实施内容：**
 已移除以下文件中的 message 直接导入，改用 auto-import:
 
 1. ✅ [src/options/modals/TelegramStickerModal.vue](../../src/options/modals/TelegramStickerModal.vue)
@@ -204,16 +204,16 @@
 8. ✅ [src/options/composables/useCacheExportImport.ts](../../src/options/composables/useCacheExportImport.ts)
 9. ✅ [src/options/composables/useImageCache.ts](../../src/options/composables/useImageCache.ts)
 
-**优化成果:**
+**优化成果：**
 
 - ✅ 所有 9 个文件已更新
 - ✅ TypeScript 类型检查通过
-- ✅ 构建成功 (1分8秒)
+- ✅ 构建成功 (1 分 8 秒)
 - ✅ 代码更简洁，符合项目 auto-import 配置
 - ✅ 预期减少 ~2KB bundle size
 
-**技术说明:**
-message API 已在 vite.config.ts 中配置为自动导入:
+**技术说明：**
+message API 已在 vite.config.ts 中配置为自动导入：
 
 ```typescript
 AutoImport({
@@ -230,16 +230,16 @@ AutoImport({
 
 ---
 
-**最后更新:** 2026-01-10
-**优化进度:** 3/3 主要任务 + 1/1 可选任务完成 ✅
-**已完成:**
+**最后更新：** 2026-01-10
+**优化进度：** 3/3 主要任务 + 1/1 可选任务完成 ✅
+**已完成：**
 
 1. ✅ Content Script 动态加载 (减少 54.9%)
 2. ✅ 统一日志管理基础设施 (工具和指南完成)
 3. ✅ Ant Design Vue 分析 (体积合理，小优化可选)
-4. ✅ 移除 message 直接导入 (9个文件，~2KB优化)
+4. ✅ 移除 message 直接导入 (9 个文件，~2KB 优化)
 
-**剩余可选任务:**
+**剩余可选任务：**
 
-1. 可选: 渐进式迁移 console 到 logger
-2. 可选: innerHTML 安全审查
+1. 可选：渐进式迁移 console 到 logger
+2. 可选：innerHTML 安全审查

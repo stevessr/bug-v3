@@ -216,13 +216,13 @@ export const BUILTIN_SKILLS: Skill[] = [
     icon: '🔍',
     priority: 100,
     triggers: [
-      '搜索(.+)',
-      '查找(.+)',
-      '查询(.+)',
+      '搜索 (.+)',
+      '查找 (.+)',
+      '查询 (.+)',
       'search\\s+(.+)',
-      '帮我搜(.+)',
-      '(.+)是什么',
-      '(.+)怎么样'
+      '帮我搜 (.+)',
+      '(.+) 是什么',
+      '(.+) 怎么样'
     ],
     aliases: ['搜索', 'search', '查询', '查找', '网搜'],
     tags: ['search', 'web', 'tavily'],
@@ -249,7 +249,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📄',
     priority: 80,
-    triggers: ['提取(.+)内容', '获取(.+)的内容', '读取(.+)', 'extract\\s+(.+)', '抓取(.+)'],
+    triggers: ['提取 (.+) 内容', '获取 (.+) 的内容', '读取 (.+)', 'extract\\s+(.+)', '抓取 (.+)'],
     aliases: ['提取', 'extract', '抓取', '获取内容'],
     tags: ['web', 'extract', 'content'],
     inputSchema: {
@@ -271,7 +271,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📚',
     priority: 90,
-    triggers: ['(.+)仓库文档', '(.+)的文档', '(.+)怎么用', '(.+)项目介绍', 'github\\s+(.+)'],
+    triggers: ['(.+) 仓库文档', '(.+) 的文档', '(.+) 怎么用', '(.+) 项目介绍', 'github\\s+(.+)'],
     aliases: ['GitHub 文档', 'deepwiki', '仓库文档', '项目文档'],
     tags: ['github', 'docs', 'knowledge'],
     inputSchema: {
@@ -294,7 +294,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '❓',
     priority: 85,
-    triggers: ['问(.+)仓库(.+)', '(.+)仓库(.+)怎么', '(.+)项目(.+)如何'],
+    triggers: ['问 (.+) 仓库 (.+)', '(.+) 仓库 (.+) 怎么', '(.+) 项目 (.+) 如何'],
     aliases: ['问答', 'ask', '提问仓库'],
     tags: ['github', 'qa', 'knowledge'],
     inputSchema: {
@@ -317,7 +317,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📖',
     priority: 95,
-    triggers: ['(.+)文档', '(.+)怎么使用', '(.+)用法', '(.+)示例', '(.+)教程'],
+    triggers: ['(.+) 文档', '(.+) 怎么使用', '(.+) 用法', '(.+) 示例', '(.+) 教程'],
     aliases: ['库文档', 'docs', 'library docs', 'context7'],
     tags: ['code', 'docs', 'library'],
     inputSchema: {
@@ -341,8 +341,8 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🔗',
     priority: 70,
-    triggers: ['查找(.+)库', '(.+)库的ID', 'resolve\\s+(.+)'],
-    aliases: ['查找库', 'resolve', '库ID'],
+    triggers: ['查找 (.+) 库', '(.+) 库的 ID', 'resolve\\s+(.+)'],
+    aliases: ['查找库', 'resolve', '库 ID'],
     tags: ['code', 'library', 'resolve'],
     inputSchema: {
       type: 'object',
@@ -364,14 +364,14 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🔬',
     priority: 95,
-    triggers: ['深度搜索(.+)', '专家搜索(.+)', '详细搜索(.+)', 'expert search(.+)'],
+    triggers: ['深度搜索 (.+)', '专家搜索 (.+)', '详细搜索 (.+)', 'expert search(.+)'],
     aliases: ['专家搜索', 'expert search', '深度搜索', '详细搜索'],
     tags: ['search', 'expert', 'tavily'],
     inputSchema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: '搜索查询' },
-        search_depth: { type: 'string', description: '搜索深度: basic 或 advanced' },
+        search_depth: { type: 'string', description: '搜索深度：basic 或 advanced' },
         max_results: { type: 'number', description: '最大结果数量' }
       },
       required: ['query']
@@ -400,7 +400,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📑',
     priority: 75,
-    triggers: ['深度提取(.+)', '专家提取(.+)', '分析(.+)内容'],
+    triggers: ['深度提取 (.+)', '专家提取 (.+)', '分析 (.+) 内容'],
     aliases: ['专家提取', 'expert extract', '深度提取'],
     tags: ['web', 'extract', 'expert', 'tavily'],
     inputSchema: {
@@ -423,7 +423,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🐛',
     priority: 88,
-    triggers: ['github\\s+issue\\s+(.+)', '(.+)的issue', '(.+)问题列表', 'issue\\s+(.+)'],
+    triggers: ['github\\s+issue\\s+(.+)', '(.+) 的 issue', '(.+) 问题列表', 'issue\\s+(.+)'],
     aliases: ['GitHub Issue', 'issue', '问题', 'bug'],
     tags: ['github', 'issue', 'bug', 'knowledge'],
     inputSchema: {
@@ -459,7 +459,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     priority: 87,
     triggers: [
       'github\\s+discussion\\s+(.+)',
-      '(.+)的讨论',
+      '(.+) 的讨论',
       '(.+)discussion',
       'discussion\\s+(.+)'
     ],
@@ -501,7 +501,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        format: { type: 'string', description: '图片格式: png 或 jpeg' }
+        format: { type: 'string', description: '图片格式：png 或 jpeg' }
       }
     }
   },
@@ -514,7 +514,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🌳',
     priority: 65,
-    triggers: ['获取DOM', '页面结构', '分析页面', 'DOM树', '页面内容'],
+    triggers: ['获取 DOM', '页面结构', '分析页面', 'DOM 树', '页面内容'],
     aliases: ['DOM', '页面结构', '页面分析'],
     tags: ['web', 'dom', 'analysis'],
     inputSchema: {
@@ -537,7 +537,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🕷️',
     priority: 72,
-    triggers: ['抓取(.+)', '爬取(.+)', 'crawl\\s+(.+)', '网页抓取(.+)'],
+    triggers: ['抓取 (.+)', '爬取 (.+)', 'crawl\\s+(.+)', '网页抓取 (.+)'],
     aliases: ['抓取', 'crawl', '爬取', '网页抓取'],
     tags: ['web', 'crawl', 'scrape'],
     inputSchema: {
@@ -559,7 +559,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '💡',
     priority: 60,
-    triggers: ['解释(.+)代码', '(.+)代码什么意思', '代码解释', 'explain\\s+code'],
+    triggers: ['解释 (.+) 代码', '(.+) 代码什么意思', '代码解释', 'explain\\s+code'],
     aliases: ['代码解释', 'explain code', '代码说明'],
     tags: ['code', 'explain', 'analysis'],
     inputSchema: {
@@ -579,7 +579,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '🌐',
     priority: 75,
-    triggers: ['翻译(.+)', '(.+)翻译成(.+)', 'translate\\s+(.+)', '(.+)的翻译'],
+    triggers: ['翻译 (.+)', '(.+) 翻译成 (.+)', 'translate\\s+(.+)', '(.+) 的翻译'],
     aliases: ['翻译', 'translate', '转换'],
     tags: ['translate', 'language'],
     inputSchema: {
@@ -605,7 +605,7 @@ export const BUILTIN_SKILLS: Skill[] = [
     enabled: true,
     icon: '📝',
     priority: 78,
-    triggers: ['总结(.+)', '概括(.+)', '(.+)的要点', 'summarize\\s+(.+)', '摘要(.+)'],
+    triggers: ['总结 (.+)', '概括 (.+)', '(.+) 的要点', 'summarize\\s+(.+)', '摘要 (.+)'],
     aliases: ['总结', 'summarize', '概括', '摘要'],
     tags: ['summarize', 'content'],
     inputSchema: {
@@ -613,7 +613,7 @@ export const BUILTIN_SKILLS: Skill[] = [
       properties: {
         content: { type: 'string', description: '要总结的内容' },
         maxLength: { type: 'number', description: '摘要最大长度' },
-        format: { type: 'string', description: '输出格式: bullets, paragraph, outline' }
+        format: { type: 'string', description: '输出格式：bullets, paragraph, outline' }
       }
     },
     presets: [
@@ -869,7 +869,7 @@ export function mcpToolToSkill(serverId: string, serverName: string, tool: McpTo
   return {
     id: `skill-mcp-${serverId}-${tool.name}`,
     name: tool.name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    description: tool.description || `MCP 工具: ${tool.name}`,
+    description: tool.description || `MCP 工具：${tool.name}`,
     category,
     source: 'mcp',
     mcpServerId: serverId,
@@ -1016,7 +1016,7 @@ export async function executeSkill(
   if (!mcpConfig) {
     return {
       success: false,
-      error: `未找到 MCP 服务: ${skill.mcpServerId}`
+      error: `未找到 MCP 服务：${skill.mcpServerId}`
     }
   }
 
@@ -1321,7 +1321,7 @@ export async function executeSkillChain(
     if (!result.success) {
       return {
         success: false,
-        error: `Chain 在步骤 ${step.skillId} 失败: ${result.error}`,
+        error: `Chain 在步骤 ${step.skillId} 失败：${result.error}`,
         duration: Date.now() - startTime,
         chainResults
       }

@@ -134,7 +134,7 @@ async function main() {
   // 命令行参数支持指定分组 ID
   const targetGroupId = process.argv[2]
   if (targetGroupId) {
-    console.log(`指定检查分组: ${targetGroupId}`)
+    console.log(`指定检查分组：${targetGroupId}`)
     groups = groups.filter(g => g.id === targetGroupId)
     if (groups.length === 0) {
       console.error(`未找到 ID 为 ${targetGroupId} 的分组！`)
