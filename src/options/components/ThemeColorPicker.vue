@@ -278,87 +278,98 @@ const handlePaste = async (event: ClipboardEvent) => {
               <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200">从图片提取配色</h4>
             </div>
 
-            <div
-              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-colors cursor-pointer relative overflow-hidden"
-              :style="{
-                '--hover-border-color': 'var(--md3-primary)',
-                '--hover-bg-color': 'var(--md3-primary-container)'
-              }"
-              @paste="handlePaste"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                @change="handleFileUpload"
-              />
-              <div v-if="previewUrl" class="absolute inset-0 p-3 pointer-events-none">
-                <div class="theme-color-checker w-full h-full rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700/70">
-                  <img
-                    :src="previewUrl"
-                    alt="预览图片"
-                    class="w-full h-full object-contain"
+            <div class="flex flex-col md:flex-row gap-4">
+              <!-- 图片区域 -->
+              <div class="flex-1 min-w-[260px]">
+                <div
+                  class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-colors cursor-pointer relative overflow-hidden min-h-[200px] md:min-h-[240px]"
+                  :style="{
+                    '--hover-border-color': 'var(--md3-primary)',
+                    '--hover-bg-color': 'var(--md3-primary-container)'
+                  }"
+                  @paste="handlePaste"
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    @change="handleFileUpload"
                   />
-                </div>
-                <div
-                  class="absolute bottom-3 right-3 text-[11px] px-2 py-1 rounded-full bg-white/90 text-gray-700 shadow-sm dark:bg-gray-900/80 dark:text-gray-200"
-                >
-                  点击更换图片
-                </div>
-              </div>
-              <div v-if="isExtracting" class="py-2">
-                <a-spin tip="正在分析颜色..." />
-              </div>
-              <div v-else-if="!previewUrl" class="space-y-2 pointer-events-none">
-                <UploadOutlined class="text-2xl text-gray-400" />
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  点击上传或直接粘贴图片 (Ctrl+V)
-                </p>
-              </div>
-            </div>
-
-            <!-- 提取结果 -->
-            <div v-if="extractedColors.length > 0" class="space-y-2">
-              <p class="text-xs text-gray-500">提取结果 (点击应用):</p>
-              <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                <div
-                  v-for="color in extractedColors"
-                  :key="color.hex"
-                  class="group relative cursor-pointer"
-                  @click="selectCustomColor(color.hex)"
-                >
-                  <div
-                    class="w-full aspect-square rounded-lg border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
-                    :style="getSwatchStyle(color)"
-                  ></div>
-
-                  <!-- 选中标记 -->
-                  <div
-                    v-if="customColor.toLowerCase() === color.hex.toLowerCase()"
-                    class="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div
-                      class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center"
-                      :style="{
-                        backgroundColor: color.hex,
-                        boxShadow: getSwatchStyle(color).boxShadow
-                      }"
-                    >
-                      <CheckOutlined
-                        class="text-xs"
-                        :style="{
-                          color: isLightColor(color.rgb) ? 'rgba(15, 23, 42, 0.8)' : '#ffffff'
-                        }"
+                  <div v-if="previewUrl" class="absolute inset-0 p-3 pointer-events-none">
+                    <div class="theme-color-checker w-full h-full rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700/70">
+                      <img
+                        :src="previewUrl"
+                        alt="预览图片"
+                        class="w-full h-full object-contain"
                       />
                     </div>
+                    <div
+                      class="absolute bottom-3 right-3 text-[11px] px-2 py-1 rounded-full bg-white/90 text-gray-700 shadow-sm dark:bg-gray-900/80 dark:text-gray-200"
+                    >
+                      点击更换图片
+                    </div>
                   </div>
+                  <div v-if="isExtracting" class="py-2">
+                    <a-spin tip="正在分析颜色..." />
+                  </div>
+                  <div v-else-if="!previewUrl" class="space-y-2 pointer-events-none">
+                    <UploadOutlined class="text-2xl text-gray-400" />
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      点击上传或直接粘贴图片 (Ctrl+V)
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                  <!-- Tooltip -->
+              <!-- 提取结果 -->
+              <div class="flex-1 min-w-[220px]">
+                <p class="text-xs text-gray-500 mb-2">提取结果 (点击应用):</p>
+                <div v-if="extractedColors.length > 0" class="theme-color-swatch-grid min-h-[200px]">
                   <div
-                    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none"
+                    v-for="color in extractedColors"
+                    :key="color.hex"
+                    class="group relative cursor-pointer"
+                    @click="selectCustomColor(color.hex)"
                   >
-                    {{ color.name }} · {{ color.hex.toUpperCase() }}
+                    <div
+                      class="w-full aspect-square rounded-lg border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
+                      :style="getSwatchStyle(color)"
+                    ></div>
+
+                    <!-- 选中标记 -->
+                    <div
+                      v-if="customColor.toLowerCase() === color.hex.toLowerCase()"
+                      class="absolute inset-0 flex items-center justify-center"
+                    >
+                      <div
+                        class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center"
+                        :style="{
+                          backgroundColor: color.hex,
+                          boxShadow: getSwatchStyle(color).boxShadow
+                        }"
+                      >
+                        <CheckOutlined
+                          class="text-xs"
+                          :style="{
+                            color: isLightColor(color.rgb) ? 'rgba(15, 23, 42, 0.8)' : '#ffffff'
+                          }"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Tooltip -->
+                    <div
+                      class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none"
+                    >
+                      {{ color.name }} · {{ color.hex.toUpperCase() }}
+                    </div>
                   </div>
+                </div>
+                <div
+                  v-else
+                  class="min-h-[200px] rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-400"
+                >
+                  上传或粘贴图片后显示提取结果
                 </div>
               </div>
             </div>
@@ -394,6 +405,16 @@ const handlePaste = async (event: ClipboardEvent) => {
     linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%);
   background-size: 12px 12px;
   background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+}
+
+.theme-color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 12px;
+}
+
+.theme-color-swatch-grid > * {
+  min-width: 72px;
 }
 
 :deep(.dark) .theme-color-checker {
