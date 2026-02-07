@@ -13,6 +13,11 @@ export interface McpBridgeSettings {
   protocol: McpBridgeProtocol
   autoConnect: boolean
   reconnectOnFailure: boolean
+  // 实验性 UI 特性
+  experimentalUI?: {
+    enableElicitation: boolean
+    enableApps: boolean
+  }
 }
 
 export const DEFAULT_MCP_BRIDGE_SETTINGS: McpBridgeSettings = {
@@ -21,7 +26,11 @@ export const DEFAULT_MCP_BRIDGE_SETTINGS: McpBridgeSettings = {
   path: '/ws',
   protocol: 'auto',
   autoConnect: true,
-  reconnectOnFailure: true
+  reconnectOnFailure: true,
+  experimentalUI: {
+    enableElicitation: true,
+    enableApps: true
+  }
 }
 
 export interface McpServerConfig {

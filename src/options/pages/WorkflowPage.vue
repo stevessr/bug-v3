@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -10,7 +10,12 @@ import {
   CloseCircleOutlined,
   LoadingOutlined,
   CodeOutlined,
-  FileAddOutlined
+  FileAddOutlined,
+  RobotOutlined,
+  SendOutlined,
+  UndoOutlined,
+  CheckOutlined,
+  CloseOutlined
 } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 
@@ -28,7 +33,11 @@ import {
   removeCustomSkill
 } from '@/agent/skills'
 import { SCRIPT_TEMPLATES, validateScript } from '@/agent/scriptRunner'
+import { useAgentSettings } from '@/agent/useAgentSettings'
 import type { SkillChain, Skill, CustomSkill, SkillChainStep } from '@/agent/skills'
+
+// Agent 设置
+const { settings: agentSettings } = useAgentSettings()
 
 // 状态
 const chains = ref<SkillChain[]>([])
@@ -52,6 +61,59 @@ const scriptDescription = ref('')
 const scriptContent = ref('')
 const scriptCategory = ref<'web' | 'data' | 'automation' | 'other'>('automation')
 const editingScriptId = ref<string | null>(null)
+
+// AI 辅助状态
+const showAiPanel = ref(false)
+const aiPrompt = ref('')
+const aiLoading = ref(false)
+const aiSuggestedCode = ref('')
+const originalCodeSnapshot = ref('')
+const showDiffView = ref(false)
+
+// 计算 diff 行
+const diffLines = computed(() => {
+  if (!showDiffView.value || !aiSuggestedCode.value) return []
+
+  const originalLines = originalCodeSnapshot.value.split('\n')
+  const suggestedLines = aiSuggestedCode.value.split('\n')
+  const result: Array<{ type: 'same' | 'removed' | 'added'; content: string; lineNum?: number }> =
+    []
+
+  // 简单的逐行 diff
+  const maxLen = Math.max(originalLines.length, suggestedLines.length)
+  let origIdx = 0
+  let sugIdx = 0
+
+  while (origIdx < originalLines.length || sugIdx < suggestedLines.length) {
+    const origLine = originalLines[origIdx]
+    const sugLine = suggestedLines[sugIdx]
+
+    if (origIdx >= originalLines.length) {
+      // 只有新增行
+      result.push({ type: 'added', content: sugLine, lineNum: sugIdx + 1 })
+      sugIdx++
+    } else if (sugIdx >= suggestedLines.length) {
+      // 只有删除行
+      result.push({ type: 'removed', content: origLine, lineNum: origIdx + 1 })
+      origIdx++
+    } else if (origLine === sugLine) {
+      // 相同行
+      result.push({ type: 'same', content: origLine, lineNum: sugIdx + 1 })
+      origIdx++
+      sugIdx++
+    } else {
+      // 不同 - 先显示删除再显示新增
+      result.push({ type: 'removed', content: origLine, lineNum: origIdx + 1 })
+      result.push({ type: 'added', content: sugLine, lineNum: sugIdx + 1 })
+      origIdx++
+      sugIdx++
+    }
+
+    if (result.length > maxLen * 2) break // 防止无限循环
+  }
+
+  return result
+})
 
 // 加载数据
 const loadData = async () => {
@@ -227,6 +289,130 @@ const deleteScript = (script: CustomSkill) => {
 
 const insertTemplate = (templateKey: keyof typeof SCRIPT_TEMPLATES) => {
   scriptContent.value = SCRIPT_TEMPLATES[templateKey]
+}
+
+// ============ AI 辅助功能 ============
+
+const CODING_SYSTEM_PROMPT = `你是一个专业的 JavaScript/TypeScript 脚本编写助手。用户正在编写用于自动化任务的脚本。
+
+可用的 API：
+- args: 传入的参数对象
+- previousResult: 上一步的结果
+- fetch(url, options): 发起网络请求
+- mcp.call(serverId, toolName, args): 调用 MCP 工具
+- storage.get(key) / storage.set(key, value) / storage.remove(key): 本地存储操作
+- log(...args): 日志输出
+- delay(ms): 延迟执行
+- parseJSON(str): 安全解析 JSON
+- formatJSON(obj): 格式化 JSON
+- match(str, pattern): 正则匹配
+- replace(str, pattern, replacement): 正则替换
+
+你的任务：
+1. 根据用户的需求，生成或修改脚本代码
+2. 代码应该简洁、高效、易读
+3. 添加必要的错误处理
+4. 只返回代码，不要包含 markdown 代码块标记
+5. 如果是修改现有代码，保持代码风格一致`
+
+const openAiPanel = () => {
+  originalCodeSnapshot.value = scriptContent.value
+  showAiPanel.value = true
+  aiSuggestedCode.value = ''
+  showDiffView.value = false
+}
+
+const closeAiPanel = () => {
+  showAiPanel.value = false
+  aiPrompt.value = ''
+  aiSuggestedCode.value = ''
+  showDiffView.value = false
+}
+
+const generateWithAi = async () => {
+  if (!aiPrompt.value.trim()) {
+    message.warning('请输入需求描述')
+    return
+  }
+
+  if (!agentSettings.value.apiKey) {
+    message.error('请先在 Agent 设置中配置 API Key')
+    return
+  }
+
+  aiLoading.value = true
+  originalCodeSnapshot.value = scriptContent.value
+
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk')
+    const client = new Anthropic({
+      apiKey: agentSettings.value.apiKey,
+      baseURL: agentSettings.value.baseUrl || undefined,
+      dangerouslyAllowBrowser: true
+    })
+
+    const userMessage = scriptContent.value.trim()
+      ? `当前脚本代码：
+\`\`\`javascript
+${scriptContent.value}
+\`\`\`
+
+用户需求：${aiPrompt.value}
+
+请根据需求修改或完善上述代码。只返回完整的修改后代码。`
+      : `用户需求：${aiPrompt.value}
+
+请根据需求生成脚本代码。只返回代码。`
+
+    const response = await client.messages.create({
+      model: agentSettings.value.taskModel || 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: CODING_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }]
+    })
+
+    // 提取文本内容
+    let generatedCode = ''
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        generatedCode += block.text
+      }
+    }
+
+    // 清理 markdown 代码块标记
+    generatedCode = generatedCode
+      .replace(/^```(?:javascript|js|typescript|ts)?\n?/gm, '')
+      .replace(/\n?```$/gm, '')
+      .trim()
+
+    if (generatedCode) {
+      aiSuggestedCode.value = generatedCode
+      showDiffView.value = true
+      message.success('AI 已生成建议代码')
+    } else {
+      message.warning('AI 未返回有效代码')
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    message.error('AI 生成失败: ' + errorMsg)
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+const applyAiSuggestion = () => {
+  if (aiSuggestedCode.value) {
+    scriptContent.value = aiSuggestedCode.value
+    message.success('已应用 AI 建议')
+    closeAiPanel()
+  }
+}
+
+const rejectAiSuggestion = () => {
+  scriptContent.value = originalCodeSnapshot.value
+  aiSuggestedCode.value = ''
+  showDiffView.value = false
+  message.info('已撤销 AI 建议')
 }
 
 // 内置工作流模板
@@ -484,20 +670,109 @@ const createFromTemplate = (template: (typeof builtinTemplates)[0]) => {
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="text-sm font-medium">脚本代码</label>
-              <a-dropdown>
-                <a-button size="small">插入模板</a-button>
-                <template #overlay>
-                  <a-menu>
-                    <a-menu-item @click="insertTemplate('simple')">简单示例</a-menu-item>
-                    <a-menu-item @click="insertTemplate('fetchExample')">网络请求</a-menu-item>
-                    <a-menu-item @click="insertTemplate('mcpExample')">MCP 调用</a-menu-item>
-                    <a-menu-item @click="insertTemplate('dataProcess')">数据处理</a-menu-item>
-                    <a-menu-item @click="insertTemplate('storageExample')">存储操作</a-menu-item>
-                    <a-menu-item @click="insertTemplate('chainExample')">链式处理</a-menu-item>
-                  </a-menu>
-                </template>
-              </a-dropdown>
+              <div class="flex items-center gap-2">
+                <a-button size="small" type="primary" ghost @click="openAiPanel">
+                  <template #icon><RobotOutlined /></template>
+                  AI 辅助
+                </a-button>
+                <a-dropdown>
+                  <a-button size="small">插入模板</a-button>
+                  <template #overlay>
+                    <a-menu>
+                      <a-menu-item @click="insertTemplate('simple')">简单示例</a-menu-item>
+                      <a-menu-item @click="insertTemplate('fetchExample')">网络请求</a-menu-item>
+                      <a-menu-item @click="insertTemplate('mcpExample')">MCP 调用</a-menu-item>
+                      <a-menu-item @click="insertTemplate('dataProcess')">数据处理</a-menu-item>
+                      <a-menu-item @click="insertTemplate('storageExample')">存储操作</a-menu-item>
+                      <a-menu-item @click="insertTemplate('chainExample')">链式处理</a-menu-item>
+                    </a-menu>
+                  </template>
+                </a-dropdown>
+              </div>
             </div>
+
+            <!-- AI 辅助面板 -->
+            <div
+              v-if="showAiPanel"
+              class="mb-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800"
+            >
+              <div class="flex items-center gap-2 mb-3">
+                <RobotOutlined class="text-purple-500" />
+                <span class="font-medium text-purple-700 dark:text-purple-300">AI 代码助手</span>
+                <a-button size="small" type="text" @click="closeAiPanel" class="ml-auto">
+                  <template #icon><CloseOutlined /></template>
+                </a-button>
+              </div>
+
+              <div class="flex gap-2 mb-3">
+                <a-textarea
+                  v-model:value="aiPrompt"
+                  :rows="2"
+                  placeholder="描述你想要的功能，例如：添加一个抓取网页标题的功能..."
+                  class="flex-1"
+                  :disabled="aiLoading"
+                />
+                <a-button
+                  type="primary"
+                  :loading="aiLoading"
+                  @click="generateWithAi"
+                  class="self-end"
+                >
+                  <template #icon><SendOutlined /></template>
+                  生成
+                </a-button>
+              </div>
+
+              <!-- Diff 视图 -->
+              <div v-if="showDiffView && aiSuggestedCode" class="mt-3">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    代码变更预览
+                  </span>
+                  <div class="flex gap-2">
+                    <a-button size="small" type="primary" @click="applyAiSuggestion">
+                      <template #icon><CheckOutlined /></template>
+                      应用修改
+                    </a-button>
+                    <a-button size="small" danger @click="rejectAiSuggestion">
+                      <template #icon><UndoOutlined /></template>
+                      撤销
+                    </a-button>
+                  </div>
+                </div>
+
+                <div
+                  class="max-h-64 overflow-auto bg-gray-900 rounded-lg p-3 font-mono text-xs leading-5"
+                >
+                  <div v-for="(line, idx) in diffLines" :key="idx" class="flex">
+                    <span class="w-8 text-gray-500 select-none shrink-0">
+                      {{ line.lineNum || '' }}
+                    </span>
+                    <span
+                      :class="{
+                        'text-gray-300': line.type === 'same',
+                        'bg-red-900/50 text-red-300': line.type === 'removed',
+                        'bg-green-900/50 text-green-300': line.type === 'added'
+                      }"
+                      class="flex-1 px-1"
+                    >
+                      <span v-if="line.type === 'removed'" class="text-red-400 mr-1">-</span>
+                      <span v-else-if="line.type === 'added'" class="text-green-400 mr-1">+</span>
+                      <span v-else class="mr-2">&nbsp;</span>
+                      {{ line.content }}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-2">
+                  <span class="text-green-500">绿色</span>
+                  表示新增，
+                  <span class="text-red-500">红色</span>
+                  表示删除
+                </p>
+              </div>
+            </div>
+
             <a-textarea
               v-model:value="scriptContent"
               :rows="15"

@@ -23,6 +23,10 @@ interface BridgeSettings {
   protocol: BridgeProtocol
   autoConnect: boolean
   reconnectOnFailure: boolean
+  experimentalUI?: {
+    enableElicitation: boolean
+    enableApps: boolean
+  }
 }
 
 const bridgeStatus = ref<ConnectionStatus>('unknown')
@@ -39,7 +43,11 @@ const bridgeSettings = ref<BridgeSettings>({
   path: '/ws',
   protocol: 'auto',
   autoConnect: true,
-  reconnectOnFailure: true
+  reconnectOnFailure: true,
+  experimentalUI: {
+    enableElicitation: true,
+    enableApps: true
+  }
 })
 
 // 判断是否本地主机
@@ -412,6 +420,50 @@ onUnmounted(() => {
             <a-checkbox v-model:checked="bridgeSettings.autoConnect">自动连接</a-checkbox>
             <a-checkbox v-model:checked="bridgeSettings.reconnectOnFailure">断线重连</a-checkbox>
           </div>
+
+          <!-- 实验性 UI 特性 -->
+          <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <span
+                class="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 text-xs rounded"
+              >
+                实验性
+              </span>
+              <span class="text-sm font-medium text-purple-700 dark:text-purple-300">
+                MCP UI 特性
+              </span>
+            </div>
+            <div class="space-y-2">
+              <a-checkbox
+                :checked="bridgeSettings.experimentalUI?.enableElicitation ?? true"
+                @change="
+                  (e: any) => {
+                    if (!bridgeSettings.experimentalUI)
+                      bridgeSettings.experimentalUI = { enableElicitation: true, enableApps: true }
+                    bridgeSettings.experimentalUI.enableElicitation = e.target.checked
+                  }
+                "
+              >
+                启用 Elicitation（服务器请求用户输入）
+              </a-checkbox>
+              <a-checkbox
+                :checked="bridgeSettings.experimentalUI?.enableApps ?? true"
+                @change="
+                  (e: any) => {
+                    if (!bridgeSettings.experimentalUI)
+                      bridgeSettings.experimentalUI = { enableElicitation: true, enableApps: true }
+                    bridgeSettings.experimentalUI.enableApps = e.target.checked
+                  }
+                "
+              >
+                启用 MCP Apps（交互式 UI 组件）
+              </a-checkbox>
+            </div>
+            <p class="text-xs text-purple-600 dark:text-purple-400 mt-2">
+              这些是 MCP 协议的实验性扩展，允许服务器提供丰富的 UI 交互
+            </p>
+          </div>
+
           <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p class="text-sm text-gray-600 dark:text-gray-400">
               WebSocket:

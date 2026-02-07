@@ -103,6 +103,25 @@ export {
 // 脚本执行器
 export { executeScript, validateScript, SCRIPT_TEMPLATES, SCRIPT_SKILLS } from './scriptRunner'
 
+// MCP UI 实验性特性
+export {
+  // Elicitation
+  setElicitationHandler,
+  handleElicitationRequest,
+  respondToElicitation,
+  getPendingElicitations,
+  // MCP Apps
+  hasUIResource,
+  getUIResourceUri,
+  fetchUIResource,
+  createAppSandbox,
+  sendMessageToApp,
+  // Schema 辅助
+  schemaToFormFields,
+  validateFormData,
+  MCP_APP_MIME_TYPE
+} from './mcpUI'
+
 // 记忆系统
 export {
   // 6层上下文
@@ -185,3 +204,14 @@ export type {
 } from './skills'
 
 export type { ScriptContext, ScriptApi, ScriptResult } from './scriptRunner'
+
+export type {
+  ElicitationSchema,
+  ElicitationPropertySchema,
+  ElicitationRequest,
+  ElicitationResponse,
+  McpAppMeta,
+  McpToolWithUI,
+  McpAppResource,
+  FormField
+} from './mcpUI'
