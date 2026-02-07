@@ -57,8 +57,8 @@ const {
   updateLinuxDoSeekingActionFilter,
   updateEnableLinuxDoCredit,
   updateTheme,
-  updateCustomPrimaryColor,
-  updateCustomColorScheme,
+  updateMd3SeedColor,
+  updateMd3ColorScheme,
   updateCustomCssBlocks,
   updateUploadMenuItems,
   updateGeminiApiKey,
@@ -113,8 +113,8 @@ onMounted(async () => {
             <ThemeSettings
               :settings="emojiStore.settings"
               @update:theme="updateTheme"
-              @update:customPrimaryColor="updateCustomPrimaryColor"
-              @update:customColorScheme="updateCustomColorScheme"
+              @update:md3SeedColor="updateMd3SeedColor"
+              @update:md3ColorScheme="updateMd3ColorScheme"
             />
           </div>
         </a-tab-pane>

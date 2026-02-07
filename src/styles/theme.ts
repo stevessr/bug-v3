@@ -37,7 +37,7 @@ async function applyTheme() {
     )
 
     const settings = await getSettings()
-    const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
+    const primaryColor = settings?.md3SeedColor || DEFAULT_PRIMARY_COLOR
     applyMd3ThemeToRoot(primaryColor, finalTheme as 'light' | 'dark')
   }
 
@@ -53,7 +53,7 @@ async function applyTheme() {
   window.addEventListener('theme-changed', async event => {
     const detail = (event as CustomEvent).detail as { mode?: 'light' | 'dark' } | undefined
     const settings = await getSettings()
-    const primaryColor = settings?.customPrimaryColor || DEFAULT_PRIMARY_COLOR
+    const primaryColor = settings?.md3SeedColor || DEFAULT_PRIMARY_COLOR
     const mode =
       detail?.mode || (document.documentElement.getAttribute('data-theme') as 'light' | 'dark')
     applyMd3ThemeToRoot(primaryColor, mode || 'light')

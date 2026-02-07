@@ -5,12 +5,12 @@ import { colorSchemes, isValidColor } from '../../styles/md3Theme'
 
 const props = defineProps<{
   modelValue?: string
-  colorScheme?: string
+  md3ColorScheme?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
-  (e: 'update:colorScheme', v: string): void
+  (e: 'update:md3ColorScheme', v: string): void
 }>()
 
 function getColorLabel(key: string): string {
@@ -62,7 +62,7 @@ const isCustomColor = computed(() => {
 const selectedColorType = computed<string>({
   get() {
     if (isCustomColor.value) return 'custom'
-    return (props.colorScheme as string) || 'default'
+    return (props.md3ColorScheme as string) || 'default'
   },
   set(value: string) {
     if (value === 'custom') {
@@ -70,7 +70,7 @@ const selectedColorType = computed<string>({
       customColorInput.value = props.modelValue || ''
     } else {
       showCustomPicker.value = false
-      emit('update:colorScheme', value)
+      emit('update:md3ColorScheme', value)
       const hex = (colorSchemes as any)[value] as string
       if (hex) emit('update:modelValue', hex)
     }
@@ -83,7 +83,7 @@ const selectPreset = (name: string) => {
 
 const saveCustomColor = () => {
   if (isValidColor(customColorInput.value)) {
-    emit('update:colorScheme', 'custom')
+    emit('update:md3ColorScheme', 'custom')
     emit('update:modelValue', customColorInput.value)
     showCustomPicker.value = false
   }

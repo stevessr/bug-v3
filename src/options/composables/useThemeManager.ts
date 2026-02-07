@@ -61,8 +61,8 @@ export function useThemeManager(options: {
   /**
    * 更新自定义主色
    */
-  const updateCustomPrimaryColor = async (color: string) => {
-    updateSettings({ customPrimaryColor: color })
+  const updateMd3SeedColor = async (color: string) => {
+    updateSettings({ md3SeedColor: color })
 
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
     applyMd3ThemeToRoot(color || DEFAULT_PRIMARY_COLOR, currentMode)
@@ -79,8 +79,8 @@ export function useThemeManager(options: {
   /**
    * 更新自定义配色方案
    */
-  const updateCustomColorScheme = (scheme: AppSettings['customColorScheme']) => {
-    updateSettings({ customColorScheme: scheme })
+  const updateMd3ColorScheme = (scheme: AppSettings['md3ColorScheme']) => {
+    updateSettings({ md3ColorScheme: scheme })
   }
 
   /**
@@ -113,8 +113,8 @@ export function useThemeManager(options: {
 
   return {
     updateTheme,
-    updateCustomPrimaryColor,
-    updateCustomColorScheme,
+    updateMd3SeedColor,
+    updateMd3ColorScheme,
     initTheme,
     applyTheme
   }

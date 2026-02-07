@@ -540,7 +540,40 @@ export async function getSettings(): Promise<AppSettings | null> {
     return null
   }
 
-  return data
+  const migrated = migrateMd3Settings(data)
+  if (migrated !== data) {
+    await storageSet(STORAGE_KEYS.SETTINGS, migrated)
+  }
+
+  return migrated
+}
+
+const migrateMd3Settings = (settings: AppSettings): AppSettings => {
+  const legacySeed = (settings as { customPrimaryColor?: string }).customPrimaryColor
+  const legacyScheme = (settings as { customColorScheme?: string }).customColorScheme
+  const hasMd3Seed = Object.prototype.hasOwnProperty.call(settings, 'md3SeedColor')
+  const hasMd3Scheme = Object.prototype.hasOwnProperty.call(settings, 'md3ColorScheme')
+
+  if (!legacySeed && !legacyScheme && hasMd3Seed && hasMd3Scheme) {
+    return settings
+  }
+
+  const migrated = { ...settings } as AppSettings & {
+    customPrimaryColor?: string
+    customColorScheme?: string
+  }
+
+  if (!hasMd3Seed && legacySeed) {
+    migrated.md3SeedColor = legacySeed
+  }
+  if (!hasMd3Scheme && legacyScheme) {
+    migrated.md3ColorScheme = legacyScheme
+  }
+
+  delete migrated.customPrimaryColor
+  delete migrated.customColorScheme
+
+  return migrated
 }
 
 export async function setSettings(settings: AppSettings): Promise<void> {

@@ -284,7 +284,7 @@ export default function useOptions() {
   }
 
   // Theme management is now provided by themeManager composable
-  // Use themeManager.updateTheme(), themeManager.updateCustomPrimaryColor(), etc.
+  // Use themeManager.updateTheme(), themeManager.updateMd3SeedColor(), etc.
 
   const updateCustomCssBlocks = (blockOrAction: any) => {
     if (blockOrAction.type === 'delete') {
@@ -891,8 +891,8 @@ export default function useOptions() {
     exportGroupStreamingMethod,
     // theme - from themeManager composable
     updateTheme: themeManager.updateTheme,
-    updateCustomPrimaryColor: themeManager.updateCustomPrimaryColor,
-    updateCustomColorScheme: themeManager.updateCustomColorScheme,
+    updateMd3SeedColor: themeManager.updateMd3SeedColor,
+    updateMd3ColorScheme: themeManager.updateMd3ColorScheme,
     // sync / settings - from syncManager composable
     resetSettings,
     syncToChrome: syncManager.syncToChrome,

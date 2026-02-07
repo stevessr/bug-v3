@@ -18,7 +18,7 @@ import ThemeColorPicker from './ThemeColorPicker.vue'
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 const settings = props.settings as AppSettings | Ref<AppSettings>
 
-const emit = defineEmits(['update:theme', 'update:customPrimaryColor', 'update:customColorScheme'])
+const emit = defineEmits(['update:theme', 'update:md3SeedColor', 'update:md3ColorScheme'])
 
 const getTheme = () => {
   try {
@@ -29,20 +29,20 @@ const getTheme = () => {
   }
 }
 
-const getCustomPrimaryColor = () => {
+const getMd3SeedColor = () => {
   try {
     if (isRef(settings))
-      return (settings.value && settings.value.customPrimaryColor) || DEFAULT_PRIMARY_COLOR
-    return (settings && (settings as AppSettings).customPrimaryColor) || DEFAULT_PRIMARY_COLOR
+      return (settings.value && settings.value.md3SeedColor) || DEFAULT_PRIMARY_COLOR
+    return (settings && (settings as AppSettings).md3SeedColor) || DEFAULT_PRIMARY_COLOR
   } catch {
     return DEFAULT_PRIMARY_COLOR
   }
 }
 
-const getCustomColorScheme = () => {
+const getMd3ColorScheme = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.customColorScheme) || 'default'
-    return (settings && (settings as AppSettings).customColorScheme) || 'default'
+    if (isRef(settings)) return (settings.value && settings.value.md3ColorScheme) || 'default'
+    return (settings && (settings as AppSettings).md3ColorScheme) || 'default'
   } catch {
     return 'default'
   }
@@ -56,19 +56,19 @@ watch(
   }
 )
 
-const localCustomPrimaryColor = ref<string>(getCustomPrimaryColor())
+const localMd3SeedColor = ref<string>(getMd3SeedColor())
 watch(
-  () => getCustomPrimaryColor(),
+  () => getMd3SeedColor(),
   val => {
-    localCustomPrimaryColor.value = val || DEFAULT_PRIMARY_COLOR
+    localMd3SeedColor.value = val || DEFAULT_PRIMARY_COLOR
   }
 )
 
-const localCustomColorScheme = ref<string>(getCustomColorScheme())
+const localMd3ColorScheme = ref<string>(getMd3ColorScheme())
 watch(
-  () => getCustomColorScheme(),
+  () => getMd3ColorScheme(),
   val => {
-    localCustomColorScheme.value = val || 'default'
+    localMd3ColorScheme.value = val || 'default'
   }
 )
 
@@ -81,12 +81,12 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
   handleThemeSelect(String(info.key))
 }
 
-const handleCustomPrimaryColorUpdate = (val: string) => {
-  emit('update:customPrimaryColor', val)
+const handleMd3SeedColorUpdate = (val: string) => {
+  emit('update:md3SeedColor', val)
 }
 
-const handleCustomColorSchemeUpdate = (val: string) => {
-  emit('update:customColorScheme', val)
+const handleMd3ColorSchemeUpdate = (val: string) => {
+  emit('update:md3ColorScheme', val)
 }
 
 // ============ 图片提取相关 ============
@@ -290,14 +290,14 @@ const extractColorPalette = async (dataUrl: string, count: number = 6): Promise<
 
 // 当前颜色生成的完整调色板
 const currentPalettes = computed<ThemePalettes | null>(() => {
-  const color = imageSeedColor.value || localCustomPrimaryColor.value
+  const color = imageSeedColor.value || localMd3SeedColor.value
   if (!color) return null
   return generatePalettes(color)
 })
 
 // MD3 语义颜色预览
 const md3Preview = computed<Md3Scheme | null>(() => {
-  const color = imageSeedColor.value || localCustomPrimaryColor.value
+  const color = imageSeedColor.value || localMd3SeedColor.value
   if (!color) return null
   const mode = localTheme.value === 'dark' ? 'dark' : 'light'
   return generateMd3Scheme(color, mode as 'light' | 'dark')
@@ -342,10 +342,10 @@ const selectPaletteColor = (index: number) => {
   const color = extractedPalette.value[index]
   if (color) {
     imageSeedColor.value = color
-    localCustomPrimaryColor.value = color
-    localCustomColorScheme.value = 'custom'
-    emit('update:customPrimaryColor', color)
-    emit('update:customColorScheme', 'custom')
+    localMd3SeedColor.value = color
+    localMd3ColorScheme.value = 'custom'
+    emit('update:md3SeedColor', color)
+    emit('update:md3ColorScheme', 'custom')
   }
 }
 </script>
@@ -392,10 +392,10 @@ const selectPaletteColor = (index: number) => {
           </div>
           <div class="w-2/3">
             <ThemeColorPicker
-              v-model="localCustomPrimaryColor"
-              :colorScheme="localCustomColorScheme"
-              @update:modelValue="handleCustomPrimaryColorUpdate"
-              @update:colorScheme="handleCustomColorSchemeUpdate"
+              v-model="localMd3SeedColor"
+              :md3ColorScheme="localMd3ColorScheme"
+              @update:modelValue="handleMd3SeedColorUpdate"
+              @update:md3ColorScheme="handleMd3ColorSchemeUpdate"
             />
           </div>
         </div>
