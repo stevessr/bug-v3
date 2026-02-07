@@ -200,11 +200,14 @@ onMounted(async () => {
 
 // 监听外部属性变化
 watch(
-  () => props.md3SeedColor,
-  val => {
-    if (val) {
-      customColor.value = val
-      activeTab.value = 'custom'
+  () => [props.md3SeedColor, props.md3ColorScheme],
+  ([seedColor, scheme]) => {
+    if (seedColor) {
+      customColor.value = seedColor
+      const hasPreset = !!(scheme && colorSchemes[scheme])
+      if (!hasPreset) {
+        activeTab.value = 'custom'
+      }
     }
   }
 )
