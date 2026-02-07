@@ -1,9 +1,9 @@
+/* Ant Design 组件样式覆盖 - must be before @tailwind */
+@import './antdOverrides.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Ant Design 组件样式覆盖 */
-@import './antdOverrides.css';
 
 @layer base {
   :root {
@@ -14,9 +14,9 @@
 
     /* ============ 调色板 CSS 变量 ============ */
     /* 这些变量会在运行时由 md3Theme.ts 动态设置 */
-    /* 格式: --palette-{name}-{tone} */
-    /* 调色板: primary, secondary, tertiary, error, neutral, neutral-variant */
-    /* 色阶: 0, 4, 6, 10, 12, 17, 20, 22, 24, 30, 40, 50, 60, 70, 80, 87, 90, 92, 94, 95, 96, 98, 99, 100 */
+    /* 格式：--palette-{name}-{tone} */
+    /* 调色板：primary, secondary, tertiary, error, neutral, neutral-variant */
+    /* 色阶：0, 4, 6, 10, 12, 17, 20, 22, 24, 30, 40, 50, 60, 70, 80, 87, 90, 92, 94, 95, 96, 98, 99, 100 */
 
     /* ============ MD3 语义颜色默认值 (Light) ============ */
     /* Primary */
