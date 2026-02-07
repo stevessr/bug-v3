@@ -100,7 +100,13 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
 }
 
 const handleMd3ColorSchemeUpdate = (val: string) => {
-  // 当选择预设方案时，清空自定义种子色
+  // 预设方案才清空自定义种子色；空值用于保留自定义颜色
+  if (!val) {
+    localMd3ColorScheme.value = ''
+    emit('update:md3ColorScheme', '')
+    return
+  }
+
   localMd3SeedColor.value = undefined
   emit('update:md3SeedColor', undefined)
   emit('update:md3ColorScheme', val)

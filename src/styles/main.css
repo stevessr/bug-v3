@@ -220,6 +220,50 @@
     border-radius: 3px;
   }
 
+  /* MD3 surface mapping for options UI backgrounds */
+  .options-root,
+  .popup-container,
+  .sidebar-container {
+    background-color: var(--md3-surface-container-lowest);
+    color: var(--md3-on-surface);
+  }
+
+  .options-root .bg-gray-50,
+  .options-root .bg-gray-100,
+  .popup-container .bg-gray-50,
+  .popup-container .bg-gray-100,
+  .sidebar-container .bg-gray-50,
+  .sidebar-container .bg-gray-100 {
+    background-color: var(--md3-surface-container-lowest) !important;
+  }
+
+  .options-root .bg-white,
+  .options-root .bg-gray-800,
+  .options-root .bg-gray-900,
+  .popup-container .bg-white,
+  .popup-container .bg-gray-800,
+  .popup-container .bg-gray-900,
+  .sidebar-container .bg-white,
+  .sidebar-container .bg-gray-800,
+  .sidebar-container .bg-gray-900 {
+    background-color: var(--md3-surface-container-low) !important;
+  }
+
+  .options-root .border-gray-100,
+  .options-root .border-gray-200,
+  .options-root .border-gray-300,
+  .options-root .border-gray-700,
+  .popup-container .border-gray-100,
+  .popup-container .border-gray-200,
+  .popup-container .border-gray-300,
+  .popup-container .border-gray-700,
+  .sidebar-container .border-gray-100,
+  .sidebar-container .border-gray-200,
+  .sidebar-container .border-gray-300,
+  .sidebar-container .border-gray-700 {
+    border-color: var(--md3-outline-variant) !important;
+  }
+
   .emoji-grid::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb-color);
     border-radius: 3px;
