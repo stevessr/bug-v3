@@ -548,6 +548,10 @@ export async function getSettings(): Promise<AppSettings | null> {
   return migrated
 }
 
+const md3Schemes = ['default', 'blue', 'green', 'purple', 'orange', 'red', 'custom'] as const
+const isMd3Scheme = (value?: string): value is AppSettings['md3ColorScheme'] =>
+  !!value && (md3Schemes as readonly string[]).includes(value)
+
 const migrateMd3Settings = (settings: AppSettings): AppSettings => {
   const legacySeed = (settings as { customPrimaryColor?: string }).customPrimaryColor
   const legacyScheme = (settings as { customColorScheme?: string }).customColorScheme
@@ -566,7 +570,7 @@ const migrateMd3Settings = (settings: AppSettings): AppSettings => {
   if (!hasMd3Seed && legacySeed) {
     migrated.md3SeedColor = legacySeed
   }
-  if (!hasMd3Scheme && legacyScheme) {
+  if (!hasMd3Scheme && isMd3Scheme(legacyScheme)) {
     migrated.md3ColorScheme = legacyScheme
   }
 

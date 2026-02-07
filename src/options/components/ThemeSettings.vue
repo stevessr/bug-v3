@@ -384,11 +384,11 @@ const selectPaletteColor = (index: number) => {
       </div>
 
       <div class="flex flex-col space-y-4">
-        <!-- 主题颜色选择器 -->
+        <!-- 主题色系选择器 -->
         <div class="flex items-start justify-between">
           <div>
-            <label class="text-sm font-medium dark:text-white">主题颜色</label>
-            <p class="text-sm text-gray-500 dark:text-gray-400">自定义界面主色调</p>
+            <label class="text-sm font-medium dark:text-white">主题色系</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">选择 MD3 色系（种子色）</p>
           </div>
           <div class="w-2/3">
             <ThemeColorPicker
@@ -428,7 +428,7 @@ const selectPaletteColor = (index: number) => {
                   class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-600 object-cover flex-shrink-0"
                 />
                 <div class="flex-1 space-y-2">
-                  <p class="text-xs text-gray-500 dark:text-gray-400">点击选择种子颜色：</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">点击选择色系种子色：</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="(color, index) in extractedPalette"

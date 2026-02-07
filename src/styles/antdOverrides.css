@@ -291,6 +291,30 @@
   border-color: var(--md3-primary) !important;
 }
 
+.ant-menu-horizontal {
+  border-bottom: 1px solid var(--md3-outline-variant) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item,
+.ant-menu-horizontal > .ant-menu-submenu {
+  border-radius: 999px !important;
+  margin: 0 4px !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item:hover,
+.ant-menu-horizontal > .ant-menu-submenu:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item-selected {
+  background: var(--md3-primary-container) !important;
+  color: var(--md3-on-primary-container) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item-selected::after {
+  border-bottom-color: var(--md3-primary) !important;
+}
+
 /* ============ 表格组件 ============ */
 .ant-table {
   background: var(--md3-surface) !important;
@@ -400,6 +424,15 @@
 
 .ant-tabs-ink-bar {
   background: var(--md3-primary) !important;
+}
+
+.ant-tabs-nav .ant-tabs-tab-btn {
+  color: inherit !important;
+}
+
+.ant-tabs-tab.ant-tabs-tab-active {
+  background: var(--md3-surface-container-low) !important;
+  border-radius: 999px !important;
 }
 
 .ant-tabs-nav::before {
