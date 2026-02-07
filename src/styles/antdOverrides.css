@@ -136,6 +136,12 @@
   color: var(--md3-primary) !important;
 }
 
+.ant-btn-default:active {
+  background: var(--md3-surface-container-high) !important;
+  border-color: var(--palette-primary-30) !important;
+  color: var(--palette-primary-30) !important;
+}
+
 .ant-btn-dashed {
   border-style: dashed;
   background: var(--md3-surface) !important;
@@ -216,6 +222,36 @@
   color: var(--palette-neutral-60) !important;
 }
 
+/* Input active/按下状态 */
+.ant-input:active,
+.ant-input-affix-wrapper:active {
+  border-color: var(--palette-primary-30) !important;
+}
+
+/* TextArea focus 状态 */
+.ant-input-textarea:focus,
+.ant-input-textarea-focused {
+  border-color: var(--md3-primary) !important;
+  box-shadow: 0 0 0 2px var(--md3-primary-container) !important;
+}
+
+/* InputNumber focus 状态 */
+.ant-input-number:focus,
+.ant-input-number-focused {
+  border-color: var(--md3-primary) !important;
+  box-shadow: 0 0 0 2px var(--md3-primary-container) !important;
+}
+
+/* InputNumber handler hover */
+.ant-input-number-handler:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* InputNumber handler active */
+.ant-input-number-handler:active {
+  background: var(--md3-surface-container-high) !important;
+}
+
 /* ============ 选择器组件 ============ */
 .ant-select-dropdown {
   background: var(--md3-surface-container-low) !important;
@@ -236,6 +272,16 @@
 
 .ant-select-item-option-active {
   background: var(--md3-surface-container-high) !important;
+}
+
+/* Select 清除按钮 hover */
+.ant-select-clear:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Select 箭头 hover */
+.ant-select-arrow:hover {
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 下拉菜单 ============ */
@@ -315,6 +361,33 @@
   border-bottom-color: var(--md3-primary) !important;
 }
 
+/* Menu item active 状态 */
+.ant-menu-item-active,
+.ant-menu-submenu-active {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-primary) !important;
+}
+
+/* Dropdown menu item active 状态 */
+.ant-dropdown-menu-item-active,
+.ant-dropdown-menu-submenu-title-active {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-primary) !important;
+}
+
+/* Dropdown menu item selected */
+.ant-dropdown-menu-item-selected {
+  background: var(--md3-primary-container) !important;
+  color: var(--md3-on-primary-container) !important;
+}
+
+/* Dropdown menu item disabled */
+.ant-dropdown-menu-item-disabled,
+.ant-dropdown-menu-submenu-title-disabled {
+  color: var(--palette-neutral-60) !important;
+  background: transparent !important;
+}
+
 /* ============ 表格组件 ============ */
 .ant-table {
   background: var(--md3-surface) !important;
@@ -339,6 +412,34 @@
   background: var(--md3-primary-container) !important;
 }
 
+/* Table 行 hover */
+.ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* Table 单元格选中 */
+.ant-table-cell-fix-left,
+.ant-table-cell-fix-right {
+  background: var(--md3-surface) !important;
+}
+
+/* Table 排序按钮 hover */
+.ant-table-column-sorter-up:hover,
+.ant-table-column-sorter-down:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Table 筛选按钮 hover */
+.ant-table-filter-trigger:hover {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-primary) !important;
+}
+
+/* Table 展开按钮 hover */
+.ant-table-row-expand-icon:hover {
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 卡片组件 ============ */
 .ant-card {
   background: var(--md3-surface) !important;
@@ -353,6 +454,17 @@
 
 .ant-card-body {
   color: var(--md3-on-surface) !important;
+}
+
+/* Card hover 状态 */
+.ant-card-hoverable:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  border-color: var(--md3-primary) !important;
+}
+
+/* Card 操作按钮 hover */
+.ant-card-actions > li > span:hover {
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 模态框组件 ============ */
@@ -387,6 +499,18 @@
   border-top: 1px solid var(--md3-outline-variant) !important;
 }
 
+/* Modal 确认按钮 hover/active */
+.ant-modal-confirm-btns .ant-btn-primary:hover,
+.ant-modal-confirm-btns .ant-btn-primary:focus {
+  background: var(--palette-primary-50) !important;
+  border-color: var(--palette-primary-50) !important;
+}
+
+.ant-modal-confirm-btns .ant-btn-primary:active {
+  background: var(--palette-primary-30) !important;
+  border-color: var(--palette-primary-30) !important;
+}
+
 /* ============ 抽屉组件 ============ */
 .ant-drawer-content {
   background: var(--md3-surface) !important;
@@ -403,6 +527,12 @@
 
 .ant-drawer-close {
   color: var(--md3-on-surface-variant) !important;
+}
+
+/* Drawer close hover */
+.ant-drawer-close:hover {
+  color: var(--md3-primary) !important;
+  background: var(--md3-surface-container-high) !important;
 }
 
 /* ============ 标签页组件 ============ */
@@ -439,6 +569,23 @@
   border-color: var(--md3-outline-variant) !important;
 }
 
+/* Tabs 标签 hover */
+.ant-tabs-tab:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Tabs 标签 focus */
+.ant-tabs-tab-btn:focus,
+.ant-tabs-tab-remove:focus {
+  color: var(--md3-primary) !important;
+}
+
+/* Tabs 更多按钮 hover */
+.ant-tabs-nav-more:hover {
+  color: var(--md3-primary) !important;
+  background: var(--md3-surface-container-high) !important;
+}
+
 /* ============ 开关组件 ============ */
 .ant-switch {
   background: var(--md3-surface-variant) !important;
@@ -450,6 +597,17 @@
 
 .ant-switch-handle::before {
   background: var(--md3-surface) !important;
+}
+
+/* Switch focus 状态 */
+.ant-switch:focus {
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+}
+
+/* Switch checked focus 状态 */
+.ant-switch-checked:focus {
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+  background: var(--md3-primary) !important;
 }
 
 /* ============ 复选框和单选框 ============ */
@@ -474,6 +632,18 @@
 
 .ant-radio-checked .ant-radio-inner::after {
   background: var(--md3-primary) !important;
+}
+
+/* Radio focus 状态 */
+.ant-radio-input:focus-visible + .ant-radio-inner {
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+  border-color: var(--md3-primary) !important;
+}
+
+/* Checkbox focus 状态 */
+.ant-checkbox-input:focus-visible + .ant-checkbox-inner {
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+  border-color: var(--md3-primary) !important;
 }
 
 /* ============ 标签组件 ============ */
@@ -502,10 +672,46 @@
   color: var(--md3-on-error-container) !important;
 }
 
+/* Tag hover 状态 */
+.ant-tag:hover {
+  opacity: 0.85 !important;
+}
+
+/* Tag 关闭按钮 hover */
+.ant-tag .anticon-close:hover {
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 徽章组件 ============ */
 .ant-badge-count {
   background: var(--md3-error) !important;
   color: var(--md3-on-error) !important;
+}
+
+/* Badge dot */
+.ant-badge-dot {
+  background: var(--md3-error) !important;
+}
+
+/* Badge status */
+.ant-badge-status-success {
+  background-color: var(--ant-color-success) !important;
+}
+
+.ant-badge-status-processing {
+  background-color: var(--md3-primary) !important;
+}
+
+.ant-badge-status-default {
+  background-color: var(--md3-on-surface-variant) !important;
+}
+
+.ant-badge-status-warning {
+  background-color: var(--ant-color-warning) !important;
+}
+
+.ant-badge-status-error {
+  background-color: var(--md3-error) !important;
 }
 
 /* ============ 警告提示 ============ */
@@ -541,6 +747,16 @@
   color: var(--md3-error) !important;
 }
 
+/* Alert close icon hover */
+.ant-alert-close-icon:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Alert action hover */
+.ant-alert-action:hover {
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 消息提示 ============ */
 .ant-message-notice-content {
   background: var(--md3-surface-container-low) !important;
@@ -548,10 +764,25 @@
   box-shadow: var(--ant-box-shadow-secondary);
 }
 
+/* Message close icon hover */
+.ant-message-notice-content .anticon-close:hover {
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 通知提示 ============ */
 .ant-notification-notice {
   background: var(--md3-surface-container-low) !important;
   border-radius: 12px;
+}
+
+/* Notification close icon hover */
+.ant-notification-notice-close:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Notification btn hover */
+.ant-notification-notice-btn a:hover {
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 进度条 ============ */
@@ -592,6 +823,11 @@
   background: var(--md3-inverse-surface) !important;
 }
 
+/* Tooltip 链接 hover */
+.ant-tooltip-inner a:hover {
+  color: var(--md3-inverse-primary) !important;
+}
+
 /* ============ 气泡卡片 ============ */
 .ant-popover-inner {
   background: var(--md3-surface-container-low) !important;
@@ -605,6 +841,18 @@
 
 .ant-popover-inner-content {
   color: var(--md3-on-surface) !important;
+}
+
+/* Popconfirm 按钮 hover/active */
+.ant-popconfirm-buttons .ant-btn-primary:hover,
+.ant-popconfirm-buttons .ant-btn-primary:focus {
+  background: var(--palette-primary-50) !important;
+  border-color: var(--palette-primary-50) !important;
+}
+
+.ant-popconfirm-buttons .ant-btn-primary:active {
+  background: var(--palette-primary-30) !important;
+  border-color: var(--palette-primary-30) !important;
 }
 
 /* ============ 日期选择器 ============ */
@@ -629,6 +877,37 @@
 
 .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before {
   border-color: var(--md3-primary) !important;
+}
+
+/* Date Picker 单元格 active/hover 状态 */
+.ant-picker-cell:hover:not(.ant-picker-cell-selected) .ant-picker-cell-inner {
+  background: var(--md3-surface-container-high) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  background: var(--md3-primary) !important;
+  color: var(--md3-on-primary) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-in-range::before {
+  background: var(--md3-primary-container) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-range-hover-start::after,
+.ant-picker-cell-in-view.ant-picker-cell-range-hover-end::after,
+.ant-picker-cell-in-view.ant-picker-cell-range-hover::after {
+  border-color: var(--md3-primary) !important;
+}
+
+/* Time Picker 面板选项 hover/active */
+.ant-picker-time-panel-cell-inner:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: var(--md3-primary) !important;
+  color: var(--md3-on-primary) !important;
 }
 
 /* ============ 分页组件 ============ */
@@ -670,6 +949,21 @@
   border-color: var(--md3-outline) !important;
 }
 
+/* Steps item hover/active */
+.ant-steps-item-process .ant-steps-item-icon .ant-steps-icon {
+  color: var(--md3-on-primary) !important;
+}
+
+.ant-steps-item-finish .ant-steps-item-content .ant-steps-item-title,
+.ant-steps-item-process .ant-steps-item-content .ant-steps-item-title {
+  color: var(--md3-on-surface) !important;
+}
+
+.ant-steps-item-finish .ant-steps-item-content .ant-steps-item-description,
+.ant-steps-item-process .ant-steps-item-content .ant-steps-item-description {
+  color: var(--md3-on-surface-variant) !important;
+}
+
 /* ============ 空状态 ============ */
 .ant-empty-description {
   color: var(--md3-on-surface-variant) !important;
@@ -686,9 +980,34 @@
   ) !important;
 }
 
+/* Skeleton avatar */
+.ant-skeleton-avatar {
+  background: var(--md3-surface-container) !important;
+}
+
+/* Skeleton button */
+.ant-skeleton-button {
+  background: var(--md3-surface-container) !important;
+}
+
+/* Skeleton input */
+.ant-skeleton-input {
+  background: var(--md3-surface-container) !important;
+}
+
 /* ============ 加载状态 ============ */
 .ant-spin-dot-item {
   background: var(--md3-primary) !important;
+}
+
+/* Spin text */
+.ant-spin-text {
+  color: var(--md3-on-surface-variant) !important;
+}
+
+/* Spin container */
+.ant-spin-container::after {
+  background: var(--md3-surface) !important;
 }
 
 /* ============ 面包屑 ============ */
@@ -706,6 +1025,23 @@
 
 .ant-breadcrumb-separator {
   color: var(--md3-on-surface-variant) !important;
+}
+
+/* Breadcrumb item hover */
+.ant-breadcrumb > span:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Breadcrumb link hover */
+.ant-breadcrumb a:hover {
+  color: var(--md3-primary) !important;
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* Breadcrumb 最后一项 */
+.ant-breadcrumb > span:last-child {
+  color: var(--md3-on-surface) !important;
+  font-weight: 500;
 }
 
 /* ============ 分割线 ============ */
@@ -731,6 +1067,11 @@
   border-color: var(--md3-outline-variant) !important;
 }
 
+/* Timeline item hover */
+.ant-timeline-item-content:hover {
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 树组件 ============ */
 .ant-tree {
   background: transparent !important;
@@ -745,6 +1086,26 @@
   background: var(--md3-primary-container) !important;
 }
 
+/* Tree node hover 状态 */
+.ant-tree-node-content-wrapper:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* Tree node active/drag 状态 */
+.ant-tree-node-content-wrapper.ant-tree-node-selected:hover {
+  background: var(--palette-primary-90) !important;
+}
+
+/* Tree checkbox 相关 */
+.ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+  background: var(--md3-primary) !important;
+  border-color: var(--md3-primary) !important;
+}
+
+.ant-tree-checkbox-indeterminate .ant-tree-checkbox-inner::after {
+  background: var(--md3-primary) !important;
+}
+
 /* ============ 穿梭框 ============ */
 .ant-transfer-list {
   background: var(--md3-surface) !important;
@@ -756,6 +1117,15 @@
   border-bottom-color: var(--md3-outline-variant) !important;
 }
 
+/* Transfer list item hover/active 状态 */
+.ant-transfer-list-content-item:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+.ant-transfer-list-content-item-checked {
+  background: var(--md3-primary-container) !important;
+}
+
 /* ============ 上传组件 ============ */
 .ant-upload-drag {
   background: var(--md3-surface-container) !important;
@@ -764,6 +1134,22 @@
 
 .ant-upload-drag:hover {
   border-color: var(--md3-primary) !important;
+}
+
+/* Upload drag active 状态 */
+.ant-upload-drag.ant-upload-drag-hover {
+  background: var(--md3-primary-container) !important;
+  border-color: var(--md3-primary) !important;
+}
+
+/* Upload 列表项 hover */
+.ant-upload-list-item:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* Upload 列表项操作按钮 */
+.ant-upload-list-item-card-actions .anticon:hover {
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 表单组件 ============ */
@@ -778,6 +1164,20 @@
 /* ============ 评分组件 ============ */
 .ant-rate-star-full .ant-rate-star-second {
   color: #fadb14 !important;
+}
+
+/* Rate star hover 状态 */
+.ant-rate-star:hover .ant-rate-star-second {
+  color: #ffec3d !important;
+}
+
+/* Rate star focus 状态 */
+.ant-rate-star:focus {
+  outline: none !important;
+}
+
+.ant-rate-star:focus .ant-rate-star-second {
+  color: #ffec3d !important;
 }
 
 /* ============ 头像组件 ============ */
@@ -801,6 +1201,12 @@
   border-top-color: var(--md3-outline-variant) !important;
 }
 
+/* Collapse header hover/active */
+.ant-collapse-header:hover {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-primary) !important;
+}
+
 /* ============ 列表组件 ============ */
 .ant-list {
   color: var(--md3-on-surface) !important;
@@ -808,6 +1214,16 @@
 
 .ant-list-item {
   border-bottom-color: var(--md3-outline-variant) !important;
+}
+
+/* List item hover */
+.ant-list-item:hover {
+  background: var(--md3-surface-container-high) !important;
+}
+
+/* List item action hover */
+.ant-list-item-action li a:hover {
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 描述列表 ============ */
@@ -821,6 +1237,14 @@
 
 .ant-descriptions-item-content {
   color: var(--md3-on-surface) !important;
+}
+
+/* Pagination 翻页按钮 hover/active */
+.ant-pagination-prev:hover .ant-pagination-item-link,
+.ant-pagination-next:hover .ant-pagination-item-link {
+  background: var(--md3-surface-container-high) !important;
+  border-color: var(--md3-primary) !important;
+  color: var(--md3-primary) !important;
 }
 
 /* ============ 分页组件 ============ */
@@ -862,6 +1286,23 @@
   background: var(--md3-surface-container-high) !important;
 }
 
+/* Popover 链接 hover */
+.ant-popover-inner-content a:hover {
+  color: var(--md3-primary) !important;
+}
+
+/* Popover 按钮 hover */
+.ant-popover-buttons .ant-btn:hover {
+  border-color: var(--md3-primary) !important;
+  color: var(--md3-primary) !important;
+}
+
+.ant-popover-buttons .ant-btn-primary:hover {
+  background: var(--palette-primary-50) !important;
+  border-color: var(--palette-primary-50) !important;
+  color: var(--md3-on-primary) !important;
+}
+
 /* ============ 通知/消息 ============ */
 .ant-message-notice-content,
 .ant-notification-notice {
@@ -888,6 +1329,22 @@
   color: var(--md3-on-primary-container) !important;
 }
 
+/* Segmented item hover 和 active 状态 */
+.ant-segmented-item:hover:not(.ant-segmented-item-selected) {
+  background: var(--md3-surface-container-high) !important;
+  color: var(--md3-on-surface) !important;
+}
+
+.ant-segmented-item:active:not(.ant-segmented-item-selected) {
+  background: var(--md3-surface-container-highest) !important;
+}
+
+/* Segmented thumb 拖动状态 */
+.ant-segmented-thumb {
+  background: var(--md3-primary-container) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
 .ant-slider-rail {
   background: var(--md3-surface-variant) !important;
 }
@@ -898,6 +1355,23 @@
 
 .ant-slider-handle::after {
   box-shadow: 0 0 0 4px var(--md3-primary-container) !important;
+}
+
+/* Slider handle hover/active 状态 */
+.ant-slider-handle:hover::after,
+.ant-slider-handle:focus::after,
+.ant-slider-handle-active::after {
+  box-shadow: 0 0 0 6px var(--md3-primary-container) !important;
+}
+
+/* Slider step 点 */
+.ant-slider-dot-active {
+  border-color: var(--md3-primary) !important;
+}
+
+/* Slider 拖拽时的轨道 */
+.ant-slider-dragging .ant-slider-track {
+  background: var(--palette-primary-50) !important;
 }
 
 /* ============ 进度条 ============ */
@@ -1011,4 +1485,36 @@ html [class*='ant-float-btn-circle'] [class*='ant-float-btn-body'] {
 html .ant-float-btn-square .ant-float-btn-body,
 html [class*='ant-float-btn-square'] [class*='ant-float-btn-body'] {
   border-radius: 8px !important;
+}
+
+/* Float Button focus 状态 */
+html .ant-float-btn-primary:focus,
+html [class*='ant-float-btn-primary']:focus,
+html .ant-float-btn-primary:focus-visible,
+html [class*='ant-float-btn-primary']:focus-visible {
+  background-color: var(--palette-primary-50) !important;
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+}
+
+html .ant-float-btn-default:focus,
+html [class*='ant-float-btn-default']:focus,
+html .ant-float-btn-default:focus-visible,
+html [class*='ant-float-btn-default']:focus-visible {
+  background-color: var(--md3-surface-container-high) !important;
+  box-shadow: 0 0 0 3px var(--md3-primary-container) !important;
+}
+
+/* Float Button active/按下状态 */
+html .ant-float-btn-primary:active,
+html [class*='ant-float-btn-primary']:active,
+html .ant-float-btn-primary .ant-float-btn-body:active,
+html [class*='ant-float-btn-primary'] [class*='ant-float-btn-body']:active {
+  background-color: var(--palette-primary-30) !important;
+}
+
+html .ant-float-btn-default:active,
+html [class*='ant-float-btn-default']:active,
+html .ant-float-btn-default .ant-float-btn-body:active,
+html [class*='ant-float-btn-default'] [class*='ant-float-btn-body']:active {
+  background-color: var(--md3-surface-container-highest) !important;
 }
