@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DownOutlined } from '@ant-design/icons-vue'
-import { ref, watch, isRef, computed, type Ref } from 'vue'
+import { ref, watch, isRef, computed, toRef, type Ref } from 'vue'
 
 import type { AppSettings } from '../../types/type'
 import {
@@ -17,14 +17,19 @@ import {
 import ThemeColorPicker from './ThemeColorPicker.vue'
 
 const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
-const settings = props.settings as AppSettings | Ref<AppSettings>
+const settingsRef = toRef(props, 'settings')
+
+const resolveSettings = () => {
+  const raw = settingsRef.value
+  return isRef(raw) ? raw.value : raw
+}
 
 const emit = defineEmits(['update:theme', 'update:md3ColorScheme', 'update:md3SeedColor'])
 
 const getTheme = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.theme) || 'system'
-    return (settings && (settings as AppSettings).theme) || 'system'
+    const resolved = resolveSettings()
+    return (resolved && resolved.theme) || 'system'
   } catch {
     return 'system'
   }
@@ -32,11 +37,9 @@ const getTheme = () => {
 
 const getMd3ColorScheme = () => {
   try {
-    const raw = isRef(settings)
-      ? settings.value && settings.value.md3ColorScheme
-      : settings && (settings as AppSettings).md3ColorScheme
+    const raw = resolveSettings()?.md3ColorScheme
     // 允许自定义值（不在预设中）
-    return raw || 'default'
+    return raw === undefined ? 'default' : raw
   } catch {
     return 'default'
   }
@@ -44,9 +47,8 @@ const getMd3ColorScheme = () => {
 
 const getMd3SeedColor = () => {
   try {
-    return isRef(settings)
-      ? settings.value && settings.value.md3SeedColor
-      : settings && (settings as AppSettings).md3SeedColor
+    const resolved = resolveSettings()
+    return resolved ? resolved.md3SeedColor : undefined
   } catch {
     return undefined
   }
@@ -64,7 +66,7 @@ const localMd3ColorScheme = ref<string>(getMd3ColorScheme())
 watch(
   () => getMd3ColorScheme(),
   val => {
-    localMd3ColorScheme.value = val || 'default'
+    localMd3ColorScheme.value = val === undefined ? 'default' : val
   }
 )
 
