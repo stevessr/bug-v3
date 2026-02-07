@@ -63,12 +63,20 @@ export function useThemeManager(options: {
    * 更新自定义配色方案
    */
   const updateMd3ColorScheme = (scheme: AppSettings['md3ColorScheme']) => {
+    // 如果清空 scheme（通常是因为切换到了自定义颜色），只更新设置，不应用默认颜色
+    // 避免覆盖 updateMd3SeedColor 设置的颜色
+    if (!scheme) {
+      updateSettings({ md3ColorScheme: scheme })
+      return
+    }
+
     let seed = DEFAULT_PRIMARY_COLOR
     if (scheme && colorSchemes[scheme]) {
       seed = colorSchemes[scheme].color
       // 选择预设时，清空自定义种子色
       updateSettings({ md3ColorScheme: scheme, md3SeedColor: undefined })
     } else {
+      // 理论上不应该走到这里，除非 scheme 是无效字符串但不是空
       updateSettings({ md3ColorScheme: scheme })
     }
 
@@ -79,7 +87,12 @@ export function useThemeManager(options: {
   /**
    * 更新自定义种子色
    */
-  const updateMd3SeedColor = (color: string) => {
+  const updateMd3SeedColor = (color: string | undefined) => {
+    if (!color) {
+      updateSettings({ md3SeedColor: undefined })
+      return
+    }
+
     updateSettings({ md3SeedColor: color, md3ColorScheme: '' })
 
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'

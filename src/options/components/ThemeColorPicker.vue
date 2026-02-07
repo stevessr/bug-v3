@@ -56,13 +56,11 @@ const categories = getAllCategories()
 
 const selectScheme = (key: string) => {
   emit('update:md3ColorScheme', key)
-  emit('update:md3SeedColor', undefined)
 }
 
 const selectCustomColor = (color: string) => {
   customColor.value = color
   emit('update:md3SeedColor', color)
-  emit('update:md3ColorScheme', '')
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -84,7 +82,7 @@ const handleFileUpload = async (event: Event) => {
       selectCustomColor(extractedColors.value[0].hex)
     }
   } catch (error) {
-    console.error('提取颜色失败:', error)
+    console.error('提取颜色失败：', error)
     message.error('提取颜色失败')
   } finally {
     isExtracting.value = false
@@ -108,7 +106,7 @@ const handlePaste = async (event: ClipboardEvent) => {
             selectCustomColor(extractedColors.value[0].hex)
           }
         } catch (error) {
-          console.error('提取颜色失败:', error)
+          console.error('提取颜色失败：', error)
           message.error('提取颜色失败')
         } finally {
           isExtracting.value = false
