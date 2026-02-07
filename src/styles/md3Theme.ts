@@ -10,10 +10,8 @@
  * - neutral: 中性色（去饱和主色）
  * - neutral-variant: 中性变体色
  *
- * 每个色调包含完整的色阶: 0, 4, 6, 10, 12, 17, 20, 22, 24, 30, 40, 50, 60, 70, 80, 87, 90, 92, 94, 95, 96, 98, 99, 100
+ * 每个色调包含完整的色阶：0, 4, 6, 10, 12, 17, 20, 22, 24, 30, 40, 50, 60, 70, 80, 87, 90, 92, 94, 95, 96, 98, 99, 100
  */
-
-import { isValidColor } from './antdTheme'
 
 // 色阶定义（MD3 标准色阶）
 export const TONES = [
@@ -42,6 +40,25 @@ export type ThemePalettes = Record<PaletteName, TonalPalette>
 export type Md3Scheme = Record<string, string>
 
 export const DEFAULT_PRIMARY_COLOR = '#1890ff'
+
+// MD3 预设配色方案（用于主题选择器）
+export const colorSchemes = {
+  default: DEFAULT_PRIMARY_COLOR,
+  blue: '#1d4ed8',
+  green: '#16a34a',
+  purple: '#7c3aed',
+  orange: '#f97316',
+  red: '#dc2626'
+}
+
+// 主题颜色验证函数
+export function isValidColor(color: string): boolean {
+  if (typeof window === 'undefined') return true
+
+  const style = new Option().style
+  style.color = color
+  return style.color !== ''
+}
 
 // ============ 颜色工具函数 ============
 
@@ -315,8 +332,8 @@ const toKebab = (value: string) => value.replace(/([a-z])([A-Z])/g, '$1-$2').toL
 
 /**
  * 将所有调色板应用为 CSS 变量
- * 生成格式: --palette-{name}-{tone}
- * 例如: --palette-primary-40, --palette-neutral-90
+ * 生成格式：--palette-{name}-{tone}
+ * 例如：--palette-primary-40, --palette-neutral-90
  */
 export const applyPalettesToRoot = (
   seedColor: string,
@@ -401,7 +418,7 @@ export const applyMd3SchemeToRoot = (
 
 /**
  * 获取调色板中指定色调的 CSS 变量引用
- * 用于在 CSS 中引用: var(--palette-primary-40)
+ * 用于在 CSS 中引用：var(--palette-primary-40)
  */
 export const paletteVar = (palette: PaletteName, tone: Tone): string => {
   return `var(--palette-${palette}-${tone})`
@@ -409,7 +426,7 @@ export const paletteVar = (palette: PaletteName, tone: Tone): string => {
 
 /**
  * 获取 MD3 语义颜色的 CSS 变量引用
- * 用于在 CSS 中引用: var(--md3-primary)
+ * 用于在 CSS 中引用：var(--md3-primary)
  */
 export const md3Var = (name: keyof Md3Scheme): string => {
   return `var(--md3-${toKebab(name)})`
@@ -417,7 +434,7 @@ export const md3Var = (name: keyof Md3Scheme): string => {
 
 /**
  * 获取主题颜色的 CSS 变量引用
- * 用于在 CSS 中引用: var(--theme-primary)
+ * 用于在 CSS 中引用：var(--theme-primary)
  */
 export const themeVar = (name: string): string => {
   return `var(--theme-${toKebab(name)})`

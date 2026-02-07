@@ -42,11 +42,7 @@ const openDiscourseBrowser = () => {
 </script>
 
 <template>
-  <AConfigProvider
-    :theme="{
-      token: {}
-    }"
-  >
+  <AConfigProvider>
     <ErrorBoundary />
     <div class="popup-container bg-white dark:bg-gray-900">
       <!-- Header with scale control -->

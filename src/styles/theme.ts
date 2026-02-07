@@ -1,4 +1,3 @@
-import { getCurrentThemeMode } from './antdTheme'
 import { applyMd3ThemeToRoot, DEFAULT_PRIMARY_COLOR } from './md3Theme'
 
 import { getSettings, storageGet } from '@/utils/simpleStorage'
@@ -27,7 +26,7 @@ async function applyTheme() {
       root.classList.remove('dark')
     }
 
-    // 触发自定义事件，通知 Ant Design Vue 主题变更
+    // 触发自定义事件，通知主题变更（供应用内同步）
     window.dispatchEvent(
       new CustomEvent('theme-changed', {
         detail: {
@@ -71,5 +70,15 @@ async function applyTheme() {
 
 applyTheme()
 
-// 导出工具函数
-export { getCurrentThemeMode }
+// 获取当前主题模式（基于存储的主题设置 + 系统偏好）
+export async function getCurrentThemeMode(): Promise<'light' | 'dark'> {
+  if (typeof window === 'undefined') return 'light'
+
+  const themeValue = (await storageGet<string>('theme')) || 'system'
+
+  if (themeValue === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+
+  return themeValue as 'light' | 'dark'
+}

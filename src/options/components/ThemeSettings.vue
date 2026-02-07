@@ -8,6 +8,7 @@ import {
   generateMd3Scheme,
   TONES,
   PALETTES,
+  DEFAULT_PRIMARY_COLOR,
   type ThemePalettes,
   type Md3Scheme
 } from '../../styles/md3Theme'
@@ -30,10 +31,11 @@ const getTheme = () => {
 
 const getCustomPrimaryColor = () => {
   try {
-    if (isRef(settings)) return (settings.value && settings.value.customPrimaryColor) || '#1890ff'
-    return (settings && (settings as AppSettings).customPrimaryColor) || '#1890ff'
+    if (isRef(settings))
+      return (settings.value && settings.value.customPrimaryColor) || DEFAULT_PRIMARY_COLOR
+    return (settings && (settings as AppSettings).customPrimaryColor) || DEFAULT_PRIMARY_COLOR
   } catch {
-    return '#1890ff'
+    return DEFAULT_PRIMARY_COLOR
   }
 }
 
@@ -58,7 +60,7 @@ const localCustomPrimaryColor = ref<string>(getCustomPrimaryColor())
 watch(
   () => getCustomPrimaryColor(),
   val => {
-    localCustomPrimaryColor.value = val || '#1890ff'
+    localCustomPrimaryColor.value = val || DEFAULT_PRIMARY_COLOR
   }
 )
 
@@ -694,13 +696,13 @@ const selectPaletteColor = (index: number) => {
               <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">
                 --palette-{name}-{tone}
                 <br />
-                例如: var(--palette-primary-40), var(--palette-neutral-90)
+                例如：var(--palette-primary-40), var(--palette-neutral-90)
               </code>
               <p class="mt-2"><strong>语义变量：</strong></p>
               <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">
                 --md3-{name} 或 --theme-{name}
                 <br />
-                例如: var(--md3-primary), var(--theme-surface-container)
+                例如：var(--md3-primary), var(--theme-surface-container)
               </code>
               <p class="mt-2"><strong>工具类：</strong></p>
               <code class="block bg-gray-100 dark:bg-gray-800 p-1 rounded text-[10px]">

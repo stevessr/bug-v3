@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, watch, provide, watchEffect } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, provide, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-
-import { generateAntdTheme, getCurrentThemeMode } from '../styles/antdTheme'
 
 import ImportConfigModal from './modals/ImportConfigModal.vue'
 import ImportEmojisModal from './modals/ImportEmojisModal.vue'
@@ -51,24 +49,6 @@ provide('streamingHandlers', {
   batchUpdateSizeStreaming: handleBatchUpdateSizeStreaming,
   exportGroupStreaming: handleExportGroupStreaming
 })
-
-// 主题相关状态
-const currentThemeMode = ref<'light' | 'dark'>('light')
-
-onMounted(async () => {
-  currentThemeMode.value = await getCurrentThemeMode()
-})
-
-// 响应式的 Ant Design Vue 主题配置
-// 使用 CSS 变量覆盖，不再依赖 Ant Design 的 token 系统
-const antdThemeConfig = computed(() => {
-  return generateAntdTheme(currentThemeMode.value)
-})
-
-// 监听主题变化事件
-const handleThemeChange = (event: CustomEvent) => {
-  currentThemeMode.value = event.detail.mode
-}
 
 // pending resolver for requestConfirmation -> modal bridge
 
@@ -258,19 +238,6 @@ onMounted(async () => {
     })
   })
 
-  // 监听主题变化事件（优化：在卸载时清理监听器）
-  const cleanupThemeListener = () => {
-    window.removeEventListener('theme-changed', handleThemeChange as (event: Event) => void)
-  }
-  window.addEventListener('theme-changed', handleThemeChange as (event: Event) => void)
-
-  // 组件卸载时清理
-  onBeforeUnmount(() => {
-    cleanupThemeListener()
-  })
-
-  // 初始化主题模式
-  currentThemeMode.value = await getCurrentThemeMode()
   // 处理通过 query tabs 指定的初始页面或分组
   const queryTabs =
     (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
@@ -325,8 +292,7 @@ onBeforeUnmount(() => {
   pendingConfirmResolver = null
   clearConfirmHandler()
 
-  // 移除主题变化监听器
-  window.removeEventListener('theme-changed', handleThemeChange as (event: Event) => void)
+  // 主题监听已移除（MD3 主题由全局主题系统统一管理）
 })
 
 // modal-level handlers: resolve pending promise if present; otherwise delegate to composable actions
@@ -378,7 +344,7 @@ const handleSaveGroup = (
 </script>
 
 <template>
-  <AConfigProvider :theme="antdThemeConfig">
+  <AConfigProvider>
     <ErrorBoundary />
     <div class="options-root min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->

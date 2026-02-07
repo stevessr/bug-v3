@@ -38,7 +38,7 @@ export function useThemeManager(options: {
         : theme
     document.documentElement.setAttribute('data-theme', finalTheme)
 
-    // 触发主题变化事件，通知 Ant Design Vue 主题更新
+    // 触发主题变化事件，通知 MD3 主题更新
     window.dispatchEvent(
       new CustomEvent('theme-changed', {
         detail: {
@@ -66,18 +66,6 @@ export function useThemeManager(options: {
 
     const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
     applyMd3ThemeToRoot(color || DEFAULT_PRIMARY_COLOR, currentMode)
-
-    // 触发主题变化事件以更新 Ant Design Vue 主题
-    const savedTheme = (await storageGet<string>('theme')) || 'system'
-
-    window.dispatchEvent(
-      new CustomEvent('theme-changed', {
-        detail: {
-          mode: currentMode,
-          theme: savedTheme
-        }
-      })
-    )
 
     window.dispatchEvent(
       new CustomEvent('theme-colors-changed', {

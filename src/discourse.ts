@@ -10,7 +10,7 @@ import './styles/discourse.css'
 const App = {
   name: 'DiscourseStandalone',
   render() {
-    return h(AConfigProvider, { theme: { token: {} } }, () =>
+    return h(AConfigProvider, null, () =>
       h('div', { class: 'discourse-standalone' }, [
         h(DiscourseBrowser, { class: 'discourse-standalone__browser' })
       ])

@@ -28,8 +28,8 @@ export interface AppSettings {
   customOpenAIModel?: string
   aiConcurrency?: number // AI 请求并发数（1-10，默认 5）
   theme?: 'system' | 'light' | 'dark'
-  // Custom theme colors
-  customPrimaryColor?: string // 主题主色
+  // MD3 theme colors
+  customPrimaryColor?: string // MD3 种子色
   customColorScheme?: 'default' | 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'custom'
   // Custom CSS injected into pages (managed in Options)
   customCssBlocks?: CustomCssBlock[] // Array of CSS blocks with toggle functionality

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
-import { colorSchemes, isValidColor } from '../../styles/antdTheme'
+import { colorSchemes, isValidColor } from '../../styles/md3Theme'
 
 const props = defineProps<{
   modelValue?: string
