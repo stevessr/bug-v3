@@ -30,7 +30,11 @@ import {
   loadCategory as loadCategoryRoute,
   loadMoreTopics as loadMoreTopicsRoute
 } from './routes/category'
-import { loadTopic as loadTopicRoute, loadMorePosts as loadMorePostsRoute } from './routes/topic'
+import {
+  loadTopic as loadTopicRoute,
+  loadMorePosts as loadMorePostsRoute,
+  ensurePostsAroundNumber as ensurePostsAroundNumberRoute
+} from './routes/topic'
 import {
   loadUser as loadUserRoute,
   loadUserActivity as loadUserActivityRoute,
@@ -734,6 +738,12 @@ export function useDiscourseBrowser() {
     await loadMorePostsRoute(activeTab, baseUrl, isLoadingMore, direction)
   }
 
+  async function ensurePostNumberLoaded(postNumber: number) {
+    const tab = activeTab.value
+    if (!tab?.currentTopic) return
+    await ensurePostsAroundNumberRoute(tab, tab.currentTopic.id, postNumber, baseUrl)
+  }
+
   // Load more topics (pagination for home/category)
   async function loadMoreTopics() {
     await loadMoreTopicsRoute(activeTab, baseUrl, users, isLoadingMore)
@@ -907,6 +917,7 @@ export function useDiscourseBrowser() {
     openChatChannel,
     openQuote,
     loadMorePosts,
+    ensurePostNumberLoaded,
     loadMoreTopics,
     switchActivityTab,
     loadMoreActivity,

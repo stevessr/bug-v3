@@ -18,6 +18,7 @@ export function useTopicNavigation(options: {
   extractData: typeof extractData
   parsePostContent: typeof parsePostContent
   emitOpenQuote: (payload: { topicId: number; postNumber: number }) => void
+  ensurePostLoaded?: (postNumber: number) => Promise<void> | void
   notify: Notify
 }) {
   const timelinePostNumber = ref(1)
@@ -25,6 +26,9 @@ export function useTopicNavigation(options: {
   const lastAutoScrollKey = ref<string | null>(null)
   const highlightedPostNumber = ref<number | null>(null)
   const highlightTimeoutId = ref<number | null>(null)
+  const ensureTimerId = ref<number | null>(null)
+  const pendingEnsureNumber = ref<number | null>(null)
+  const inFlightEnsures = new Set<number>()
 
   const HIGHLIGHT_DURATION_MS = 2000
 
@@ -71,7 +75,35 @@ export function useTopicNavigation(options: {
     return (above || below)?.el || null
   }
 
-  const scrollToPost = (postNumber: number, behavior: ScrollBehavior = 'smooth') => {
+  const scheduleEnsure = (postNumber: number, behavior: ScrollBehavior) => {
+    if (!options.ensurePostLoaded) return
+    pendingEnsureNumber.value = postNumber
+    if (ensureTimerId.value !== null) return
+    ensureTimerId.value = window.setTimeout(async () => {
+      const target = pendingEnsureNumber.value
+      pendingEnsureNumber.value = null
+      ensureTimerId.value = null
+      if (typeof target !== 'number') return
+      if (inFlightEnsures.has(target)) return
+      inFlightEnsures.add(target)
+      try {
+        await options.ensurePostLoaded?.(target)
+      } catch (error) {
+        console.warn('[DiscourseBrowser] ensure post loaded failed:', error)
+        options.notify.warning('加载帖子失败')
+      } finally {
+        inFlightEnsures.delete(target)
+      }
+      await nextTick()
+      scrollToPost(target, behavior, false)
+    }, 120)
+  }
+
+  const scrollToPost = async (
+    postNumber: number,
+    behavior: ScrollBehavior = 'smooth',
+    allowEnsure = true
+  ) => {
     const list = options.postsListRef.value
     if (!list) return
     const target = list.querySelector<HTMLElement>(`[data-post-number="${postNumber}"]`)
@@ -80,6 +112,9 @@ export function useTopicNavigation(options: {
       scrollElementIntoView(target, container, behavior)
       triggerHighlight(postNumber)
       return
+    }
+    if (allowEnsure) {
+      scheduleEnsure(postNumber, behavior)
     }
     const nearest = findNearestPostElement(postNumber)
     if (nearest) {
@@ -256,7 +291,7 @@ export function useTopicNavigation(options: {
       if (lastAutoScrollKey.value === key) return
       lastAutoScrollKey.value = key
       await nextTick()
-      scrollToPost(value)
+      await scrollToPost(value)
       timelinePostNumber.value = value
     },
     { immediate: true }
@@ -273,6 +308,9 @@ export function useTopicNavigation(options: {
     options.postsListRef.value?.removeEventListener('click', handleQuoteToggle)
     const container = options.postsListRef.value?.closest('.content-area') as HTMLElement | null
     container?.removeEventListener('scroll', updateTimelineFromScroll)
+    if (ensureTimerId.value !== null) {
+      clearTimeout(ensureTimerId.value)
+    }
   })
 
   return {

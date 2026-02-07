@@ -74,6 +74,7 @@ const {
   openChat,
   openQuote,
   loadMorePosts,
+  ensurePostNumberLoaded,
   loadMoreTopics,
   switchActivityTab,
   loadMoreActivity,
@@ -1177,6 +1178,7 @@ onUnmounted(() => {
         :targetPostNumber="activeTab.targetPostNumber"
         :currentUser="activeTab.currentUser"
         :currentUsername="currentUsername"
+        :ensurePostLoaded="ensurePostNumberLoaded"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
         @refresh="refresh"

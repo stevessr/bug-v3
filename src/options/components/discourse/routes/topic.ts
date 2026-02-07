@@ -107,6 +107,67 @@ export async function loadTopic(
   }
 }
 
+async function fetchPostIdByNumber(
+  topicId: number,
+  postNumber: number,
+  baseUrl: Ref<string>
+): Promise<number | null> {
+  try {
+    const result = await pageFetch<any>(
+      `${baseUrl.value}/posts/by_number/${topicId}/${postNumber}.json`
+    )
+    if (result.status === 404 || result.ok === false) return null
+    const data = extractData(result)
+    const postId = Number(data?.id)
+    return Number.isFinite(postId) && postId > 0 ? postId : null
+  } catch (e) {
+    console.warn('[DiscourseBrowser] fetch post id failed:', e)
+    return null
+  }
+}
+
+async function loadPostsByIds(
+  tab: BrowserTab,
+  topicId: number,
+  postIds: number[],
+  baseUrl: Ref<string>
+) {
+  if (!tab.currentTopic || postIds.length === 0) return
+
+  const uniqueIds = Array.from(new Set(postIds)).filter(id => !tab.loadedPostIds.has(id))
+  if (uniqueIds.length === 0) return
+
+  const batches: number[][] = []
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    batches.push(uniqueIds.slice(i, i + 30))
+  }
+
+  const collected: DiscoursePost[] = []
+  for (const batch of batches) {
+    const idsParam = batch.map((id: number) => `post_ids[]=${id}`).join('&')
+    const url = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}&include_suggested=false`
+    const result = await pageFetch<any>(url)
+    const data = extractData(result)
+    const posts = data?.post_stream?.posts || []
+    if (Array.isArray(posts) && posts.length > 0) {
+      collected.push(...posts)
+    }
+  }
+
+  if (collected.length === 0 || !tab.currentTopic) return
+
+  tab.currentTopic.post_stream.posts = [
+    ...tab.currentTopic.post_stream.posts,
+    ...collected
+  ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
+  collected.forEach((post: DiscoursePost) => tab.loadedPostIds.add(post.id))
+
+  const stream = tab.currentTopic.post_stream?.stream || []
+  tab.hasMorePosts = stream.some((id: number) => !tab.loadedPostIds.has(id))
+
+  void sendReadTimings(tab, topicId, baseUrl.value, collected)
+}
+
 async function ensurePostByNumberLoaded(
   tab: BrowserTab,
   topicId: number,
@@ -114,28 +175,66 @@ async function ensurePostByNumberLoaded(
   baseUrl: Ref<string>
 ) {
   try {
-    const result = await pageFetch<any>(
-      `${baseUrl.value}/posts/by_number/${topicId}/${postNumber}.json`
-    )
-    const data = extractData(result)
-    const postId = data?.id
+    const postId = await fetchPostIdByNumber(topicId, postNumber, baseUrl)
     if (!postId || tab.loadedPostIds.has(postId)) return
-
-    const postResult = await pageFetch<any>(
-      `${baseUrl.value}/t/${topicId}/posts.json?post_ids[]=${postId}`
-    )
-    const postData = extractData(postResult)
-    const posts = postData?.post_stream?.posts || []
-    if (tab.currentTopic && posts.length > 0) {
-      tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...posts].sort(
-        (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
-      )
-      posts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
-      void sendReadTimings(tab, topicId, baseUrl.value, posts)
-    }
+    await loadPostsByIds(tab, topicId, [postId], baseUrl)
   } catch (e) {
     console.warn('[DiscourseBrowser] ensurePostByNumberLoaded error:', e)
   }
+}
+
+export async function ensurePostsAroundNumber(
+  tab: BrowserTab,
+  topicId: number,
+  postNumber: number,
+  baseUrl: Ref<string>
+) {
+  if (!tab.currentTopic || postNumber <= 0) return
+
+  const stream = tab.currentTopic.post_stream?.stream || []
+  if (!Array.isArray(stream) || stream.length === 0) {
+    await ensurePostByNumberLoaded(tab, topicId, postNumber, baseUrl)
+    return
+  }
+
+  const existingPost = tab.currentTopic.post_stream.posts.find(
+    (post: DiscoursePost) => post.post_number === postNumber
+  )
+  const targetId = existingPost?.id ?? (await fetchPostIdByNumber(topicId, postNumber, baseUrl))
+  if (!targetId) return
+
+  const targetIndex = stream.indexOf(targetId)
+  if (targetIndex < 0) {
+    await ensurePostByNumberLoaded(tab, topicId, postNumber, baseUrl)
+    return
+  }
+
+  let lowerIndex = -1
+  let upperIndex = stream.length
+  stream.forEach((id: number, index: number) => {
+    if (!tab.loadedPostIds.has(id)) return
+    if (index <= targetIndex && index > lowerIndex) {
+      lowerIndex = index
+    }
+    if (index >= targetIndex && index < upperIndex) {
+      upperIndex = index
+    }
+  })
+
+  let candidateIds: number[] = []
+  if (lowerIndex >= 0 && upperIndex < stream.length && upperIndex - lowerIndex > 1) {
+    candidateIds = stream.slice(lowerIndex + 1, upperIndex)
+  } else {
+    const windowSize = 40
+    const start = Math.max(0, targetIndex - Math.floor(windowSize / 2))
+    const end = Math.min(stream.length, start + windowSize)
+    candidateIds = stream.slice(start, end)
+  }
+
+  const idsToLoad = candidateIds.filter(id => !tab.loadedPostIds.has(id))
+  if (idsToLoad.length === 0) return
+
+  await loadPostsByIds(tab, topicId, idsToLoad, baseUrl)
 }
 
 export async function loadMorePosts(

@@ -34,7 +34,11 @@ export default defineComponent({
     hasMorePosts: { type: Boolean, required: true },
     targetPostNumber: { type: Number as () => number | null, default: null },
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
-    currentUsername: { type: String, default: null }
+    currentUsername: { type: String, default: null },
+    ensurePostLoaded: {
+      type: Function as () => (postNumber: number) => Promise<void> | void,
+      default: null
+    }
   },
   emits: [
     'openSuggestedTopic',
@@ -365,6 +369,7 @@ export default defineComponent({
       extractData,
       parsePostContent,
       emitOpenQuote: payload => emit('openQuote', payload),
+      ensurePostLoaded: props.ensurePostLoaded || undefined,
       notify: message
     })
 
