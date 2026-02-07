@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { UploadOutlined, BgColorsOutlined, CheckOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -27,6 +27,57 @@ const activeTab = ref<string>('classic')
 const customColor = ref<string>(props.md3SeedColor || '#6750A4')
 const extractedColors = ref<ExtractedColor[]>([])
 const isExtracting = ref(false)
+const previewUrl = ref<string | null>(null)
+
+const parseHexColor = (hex: string) => {
+  const normalized = hex.replace('#', '').trim()
+  if (normalized.length === 3) {
+    const r = Number.parseInt(normalized[0] + normalized[0], 16)
+    const g = Number.parseInt(normalized[1] + normalized[1], 16)
+    const b = Number.parseInt(normalized[2] + normalized[2], 16)
+    return { r, g, b }
+  }
+  if (normalized.length === 6) {
+    const r = Number.parseInt(normalized.slice(0, 2), 16)
+    const g = Number.parseInt(normalized.slice(2, 4), 16)
+    const b = Number.parseInt(normalized.slice(4, 6), 16)
+    return { r, g, b }
+  }
+  return null
+}
+
+const getLuminance = (rgb: { r: number; g: number; b: number }) =>
+  (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255
+
+const isLightColor = (rgb: { r: number; g: number; b: number }) => getLuminance(rgb) > 0.72
+
+const customColorIsLight = computed(() => {
+  const rgb = parseHexColor(customColor.value)
+  return rgb ? isLightColor(rgb) : false
+})
+
+const getSwatchStyle = (color: ExtractedColor) => {
+  const light = isLightColor(color.rgb)
+  return {
+    backgroundColor: color.hex,
+    boxShadow: `inset 0 0 0 1px ${light ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.25)'}, 0 2px 6px rgba(0,0,0,0.12)`
+  }
+}
+
+const revokePreviewUrl = () => {
+  if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(previewUrl.value)
+  }
+}
+
+const setPreviewFromFile = (file: File) => {
+  revokePreviewUrl()
+  previewUrl.value = URL.createObjectURL(file)
+}
+
+onBeforeUnmount(() => {
+  revokePreviewUrl()
+})
 
 // 监听外部属性变化
 watch(
@@ -84,6 +135,7 @@ const handleFileUpload = async (event: Event) => {
 
   try {
     isExtracting.value = true
+    setPreviewFromFile(file)
     extractedColors.value = await extractColorsFromImage(file, 8, 'mediancut')
 
     // 默认选中第一个提取的颜色
@@ -110,6 +162,7 @@ const handlePaste = async (event: ClipboardEvent) => {
       if (file) {
         try {
           isExtracting.value = true
+          setPreviewFromFile(file)
           extractedColors.value = await extractColorsFromImage(file, 8, 'mediancut')
           if (extractedColors.value.length > 0) {
             selectCustomColor(extractedColors.value[0].hex)
@@ -190,9 +243,17 @@ const handlePaste = async (event: ClipboardEvent) => {
               />
               <div
                 class="w-16 h-16 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center transition-transform group-hover:scale-105"
-                :style="{ backgroundColor: customColor }"
+                :style="{
+                  backgroundColor: customColor,
+                  boxShadow: customColorIsLight
+                    ? 'inset 0 0 0 1px rgba(0,0,0,0.2), 0 6px 14px rgba(0,0,0,0.16)'
+                    : 'inset 0 0 0 1px rgba(255,255,255,0.18), 0 6px 14px rgba(0,0,0,0.16)'
+                }"
               >
-                <BgColorsOutlined class="text-white text-xl drop-shadow-md" />
+                <BgColorsOutlined
+                  class="text-xl drop-shadow-md"
+                  :style="{ color: customColorIsLight ? 'rgba(15, 23, 42, 0.8)' : '#ffffff' }"
+                />
               </div>
             </div>
 
@@ -218,7 +279,7 @@ const handlePaste = async (event: ClipboardEvent) => {
             </div>
 
             <div
-              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-colors cursor-pointer relative"
+              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center transition-colors cursor-pointer relative overflow-hidden"
               :style="{
                 '--hover-border-color': 'var(--md3-primary)',
                 '--hover-bg-color': 'var(--md3-primary-container)'
@@ -231,10 +292,24 @@ const handlePaste = async (event: ClipboardEvent) => {
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 @change="handleFileUpload"
               />
+              <div v-if="previewUrl" class="absolute inset-0 p-3 pointer-events-none">
+                <div class="theme-color-checker w-full h-full rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700/70">
+                  <img
+                    :src="previewUrl"
+                    alt="预览图片"
+                    class="w-full h-full object-contain"
+                  />
+                </div>
+                <div
+                  class="absolute bottom-3 right-3 text-[11px] px-2 py-1 rounded-full bg-white/90 text-gray-700 shadow-sm dark:bg-gray-900/80 dark:text-gray-200"
+                >
+                  点击更换图片
+                </div>
+              </div>
               <div v-if="isExtracting" class="py-2">
                 <a-spin tip="正在分析颜色..." />
               </div>
-              <div v-else class="space-y-2 pointer-events-none">
+              <div v-else-if="!previewUrl" class="space-y-2 pointer-events-none">
                 <UploadOutlined class="text-2xl text-gray-400" />
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   点击上传或直接粘贴图片 (Ctrl+V)
@@ -253,8 +328,8 @@ const handlePaste = async (event: ClipboardEvent) => {
                   @click="selectCustomColor(color.hex)"
                 >
                   <div
-                    class="w-full aspect-square rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
-                    :style="{ backgroundColor: color.hex }"
+                    class="w-full aspect-square rounded-lg border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
+                    :style="getSwatchStyle(color)"
                   ></div>
 
                   <!-- 选中标记 -->
@@ -264,9 +339,17 @@ const handlePaste = async (event: ClipboardEvent) => {
                   >
                     <div
                       class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center"
-                      :style="{ backgroundColor: color.hex, filter: 'brightness(0.8)' }"
+                      :style="{
+                        backgroundColor: color.hex,
+                        boxShadow: getSwatchStyle(color).boxShadow
+                      }"
                     >
-                      <CheckOutlined class="text-white text-xs" />
+                      <CheckOutlined
+                        class="text-xs"
+                        :style="{
+                          color: isLightColor(color.rgb) ? 'rgba(15, 23, 42, 0.8)' : '#ffffff'
+                        }"
+                      />
                     </div>
                   </div>
 
@@ -274,7 +357,7 @@ const handlePaste = async (event: ClipboardEvent) => {
                   <div
                     class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none"
                   >
-                    {{ color.name }}
+                    {{ color.name }} · {{ color.hex.toUpperCase() }}
                   </div>
                 </div>
               </div>
@@ -300,5 +383,25 @@ const handlePaste = async (event: ClipboardEvent) => {
 .theme-color-picker [style*='--hover-border-color']:hover {
   border-color: var(--hover-border-color) !important;
   background-color: var(--hover-bg-color) !important;
+}
+
+.theme-color-checker {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(45deg, rgba(15, 23, 42, 0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(15, 23, 42, 0.06) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+}
+
+:deep(.dark) .theme-color-checker {
+  background-color: #0f172a;
+  background-image:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.2) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.2) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.2) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.2) 75%);
 }
 </style>
