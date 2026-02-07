@@ -301,10 +301,18 @@
       "isArchived": false
     },
     {
+      "id": "group-1769003966293",
+      "name": "steve 的 OC",
+      "icon": "S",
+      "order": 37,
+      "emojiCount": 49,
+      "isArchived": false
+    },
+    {
       "id": "group-1764592283419",
       "name": "steve 的 OC 表情包",
       "icon": "https://linux.do/uploads/default/original/4X/7/a/e/7ae79c2cc6c90287f2ffcdfb26578b4ce95c1ec0.jpeg",
-      "order": 37,
+      "order": 38,
       "emojiCount": 54,
       "isArchived": false
     },
@@ -312,7 +320,7 @@
       "id": "group-1764386468076",
       "name": "steve 的 OC？",
       "icon": "😮",
-      "order": 38,
+      "order": 39,
       "emojiCount": 111,
       "isArchived": true
     },
@@ -320,16 +328,8 @@
       "id": "group-1761328497264",
       "name": "Stevessr 搞来的 orange",
       "icon": "🌿",
-      "order": 39,
-      "emojiCount": 69,
-      "isArchived": false
-    },
-    {
-      "id": "group-1769003966293",
-      "name": "steve 的 OC",
-      "icon": "S",
       "order": 40,
-      "emojiCount": 49,
+      "emojiCount": 69,
       "isArchived": false
     },
     {
