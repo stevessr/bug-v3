@@ -278,7 +278,7 @@ const handlePaste = async (event: ClipboardEvent) => {
               <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200">从图片提取配色</h4>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex flex-col md:flex-row md:items-stretch gap-4">
               <!-- 图片区域 -->
               <div class="flex-1 min-w-[260px]">
                 <div
@@ -322,17 +322,20 @@ const handlePaste = async (event: ClipboardEvent) => {
               </div>
 
               <!-- 提取结果 -->
-              <div class="flex-1 min-w-[220px]">
+              <div class="flex-1 min-w-[220px] min-h-[240px] flex flex-col">
                 <p class="text-xs text-gray-500 mb-2">提取结果 (点击应用):</p>
-                <div v-if="extractedColors.length > 0" class="theme-color-swatch-grid min-h-[200px]">
+                <div
+                  v-if="extractedColors.length > 0"
+                  class="theme-color-swatch-grid min-h-[200px] flex-1"
+                >
                   <div
                     v-for="color in extractedColors"
                     :key="color.hex"
-                    class="group relative cursor-pointer"
+                    class="theme-color-swatch group relative cursor-pointer"
                     @click="selectCustomColor(color.hex)"
                   >
                     <div
-                      class="w-full aspect-square rounded-lg border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
+                      class="theme-color-swatch-tile rounded-lg border border-gray-100 dark:border-gray-700 transition-transform group-hover:scale-110"
                       :style="getSwatchStyle(color)"
                     ></div>
 
@@ -367,7 +370,7 @@ const handlePaste = async (event: ClipboardEvent) => {
                 </div>
                 <div
                   v-else
-                  class="min-h-[200px] rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-400"
+                  class="min-h-[200px] rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-400 flex-1"
                 >
                   上传或粘贴图片后显示提取结果
                 </div>
@@ -410,11 +413,23 @@ const handlePaste = async (event: ClipboardEvent) => {
 .theme-color-swatch-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  grid-auto-rows: minmax(72px, 1fr);
   gap: 12px;
 }
 
 .theme-color-swatch-grid > * {
   min-width: 72px;
+}
+
+.theme-color-swatch {
+  width: 100%;
+  height: 100%;
+  min-height: 72px;
+}
+
+.theme-color-swatch-tile {
+  width: 100%;
+  height: 100%;
 }
 
 :deep(.dark) .theme-color-checker {
