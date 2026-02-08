@@ -18,7 +18,6 @@ struct AllocHeader {
 
 const HEADER_SIZE: usize = size_of::<AllocHeader>();
 const DEFAULT_ALIGN: usize = 8;
-const POPCOUNT4: [u8; 16] = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
 #[inline]
 fn alloc_bytes(size: usize) -> *mut u8 {
@@ -210,16 +209,88 @@ fn parse_c_hex(ptr: *const u8) -> Option<Vec<u8>> {
     Some(bytes.to_vec())
 }
 
-fn hamming_distance_hex(hash1: &[u8], hash2: &[u8]) -> i32 {
-    if hash1.len() != hash2.len() {
+struct PackedHash {
+    blocks: Vec<u64>,
+    nibbles: usize,
+    valid: bool,
+}
+
+fn pack_hex_to_u64_blocks(bytes: &[u8]) -> PackedHash {
+    if bytes.is_empty() {
+        return PackedHash {
+            blocks: Vec::new(),
+            nibbles: 0,
+            valid: false,
+        };
+    }
+
+    let mut blocks = Vec::with_capacity((bytes.len() + 15) / 16);
+    let mut offset = 0usize;
+
+    while offset < bytes.len() {
+        let end = (offset + 16).min(bytes.len());
+        let mut block = 0u64;
+
+        for &ch in &bytes[offset..end] {
+            block = (block << 4) | hex_to_val(ch) as u64;
+        }
+
+        let remaining = 16usize - (end - offset);
+        if remaining > 0 {
+            block <<= (remaining * 4) as u32;
+        }
+
+        blocks.push(block);
+        offset = end;
+    }
+
+    PackedHash {
+        blocks,
+        nibbles: bytes.len(),
+        valid: true,
+    }
+}
+
+fn parse_packed_hash(ptr: *const u8) -> PackedHash {
+    match parse_c_hex(ptr) {
+        Some(bytes) => pack_hex_to_u64_blocks(&bytes),
+        None => PackedHash {
+            blocks: Vec::new(),
+            nibbles: 0,
+            valid: false,
+        },
+    }
+}
+
+fn hamming_distance_packed(hash1: &PackedHash, hash2: &PackedHash, early_stop: i32) -> i32 {
+    if !hash1.valid || !hash2.valid || hash1.nibbles != hash2.nibbles {
         return -1;
     }
 
     let mut distance = 0i32;
-    for i in 0..hash1.len() {
-        let v1 = hex_to_val(hash1[i]);
-        let v2 = hex_to_val(hash2[i]);
-        distance += POPCOUNT4[(v1 ^ v2) as usize] as i32;
+    let mut idx = 0usize;
+    let len = hash1.blocks.len();
+
+    // Unrolled block-wise accumulation to improve wasm backend vectorization opportunities.
+    while idx + 4 <= len {
+        distance += (hash1.blocks[idx] ^ hash2.blocks[idx]).count_ones() as i32;
+        distance += (hash1.blocks[idx + 1] ^ hash2.blocks[idx + 1]).count_ones() as i32;
+        distance += (hash1.blocks[idx + 2] ^ hash2.blocks[idx + 2]).count_ones() as i32;
+        distance += (hash1.blocks[idx + 3] ^ hash2.blocks[idx + 3]).count_ones() as i32;
+
+        if early_stop >= 0 && distance > early_stop {
+            return distance;
+        }
+
+        idx += 4;
+    }
+
+    while idx < len {
+        distance += (hash1.blocks[idx] ^ hash2.blocks[idx]).count_ones() as i32;
+        if early_stop >= 0 && distance > early_stop {
+            return distance;
+        }
+        idx += 1;
     }
 
     distance
@@ -382,14 +453,9 @@ pub extern "C" fn calculate_batch_hashes(
 
 #[no_mangle]
 pub extern "C" fn calculate_hamming_distance(hash1: *const u8, hash2: *const u8) -> i32 {
-    let Some(bytes1) = parse_c_hex(hash1) else {
-        return -1;
-    };
-    let Some(bytes2) = parse_c_hex(hash2) else {
-        return -1;
-    };
-
-    hamming_distance_hex(&bytes1, &bytes2)
+    let packed1 = parse_packed_hash(hash1);
+    let packed2 = parse_packed_hash(hash2);
+    hamming_distance_packed(&packed1, &packed2, -1)
 }
 
 #[no_mangle]
@@ -414,20 +480,21 @@ pub extern "C" fn find_similar_pairs(
     // SAFETY: hashes points to num pointers.
     let hash_ptrs = unsafe { core::slice::from_raw_parts(hashes, num) };
 
-    let mut parsed_hashes = Vec::with_capacity(num);
+    let mut parsed_hashes: Vec<PackedHash> = Vec::with_capacity(num);
     for &hash_ptr in hash_ptrs {
-        let Some(bytes) = parse_c_hex(hash_ptr) else {
-            parsed_hashes.push(Vec::new());
-            continue;
-        };
-        parsed_hashes.push(bytes);
+        parsed_hashes.push(parse_packed_hash(hash_ptr));
     }
 
     let mut pairs: Vec<i32> = Vec::new();
+    let threshold_for_early_stop = threshold.max(0);
 
     for i in 0..num {
         for j in (i + 1)..num {
-            let distance = hamming_distance_hex(&parsed_hashes[i], &parsed_hashes[j]);
+            let distance = hamming_distance_packed(
+                &parsed_hashes[i],
+                &parsed_hashes[j],
+                threshold_for_early_stop,
+            );
             if distance >= 0 && distance <= threshold {
                 pairs.push(i as i32);
                 pairs.push(j as i32);
@@ -479,16 +546,13 @@ pub extern "C" fn find_similar_pairs_bucketed(
     let starts = unsafe { core::slice::from_raw_parts(bucket_starts, num_buckets_usize) };
     let sizes = unsafe { core::slice::from_raw_parts(bucket_sizes, num_buckets_usize) };
 
-    let mut parsed_hashes = Vec::with_capacity(num_hashes_usize);
+    let mut parsed_hashes: Vec<PackedHash> = Vec::with_capacity(num_hashes_usize);
     for &hash_ptr in hash_ptrs {
-        let Some(bytes) = parse_c_hex(hash_ptr) else {
-            parsed_hashes.push(Vec::new());
-            continue;
-        };
-        parsed_hashes.push(bytes);
+        parsed_hashes.push(parse_packed_hash(hash_ptr));
     }
 
     let mut pairs: Vec<i32> = Vec::new();
+    let threshold_for_early_stop = threshold.max(0);
 
     // Compare within each bucket.
     for b in 0..num_buckets_usize {
@@ -510,7 +574,11 @@ pub extern "C" fn find_similar_pairs_bucketed(
 
         for i in start_usize..end {
             for j in (i + 1)..end {
-                let distance = hamming_distance_hex(&parsed_hashes[i], &parsed_hashes[j]);
+                let distance = hamming_distance_packed(
+                    &parsed_hashes[i],
+                    &parsed_hashes[j],
+                    threshold_for_early_stop,
+                );
                 if distance >= 0 && distance <= threshold {
                     pairs.push(i as i32);
                     pairs.push(j as i32);
@@ -546,7 +614,11 @@ pub extern "C" fn find_similar_pairs_bucketed(
 
             for i in range1_start..range1_end {
                 for j in range2_start..range2_end {
-                    let distance = hamming_distance_hex(&parsed_hashes[i], &parsed_hashes[j]);
+                    let distance = hamming_distance_packed(
+                        &parsed_hashes[i],
+                        &parsed_hashes[j],
+                        threshold_for_early_stop,
+                    );
                     if distance >= 0 && distance <= threshold {
                         pairs.push(i as i32);
                         pairs.push(j as i32);
