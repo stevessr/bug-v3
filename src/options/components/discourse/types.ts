@@ -413,6 +413,14 @@ export interface ChatChannel {
     uploaded_logo?: { url: string } | null
     uploaded_logo_dark?: { url: string } | null
   }
+  meta?: {
+    can_moderate?: boolean
+    can_flag?: boolean
+    can_join_chat_channel?: boolean
+    can_remove_members?: boolean
+    user_silenced?: boolean
+    [key: string]: any
+  }
   status?: string
   last_message_sent_at?: string
   last_message_id?: number
@@ -426,16 +434,52 @@ export interface ChatChannel {
   current_user_membership?: ChatChannelMembership
 }
 
+export interface ChatMessageReaction {
+  emoji: string
+  count: number
+  reacted?: boolean
+  users?: DiscourseUser[]
+}
+
+export interface ChatMessageBlockText {
+  type?: string
+  text?: string
+}
+
+export interface ChatMessageBlockElement {
+  type?: string
+  action_id?: string
+  style?: string
+  text?: ChatMessageBlockText
+}
+
+export interface ChatMessageBlock {
+  type?: string
+  elements?: ChatMessageBlockElement[]
+}
+
 export interface ChatMessage {
   id: number
   message?: string
   cooked?: string
   created_at: string
+  chat_channel_id?: number
+  thread_id?: number | null
   user_id?: number
   username?: string
   name?: string
   avatar_template?: string
   user?: DiscourseUser
+  reactions?: ChatMessageReaction[]
+  blocks?: ChatMessageBlock[]
+}
+
+export interface ChatChannelUpdatePayload {
+  name?: string
+  description?: string
+  slug?: string
+  emoji?: string
+  threading_enabled?: boolean
 }
 
 export interface ChatState {

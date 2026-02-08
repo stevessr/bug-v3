@@ -50,6 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .chat-main-title {
@@ -60,6 +61,27 @@
 
 .dark .chat-main-title {
   color: #e2e8f0;
+}
+
+.chat-main-action-btn {
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.chat-main-action-btn:hover {
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.dark .chat-main-action-btn {
+  border-color: #334155;
+  background: #111827;
+  color: #cbd5e1;
 }
 
 .chat-empty {

@@ -84,6 +84,9 @@ const {
   selectChatChannel,
   loadMoreChatMessagesForChannel,
   sendChat,
+  reactToChatMessage,
+  updateChatChannel,
+  replyChatInteraction,
   changeTopicListType,
   loadNotifications,
   checkTopicListUpdates,
@@ -594,6 +597,54 @@ const handleLoadMoreChatMessages = (channelId: number) => {
 
 const handleSendChatMessage = (payload: { channelId: number; message: string }) => {
   sendChat(payload.channelId, payload.message)
+}
+
+const handleReactChatMessage = async (payload: {
+  channelId: number
+  messageId: number
+  emoji: string
+  reacted?: boolean
+}) => {
+  const ok = await reactToChatMessage(
+    payload.channelId,
+    payload.messageId,
+    payload.emoji,
+    payload.reacted
+  )
+  if (!ok) {
+    message.error(activeTab.value?.chatState?.errorMessage || '聊天反应操作失败')
+  }
+}
+
+const handleEditChatChannel = async (payload: {
+  channelId: number
+  updates: {
+    name?: string
+    description?: string
+    slug?: string
+    emoji?: string
+    threading_enabled?: boolean
+  }
+}) => {
+  const channel = await updateChatChannel(payload.channelId, payload.updates)
+  if (channel) {
+    message.success('频道已更新')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '频道更新失败')
+  }
+}
+
+const handleChatMessageInteraction = async (payload: {
+  channelId: number
+  messageId: number
+  actionId: string
+}) => {
+  const result = await replyChatInteraction(payload.channelId, payload.messageId, payload.actionId)
+  if (result) {
+    message.success('邀请回复已发送')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '邀请回复失败')
+  }
 }
 
 const handleChangeTopicListType = (type: TopicListType) => {
@@ -1165,6 +1216,9 @@ onUnmounted(() => {
         @selectChannel="handleSelectChatChannel"
         @loadMore="handleLoadMoreChatMessages"
         @sendMessage="handleSendChatMessage"
+        @react="handleReactChatMessage"
+        @editChannel="handleEditChatChannel"
+        @interact="handleChatMessageInteraction"
         @navigate="handleContentNavigation"
       />
 
@@ -1195,7 +1249,7 @@ onUnmounted(() => {
         :user="activeTab.currentUser"
         :baseUrl="baseUrl"
         :showSettings="isViewingSelf"
-        :showGroups="true"
+        showGroups
         @openTopic="handleUserTopicClick"
         @openActivity="handleOpenUserActivity"
         @openMessages="handleOpenUserMessages"
@@ -1221,7 +1275,7 @@ onUnmounted(() => {
         :isLoadingMore="isLoadingMore"
         :hasMore="activeTab.followFeedHasMore"
         :showSettings="isViewingSelf"
-        :showGroups="true"
+        showGroups
         @switchTab="handleUserExtrasTabSwitch"
         @openUser="handleUserClick"
         @openTopic="handleUserTopicClick"
@@ -1240,7 +1294,7 @@ onUnmounted(() => {
         :isLoadingMore="isLoadingMore"
         :showReadTab="isViewingSelf"
         :showSettings="isViewingSelf"
-        :showGroups="true"
+        showGroups
         @switchTab="handleActivityTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"
@@ -1259,7 +1313,7 @@ onUnmounted(() => {
         :users="users"
         :isLoadingMore="isLoadingMore"
         :showSettings="isViewingSelf"
-        :showGroups="true"
+        showGroups
         @switchTab="handleMessagesTabSwitch"
         @openTopic="handleUserTopicClick"
         @openUser="handleUserClick"

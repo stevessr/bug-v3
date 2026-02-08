@@ -60,3 +60,122 @@
 .dark .chat-message-name {
   color: #e2e8f0;
 }
+
+.chat-message-footer {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-message-own .chat-message-footer {
+  justify-content: flex-end;
+}
+
+.chat-message-reaction,
+.chat-message-reaction-add {
+  border: 1px solid #dbe2ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.chat-message-reaction:hover,
+.chat-message-reaction-add:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.chat-message-reaction.active {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.chat-message-reaction-emoji {
+  font-size: 12px;
+}
+
+.chat-message-reaction-count {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.chat-message-blocks {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-message-own .chat-message-blocks {
+  justify-content: flex-end;
+}
+
+.chat-message-block-button {
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chat-message-block-button:hover {
+  background: #dbeafe;
+}
+
+.chat-message-block-button.is-danger {
+  border-color: #fda4af;
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.chat-message-block-button.is-primary {
+  border-color: #60a5fa;
+  background: #2563eb;
+  color: #fff;
+}
+
+.dark .chat-message-reaction,
+.dark .chat-message-reaction-add {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+.dark .chat-message-reaction:hover,
+.dark .chat-message-reaction-add:hover {
+  border-color: #60a5fa;
+  background: #1e293b;
+}
+
+.dark .chat-message-reaction.active {
+  border-color: #60a5fa;
+  background: #1e3a8a;
+  color: #dbeafe;
+}
+
+.dark .chat-message-reaction-count {
+  color: #cbd5e1;
+}
+
+.dark .chat-message-block-button {
+  border-color: #3b82f6;
+  background: #1e3a8a;
+  color: #dbeafe;
+}

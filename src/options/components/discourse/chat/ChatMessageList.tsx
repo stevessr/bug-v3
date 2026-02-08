@@ -15,7 +15,7 @@ export default defineComponent({
     loading: { type: Boolean, required: true },
     hasMore: { type: Boolean, required: true }
   },
-  emits: ['loadMore', 'navigate'],
+  emits: ['loadMore', 'navigate', 'react', 'interact'],
   setup(props, { emit }) {
     const listRef = ref<HTMLDivElement | null>(null)
     const parsedCache = new Map<number, ParsedContent>()
@@ -45,6 +45,14 @@ export default defineComponent({
 
     const handleNavigate = (url: string) => {
       emit('navigate', url)
+    }
+
+    const handleReact = (payload: { messageId: number; emoji: string; reacted?: boolean }) => {
+      emit('react', payload)
+    }
+
+    const handleInteract = (payload: { messageId: number; actionId: string }) => {
+      emit('interact', payload)
     }
 
     const handleScroll = () => {
@@ -79,6 +87,8 @@ export default defineComponent({
             baseUrl={props.baseUrl}
             isOwn={(message.user?.username || message.username) === props.currentUsername}
             onNavigate={handleNavigate}
+            onReact={handleReact}
+            onInteract={handleInteract}
           />
         ))}
       </div>

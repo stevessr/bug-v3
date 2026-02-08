@@ -4,8 +4,75 @@ import TypeIt from 'typeit'
 
 // 从 package.json 读取版本信息（相对路径从当前文件到项目根）
 import pkg from '../../../package.json'
+import changelogMarkdown from '../../../CHANGELOG.md?raw'
+
 const version = pkg?.version || 'dev'
 const extensionName = pkg?.name || 'Emoji Extension'
+
+type ChangelogEntry = {
+  version: string
+  date: string
+  notes: string[]
+}
+
+const CHANGELOG_HEADING_RE = /^##\s+\[?([^\]\s]+)\]?\s*-\s*(.+)$/
+const CHANGELOG_SECTION_RE = /^###\s+(.+)$/
+const CHANGELOG_NOTE_RE = /^[-*]\s+(.+)$/
+
+function parseChangelog(markdown: string, maxEntries = 8): ChangelogEntry[] {
+  const entries: ChangelogEntry[] = []
+  let current: ChangelogEntry | null = null
+  let currentSection = ''
+
+  const flushCurrent = () => {
+    if (current && current.notes.length > 0) {
+      entries.push(current)
+    }
+  }
+
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line) {
+      continue
+    }
+
+    const headingMatch = line.match(CHANGELOG_HEADING_RE)
+    if (headingMatch) {
+      flushCurrent()
+      const [, entryVersion, entryDate] = headingMatch
+      current = {
+        version: entryVersion.trim(),
+        date: entryDate.trim(),
+        notes: []
+      }
+      currentSection = ''
+      continue
+    }
+
+    if (!current) {
+      continue
+    }
+
+    const sectionMatch = line.match(CHANGELOG_SECTION_RE)
+    if (sectionMatch) {
+      currentSection = sectionMatch[1].trim()
+      continue
+    }
+
+    const noteMatch = line.match(CHANGELOG_NOTE_RE)
+    if (noteMatch) {
+      const noteText = noteMatch[1].trim()
+      if (!noteText) {
+        continue
+      }
+      current.notes.push(currentSection ? `${currentSection}: ${noteText}` : noteText)
+    }
+  }
+
+  flushCurrent()
+
+  return entries.slice(0, maxEntries)
+}
 
 // 功能统计
 const stats = ref([
@@ -42,22 +109,19 @@ const features = ref([
   }
 ])
 
-// 更新日志（最近若干版本）
-const changelog = ref([
-  {
-    version: version,
-    date: '2026-1-29', // Today's date
-    notes: [
-      '修复：Linux Do 网站严格同源的问题',
-      '修复：针对 LINUX DO 网站的功能修复',
-      '重构：部分功能移动到测试',
-      '重构：现在同源出错时会尝试通过页面代理获取',
-      '脚本：引入预计 Linux DO credit 获取脚本',
-      '上传：现在 Linux DO 上传走页面代理',
-      '功能：现在尝试从网页代理图片的时候会有提示'
-    ]
-  }
-])
+// 更新日志（从仓库 CHANGELOG.md 自动解析）
+const parsedChangelog = parseChangelog(changelogMarkdown)
+const changelog = ref<ChangelogEntry[]>(
+  parsedChangelog.length > 0
+    ? parsedChangelog
+    : [
+        {
+          version,
+          date: new Date().toISOString().slice(0, 10),
+          notes: ['暂无可解析的更新日志，请查看仓库根目录 CHANGELOG.md。']
+        }
+      ]
+)
 
 const supportedSites = ref([
   'Discord',

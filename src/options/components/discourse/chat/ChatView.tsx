@@ -14,7 +14,15 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: null }
   },
-  emits: ['selectChannel', 'loadMore', 'sendMessage', 'navigate'],
+  emits: [
+    'selectChannel',
+    'loadMore',
+    'sendMessage',
+    'navigate',
+    'react',
+    'editChannel',
+    'interact'
+  ],
   setup(props, { emit }) {
     const activeChannel = computed(
       () =>
@@ -49,6 +57,16 @@ export default defineComponent({
       return props.chatState.hasMoreByChannel[channelId] !== false
     })
 
+    const canEditActiveChannel = computed(() => {
+      const channel = activeChannel.value
+      if (!channel) return false
+      const isDirect =
+        channel.channelType === 'direct' ||
+        channel.chatable_type === 'DirectMessage' ||
+        !!channel.direct_message_users?.length
+      return !isDirect && channel.meta?.can_moderate !== false
+    })
+
     const handleSelectChannel = (channel: ChatChannel) => {
       emit('selectChannel', channel)
     }
@@ -65,6 +83,40 @@ export default defineComponent({
 
     const handleNavigate = (url: string) => {
       emit('navigate', url)
+    }
+
+    const handleEditChannel = () => {
+      const channel = activeChannel.value
+      if (!channel) return
+
+      const currentName = channel.title || channel.unicode_title || channel.chatable?.name || ''
+      const nameInput = window.prompt('频道名称', currentName)
+      if (nameInput === null) return
+      const name = nameInput.trim()
+      if (!name) return
+
+      const descriptionInput = window.prompt('频道描述（可留空）', channel.description || '')
+      if (descriptionInput === null) return
+
+      emit('editChannel', {
+        channelId: channel.id,
+        updates: {
+          name,
+          description: descriptionInput.trim()
+        }
+      })
+    }
+
+    const handleReact = (payload: { messageId: number; emoji: string; reacted?: boolean }) => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return
+      emit('react', { channelId, ...payload })
+    }
+
+    const handleInteract = (payload: { messageId: number; actionId: string }) => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return
+      emit('interact', { channelId, ...payload })
     }
 
     return () => (
@@ -86,6 +138,11 @@ export default defineComponent({
         <div class="chat-main">
           <div class="chat-main-header">
             <div class="chat-main-title">{activeChannelTitle.value}</div>
+            {canEditActiveChannel.value && (
+              <button class="chat-main-action-btn" onClick={handleEditChannel}>
+                编辑频道
+              </button>
+            )}
           </div>
 
           {activeChannel.value ? (
@@ -97,6 +154,8 @@ export default defineComponent({
               hasMore={hasMore.value}
               onLoadMore={handleLoadMore}
               onNavigate={handleNavigate}
+              onReact={handleReact}
+              onInteract={handleInteract}
             />
           ) : (
             <div class="chat-empty">请选择一个频道开始聊天</div>

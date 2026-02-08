@@ -12,7 +12,8 @@ import type {
   MessagesTabType,
   TopicListType,
   DiscourseNotificationFilter,
-  DiscourseSearchFilters
+  DiscourseSearchFilters,
+  ChatChannelUpdatePayload
 } from './types'
 import { generateId, pageFetch, extractData } from './utils'
 import {
@@ -47,7 +48,14 @@ import {
   loadUserPreferences as loadUserPreferencesRoute
 } from './routes/user'
 import { loadUsernameFromExtension } from './routes/session'
-import { loadChat as loadChatRoute, loadChatMessages, sendChatMessage } from './routes/chat'
+import {
+  loadChat as loadChatRoute,
+  loadChatMessages,
+  sendChatMessage,
+  toggleChatMessageReaction,
+  updateChatChannel as updateChatChannelRoute,
+  interactChatMessage
+} from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
 
 export function useDiscourseBrowser() {
@@ -745,7 +753,30 @@ export function useDiscourseBrowser() {
   async function sendChat(channelId: number, message: string) {
     const tab = activeTab.value
     if (!tab?.chatState) return
-    await sendChatMessage(tab, baseUrl, channelId, message)
+    await sendChatMessage(tab, baseUrl, users, channelId, message)
+  }
+
+  async function reactToChatMessage(
+    channelId: number,
+    messageId: number,
+    emoji: string,
+    reacted?: boolean
+  ) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await toggleChatMessageReaction(tab, baseUrl, channelId, messageId, emoji, reacted)
+  }
+
+  async function updateChatChannel(channelId: number, payload: ChatChannelUpdatePayload) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    return await updateChatChannelRoute(tab, baseUrl, channelId, payload)
+  }
+
+  async function replyChatInteraction(channelId: number, messageId: number, actionId: string) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    return await interactChatMessage(tab, baseUrl, channelId, messageId, actionId)
   }
 
   // Load more posts (pagination)
@@ -943,6 +974,9 @@ export function useDiscourseBrowser() {
     selectChatChannel,
     loadMoreChatMessagesForChannel,
     sendChat,
+    reactToChatMessage,
+    updateChatChannel,
+    replyChatInteraction,
     changeTopicListType,
     loadNotifications,
     checkTopicListUpdates,
