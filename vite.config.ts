@@ -255,7 +255,7 @@ export default defineConfig(({ mode }) => {
       target: 'esnext',
       // 优化：启用 CSS 代码分割
       cssCodeSplit: !isFastBuild,
-      cssMinify: isFastBuild ? false : undefined,
+      cssMinify: isFastBuild ? false : 'esbuild',
       emptyOutDir: !isFastBuild,
       terserOptions:
         process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
