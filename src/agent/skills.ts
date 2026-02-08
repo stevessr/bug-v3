@@ -101,6 +101,14 @@ export interface CustomSkill extends Skill {
   script?: string
   // 模板提示词
   promptTemplate?: string
+  // 外部导入来源（可选）
+  importSource?: 'skills.sh'
+  // 来源页面
+  sourceUrl?: string
+  // 对应仓库
+  repositoryUrl?: string
+  // skills.sh 的 skill 标识
+  skillSlug?: string
   // 创建时间
   createdAt: number
   // 更新时间
@@ -130,6 +138,11 @@ export interface SkillExecutionResult {
   chainResults?: SkillExecutionResult[]
   // 建议的后续 skill
   suggestedNextSkills?: string[]
+}
+
+export interface SkillsShImportResult {
+  skill: CustomSkill
+  action: 'created' | 'updated'
 }
 
 export interface BuiltinMcpServer {
@@ -1184,6 +1197,365 @@ export function removeCustomSkill(skillId: string): boolean {
   if (filtered.length === skills.length) return false
   saveCustomSkills(filtered)
   return true
+}
+
+interface SkillsShReference {
+  owner: string
+  repo: string
+  skillSlug: string
+  canonicalUrl: string
+}
+
+interface SkillFrontmatter {
+  name?: string
+  description?: string
+}
+
+interface GitHubRepoResponse {
+  default_branch?: string
+  message?: string
+}
+
+interface GitHubTreeResponse {
+  tree?: Array<{ path?: string; type?: string }>
+  message?: string
+}
+
+const SKILLS_SH_HOSTS = new Set(['skills.sh', 'www.skills.sh'])
+const GITHUB_API_HEADERS = {
+  Accept: 'application/vnd.github+json'
+}
+
+function normalizeSkillToken(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
+}
+
+function trimQuotedString(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1).trim()
+  }
+  return value
+}
+
+function parseSkillsShReference(input: string): SkillsShReference {
+  const raw = input.trim()
+  if (!raw) {
+    throw new Error('请输入 skills.sh 链接')
+  }
+
+  let owner = ''
+  let repo = ''
+  let skillSlug = ''
+
+  const shorthandMatch = raw.match(
+    /^([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)(?:\/|@)([A-Za-z0-9._-]+)$/
+  )
+  if (shorthandMatch) {
+    owner = shorthandMatch[1]
+    repo = shorthandMatch[2]
+    skillSlug = shorthandMatch[3]
+  } else {
+    let url: URL
+    try {
+      url = new URL(raw)
+    } catch {
+      throw new Error('请输入合法的 skills.sh 链接，例如 https://skills.sh/owner/repo/skill')
+    }
+
+    if (!SKILLS_SH_HOSTS.has(url.hostname.toLowerCase())) {
+      throw new Error('仅支持 skills.sh 链接')
+    }
+
+    const segments = url.pathname.split('/').filter(Boolean)
+    if (segments.length < 3) {
+      throw new Error('skills.sh 链接格式应为 /owner/repo/skill')
+    }
+
+    owner = decodeURIComponent(segments[0] || '')
+    repo = decodeURIComponent(segments[1] || '')
+    skillSlug = decodeURIComponent(segments[2] || '')
+  }
+
+  if (!owner || !repo || !skillSlug) {
+    throw new Error('无法解析 skills.sh 链接，请检查 owner/repo/skill 是否完整')
+  }
+
+  return {
+    owner,
+    repo,
+    skillSlug,
+    canonicalUrl: `https://skills.sh/${owner}/${repo}/${skillSlug}`
+  }
+}
+
+function parseSkillFrontmatter(markdown: string): SkillFrontmatter {
+  const result: SkillFrontmatter = {}
+  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
+  if (!match) return result
+
+  const lines = match[1].split(/\r?\n/)
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+
+    const separatorIndex = trimmed.indexOf(':')
+    if (separatorIndex <= 0) continue
+
+    const key = trimmed.slice(0, separatorIndex).trim().toLowerCase()
+    const value = trimQuotedString(trimmed.slice(separatorIndex + 1).trim())
+
+    if (key === 'name' && value) {
+      result.name = value
+    } else if (key === 'description' && value) {
+      result.description = value
+    }
+  }
+
+  return result
+}
+
+function extractMarkdownHeading(markdown: string): string | undefined {
+  const withoutFrontmatter = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
+  const headingMatch = withoutFrontmatter.match(/^\s*#\s+(.+?)\s*$/m)
+  return headingMatch?.[1]?.trim()
+}
+
+function rankSkillPath(path: string, skillSlug: string): number {
+  const normalizedPath = path.toLowerCase()
+  const normalizedSlug = skillSlug.toLowerCase()
+
+  if (normalizedPath === `${normalizedSlug}/skill.md`) return 1000
+  if (normalizedPath.endsWith(`/${normalizedSlug}/skill.md`)) return 950
+  if (normalizedPath.includes(`/${normalizedSlug}/`)) return 900
+  if (normalizedPath.includes(normalizedSlug)) return 700
+  if (normalizedPath === 'skill.md') return 400
+  if (normalizedPath.endsWith('/skill.md')) return 300
+  return 0
+}
+
+async function getGithubErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as { message?: string }
+    if (typeof data.message === 'string' && data.message.trim()) {
+      return `: ${data.message}`
+    }
+  } catch {
+    // ignore parse error
+  }
+  return ''
+}
+
+async function fetchGithubDefaultBranch(owner: string, repo: string): Promise<string> {
+  const response = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+    {
+      headers: GITHUB_API_HEADERS
+    }
+  )
+
+  if (!response.ok) {
+    const message = await getGithubErrorMessage(response)
+    throw new Error(`无法访问 GitHub 仓库 ${owner}/${repo}${message}`)
+  }
+
+  const data = (await response.json()) as GitHubRepoResponse
+  if (!data.default_branch) {
+    throw new Error(`仓库 ${owner}/${repo} 缺少默认分支信息`)
+  }
+  return data.default_branch
+}
+
+async function fetchGithubSkillPaths(
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<string[]> {
+  const response = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+      repo
+    )}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+    {
+      headers: GITHUB_API_HEADERS
+    }
+  )
+
+  if (!response.ok) {
+    const message = await getGithubErrorMessage(response)
+    throw new Error(`读取仓库文件树失败${message}`)
+  }
+
+  const data = (await response.json()) as GitHubTreeResponse
+  const tree = Array.isArray(data.tree) ? data.tree : []
+  return tree
+    .filter(item => item.type === 'blob' && typeof item.path === 'string')
+    .map(item => item.path as string)
+    .filter(path => /(^|\/)SKILL\.md$/i.test(path))
+}
+
+async function fetchGithubRawSkill(
+  owner: string,
+  repo: string,
+  branch: string,
+  path: string
+): Promise<string> {
+  const encodedPath = path
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+
+  const response = await fetch(
+    `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(
+      repo
+    )}/${encodeURIComponent(branch)}/${encodedPath}`
+  )
+
+  if (!response.ok) {
+    throw new Error(`下载 Skill 文件失败：${path}`)
+  }
+
+  return response.text()
+}
+
+async function resolveSkillMarkdownFromGitHub(reference: SkillsShReference): Promise<{
+  markdown: string
+  frontmatter: SkillFrontmatter
+}> {
+  const branch = await fetchGithubDefaultBranch(reference.owner, reference.repo)
+  const paths = await fetchGithubSkillPaths(reference.owner, reference.repo, branch)
+
+  if (paths.length === 0) {
+    throw new Error(`仓库 ${reference.owner}/${reference.repo} 中未找到 SKILL.md`)
+  }
+
+  const sortedPaths = paths
+    .map(path => ({ path, score: rankSkillPath(path, reference.skillSlug) }))
+    .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path))
+
+  const normalizedSlug = normalizeSkillToken(reference.skillSlug)
+  let fallback:
+    | {
+        markdown: string
+        frontmatter: SkillFrontmatter
+      }
+    | undefined
+
+  const maxInspect = Math.min(sortedPaths.length, 24)
+  for (let i = 0; i < maxInspect; i++) {
+    const candidate = sortedPaths[i]
+    const markdown = await fetchGithubRawSkill(
+      reference.owner,
+      reference.repo,
+      branch,
+      candidate.path
+    )
+    const frontmatter = parseSkillFrontmatter(markdown)
+
+    if (!fallback) {
+      fallback = { markdown, frontmatter }
+    }
+
+    const normalizedName = frontmatter.name ? normalizeSkillToken(frontmatter.name) : ''
+    if (normalizedName && normalizedName === normalizedSlug) {
+      return { markdown, frontmatter }
+    }
+
+    if (candidate.score >= 950) {
+      return { markdown, frontmatter }
+    }
+  }
+
+  if (fallback) {
+    return fallback
+  }
+
+  throw new Error('未找到可导入的 Skill 内容')
+}
+
+function buildImportedSkillTags(
+  reference: SkillsShReference,
+  existingTags: string[] = []
+): string[] {
+  const tags = new Set<string>(existingTags.filter(Boolean))
+  tags.add('skills.sh')
+  tags.add(reference.skillSlug)
+  tags.add(`${reference.owner}/${reference.repo}`)
+  return Array.from(tags)
+}
+
+/**
+ * 从 skills.sh 导入 Skill 到自定义 Skills
+ */
+export async function importSkillFromSkillsSh(
+  referenceInput: string
+): Promise<SkillsShImportResult> {
+  const reference = parseSkillsShReference(referenceInput)
+  const { markdown, frontmatter } = await resolveSkillMarkdownFromGitHub(reference)
+  const now = Date.now()
+  const skills = loadCustomSkills()
+  const repositoryUrl = `https://github.com/${reference.owner}/${reference.repo}`
+  const normalizedSlug = normalizeSkillToken(reference.skillSlug)
+  const existingIndex = skills.findIndex(skill => {
+    if (skill.importSource !== 'skills.sh') return false
+
+    if (skill.sourceUrl === reference.canonicalUrl) return true
+    if (skill.repositoryUrl !== repositoryUrl) return false
+
+    const skillSlug = skill.skillSlug ? normalizeSkillToken(skill.skillSlug) : ''
+    return skillSlug === normalizedSlug
+  })
+
+  const name = frontmatter.name?.trim() || extractMarkdownHeading(markdown) || reference.skillSlug
+  const description =
+    frontmatter.description?.trim() || `从 skills.sh 导入的 Skill：${reference.skillSlug}`
+
+  if (existingIndex >= 0) {
+    const existing = skills[existingIndex]
+    const updated: CustomSkill = {
+      ...existing,
+      name,
+      description,
+      source: 'custom',
+      category: existing.category || 'other',
+      promptTemplate: markdown,
+      importSource: 'skills.sh',
+      sourceUrl: reference.canonicalUrl,
+      repositoryUrl,
+      skillSlug: reference.skillSlug,
+      tags: buildImportedSkillTags(reference, existing.tags),
+      updatedAt: now
+    }
+
+    skills[existingIndex] = updated
+    saveCustomSkills(skills)
+    return { skill: updated, action: 'updated' }
+  }
+
+  const created: CustomSkill = {
+    id: `skill-custom-${nanoid()}`,
+    name,
+    description,
+    category: 'other',
+    source: 'custom',
+    enabled: true,
+    promptTemplate: markdown,
+    importSource: 'skills.sh',
+    sourceUrl: reference.canonicalUrl,
+    repositoryUrl,
+    skillSlug: reference.skillSlug,
+    tags: buildImportedSkillTags(reference),
+    createdAt: now,
+    updatedAt: now
+  }
+
+  skills.push(created)
+  saveCustomSkills(skills)
+  return { skill: created, action: 'created' }
 }
 
 // ============ Skill Chains 管理 ============

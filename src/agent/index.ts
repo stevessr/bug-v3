@@ -72,6 +72,7 @@ export {
   addCustomSkill,
   updateCustomSkill,
   removeCustomSkill,
+  importSkillFromSkillsSh,
   // Skill Chains
   loadSkillChains,
   saveSkillChains,
@@ -200,7 +201,8 @@ export type {
   SkillChainStep,
   SkillExecutionContext,
   CustomSkill,
-  SkillMatch
+  SkillMatch,
+  SkillsShImportResult
 } from './skills'
 
 export type { ScriptContext, ScriptApi, ScriptResult } from './scriptRunner'

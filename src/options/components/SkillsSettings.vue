@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
 
 import {
   BUILTIN_MCP_SERVERS,
@@ -16,6 +17,7 @@ import {
   loadCustomSkills,
   addCustomSkill,
   removeCustomSkill,
+  importSkillFromSkillsSh,
   loadSkillChains,
   addSkillChain,
   removeSkillChain,
@@ -51,6 +53,9 @@ const skillsEnabled = reactive<Record<string, boolean>>({})
 // 自定义 Skills
 const customSkills = ref<CustomSkill[]>([])
 const showCustomSkillModal = ref(false)
+const showImportSkillModal = ref(false)
+const importingSkill = ref(false)
+const skillsShInput = ref('')
 const newCustomSkill = reactive({
   name: '',
   description: '',
@@ -233,6 +238,31 @@ const createCustomSkill = () => {
   // 刷新列表
   customSkills.value = loadCustomSkills()
   showCustomSkillModal.value = false
+}
+
+// 从 skills.sh 导入 Skill
+const importFromSkillsSh = async () => {
+  const input = skillsShInput.value.trim()
+  if (!input) {
+    message.warning('请输入 skills.sh 链接')
+    return
+  }
+
+  importingSkill.value = true
+  try {
+    const result = await importSkillFromSkillsSh(input)
+    customSkills.value = loadCustomSkills()
+    skillsEnabled[result.skill.id] = true
+    const actionText = result.action === 'updated' ? '更新' : '导入'
+    message.success(`${actionText}成功：${result.skill.name}`)
+    showImportSkillModal.value = false
+    skillsShInput.value = ''
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    message.error(`导入失败：${errorMsg}`)
+  } finally {
+    importingSkill.value = false
+  }
 }
 
 // 删除自定义 Skill
@@ -512,14 +542,10 @@ onMounted(() => {
         >
           刷新
         </a-button>
-        <a-button
-          v-if="activeTab === 'custom'"
-          size="small"
-          type="primary"
-          @click="showCustomSkillModal = true"
-        >
-          新建
-        </a-button>
+        <div v-if="activeTab === 'custom'" class="flex items-center gap-2">
+          <a-button size="small" @click="showImportSkillModal = true">从 skills.sh 导入</a-button>
+          <a-button size="small" type="primary" @click="showCustomSkillModal = true">新建</a-button>
+        </div>
         <a-button
           v-if="activeTab === 'chains'"
           size="small"
@@ -616,8 +642,23 @@ onMounted(() => {
                 >
                   {{ categoryNames[skill.category] || skill.category }}
                 </span>
+                <span
+                  v-if="skill.importSource === 'skills.sh'"
+                  class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                >
+                  skills.sh
+                </span>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ skill.description }}</p>
+              <a
+                v-if="skill.sourceUrl"
+                :href="skill.sourceUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-xs text-blue-500 hover:underline mt-1 inline-block"
+              >
+                {{ skill.sourceUrl }}
+              </a>
               <div v-if="skill.tags && skill.tags.length > 0" class="flex gap-1 mt-1">
                 <span
                   v-for="tag in skill.tags"
@@ -724,6 +765,25 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 从 skills.sh 导入 Skill Modal -->
+    <a-modal
+      v-model:open="showImportSkillModal"
+      title="从 skills.sh 导入 Skill"
+      :confirm-loading="importingSkill"
+      @ok="importFromSkillsSh"
+    >
+      <div class="space-y-3">
+        <a-input
+          v-model:value="skillsShInput"
+          placeholder="https://skills.sh/owner/repo/skill"
+          @press-enter="importFromSkillsSh"
+        />
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          也支持 `owner/repo/skill` 或 `owner/repo@skill`
+        </p>
+      </div>
+    </a-modal>
 
     <!-- 新建自定义 Skill Modal -->
     <a-modal v-model:open="showCustomSkillModal" title="新建自定义 Skill" @ok="createCustomSkill">
