@@ -28,8 +28,14 @@ export class OptimizedHashService {
     if (this.wasmAvailable) {
       try {
         await wasmHashService.initialize()
-        console.log('[OptimizedHashService] Using optimized hash service (WASM)')
-        return
+        this.wasmAvailable = wasmHashService.isReady()
+        if (this.wasmAvailable) {
+          console.log('[OptimizedHashService] Using optimized hash service (WASM)')
+          return
+        }
+        console.warn(
+          '[OptimizedHashService] WASM unavailable after initialization, falling back to Workers'
+        )
       } catch (error) {
         console.warn(
           '[OptimizedHashService] Hash service initialization failed, falling back to Workers:',

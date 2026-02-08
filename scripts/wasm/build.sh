@@ -1,74 +1,67 @@
 #!/bin/bash
 
-# WebAssembly Build Script for Perceptual Hash
-# This script compiles the C code to WebAssembly using Emscripten
+# WebAssembly Build Script for Perceptual Hash (Rust)
 
-set -e
+set -euo pipefail
 
-echo "🚀 Building WebAssembly perceptual hash module..."
+echo "🚀 Building Rust WebAssembly perceptual hash module..."
 
-# Check if Emscripten is available
-if ! command -v emcc &> /dev/null; then
-    echo "❌ Emscripten not found. Please install Emscripten:"
-    echo "   git clone https://github.com/emscripten-core/emsdk.git"
-    echo "   cd emsdk"
-    echo "   ./emsdk install latest"
-    echo "   ./emsdk activate latest"
-    echo "   chmod +x ./emsdk_env.fish"
-    echo "   source ./emsdk_env.fish"
-    exit 1
+if ! command -v cargo &> /dev/null; then
+  echo "❌ Rust toolchain not found. Please install Rust (rustup + cargo)."
+  exit 1
+fi
+
+if ! rustup target list --installed | grep -q "^wasm32-unknown-unknown$"; then
+  echo "📦 Installing wasm32 target..."
+  rustup target add wasm32-unknown-unknown
 fi
 
 # Navigate to WASM directory
 cd "$(dirname "$0")"
-
-echo "📦 Compiling perceptual_hash.c to WebAssembly..."
-
-# Create output directory
 mkdir -p dist
 
-# Compile with different optimization levels
-echo "🔧 Building development version..."
-emcc perceptual_hash.c \
-    -g \
-    -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_calculate_batch_hamming_distances,_find_similar_pairs,_find_similar_pairs_bucketed,_free_hash_result,_free_batch_results,_free_batch_distance_result,_free_pairs,_has_simd_support,_malloc,_free' \
-    -s EXPORTED_RUNTIME_METHODS='cwrap,ccall,getValue,setValue,stringToUTF8,UTF8ToString,lengthBytesUTF8' \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s MODULARIZE=1 \
-    -s EXPORT_NAME='PerceptualHashModule' \
-    -o dist/perceptual_hash.dev.js
+echo "⚡ Compiling Rust crate (release)..."
+cargo build --release --target wasm32-unknown-unknown
 
-echo "⚡ Building optimized version..."
-emcc perceptual_hash.c \
-    -O3 \
-    -flto \
-    -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='_calculate_perceptual_hash,_calculate_batch_hashes,_calculate_hamming_distance,_calculate_batch_hamming_distances,_find_similar_pairs,_find_similar_pairs_bucketed,_free_hash_result,_free_batch_results,_free_batch_distance_result,_free_pairs,_has_simd_support,_malloc,_free' \
-    -s EXPORTED_RUNTIME_METHODS='cwrap,ccall,getValue,setValue,stringToUTF8,UTF8ToString,lengthBytesUTF8' \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s MODULARIZE=1 \
-    -s EXPORT_NAME='PerceptualHashModule' \
-    -s WASM_ASYNC_COMPILATION=1 \
-    -o dist/perceptual_hash.js
+WASM_SOURCE="target/wasm32-unknown-unknown/release/perceptual_hash_wasm.wasm"
+if [[ ! -f "$WASM_SOURCE" ]]; then
+  echo "❌ Build succeeded but wasm output not found: $WASM_SOURCE"
+  exit 1
+fi
 
-# Copy the optimized version to the main location
-cp dist/perceptual_hash.js ../wasm/
-cp dist/perceptual_hash.wasm ../wasm/ 2>/dev/null || true
+cp "$WASM_SOURCE" dist/perceptual_hash.wasm
+cp "$WASM_SOURCE" dist/perceptual_hash.dev.wasm
 
-echo "✅ WebAssembly build completed!"
+# Lightweight helper module (optional) to keep file parity for existing copy pipeline.
+cat > dist/perceptual_hash.js <<'EOF'
+export async function loadPerceptualHashWasm(wasmUrl) {
+  const response = await fetch(wasmUrl)
+  if (!response.ok) {
+    throw new Error(`Failed to load WASM: ${response.status} ${response.statusText}`)
+  }
+  const bytes = await response.arrayBuffer()
+  const { instance } = await WebAssembly.instantiate(bytes, {})
+  return instance.exports
+}
+EOF
+
+cp dist/perceptual_hash.js dist/perceptual_hash.dev.js
+
+# Keep scripts/wasm as source of truth for scripts/build.js pre-copy stage.
+cp dist/perceptual_hash.js ./perceptual_hash.js
+cp dist/perceptual_hash.wasm ./perceptual_hash.wasm
+
+# Also update public/wasm for immediate dev/runtime usage.
+mkdir -p ../../public/wasm
+cp dist/perceptual_hash.js ../../public/wasm/perceptual_hash.js
+cp dist/perceptual_hash.wasm ../../public/wasm/perceptual_hash.wasm
+
+echo "✅ Rust WebAssembly build completed!"
 echo ""
 echo "📁 Generated files:"
-echo "   - dist/perceptual_hash.dev.js (development)"
-echo "   - dist/perceptual_hash.js (optimized)"
-echo "   - dist/perceptual_hash.wasm (WebAssembly binary)"
-echo ""
-echo "🎯 To use WASM acceleration:"
-echo "   1. The compiled files are now available in scripts/wasm/"
-echo "   2. The system will automatically use WASM when available"
-echo "   3. Fallback to JavaScript/Web Workers when WASM is not supported"
-echo ""
-echo "🔍 Performance benefits:"
-echo "   - 2-5x faster hash calculation"
-echo "   - Lower memory usage"
-echo "   - Better batch processing performance"
+echo "   - dist/perceptual_hash.js (loader helper)"
+echo "   - dist/perceptual_hash.dev.js (loader helper)"
+echo "   - dist/perceptual_hash.wasm (Rust WebAssembly binary)"
+echo "   - dist/perceptual_hash.dev.wasm (Rust WebAssembly binary)"
+echo "   - scripts/wasm/perceptual_hash.{js,wasm}"
+echo "   - public/wasm/perceptual_hash.{js,wasm}"

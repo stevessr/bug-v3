@@ -1,14 +1,11 @@
 {
   "name": "perceptual-hash-wasm",
   "version": "1.0.0",
-  "description": "WebAssembly perceptual hash calculation for emoji duplicate detection",
+  "description": "Rust WebAssembly perceptual hash calculation for emoji duplicate detection",
   "main": "perceptual_hash.js",
   "scripts": {
-    "build": "emcc perceptual_hash.c -O3 -s WASM=1 -s EXPORTED_FUNCTIONS='calculate_perceptual_hash,calculate_batch_hashes,calculate_hamming_distance,free_hash_result,free_batch_results' -s EXPORTED_RUNTIME_METHODS='cwrap' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -o perceptual_hash.js",
-    "build-debug": "emcc perceptual_hash.c -g -s WASM=1 -s EXPORTED_FUNCTIONS='calculate_perceptual_hash,calculate_batch_hashes,calculate_hamming_distance,free_hash_result,free_batch_results' -s EXPORTED_RUNTIME_METHODS='cwrap' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -o perceptual_hash.js",
-    "build-optimized": "emcc perceptual_hash.c -O3 -flto -s WASM=1 -s EXPORTED_FUNCTIONS='calculate_perceptual_hash,calculate_batch_hashes,calculate_hamming_distance,free_hash_result,free_batch_results' -s EXPORTED_RUNTIME_METHODS='cwrap' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s WASM_ASYNC_COMPILATION=1 -o perceptual_hash.js"
-  },
-  "devDependencies": {
-    "emscripten": "^3.1.0"
+    "build": "bash ./build.sh",
+    "build-debug": "cargo build --target wasm32-unknown-unknown && bash ./build.sh",
+    "build-optimized": "bash ./build.sh"
   }
 }

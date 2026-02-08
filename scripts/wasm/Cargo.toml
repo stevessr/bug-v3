@@ -1,0 +1,19 @@
+[package]
+name = "perceptual_hash_wasm"
+version = "1.0.0"
+edition = "2021"
+description = "Rust WebAssembly perceptual hash module for emoji duplicate detection"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+panic = "abort"

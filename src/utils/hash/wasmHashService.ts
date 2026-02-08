@@ -1,180 +1,176 @@
-import { type WASMHashResult, type SimilarPair, type EmscriptenModule } from './types'
+import { type WASMHashResult, type SimilarPair, type RustWasmExports } from './types'
 
 class WASMHashService {
-  private module: EmscriptenModule | null = null
+  private exports: RustWasmExports | null = null
   private isInitialized = false
   private wasmAvailable = false
-
-  // WASM functions
-  private _calculate_perceptual_hash: any = null
-  private _calculate_batch_hashes: any = null
-  private _calculate_hamming_distance: any = null
-  private _find_similar_pairs: any = null
-  private _find_similar_pairs_bucketed: any = null
-  private _free_hash_result: any = null
-  private _free_batch_results: any = null
-  private _free_pairs: any = null
-  private _has_simd_support: any = null
+  private readonly textEncoder = new TextEncoder()
+  private readonly textDecoder = new TextDecoder()
 
   private getWasmPath(filename: string): string {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
       return chrome.runtime.getURL(`wasm/${filename}`)
     }
-    // Fallback for standard web environment (e.g. localhost)
-    // Files in public/wasm/ are served at /wasm/
     return `/wasm/${filename}`
+  }
+
+  private detectWasmSupport(): boolean {
+    return typeof WebAssembly === 'object' && typeof WebAssembly.instantiate === 'function'
+  }
+
+  private hasRequiredExports(
+    maybeExports: Partial<RustWasmExports>
+  ): maybeExports is RustWasmExports {
+    return (
+      typeof maybeExports.memory === 'object' &&
+      typeof maybeExports.malloc === 'function' &&
+      typeof maybeExports.free === 'function' &&
+      typeof maybeExports.calculate_perceptual_hash === 'function' &&
+      typeof maybeExports.calculate_batch_hashes === 'function' &&
+      typeof maybeExports.calculate_hamming_distance === 'function' &&
+      typeof maybeExports.find_similar_pairs === 'function' &&
+      typeof maybeExports.find_similar_pairs_bucketed === 'function' &&
+      typeof maybeExports.free_hash_result === 'function' &&
+      typeof maybeExports.free_batch_results === 'function' &&
+      typeof maybeExports.free_pairs === 'function' &&
+      typeof maybeExports.has_simd_support === 'function'
+    )
   }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
 
-    // Check if WASM is supported
-    this.wasmAvailable =
-      typeof WebAssembly === 'object' && typeof WebAssembly.validate === 'function'
-
+    this.wasmAvailable = this.detectWasmSupport()
     if (!this.wasmAvailable) {
       console.warn('[WASMHashService] WASM not supported')
       return
     }
 
     try {
-      // Load the Emscripten generated JS file
-      await this.loadScript()
-
-      // Initialize the module
-      if (typeof window.PerceptualHashModule === 'function') {
-        const wasmUrl = this.getWasmPath('perceptual_hash.wasm')
-
-        this.module = await window.PerceptualHashModule({
-          locateFile: (path: string) => {
-            if (path.endsWith('.wasm')) {
-              return wasmUrl
-            }
-            return path
-          }
-        })
-
-        // Bind functions
-        this._calculate_perceptual_hash = this.module.cwrap('calculate_perceptual_hash', 'number', [
-          'number',
-          'number',
-          'number',
-          'number'
-        ])
-        this._calculate_batch_hashes = this.module.cwrap('calculate_batch_hashes', 'number', [
-          'number',
-          'number',
-          'number',
-          'number',
-          'number'
-        ])
-        this._calculate_hamming_distance = this.module.cwrap(
-          'calculate_hamming_distance',
-          'number',
-          ['string', 'string']
-        )
-        this._find_similar_pairs = this.module.cwrap('find_similar_pairs', 'number', [
-          'number', // hashes pointer array
-          'number', // num_hashes
-          'number', // threshold
-          'number' // out_count pointer
-        ])
-        this._find_similar_pairs_bucketed = this.module.cwrap(
-          'find_similar_pairs_bucketed',
-          'number',
-          [
-            'number', // hashes
-            'number', // num_hashes
-            'number', // bucket_starts
-            'number', // bucket_sizes
-            'number', // num_buckets
-            'number', // threshold
-            'number' // out_count
-          ]
-        )
-        this._free_hash_result = this.module.cwrap('free_hash_result', 'void', ['number'])
-        this._free_batch_results = this.module.cwrap('free_batch_results', 'void', [
-          'number',
-          'number'
-        ])
-        this._free_pairs = this.module.cwrap('free_pairs', 'void', ['number'])
-        this._has_simd_support = this.module.cwrap('has_simd_support', 'number', [])
-
-        const simdSupported = this._has_simd_support()
-        console.log(
-          `[WASMHashService] WASM module initialized successfully (SIMD: ${simdSupported ? 'enabled' : 'disabled'})`
-        )
-        this.isInitialized = true
-      } else {
-        console.error('[WASMHashService] PerceptualHashModule not found')
-        this.wasmAvailable = false
+      const wasmUrl = this.getWasmPath('perceptual_hash.wasm')
+      const response = await fetch(wasmUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch WASM (${response.status} ${response.statusText})`)
       }
+
+      const bytes = await response.arrayBuffer()
+      const { instance } = await WebAssembly.instantiate(bytes, {})
+
+      const maybeExports = instance.exports as unknown as Partial<RustWasmExports>
+      if (!this.hasRequiredExports(maybeExports)) {
+        throw new Error('WASM exports are incomplete or incompatible')
+      }
+
+      this.exports = maybeExports
+      this.isInitialized = true
+      this.wasmAvailable = true
+
+      const simdSupported = this.exports.has_simd_support() === 1
+      console.log(
+        `[WASMHashService] Rust WASM module initialized (SIMD: ${simdSupported ? 'enabled' : 'disabled'})`
+      )
     } catch (error) {
       console.error('[WASMHashService] Initialization failed:', error)
       this.wasmAvailable = false
+      this.isInitialized = false
+      this.exports = null
     }
   }
 
-  private loadScript(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Check if script is already loaded
-      if (window.PerceptualHashModule) {
-        resolve()
-        return
-      }
+  private getHeapU8(): Uint8Array {
+    if (!this.exports) {
+      throw new Error('WASM module not initialized')
+    }
+    return new Uint8Array(this.exports.memory.buffer)
+  }
 
-      const script = document.createElement('script')
-      script.src = this.getWasmPath('perceptual_hash.js')
-      script.onload = () => resolve()
-      script.onerror = e => reject(new Error(`Failed to load WASM script: ${e}`))
-      document.head.appendChild(script)
-    })
+  private getHeapI32(): Int32Array {
+    if (!this.exports) {
+      throw new Error('WASM module not initialized')
+    }
+    return new Int32Array(this.exports.memory.buffer)
+  }
+
+  private alloc(size: number): number {
+    if (!this.exports) {
+      throw new Error('WASM module not initialized')
+    }
+    const ptr = this.exports.malloc(size)
+    if (!ptr) {
+      throw new Error(`WASM allocation failed (${size} bytes)`)
+    }
+    return ptr
+  }
+
+  private free(ptr: number | null | undefined): void {
+    if (!this.exports || !ptr) return
+    this.exports.free(ptr)
+  }
+
+  private allocCString(value: string): number {
+    const bytes = this.textEncoder.encode(value)
+    const ptr = this.alloc(bytes.length + 1)
+    const heap = this.getHeapU8()
+    heap.set(bytes, ptr)
+    heap[ptr + bytes.length] = 0
+    return ptr
+  }
+
+  private readCString(ptr: number): string {
+    if (!ptr) return ''
+
+    const heap = this.getHeapU8()
+    let end = ptr
+    while (end < heap.length && heap[end] !== 0) {
+      end++
+    }
+
+    return this.textDecoder.decode(heap.subarray(ptr, end))
   }
 
   async calculateHash(imageData: ImageData, hashSize: number = 16): Promise<WASMHashResult> {
     await this.initialize()
 
-    if (!this.wasmAvailable || !this.module) {
+    if (!this.wasmAvailable || !this.exports) {
       return this.fallbackCalculateHash(imageData, hashSize)
     }
 
+    let dataPtr = 0
+    let resultPtr = 0
+
     try {
       const { data, width, height } = imageData
-      const dataSize = data.length
+      dataPtr = this.alloc(data.length)
+      this.getHeapU8().set(data, dataPtr)
 
-      // Allocate memory for image data
-      const dataPtr = this.module._malloc(dataSize)
-      this.module.HEAPU8.set(data, dataPtr)
-
-      // Call WASM function
-      const resultPtr = this._calculate_perceptual_hash(dataPtr, width, height, hashSize)
-
-      // Free input memory
-      this.module._free(dataPtr)
-
-      // Read result
-      const hashPtr = this.module.HEAP32[resultPtr / 4]
-      const error = this.module.HEAP32[resultPtr / 4 + 1]
-      const errorMsgPtr = this.module.HEAP32[resultPtr / 4 + 2]
-
-      let result: WASMHashResult
-
-      if (error === 0) {
-        // Read string from memory (assuming UTF8/ASCII)
-        const hash = this.readString(hashPtr)
-        result = { hash, error: false }
-      } else {
-        const errorMessage = this.readString(errorMsgPtr)
-        result = { hash: '', error: true, errorMessage }
+      resultPtr = this.exports.calculate_perceptual_hash(dataPtr, width, height, hashSize)
+      if (!resultPtr) {
+        throw new Error('calculate_perceptual_hash returned null pointer')
       }
 
-      // Free result structure
-      this._free_hash_result(resultPtr)
+      const heapI32 = this.getHeapI32()
+      const base = resultPtr >>> 2
+      const hashPtr = heapI32[base]
+      const error = heapI32[base + 1]
+      const errorMsgPtr = heapI32[base + 2]
 
-      return result
+      if (error === 0) {
+        return { hash: this.readCString(hashPtr), error: false }
+      }
+
+      return {
+        hash: '',
+        error: true,
+        errorMessage: this.readCString(errorMsgPtr) || 'Rust WASM hash calculation failed'
+      }
     } catch (error) {
       console.error('[WASMHashService] Error calculating hash:', error)
       return this.fallbackCalculateHash(imageData, hashSize)
+    } finally {
+      this.free(dataPtr)
+      if (resultPtr && this.exports) {
+        this.exports.free_hash_result(resultPtr)
+      }
     }
   }
 
@@ -184,19 +180,23 @@ class WASMHashService {
   ): Promise<WASMHashResult[]> {
     await this.initialize()
 
-    if (!this.wasmAvailable || !this.module) {
-      // Fallback to sequential JS processing
-      const results = []
+    if (!this.wasmAvailable || !this.exports) {
+      const fallbackResults: WASMHashResult[] = []
       for (const img of imageDataList) {
-        results.push(await this.fallbackCalculateHash(img, hashSize))
+        fallbackResults.push(this.fallbackCalculateHash(img, hashSize))
       }
-      return results
+      return fallbackResults
     }
+
+    let imagesDataPtr = 0
+    let dimensionsPtr = 0
+    let offsetsPtr = 0
+    let resultsPtr = 0
 
     try {
       const numImages = imageDataList.length
+      if (numImages === 0) return []
 
-      // Calculate total size and create flattened buffer
       let totalSize = 0
       const offsets = new Int32Array(numImages)
       const dimensions = new Int32Array(numImages * 2)
@@ -208,23 +208,19 @@ class WASMHashService {
         dimensions[i * 2 + 1] = imageDataList[i].height
       }
 
-      // Allocate memory
-      const imagesDataPtr = this.module._malloc(totalSize)
-      const offsetsPtr = this.module._malloc(numImages * 4)
-      const dimensionsPtr = this.module._malloc(numImages * 8)
+      imagesDataPtr = this.alloc(totalSize)
+      dimensionsPtr = this.alloc(numImages * 8)
+      offsetsPtr = this.alloc(numImages * 4)
 
-      // Copy data
-      this.module.HEAP32.set(offsets, offsetsPtr / 4)
-      this.module.HEAP32.set(dimensions, dimensionsPtr / 4)
+      this.getHeapI32().set(dimensions, dimensionsPtr >>> 2)
+      this.getHeapI32().set(offsets, offsetsPtr >>> 2)
 
-      // Copy image data
       for (let i = 0; i < numImages; i++) {
         const offset = offsets[i]
-        this.module.HEAPU8.set(imageDataList[i].data, imagesDataPtr + offset)
+        this.getHeapU8().set(imageDataList[i].data, imagesDataPtr + offset)
       }
 
-      // Call batch function
-      const resultsPtr = this._calculate_batch_hashes(
+      resultsPtr = this.exports.calculate_batch_hashes(
         imagesDataPtr,
         dimensionsPtr,
         offsetsPtr,
@@ -232,61 +228,73 @@ class WASMHashService {
         hashSize
       )
 
-      // Free input memory
-      this.module._free(imagesDataPtr)
-      this.module._free(offsetsPtr)
-      this.module._free(dimensionsPtr)
-
-      // Read results
-      const results: WASMHashResult[] = []
-
-      for (let i = 0; i < numImages; i++) {
-        // HashResult struct size is 12 bytes (3 * 4 bytes for 32-bit WASM)
-        const resultBase = resultsPtr + i * 12
-        const hashPtr = this.module.HEAP32[resultBase / 4]
-        const error = this.module.HEAP32[resultBase / 4 + 1]
-        const errorMsgPtr = this.module.HEAP32[resultBase / 4 + 2]
-
-        if (error === 0) {
-          const hash = this.readString(hashPtr)
-          results.push({ hash, error: false })
-        } else {
-          const errorMessage = this.readString(errorMsgPtr)
-          results.push({ hash: '', error: true, errorMessage })
-        }
+      if (!resultsPtr) {
+        throw new Error('calculate_batch_hashes returned null pointer')
       }
 
-      // Free results memory
-      this._free_batch_results(resultsPtr, numImages)
+      const results: WASMHashResult[] = []
+      const heapI32 = this.getHeapI32()
+
+      for (let i = 0; i < numImages; i++) {
+        const base = (resultsPtr >>> 2) + i * 3
+        const hashPtr = heapI32[base]
+        const error = heapI32[base + 1]
+        const errorMsgPtr = heapI32[base + 2]
+
+        if (error === 0) {
+          results.push({ hash: this.readCString(hashPtr), error: false })
+        } else {
+          results.push({
+            hash: '',
+            error: true,
+            errorMessage: this.readCString(errorMsgPtr) || 'Rust WASM batch hash calculation failed'
+          })
+        }
+      }
 
       return results
     } catch (error) {
       console.error('[WASMHashService] Batch processing failed:', error)
-      // Fallback
-      const results = []
+      const fallbackResults: WASMHashResult[] = []
       for (const img of imageDataList) {
-        results.push(await this.fallbackCalculateHash(img, hashSize))
+        fallbackResults.push(this.fallbackCalculateHash(img, hashSize))
       }
-      return results
+      return fallbackResults
+    } finally {
+      this.free(imagesDataPtr)
+      this.free(dimensionsPtr)
+      this.free(offsetsPtr)
+      if (resultsPtr && this.exports) {
+        this.exports.free_batch_results(resultsPtr, imageDataList.length)
+      }
     }
   }
 
   calculateHammingDistance(hash1: string, hash2: string): number {
-    if (!this.wasmAvailable || !this.module || !this._calculate_hamming_distance) {
+    if (!this.wasmAvailable || !this.exports) {
       return this.fallbackHammingDistance(hash1, hash2)
     }
 
-    return this._calculate_hamming_distance(hash1, hash2)
+    let hash1Ptr = 0
+    let hash2Ptr = 0
+
+    try {
+      hash1Ptr = this.allocCString(hash1)
+      hash2Ptr = this.allocCString(hash2)
+      return this.exports.calculate_hamming_distance(hash1Ptr, hash2Ptr)
+    } catch (error) {
+      console.error('[WASMHashService] Hamming distance failed:', error)
+      return this.fallbackHammingDistance(hash1, hash2)
+    } finally {
+      this.free(hash1Ptr)
+      this.free(hash2Ptr)
+    }
   }
 
-  /**
-   * Find all similar pairs using WASM acceleration
-   * Returns array of index pairs where hamming distance <= threshold
-   */
   async findSimilarPairs(hashes: string[], threshold: number): Promise<SimilarPair[]> {
     await this.initialize()
 
-    if (!this.wasmAvailable || !this.module || !this._find_similar_pairs) {
+    if (!this.wasmAvailable || !this.exports) {
       return this.fallbackFindSimilarPairs(hashes, threshold)
     }
 
@@ -294,58 +302,39 @@ class WASMHashService {
       return []
     }
 
+    let hashPtrsArray = 0
+    let outCountPtr = 0
+    let pairsPtr = 0
+    const stringPtrs: number[] = []
+
     try {
       const startTime = performance.now()
-
-      // Allocate array of string pointers
       const numHashes = hashes.length
-      const hashPtrsArray = this.module._malloc(numHashes * 4) // 4 bytes per pointer
 
-      // Allocate and copy each hash string
-      const stringPtrs: number[] = []
+      hashPtrsArray = this.alloc(numHashes * 4)
+
       for (let i = 0; i < numHashes; i++) {
-        const hash = hashes[i]
-        const len = hash.length + 1 // Include null terminator
-        const strPtr = this.module._malloc(len)
+        const strPtr = this.allocCString(hashes[i])
         stringPtrs.push(strPtr)
-
-        // Copy string bytes
-        for (let j = 0; j < hash.length; j++) {
-          this.module.HEAPU8[strPtr + j] = hash.charCodeAt(j)
-        }
-        this.module.HEAPU8[strPtr + hash.length] = 0 // Null terminator
-
-        // Store pointer in array
-        this.module.HEAP32[hashPtrsArray / 4 + i] = strPtr
+        this.getHeapI32()[(hashPtrsArray >>> 2) + i] = strPtr
       }
 
-      // Allocate output count
-      const outCountPtr = this.module._malloc(4)
+      outCountPtr = this.alloc(4)
+      this.getHeapI32()[outCountPtr >>> 2] = 0
 
-      // Call WASM function
-      const pairsPtr = this._find_similar_pairs(hashPtrsArray, numHashes, threshold, outCountPtr)
+      pairsPtr = this.exports.find_similar_pairs(hashPtrsArray, numHashes, threshold, outCountPtr)
+      const pairCount = Math.max(0, this.getHeapI32()[outCountPtr >>> 2])
 
-      // Read result count
-      const pairCount = this.module.HEAP32[outCountPtr / 4]
-
-      // Read pairs
       const pairs: SimilarPair[] = []
       if (pairsPtr && pairCount > 0) {
+        const heapI32 = this.getHeapI32()
+        const base = pairsPtr >>> 2
         for (let i = 0; i < pairCount; i++) {
-          const index1 = this.module.HEAP32[pairsPtr / 4 + i * 2]
-          const index2 = this.module.HEAP32[pairsPtr / 4 + i * 2 + 1]
-          pairs.push({ index1, index2 })
+          pairs.push({
+            index1: heapI32[base + i * 2],
+            index2: heapI32[base + i * 2 + 1]
+          })
         }
-      }
-
-      // Free memory
-      for (const ptr of stringPtrs) {
-        this.module._free(ptr)
-      }
-      this.module._free(hashPtrsArray)
-      this.module._free(outCountPtr)
-      if (pairsPtr) {
-        this._free_pairs(pairsPtr)
       }
 
       const endTime = performance.now()
@@ -357,13 +346,18 @@ class WASMHashService {
     } catch (error) {
       console.error('[WASMHashService] findSimilarPairs failed:', error)
       return this.fallbackFindSimilarPairs(hashes, threshold)
+    } finally {
+      for (const strPtr of stringPtrs) {
+        this.free(strPtr)
+      }
+      this.free(hashPtrsArray)
+      this.free(outCountPtr)
+      if (pairsPtr && this.exports) {
+        this.exports.free_pairs(pairsPtr)
+      }
     }
   }
 
-  /**
-   * Find similar pairs with bucket optimization
-   * Hashes should be pre-sorted by prefix for best performance
-   */
   async findSimilarPairsBucketed(
     hashes: string[],
     bucketStarts: number[],
@@ -372,7 +366,7 @@ class WASMHashService {
   ): Promise<SimilarPair[]> {
     await this.initialize()
 
-    if (!this.wasmAvailable || !this.module || !this._find_similar_pairs_bucketed) {
+    if (!this.wasmAvailable || !this.exports) {
       return this.fallbackFindSimilarPairs(hashes, threshold)
     }
 
@@ -380,46 +374,34 @@ class WASMHashService {
       return []
     }
 
+    let hashPtrsArray = 0
+    let bucketStartsPtr = 0
+    let bucketSizesPtr = 0
+    let outCountPtr = 0
+    let pairsPtr = 0
+    const stringPtrs: number[] = []
+
     try {
       const startTime = performance.now()
-
       const numHashes = hashes.length
       const numBuckets = bucketStarts.length
 
-      // Allocate array of string pointers
-      const hashPtrsArray = this.module._malloc(numHashes * 4)
-
-      // Allocate and copy each hash string
-      const stringPtrs: number[] = []
+      hashPtrsArray = this.alloc(numHashes * 4)
       for (let i = 0; i < numHashes; i++) {
-        const hash = hashes[i]
-        const len = hash.length + 1
-        const strPtr = this.module._malloc(len)
+        const strPtr = this.allocCString(hashes[i])
         stringPtrs.push(strPtr)
-
-        for (let j = 0; j < hash.length; j++) {
-          this.module.HEAPU8[strPtr + j] = hash.charCodeAt(j)
-        }
-        this.module.HEAPU8[strPtr + hash.length] = 0
-
-        this.module.HEAP32[hashPtrsArray / 4 + i] = strPtr
+        this.getHeapI32()[(hashPtrsArray >>> 2) + i] = strPtr
       }
 
-      // Allocate bucket arrays
-      const bucketStartsPtr = this.module._malloc(numBuckets * 4)
-      const bucketSizesPtr = this.module._malloc(numBuckets * 4)
+      bucketStartsPtr = this.alloc(numBuckets * 4)
+      bucketSizesPtr = this.alloc(numBuckets * 4)
+      outCountPtr = this.alloc(4)
 
-      const startsArray = new Int32Array(bucketStarts)
-      const sizesArray = new Int32Array(bucketSizes)
+      this.getHeapI32().set(new Int32Array(bucketStarts), bucketStartsPtr >>> 2)
+      this.getHeapI32().set(new Int32Array(bucketSizes), bucketSizesPtr >>> 2)
+      this.getHeapI32()[outCountPtr >>> 2] = 0
 
-      this.module.HEAP32.set(startsArray, bucketStartsPtr / 4)
-      this.module.HEAP32.set(sizesArray, bucketSizesPtr / 4)
-
-      // Allocate output count
-      const outCountPtr = this.module._malloc(4)
-
-      // Call WASM function
-      const pairsPtr = this._find_similar_pairs_bucketed(
+      pairsPtr = this.exports.find_similar_pairs_bucketed(
         hashPtrsArray,
         numHashes,
         bucketStartsPtr,
@@ -429,29 +411,18 @@ class WASMHashService {
         outCountPtr
       )
 
-      // Read result count
-      const pairCount = this.module.HEAP32[outCountPtr / 4]
-
-      // Read pairs
+      const pairCount = Math.max(0, this.getHeapI32()[outCountPtr >>> 2])
       const pairs: SimilarPair[] = []
-      if (pairsPtr && pairCount > 0) {
-        for (let i = 0; i < pairCount; i++) {
-          const index1 = this.module.HEAP32[pairsPtr / 4 + i * 2]
-          const index2 = this.module.HEAP32[pairsPtr / 4 + i * 2 + 1]
-          pairs.push({ index1, index2 })
-        }
-      }
 
-      // Free memory
-      for (const ptr of stringPtrs) {
-        this.module._free(ptr)
-      }
-      this.module._free(hashPtrsArray)
-      this.module._free(bucketStartsPtr)
-      this.module._free(bucketSizesPtr)
-      this.module._free(outCountPtr)
-      if (pairsPtr) {
-        this._free_pairs(pairsPtr)
+      if (pairsPtr && pairCount > 0) {
+        const heapI32 = this.getHeapI32()
+        const base = pairsPtr >>> 2
+        for (let i = 0; i < pairCount; i++) {
+          pairs.push({
+            index1: heapI32[base + i * 2],
+            index2: heapI32[base + i * 2 + 1]
+          })
+        }
       }
 
       const endTime = performance.now()
@@ -463,28 +434,20 @@ class WASMHashService {
     } catch (error) {
       console.error('[WASMHashService] findSimilarPairsBucketed failed:', error)
       return this.fallbackFindSimilarPairs(hashes, threshold)
+    } finally {
+      for (const strPtr of stringPtrs) {
+        this.free(strPtr)
+      }
+      this.free(hashPtrsArray)
+      this.free(bucketStartsPtr)
+      this.free(bucketSizesPtr)
+      this.free(outCountPtr)
+      if (pairsPtr && this.exports) {
+        this.exports.free_pairs(pairsPtr)
+      }
     }
   }
 
-  // Helper to read C string from memory
-  private readString(ptr: number): string {
-    if (ptr === 0) return ''
-
-    let str = ''
-    let i = 0
-    if (!this.module) {
-      throw new Error('WASM module not initialized')
-    }
-    while (true) {
-      const charCode = this.module.HEAPU8[ptr + i]
-      if (charCode === 0) break
-      str += String.fromCharCode(charCode)
-      i++
-    }
-    return str
-  }
-
-  // Fallback implementations
   private fallbackCalculateHash(imageData: ImageData, hashSize: number): WASMHashResult {
     try {
       const hash = this.calculateHashFromImageData(imageData, hashSize)
@@ -500,19 +463,13 @@ class WASMHashService {
 
   private fallbackHammingDistance(hash1: string, hash2: string): number {
     if (!hash1 || !hash2) return -1
+    if (hash1.length !== hash2.length) return -1
 
-    const len1 = hash1.length
-    const len2 = hash2.length
-
-    if (len1 !== len2) return -1
-
-    // Optimized bit counting for hex strings
     let distance = 0
-    for (let i = 0; i < len1; i++) {
+    for (let i = 0; i < hash1.length; i++) {
       const v1 = parseInt(hash1[i], 16)
       const v2 = parseInt(hash2[i], 16)
       let xor = v1 ^ v2
-      // Count bits in 4-bit value
       while (xor) {
         distance += xor & 1
         xor >>= 1
@@ -538,7 +495,6 @@ class WASMHashService {
   private calculateHashFromImageData(imageData: ImageData, hashSize: number): string {
     const { data, width, height } = imageData
 
-    // Convert to grayscale and resize if needed
     const grayData = new Uint8Array(hashSize * hashSize)
     const xStep = width / hashSize
     const yStep = height / hashSize
@@ -556,17 +512,14 @@ class WASMHashService {
       }
     }
 
-    // Calculate average
     const sum = grayData.reduce((acc, val) => acc + val, 0)
     const average = sum / grayData.length
 
-    // Generate hash
     let hash = ''
     for (let i = 0; i < grayData.length; i++) {
       hash += grayData[i] > average ? '1' : '0'
     }
 
-    // Convert to hex
     let hexHash = ''
     for (let i = 0; i < hash.length; i += 4) {
       const chunk = hash.slice(i, i + 4)
@@ -577,19 +530,24 @@ class WASMHashService {
   }
 
   isSupported(): boolean {
-    return this.wasmAvailable
+    return this.detectWasmSupport()
+  }
+
+  isReady(): boolean {
+    return this.wasmAvailable && this.isInitialized && this.exports !== null
   }
 
   hasSIMDSupport(): boolean {
-    if (!this.wasmAvailable || !this._has_simd_support) {
+    if (!this.wasmAvailable || !this.exports) {
       return false
     }
-    return this._has_simd_support() === 1
+    return this.exports.has_simd_support() === 1
   }
 
   async cleanup(): Promise<void> {
     this.isInitialized = false
-    this.module = null
+    this.wasmAvailable = false
+    this.exports = null
   }
 }
 

@@ -9,16 +9,43 @@ export interface SimilarPair {
   index2: number
 }
 
-// Emscripten Module Interface
-export interface EmscriptenModule {
-  cwrap: (ident: string, returnType: string | null, argTypes: string[]) => any
-  _malloc: (size: number) => number
-  _free: (ptr: number) => void
-  HEAPU8: Uint8Array
-  HEAP32: Int32Array
-  getValue: (ptr: number, type: string) => number
-  stringToUTF8: (str: string, ptr: number, maxLength: number) => void
-  lengthBytesUTF8: (str: string) => number
+export interface RustWasmExports {
+  memory: WebAssembly.Memory
+  malloc: (size: number) => number
+  free: (ptr: number) => void
+  calculate_perceptual_hash: (
+    imageDataPtr: number,
+    width: number,
+    height: number,
+    hashSize: number
+  ) => number
+  calculate_batch_hashes: (
+    imagesDataPtr: number,
+    dimensionsPtr: number,
+    imageOffsetsPtr: number,
+    numImages: number,
+    hashSize: number
+  ) => number
+  calculate_hamming_distance: (hash1Ptr: number, hash2Ptr: number) => number
+  find_similar_pairs: (
+    hashesPtr: number,
+    numHashes: number,
+    threshold: number,
+    outCountPtr: number
+  ) => number
+  find_similar_pairs_bucketed: (
+    hashesPtr: number,
+    numHashes: number,
+    bucketStartsPtr: number,
+    bucketSizesPtr: number,
+    numBuckets: number,
+    threshold: number,
+    outCountPtr: number
+  ) => number
+  free_hash_result: (resultPtr: number) => void
+  free_batch_results: (resultsPtr: number, numResults: number) => void
+  free_pairs: (pairsPtr: number) => void
+  has_simd_support: () => number
 }
 
 export interface HashCalculationOptions {
@@ -35,10 +62,4 @@ export interface BatchHashResult {
   cached: boolean
   error?: string
   wasmAccelerated?: boolean
-}
-
-declare global {
-  interface Window {
-    PerceptualHashModule?: (config: any) => Promise<EmscriptenModule>
-  }
 }
