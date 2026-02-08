@@ -110,17 +110,24 @@ export default defineConfig(({ mode }) => {
         process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
           ? undefined
           : {
+              ecma: 2020,
+              module: true,
+              toplevel: true,
               compress: {
+                ecma: 2020,
                 // 生产环境移除所有 console（除了 console.error）
                 drop_console: isProd,
                 drop_debugger: true, // 始终移除 debugger
-                passes: 3, // 更激进的压缩
+                passes: 4, // 更激进的压缩
                 // 显式移除日志函数
                 pure_funcs: isProd
                   ? ['console.log', 'console.info', 'console.debug', 'console.warn']
                   : [],
                 dead_code: true,
                 unused: true,
+                pure_getters: true,
+                hoist_funs: true,
+                unsafe_arrows: true,
                 // 额外的生产环境优化
                 ...(isProd && {
                   arrows: true, // 转换箭头函数
@@ -139,7 +146,8 @@ export default defineConfig(({ mode }) => {
                 comments: false // 移除所有注释
               },
               mangle: {
-                safari10: true
+                safari10: true,
+                toplevel: true
               }
             },
       rollupOptions: {
