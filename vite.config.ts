@@ -1,11 +1,160 @@
 import { fileURLToPath, URL } from 'url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
+
+type AntdImportTransformRule = {
+  importKind: 'default' | 'named'
+  path: string
+  namedImport?: string
+  includeStyle?: boolean
+}
+
+const ANTD_IMPORT_TRANSFORM_MAP: Record<string, AntdImportTransformRule> = {
+  Badge: { importKind: 'default', path: 'badge' },
+  Button: { importKind: 'default', path: 'button' },
+  Checkbox: { importKind: 'default', path: 'checkbox' },
+  ConfigProvider: { importKind: 'default', path: 'config-provider' },
+  Dropdown: { importKind: 'default', path: 'dropdown' },
+  Image: { importKind: 'default', path: 'image' },
+  Input: { importKind: 'default', path: 'input' },
+  Menu: { importKind: 'default', path: 'menu' },
+  MenuItem: { importKind: 'named', path: 'menu', namedImport: 'MenuItem' },
+  Modal: { importKind: 'default', path: 'modal' },
+  Popconfirm: { importKind: 'default', path: 'popconfirm' },
+  Progress: { importKind: 'default', path: 'progress' },
+  Radio: { importKind: 'default', path: 'radio' },
+  Select: { importKind: 'default', path: 'select' },
+  Spin: { importKind: 'default', path: 'spin' },
+  Switch: { importKind: 'default', path: 'switch' },
+  Tooltip: { importKind: 'default', path: 'tooltip' },
+  TreeSelect: { importKind: 'default', path: 'tree-select' },
+  message: { importKind: 'default', path: 'message' }
+}
+
+const ANTD_NAMED_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"]ant-design-vue['"]\s*;?/g
+const SUPPORTED_TRANSFORM_FILE_RE = /\.(vue|[cm]?[jt]sx?)(\?.*)?$/
+const KATEX_FALLBACK_FONT_RE = /^assets\/KaTeX_.*\.(woff|ttf)$/
+
+type ParsedNamedImport = {
+  imported: string
+  local: string
+  raw: string
+}
+
+function parseNamedImports(rawImports: string): ParsedNamedImport[] {
+  return rawImports
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+    .map(item => {
+      const match = item.match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/)
+      if (!match) {
+        return null
+      }
+
+      const [, imported, local] = match
+      return {
+        imported,
+        local: local ?? imported,
+        raw: item
+      }
+    })
+    .filter((item): item is ParsedNamedImport => item !== null)
+}
+
+function createAntDesignVueOnDemandPlugin(): Plugin {
+  return {
+    name: 'ant-design-vue-on-demand-import',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!SUPPORTED_TRANSFORM_FILE_RE.test(id) || id.includes('/node_modules/')) {
+        return null
+      }
+
+      if (!code.includes('ant-design-vue')) {
+        return null
+      }
+
+      let hasChanged = false
+
+      const transformed = code.replace(ANTD_NAMED_IMPORT_RE, (_fullMatch, importBlock) => {
+        const parsedImports = parseNamedImports(importBlock)
+        if (parsedImports.length === 0) {
+          return _fullMatch
+        }
+
+        const transformedImports: string[] = []
+        const styleImports = new Set<string>()
+        const fallbackImports: string[] = []
+
+        for (const specifier of parsedImports) {
+          const rule = ANTD_IMPORT_TRANSFORM_MAP[specifier.imported]
+          if (!rule) {
+            fallbackImports.push(specifier.raw)
+            continue
+          }
+
+          const modulePath = `ant-design-vue/es/${rule.path}`
+
+          if (rule.importKind === 'default') {
+            transformedImports.push(`import ${specifier.local} from '${modulePath}';`)
+          } else {
+            const namedImport = rule.namedImport ?? specifier.imported
+            transformedImports.push(
+              specifier.local === namedImport
+                ? `import { ${namedImport} } from '${modulePath}';`
+                : `import { ${namedImport} as ${specifier.local} } from '${modulePath}';`
+            )
+          }
+
+          if (rule.includeStyle !== false) {
+            styleImports.add(`import 'ant-design-vue/es/${rule.path}/style';`)
+          }
+        }
+
+        if (fallbackImports.length > 0) {
+          transformedImports.push(`import { ${fallbackImports.join(', ')} } from 'ant-design-vue';`)
+        }
+
+        if (transformedImports.length === 0) {
+          return _fullMatch
+        }
+
+        hasChanged = true
+
+        return `${transformedImports.join('\n')}\n${Array.from(styleImports).join('\n')}`
+      })
+
+      if (!hasChanged) {
+        return null
+      }
+
+      return {
+        code: transformed,
+        map: null
+      }
+    }
+  }
+}
+
+function createPruneKatexFallbackFontsPlugin(): Plugin {
+  return {
+    name: 'prune-katex-fallback-fonts',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        if (KATEX_FALLBACK_FONT_RE.test(fileName)) {
+          delete bundle[fileName]
+        }
+      }
+    }
+  }
+}
 
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
@@ -33,6 +182,8 @@ export default defineConfig(({ mode }) => {
       __ENABLE_LOGGING__: enableLogging
     },
     plugins: [
+      createAntDesignVueOnDemandPlugin(),
+      createPruneKatexFallbackFontsPlugin(),
       vue({
         // 优化：启用 Vue 的响应式转换优化
         script: {
