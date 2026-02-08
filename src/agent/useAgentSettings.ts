@@ -1,12 +1,23 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 
 import { loadAgentSettings, resetAgentSettings, saveAgentSettings } from './storage'
 import type { AgentSettings, SubAgentConfig } from './types'
 
 export function useAgentSettings() {
+  const SAVE_DEBOUNCE_MS = 250
   const settings = ref<AgentSettings>(loadAgentSettings())
   const isSaving = ref(false)
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+  const flushSettingsSave = () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    saveAgentSettings(settings.value)
+    isSaving.value = false
+  }
 
   const activeSubagent = computed(() => {
     const id = settings.value.defaultSubagentId
@@ -66,13 +77,21 @@ export function useAgentSettings() {
 
   watch(
     settings,
-    next => {
+    () => {
       isSaving.value = true
-      saveAgentSettings(next)
-      isSaving.value = false
+      if (saveTimer) {
+        clearTimeout(saveTimer)
+      }
+      saveTimer = setTimeout(flushSettingsSave, SAVE_DEBOUNCE_MS)
     },
-    { deep: true }
+    { deep: true, flush: 'post' }
   )
+
+  onScopeDispose(() => {
+    if (saveTimer) {
+      flushSettingsSave()
+    }
+  })
 
   return {
     settings,

@@ -102,10 +102,14 @@ export class OptimizedHashService {
     const blob = new Blob([workerCode], { type: 'application/javascript' })
     const workerUrl = URL.createObjectURL(blob)
 
-    for (let i = 0; i < this.WORKER_COUNT; i++) {
-      const worker = new Worker(workerUrl)
-      this.workers.push(worker)
-      this.workerReady.push(true)
+    try {
+      for (let i = 0; i < this.WORKER_COUNT; i++) {
+        const worker = new Worker(workerUrl)
+        this.workers.push(worker)
+        this.workerReady.push(true)
+      }
+    } finally {
+      URL.revokeObjectURL(workerUrl)
     }
   }
 
@@ -185,6 +189,7 @@ export class OptimizedHashService {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
+      const objectUrl = URL.createObjectURL(blob)
 
       img.onload = async () => {
         try {
@@ -212,11 +217,16 @@ export class OptimizedHashService {
           }
         } catch (error) {
           reject(error)
+        } finally {
+          URL.revokeObjectURL(objectUrl)
         }
       }
 
-      img.onerror = () => reject(new Error('Failed to load image'))
-      img.src = URL.createObjectURL(blob)
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Failed to load image'))
+      }
+      img.src = objectUrl
     })
   }
 
@@ -406,6 +416,7 @@ export class OptimizedHashService {
     return new Promise(resolve => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
+      const objectUrl = URL.createObjectURL(blob)
 
       img.onload = () => {
         try {
@@ -424,11 +435,16 @@ export class OptimizedHashService {
           resolve(imageData)
         } catch (error) {
           resolve(null)
+        } finally {
+          URL.revokeObjectURL(objectUrl)
         }
       }
 
-      img.onerror = () => resolve(null)
-      img.src = URL.createObjectURL(blob)
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        resolve(null)
+      }
+      img.src = objectUrl
     })
   }
 
@@ -438,6 +454,7 @@ export class OptimizedHashService {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
+      const objectUrl = URL.createObjectURL(blob)
 
       img.onload = () => {
         try {
@@ -458,11 +475,16 @@ export class OptimizedHashService {
           resolve(hash)
         } catch (error) {
           reject(error)
+        } finally {
+          URL.revokeObjectURL(objectUrl)
         }
       }
 
-      img.onerror = () => reject(new Error('Failed to load image'))
-      img.src = URL.createObjectURL(blob)
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Failed to load image'))
+      }
+      img.src = objectUrl
     })
   }
 

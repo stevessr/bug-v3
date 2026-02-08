@@ -52,22 +52,21 @@ const visibleItems = computed(() => {
 
 const offsetY = computed(() => Math.floor(startIndex.value / itemsPerRow.value) * props.itemHeight)
 
-const handleScroll = (e: Event) => {
-  const target = e.target as HTMLElement
-  scrollTop.value = target.scrollTop
-}
-
 // Auto scroll to bottom when new items are added (for streaming)
 const autoScroll = ref(false)
 
 // 使用 requestAnimationFrame 优化滚动性能（比 setTimeout 更流畅）
 let scrollRafId: number | null = null
 const handleScrollDebounced = (e: Event) => {
-  if (scrollRafId) {
+  const target = e.target as HTMLElement
+  const nextScrollTop = target.scrollTop
+
+  if (scrollRafId !== null) {
     cancelAnimationFrame(scrollRafId)
   }
   scrollRafId = requestAnimationFrame(() => {
-    handleScroll(e)
+    scrollTop.value = nextScrollTop
+    scrollRafId = null
   })
 }
 
@@ -102,7 +101,7 @@ const scrollToTop = () => {
 
 // 清理资源：取消待处理的 RAF
 onUnmounted(() => {
-  if (scrollRafId) {
+  if (scrollRafId !== null) {
     cancelAnimationFrame(scrollRafId)
     scrollRafId = null
   }
@@ -120,13 +119,6 @@ defineExpose({
   disableAutoScroll,
   scrollToTop,
   scrollToBottom
-})
-
-// 清理定时器
-onUnmounted(() => {
-  if (scrollRafId) {
-    cancelAnimationFrame(scrollRafId)
-  }
 })
 </script>
 

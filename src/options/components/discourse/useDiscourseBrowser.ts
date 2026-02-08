@@ -69,6 +69,7 @@ export function useDiscourseBrowser() {
   const isLoadingMore = ref(false)
 
   const currentUsername = ref<string | null>(null)
+  let sessionUserPromise: Promise<string | null> | null = null
 
   // Sync URL input with active tab's URL
   watch(
@@ -81,20 +82,34 @@ export function useDiscourseBrowser() {
     { immediate: true }
   )
 
-  async function ensureSessionUser() {
-    if (currentUsername.value !== null) return
-    currentUsername.value = await loadUsernameFromExtension()
+  async function ensureSessionUser(forceReload = false): Promise<string | null> {
+    if (!forceReload && currentUsername.value !== null) {
+      return currentUsername.value
+    }
+
+    if (sessionUserPromise) {
+      return sessionUserPromise
+    }
+
+    sessionUserPromise = loadUsernameFromExtension()
+      .then(username => {
+        currentUsername.value = username
+        return username
+      })
+      .finally(() => {
+        sessionUserPromise = null
+      })
+
+    return sessionUserPromise
   }
 
   watch(
     baseUrl,
-    async () => {
-      currentUsername.value = await loadUsernameFromExtension()
+    () => {
+      void ensureSessionUser(true)
     },
     { immediate: true }
   )
-
-  void ensureSessionUser()
 
   // Create a new tab
   function createTab(url?: string) {
