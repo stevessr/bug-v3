@@ -799,14 +799,31 @@ function handleMessage(ws, clientId, message) {
             binaryMode: binaryMode // 标记是否为二进制模式
           }
 
+          // 检查是否有预先缓存的二进制数据（修复网络延迟导致数据丢失的问题）
+          if (binaryMode && ws.pendingBinaryData && ws.pendingBinaryData.has(task.id)) {
+            const cachedData = ws.pendingBinaryData.get(task.id)
+            if (cachedData) {
+              task.binaryData = cachedData
+              task.size = cachedData.length
+              task.status = 'pending' // 数据已准备好，可以直接调度
+              ws.pendingBinaryData.delete(task.id)
+              log(`Restored cached binary data for task ${task.id}`)
+            }
+          }
+
           pendingTasks.set(task.id, task)
           session.taskIds.push(task.id)
           session.totalTasks++
           validTasks++
+
+          // 如果任务状态是 pending（数据已准备好），触发调度
+          if (task.status === 'pending') {
+            scheduleNextTask()
+          }
         }
 
         log(
-          `Session ${data.sessionId}: ${tasks.length} tasks submitted (binaryMode: ${binaryMode})`
+          `Session ${data.sessionId}: ${tasks.length} tasks submitted (binaryMode: ${binaryMode}, valid: ${validTasks}, invalid: ${invalidTasks})`
         )
 
         sendToClient(ws, {

@@ -399,68 +399,135 @@ const addFiles = async (files: File[]) => {
     selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
   )
 
-  const newFiles = await Promise.all(
-    imageFiles
-      .filter(file => {
-        const fileName = file.name
-        const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
+  // Pre-filter files to avoid unnecessary processing
+  const filteredFiles = imageFiles.filter(file => {
+    const fileName = file.name
+    const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
 
-        // Check if file already exists in buffer group
-        if (existingNames.includes(fileName)) {
-          console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
-          return false
-        }
+    // Check if file already exists in buffer group
+    if (existingNames.includes(fileName)) {
+      console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
+      return false
+    }
 
-        // Check if file already exists in current selection
-        if (existingFileNames.has(fileNameWithoutExt)) {
-          console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
-          return false
-        }
+    // Check if file already exists in current selection
+    if (existingFileNames.has(fileNameWithoutExt)) {
+      console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
+      return false
+    }
 
-        return true
-      })
-      .map(async file => {
-        // 立即读取文件内容到内存，防止源文件被删除导致 "File not found"
-        // 将原始 File 转换为基于内存 Blob 的 File
-        const arrayBuffer = await file.arrayBuffer()
-        const blob = new Blob([arrayBuffer], { type: file.type })
-        const memoryFile = new File([blob], file.name, {
-          type: file.type,
-          lastModified: file.lastModified
+    return true
+  })
+
+  if (filteredFiles.length === 0) {
+    console.log('[BufferPage] No new files to add after filtering')
+    return
+  }
+
+  console.log(`[BufferPage] Processing ${filteredFiles.length} files in batches...`)
+
+  // Process files in batches to avoid memory overflow
+  const BATCH_SIZE = 100 // Process 100 files at a time
+  const newFiles: Array<{
+    id: string
+    file: File
+    previewUrl: string
+    cropData: undefined
+    width: number | undefined
+    height: number | undefined
+  }> = []
+
+  let successCount = 0
+  let errorCount = 0
+
+  for (let i = 0; i < filteredFiles.length; i += BATCH_SIZE) {
+    const batch = filteredFiles.slice(i, i + BATCH_SIZE)
+    console.log(
+      `[BufferPage] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(filteredFiles.length / BATCH_SIZE)} (${batch.length} files)`
+    )
+
+    try {
+      // Process batch in parallel
+      const batchResults = await Promise.allSettled(
+        batch.map(async file => {
+          try {
+            // 立即读取文件内容到内存，防止源文件被删除导致 "File not found"
+            // 将原始 File 转换为基于内存 Blob 的 File
+            const arrayBuffer = await file.arrayBuffer()
+            const blob = new Blob([arrayBuffer], { type: file.type })
+            const memoryFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: file.lastModified
+            })
+
+            const url = URL.createObjectURL(memoryFile)
+
+            const newFileEntry = {
+              id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              file: memoryFile, // 使用内存文件替换原始文件引用
+              previewUrl: url,
+              cropData: undefined as undefined,
+              width: undefined as number | undefined,
+              height: undefined as number | undefined
+            }
+
+            // Get image dimensions
+            // 使用 Promise 包装图片加载，虽然 addFiles 原本没等待它，但为了逻辑完整性保持原样结构
+            // 这里的图片加载是异步的，不阻塞返回，宽高会在加载完成后更新
+            const img = new Image()
+            img.onload = () => {
+              newFileEntry.width = img.width
+              newFileEntry.height = img.height
+            }
+            img.onerror = () => {
+              console.warn(`[BufferPage] Failed to load image dimensions for ${file.name}`)
+            }
+            img.src = url
+
+            return newFileEntry
+          } catch (error) {
+            console.error(`[BufferPage] Failed to process file ${file.name}:`, error)
+            throw error
+          }
         })
+      )
 
-        const url = URL.createObjectURL(memoryFile)
-
-        const newFileEntry = {
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          file: memoryFile, // 使用内存文件替换原始文件引用
-          previewUrl: url,
-          cropData: undefined as undefined,
-          width: undefined as number | undefined,
-          height: undefined as number | undefined
+      // Collect successful results
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          newFiles.push(result.value)
+          successCount++
+        } else {
+          errorCount++
+          console.error(`[BufferPage] Batch processing error:`, result.reason)
         }
+      }
 
-        // Get image dimensions
-        // 使用 Promise 包装图片加载，虽然 addFiles 原本没等待它，但为了逻辑完整性保持原样结构
-        // 这里的图片加载是异步的，不阻塞返回，宽高会在加载完成后更新
-        const img = new Image()
-        img.onload = () => {
-          newFileEntry.width = img.width
-          newFileEntry.height = img.height
-        }
-        img.src = url
+      // Add batch to selected files incrementally to reduce memory pressure
+      selectedFiles.value = [...selectedFiles.value, ...newFiles.splice(0, newFiles.length)]
 
-        return newFileEntry
-      })
+      // Allow UI to update between batches
+      await new Promise(resolve => setTimeout(resolve, 10))
+    } catch (error) {
+      console.error(`[BufferPage] Failed to process batch starting at index ${i}:`, error)
+      errorCount += batch.length
+    }
+  }
+
+  console.log(
+    `[BufferPage] File processing completed: ${successCount} succeeded, ${errorCount} failed`
   )
-
-  selectedFiles.value = [...selectedFiles.value, ...newFiles]
 
   // 如果启用了过滤器，自动检测重复项
   if (enableFilter.value && selectedFilterGroups.value.length > 0) {
     setTimeout(() => {
       filterDuplicateFiles()
     }, 1000) // 延迟执行，确保图片加载完成
+  }
+
+  // Show notification for errors
+  if (errorCount > 0) {
+    message.warning(`部分文件处理失败：${successCount} 成功，${errorCount} 失败`)
   }
 }
 
