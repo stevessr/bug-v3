@@ -205,6 +205,9 @@ export interface DomTreeAction extends AgentActionBase {
     maxDepth?: number
     maxChildren?: number
     maxTextLength?: number
+    textLimit?: number
+    markdownLimit?: number
+    maxTextBlocks?: number
   }
 }
 

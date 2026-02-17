@@ -8,14 +8,27 @@ export const domQueryHandler: MessageHandler = (message, _sender, sendResponse) 
   if (message.type !== 'DOM_QUERY') return false
 
   try {
+    const options = message.options && typeof message.options === 'object' ? message.options : {}
     if (message.kind === 'tree') {
-      const data = getDomTree(message.selector, message.options || {})
+      const data = getDomTree(message.selector, options)
       const response: MessageResponse = { success: true, data }
       sendResponse(response)
       return true
     }
     if (message.kind === 'at-point') {
-      const data = getDomTreeAtPoint(message.x ?? 0, message.y ?? 0, message.options || {})
+      const x = message.x
+      const y = message.y
+      if (typeof x !== 'number' || typeof y !== 'number') {
+        const response: MessageResponse = { success: false, error: 'DOM 查询坐标无效' }
+        sendResponse(response)
+        return true
+      }
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        const response: MessageResponse = { success: false, error: 'DOM 查询坐标无效' }
+        sendResponse(response)
+        return true
+      }
+      const data = getDomTreeAtPoint(x, y, options)
       const response: MessageResponse = { success: true, data }
       sendResponse(response)
       return true

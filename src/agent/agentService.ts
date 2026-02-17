@@ -84,7 +84,12 @@ const buildSystemPrompt = (
     '可写入记忆：memory.set；可删除记忆：memory.remove。',
     'MCP 服务不是子代理，不要把 MCP 服务名写进 subagents。',
     'steps 与 thoughts 必须基于可观察证据（当前页面、DOM、截图结果），不要猜测或编造。',
-    '若证据不足，用“待确认”表述，不要下结论。'
+    '若证据不足，用“待确认”表述，不要下结论。',
+    'DOM 探索工作流：先执行 getDOM（建议 includeMarkdown=true），再定位目标元素并生成 selector。',
+    'DOM 探索工作流：优先依据 id、name、data-testid、aria-label、role 等稳定属性构造 selector。',
+    'DOM 探索工作流：目标不唯一时先缩小范围（局部 selector + 再次 getDOM），必要时滚动后重复 getDOM。',
+    'DOM 探索工作流：仅在 DOM 信息不足时才截图，且截图后仍需回到 DOM 证据。',
+    'DOM 探索工作流：执行关键动作前后都应给出可验证依据（步骤描述与后置验证）。'
   ]
 
   if (settings.enableThoughts) {

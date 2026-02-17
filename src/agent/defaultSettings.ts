@@ -167,6 +167,12 @@ export const defaultAgentSettings: AgentSettings = {
     '内置 MCP 服务包括 DeepWiki、Context7、Tavily。',
     '对于 Discourse 论坛操作，优先使用 discourse_* 系列工具。',
     '',
+    '## DOM 探索引导',
+    '面对未知页面时，先 getDOM（includeMarkdown=true）获取结构和文本，再决定动作。',
+    '优先使用稳定 selector（id/name/data-testid/aria-label/role），避免直接坐标点击。',
+    '目标不明确时，使用“局部 selector + 再次 getDOM”逐步缩小范围。',
+    '执行关键动作后再次 getDOM 验证结果；DOM 证据不足时再补截图。',
+    '',
     '## 记忆系统',
     '你可以使用 memory.set 保存重要信息，使用 memory.get 回忆之前的信息。',
     '频繁使用的信息会自动提升为长期记忆。'

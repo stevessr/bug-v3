@@ -1066,6 +1066,15 @@ const onBypassModeChange = (value: boolean | string | number) => {
           <button class="agent-suggestion" @click="inputValue = '总结当前页面重点'">
             总结页面
           </button>
+          <button
+            class="agent-suggestion"
+            @click="
+              inputValue =
+                '先探索当前页面 DOM（includeMarkdown=true），列出关键区域、可交互元素与推荐 selector。'
+            "
+          >
+            DOM 探索
+          </button>
           <button class="agent-suggestion" @click="inputValue = '定位页面中的搜索框并输入关键词'">
             定位搜索框
           </button>

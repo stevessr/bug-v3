@@ -2,6 +2,16 @@ import type { AgentAction, AgentActionResult, AgentPermissions } from './types'
 
 type ActionStatus = AgentActionResult
 
+type DomQueryOptions = {
+  includeMarkdown?: boolean
+  maxDepth?: number
+  maxChildren?: number
+  maxTextLength?: number
+  textLimit?: number
+  markdownLimit?: number
+  maxTextBlocks?: number
+}
+
 const ACTION_TYPE_TO_PERMISSION: Record<string, keyof AgentPermissions> = {
   click: 'click',
   'click-dom': 'clickDom',
@@ -10,6 +20,32 @@ const ACTION_TYPE_TO_PERMISSION: Record<string, keyof AgentPermissions> = {
   screenshot: 'screenshot',
   navigate: 'navigate',
   input: 'input'
+}
+
+const clampInteger = (value: unknown, fallback: number, min: number, max: number): number => {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  const rounded = Math.floor(parsed)
+  if (rounded < min) return min
+  if (rounded > max) return max
+  return rounded
+}
+
+const normalizeDomQueryOptions = (options: unknown): DomQueryOptions => {
+  if (!options || typeof options !== 'object') return {}
+  const record = options as Record<string, unknown>
+  const includeMarkdown =
+    typeof record.includeMarkdown === 'boolean' ? record.includeMarkdown : undefined
+
+  return {
+    includeMarkdown,
+    maxDepth: clampInteger(record.maxDepth, 4, 1, 8),
+    maxChildren: clampInteger(record.maxChildren, 20, 1, 80),
+    maxTextLength: clampInteger(record.maxTextLength, 120, 20, 500),
+    textLimit: clampInteger(record.textLimit, 120, 20, 500),
+    markdownLimit: clampInteger(record.markdownLimit, 4000, 400, 40000),
+    maxTextBlocks: clampInteger(record.maxTextBlocks, 60, 10, 400)
+  }
 }
 
 function isChromeAvailable() {
@@ -79,7 +115,8 @@ export async function executeAgentActions(
       'blur',
       'drag'
     ].includes(action.type)
-    if (needsTarget && !action.selector && (action.x === undefined || action.y === undefined)) {
+    const target = action as { selector?: string; x?: number; y?: number }
+    if (needsTarget && !target.selector && (target.x === undefined || target.y === undefined)) {
       return {
         id: action.id,
         type: action.type,
@@ -148,7 +185,7 @@ export async function executeAgentActions(
             type: 'DOM_QUERY',
             kind: 'tree',
             selector: action.selector,
-            options: action.options || {}
+            options: normalizeDomQueryOptions(action.options)
           },
           (resp: any) => resolve(resp)
         )

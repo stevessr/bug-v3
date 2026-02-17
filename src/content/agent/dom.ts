@@ -5,6 +5,7 @@ export type DomTreeNode = {
   text?: string
   attrs?: Record<string, string>
   children?: DomTreeNode[]
+  truncatedChildren?: boolean
 }
 
 type DomTreeOptions = {
@@ -12,15 +13,57 @@ type DomTreeOptions = {
   maxChildren?: number
   includeText?: boolean
   textLimit?: number
+  maxTextLength?: number
   includeMarkdown?: boolean
   markdownLimit?: number
   maxTextBlocks?: number
+}
+
+type NormalizedDomTreeOptions = {
+  maxDepth: number
+  maxChildren: number
+  includeText: boolean
+  textLimit: number
+  includeMarkdown: boolean
+  markdownLimit: number
+  maxTextBlocks: number
+}
+
+type DomTraversalContext = {
+  hiddenCache: WeakMap<Element, boolean>
 }
 
 function sanitizeText(text: string, limit: number) {
   const trimmed = text.replace(/\s+/g, ' ').trim()
   if (!trimmed) return ''
   return trimmed.length > limit ? `${trimmed.slice(0, limit)}…` : trimmed
+}
+
+function clampInteger(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  const rounded = Math.floor(parsed)
+  if (rounded < min) return min
+  if (rounded > max) return max
+  return rounded
+}
+
+function normalizeOptions(options: DomTreeOptions = {}): NormalizedDomTreeOptions {
+  return {
+    maxDepth: clampInteger(options.maxDepth, 4, 1, 8),
+    maxChildren: clampInteger(options.maxChildren, 20, 1, 80),
+    includeText: options.includeText !== false,
+    textLimit: clampInteger(options.textLimit ?? options.maxTextLength, 120, 20, 500),
+    includeMarkdown: options.includeMarkdown === true,
+    markdownLimit: clampInteger(options.markdownLimit, 4000, 400, 40000),
+    maxTextBlocks: clampInteger(options.maxTextBlocks, 60, 10, 400)
+  }
+}
+
+function createTraversalContext(): DomTraversalContext {
+  return {
+    hiddenCache: new WeakMap<Element, boolean>()
+  }
 }
 
 const SKIP_TAGS = new Set(['script', 'style', 'noscript', 'template', 'svg', 'path'])
@@ -65,14 +108,30 @@ const TEXT_BLOCK_TAGS = new Set([
 ])
 const INTERACTIVE_TAGS = new Set(['a', 'button', 'input', 'textarea', 'select', 'option', 'label'])
 
-function isHidden(element: Element): boolean {
-  if (element.hasAttribute('hidden') || element.getAttribute('aria-hidden') === 'true') return true
-  if (element instanceof HTMLElement) {
-    const style = window.getComputedStyle(element)
-    if (style.display === 'none' || style.visibility === 'hidden') return true
-    if (style.opacity === '0') return true
+function isHidden(element: Element, context: DomTraversalContext): boolean {
+  const cached = context.hiddenCache.get(element)
+  if (cached !== undefined) return cached
+
+  const parent = element.parentElement
+  if (parent && isHidden(parent, context)) {
+    context.hiddenCache.set(element, true)
+    return true
   }
-  return false
+
+  let hidden = false
+  if (element.hasAttribute('hidden') || element.getAttribute('aria-hidden') === 'true') {
+    hidden = true
+  } else if (element instanceof HTMLElement) {
+    const style = window.getComputedStyle(element)
+    hidden =
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      style.opacity === '0' ||
+      style.pointerEvents === 'none'
+  }
+
+  context.hiddenCache.set(element, hidden)
+  return hidden
 }
 
 function getOwnText(element: Element): string {
@@ -125,21 +184,25 @@ function shouldIncludeText(element: Element): boolean {
   const tag = element.tagName.toLowerCase()
   if (INTERACTIVE_TAGS.has(tag)) return true
   if (TEXT_CONTAINER_TAGS.has(tag)) return true
-  const hasElementChildren = element.children.length > 0
-  return !hasElementChildren
+  return element.children.length === 0
 }
 
 function getAttrs(element: Element): Record<string, string> | undefined {
   const tag = element.tagName.toLowerCase()
   const attrs: Record<string, string> = {}
+
   if (tag === 'a') {
     const href = element.getAttribute('href') || ''
-    if (href && href.length <= 200) attrs.href = href
+    if (href && href.length <= 240) attrs.href = href
   }
+
   if (tag === 'img') {
+    const src = element.getAttribute('src') || ''
     const alt = element.getAttribute('alt') || ''
+    if (src && src.length <= 240) attrs.src = src
     if (alt) attrs.alt = alt
   }
+
   if (tag === 'input' || tag === 'textarea' || tag === 'select') {
     const type = element.getAttribute('type') || ''
     const name = element.getAttribute('name') || ''
@@ -148,8 +211,14 @@ function getAttrs(element: Element): Record<string, string> | undefined {
     if (name) attrs.name = name
     if (placeholder) attrs.placeholder = placeholder
   }
+
   const role = element.getAttribute('role') || ''
+  const ariaLabel = element.getAttribute('aria-label') || ''
+  const dataTestId = element.getAttribute('data-testid') || element.getAttribute('data-test') || ''
   if (role) attrs.role = role
+  if (ariaLabel) attrs['aria-label'] = sanitizeText(ariaLabel, 80)
+  if (dataTestId) attrs['data-testid'] = sanitizeText(dataTestId, 80)
+
   return Object.keys(attrs).length > 0 ? attrs : undefined
 }
 
@@ -168,19 +237,21 @@ function formatMarkdownBlock(tag: string, text: string): string {
   return text
 }
 
-function getDomMarkdown(root: Element, options: DomTreeOptions): string {
+function getDomMarkdown(
+  root: Element,
+  options: NormalizedDomTreeOptions,
+  context: DomTraversalContext
+): string {
   const blocks: string[] = []
-  const limit = options.markdownLimit ?? 4000
-  const maxBlocks = options.maxTextBlocks ?? 60
-  const textLimit = options.textLimit ?? 160
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT)
-
   let length = 0
+
   while (walker.nextNode()) {
     const element = walker.currentNode as Element
     const tag = element.tagName.toLowerCase()
-    if (SKIP_TAGS.has(tag) || isHidden(element)) continue
+    if (SKIP_TAGS.has(tag) || isHidden(element, context)) continue
     if (!TEXT_BLOCK_TAGS.has(tag) && !INTERACTIVE_TAGS.has(tag)) continue
+
     let parent = element.parentElement
     let skip = false
     while (parent) {
@@ -193,48 +264,61 @@ function getDomMarkdown(root: Element, options: DomTreeOptions): string {
     }
     if (skip) continue
 
-    const text = getElementText(element, textLimit)
+    const text = getElementText(element, options.textLimit)
     if (!text) continue
+
     const line = formatMarkdownBlock(tag, text)
     if (!line) continue
+
     blocks.push(line)
     length += line.length + 1
-    if (blocks.length >= maxBlocks || length >= limit) break
+    if (blocks.length >= options.maxTextBlocks || length >= options.markdownLimit) {
+      break
+    }
   }
 
   return blocks.join('\n')
 }
 
-function buildTree(element: Element, options: DomTreeOptions, depth: number): DomTreeNode | null {
+function buildTree(
+  element: Element,
+  options: NormalizedDomTreeOptions,
+  depth: number,
+  context: DomTraversalContext
+): DomTreeNode | null {
   const tag = element.tagName.toLowerCase()
-  if (SKIP_TAGS.has(tag) || isHidden(element)) return null
-  const node: DomTreeNode = {
-    tag
+  if (SKIP_TAGS.has(tag) || isHidden(element, context)) return null
+
+  const node: DomTreeNode = { tag }
+  if (element.id) node.id = element.id
+  if (element.classList.length > 0) {
+    node.classes = Array.from(element.classList).slice(0, 8)
   }
 
-  if (element.id) node.id = element.id
-  if (element.classList.length > 0) node.classes = Array.from(element.classList)
-
-  if (options.includeText) {
-    if (shouldIncludeText(element)) {
-      const text = getElementText(element, options.textLimit || 120)
-      if (text) node.text = text
-    }
+  if (options.includeText && shouldIncludeText(element)) {
+    const text = getElementText(element, options.textLimit)
+    if (text) node.text = text
   }
 
   const attrs = getAttrs(element)
   if (attrs) node.attrs = attrs
 
-  if (depth >= (options.maxDepth ?? 4)) return node
+  if (depth >= options.maxDepth) return node
 
   const children = Array.from(element.children)
-  const limit = options.maxChildren ?? 20
-  if (children.length > 0) {
-    const nextChildren = children
-      .slice(0, limit)
-      .map(child => buildTree(child, options, depth + 1))
-      .filter(Boolean) as DomTreeNode[]
-    if (nextChildren.length > 0) node.children = nextChildren
+  if (children.length === 0) return node
+
+  const nextChildren: DomTreeNode[] = []
+  for (const child of children.slice(0, options.maxChildren)) {
+    const parsed = buildTree(child, options, depth + 1, context)
+    if (parsed) nextChildren.push(parsed)
+  }
+
+  if (nextChildren.length > 0) {
+    node.children = nextChildren
+  }
+  if (children.length > options.maxChildren) {
+    node.truncatedChildren = true
   }
 
   return node
@@ -243,17 +327,25 @@ function buildTree(element: Element, options: DomTreeOptions, depth: number): Do
 type DomTreeResult = DomTreeNode | { tree: DomTreeNode; markdown: string }
 
 export function getDomTree(selector?: string, options: DomTreeOptions = {}): DomTreeResult {
-  const root = selector ? document.querySelector(selector) : document.documentElement
+  const normalized = normalizeOptions(options)
+  const root = selector
+    ? document.querySelector(selector)
+    : document.body || document.documentElement
+
   if (!root) {
     throw new Error('未找到 DOM 根节点')
   }
-  const tree = buildTree(root, options, 0)
+
+  const context = createTraversalContext()
+  const tree = buildTree(root, normalized, 0, context)
   if (!tree) {
     throw new Error('未找到可用 DOM 节点')
   }
-  if (options.includeMarkdown) {
-    return { tree, markdown: getDomMarkdown(root, options) }
+
+  if (normalized.includeMarkdown) {
+    return { tree, markdown: getDomMarkdown(root, normalized, context) }
   }
+
   return tree
 }
 
@@ -262,16 +354,25 @@ export function getDomTreeAtPoint(
   y: number,
   options: DomTreeOptions = {}
 ): DomTreeResult {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error('坐标必须是有效数字')
+  }
+
   const element = document.elementFromPoint(x, y)
   if (!element) {
     throw new Error('未找到坐标对应元素')
   }
-  const tree = buildTree(element, options, 0)
+
+  const normalized = normalizeOptions(options)
+  const context = createTraversalContext()
+  const tree = buildTree(element, normalized, 0, context)
   if (!tree) {
     throw new Error('未找到可用 DOM 节点')
   }
-  if (options.includeMarkdown) {
-    return { tree, markdown: getDomMarkdown(element, options) }
+
+  if (normalized.includeMarkdown) {
+    return { tree, markdown: getDomMarkdown(element, normalized, context) }
   }
+
   return tree
 }
