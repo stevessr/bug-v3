@@ -129,7 +129,9 @@ function createDownloadBtn(data: AddEmojiButtonData) {
       mouseleave: () => {
         btn.style.backgroundColor = 'transparent'
       },
-      click: async () => {
+      click: async ev => {
+        ev.preventDefault()
+        ev.stopPropagation()
         try {
           const url = data.url
           const name = data.name || 'image'
@@ -139,10 +141,8 @@ function createDownloadBtn(data: AddEmojiButtonData) {
             if (!resp.ok) throw new Error('network')
             const blob = await resp.blob()
             const blobUrl = URL.createObjectURL(blob)
-            const a = createE('a', {
-              src: blobUrl,
-              attrs: { download: name }
-            }) as HTMLAnchorElement
+            const a = createE('a', { attrs: { download: name } }) as HTMLAnchorElement
+            a.href = blobUrl
             // append to DOM so click works in all browsers
             DOA(a)
             a.click()
