@@ -1,14 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { nanoid } from 'nanoid'
-import { z } from 'zod'
 
 import type {
   AgentAction,
   AgentActionResult,
   AgentMessage,
   AgentSettings,
-  SubAgentConfig,
-  ApiFlavor
+  SubAgentConfig
 } from './types'
 import {
   createSubagentSession,
@@ -25,520 +23,34 @@ import {
 } from './mcpClient'
 import { beginContext, endContext } from './agentContext'
 import { getEnabledBuiltinMcpConfigs } from './skills'
+import {
+  streamClaudeText,
+  streamClaudeTurn,
+  streamClaudeToolConversation,
+  type AgentStreamUpdate
+} from './agentStreaming'
+import {
+  extractTextContent,
+  parsePayloadFromRawText,
+  toolSchema,
+  type AgentToolPayload
+} from './agentPayload'
+import type { AgentUsage } from './agentUsage'
 
-// Disable Zod JIT to avoid eval/new Function in CSP-restricted contexts.
-z.config({ jitless: true })
-
-interface AgentRunResult {
+export interface AgentRunResult {
+  threadId?: string
   message?: AgentMessage
   actions?: AgentAction[]
   toolUseId?: string
-  toolInput?: z.infer<typeof responseSchema>
+  toolInput?: AgentToolPayload
   toolUseIds?: string[]
-  toolInputs?: z.infer<typeof responseSchema>[]
+  toolInputs?: AgentToolPayload[]
   parallelActions?: boolean
   thoughts?: string[]
   steps?: string[]
+  usage?: AgentUsage
   error?: string
 }
-
-const actionSchema = z.object({
-  id: z.string().optional(),
-  type: z.enum([
-    'click',
-    'scroll',
-    'touch',
-    'screenshot',
-    'navigate',
-    'click-dom',
-    'input',
-    'double-click',
-    'right-click',
-    'hover',
-    'key',
-    'type',
-    'drag',
-    'select',
-    'focus',
-    'blur',
-    'getDOM'
-  ]),
-  note: z.string().optional(),
-  selector: z.string().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  button: z.number().optional(),
-  behavior: z.enum(['auto', 'smooth']).optional(),
-  format: z.enum(['png', 'jpeg']).optional(),
-  url: z.string().optional(),
-  text: z.string().optional(),
-  clear: z.boolean().optional(),
-  key: z.string().optional(),
-  code: z.string().optional(),
-  ctrlKey: z.boolean().optional(),
-  altKey: z.boolean().optional(),
-  shiftKey: z.boolean().optional(),
-  metaKey: z.boolean().optional(),
-  repeat: z.boolean().optional(),
-  delayMs: z.number().optional(),
-  targetSelector: z.string().optional(),
-  toX: z.number().optional(),
-  toY: z.number().optional(),
-  value: z.string().optional(),
-  label: z.string().optional(),
-  options: z.record(z.any()).optional()
-})
-
-const listFromString = z.preprocess(
-  value => (typeof value === 'string' ? [value] : value),
-  z.array(z.string())
-)
-
-const normalizeAgentPayload = (payload: unknown): unknown => {
-  if (!payload || typeof payload !== 'object') return payload
-  const normalized: Record<string, unknown> = { ...(payload as Record<string, unknown>) }
-  const actionTypes = new Set([
-    'click',
-    'scroll',
-    'touch',
-    'screenshot',
-    'navigate',
-    'click-dom',
-    'input',
-    'double-click',
-    'right-click',
-    'hover',
-    'key',
-    'type',
-    'drag',
-    'select',
-    'focus',
-    'blur',
-    'getDOM'
-  ])
-  if (normalized['memory.set'] || normalized['memory.remove']) {
-    normalized.memory =
-      normalized.memory && typeof normalized.memory === 'object' ? normalized.memory : {}
-    const memory = normalized.memory as Record<string, unknown>
-    if (normalized['memory.set'] && typeof normalized['memory.set'] === 'object') {
-      memory.set = normalized['memory.set']
-    }
-    if (Array.isArray(normalized['memory.remove'])) {
-      memory.remove = normalized['memory.remove']
-    }
-    delete normalized['memory.set']
-    delete normalized['memory.remove']
-  }
-  if (Array.isArray(normalized.actions)) {
-    const flattened: unknown[] = []
-    const embeddedPayloads: Record<string, unknown>[] = []
-    for (const action of normalized.actions) {
-      if (!action || typeof action !== 'object') {
-        flattened.push(action)
-        continue
-      }
-      const actionRecord = action as Record<string, unknown>
-
-      const toolName =
-        typeof actionRecord.name === 'string'
-          ? actionRecord.name
-          : typeof actionRecord.tool === 'string'
-            ? actionRecord.tool
-            : typeof actionRecord.type === 'string'
-              ? actionRecord.type
-              : ''
-      if (
-        toolName === 'browser_actions' &&
-        actionRecord.args &&
-        typeof actionRecord.args === 'object'
-      ) {
-        const argsRecord = actionRecord.args as Record<string, unknown>
-        const hasPayloadShape =
-          'actions' in argsRecord ||
-          'subagents' in argsRecord ||
-          'message' in argsRecord ||
-          'steps' in argsRecord ||
-          'thoughts' in argsRecord ||
-          'memory' in argsRecord ||
-          'parallelActions' in argsRecord
-        if (hasPayloadShape) {
-          embeddedPayloads.push(argsRecord)
-          continue
-        }
-      }
-
-      if (actionRecord.type === 'browser_actions' && actionRecord.args) {
-        const args = actionRecord.args as Record<string, unknown>
-        const actionType = args.action
-        const actionArgs = args.args
-        if (typeof actionType === 'string') {
-          if (actionArgs && typeof actionArgs === 'object') {
-            flattened.push({ type: actionType, ...(actionArgs as Record<string, unknown>) })
-          } else {
-            flattened.push({ type: actionType })
-          }
-          continue
-        }
-      }
-
-      if (typeof actionRecord.action === 'string' && actionRecord.args && !actionRecord.type) {
-        const actionArgs = actionRecord.args
-        if (actionArgs && typeof actionArgs === 'object') {
-          flattened.push({ type: actionRecord.action, ...(actionArgs as Record<string, unknown>) })
-        } else {
-          flattened.push({ type: actionRecord.action })
-        }
-        continue
-      }
-
-      flattened.push(actionRecord)
-    }
-    const nextActions: Record<string, unknown>[] = []
-    const nextSubagents: Array<Record<string, unknown>> = Array.isArray(normalized.subagents)
-      ? (normalized.subagents as Array<Record<string, unknown>>)
-      : []
-    for (const item of flattened) {
-      if (!item || typeof item !== 'object') continue
-      const record = item as Record<string, unknown>
-      let type = typeof record.type === 'string' ? record.type : ''
-      if (type === 'DOM' || type === 'dom') {
-        type = 'getDOM'
-        record.type = 'getDOM'
-      }
-      if (type === 'getDOM') {
-        const includeMarkdown =
-          typeof record.includeMarkdown === 'boolean'
-            ? record.includeMarkdown
-            : typeof record.getMarkdown === 'boolean'
-              ? record.getMarkdown
-              : undefined
-        if (includeMarkdown !== undefined) {
-          const options = record.options && typeof record.options === 'object' ? record.options : {}
-          record.options = { ...options, includeMarkdown }
-        }
-      }
-      if (type === 'subagents' && Array.isArray(record.subagents)) {
-        nextSubagents.push(...(record.subagents as Array<Record<string, unknown>>))
-        continue
-      }
-      if (type && !actionTypes.has(type)) {
-        continue
-      }
-      nextActions.push(record)
-    }
-    normalized.actions = nextActions
-    if (nextSubagents.length > 0) normalized.subagents = nextSubagents
-
-    if (embeddedPayloads.length > 0) {
-      const mergedEmbedded: Record<string, unknown> = {}
-      for (const item of embeddedPayloads) {
-        const normalizedItem = normalizeAgentPayload(item)
-        if (!normalizedItem || typeof normalizedItem !== 'object') continue
-        const record = normalizedItem as Record<string, unknown>
-        if (!mergedEmbedded.message && typeof record.message === 'string') {
-          mergedEmbedded.message = record.message
-        }
-        if (Array.isArray(record.actions)) {
-          mergedEmbedded.actions = [
-            ...((mergedEmbedded.actions as unknown[]) || []),
-            ...record.actions
-          ]
-        }
-        if (record.parallelActions !== undefined) {
-          mergedEmbedded.parallelActions =
-            (mergedEmbedded.parallelActions ?? false) || Boolean(record.parallelActions)
-        }
-        if (Array.isArray(record.thoughts)) {
-          mergedEmbedded.thoughts = [
-            ...((mergedEmbedded.thoughts as unknown[]) || []),
-            ...record.thoughts
-          ]
-        }
-        if (Array.isArray(record.steps)) {
-          mergedEmbedded.steps = [...((mergedEmbedded.steps as unknown[]) || []), ...record.steps]
-        }
-        if (Array.isArray(record.subagents)) {
-          mergedEmbedded.subagents = [
-            ...((mergedEmbedded.subagents as unknown[]) || []),
-            ...record.subagents
-          ]
-        }
-        if (record.memory && typeof record.memory === 'object') {
-          mergedEmbedded.memory = mergedEmbedded.memory || {}
-          const memory = record.memory as Record<string, unknown>
-          if (memory.set && typeof memory.set === 'object') {
-            ;(mergedEmbedded.memory as Record<string, unknown>).set = {
-              ...(((mergedEmbedded.memory as Record<string, unknown>).set as Record<
-                string,
-                unknown
-              >) || {}),
-              ...(memory.set as Record<string, unknown>)
-            }
-          }
-          if (Array.isArray(memory.remove)) {
-            const existing = new Set(
-              Array.isArray((mergedEmbedded.memory as Record<string, unknown>).remove)
-                ? ((mergedEmbedded.memory as Record<string, unknown>).remove as string[])
-                : []
-            )
-            for (const key of memory.remove) {
-              if (typeof key === 'string') existing.add(key)
-            }
-            ;(mergedEmbedded.memory as Record<string, unknown>).remove = Array.from(existing)
-          }
-        }
-      }
-
-      const combined: Record<string, unknown> = {}
-      Object.assign(combined, normalized)
-      if (!combined.message && typeof mergedEmbedded.message === 'string') {
-        combined.message = mergedEmbedded.message
-      }
-      if (Array.isArray(mergedEmbedded.actions)) {
-        combined.actions = [
-          ...((combined.actions as unknown[]) || []),
-          ...(mergedEmbedded.actions as unknown[])
-        ]
-      }
-      if (mergedEmbedded.parallelActions !== undefined) {
-        combined.parallelActions =
-          (combined.parallelActions ?? false) || Boolean(mergedEmbedded.parallelActions)
-      }
-      if (Array.isArray(mergedEmbedded.thoughts)) {
-        combined.thoughts = [
-          ...((combined.thoughts as unknown[]) || []),
-          ...(mergedEmbedded.thoughts as unknown[])
-        ]
-      }
-      if (Array.isArray(mergedEmbedded.steps)) {
-        combined.steps = [
-          ...((combined.steps as unknown[]) || []),
-          ...(mergedEmbedded.steps as unknown[])
-        ]
-      }
-      if (Array.isArray(mergedEmbedded.subagents)) {
-        combined.subagents = [
-          ...((combined.subagents as unknown[]) || []),
-          ...(mergedEmbedded.subagents as unknown[])
-        ]
-      }
-      if (mergedEmbedded.memory && typeof mergedEmbedded.memory === 'object') {
-        combined.memory = combined.memory || {}
-        const mergedMemory = mergedEmbedded.memory as Record<string, unknown>
-        if (mergedMemory.set && typeof mergedMemory.set === 'object') {
-          ;(combined.memory as Record<string, unknown>).set = {
-            ...(((combined.memory as Record<string, unknown>).set as Record<string, unknown>) ||
-              {}),
-            ...(mergedMemory.set as Record<string, unknown>)
-          }
-        }
-        if (Array.isArray(mergedMemory.remove)) {
-          const existing = new Set(
-            Array.isArray((combined.memory as Record<string, unknown>).remove)
-              ? ((combined.memory as Record<string, unknown>).remove as string[])
-              : []
-          )
-          for (const key of mergedMemory.remove) {
-            if (typeof key === 'string') existing.add(key)
-          }
-          ;(combined.memory as Record<string, unknown>).remove = Array.from(existing)
-        }
-      }
-
-      return combined
-    }
-  }
-  return normalized
-}
-
-const parseResponsePayload = (payload: unknown): z.infer<typeof responseSchema> | null => {
-  try {
-    return responseSchema.parse(normalizeAgentPayload(payload))
-  } catch {
-    return null
-  }
-}
-
-const responseSchema = z.object({
-  message: z.string().optional(),
-  actions: z.array(actionSchema).optional(),
-  parallelActions: z.boolean().optional(),
-  thoughts: listFromString.optional(),
-  steps: listFromString.optional(),
-  memory: z
-    .object({
-      set: z.record(z.string()).optional(),
-      remove: z.array(z.string()).optional()
-    })
-    .optional(),
-  subagents: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        name: z.string().optional(),
-        prompt: z.string()
-      })
-    )
-    .optional()
-})
-
-const ensureActionIds = (parsed: z.infer<typeof responseSchema>): void => {
-  if (!parsed.actions) return
-  for (const action of parsed.actions) {
-    if (!action.id) action.id = nanoid()
-  }
-}
-
-const mergeParsedPayloads = (
-  payloads: z.infer<typeof responseSchema>[]
-): z.infer<typeof responseSchema> | null => {
-  if (!payloads.length) return null
-  if (payloads.length === 1) return payloads[0]
-  const merged: z.infer<typeof responseSchema> = {}
-  for (const item of payloads) {
-    if (!merged.message && item.message) merged.message = item.message
-    if (item.actions?.length) {
-      merged.actions = [...(merged.actions || []), ...item.actions]
-    }
-    if (item.parallelActions !== undefined) {
-      merged.parallelActions = (merged.parallelActions ?? false) || item.parallelActions
-    }
-    if (item.thoughts?.length) {
-      merged.thoughts = [...(merged.thoughts || []), ...item.thoughts]
-    }
-    if (item.steps?.length) {
-      merged.steps = [...(merged.steps || []), ...item.steps]
-    }
-    if (item.subagents?.length) {
-      merged.subagents = [...(merged.subagents || []), ...item.subagents]
-    }
-    if (item.memory) {
-      merged.memory = merged.memory || {}
-      if (item.memory.set) {
-        merged.memory.set = { ...(merged.memory.set || {}), ...item.memory.set }
-      }
-      if (item.memory.remove?.length) {
-        const existing = new Set(merged.memory.remove || [])
-        for (const key of item.memory.remove) existing.add(key)
-        merged.memory.remove = Array.from(existing)
-      }
-    }
-  }
-  return merged
-}
-
-const extractBrowserToolUses = (content: Array<any> | undefined) =>
-  (content || []).filter(
-    block => block?.type === 'tool_use' && block?.name === toolSchema.name
-  ) as { id?: string; input?: unknown }[]
-
-const parseToolInputs = (
-  toolUses: { id?: string; input?: unknown }[]
-): { parsedInputs: z.infer<typeof responseSchema>[]; toolUseIds: string[] } => {
-  const parsedInputs: z.infer<typeof responseSchema>[] = []
-  const toolUseIds: string[] = []
-  for (const toolUse of toolUses) {
-    if (!toolUse?.id || !toolUse.input) continue
-    const parsed = parseResponsePayload(toolUse.input)
-    if (!parsed) continue
-    ensureActionIds(parsed)
-    parsedInputs.push(parsed)
-    toolUseIds.push(toolUse.id)
-  }
-  return { parsedInputs, toolUseIds }
-}
-
-const toolSchema = {
-  name: 'browser_actions',
-  description:
-    'Respond with a message and optional browser actions. Use parallelActions=true for independent actions.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      message: { type: 'string' },
-      actions: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            type: {
-              type: 'string',
-              enum: [
-                'click',
-                'double-click',
-                'right-click',
-                'hover',
-                'focus',
-                'blur',
-                'scroll',
-                'touch',
-                'screenshot',
-                'navigate',
-                'click-dom',
-                'input',
-                'key',
-                'type',
-                'drag',
-                'select',
-                'getDOM'
-              ]
-            },
-            note: { type: 'string' },
-            selector: { type: 'string' },
-            x: { type: 'number' },
-            y: { type: 'number' },
-            button: { type: 'number' },
-            behavior: { type: 'string', enum: ['auto', 'smooth'] },
-            format: { type: 'string', enum: ['png', 'jpeg'] },
-            url: { type: 'string' },
-            text: { type: 'string' },
-            clear: { type: 'boolean' },
-            key: { type: 'string' },
-            code: { type: 'string' },
-            ctrlKey: { type: 'boolean' },
-            altKey: { type: 'boolean' },
-            shiftKey: { type: 'boolean' },
-            metaKey: { type: 'boolean' },
-            repeat: { type: 'boolean' },
-            delayMs: { type: 'number' },
-            targetSelector: { type: 'string' },
-            toX: { type: 'number' },
-            toY: { type: 'number' },
-            value: { type: 'string' },
-            label: { type: 'string' },
-            options: { type: 'object' }
-          },
-          required: ['type']
-        }
-      },
-      subagents: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-            prompt: { type: 'string' }
-          },
-          required: ['prompt']
-        }
-      },
-      thoughts: { type: 'array', items: { type: 'string' } },
-      steps: { type: 'array', items: { type: 'string' } },
-      parallelActions: { type: 'boolean' },
-      memory: {
-        type: 'object',
-        properties: {
-          set: { type: 'object' },
-          remove: { type: 'array', items: { type: 'string' } }
-        }
-      }
-    },
-    required: []
-  }
-}
-
 type TabContext = {
   id?: number
   title?: string
@@ -547,6 +59,8 @@ type TabContext = {
   active?: boolean
   windowId?: number
 }
+
+export type AgentTabContext = TabContext
 
 const buildSystemPrompt = (
   settings: AgentSettings,
@@ -624,188 +138,6 @@ const buildSystemPrompt = (
   return lines.join('\n')
 }
 
-const repairJson = (raw: unknown): string | null => {
-  if (typeof raw !== 'string') return null
-  const start = raw.indexOf('{')
-  const end = raw.lastIndexOf('}')
-  if (start === -1 || end === -1 || end <= start) return null
-  const candidate = raw.slice(start, end + 1)
-  const trimmed = candidate
-    .replace(/,\s*([}\]])/g, '$1')
-    .replace(/"thoughts"\s*:\s*([},])/g, '"thoughts":[]$1')
-    .replace(/"steps"\s*:\s*([},])/g, '"steps":[]$1')
-    .replace(/"actions"\s*:\s*([},])/g, '"actions":[]$1')
-    .replace(/"subagents"\s*:\s*([},])/g, '"subagents":[]$1')
-    .replace(/"memory"\s*:\s*([},])/g, '"memory":{}$1')
-  return trimmed
-}
-
-/**
- * Parse YAML-like format returned by some models (e.g. GLM-4.7-flash)
- * Example format:
- *   thoughts: ["..."]
- *   steps: ["..."]
- *   actions: [{"action": "tool", ...}]
- */
-const parseYamlLikeFormat = (raw: unknown): string | null => {
-  if (typeof raw !== 'string') return null
-  const text = raw.trim()
-  if (!text) return null
-  if (text.includes('```')) return null
-
-  // Only accept if the first non-empty line starts with a known key
-  const lines = text.split('\n').map(line => line.trim())
-  const firstLine = lines.find(line => line.length > 0)
-  if (!firstLine) return null
-  const keyValuePattern = /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:/
-  if (!keyValuePattern.test(firstLine)) return null
-  if (text.startsWith('{') && text.endsWith('}')) return null
-
-  const result: Record<string, unknown> = {}
-
-  let currentKey = ''
-  let currentValue = ''
-  let bracketDepth = 0
-  let inValue = false
-
-  for (const line of lines) {
-    const trimmedLine = line.trim()
-    if (!trimmedLine) continue
-
-    // Check if line starts a new key
-    const keyMatch = trimmedLine.match(
-      /^(thoughts|steps|actions|message|parallelActions|memory|subagents)\s*:\s*(.*)$/
-    )
-    if (keyMatch && bracketDepth === 0) {
-      // Save previous key-value if exists
-      if (currentKey && currentValue) {
-        try {
-          result[currentKey] = JSON.parse(currentValue.trim())
-        } catch {
-          result[currentKey] = currentValue.trim()
-        }
-      }
-
-      currentKey = keyMatch[1]
-      currentValue = keyMatch[2]
-      inValue = true
-
-      // Count brackets to handle multi-line values
-      bracketDepth =
-        (currentValue.match(/[[{]/g) || []).length - (currentValue.match(/[}\]]/g) || []).length
-    } else if (inValue) {
-      currentValue += '\n' + trimmedLine
-      bracketDepth +=
-        (trimmedLine.match(/[[{]/g) || []).length - (trimmedLine.match(/[}\]]/g) || []).length
-    }
-  }
-
-  // Save the last key-value
-  if (currentKey && currentValue) {
-    try {
-      result[currentKey] = JSON.parse(currentValue.trim())
-    } catch {
-      result[currentKey] = currentValue.trim()
-    }
-  }
-
-  // Only return if we parsed something useful
-  if (Object.keys(result).length === 0) return null
-
-  try {
-    return JSON.stringify(result)
-  } catch {
-    return null
-  }
-}
-
-const extractSingleCodeFence = (raw: string): string | null => {
-  const match = raw.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
-  return match ? match[1].trim() : null
-}
-
-const canParseStructured = (raw: string): { candidate: string | null } => {
-  const fenced = extractSingleCodeFence(raw)
-  if (fenced !== null) {
-    return { candidate: fenced }
-  }
-  if (raw.includes('```')) return { candidate: null }
-  const trimmed = raw.trim()
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return { candidate: trimmed }
-  return { candidate: raw }
-}
-
-const extractTextContent = (
-  content: Array<{ type: string; text?: string }> | undefined
-): string => {
-  if (!content) return ''
-  return content
-    .filter(block => block.type === 'text')
-    .map(block => block.text || '')
-    .join('')
-}
-
-const sleep = async (ms: number) => {
-  if (!ms) return
-  await new Promise(resolve => setTimeout(resolve, ms))
-}
-
-const getHeaderValue = (headers: any, key: string): string | null => {
-  if (!headers) return null
-  const lowerKey = key.toLowerCase()
-  if (typeof headers.get === 'function') {
-    return headers.get(lowerKey) || headers.get(key) || null
-  }
-  const value = headers[key] ?? headers[lowerKey]
-  return typeof value === 'string' ? value : null
-}
-
-const getRetryDelayMs = (error: any, attempt: number): number | null => {
-  const status = error?.status ?? error?.statusCode
-  const name = typeof error?.name === 'string' ? error.name : ''
-  const message = typeof error?.message === 'string' ? error.message : ''
-  const isRateLimit = status === 429 || name === 'RateLimitError' || /429|rate limit/i.test(message)
-  const isTransientStreamError =
-    /stream ended without producing a Message with role=assistant/i.test(message) ||
-    /request ended without sending any chunks/i.test(message)
-  const isServerError = typeof status === 'number' && status >= 500
-  if (!isRateLimit && !isTransientStreamError && !isServerError) return null
-  const retryAfter = getHeaderValue(error?.headers, 'retry-after')
-  if (retryAfter) {
-    const seconds = Number(retryAfter)
-    if (Number.isFinite(seconds) && seconds > 0) {
-      return Math.min(seconds * 1000, 30000)
-    }
-  }
-  const base = 1000
-  const maxDelay = 8000
-  const backoff = Math.min(base * 2 ** attempt, maxDelay)
-  const jitter = Math.floor(Math.random() * 250)
-  const quick = 500 + Math.floor(Math.random() * 500)
-  return (isTransientStreamError ? quick : backoff) + jitter
-}
-
-const withRateLimitRetry = async <T>(
-  task: () => Promise<T>,
-  onRetry?: (attempt: number, delayMs: number, error: any) => void,
-  maxRetries = 2
-): Promise<T> => {
-  let attempt = 0
-  while (true) {
-    try {
-      return await task()
-    } catch (error: any) {
-      const delayMs = getRetryDelayMs(error, attempt)
-      if (delayMs === null || attempt >= maxRetries) {
-        throw error
-      }
-      onRetry?.(attempt + 1, delayMs, error)
-      await sleep(delayMs)
-      attempt += 1
-    }
-  }
-}
-
 const buildSubagentPrompt = (subagent: SubAgentConfig): string => {
   const lines = ['你是协作子代理，只输出简洁的文本结论或步骤。', '不要输出 JSON，不要包含 action。']
   if (subagent.systemPrompt) lines.push(subagent.systemPrompt)
@@ -834,361 +166,8 @@ const resolveMaxTokens = (value: unknown, fallback = 1024): number => {
   return Math.floor(parsed)
 }
 
-async function streamClaudeTools(options: {
-  client: Anthropic
-  model: string
-  system: string
-  prompt: string
-  onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
-  forceTool?: boolean
-  maxTokens: number
-  mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
-}) {
-  // 合并 browser_actions 工具和 MCP 工具
-  const allTools: (typeof toolSchema)[] = [toolSchema as typeof toolSchema]
-  if (options.mcpTools && options.mcpTools.length > 0) {
-    allTools.push(...(options.mcpTools as (typeof toolSchema)[]))
-  }
-
-  const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
-    if (!options.onUpdate) return
-    if (!payload.message && !payload.thoughts && !payload.steps) return
-    options.onUpdate(payload)
-  }
-  const extractFromSnapshot = (snapshot: unknown) => {
-    if (!snapshot || typeof snapshot !== 'object') return
-    const record = snapshot as Record<string, unknown>
-    const message = typeof record.message === 'string' ? record.message : undefined
-    const thoughts = Array.isArray(record.thoughts)
-      ? record.thoughts.filter(item => typeof item === 'string')
-      : undefined
-    const steps = Array.isArray(record.steps)
-      ? record.steps.filter(item => typeof item === 'string')
-      : undefined
-    emitUpdate({ message, thoughts, steps })
-  }
-
-  return withRateLimitRetry(
-    async () => {
-      let streamedText = ''
-      const stream = options.client.messages
-        .stream({
-          model: options.model,
-          max_tokens: options.maxTokens,
-          system: options.system,
-          messages: [{ role: 'user', content: options.prompt }],
-          tools: allTools,
-          tool_choice: options.forceTool
-            ? { type: 'tool', name: toolSchema.name }
-            : { type: 'auto' }
-        })
-        .on('text', text => {
-          streamedText += text
-          emitUpdate({ message: streamedText })
-        })
-        .on('thinking', (_, thinkingSnapshot) => {
-          emitUpdate({ thoughts: [thinkingSnapshot] })
-        })
-        .on('inputJson', (_partial, jsonSnapshot) => {
-          extractFromSnapshot(jsonSnapshot)
-        })
-
-      const finalMessage = await stream.finalMessage()
-      const rawText = streamedText || extractTextContent(finalMessage.content)
-
-      // 检查 browser_actions 工具调用
-      const browserToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
-      const { parsedInputs, toolUseIds } = parseToolInputs(browserToolUses)
-      const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
-      const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
-
-      // 检查 MCP 工具调用
-      const mcpToolUses = finalMessage.content?.filter(
-        (block: any) => block?.type === 'tool_use' && block?.name?.startsWith('mcp__')
-      ) as { id?: string; name?: string; input?: any }[] | undefined
-
-      let parsed: z.infer<typeof responseSchema> | null = null
-      if (parsedInputs.length > 0) {
-        parsed = mergeParsedPayloads(parsedInputs)
-      }
-
-      if (!parsed) {
-        const { candidate } = canParseStructured(rawText)
-        if (candidate) {
-          const repaired = repairJson(candidate) || candidate
-          try {
-            parsed = parseResponsePayload(JSON.parse(repaired))
-          } catch {
-            parsed = null
-          }
-        }
-      }
-
-      // Try YAML-like format as fallback (for models like GLM-4.7-flash)
-      if (!parsed) {
-        const yamlLikeCandidate = parseYamlLikeFormat(rawText)
-        if (yamlLikeCandidate) {
-          try {
-            parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
-          } catch {
-            parsed = null
-          }
-        }
-      }
-
-      return {
-        rawText,
-        parsed,
-        toolUseId,
-        toolInput,
-        toolUseIds,
-        toolInputs: parsedInputs,
-        mcpToolUses
-      }
-    },
-    (attempt, delayMs, error) => {
-      const message =
-        error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
-          ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
-          : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
-      emitUpdate({ message })
-    }
-  )
-}
-
-/**
- * 使用 Response API 调用 Claude
- * Response API 是 Anthropic 的新 API 格式，支持更好的流式响应和工具调用
- */
-async function streamClaudeResponseApi(options: {
-  client: Anthropic
-  model: string
-  system: string
-  prompt: string
-  onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
-  forceTool?: boolean
-  maxTokens: number
-  mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
-}) {
-  // 合并 browser_actions 工具和 MCP 工具
-  const allTools: (typeof toolSchema)[] = [toolSchema as typeof toolSchema]
-  if (options.mcpTools && options.mcpTools.length > 0) {
-    allTools.push(...(options.mcpTools as (typeof toolSchema)[]))
-  }
-
-  const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
-    if (!options.onUpdate) return
-    if (!payload.message && !payload.thoughts && !payload.steps) return
-    options.onUpdate(payload)
-  }
-
-  const extractFromSnapshot = (snapshot: unknown) => {
-    if (!snapshot || typeof snapshot !== 'object') return
-    const record = snapshot as Record<string, unknown>
-    const message = typeof record.message === 'string' ? record.message : undefined
-    const thoughts = Array.isArray(record.thoughts)
-      ? record.thoughts.filter(item => typeof item === 'string')
-      : undefined
-    const steps = Array.isArray(record.steps)
-      ? record.steps.filter(item => typeof item === 'string')
-      : undefined
-    emitUpdate({ message, thoughts, steps })
-  }
-
-  return withRateLimitRetry(
-    async () => {
-      let streamedText = ''
-
-      // Response API 使用 responses.create 而不是 messages.create
-      // 但目前 @anthropic-ai/sdk 可能还不支持 responses API
-      // 我们需要使用原生 fetch 调用
-      const baseUrl = (options.client as any)._options?.baseURL || 'https://api.anthropic.com'
-      const apiKey = (options.client as any)._options?.apiKey || ''
-
-      const requestBody = {
-        model: options.model,
-        max_tokens: options.maxTokens,
-        system: [{ type: 'text', text: options.system }],
-        input: [{ role: 'user', content: options.prompt }],
-        tools: allTools.map(tool => ({
-          type: 'function',
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.input_schema
-        })),
-        stream: true
-      }
-
-      const response = await fetch(`${baseUrl}/v1/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2024-01-01',
-          'anthropic-beta': 'responses-2025-01-01'
-        },
-        body: JSON.stringify(requestBody)
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Response API error: ${response.status} - ${errorText}`)
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('No response body')
-      }
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-      const toolCalls: Array<{ id: string; name: string; input: any }> = []
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
-
-          try {
-            const event = JSON.parse(data)
-
-            // 处理不同类型的事件
-            if (event.type === 'content_block_delta') {
-              if (event.delta?.type === 'text_delta') {
-                streamedText += event.delta.text || ''
-                emitUpdate({ message: streamedText })
-              } else if (event.delta?.type === 'thinking_delta') {
-                emitUpdate({ thoughts: [event.delta.thinking || ''] })
-              } else if (event.delta?.type === 'input_json_delta') {
-                // 工具调用参数增量
-                extractFromSnapshot(event.delta.partial_json)
-              }
-            } else if (event.type === 'content_block_start') {
-              if (event.content_block?.type === 'tool_use') {
-                toolCalls.push({
-                  id: event.content_block.id,
-                  name: event.content_block.name,
-                  input: {}
-                })
-              }
-            } else if (event.type === 'content_block_stop') {
-              // 工具调用完成
-            } else if (event.type === 'message_stop') {
-              // 消息完成
-            }
-          } catch {
-            // 忽略解析错误
-          }
-        }
-      }
-
-      // 解析工具调用结果
-      const browserToolUses = toolCalls.filter(t => t.name === 'browser_actions')
-      const mcpToolUses = toolCalls.filter(t => t.name?.startsWith('mcp__'))
-
-      const { parsedInputs, toolUseIds } = parseToolInputs(
-        browserToolUses.map(t => ({ id: t.id, name: t.name, input: t.input }))
-      )
-      const toolUseId = toolUseIds.length === 1 ? toolUseIds[0] : undefined
-      const toolInput = parsedInputs.length === 1 ? parsedInputs[0] : undefined
-
-      let parsed: z.infer<typeof responseSchema> | null = null
-      if (parsedInputs.length > 0) {
-        parsed = mergeParsedPayloads(parsedInputs)
-      }
-
-      if (!parsed) {
-        const { candidate } = canParseStructured(streamedText)
-        if (candidate) {
-          const repaired = repairJson(candidate) || candidate
-          try {
-            parsed = parseResponsePayload(JSON.parse(repaired))
-          } catch {
-            parsed = null
-          }
-        }
-      }
-
-      return {
-        rawText: streamedText,
-        parsed,
-        toolUseId,
-        toolInput,
-        toolUseIds,
-        toolInputs: parsedInputs,
-        mcpToolUses: mcpToolUses.length > 0 ? mcpToolUses : undefined
-      }
-    },
-    (attempt, delayMs, error) => {
-      const message =
-        error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
-          ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
-          : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
-      emitUpdate({ message })
-    }
-  )
-}
-
-/**
- * 根据 API 风格选择调用方法
- */
-async function streamClaude(
-  options: {
-    client: Anthropic
-    model: string
-    system: string
-    prompt: string
-    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
-    forceTool?: boolean
-    maxTokens: number
-    mcpTools?: ReturnType<typeof mcpToolToAnthropicTool>[]
-  },
-  apiFlavor: ApiFlavor = 'messages'
-) {
-  if (apiFlavor === 'responses') {
-    return streamClaudeResponseApi(options)
-  }
-  return streamClaudeTools(options)
-}
-
-async function streamClaudeText(options: {
-  client: Anthropic
-  model: string
-  system: string
-  prompt: string
-  maxTokens: number
-}) {
-  return withRateLimitRetry(
-    async () => {
-      let streamedText = ''
-      const stream = options.client.messages
-        .stream({
-          model: options.model,
-          max_tokens: options.maxTokens,
-          system: options.system,
-          messages: [{ role: 'user', content: options.prompt }]
-        })
-        .on('text', text => {
-          streamedText += text
-        })
-
-      const finalMessage = await stream.finalMessage()
-      const rawText = streamedText || extractTextContent(finalMessage.content)
-      return rawText.trim()
-    },
-    () => {
-      // no-op for background tasks
-    }
-  )
-}
+const normalizeActions = (actions: AgentToolPayload['actions'] | undefined): AgentAction[] =>
+  (actions || []).map(action => ({ ...action, id: action.id || nanoid() }) as AgentAction)
 
 const parseChecklist = (raw: string): string[] => {
   const items = raw
@@ -1224,16 +203,9 @@ export async function generateChecklist(
       prompt: input,
       maxTokens: resolveMaxTokens(settings.maxTokens)
     })
-    const yamlLikeCandidate = parseYamlLikeFormat(raw)
-    if (yamlLikeCandidate) {
-      try {
-        const parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
-        if (parsed?.steps?.length) return parsed.steps.slice(0, 10)
-        if (parsed?.thoughts?.length) return parsed.thoughts.slice(0, 10)
-      } catch {
-        // fallback to plain parsing
-      }
-    }
+    const parsed = parsePayloadFromRawText(raw)
+    if (parsed?.steps?.length) return parsed.steps.slice(0, 10)
+    if (parsed?.thoughts?.length) return parsed.thoughts.slice(0, 10)
     return parseChecklist(raw)
   } catch {
     return []
@@ -1284,21 +256,27 @@ export async function runAgentMessage(
   subagent?: SubAgentConfig,
   context?: { tab?: TabContext },
   options?: {
-    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
+    onUpdate?: (update: AgentStreamUpdate) => void
     sessionId?: string // 外部传入的会话 ID
     isolated?: boolean // 是否隔离上下文
   }
 ): Promise<AgentRunResult> {
+  const threadId = options?.sessionId || nanoid()
+  const withThreadId = (result: AgentRunResult): AgentRunResult => ({
+    threadId,
+    ...result
+  })
+
   if (!settings.apiKey) {
-    return {
+    return withThreadId({
       error: '请先在设置中填写 Claude 的 apiKey。'
-    }
+    })
   }
 
   // 开始执行上下文
   const contextType = subagent ? 'subagent' : 'master'
   const executionContextId = beginContext(contextType, input, {
-    sessionId: options?.sessionId,
+    sessionId: threadId,
     agentId: subagent?.id,
     agentName: subagent?.name,
     isolated: options?.isolated ?? contextType === 'subagent'
@@ -1337,7 +315,7 @@ export async function runAgentMessage(
       }
     }
 
-    const firstPass = await streamClaude(
+    const firstPass = await streamClaudeTurn(
       {
         client,
         model: modelId,
@@ -1374,7 +352,11 @@ export async function runAgentMessage(
             }
           }
 
-          const result = await callMcpTool(server, parsed.toolName, mcpToolUse.input || {})
+          const args =
+            mcpToolUse.input && typeof mcpToolUse.input === 'object'
+              ? (mcpToolUse.input as Record<string, unknown>)
+              : {}
+          const result = await callMcpTool(server, parsed.toolName, args)
           return { toolUseId: mcpToolUse.id || '', ...result }
         })
       )
@@ -1394,118 +376,37 @@ export async function runAgentMessage(
       })
 
       // 继续对话，让模型处理 MCP 结果
-      let followUpText = ''
-      const emitFollowUp = (payload: {
-        message?: string
-        thoughts?: string[]
-        steps?: string[]
-      }) => {
-        if (!options?.onUpdate) return
-        if (!payload.message && !payload.thoughts && !payload.steps) return
-        options.onUpdate(payload)
-      }
-      const extractFollowUpSnapshot = (snapshot: unknown) => {
-        if (!snapshot || typeof snapshot !== 'object') return
-        const record = snapshot as Record<string, unknown>
-        const message = typeof record.message === 'string' ? record.message : undefined
-        const thoughts = Array.isArray(record.thoughts)
-          ? record.thoughts.filter(item => typeof item === 'string')
-          : undefined
-        const steps = Array.isArray(record.steps)
-          ? record.steps.filter(item => typeof item === 'string')
-          : undefined
-        emitFollowUp({ message, thoughts, steps })
-      }
-      const followUpResult = await withRateLimitRetry(
-        async () => {
-          followUpText = ''
-          const followUpStream = client.messages
-            .stream({
-              model: modelId,
-              max_tokens: resolveMaxTokens(settings.maxTokens),
-              system,
-              messages: [
-                { role: 'user', content: input },
-                {
-                  role: 'assistant',
-                  content: firstPass.mcpToolUses.map(use => ({
-                    type: 'tool_use' as const,
-                    id: use.id || '',
-                    name: use.name || '',
-                    input: use.input || {}
-                  }))
-                },
-                {
-                  role: 'user',
-                  content: toolResultMessages
-                }
-              ],
-              tools: [toolSchema, ...(mcpTools as (typeof toolSchema)[])],
-              tool_choice: { type: 'auto' }
-            })
-            .on('text', text => {
-              followUpText += text
-              emitFollowUp({ message: followUpText })
-            })
-            .on('thinking', (_, thinkingSnapshot) => {
-              emitFollowUp({ thoughts: [thinkingSnapshot] })
-            })
-            .on('inputJson', (_partial, jsonSnapshot) => {
-              extractFollowUpSnapshot(jsonSnapshot)
-            })
-
-          const followUpMessage = await followUpStream.finalMessage()
-          return {
-            followUpMessage,
-            followUpRawText: followUpText || extractTextContent(followUpMessage.content)
+      const followUpResult = await streamClaudeToolConversation({
+        client,
+        model: modelId,
+        system,
+        messages: [
+          { role: 'user', content: input },
+          {
+            role: 'assistant',
+            content: firstPass.mcpToolUses.map(use => ({
+              type: 'tool_use' as const,
+              id: use.id || '',
+              name: use.name || '',
+              input: use.input || {}
+            }))
+          },
+          {
+            role: 'user',
+            content: toolResultMessages
           }
-        },
-        (attempt, delayMs, error) => {
-          const message =
-            error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
-              ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
-              : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
-          emitFollowUp({ message })
-        }
-      )
-      const followUpMessage = followUpResult.followUpMessage
-      const followUpRawText = followUpResult.followUpRawText
-
-      // 检查是否有 browser_actions 工具调用
-      const followUpToolUses = extractBrowserToolUses(followUpMessage.content as any[] | undefined)
-      const followUpParsedInputs = parseToolInputs(followUpToolUses)
-      let followUpParsed: z.infer<typeof responseSchema> | null = null
-      if (followUpParsedInputs.parsedInputs.length > 0) {
-        followUpParsed = mergeParsedPayloads(followUpParsedInputs.parsedInputs)
-      }
-
-      if (!followUpParsed) {
-        const { candidate } = canParseStructured(followUpRawText)
-        if (candidate) {
-          const repaired = repairJson(candidate) || candidate
-          try {
-            followUpParsed = parseResponsePayload(JSON.parse(repaired))
-          } catch {
-            followUpParsed = null
-          }
-        }
-      }
-
-      if (!followUpParsed) {
-        const yamlLikeCandidate = parseYamlLikeFormat(followUpRawText)
-        if (yamlLikeCandidate) {
-          try {
-            followUpParsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
-          } catch {
-            followUpParsed = null
-          }
-        }
-      }
+        ],
+        tools: [toolSchema, ...mcpTools],
+        toolChoice: { type: 'auto' },
+        maxTokens: resolveMaxTokens(settings.maxTokens),
+        onUpdate: update => options?.onUpdate?.(update)
+      })
+      const followUpParsed = followUpResult.parsed
 
       const content =
         followUpParsed?.message?.trim() ||
         followUpParsed?.steps?.[0]?.trim() ||
-        followUpRawText.trim() ||
+        followUpResult.rawText.trim() ||
         '已完成 MCP 工具调用。'
 
       if (followUpParsed?.memory) {
@@ -1519,31 +420,22 @@ export async function runAgentMessage(
         memoryUpdates: followUpParsed?.memory?.set
       })
 
-      return {
+      return withThreadId({
         message: {
           id: nanoid(),
           role: 'assistant',
           content
         },
-        actions:
-          followUpParsed?.actions?.map(action => ({
-            ...action,
-            id: action.id || nanoid()
-          })) || [],
-        toolUseId:
-          followUpParsedInputs.toolUseIds.length === 1
-            ? followUpParsedInputs.toolUseIds[0]
-            : undefined,
-        toolInput:
-          followUpParsedInputs.parsedInputs.length === 1
-            ? followUpParsedInputs.parsedInputs[0]
-            : undefined,
-        toolUseIds: followUpParsedInputs.toolUseIds,
-        toolInputs: followUpParsedInputs.parsedInputs,
+        actions: normalizeActions(followUpParsed?.actions),
+        toolUseId: followUpResult.toolUseId,
+        toolInput: followUpResult.toolInput,
+        toolUseIds: followUpResult.toolUseIds,
+        toolInputs: followUpResult.toolInputs,
         parallelActions: followUpParsed?.parallelActions,
         thoughts: followUpParsed?.thoughts,
-        steps: followUpParsed?.steps
-      }
+        steps: followUpParsed?.steps,
+        usage: followUpResult.usage
+      })
     }
 
     if (!firstPass.parsed) {
@@ -1553,14 +445,15 @@ export async function runAgentMessage(
         success: true,
         output: fallbackContent
       })
-      return {
+      return withThreadId({
         message: {
           id: nanoid(),
           role: 'assistant',
           content: fallbackContent
         },
-        actions: []
-      }
+        actions: [],
+        usage: firstPass.usage
+      })
     }
 
     if (firstPass.parsed.subagents && firstPass.parsed.subagents.length > 0) {
@@ -1589,14 +482,15 @@ export async function runAgentMessage(
           error: errorContent
         })
 
-        return {
+        return withThreadId({
           message: {
             id: nanoid(),
             role: 'assistant',
             content: errorContent
           },
-          actions: []
-        }
+          actions: [],
+          usage: firstPass.usage
+        })
       }
       const sessionId = nanoid()
       createSubagentSession(sessionId, input, firstPass.parsed.subagents)
@@ -1663,14 +557,15 @@ export async function runAgentMessage(
         JSON.stringify(subagentResults)
       ].join('\n')
 
-      const aggregated = await streamClaudeTools({
+      const aggregated = await streamClaudeToolConversation({
         client,
         model: modelId,
         system: `${system}\n不要再调用子代理。`,
-        prompt: aggregatePrompt,
-        onUpdate: message => options?.onUpdate?.({ message }),
-        forceTool: false,
-        maxTokens: resolveMaxTokens(settings.maxTokens)
+        messages: [{ role: 'user', content: aggregatePrompt }],
+        tools: [toolSchema],
+        toolChoice: { type: 'auto' },
+        maxTokens: resolveMaxTokens(settings.maxTokens),
+        onUpdate: update => options?.onUpdate?.(update)
       })
 
       if (!aggregated.parsed) {
@@ -1680,23 +575,20 @@ export async function runAgentMessage(
           success: true,
           output: fallbackContent
         })
-        return {
+        return withThreadId({
           message: {
             id: nanoid(),
             role: 'assistant',
             content: fallbackContent
           },
-          actions: []
-        }
+          actions: [],
+          usage: aggregated.usage
+        })
       }
 
       const aggregatedContent =
         aggregated.parsed.message?.trim() || aggregated.parsed.steps?.[0]?.trim() || '已完成任务。'
-      const aggregatedActions =
-        aggregated.parsed.actions?.map(action => ({
-          ...action,
-          id: action.id || nanoid()
-        })) || []
+      const aggregatedActions = normalizeActions(aggregated.parsed.actions)
 
       if (aggregated.parsed?.memory) {
         updateMemory(aggregated.parsed.memory)
@@ -1709,7 +601,7 @@ export async function runAgentMessage(
         memoryUpdates: aggregated.parsed?.memory?.set
       })
 
-      return {
+      return withThreadId({
         message: {
           id: nanoid(),
           role: 'assistant',
@@ -1722,8 +614,9 @@ export async function runAgentMessage(
         toolInputs: aggregated.toolInputs,
         parallelActions: aggregated.parsed?.parallelActions,
         thoughts: aggregated.parsed?.thoughts,
-        steps: aggregated.parsed?.steps
-      }
+        steps: aggregated.parsed?.steps,
+        usage: aggregated.usage
+      })
     }
 
     if (firstPass.parsed.memory) {
@@ -1732,11 +625,7 @@ export async function runAgentMessage(
 
     const content =
       firstPass.parsed.message?.trim() || firstPass.parsed.steps?.[0]?.trim() || '已完成任务。'
-    const actions =
-      firstPass.parsed.actions?.map(action => ({
-        ...action,
-        id: action.id || nanoid()
-      })) || []
+    const actions = normalizeActions(firstPass.parsed.actions)
 
     // 结束执行上下文（成功）
     endContext(executionContextId, {
@@ -1745,7 +634,7 @@ export async function runAgentMessage(
       memoryUpdates: firstPass.parsed.memory?.set
     })
 
-    return {
+    return withThreadId({
       message: {
         id: nanoid(),
         role: 'assistant',
@@ -1758,31 +647,48 @@ export async function runAgentMessage(
       toolInputs: firstPass.toolInputs,
       parallelActions: firstPass.parsed.parallelActions,
       thoughts: firstPass.parsed.thoughts,
-      steps: firstPass.parsed.steps
-    }
+      steps: firstPass.parsed.steps,
+      usage: firstPass.usage
+    })
   } catch (error: any) {
     // 结束执行上下文（失败）
     endContext(executionContextId, {
       success: false,
       error: error?.message || 'Claude Agent 请求失败。'
     })
-    return {
+    return withThreadId({
       error: error?.message || 'Claude Agent 请求失败。'
-    }
+    })
   }
 }
 
 export async function runAgentFollowup(
   input: string,
-  toolUses: { id: string; input: z.infer<typeof responseSchema> }[],
+  toolUses: { id: string; input: AgentToolPayload }[],
   toolResult: AgentActionResult[],
   settings: AgentSettings,
   subagent?: SubAgentConfig,
   context?: { tab?: TabContext },
   options?: {
-    onUpdate?: (update: { message?: string; thoughts?: string[]; steps?: string[] }) => void
+    onUpdate?: (update: AgentStreamUpdate) => void
+    sessionId?: string
+    isolated?: boolean
   }
 ): Promise<AgentRunResult> {
+  const threadId = options?.sessionId || nanoid()
+  const withThreadId = (result: AgentRunResult): AgentRunResult => ({
+    threadId,
+    ...result
+  })
+
+  const contextType = subagent ? 'subagent' : 'master'
+  const executionContextId = beginContext(contextType, input, {
+    sessionId: threadId,
+    agentId: subagent?.id,
+    agentName: subagent?.name,
+    isolated: options?.isolated ?? contextType === 'subagent'
+  })
+
   try {
     const client = new Anthropic({
       apiKey: settings.apiKey,
@@ -1795,133 +701,61 @@ export async function runAgentFollowup(
       .filter(Boolean)
       .join('\n')
 
-    let streamedText = ''
-    const emitUpdate = (payload: { message?: string; thoughts?: string[]; steps?: string[] }) => {
-      if (!options?.onUpdate) return
-      if (!payload.message && !payload.thoughts && !payload.steps) return
-      options.onUpdate(payload)
-    }
-    const extractFromSnapshot = (snapshot: unknown) => {
-      if (!snapshot || typeof snapshot !== 'object') return
-      const record = snapshot as Record<string, unknown>
-      const message = typeof record.message === 'string' ? record.message : undefined
-      const thoughts = Array.isArray(record.thoughts)
-        ? record.thoughts.filter(item => typeof item === 'string')
-        : undefined
-      const steps = Array.isArray(record.steps)
-        ? record.steps.filter(item => typeof item === 'string')
-        : undefined
-      emitUpdate({ message, thoughts, steps })
-    }
-    const followupResult = await withRateLimitRetry(
-      async () => {
-        streamedText = ''
-        const stream = client.messages
-          .stream({
-            model: modelId,
-            max_tokens: resolveMaxTokens(settings.maxTokens),
-            system,
-            messages: [
-              { role: 'user', content: input },
-              {
-                role: 'assistant',
-                content: toolUses.map(use => ({
-                  type: 'tool_use' as const,
-                  id: use.id,
-                  name: toolSchema.name,
-                  input: use.input
-                }))
-              },
-              {
-                role: 'user',
-                content: toolUses.map(use => {
-                  const actionIds = (use.input.actions || [])
-                    .map(action => action.id)
-                    .filter((id): id is string => typeof id === 'string')
-                  const filteredResults = actionIds.length
-                    ? toolResult.filter(result => actionIds.includes(result.id))
-                    : []
-                  return {
-                    type: 'tool_result' as const,
-                    tool_use_id: use.id,
-                    content: JSON.stringify(filteredResults)
-                  }
-                })
-              }
-            ],
-            tools: [toolSchema],
-            tool_choice: { type: 'auto' }
+    const followupResult = await streamClaudeToolConversation({
+      client,
+      model: modelId,
+      system,
+      messages: [
+        { role: 'user', content: input },
+        {
+          role: 'assistant',
+          content: toolUses.map(use => ({
+            type: 'tool_use' as const,
+            id: use.id,
+            name: toolSchema.name,
+            input: use.input
+          }))
+        },
+        {
+          role: 'user',
+          content: toolUses.map(use => {
+            const actionIds = (use.input.actions || [])
+              .map(action => action.id)
+              .filter((id): id is string => typeof id === 'string')
+            const filteredResults = actionIds.length
+              ? toolResult.filter(result => actionIds.includes(result.id))
+              : []
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: use.id,
+              content: JSON.stringify(filteredResults)
+            }
           })
-          .on('text', text => {
-            streamedText += text
-            emitUpdate({ message: streamedText })
-          })
-          .on('thinking', (_, thinkingSnapshot) => {
-            emitUpdate({ thoughts: [thinkingSnapshot] })
-          })
-          .on('inputJson', (_partial, jsonSnapshot) => {
-            extractFromSnapshot(jsonSnapshot)
-          })
-
-        const finalMessage = await stream.finalMessage()
-        return {
-          finalMessage,
-          rawText: streamedText || extractTextContent(finalMessage.content)
         }
-      },
-      (attempt, delayMs, error) => {
-        const message =
-          error?.status === 429 || /429|rate limit/i.test(String(error?.message || ''))
-            ? `请求过于频繁，${delayMs}ms 后重试（${attempt}/3）…`
-            : `连接中断，${delayMs}ms 后重试（${attempt}/3）…`
-        emitUpdate({ message })
-      }
-    )
+      ],
+      tools: [toolSchema],
+      toolChoice: { type: 'auto' },
+      maxTokens: resolveMaxTokens(settings.maxTokens),
+      onUpdate: update => options?.onUpdate?.(update)
+    })
 
-    const finalMessage = followupResult.finalMessage
-    const rawText = followupResult.rawText
-    const followUpToolUses = extractBrowserToolUses(finalMessage.content as any[] | undefined)
-    const followUpParsedInputs = parseToolInputs(followUpToolUses)
-
-    let parsed: z.infer<typeof responseSchema> | null = null
-    if (followUpParsedInputs.parsedInputs.length > 0) {
-      parsed = mergeParsedPayloads(followUpParsedInputs.parsedInputs)
-    }
+    const parsed = followupResult.parsed
 
     if (!parsed) {
-      const { candidate } = canParseStructured(rawText)
-      if (candidate) {
-        const repaired = repairJson(candidate) || candidate
-        try {
-          parsed = parseResponsePayload(JSON.parse(repaired))
-        } catch {
-          parsed = null
-        }
-      }
-    }
-
-    // Try YAML-like format as fallback (for models like GLM-4.7-flash)
-    if (!parsed) {
-      const yamlLikeCandidate = parseYamlLikeFormat(rawText)
-      if (yamlLikeCandidate) {
-        try {
-          parsed = parseResponsePayload(JSON.parse(yamlLikeCandidate))
-        } catch {
-          parsed = null
-        }
-      }
-    }
-
-    if (!parsed) {
-      const fallbackContent = rawText.trim() || '已完成任务。'
-      return {
+      const fallbackContent = followupResult.rawText.trim() || '已完成任务。'
+      endContext(executionContextId, {
+        success: true,
+        output: fallbackContent
+      })
+      return withThreadId({
         message: {
           id: nanoid(),
           role: 'assistant',
           content: fallbackContent
         },
-        actions: []
-      }
+        actions: [],
+        usage: followupResult.usage
+      })
     }
 
     if (parsed.memory) {
@@ -1929,35 +763,36 @@ export async function runAgentFollowup(
     }
 
     const content = parsed.message?.trim() || parsed.steps?.[0]?.trim() || '已完成任务。'
-    const actions =
-      parsed.actions?.map(action => ({
-        ...action,
-        id: action.id || nanoid()
-      })) || []
+    const actions = normalizeActions(parsed.actions)
 
-    return {
+    endContext(executionContextId, {
+      success: true,
+      output: content,
+      memoryUpdates: parsed.memory?.set
+    })
+
+    return withThreadId({
       message: {
         id: nanoid(),
         role: 'assistant',
         content
       },
       actions,
-      toolUseId:
-        followUpParsedInputs.toolUseIds.length === 1
-          ? followUpParsedInputs.toolUseIds[0]
-          : undefined,
-      toolInput:
-        followUpParsedInputs.parsedInputs.length === 1
-          ? followUpParsedInputs.parsedInputs[0]
-          : undefined,
-      toolUseIds: followUpParsedInputs.toolUseIds,
-      toolInputs: followUpParsedInputs.parsedInputs,
+      toolUseId: followupResult.toolUseId,
+      toolInput: followupResult.toolInput,
+      toolUseIds: followupResult.toolUseIds,
+      toolInputs: followupResult.toolInputs,
       parallelActions: parsed.parallelActions,
       thoughts: parsed.thoughts,
-      steps: parsed.steps
-    }
+      steps: parsed.steps,
+      usage: followupResult.usage
+    })
   } catch (error: any) {
-    return { error: error?.message || 'Claude Agent 请求失败。' }
+    endContext(executionContextId, {
+      success: false,
+      error: error?.message || 'Claude Agent 请求失败。'
+    })
+    return withThreadId({ error: error?.message || 'Claude Agent 请求失败。' })
   }
 }
 
@@ -2021,6 +856,7 @@ export async function describeScreenshot(
     const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
     if (!match) return ''
     const mediaType = match[1]
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mediaType)) return ''
     const base64 = match[2]
     let streamedText = ''
     const stream = client.messages
@@ -2031,7 +867,14 @@ export async function describeScreenshot(
           {
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
+                  data: base64
+                }
+              },
               { type: 'text', text: prompt }
             ]
           }

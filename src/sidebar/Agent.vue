@@ -6,16 +6,14 @@ import katex from 'katex'
 import { nanoid } from 'nanoid'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
-import {
-  describeScreenshot,
-  generateChecklist,
-  runAgentFollowup,
-  runAgentMessage,
-  verifyChecklist
-} from '@/agent/agentService'
+import { describeScreenshot, generateChecklist, verifyChecklist } from '@/agent/agentService'
+import { AgentCodex } from '@/agent/agentThread'
 import { updateMemory } from '@/agent/memory'
 import { executeAgentActions } from '@/agent/executeActions'
 import type { AgentAction, AgentActionResult, AgentMessage } from '@/agent/types'
+import type { AgentToolPayload } from '@/agent/agentPayload'
+import type { AgentThreadEvent } from '@/agent/agentThreadEvents'
+import type { BrowserActionsItem } from '@/agent/agentThreadItems'
 
 const { settings, activeSubagent } = useAgentSettings()
 
@@ -30,16 +28,27 @@ const BYPASS_MODE_STORAGE_KEY = 'ai-agent-bypass-mode-v1'
 const bypassMode = ref(true)
 const lastUserInput = ref('')
 const lastToolUseIds = ref<string[]>([])
-const lastToolInputs = ref<any[]>([])
+const lastToolInputs = ref<AgentToolPayload[]>([])
 const lastParallelActions = ref(false)
 const pendingActionsAssistantId = ref<string | null>(null)
 const lastTabContext = ref<any>(null)
 const lastChecklist = ref<string[]>([])
+const currentThreadId = ref<string | null>(null)
 const TIMELINE_STORAGE_KEY = 'ai-agent-timeline-v1'
 const timelines = ref<Record<string, { collapsed: boolean; entries: any[] }>>({})
 const streamingEntries = ref<Record<string, { thoughtId?: string; stepId?: string }>>({})
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
 const SESSION_STORAGE_KEY = 'ai-agent-session-v1'
+const codex = new AgentCodex({ settings: () => settings.value })
+
+const getCurrentThread = () => {
+  if (currentThreadId.value) {
+    return codex.resumeThread(currentThreadId.value)
+  }
+  const thread = codex.startThread()
+  currentThreadId.value = thread.id
+  return thread
+}
 
 const hasConnection = computed(() => {
   return Boolean(settings.value.apiKey)
@@ -167,7 +176,8 @@ const saveSession = () => {
     lastParallelActions: lastParallelActions.value,
     lastUserInput: lastUserInput.value,
     lastChecklist: lastChecklist.value,
-    lastTabContext: lastTabContext.value
+    lastTabContext: lastTabContext.value,
+    threadId: currentThreadId.value
   }
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
 }
@@ -191,9 +201,11 @@ const loadSession = () => {
       lastToolUseIds.value = []
     }
     if (Array.isArray(parsed?.lastToolInputs)) {
-      lastToolInputs.value = parsed.lastToolInputs
-    } else if (parsed?.lastToolInput) {
-      lastToolInputs.value = [parsed.lastToolInput]
+      lastToolInputs.value = parsed.lastToolInputs.filter(
+        (item: unknown): item is AgentToolPayload => Boolean(item) && typeof item === 'object'
+      )
+    } else if (parsed?.lastToolInput && typeof parsed.lastToolInput === 'object') {
+      lastToolInputs.value = [parsed.lastToolInput as AgentToolPayload]
     } else {
       lastToolInputs.value = []
     }
@@ -201,9 +213,11 @@ const loadSession = () => {
     lastUserInput.value = typeof parsed?.lastUserInput === 'string' ? parsed.lastUserInput : ''
     lastChecklist.value = Array.isArray(parsed?.lastChecklist) ? parsed.lastChecklist : []
     lastTabContext.value = parsed?.lastTabContext ?? null
+    currentThreadId.value = typeof parsed?.threadId === 'string' ? parsed.threadId : null
   } catch {
     pendingActions.value = []
     pendingActionsAssistantId.value = null
+    currentThreadId.value = null
   }
   if (
     pendingActionsAssistantId.value &&
@@ -287,20 +301,115 @@ const updateTimelineFromStream = (assistantId: string, raw: string) => {
   if (steps.length) updateStreamingEntry(assistantId, 'step', steps.join(' · '))
 }
 
-const applyStreamingUpdate = (
+const applyThreadEventItem = (
   assistantId: string,
-  update: { message?: string; thoughts?: string[]; steps?: string[] }
+  item:
+    | { type: 'agent_message'; text: string }
+    | { type: 'reasoning'; text: string }
+    | { type: 'todo_list'; items: Array<{ text: string }> }
+    | BrowserActionsItem
+    | { type: 'error'; message: string }
 ) => {
-  if (update.message) {
-    updateAssistantMessage(assistantId, update.message)
-    updateTimelineFromStream(assistantId, update.message)
+  if (item.type === 'agent_message') {
+    updateAssistantMessage(assistantId, item.text)
+    updateTimelineFromStream(assistantId, item.text)
+    return
   }
-  if (update.thoughts?.length) {
-    updateStreamingEntry(assistantId, 'thought', update.thoughts.join(' · '))
+  if (item.type === 'reasoning') {
+    updateStreamingEntry(assistantId, 'thought', item.text)
+    return
   }
-  if (update.steps?.length) {
-    updateStreamingEntry(assistantId, 'step', update.steps.join(' · '))
+  if (item.type === 'todo_list') {
+    const steps = item.items.map(step => step.text).filter(Boolean)
+    if (steps.length) {
+      updateStreamingEntry(assistantId, 'step', steps.join(' · '))
+    }
+    return
   }
+  if (item.type === 'browser_actions') {
+    applyToolState(assistantId, {
+      actions: item.actions,
+      toolUseIds: item.toolUseIds,
+      toolInputs: item.toolInputs,
+      parallelActions: item.parallelActions
+    })
+    return
+  }
+  if (item.type === 'error') {
+    updateAssistantMessage(assistantId, item.message, item.message)
+  }
+}
+
+type ConsumedTurnState = {
+  completed: boolean
+  failed: boolean
+  browserActionsCompleted: boolean
+  failureMessage?: string
+}
+
+const consumeThreadEvents = async (
+  assistantId: string,
+  events: AsyncGenerator<AgentThreadEvent>
+): Promise<ConsumedTurnState> => {
+  const state: ConsumedTurnState = {
+    completed: false,
+    failed: false,
+    browserActionsCompleted: false
+  }
+  for await (const event of events) {
+    if (event.type === 'thread.started') {
+      currentThreadId.value = event.thread_id
+      saveSession()
+      continue
+    }
+
+    if (event.type === 'turn.completed') {
+      state.completed = true
+      continue
+    }
+
+    if (event.type === 'turn.failed') {
+      updateAssistantMessage(assistantId, event.error.message, event.error.message)
+      applyToolState(assistantId, { actions: [], toolUseIds: [], toolInputs: [] })
+      state.failed = true
+      state.failureMessage = event.error.message
+      saveSession()
+      continue
+    }
+
+    if (event.type === 'error') {
+      updateAssistantMessage(assistantId, event.message, event.message)
+      applyToolState(assistantId, { actions: [], toolUseIds: [], toolInputs: [] })
+      state.failed = true
+      state.failureMessage = event.message
+      saveSession()
+      continue
+    }
+
+    if (
+      event.type === 'item.started' ||
+      event.type === 'item.updated' ||
+      event.type === 'item.completed'
+    ) {
+      const item = event.item
+      if (item.type === 'agent_message') {
+        applyThreadEventItem(assistantId, item)
+      } else if (item.type === 'reasoning') {
+        applyThreadEventItem(assistantId, item)
+      } else if (item.type === 'todo_list') {
+        applyThreadEventItem(assistantId, item)
+      } else if (item.type === 'browser_actions') {
+        if (event.type === 'item.completed') {
+          state.browserActionsCompleted = true
+        }
+        applyThreadEventItem(assistantId, item)
+        saveSession()
+      } else if (item.type === 'error') {
+        applyThreadEventItem(assistantId, item)
+      }
+    }
+  }
+  return state
 }
 
 const applyFinalTimelineEntries = (assistantId: string, thoughts?: string[], steps?: string[]) => {
@@ -414,6 +523,45 @@ const buildSegmentsFromToolInputs = (
     }
   })
 
+const applyToolState = (
+  assistantId: string,
+  payload: {
+    actions?: AgentAction[]
+    toolUseIds?: string[]
+    toolUseId?: string
+    toolInputs?: AgentToolPayload[]
+    toolInput?: AgentToolPayload
+    parallelActions?: boolean
+  }
+) => {
+  pendingActions.value = payload.actions || []
+  actionResults.value = {}
+  pendingActionsAssistantId.value = assistantId
+  if (payload.toolUseIds?.length) {
+    lastToolUseIds.value = payload.toolUseIds
+  } else if (payload.toolUseId) {
+    lastToolUseIds.value = [payload.toolUseId]
+  } else {
+    lastToolUseIds.value = []
+  }
+  if (payload.toolInputs?.length) {
+    lastToolInputs.value = payload.toolInputs
+  } else if (payload.toolInput) {
+    lastToolInputs.value = [payload.toolInput]
+  } else {
+    lastToolInputs.value = []
+  }
+  if (lastToolInputs.value.length > 1) {
+    setAssistantSegments(
+      assistantId,
+      buildSegmentsFromToolInputs(lastToolInputs.value, lastToolUseIds.value)
+    )
+  } else {
+    setAssistantSegments(assistantId, null)
+  }
+  lastParallelActions.value = payload.parallelActions !== false
+}
+
 const retryFromMessage = async (message: AgentMessage) => {
   if (!message.content || isSending.value) return
   const idx = messages.value.findIndex(item => item.id === message.id)
@@ -444,164 +592,199 @@ const runActionsAndContinue = async () => {
     lastTabContext.value = await resolveTabContext(targetTabId.value)
     saveSession()
   }
-  while (
-    pendingActions.value.length > 0 &&
-    lastToolUseIds.value.length > 0 &&
-    lastToolInputs.value.length > 0
-  ) {
-    const results = (await runActions()) || []
-    if (pendingActionsAssistantId.value) {
-      addTimelineEntries(
-        pendingActionsAssistantId.value,
-        results.map(result => ({
-          id: result.id,
-          type: 'action',
-          actionType: result.type,
-          status: result.success ? 'success' : result.error ? 'error' : 'info',
-          error: result.error,
-          data: result.data
-        }))
-      )
-    }
-    if (pendingActionsAssistantId.value) {
-      for (const result of results) {
-        if (result.type === 'screenshot' && result.data) {
-          const promptEntryId = nanoid()
-          addTimelineEntries(pendingActionsAssistantId.value, [
-            {
-              id: promptEntryId,
-              type: 'vision_prompt',
-              text: '识图中',
-              status: 'info'
+  let hasFollowupFailure = false
+  try {
+    while (
+      pendingActions.value.length > 0 &&
+      lastToolUseIds.value.length > 0 &&
+      lastToolInputs.value.length > 0
+    ) {
+      const results = (await runActions()) || []
+      if (pendingActionsAssistantId.value) {
+        addTimelineEntries(
+          pendingActionsAssistantId.value,
+          results.map(result => ({
+            id: result.id,
+            type: 'action',
+            actionType: result.type,
+            status: result.success ? 'success' : result.error ? 'error' : 'info',
+            error: result.error,
+            data: result.data
+          }))
+        )
+      }
+      if (pendingActionsAssistantId.value) {
+        for (const result of results) {
+          if (result.type === 'screenshot' && result.data) {
+            const promptEntryId = nanoid()
+            addTimelineEntries(pendingActionsAssistantId.value, [
+              {
+                id: promptEntryId,
+                type: 'vision_prompt',
+                text: '识图中',
+                status: 'info'
+              }
+            ])
+            const description = await describeScreenshot(
+              result.data,
+              lastUserInput.value,
+              settings.value,
+              activeSubagent.value,
+              { tab: lastTabContext.value || undefined }
+            )
+            if (description) {
+              result.data = { dataUrl: result.data, vision: description }
+              updateTimelineEntry(pendingActionsAssistantId.value, promptEntryId, {
+                text: '识图完成'
+              })
             }
-          ])
-          const description = await describeScreenshot(
-            result.data,
-            lastUserInput.value,
-            settings.value,
-            activeSubagent.value,
-            { tab: lastTabContext.value || undefined }
-          )
-          if (description) {
-            result.data = { dataUrl: result.data, vision: description }
-            updateTimelineEntry(pendingActionsAssistantId.value, promptEntryId, {
-              text: '识图完成'
-            })
           }
         }
       }
-    }
-    const toolUses = lastToolUseIds.value
-      .map((id, index) => ({
-        id,
-        input: lastToolInputs.value[index]
-      }))
-      .filter(item => item.id && item.input)
-    if (toolUses.length === 0) {
-      updateAssistantMessage(
-        pendingActionsAssistantId.value as string,
-        '工具调用信息缺失，无法继续。',
-        '工具调用信息缺失，无法继续。'
+      const toolUses = lastToolUseIds.value
+        .map((id, index) => ({
+          id,
+          input: lastToolInputs.value[index]
+        }))
+        .filter(
+          (item): item is { id: string; input: AgentToolPayload } =>
+            typeof item.id === 'string' && Boolean(item.input)
+        )
+      if (toolUses.length === 0) {
+        updateAssistantMessage(
+          pendingActionsAssistantId.value as string,
+          '工具调用信息缺失，无法继续。',
+          '工具调用信息缺失，无法继续。'
+        )
+        applyToolState(pendingActionsAssistantId.value as string, {
+          actions: [],
+          toolUseIds: [],
+          toolInputs: []
+        })
+        hasFollowupFailure = true
+        break
+      }
+
+      const sanitizedResults = results.map(result => {
+        if (result.type !== 'screenshot') return result
+        if (!result.data) return result
+        if (typeof result.data === 'string') {
+          return { ...result, data: { vision: undefined } }
+        }
+        if (typeof result.data === 'object') {
+          const vision = (result.data as { vision?: string }).vision
+          return { ...result, data: vision ? { vision } : { vision: undefined } }
+        }
+        return result
+      })
+
+      const thread = getCurrentThread()
+      const streamedFollowup = await thread.runFollowupStreamed(
+        lastUserInput.value,
+        toolUses,
+        sanitizedResults,
+        {
+          subagent: activeSubagent.value,
+          context: { tab: lastTabContext.value || undefined }
+        }
       )
-      break
-    }
+      const followupEventsDone = consumeThreadEvents(
+        pendingActionsAssistantId.value as string,
+        streamedFollowup.events
+      )
+      const followup = await streamedFollowup.completion
+      const followupState = await followupEventsDone
 
-    const sanitizedResults = results.map(result => {
-      if (result.type !== 'screenshot') return result
-      if (!result.data) return result
-      if (typeof result.data === 'string') {
-        return { ...result, data: { vision: undefined } }
+      if (followup.threadId) {
+        currentThreadId.value = followup.threadId
       }
-      if (typeof result.data === 'object') {
-        const vision = (result.data as { vision?: string }).vision
-        return { ...result, data: vision ? { vision } : { vision: undefined } }
-      }
-      return result
-    })
 
-    const followup = await runAgentFollowup(
-      lastUserInput.value,
-      toolUses,
-      sanitizedResults,
-      settings.value,
-      activeSubagent.value,
-      { tab: lastTabContext.value || undefined },
-      {
-        onUpdate: update => {
-          applyStreamingUpdate(pendingActionsAssistantId.value as string, update)
+      if (followupState.failed || followup.error) {
+        hasFollowupFailure = true
+        if (followup.error && !followupState.failed) {
+          updateAssistantMessage(
+            pendingActionsAssistantId.value as string,
+            followup.error,
+            followup.error
+          )
+          applyToolState(pendingActionsAssistantId.value as string, {
+            actions: [],
+            toolUseIds: [],
+            toolInputs: []
+          })
+        }
+        break
+      }
+
+      if (!followupState.completed) {
+        if (followup.message) {
+          updateAssistantMessage(
+            pendingActionsAssistantId.value as string,
+            followup.message.content
+          )
+        }
+        applyToolState(pendingActionsAssistantId.value as string, followup)
+        if (pendingActionsAssistantId.value) {
+          applyFinalTimelineEntries(
+            pendingActionsAssistantId.value,
+            followup.thoughts,
+            followup.steps
+          )
         }
       }
-    )
-    if (followup.error) {
-      updateAssistantMessage(
-        pendingActionsAssistantId.value as string,
-        followup.error,
-        followup.error
-      )
-      break
-    }
-    if (followup.message) {
-      updateAssistantMessage(pendingActionsAssistantId.value as string, followup.message.content)
-    }
-    if (followup.toolInputs && followup.toolInputs.length > 1) {
-      setAssistantSegments(
-        pendingActionsAssistantId.value as string,
-        buildSegmentsFromToolInputs(followup.toolInputs, followup.toolUseIds)
-      )
-    } else {
-      setAssistantSegments(pendingActionsAssistantId.value as string, null)
-    }
-    pendingActions.value = followup.actions || []
-    actionResults.value = {}
-    if (followup.toolUseIds?.length) {
-      lastToolUseIds.value = followup.toolUseIds
-    } else if (followup.toolUseId) {
-      lastToolUseIds.value = [followup.toolUseId]
-    } else {
-      lastToolUseIds.value = []
-    }
-    if (followup.toolInputs?.length) {
-      lastToolInputs.value = followup.toolInputs
-    } else if (followup.toolInput) {
-      lastToolInputs.value = [followup.toolInput]
-    } else {
-      lastToolInputs.value = []
-    }
-    lastParallelActions.value = followup.parallelActions !== false
-    saveSession()
-    if (pendingActionsAssistantId.value) {
-      applyFinalTimelineEntries(pendingActionsAssistantId.value, followup.thoughts, followup.steps)
-    }
-    if (!pendingActions.value.length) break
-  }
-  if (
-    pendingActionsAssistantId.value &&
-    pendingActions.value.length === 0 &&
-    lastChecklist.value.length
-  ) {
-    const finalMessage =
-      messages.value.find(item => item.id === pendingActionsAssistantId.value)?.content || ''
-    const review = await verifyChecklist(
-      lastUserInput.value,
-      lastChecklist.value,
-      finalMessage,
-      settings.value,
-      activeSubagent.value,
-      { tab: lastTabContext.value || undefined }
-    )
-    addTimelineEntries(pendingActionsAssistantId.value, [
-      {
-        id: nanoid(),
-        type: 'review',
-        text: review,
-        status: review.includes('未完成') ? 'error' : 'success'
+      if (followupState.completed && !followupState.browserActionsCompleted) {
+        applyToolState(pendingActionsAssistantId.value as string, followup)
       }
-    ])
+
+      saveSession()
+      if (!pendingActions.value.length) break
+    }
+    if (
+      !hasFollowupFailure &&
+      pendingActionsAssistantId.value &&
+      pendingActions.value.length === 0 &&
+      lastChecklist.value.length
+    ) {
+      const finalMessage =
+        messages.value.find(item => item.id === pendingActionsAssistantId.value)?.content || ''
+      const review = await verifyChecklist(
+        lastUserInput.value,
+        lastChecklist.value,
+        finalMessage,
+        settings.value,
+        activeSubagent.value,
+        { tab: lastTabContext.value || undefined }
+      )
+      addTimelineEntries(pendingActionsAssistantId.value, [
+        {
+          id: nanoid(),
+          type: 'review',
+          text: review,
+          status: review.includes('未完成') ? 'error' : 'success'
+        }
+      ])
+    }
+    if (
+      !hasFollowupFailure &&
+      pendingActionsAssistantId.value &&
+      pendingActions.value.length === 0
+    ) {
+      setTimelineCollapsed(pendingActionsAssistantId.value, true)
+    }
+  } catch (error: any) {
+    hasFollowupFailure = true
+    if (pendingActionsAssistantId.value) {
+      const message = error?.message || '自动执行后续动作失败。'
+      updateAssistantMessage(pendingActionsAssistantId.value, message, message)
+      applyToolState(pendingActionsAssistantId.value, {
+        actions: [],
+        toolUseIds: [],
+        toolInputs: []
+      })
+    }
+  } finally {
+    saveSession()
   }
-  if (pendingActionsAssistantId.value && pendingActions.value.length === 0) {
-    setTimelineCollapsed(pendingActionsAssistantId.value, true)
-  }
-  saveSession()
 }
 
 const resolveActiveTabId = async (): Promise<number | null> => {
@@ -670,112 +853,106 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
   }
   inputValue.value = ''
   isSending.value = true
-  setTargetTabId(await resolveActiveTabId())
-  lastTabContext.value = await resolveTabContext(targetTabId.value)
-  lastChecklist.value = await generateChecklist(content, settings.value, activeSubagent.value, {
-    tab: lastTabContext.value || undefined
-  })
-  if (lastChecklist.value.length) {
-    updateMemory({
-      set: { task_checklist: lastChecklist.value.map(item => `- ${item}`).join('\n') }
-    })
-  }
-  saveSession()
-
   const assistantId = nanoid()
-  appendMessage({
-    id: assistantId,
-    role: 'assistant',
-    content: ''
-  })
-  ensureTimeline(assistantId)
-  saveTimelines()
-  if (lastChecklist.value.length) {
-    addTimelineEntries(assistantId, [
-      {
-        id: nanoid(),
-        type: 'checklist',
-        text: lastChecklist.value.join(' · '),
-        status: 'info'
-      }
-    ])
-  }
-
-  const result = await runAgentMessage(
-    content,
-    settings.value,
-    activeSubagent.value,
-    { tab: lastTabContext.value || undefined },
-    {
-      onUpdate: update => {
-        applyStreamingUpdate(assistantId, update)
-      }
+  try {
+    setTargetTabId(await resolveActiveTabId())
+    lastTabContext.value = await resolveTabContext(targetTabId.value)
+    lastChecklist.value = await generateChecklist(content, settings.value, activeSubagent.value, {
+      tab: lastTabContext.value || undefined
+    })
+    if (lastChecklist.value.length) {
+      updateMemory({
+        set: { task_checklist: lastChecklist.value.map(item => `- ${item}`).join('\n') }
+      })
     }
-  )
-  if (result.error) {
-    updateAssistantMessage(assistantId, result.error, result.error)
-    isSending.value = false
-    return
-  }
+    saveSession()
 
-  if (result.message) {
-    updateAssistantMessage(assistantId, result.message.content)
-  }
-  if (result.toolInputs && result.toolInputs.length > 1) {
-    setAssistantSegments(
-      assistantId,
-      buildSegmentsFromToolInputs(result.toolInputs, result.toolUseIds)
-    )
-  } else {
-    setAssistantSegments(assistantId, null)
-  }
+    appendMessage({
+      id: assistantId,
+      role: 'assistant',
+      content: ''
+    })
+    ensureTimeline(assistantId)
+    saveTimelines()
+    if (lastChecklist.value.length) {
+      addTimelineEntries(assistantId, [
+        {
+          id: nanoid(),
+          type: 'checklist',
+          text: lastChecklist.value.join(' · '),
+          status: 'info'
+        }
+      ])
+    }
+    pendingActionsAssistantId.value = assistantId
+    saveSession()
 
-  pendingActions.value = result.actions || []
-  actionResults.value = {}
-  pendingActionsAssistantId.value = assistantId
-  if (result.toolUseIds?.length) {
-    lastToolUseIds.value = result.toolUseIds
-  } else if (result.toolUseId) {
-    lastToolUseIds.value = [result.toolUseId]
-  } else {
-    lastToolUseIds.value = []
-  }
-  if (result.toolInputs?.length) {
-    lastToolInputs.value = result.toolInputs
-  } else if (result.toolInput) {
-    lastToolInputs.value = [result.toolInput]
-  } else {
-    lastToolInputs.value = []
-  }
-  lastParallelActions.value = result.parallelActions !== false
-  saveSession()
-  applyFinalTimelineEntries(assistantId, result.thoughts, result.steps)
-  if (bypassMode.value && pendingActions.value.length > 0) {
-    await runActionsAndContinue()
-  }
-  if (pendingActions.value.length === 0 && lastChecklist.value.length) {
-    const finalMessage = messages.value.find(item => item.id === assistantId)?.content || ''
-    const review = await verifyChecklist(
-      lastUserInput.value,
-      lastChecklist.value,
-      finalMessage,
-      settings.value,
-      activeSubagent.value,
-      { tab: lastTabContext.value || undefined }
-    )
-    addTimelineEntries(assistantId, [
-      {
-        id: nanoid(),
-        type: 'review',
-        text: review,
-        status: review.includes('未完成') ? 'error' : 'success'
+    const thread = getCurrentThread()
+    const streamedTurn = await thread.runStreamed(content, {
+      subagent: activeSubagent.value,
+      context: { tab: lastTabContext.value || undefined }
+    })
+    const turnEventsDone = consumeThreadEvents(assistantId, streamedTurn.events)
+    const result = await streamedTurn.completion
+    const turnState = await turnEventsDone
+
+    if (result.threadId) {
+      currentThreadId.value = result.threadId
+    }
+
+    if (turnState.failed || result.error) {
+      if (result.error && !turnState.failed) {
+        updateAssistantMessage(assistantId, result.error, result.error)
+        applyToolState(assistantId, { actions: [], toolUseIds: [], toolInputs: [] })
       }
-    ])
+      return
+    }
+
+    if (!turnState.completed) {
+      if (result.message) {
+        updateAssistantMessage(assistantId, result.message.content)
+      }
+      applyToolState(assistantId, result)
+      applyFinalTimelineEntries(assistantId, result.thoughts, result.steps)
+    }
+    if (turnState.completed && !turnState.browserActionsCompleted) {
+      applyToolState(assistantId, result)
+    }
+
+    saveSession()
+    if (bypassMode.value && pendingActions.value.length > 0) {
+      await runActionsAndContinue()
+    }
+    if (pendingActions.value.length === 0 && lastChecklist.value.length) {
+      const finalMessage = messages.value.find(item => item.id === assistantId)?.content || ''
+      const review = await verifyChecklist(
+        lastUserInput.value,
+        lastChecklist.value,
+        finalMessage,
+        settings.value,
+        activeSubagent.value,
+        { tab: lastTabContext.value || undefined }
+      )
+      addTimelineEntries(assistantId, [
+        {
+          id: nanoid(),
+          type: 'review',
+          text: review,
+          status: review.includes('未完成') ? 'error' : 'success'
+        }
+      ])
+    }
+    if (pendingActions.value.length === 0) {
+      setTimelineCollapsed(assistantId, true)
+    }
+  } catch (error: any) {
+    const message = error?.message || '发送消息失败。'
+    updateAssistantMessage(assistantId, message, message)
+    applyToolState(assistantId, { actions: [], toolUseIds: [], toolInputs: [] })
+  } finally {
+    isSending.value = false
+    saveSession()
   }
-  if (pendingActions.value.length === 0) {
-    setTimelineCollapsed(assistantId, true)
-  }
-  isSending.value = false
 }
 
 const sendMessage = async () => {
@@ -792,6 +969,7 @@ const clearMessages = () => {
   lastToolUseIds.value = []
   lastToolInputs.value = []
   pendingActionsAssistantId.value = null
+  currentThreadId.value = null
   timelines.value = {}
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(TIMELINE_STORAGE_KEY)
@@ -837,9 +1015,10 @@ onMounted(async () => {
   }
 })
 
-const onBypassModeChange = (value: boolean) => {
-  bypassMode.value = value
-  writeStoredBypassMode(value)
+const onBypassModeChange = (value: boolean | string | number) => {
+  const enabled = value === true
+  bypassMode.value = enabled
+  writeStoredBypassMode(enabled)
 }
 </script>
 

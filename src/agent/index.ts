@@ -11,6 +11,9 @@ export {
   describeScreenshot
 } from './agentService'
 
+// Codex 风格线程 API
+export { AgentCodex, AgentThread } from './agentThread'
+
 // 上下文管理
 export {
   beginContext,
@@ -172,6 +175,39 @@ export type {
   McpServerConfig,
   ApiFlavor
 } from './types'
+
+export type { AgentRunResult, AgentTabContext } from './agentService'
+export type { AgentUsage } from './agentUsage'
+export type {
+  AgentInput,
+  AgentUserInput,
+  AgentThreadOptions,
+  AgentThreadTurnOptions,
+  AgentCodexOptions,
+  AgentTurn,
+  AgentStreamedTurn
+} from './agentThread'
+export type {
+  AgentThreadEvent,
+  ThreadStartedEvent,
+  TurnStartedEvent,
+  TurnCompletedEvent,
+  TurnFailedEvent,
+  ItemStartedEvent,
+  ItemUpdatedEvent,
+  ItemCompletedEvent,
+  ErrorEvent,
+  Usage
+} from './agentThreadEvents'
+export type {
+  AgentThreadItem,
+  AgentMessageItem,
+  ReasoningItem,
+  TodoItem,
+  TodoListItem,
+  BrowserActionsItem,
+  ErrorItem
+} from './agentThreadItems'
 
 export type { AgentExecutionContext, AgentContextType, ContextSnapshot } from './agentContext'
 
