@@ -25,6 +25,10 @@ export default defineComponent({
     open: {
       type: Boolean,
       required: true
+    },
+    baseUrl: {
+      type: String,
+      required: true
     }
   },
   emits: {
@@ -61,6 +65,7 @@ export default defineComponent({
                 <NotificationsView
                   notifications={preview.value}
                   filter={props.filter}
+                  baseUrl={props.baseUrl}
                   onChangeFilter={(filter: DiscourseNotificationFilter) =>
                     emit('changeFilter', filter)
                   }

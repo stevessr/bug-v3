@@ -1060,6 +1060,7 @@ onUnmounted(() => {
           :filter="activeTab?.notificationsFilter || 'all'"
           :unreadCount="unreadNotificationsCount"
           :open="notificationsOpen"
+          :baseUrl="baseUrl"
           @openChange="handleNotificationsOpenChange"
           @refresh="handleRefreshNotifications"
           @openAll="handleOpenNotifications"
