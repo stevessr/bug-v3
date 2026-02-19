@@ -153,7 +153,11 @@ export async function handleGetEmojiSetting(
 
 export async function handleGetEmojiSettingsBatch(
   keys: string[],
-  _sendResponse: (resp: { success: boolean; data?: Record<string, unknown>; error?: string }) => void
+  _sendResponse: (resp: {
+    success: boolean
+    data?: Record<string, unknown>
+    error?: string
+  }) => void
 ) {
   void _sendResponse
   try {

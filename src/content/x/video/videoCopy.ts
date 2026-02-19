@@ -363,7 +363,12 @@ function observeVideos(): () => void {
     })
     if (changed) setTimeout(scanAndInjectVideo, 120)
   })
-  obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] })
+  obs.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src', 'style', 'class']
+  })
 
   // 返回 disconnect 函数以支持资源清理
   return () => {

@@ -12,6 +12,7 @@ import {
   type ColorSchemeCategory,
   type ExtractedColor
 } from '../../styles/md3Theme'
+
 import { storageGet, storageSet } from '@/utils/simpleStorage'
 
 const props = defineProps<{
@@ -437,12 +438,10 @@ const handlePaste = async (event: ClipboardEvent) => {
                     @change="handleFileUpload"
                   />
                   <div v-if="previewUrl" class="absolute inset-0 p-3 pointer-events-none">
-                    <div class="theme-color-checker w-full h-full rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700/70">
-                      <img
-                        :src="previewUrl"
-                        alt="预览图片"
-                        class="w-full h-full object-contain"
-                      />
+                    <div
+                      class="theme-color-checker w-full h-full rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700/70"
+                    >
+                      <img :src="previewUrl" alt="预览图片" class="w-full h-full object-contain" />
                     </div>
                     <div
                       class="absolute bottom-3 right-3 text-[11px] px-2 py-1 rounded-full bg-white/90 text-gray-700 shadow-sm dark:bg-gray-900/80 dark:text-gray-200"
@@ -548,7 +547,11 @@ const handlePaste = async (event: ClipboardEvent) => {
     linear-gradient(45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%),
     linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.06) 75%);
   background-size: 12px 12px;
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0px;
 }
 
 .theme-color-swatch-grid {

@@ -781,7 +781,12 @@ export function observeCarousel() {
   })
 
   try {
-    carouselObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] })
+    carouselObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'style', 'class']
+    })
   } catch {
     // ignore if document.body not ready
   }

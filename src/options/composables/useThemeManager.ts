@@ -58,7 +58,6 @@ export function useThemeManager(options: {
     applyTheme(theme)
   }
 
-
   /**
    * 更新自定义配色方案
    */

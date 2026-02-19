@@ -305,7 +305,9 @@ export function getSchemeColor(schemeKey: string): string {
 /**
  * 按分类获取配色方案
  */
-export function getSchemesByCategory(category: ColorSchemeCategory): Record<string, ColorSchemeDefinition> {
+export function getSchemesByCategory(
+  category: ColorSchemeCategory
+): Record<string, ColorSchemeDefinition> {
   const result: Record<string, ColorSchemeDefinition> = {}
   for (const [key, scheme] of Object.entries(colorSchemes)) {
     if (scheme.category === category) {
@@ -466,11 +468,7 @@ export interface ExtractedColor {
  * 计算颜色距离（欧几里得距离）
  */
 function colorDistance(c1: RGB, c2: RGB): number {
-  return Math.sqrt(
-    Math.pow(c1.r - c2.r, 2) +
-    Math.pow(c1.g - c2.g, 2) +
-    Math.pow(c1.b - c2.b, 2)
-  )
+  return Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2))
 }
 
 /**
@@ -538,11 +536,19 @@ function medianCut(pixels: RGB[], depth: number): RGB[] {
   }
 
   // 计算每个通道的范围
-  let minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0
+  let minR = 255,
+    maxR = 0,
+    minG = 255,
+    maxG = 0,
+    minB = 255,
+    maxB = 0
   for (const p of pixels) {
-    minR = Math.min(minR, p.r); maxR = Math.max(maxR, p.r)
-    minG = Math.min(minG, p.g); maxG = Math.max(maxG, p.g)
-    minB = Math.min(minB, p.b); maxB = Math.max(maxB, p.b)
+    minR = Math.min(minR, p.r)
+    maxR = Math.max(maxR, p.r)
+    minG = Math.min(minG, p.g)
+    maxG = Math.max(maxG, p.g)
+    minB = Math.min(minB, p.b)
+    maxB = Math.max(maxB, p.b)
   }
 
   const rangeR = maxR - minR
@@ -563,10 +569,7 @@ function medianCut(pixels: RGB[], depth: number): RGB[] {
   const sorted = [...pixels].sort((a, b) => a[channel] - b[channel])
   const mid = Math.floor(sorted.length / 2)
 
-  return [
-    ...medianCut(sorted.slice(0, mid), depth - 1),
-    ...medianCut(sorted.slice(mid), depth - 1)
-  ]
+  return [...medianCut(sorted.slice(0, mid), depth - 1), ...medianCut(sorted.slice(mid), depth - 1)]
 }
 
 /**
@@ -656,9 +659,10 @@ export async function extractColorsFromImage(
           await wasmColorService.initialize()
 
           if (wasmColorService.isAvailable) {
-            const wasmResult = algorithm === 'kmeans'
-              ? await wasmColorService.quantizeKMeans(imageData, colorCount, 20, 128)
-              : await wasmColorService.quantizeMedianCut(imageData, colorCount, 128)
+            const wasmResult =
+              algorithm === 'kmeans'
+                ? await wasmColorService.quantizeKMeans(imageData, colorCount, 20, 128)
+                : await wasmColorService.quantizeMedianCut(imageData, colorCount, 128)
 
             if (!wasmResult.error && wasmResult.colors.length > 0) {
               const results: ExtractedColor[] = wasmResult.colors.map(c => {
@@ -778,7 +782,9 @@ export async function extractColorsFromImage(
 /**
  * 从图片 URL 快速提取主色调
  */
-export async function extractPrimaryColorFromImage(imageSource: string | File | HTMLImageElement): Promise<string> {
+export async function extractPrimaryColorFromImage(
+  imageSource: string | File | HTMLImageElement
+): Promise<string> {
   const colors = await extractColorsFromImage(imageSource, 1, 'mediancut')
   return colors[0]?.hex || DEFAULT_PRIMARY_COLOR
 }

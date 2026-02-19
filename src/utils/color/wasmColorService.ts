@@ -51,9 +51,7 @@ class WASMColorService {
     return `/wasm/${filename}`
   }
 
-  private hasRequiredExports(
-    maybeExports: unknown
-  ): maybeExports is ColorWasmExports {
+  private hasRequiredExports(maybeExports: unknown): maybeExports is ColorWasmExports {
     const e = maybeExports as Record<string, unknown>
     return (
       typeof e.memory === 'object' &&
@@ -179,7 +177,12 @@ class WASMColorService {
       heap.set(data, dataPtr)
 
       const resultPtr = this.exports.kmeans_quantize(
-        dataPtr, width, height, k, maxIterations, skipAlpha
+        dataPtr,
+        width,
+        height,
+        k,
+        maxIterations,
+        skipAlpha
       )
 
       return this.parseColorResult(resultPtr)
@@ -214,7 +217,11 @@ class WASMColorService {
       heap.set(data, dataPtr)
 
       const resultPtr = this.exports.median_cut_quantize(
-        dataPtr, width, height, numColors, skipAlpha
+        dataPtr,
+        width,
+        height,
+        numColors,
+        skipAlpha
       )
 
       return this.parseColorResult(resultPtr)

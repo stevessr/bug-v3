@@ -34,16 +34,13 @@ export function requestSettingsBatch(keys: string[]): Promise<Record<string, any
     try {
       const chromeAPI = (window as any).chrome
       if (chromeAPI?.runtime?.sendMessage) {
-        chromeAPI.runtime.sendMessage(
-          { type: 'GET_EMOJI_SETTINGS_BATCH', keys },
-          (resp: any) => {
-            if (resp?.success && resp?.data) {
-              resolve(resp.data)
-            } else {
-              resolve({})
-            }
+        chromeAPI.runtime.sendMessage({ type: 'GET_EMOJI_SETTINGS_BATCH', keys }, (resp: any) => {
+          if (resp?.success && resp?.data) {
+            resolve(resp.data)
+          } else {
+            resolve({})
           }
-        )
+        })
       } else {
         resolve({})
       }

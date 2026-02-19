@@ -156,10 +156,9 @@ async function loadPostsByIds(
 
   if (collected.length === 0 || !tab.currentTopic) return
 
-  tab.currentTopic.post_stream.posts = [
-    ...tab.currentTopic.post_stream.posts,
-    ...collected
-  ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
+  tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...collected].sort(
+    (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
+  )
   collected.forEach((post: DiscoursePost) => tab.loadedPostIds.add(post.id))
 
   const stream = tab.currentTopic.post_stream?.stream || []

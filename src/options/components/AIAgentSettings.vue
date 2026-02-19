@@ -40,7 +40,10 @@ const addMcpServer = () => {
 }
 
 const removeMcpServer = (id: string) => {
-  settings.value = { ...settings.value, mcpServers: settings.value.mcpServers.filter(server => server.id !== id) }
+  settings.value = {
+    ...settings.value,
+    mcpServers: settings.value.mcpServers.filter(server => server.id !== id)
+  }
   delete headerDrafts[id]
   delete headerErrors[id]
 }

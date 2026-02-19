@@ -142,7 +142,10 @@ export function startReadTracker() {
     () => clearInterval(flushInterval),
     () => window.removeEventListener('scroll', scrollHandler),
     () => postsObserver.disconnect(),
-    () => { cachedPostEls = []; postsCacheDirty = true }
+    () => {
+      cachedPostEls = []
+      postsCacheDirty = true
+    }
   )
 
   console.log('[readTracker] started')
