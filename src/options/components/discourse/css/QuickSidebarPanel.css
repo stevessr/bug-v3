@@ -118,6 +118,13 @@
   color: #9ca3af;
 }
 
+.quick-sidebar-item.is-muted .quick-sidebar-label::after {
+  content: '（静音）';
+  margin-left: 6px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
 .dark .quick-sidebar-item {
   color: #e5e7eb;
 }
@@ -129,7 +136,7 @@
 .quick-sidebar-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #cbd5f5;
   flex: 0 0 auto;
 }
@@ -142,6 +149,10 @@
   justify-content: center;
   color: #6b7280;
   flex: 0 0 auto;
+}
+
+.quick-sidebar-icon--placeholder {
+  color: transparent;
 }
 
 .dark .quick-sidebar-icon {

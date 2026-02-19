@@ -75,11 +75,13 @@ export default defineComponent({
                               <use href={`#${item.icon}`} />
                             </svg>
                           </span>
-                        ) : (
+                        ) : item.color ? (
                           <span
                             class="quick-sidebar-dot"
-                            style={item.color ? { backgroundColor: `#${item.color}` } : {}}
+                            style={{ backgroundColor: `#${item.color}` }}
                           />
+                        ) : (
+                          <span class="quick-sidebar-icon quick-sidebar-icon--placeholder" />
                         )}
                         <span class="quick-sidebar-label">{item.label}</span>
                       </button>

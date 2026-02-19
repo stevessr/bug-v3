@@ -487,7 +487,7 @@ const buildCategoryItems = (
     .filter(Boolean) as QuickSidebarItem[]
 }
 
-const buildTagItems = (tags: unknown): QuickSidebarItem[] => {
+const buildTagItems = (tags: unknown, muted = false): QuickSidebarItem[] => {
   if (!Array.isArray(tags)) return []
   return tags
     .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
@@ -495,7 +495,8 @@ const buildTagItems = (tags: unknown): QuickSidebarItem[] => {
     .map(tag => ({
       id: `tag-${tag}`,
       label: tag,
-      path: `/tag/${encodeURIComponent(tag)}`
+      path: `/tag/${encodeURIComponent(tag)}`,
+      muted
     }))
 }
 
@@ -522,6 +523,7 @@ const loadQuickSidebar = async (force = false) => {
     )
 
     const user = userData.user || {}
+    const userOption = user.user_option || {}
     const sections: QuickSidebarSection[] = []
 
     sections.push({
@@ -538,44 +540,57 @@ const loadQuickSidebar = async (force = false) => {
             : '/my/notifications',
           icon: 'bell'
         },
-        { id: 'bookmarks', label: '书签', path: '/bookmarks', icon: 'bookmark' },
+        {
+          id: 'private-messages',
+          label: '私信',
+          path: currentUsername.value
+            ? `/u/${encodeURIComponent(currentUsername.value)}/user-menu-private-messages`
+            : '/my/messages',
+          icon: 'envelope'
+        },
+        {
+          id: 'bookmarks',
+          label: '书签',
+          path: currentUsername.value
+            ? `/u/${encodeURIComponent(currentUsername.value)}/user-menu-bookmarks`
+            : '/bookmarks',
+          icon: 'bookmark'
+        },
         { id: 'posted', label: '我的帖子', path: '/posted', icon: 'pencil' }
       ]
     })
 
-    const regularItems = buildCategoryItems(user.regular_category_ids, categoryMap)
-    if (regularItems.length) {
-      sections.push({ title: '常用分类', items: regularItems })
+    const watchedCategoryItems = buildCategoryItems(userOption.watched_category_ids, categoryMap)
+    const trackedCategoryItems = buildCategoryItems(userOption.tracked_category_ids, categoryMap)
+    const watchedFirstPostCategoryItems = buildCategoryItems(
+      userOption.watched_first_post_category_ids,
+      categoryMap
+    )
+    const mutedCategoryItems = buildCategoryItems(userOption.muted_category_ids, categoryMap, true)
+
+    const categoryNotificationItems: QuickSidebarItem[] = [
+      ...watchedCategoryItems,
+      ...trackedCategoryItems,
+      ...watchedFirstPostCategoryItems,
+      ...mutedCategoryItems
+    ]
+    if (categoryNotificationItems.length) {
+      sections.push({ title: '分类通知', items: categoryNotificationItems })
     }
 
-    const watchedItems = buildCategoryItems(user.watched_category_ids, categoryMap)
-    if (watchedItems.length) {
-      sections.push({ title: '关注分类', items: watchedItems })
-    }
+    const watchedTags = buildTagItems(userOption.watched_tags)
+    const trackedTags = buildTagItems(userOption.tracked_tags)
+    const watchingFirstPostTags = buildTagItems(userOption.watching_first_post_tags)
+    const mutedTags = buildTagItems(userOption.muted_tags, true)
 
-    const trackedItems = buildCategoryItems(user.tracked_category_ids, categoryMap)
-    if (trackedItems.length) {
-      sections.push({ title: '追踪分类', items: trackedItems })
-    }
-
-    const mutedItems = buildCategoryItems(user.muted_category_ids, categoryMap, true)
-    if (mutedItems.length) {
-      sections.push({ title: '静音分类', items: mutedItems })
-    }
-
-    const watchedTags = buildTagItems(user.watched_tags)
-    if (watchedTags.length) {
-      sections.push({ title: '关注标签', items: watchedTags })
-    }
-
-    const trackedTags = buildTagItems(user.tracked_tags)
-    if (trackedTags.length) {
-      sections.push({ title: '追踪标签', items: trackedTags })
-    }
-
-    const mutedTags = buildTagItems(user.muted_tags)
-    if (mutedTags.length) {
-      sections.push({ title: '静音标签', items: mutedTags.map(item => ({ ...item, muted: true })) })
+    const tagNotificationItems: QuickSidebarItem[] = [
+      ...watchedTags,
+      ...trackedTags,
+      ...watchingFirstPostTags,
+      ...mutedTags
+    ]
+    if (tagNotificationItems.length) {
+      sections.push({ title: '标签通知', items: tagNotificationItems })
     }
 
     quickSidebarSections.value = sections
