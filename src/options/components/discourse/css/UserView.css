@@ -6,3 +6,47 @@
 .user-profile :deep(a:hover) {
   text-decoration: underline;
 }
+
+/* 个人简介中的脚注样式 */
+.user-bio-content .footnotes-sep {
+  display: none;
+}
+
+.user-bio-content .footnotes-list {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.8em;
+  color: #6b7280;
+  list-style-position: inside;
+}
+
+.dark .user-bio-content .footnotes-list {
+  border-top-color: #374151;
+  color: #9ca3af;
+}
+
+.user-bio-content .footnotes-list li {
+  margin-bottom: 0.25rem;
+}
+
+.user-bio-content .footnotes-list .footnote-backref {
+  display: none;
+}
+
+.user-bio-content sup.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+}
+
+.user-bio-content sup.footnote-ref a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0 1px;
+}
+
+.user-bio-content sup.footnote-ref a:hover {
+  text-decoration: underline;
+}
