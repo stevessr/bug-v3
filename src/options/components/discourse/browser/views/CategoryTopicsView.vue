@@ -22,12 +22,15 @@ type Props = {
   topicSortOrder: TopicSortOrder
   isLoadingMore: boolean
   composerMode: 'reply' | 'topic' | 'edit' | null
+  notificationLevel: number
+  notificationSaving: boolean
 }
 
 defineProps<Props>()
 
 defineEmits([
   'toggleComposer',
+  'changeNotificationLevel',
   'applyPendingTopics',
   'topicSort',
   'topicClick',
@@ -43,11 +46,28 @@ defineEmits([
 <template>
   <div class="flex gap-4">
     <div class="flex-1 min-w-0 space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-3">
         <h3 class="text-lg font-semibold dark:text-white">在当前分类发帖</h3>
-        <a-button size="small" @click="$emit('toggleComposer')">
-          {{ composerMode === 'topic' ? '收起' : '发帖' }}
-        </a-button>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500 dark:text-gray-400">通知等级</span>
+          <a-select
+            size="small"
+            style="width: 128px"
+            :value="notificationLevel"
+            :loading="notificationSaving"
+            :disabled="notificationSaving"
+            @change="$emit('changeNotificationLevel', Number($event))"
+          >
+            <a-select-option :value="0">忽略</a-select-option>
+            <a-select-option :value="1">常规</a-select-option>
+            <a-select-option :value="2">追踪</a-select-option>
+            <a-select-option :value="3">关注</a-select-option>
+            <a-select-option :value="4">仅关注首帖</a-select-option>
+          </a-select>
+          <a-button size="small" @click="$emit('toggleComposer')">
+            {{ composerMode === 'topic' ? '收起' : '发帖' }}
+          </a-button>
+        </div>
       </div>
 
       <CategoryGrid

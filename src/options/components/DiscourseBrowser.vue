@@ -12,7 +12,8 @@ import type {
   MessagesTabType,
   DiscoursePost,
   DiscourseSearchFilters,
-  TopicListType
+  TopicListType,
+  DiscourseUserPreferences
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import Icon from './discourse/layout/Icon'
@@ -164,6 +165,15 @@ const unreadNotificationsCount = computed(
   () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
 )
 const notificationsOpen = ref(false)
+
+type NotificationLevel = 0 | 1 | 2 | 3 | 4
+
+const categoryNotificationLevel = ref<NotificationLevel>(1)
+const tagNotificationLevel = ref<NotificationLevel>(1)
+const categoryNotificationSaving = ref(false)
+const tagNotificationSaving = ref(false)
+const notificationPreferences = ref<DiscourseUserPreferences | null>(null)
+const notificationPreferencesKey = ref('')
 
 const composerTopicId = computed(() => {
   if (composerMode.value === 'edit') {
@@ -500,6 +510,323 @@ const buildTagItems = (tags: unknown, muted = false): QuickSidebarItem[] => {
     }))
 }
 
+const sanitizeNumberArray = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(item => (typeof item === 'number' ? item : Number(item)))
+    .filter(item => Number.isFinite(item) && item >= 0)
+}
+
+const sanitizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value.map(item => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+}
+
+const normalizeNotificationPreferences = (raw: any): DiscourseUserPreferences => {
+  const input = raw || {}
+  return {
+    watched_category_ids: sanitizeNumberArray(input.watched_category_ids),
+    tracked_category_ids: sanitizeNumberArray(input.tracked_category_ids),
+    watched_first_post_category_ids: sanitizeNumberArray(input.watched_first_post_category_ids),
+    muted_category_ids: sanitizeNumberArray(input.muted_category_ids),
+    watched_tags: sanitizeStringArray(input.watched_tags),
+    tracked_tags: sanitizeStringArray(input.tracked_tags),
+    watching_first_post_tags: sanitizeStringArray(input.watching_first_post_tags),
+    muted_tags: sanitizeStringArray(input.muted_tags)
+  }
+}
+
+const buildNotificationPreferencesKey = () => `${baseUrl.value}::${currentUsername.value || ''}`
+
+const ensureNotificationPreferences = async (
+  forceReload = false
+): Promise<DiscourseUserPreferences | null> => {
+  const username = currentUsername.value
+  if (!username) return null
+  const cacheKey = buildNotificationPreferencesKey()
+  if (
+    !forceReload &&
+    notificationPreferences.value &&
+    notificationPreferencesKey.value === cacheKey
+  ) {
+    return notificationPreferences.value
+  }
+
+  const result = await pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(username)}.json`)
+  const data = extractData(result)
+  if (result.ok === false) {
+    const msg = data?.errors?.join(', ') || data?.error || '加载通知设置失败'
+    throw new Error(msg)
+  }
+
+  const normalized = normalizeNotificationPreferences(data?.user?.user_option || {})
+  notificationPreferences.value = normalized
+  notificationPreferencesKey.value = cacheKey
+  return normalized
+}
+
+const determineCategoryNotificationLevel = (
+  categoryId: number | null,
+  preferences: DiscourseUserPreferences | null
+): NotificationLevel => {
+  if (!categoryId || !preferences) return 1
+  const id = Number(categoryId)
+  if ((preferences.muted_category_ids || []).includes(id)) return 0
+  if ((preferences.watched_first_post_category_ids || []).includes(id)) return 4
+  if ((preferences.watched_category_ids || []).includes(id)) return 3
+  if ((preferences.tracked_category_ids || []).includes(id)) return 2
+  return 1
+}
+
+const determineTagNotificationLevel = (
+  tagName: string,
+  preferences: DiscourseUserPreferences | null
+): NotificationLevel => {
+  const normalizedTag = tagName.trim().toLowerCase()
+  if (!normalizedTag || !preferences) return 1
+  const hasTag = (tags?: string[]) =>
+    (tags || []).some(tag => tag.trim().toLowerCase() === normalizedTag)
+  if (hasTag(preferences.muted_tags)) return 0
+  if (hasTag(preferences.watching_first_post_tags)) return 4
+  if (hasTag(preferences.watched_tags)) return 3
+  if (hasTag(preferences.tracked_tags)) return 2
+  return 1
+}
+
+const toCategoryNotificationLists = (
+  level: NotificationLevel,
+  categoryId: number,
+  source: DiscourseUserPreferences
+) => {
+  const watched = new Set(
+    sanitizeNumberArray(source.watched_category_ids).filter(id => id !== categoryId)
+  )
+  const tracked = new Set(
+    sanitizeNumberArray(source.tracked_category_ids).filter(id => id !== categoryId)
+  )
+  const watchedFirst = new Set(
+    sanitizeNumberArray(source.watched_first_post_category_ids).filter(id => id !== categoryId)
+  )
+  const muted = new Set(
+    sanitizeNumberArray(source.muted_category_ids).filter(id => id !== categoryId)
+  )
+
+  if (level === 3) watched.add(categoryId)
+  else if (level === 2) tracked.add(categoryId)
+  else if (level === 4) watchedFirst.add(categoryId)
+  else if (level === 0) muted.add(categoryId)
+
+  return {
+    watched_category_ids: Array.from(watched),
+    tracked_category_ids: Array.from(tracked),
+    watched_first_post_category_ids: Array.from(watchedFirst),
+    muted_category_ids: Array.from(muted)
+  }
+}
+
+const toTagNotificationLists = (
+  level: NotificationLevel,
+  tagName: string,
+  source: DiscourseUserPreferences
+) => {
+  const normalizedTag = tagName.trim()
+  const lower = normalizedTag.toLowerCase()
+  const removeTag = (tags: string[] = []) => tags.filter(tag => tag.trim().toLowerCase() !== lower)
+
+  const watched = new Set(removeTag(sanitizeStringArray(source.watched_tags)))
+  const tracked = new Set(removeTag(sanitizeStringArray(source.tracked_tags)))
+  const watchedFirst = new Set(removeTag(sanitizeStringArray(source.watching_first_post_tags)))
+  const muted = new Set(removeTag(sanitizeStringArray(source.muted_tags)))
+
+  if (level === 3) watched.add(normalizedTag)
+  else if (level === 2) tracked.add(normalizedTag)
+  else if (level === 4) watchedFirst.add(normalizedTag)
+  else if (level === 0) muted.add(normalizedTag)
+
+  return {
+    watched_tags: Array.from(watched),
+    tracked_tags: Array.from(tracked),
+    watching_first_post_tags: Array.from(watchedFirst),
+    muted_tags: Array.from(muted)
+  }
+}
+
+const encodeCategoryIds = (ids: number[]) => (ids.length ? ids : [-1])
+
+const encodeDelimited = (values: string[]) =>
+  values
+    .map(value => value.trim())
+    .filter(Boolean)
+    .join(',')
+
+const syncCategoryNotificationLevel = async () => {
+  const tab = activeTab.value
+  if (!tab || tab.viewType !== 'category') {
+    categoryNotificationLevel.value = 1
+    return
+  }
+
+  if (!tab.currentCategoryId) {
+    categoryNotificationLevel.value = 1
+    return
+  }
+
+  try {
+    const prefs = await ensureNotificationPreferences()
+    categoryNotificationLevel.value = determineCategoryNotificationLevel(
+      tab.currentCategoryId,
+      prefs
+    )
+  } catch {
+    categoryNotificationLevel.value = 1
+  }
+}
+
+const syncTagNotificationLevel = async () => {
+  const tab = activeTab.value
+  if (!tab || tab.viewType !== 'tag') {
+    tagNotificationLevel.value = 1
+    return
+  }
+
+  if (!tab.currentTagName) {
+    tagNotificationLevel.value = 1
+    return
+  }
+
+  try {
+    const prefs = await ensureNotificationPreferences()
+    tagNotificationLevel.value = determineTagNotificationLevel(tab.currentTagName, prefs)
+  } catch {
+    tagNotificationLevel.value = 1
+  }
+}
+
+const handleCategoryNotificationLevelChange = async (level: number) => {
+  const tab = activeTab.value
+  const username = currentUsername.value
+  if (!tab || tab.viewType !== 'category' || !tab.currentCategoryId || !username) return
+  const nextLevel = Number(level) as NotificationLevel
+  if (![0, 1, 2, 3, 4].includes(nextLevel)) return
+
+  const prevLevel = categoryNotificationLevel.value
+  categoryNotificationLevel.value = nextLevel
+  categoryNotificationSaving.value = true
+
+  try {
+    const basePrefs =
+      (await ensureNotificationPreferences()) || normalizeNotificationPreferences({})
+    const categoryLists = toCategoryNotificationLists(nextLevel, tab.currentCategoryId, basePrefs)
+    const nextPrefs: DiscourseUserPreferences = {
+      ...basePrefs,
+      ...categoryLists
+    }
+
+    const payload = {
+      watched_category_ids: encodeCategoryIds(categoryLists.watched_category_ids || []),
+      tracked_category_ids: encodeCategoryIds(categoryLists.tracked_category_ids || []),
+      watched_first_post_category_ids: encodeCategoryIds(
+        categoryLists.watched_first_post_category_ids || []
+      ),
+      muted_category_ids: encodeCategoryIds(categoryLists.muted_category_ids || []),
+      watched_tags: encodeDelimited(sanitizeStringArray(basePrefs.watched_tags)),
+      tracked_tags: encodeDelimited(sanitizeStringArray(basePrefs.tracked_tags)),
+      watching_first_post_tags: encodeDelimited(
+        sanitizeStringArray(basePrefs.watching_first_post_tags)
+      ),
+      muted_tags: encodeDelimited(sanitizeStringArray(basePrefs.muted_tags))
+    }
+
+    const result = await pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(username)}.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(payload)
+    })
+    const data = extractData(result)
+    if (result.ok === false) {
+      const msg = data?.errors?.join(', ') || data?.error || '设置通知级别失败'
+      throw new Error(msg)
+    }
+
+    notificationPreferences.value = nextPrefs
+    notificationPreferencesKey.value = buildNotificationPreferencesKey()
+    message.success('分类通知等级已更新')
+    if (quickSidebarOpen.value) {
+      void loadQuickSidebar(true)
+    }
+  } catch (error: any) {
+    categoryNotificationLevel.value = prevLevel
+    message.error(error?.message || '更新分类通知等级失败')
+  } finally {
+    categoryNotificationSaving.value = false
+  }
+}
+
+const handleTagNotificationLevelChange = async (level: number) => {
+  const tab = activeTab.value
+  const username = currentUsername.value
+  const tagName = tab?.currentTagName?.trim() || ''
+  if (!tab || tab.viewType !== 'tag' || !tagName || !username) return
+  const nextLevel = Number(level) as NotificationLevel
+  if (![0, 1, 2, 3, 4].includes(nextLevel)) return
+
+  const prevLevel = tagNotificationLevel.value
+  tagNotificationLevel.value = nextLevel
+  tagNotificationSaving.value = true
+
+  try {
+    const basePrefs =
+      (await ensureNotificationPreferences()) || normalizeNotificationPreferences({})
+    const tagLists = toTagNotificationLists(nextLevel, tagName, basePrefs)
+    const nextPrefs: DiscourseUserPreferences = {
+      ...basePrefs,
+      ...tagLists
+    }
+
+    const payload = {
+      watched_category_ids: encodeCategoryIds(sanitizeNumberArray(basePrefs.watched_category_ids)),
+      tracked_category_ids: encodeCategoryIds(sanitizeNumberArray(basePrefs.tracked_category_ids)),
+      watched_first_post_category_ids: encodeCategoryIds(
+        sanitizeNumberArray(basePrefs.watched_first_post_category_ids)
+      ),
+      muted_category_ids: encodeCategoryIds(sanitizeNumberArray(basePrefs.muted_category_ids)),
+      watched_tags: encodeDelimited(tagLists.watched_tags || []),
+      tracked_tags: encodeDelimited(tagLists.tracked_tags || []),
+      watching_first_post_tags: encodeDelimited(tagLists.watching_first_post_tags || []),
+      muted_tags: encodeDelimited(tagLists.muted_tags || [])
+    }
+
+    const result = await pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(username)}.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(payload)
+    })
+    const data = extractData(result)
+    if (result.ok === false) {
+      const msg = data?.errors?.join(', ') || data?.error || '设置通知级别失败'
+      throw new Error(msg)
+    }
+
+    notificationPreferences.value = nextPrefs
+    notificationPreferencesKey.value = buildNotificationPreferencesKey()
+    message.success('标签通知等级已更新')
+    if (quickSidebarOpen.value) {
+      void loadQuickSidebar(true)
+    }
+  } catch (error: any) {
+    tagNotificationLevel.value = prevLevel
+    message.error(error?.message || '更新标签通知等级失败')
+  } finally {
+    tagNotificationSaving.value = false
+  }
+}
+
 const loadQuickSidebar = async (force = false) => {
   const now = Date.now()
   if (!currentUsername.value) return
@@ -523,7 +850,9 @@ const loadQuickSidebar = async (force = false) => {
     )
 
     const user = userData.user || {}
-    const userOption = user.user_option || {}
+    const normalizedPrefs = normalizeNotificationPreferences(user.user_option || {})
+    notificationPreferences.value = normalizedPrefs
+    notificationPreferencesKey.value = buildNotificationPreferencesKey()
     const sections: QuickSidebarSection[] = []
 
     sections.push({
@@ -560,13 +889,23 @@ const loadQuickSidebar = async (force = false) => {
       ]
     })
 
-    const watchedCategoryItems = buildCategoryItems(userOption.watched_category_ids, categoryMap)
-    const trackedCategoryItems = buildCategoryItems(userOption.tracked_category_ids, categoryMap)
-    const watchedFirstPostCategoryItems = buildCategoryItems(
-      userOption.watched_first_post_category_ids,
+    const watchedCategoryItems = buildCategoryItems(
+      normalizedPrefs.watched_category_ids,
       categoryMap
     )
-    const mutedCategoryItems = buildCategoryItems(userOption.muted_category_ids, categoryMap, true)
+    const trackedCategoryItems = buildCategoryItems(
+      normalizedPrefs.tracked_category_ids,
+      categoryMap
+    )
+    const watchedFirstPostCategoryItems = buildCategoryItems(
+      normalizedPrefs.watched_first_post_category_ids,
+      categoryMap
+    )
+    const mutedCategoryItems = buildCategoryItems(
+      normalizedPrefs.muted_category_ids,
+      categoryMap,
+      true
+    )
 
     const categoryNotificationItems: QuickSidebarItem[] = [
       ...watchedCategoryItems,
@@ -578,10 +917,10 @@ const loadQuickSidebar = async (force = false) => {
       sections.push({ title: '分类通知', items: categoryNotificationItems })
     }
 
-    const watchedTags = buildTagItems(userOption.watched_tags)
-    const trackedTags = buildTagItems(userOption.tracked_tags)
-    const watchingFirstPostTags = buildTagItems(userOption.watching_first_post_tags)
-    const mutedTags = buildTagItems(userOption.muted_tags, true)
+    const watchedTags = buildTagItems(normalizedPrefs.watched_tags)
+    const trackedTags = buildTagItems(normalizedPrefs.tracked_tags)
+    const watchingFirstPostTags = buildTagItems(normalizedPrefs.watching_first_post_tags)
+    const mutedTags = buildTagItems(normalizedPrefs.muted_tags, true)
 
     const tagNotificationItems: QuickSidebarItem[] = [
       ...watchedTags,
@@ -976,9 +1315,27 @@ watch(
   () => [baseUrl.value, currentUsername.value],
   () => {
     quickSidebarFetchedAt.value = 0
+    notificationPreferences.value = null
+    notificationPreferencesKey.value = ''
     if (quickSidebarOpen.value) {
       void loadQuickSidebar(true)
     }
+    void syncCategoryNotificationLevel()
+    void syncTagNotificationLevel()
+  }
+)
+
+watch(
+  () => [activeTab.value?.viewType, activeTab.value?.currentCategoryId],
+  () => {
+    void syncCategoryNotificationLevel()
+  }
+)
+
+watch(
+  () => [activeTab.value?.viewType, activeTab.value?.currentTagName],
+  () => {
+    void syncTagNotificationLevel()
   }
 )
 
@@ -1191,6 +1548,9 @@ onUnmounted(() => {
         :topicSortKey="topicSortKey"
         :topicSortOrder="topicSortOrder"
         :isLoadingMore="isLoadingMore"
+        :notificationLevel="tagNotificationLevel"
+        :notificationSaving="tagNotificationSaving"
+        @changeNotificationLevel="handleTagNotificationLevelChange"
         @applyPendingTopics="handleApplyPendingTopics"
         @topicSort="handleTopicSort"
         @topicClick="handleTopicClick"
@@ -1211,7 +1571,10 @@ onUnmounted(() => {
         :topicSortOrder="topicSortOrder"
         :isLoadingMore="isLoadingMore"
         :composerMode="composerMode"
+        :notificationLevel="categoryNotificationLevel"
+        :notificationSaving="categoryNotificationSaving"
         @toggleComposer="toggleTopicComposer"
+        @changeNotificationLevel="handleCategoryNotificationLevelChange"
         @applyPendingTopics="handleApplyPendingTopics"
         @topicSort="handleTopicSort"
         @topicClick="handleTopicClick"
