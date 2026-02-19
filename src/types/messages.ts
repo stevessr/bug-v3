@@ -31,6 +31,14 @@ export interface GetEmojiSettingMessage extends BaseMessage {
 }
 
 /**
+ * GET_EMOJI_SETTINGS_BATCH 消息 - 批量获取设置
+ */
+export interface GetEmojiSettingsBatchMessage extends BaseMessage {
+  type: 'GET_EMOJI_SETTINGS_BATCH'
+  keys: string[]
+}
+
+/**
  * SAVE_EMOJI_DATA 消息
  */
 export interface SaveEmojiDataMessage extends BaseMessage {
@@ -253,6 +261,7 @@ export interface UploadAndAddEmojiMessage {
 export type TypedMessage =
   | GetEmojiDataMessage
   | GetEmojiSettingMessage
+  | GetEmojiSettingsBatchMessage
   | SaveEmojiDataMessage
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage

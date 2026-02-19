@@ -22,6 +22,19 @@ let topicId = 0
 const cleanupHandlers: Array<() => void> = []
 let isTracking = false
 
+// 缓存 post 元素列表，通过 MutationObserver 在 DOM 变化时刷新，避免每秒全量 querySelectorAll
+let cachedPostEls: HTMLElement[] = []
+let postsCacheDirty = true
+
+function refreshPostCache() {
+  cachedPostEls = Array.from(DQSA('[data-post-number]')) as HTMLElement[]
+  postsCacheDirty = false
+}
+
+function markPostCacheDirty() {
+  postsCacheDirty = true
+}
+
 function readTopicId(): number {
   const m1 = window.location.pathname.match(/t\/topic\/(\d+)/)
   const m2 = window.location.pathname.match(/t\/(\d+)/)
@@ -38,8 +51,8 @@ function isVisible(el: Element) {
 }
 
 function collectVisiblePosts() {
-  const postEls = Array.from(DQSA('[data-post-number]')) as HTMLElement[]
-  return postEls.filter(isVisible)
+  if (postsCacheDirty) refreshPostCache()
+  return cachedPostEls.filter(el => document.contains(el) && isVisible(el))
 }
 
 async function flushIfNeeded() {
@@ -78,6 +91,11 @@ export function startReadTracker() {
   lastScrolled = Date.now()
   lastTick = Date.now()
   isTracking = true
+
+  // 初始化 post 缓存及 DOM 变更观察器
+  refreshPostCache()
+  const postsObserver = new MutationObserver(markPostCacheDirty)
+  postsObserver.observe(document.body, { childList: true, subtree: true })
 
   // 添加滚动监听器（需要保存引用以便清理）
   const scrollHandler = () => {
@@ -122,7 +140,9 @@ export function startReadTracker() {
   cleanupHandlers.push(
     () => clearInterval(mainInterval),
     () => clearInterval(flushInterval),
-    () => window.removeEventListener('scroll', scrollHandler)
+    () => window.removeEventListener('scroll', scrollHandler),
+    () => postsObserver.disconnect(),
+    () => { cachedPostEls = []; postsCacheDirty = true }
   )
 
   console.log('[readTracker] started')

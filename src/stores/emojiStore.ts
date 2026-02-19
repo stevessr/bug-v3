@@ -39,7 +39,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   // 注意：更新时必须替换整个数组引用，而不是修改属性
   const groups = shallowRef<EmojiGroup[]>([])
   const archivedGroups = shallowRef<EmojiGroup[]>([]) // 已归档的分组
-  const settings = ref<AppSettings>(defaultSettings)
+  const settings = shallowRef<AppSettings>(defaultSettings)
   const favorites = ref<Set<string>>(new Set())
   const activeGroupId = ref<string>('nachoneko')
   const searchQuery = ref<string>(' ')

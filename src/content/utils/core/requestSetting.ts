@@ -26,3 +26,29 @@ export function requestSettingFromBackground(key: string): Promise<any> {
     }
   })
 }
+
+// Batch request multiple settings in a single message roundtrip.
+// Returns a Record mapping each key to its value (or null if unavailable).
+export function requestSettingsBatch(keys: string[]): Promise<Record<string, any>> {
+  return new Promise(resolve => {
+    try {
+      const chromeAPI = (window as any).chrome
+      if (chromeAPI?.runtime?.sendMessage) {
+        chromeAPI.runtime.sendMessage(
+          { type: 'GET_EMOJI_SETTINGS_BATCH', keys },
+          (resp: any) => {
+            if (resp?.success && resp?.data) {
+              resolve(resp.data)
+            } else {
+              resolve({})
+            }
+          }
+        )
+      } else {
+        resolve({})
+      }
+    } catch {
+      resolve({})
+    }
+  })
+}

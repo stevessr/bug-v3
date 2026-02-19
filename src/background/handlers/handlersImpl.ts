@@ -151,6 +151,31 @@ export async function handleGetEmojiSetting(
   }
 }
 
+export async function handleGetEmojiSettingsBatch(
+  keys: string[],
+  _sendResponse: (resp: { success: boolean; data?: Record<string, unknown>; error?: string }) => void
+) {
+  void _sendResponse
+  try {
+    const settings = await storage.getSettings()
+    const result: Record<string, unknown> = {}
+    for (const key of keys) {
+      if (settings && Object.prototype.hasOwnProperty.call(settings, key)) {
+        result[key] = settings[key as keyof AppSettings]
+      } else {
+        result[key] = null
+      }
+    }
+    _sendResponse({ success: true, data: result })
+  } catch (error) {
+    console.error('Failed to get emoji settings batch:', keys, error)
+    _sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}
+
 export async function handleSaveEmojiData(
   data: Record<string, unknown>,
   _sendResponse: (resp: { success: boolean; error?: string }) => void

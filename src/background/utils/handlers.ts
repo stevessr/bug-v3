@@ -16,6 +16,7 @@ import {
   setupContextMenu,
   setupPeriodicCleanup,
   handleGetEmojiSetting,
+  handleGetEmojiSettingsBatch,
   handleProxyFetchRequest,
   handleProxyImageRequest,
   setupScheduledLikes,
@@ -76,6 +77,15 @@ export function setupMessageListener() {
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing key for GET_EMOJI_SETTING' })
+                return false
+              }
+
+            case 'GET_EMOJI_SETTINGS_BATCH':
+              if ('keys' in typedMsg && Array.isArray((typedMsg as any).keys)) {
+                handleGetEmojiSettingsBatch((typedMsg as any).keys, sendResponse as any)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing keys for GET_EMOJI_SETTINGS_BATCH' })
                 return false
               }
 

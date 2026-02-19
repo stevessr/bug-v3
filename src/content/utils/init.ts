@@ -363,12 +363,4 @@ export async function initializeEmojiFeature(
     if (cachedSubmenuInjectorEnabled === true) return
     checkAndShowFloatingButton()
   }, 5000)
-
-  if (dataReloadIntervalId) {
-    clearInterval(dataReloadIntervalId)
-  }
-  dataReloadIntervalId = setInterval(() => {
-    console.log('[Emoji Extension] Periodic data reload (module)')
-    loadDataFromStorage()
-  }, 120000)
 }

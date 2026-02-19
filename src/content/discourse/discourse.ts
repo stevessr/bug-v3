@@ -1,5 +1,5 @@
 // 导入各个功能模块
-import { requestSettingFromBackground } from '../utils/core/requestSetting'
+import { requestSettingsBatch } from '../utils/core/requestSetting'
 import { contentImageCache, processEmojiImages } from '../utils/core/contentImageCache'
 
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
@@ -26,14 +26,23 @@ export async function initDiscourse() {
     observeMagnificPopup()
     setupDiscourseUploadHandler()
 
-    let enableBatchParseImages = true
-    try {
-      const setting = await requestSettingFromBackground('enableBatchParseImages')
-      if (typeof setting === 'boolean') enableBatchParseImages = setting
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableBatchParseImages setting', e)
-    }
+    // 批量获取所有需要的设置（单次消息往返，替代 8+ 次顺序请求）
+    const settings = await requestSettingsBatch([
+      'enableBatchParseImages',
+      'enableCalloutSuggestions',
+      'enableChatMultiReactor',
+      'chatMultiReactorEmojis',
+      'enableContentImageCache',
+      'enableSubmenuInjector',
+      'enableLinuxDoSeeking',
+      'enableLinuxDoCredit',
+      'enableExperimentalFeatures',
+      'enableLinuxDoLikeCounter'
+    ])
 
+    // Batch parse images（默认启用）
+    const enableBatchParseImages =
+      typeof settings.enableBatchParseImages === 'boolean' ? settings.enableBatchParseImages : true
     if (enableBatchParseImages) {
       setTimeout(scanForCookedContent, 300)
       observeCookedContent()
@@ -41,47 +50,24 @@ export async function initDiscourse() {
       console.log('[DiscourseOneClick] batch parse button disabled via settings')
     }
 
-    // 集成 callout suggestions（在 textarea 输入 `[!` 时展示候选）
-    // 检查是否启用了 callout suggestions
-    try {
-      const enableCalloutSuggestions = await requestSettingFromBackground(
-        'enableCalloutSuggestions'
-      )
-      // 默认启用，只有明确设置为 false 时才禁用
-      if (enableCalloutSuggestions !== false) {
-        initCalloutSuggestions()
-      } else {
-        console.log('[DiscourseOneClick] callout suggestions disabled by user setting')
-      }
-    } catch (e) {
-      console.warn(
-        '[DiscourseOneClick] failed to get enableCalloutSuggestions setting, defaulting to enabled',
-        e
-      )
+    // Callout suggestions（默认启用，只有明确设置为 false 时才禁用）
+    if (settings.enableCalloutSuggestions !== false) {
       initCalloutSuggestions()
+    } else {
+      console.log('[DiscourseOneClick] callout suggestions disabled by user setting')
     }
 
-    // 集成聊天多表情反应功能
-    try {
-      const enableChatMultiReactor = await requestSettingFromBackground('enableChatMultiReactor')
-      if (enableChatMultiReactor === true) {
-        // 获取自定义表情列表
-        const customEmojis = await requestSettingFromBackground('chatMultiReactorEmojis')
-        initChatMultiReactor(Array.isArray(customEmojis) ? customEmojis : undefined)
-        console.log('[DiscourseOneClick] chat multi-reactor enabled')
-      }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableChatMultiReactor setting', e)
+    // 聊天多表情反应功能
+    if (settings.enableChatMultiReactor === true) {
+      const customEmojis = settings.chatMultiReactorEmojis
+      initChatMultiReactor(Array.isArray(customEmojis) ? customEmojis : undefined)
+      console.log('[DiscourseOneClick] chat multi-reactor enabled')
     }
 
-    // 集成图片缓存功能
-    try {
-      const enableContentImageCache = await requestSettingFromBackground('enableContentImageCache')
-      if (enableContentImageCache !== false) {
-        // 初始化图片缓存服务
+    // 图片缓存功能（默认启用）
+    if (settings.enableContentImageCache !== false) {
+      try {
         await contentImageCache.init()
-
-        // 延迟处理页面中的图片，避免影响页面加载
         setTimeout(async () => {
           try {
             const processedCount = await processEmojiImages()
@@ -90,39 +76,25 @@ export async function initDiscourse() {
             console.warn('[DiscourseOneClick] failed to process images with cache:', e)
           }
         }, 1000)
-
         console.log('[DiscourseOneClick] content image cache enabled')
+      } catch (e) {
+        console.warn('[DiscourseOneClick] failed to initialize content image cache:', e)
       }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to initialize content image cache:', e)
     }
 
-    // 试验性功能：子菜单注入
-    // 将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏
-    try {
-      const enableSubmenuInjector = await requestSettingFromBackground('enableSubmenuInjector')
-      if (enableSubmenuInjector === true) {
-        initSubmenuInjector()
-        console.log('[DiscourseOneClick] submenu injector enabled (experimental)')
-      }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableSubmenuInjector setting', e)
+    // 子菜单注入（试验性功能）
+    if (settings.enableSubmenuInjector === true) {
+      initSubmenuInjector()
+      console.log('[DiscourseOneClick] submenu injector enabled (experimental)')
     }
 
     // LinuxDo 追觅功能
-    // 监控 Linux.do 用户活动，显示侧边栏
-    try {
-      const enableLinuxDoSeeking = await requestSettingFromBackground('enableLinuxDoSeeking')
-      if (enableLinuxDoSeeking === true) {
-        initLinuxDoSeeking()
-        console.log('[DiscourseOneClick] LinuxDo seeking enabled')
-      }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableLinuxDoSeeking setting', e)
+    if (settings.enableLinuxDoSeeking === true) {
+      initLinuxDoSeeking()
+      console.log('[DiscourseOneClick] LinuxDo seeking enabled')
     }
 
     // Discourse 路由刷新功能
-    // 周期性调用 Discourse 路由刷新以优化用户体验
     try {
       await initDiscourseRouterRefresh()
     } catch (e) {
@@ -137,33 +109,18 @@ export async function initDiscourse() {
     }
 
     // LinuxDo Credit 积分浮窗
-    try {
-      const enableLinuxDoCredit = await requestSettingFromBackground('enableLinuxDoCredit')
-      if (enableLinuxDoCredit === true) {
-        initLinuxDoCredit()
-        console.log('[DiscourseOneClick] LinuxDo Credit widget enabled')
-      }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableLinuxDoCredit setting', e)
+    if (settings.enableLinuxDoCredit === true) {
+      initLinuxDoCredit()
+      console.log('[DiscourseOneClick] LinuxDo Credit widget enabled')
     }
 
-    // LinuxDo 点赞计数器（试验性功能）
-    // 需同时开启试验性特性开关
-    try {
-      const enableExperimentalFeatures = await requestSettingFromBackground(
-        'enableExperimentalFeatures'
-      )
-      if (enableExperimentalFeatures === true) {
-        const enableLinuxDoLikeCounter = await requestSettingFromBackground(
-          'enableLinuxDoLikeCounter'
-        )
-        if (enableLinuxDoLikeCounter === true) {
-          initLinuxDoLikeCounter()
-          console.log('[DiscourseOneClick] LinuxDo Like Counter enabled (experimental)')
-        }
-      }
-    } catch (e) {
-      console.warn('[DiscourseOneClick] failed to get enableLinuxDoLikeCounter setting', e)
+    // LinuxDo 点赞计数器（试验性功能，需同时开启试验性特性开关）
+    if (
+      settings.enableExperimentalFeatures === true &&
+      settings.enableLinuxDoLikeCounter === true
+    ) {
+      initLinuxDoLikeCounter()
+      console.log('[DiscourseOneClick] LinuxDo Like Counter enabled (experimental)')
     }
 
     // save-last-discourse injection removed — no-op to avoid injecting UI into Discourse pages

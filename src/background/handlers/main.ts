@@ -13,6 +13,7 @@ export { handleCaptureScreenshot } from './handleCaptureScreenshot'
 export {
   handleGetEmojiData,
   handleGetEmojiSetting,
+  handleGetEmojiSettingsBatch,
   handleSaveEmojiData,
   setupStorageChangeListener,
   setupPeriodicCleanup,

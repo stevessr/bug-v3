@@ -628,7 +628,7 @@ export async function extractColorsFromImage(
   algorithm: 'kmeans' | 'mediancut' = 'mediancut'
 ): Promise<ExtractedColor[]> {
   return new Promise((resolve, reject) => {
-    const processImage = (img: HTMLImageElement) => {
+    const processImage = async (img: HTMLImageElement) => {
       try {
         // 创建 canvas
         const canvas = document.createElement('canvas')
@@ -649,6 +649,38 @@ export async function extractColorsFromImage(
 
         // 获取像素数据
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+        // 尝试 WASM 加速路径
+        try {
+          const { wasmColorService } = await import('@/utils/color/wasmColorService')
+          await wasmColorService.initialize()
+
+          if (wasmColorService.isAvailable) {
+            const wasmResult = algorithm === 'kmeans'
+              ? await wasmColorService.quantizeKMeans(imageData, colorCount, 20, 128)
+              : await wasmColorService.quantizeMedianCut(imageData, colorCount, 128)
+
+            if (!wasmResult.error && wasmResult.colors.length > 0) {
+              const results: ExtractedColor[] = wasmResult.colors.map(c => {
+                const hex = rgbToHex(c.r, c.g, c.b)
+                const hsl = rgbToHsl(c.r, c.g, c.b)
+                return {
+                  hex,
+                  rgb: { r: c.r, g: c.g, b: c.b },
+                  hsl,
+                  population: c.population,
+                  name: generateColorName(hsl)
+                }
+              })
+              resolve(results)
+              return
+            }
+          }
+        } catch {
+          // WASM 不可用，回退到 JS 实现
+        }
+
+        // JS 回退路径
         const pixels: RGB[] = []
 
         for (let i = 0; i < imageData.data.length; i += 4) {
@@ -716,9 +748,9 @@ export async function extractColorsFromImage(
     // 处理不同的输入类型
     if (imageSource instanceof HTMLImageElement) {
       if (imageSource.complete) {
-        processImage(imageSource)
+        processImage(imageSource).catch(reject)
       } else {
-        imageSource.onload = () => processImage(imageSource)
+        imageSource.onload = () => processImage(imageSource).catch(reject)
         imageSource.onerror = () => reject(new Error('图片加载失败'))
       }
     } else if (imageSource instanceof File) {
@@ -726,7 +758,7 @@ export async function extractColorsFromImage(
       reader.onload = () => {
         const img = new Image()
         img.crossOrigin = 'anonymous'
-        img.onload = () => processImage(img)
+        img.onload = () => processImage(img).catch(reject)
         img.onerror = () => reject(new Error('图片加载失败'))
         img.src = reader.result as string
       }
@@ -736,7 +768,7 @@ export async function extractColorsFromImage(
       // URL 字符串
       const img = new Image()
       img.crossOrigin = 'anonymous'
-      img.onload = () => processImage(img)
+      img.onload = () => processImage(img).catch(reject)
       img.onerror = () => reject(new Error('图片加载失败'))
       img.src = imageSource
     }

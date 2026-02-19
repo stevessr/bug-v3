@@ -8,6 +8,7 @@
 import { ref, watch, onMounted } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
+import { getCachedImage, cacheImage } from '@/utils/imageCache'
 import {
   resolveImageCacheStrategy,
   isImageDomainBlocked,
@@ -82,8 +83,6 @@ const loadCachedImage = async (
   isError.value = false
 
   try {
-    const { getCachedImage, cacheImage } = await import('@/utils/imageCache')
-
     // 先尝试从缓存获取
     const cachedUrl = await getCachedImage(url)
     if (cachedUrl) {
@@ -154,7 +153,6 @@ const handleImageError = async () => {
   // 如果是 blob URL 失败，可能是缓存已过期，尝试重新缓存
   if (displaySrc.value.startsWith('blob:') && props.src) {
     try {
-      const { cacheImage } = await import('@/utils/imageCache')
       const blobUrl = await cacheImage(props.src)
       if (blobUrl) {
         displaySrc.value = blobUrl

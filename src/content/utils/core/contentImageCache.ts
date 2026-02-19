@@ -17,6 +17,7 @@ class ContentImageCacheService {
   private isInitialized = false
   private preloadQueue = new Set<string>()
   private preloadTimeout: number | null = null
+  private listeners: Array<{ event: string; handler: EventListener }> = []
 
   constructor(options: ContentImageCacheOptions = {}) {
     this.options = {
@@ -152,7 +153,7 @@ class ContentImageCacheService {
    */
   private setupPreloadListeners(): void {
     // 监听鼠标悬停在表情图片上
-    document.addEventListener('mouseover', event => {
+    const mouseoverHandler = (event: Event) => {
       const target = event.target as HTMLElement
       const imgElement = target.closest('img, [data-emoji-url]')
 
@@ -169,10 +170,10 @@ class ContentImageCacheService {
           }, 200)
         }
       }
-    })
+    }
 
     // 鼠标移出时取消预加载
-    document.addEventListener('mouseout', event => {
+    const mouseoutHandler = (event: Event) => {
       const target = event.target as HTMLElement
       const imgElement = target.closest('img, [data-emoji-url]')
 
@@ -180,7 +181,30 @@ class ContentImageCacheService {
         clearTimeout(this.preloadTimeout)
         this.preloadTimeout = null
       }
-    })
+    }
+
+    document.addEventListener('mouseover', mouseoverHandler)
+    document.addEventListener('mouseout', mouseoutHandler)
+
+    this.listeners.push(
+      { event: 'mouseover', handler: mouseoverHandler },
+      { event: 'mouseout', handler: mouseoutHandler }
+    )
+  }
+
+  /**
+   * 销毁缓存服务，移除所有事件监听器
+   */
+  destroy(): void {
+    for (const { event, handler } of this.listeners) {
+      document.removeEventListener(event, handler)
+    }
+    this.listeners = []
+    if (this.preloadTimeout) {
+      clearTimeout(this.preloadTimeout)
+      this.preloadTimeout = null
+    }
+    this.isInitialized = false
   }
 
   /**

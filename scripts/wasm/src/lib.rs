@@ -694,3 +694,346 @@ pub extern "C" fn has_simd_support() -> i32 {
         0
     }
 }
+
+// ===== Color Quantization =====
+
+/// Result struct for color quantization operations.
+/// `colors_ptr` points to a flat array of `[r, g, b, population]` u32 tuples.
+#[repr(C)]
+pub struct ColorResult {
+    pub colors_ptr: *mut u32,
+    pub num_colors: i32,
+    pub error: i32,
+    pub error_message: *mut u8,
+}
+
+fn create_color_result(
+    colors_ptr: *mut u32,
+    num_colors: i32,
+    error: i32,
+    error_message: *mut u8,
+) -> *mut ColorResult {
+    let ptr = alloc_bytes(size_of::<ColorResult>()) as *mut ColorResult;
+    if ptr.is_null() {
+        if !colors_ptr.is_null() {
+            dealloc_bytes(colors_ptr as *mut u8);
+        }
+        if !error_message.is_null() {
+            dealloc_bytes(error_message);
+        }
+        return null_mut();
+    }
+
+    unsafe {
+        ptr.write(ColorResult {
+            colors_ptr,
+            num_colors,
+            error,
+            error_message,
+        });
+    }
+
+    ptr
+}
+
+fn create_color_error(message: &str) -> *mut ColorResult {
+    let error_message = alloc_c_string(message);
+    create_color_result(null_mut(), 0, 1, error_message)
+}
+
+/// Allocate and populate a flat u32 array with [r, g, b, population] tuples.
+fn alloc_color_array(colors: &[(u32, u32, u32, u32)]) -> *mut u32 {
+    if colors.is_empty() {
+        return null_mut();
+    }
+
+    let total_u32s = colors.len() * 4;
+    let Some(total_bytes) = total_u32s.checked_mul(size_of::<u32>()) else {
+        return null_mut();
+    };
+
+    let ptr = alloc_bytes(total_bytes) as *mut u32;
+    if ptr.is_null() {
+        return null_mut();
+    }
+
+    for (i, &(r, g, b, pop)) in colors.iter().enumerate() {
+        unsafe {
+            *ptr.add(i * 4) = r;
+            *ptr.add(i * 4 + 1) = g;
+            *ptr.add(i * 4 + 2) = b;
+            *ptr.add(i * 4 + 3) = pop;
+        }
+    }
+
+    ptr
+}
+
+#[inline]
+fn color_distance_sq(r1: u32, g1: u32, b1: u32, r2: u32, g2: u32, b2: u32) -> u32 {
+    let dr = r1.wrapping_sub(r2);
+    let dg = g1.wrapping_sub(g2);
+    let db = b1.wrapping_sub(b2);
+    // Use i32 to handle negative differences correctly
+    let dr = dr as i32;
+    let dg = dg as i32;
+    let db = db as i32;
+    (dr * dr + dg * dg + db * db) as u32
+}
+
+/// Extract RGB pixels from RGBA data, skipping transparent pixels.
+fn extract_rgb_pixels(pixel_data: &[u8], skip_alpha: u8) -> Vec<(u32, u32, u32)> {
+    let num_pixels = pixel_data.len() / 4;
+    let mut pixels = Vec::with_capacity(num_pixels);
+
+    for i in 0..num_pixels {
+        let a = pixel_data[i * 4 + 3];
+        if a < skip_alpha {
+            continue;
+        }
+        let r = pixel_data[i * 4] as u32;
+        let g = pixel_data[i * 4 + 1] as u32;
+        let b = pixel_data[i * 4 + 2] as u32;
+        pixels.push((r, g, b));
+    }
+
+    pixels
+}
+
+/// K-Means clustering on RGBA pixel data.
+#[no_mangle]
+pub extern "C" fn kmeans_quantize(
+    pixel_data: *const u8,
+    width: i32,
+    height: i32,
+    k: i32,
+    max_iterations: i32,
+    skip_alpha_threshold: u8,
+) -> *mut ColorResult {
+    if pixel_data.is_null() || width <= 0 || height <= 0 || k <= 0 {
+        return create_color_error("Invalid input parameters");
+    }
+
+    let w = width as usize;
+    let h = height as usize;
+    let k = k as usize;
+    let max_iter = if max_iterations <= 0 { 20 } else { max_iterations as usize };
+
+    let Some(num_pixels) = w.checked_mul(h) else {
+        return create_color_error("Pixel count overflow");
+    };
+    let Some(data_len) = num_pixels.checked_mul(4) else {
+        return create_color_error("Data size overflow");
+    };
+
+    let data = unsafe { core::slice::from_raw_parts(pixel_data, data_len) };
+    let pixels = extract_rgb_pixels(data, skip_alpha_threshold);
+
+    if pixels.is_empty() {
+        return create_color_result(null_mut(), 0, 0, null_mut());
+    }
+
+    if pixels.len() <= k {
+        let colors: Vec<(u32, u32, u32, u32)> = pixels.iter().map(|&(r, g, b)| (r, g, b, 1)).collect();
+        let ptr = alloc_color_array(&colors);
+        return create_color_result(ptr, colors.len() as i32, 0, null_mut());
+    }
+
+    // Initialize centroids by evenly sampling the pixel array (deterministic)
+    let mut centroids: Vec<(u32, u32, u32)> = Vec::with_capacity(k);
+    for i in 0..k {
+        let idx = (i * pixels.len()) / k;
+        centroids.push(pixels[idx]);
+    }
+
+    // Cluster assignment buffer
+    let mut assignments = vec![0usize; pixels.len()];
+    let mut cluster_counts = vec![0u64; k];
+    let mut cluster_sums_r = vec![0u64; k];
+    let mut cluster_sums_g = vec![0u64; k];
+    let mut cluster_sums_b = vec![0u64; k];
+
+    for _iter in 0..max_iter {
+        // Assign each pixel to nearest centroid
+        for (pi, &(r, g, b)) in pixels.iter().enumerate() {
+            let mut min_dist = u32::MAX;
+            let mut min_idx = 0usize;
+            for (ci, &(cr, cg, cb)) in centroids.iter().enumerate() {
+                let dist = color_distance_sq(r, g, b, cr, cg, cb);
+                if dist < min_dist {
+                    min_dist = dist;
+                    min_idx = ci;
+                }
+            }
+            assignments[pi] = min_idx;
+        }
+
+        // Recompute centroids
+        for i in 0..k {
+            cluster_counts[i] = 0;
+            cluster_sums_r[i] = 0;
+            cluster_sums_g[i] = 0;
+            cluster_sums_b[i] = 0;
+        }
+
+        for (pi, &(r, g, b)) in pixels.iter().enumerate() {
+            let ci = assignments[pi];
+            cluster_counts[ci] += 1;
+            cluster_sums_r[ci] += r as u64;
+            cluster_sums_g[ci] += g as u64;
+            cluster_sums_b[ci] += b as u64;
+        }
+
+        let mut changed = false;
+        for i in 0..k {
+            if cluster_counts[i] == 0 {
+                continue;
+            }
+            let new_r = (cluster_sums_r[i] / cluster_counts[i]) as u32;
+            let new_g = (cluster_sums_g[i] / cluster_counts[i]) as u32;
+            let new_b = (cluster_sums_b[i] / cluster_counts[i]) as u32;
+
+            if color_distance_sq(new_r, new_g, new_b, centroids[i].0, centroids[i].1, centroids[i].2) > 1 {
+                changed = true;
+                centroids[i] = (new_r, new_g, new_b);
+            }
+        }
+
+        if !changed {
+            break;
+        }
+    }
+
+    // Build output with population counts
+    let mut colors: Vec<(u32, u32, u32, u32)> = Vec::with_capacity(k);
+    for i in 0..k {
+        if cluster_counts[i] > 0 {
+            colors.push((centroids[i].0, centroids[i].1, centroids[i].2, cluster_counts[i] as u32));
+        }
+    }
+
+    // Sort by population descending
+    colors.sort_by(|a, b| b.3.cmp(&a.3));
+
+    let ptr = alloc_color_array(&colors);
+    create_color_result(ptr, colors.len() as i32, 0, null_mut())
+}
+
+/// Median Cut algorithm on RGBA pixel data.
+#[no_mangle]
+pub extern "C" fn median_cut_quantize(
+    pixel_data: *const u8,
+    width: i32,
+    height: i32,
+    num_colors: i32,
+    skip_alpha_threshold: u8,
+) -> *mut ColorResult {
+    if pixel_data.is_null() || width <= 0 || height <= 0 || num_colors <= 0 {
+        return create_color_error("Invalid input parameters");
+    }
+
+    let w = width as usize;
+    let h = height as usize;
+
+    let Some(num_pixels) = w.checked_mul(h) else {
+        return create_color_error("Pixel count overflow");
+    };
+    let Some(data_len) = num_pixels.checked_mul(4) else {
+        return create_color_error("Data size overflow");
+    };
+
+    let data = unsafe { core::slice::from_raw_parts(pixel_data, data_len) };
+    let pixels = extract_rgb_pixels(data, skip_alpha_threshold);
+
+    if pixels.is_empty() {
+        return create_color_result(null_mut(), 0, 0, null_mut());
+    }
+
+    // Calculate depth from num_colors: depth = ceil(log2(num_colors))
+    let target = num_colors as usize;
+    let depth = if target <= 1 { 0 } else { (target as f64).log2().ceil() as usize };
+
+    let result_pixels = median_cut_impl(pixels, depth);
+
+    let colors: Vec<(u32, u32, u32, u32)> = result_pixels
+        .into_iter()
+        .map(|(r, g, b, pop)| (r, g, b, pop))
+        .collect();
+
+    // Sort by population descending
+    let mut colors = colors;
+    colors.sort_by(|a, b| b.3.cmp(&a.3));
+
+    let ptr = alloc_color_array(&colors);
+    create_color_result(ptr, colors.len() as i32, 0, null_mut())
+}
+
+fn median_cut_impl(
+    mut pixels: Vec<(u32, u32, u32)>,
+    depth: usize,
+) -> Vec<(u32, u32, u32, u32)> {
+    if depth == 0 || pixels.is_empty() {
+        if pixels.is_empty() {
+            return Vec::new();
+        }
+        // Return average color with population
+        let count = pixels.len() as u64;
+        let (sr, sg, sb) = pixels.iter().fold((0u64, 0u64, 0u64), |(sr, sg, sb), &(r, g, b)| {
+            (sr + r as u64, sg + g as u64, sb + b as u64)
+        });
+        return vec![((sr / count) as u32, (sg / count) as u32, (sb / count) as u32, count as u32)];
+    }
+
+    // Find the channel with the largest range
+    let (mut min_r, mut max_r) = (255u32, 0u32);
+    let (mut min_g, mut max_g) = (255u32, 0u32);
+    let (mut min_b, mut max_b) = (255u32, 0u32);
+
+    for &(r, g, b) in &pixels {
+        if r < min_r { min_r = r; }
+        if r > max_r { max_r = r; }
+        if g < min_g { min_g = g; }
+        if g > max_g { max_g = g; }
+        if b < min_b { min_b = b; }
+        if b > max_b { max_b = b; }
+    }
+
+    let range_r = max_r - min_r;
+    let range_g = max_g - min_g;
+    let range_b = max_b - min_b;
+
+    // Sort by the channel with the largest range
+    if range_r >= range_g && range_r >= range_b {
+        pixels.sort_unstable_by_key(|&(r, _, _)| r);
+    } else if range_g >= range_r && range_g >= range_b {
+        pixels.sort_unstable_by_key(|&(_, g, _)| g);
+    } else {
+        pixels.sort_unstable_by_key(|&(_, _, b)| b);
+    }
+
+    let mid = pixels.len() / 2;
+    let right = pixels.split_off(mid);
+
+    let mut results = median_cut_impl(pixels, depth - 1);
+    results.extend(median_cut_impl(right, depth - 1));
+    results
+}
+
+#[no_mangle]
+pub extern "C" fn free_color_result(result: *mut ColorResult) {
+    if result.is_null() {
+        return;
+    }
+
+    unsafe {
+        let value = result.read();
+        if !value.colors_ptr.is_null() {
+            dealloc_bytes(value.colors_ptr as *mut u8);
+        }
+        if !value.error_message.is_null() {
+            dealloc_bytes(value.error_message);
+        }
+    }
+
+    dealloc_bytes(result as *mut u8);
+}

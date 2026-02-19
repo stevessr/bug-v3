@@ -55,7 +55,7 @@
     "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
     "katex": "^0.16.27",
-    "libavif-wasm": "^0.1.13",
+
     "marked": "^16.4.2",
     "nanoid": "^5.1.6",
     "pinia": "^2.3.1",

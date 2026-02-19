@@ -242,8 +242,6 @@ export default defineConfig(({ mode }) => {
     // 优化：预构建依赖
     optimizeDeps: {
       include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue'],
-      // 排除不需要预构建的模块
-      exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/oxipng', '@jsquash/webp']
     },
     build: {
       sourcemap: !isFastBuild && process.env.BUILD_SOURCEMAP === 'true',

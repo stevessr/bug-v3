@@ -45,7 +45,7 @@ export function useCssStore(options: CssStoreOptions) {
       blocks.push({ ...block, createdAt: Date.now(), updatedAt: Date.now() })
     }
 
-    settings.value.customCssBlocks = [...blocks]
+    settings.value = { ...settings.value, customCssBlocks: [...blocks] }
     console.log('[CssStore] saveCustomCssBlock', { blockId: block.id, name: block.name })
     saveControl.maybeSave()
   }
@@ -58,7 +58,7 @@ export function useCssStore(options: CssStoreOptions) {
     const filteredBlocks = blocks.filter(b => b.id !== blockId)
 
     if (filteredBlocks.length !== blocks.length) {
-      settings.value.customCssBlocks = filteredBlocks
+      settings.value = { ...settings.value, customCssBlocks: filteredBlocks }
       console.log('[CssStore] deleteCustomCssBlock', { blockId })
       saveControl.maybeSave()
     }
@@ -74,7 +74,7 @@ export function useCssStore(options: CssStoreOptions) {
     if (block) {
       block.enabled = !block.enabled
       block.updatedAt = Date.now()
-      settings.value.customCssBlocks = [...blocks]
+      settings.value = { ...settings.value, customCssBlocks: [...blocks] }
       console.log('[CssStore] toggleCustomCssBlock', { blockId, enabled: block.enabled })
       saveControl.maybeSave()
     }
@@ -128,7 +128,7 @@ export function useCssStore(options: CssStoreOptions) {
     if (block) {
       block.content = content
       block.updatedAt = Date.now()
-      settings.value.customCssBlocks = [...blocks]
+      settings.value = { ...settings.value, customCssBlocks: [...blocks] }
       console.log('[CssStore] updateCssBlockContent', { blockId })
       saveControl.maybeSave()
     }

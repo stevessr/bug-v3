@@ -55,7 +55,7 @@ export default defineComponent({
         >
           {props.emojis.map((emoji, index) => (
             <div
-              key={`${props.groupId}-${index}`}
+              key={emoji.id}
               class="options-emoji-item relative group cursor-move"
               draggable
               onDragstart={(event: DragEvent) => handleEmojiDragStart(emoji, index, event)}

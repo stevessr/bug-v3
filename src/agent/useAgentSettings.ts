@@ -29,7 +29,7 @@ export function useAgentSettings() {
   })
 
   const setActiveSubagent = (id: string) => {
-    settings.value.defaultSubagentId = id
+    settings.value = { ...settings.value, defaultSubagentId: id }
   }
 
   const addSubagent = (agent?: Partial<SubAgentConfig>) => {
@@ -55,16 +55,26 @@ export function useAgentSettings() {
       isPreset: agent?.isPreset
     }
 
-    settings.value.subagents.push(newAgent)
-    settings.value.defaultSubagentId = newAgent.id
+    settings.value = {
+      ...settings.value,
+      subagents: [...settings.value.subagents, newAgent],
+      defaultSubagentId: newAgent.id
+    }
   }
 
   const removeSubagent = (id: string) => {
     const idx = settings.value.subagents.findIndex(agent => agent.id === id)
     if (idx === -1) return
-    const removed = settings.value.subagents.splice(idx, 1)[0]
-    if (removed && settings.value.defaultSubagentId === removed.id) {
-      settings.value.defaultSubagentId = settings.value.subagents[0]?.id
+    const removed = settings.value.subagents[idx]
+    const newSubagents = settings.value.subagents.filter((_, i) => i !== idx)
+    let newDefaultId = settings.value.defaultSubagentId
+    if (removed && newDefaultId === removed.id) {
+      newDefaultId = newSubagents[0]?.id
+    }
+    settings.value = {
+      ...settings.value,
+      subagents: newSubagents,
+      defaultSubagentId: newDefaultId
     }
     if (settings.value.subagents.length === 0) {
       addSubagent({ name: '新子代理' })
