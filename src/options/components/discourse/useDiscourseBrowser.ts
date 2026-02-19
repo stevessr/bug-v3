@@ -356,6 +356,15 @@ export function useDiscourseBrowser() {
           await loadMessages(tab, username, 'all')
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
+        } else if (pathParts[1] === 'user-menu-private-messages') {
+          await loadMessages(tab, username, 'all')
+          tab.title = `${username} - 私信`
+          tab.viewType = 'messages'
+        } else if (pathParts[1] === 'user-menu-bookmarks') {
+          await loadBookmarks(tab)
+          tab.title = `${username} - 书签`
+          tab.viewType = 'home'
+          tab.topicListType = 'bookmarks'
         } else if (pathParts[1] === 'notifications') {
           const filterParam = urlObj.searchParams.get('filter')
           const notificationFilter: DiscourseNotificationFilter =

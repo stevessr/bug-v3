@@ -1,6 +1,9 @@
 .notifications-dropdown {
   width: 340px;
   max-width: 75vw;
+  max-height: calc(100dvh - 72px);
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 1px solid #d9d9d9;
   border-radius: 8px;
@@ -37,7 +40,8 @@
 }
 
 .notifications-dropdown__body {
-  max-height: 380px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 8px 12px;
 }

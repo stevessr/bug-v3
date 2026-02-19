@@ -180,7 +180,8 @@ export default defineComponent({
     notifications: { type: Array as () => DiscourseNotification[], required: true },
     filter: { type: String as () => DiscourseNotificationFilter, required: true },
     loading: { type: Boolean, default: false },
-    baseUrl: { type: String, default: '' }
+    baseUrl: { type: String, default: '' },
+    currentUsername: { type: String, default: '' }
   },
   emits: ['changeFilter', 'open'],
   setup(props, { emit }) {
@@ -226,6 +227,17 @@ export default defineComponent({
         const slug = n.data?.badge_slug || n.data?.badge_name || 'badge'
         return `/badges/${badgeId}/${encodeURIComponent(String(slug))}`
       }
+
+      const username = props.currentUsername.trim()
+      if (username) {
+        if (n.notification_type === 24) {
+          return `/u/${encodeURIComponent(username)}/user-menu-bookmarks`
+        }
+        if ([6, 7, 16].includes(n.notification_type)) {
+          return `/u/${encodeURIComponent(username)}/user-menu-private-messages`
+        }
+      }
+
       const topicId = n.topic_id || n.data?.topic_id
       const slug = n.slug || n.data?.slug || 'topic'
       const postNumber = n.post_number || n.data?.post_number

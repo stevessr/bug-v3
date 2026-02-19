@@ -29,6 +29,10 @@ export default defineComponent({
     baseUrl: {
       type: String,
       required: true
+    },
+    currentUsername: {
+      type: String,
+      default: ''
     }
   },
   emits: {
@@ -66,6 +70,7 @@ export default defineComponent({
                   notifications={preview.value}
                   filter={props.filter}
                   baseUrl={props.baseUrl}
+                  currentUsername={props.currentUsername}
                   onChangeFilter={(filter: DiscourseNotificationFilter) =>
                     emit('changeFilter', filter)
                   }

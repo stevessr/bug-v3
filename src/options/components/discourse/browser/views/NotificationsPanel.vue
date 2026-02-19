@@ -6,6 +6,7 @@ import Sidebar from '../../layout/Sidebar'
 type Props = {
   activeTab: BrowserTab
   baseUrl: string
+  currentUsername: string
 }
 
 defineProps<Props>()
@@ -27,6 +28,7 @@ defineEmits([
         :notifications="activeTab.notifications"
         :filter="activeTab.notificationsFilter"
         :baseUrl="baseUrl"
+        :currentUsername="currentUsername"
         @changeFilter="$emit('changeFilter', $event)"
         @open="$emit('openNotification', $event)"
       />
