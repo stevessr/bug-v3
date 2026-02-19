@@ -47,9 +47,6 @@ importers:
       katex:
         specifier: ^0.16.27
         version: 0.16.27
-      libavif-wasm:
-        specifier: ^0.1.13
-        version: 0.1.13
       marked:
         specifier: ^16.4.2
         version: 16.4.2
@@ -892,9 +889,6 @@ packages:
   '@types/chrome@0.1.33':
     resolution: {integrity: sha512-hSwcseKjWilz8bq93kLyIfSTvFLypRbO5iRhSXdJyVFFMV9aeqIjisBI6P/0J5+FiIKMo2NejyhHXfQLN0c0tQ==}
 
-  '@types/emscripten@1.41.5':
-    resolution: {integrity: sha512-cMQm7pxu6BxtHyqJ7mQZ2kXWV5SLmugybFdHCBbJ5eHzOo6VhBckEgAT3//rP5FwPHNPeEiq4SmQ5ucBwsOo4Q==}
-
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -1305,10 +1299,6 @@ packages:
   character-entities-legacy@3.0.0:
     resolution: {integrity: sha512-RpPp0asT/6ufRm//AJVwpViZbGM/MkjQFxJccQRHmISF/22NBtsHqAWmL+/pmkPWoIUJdWyeVleTl1wydHATVQ==}
 
-  check-image-type@0.1.4:
-    resolution: {integrity: sha512-c5t2NW5krb0jWkYfpKzNkJcPjcaTvFkEe2BcDmj0Sqi4Ti+MOVAWavHSaL64YNmfVV/CnKyOhnFys8gxpbmOdg==}
-    engines: {node: '>=10'}
-
   chokidar@3.6.0:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
@@ -1475,10 +1465,6 @@ packages:
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
-
-  e-emscripten@0.1.4:
-    resolution: {integrity: sha512-qImas1i+joJKkBK6/vF4db1t3L8WOgCbVlw1foOANBzi7oSpEAxLl7vTfyqr+JndiwGyUX0DBN6iSWkiVsoPDA==}
-    engines: {node: '>=10'}
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
@@ -2146,10 +2132,6 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
-  libavif-wasm@0.1.13:
-    resolution: {integrity: sha512-5ZK5z+EeVZ6B+SY91G6j/h9S/YQqrjzfYKRe/NsUtazHbbwedZ2HKGu3UXrQ/7rD67Oytm2mKIRNQAOVvqesyw==}
-    engines: {node: '>=10'}
-
   lightningcss-android-arm64@1.30.2:
     resolution: {integrity: sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A==}
     engines: {node: '>= 12.0.0'}
@@ -2699,9 +2681,6 @@ packages:
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
-
-  regenerator-runtime@0.13.11:
-    resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
 
   regexp.prototype.flags@1.5.4:
     resolution: {integrity: sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==}
@@ -3876,8 +3855,6 @@ snapshots:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
 
-  '@types/emscripten@1.41.5': {}
-
   '@types/estree@1.0.8': {}
 
   '@types/filesystem@0.0.36':
@@ -4402,8 +4379,6 @@ snapshots:
 
   character-entities-legacy@3.0.0: {}
 
-  check-image-type@0.1.4: {}
-
   chokidar@3.6.0:
     dependencies:
       anymatch: 3.1.3
@@ -4558,10 +4533,6 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       es-errors: 1.3.0
       gopd: 1.2.0
-
-  e-emscripten@0.1.4:
-    dependencies:
-      '@types/emscripten': 1.41.5
 
   eastasianwidth@0.2.0: {}
 
@@ -5348,13 +5319,6 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
-  libavif-wasm@0.1.13:
-    dependencies:
-      '@types/emscripten': 1.41.5
-      check-image-type: 0.1.4
-      e-emscripten: 0.1.4
-      regenerator-runtime: 0.13.11
-
   lightningcss-android-arm64@1.30.2:
     optional: true
 
@@ -5890,8 +5854,6 @@ snapshots:
       get-intrinsic: 1.3.0
       get-proto: 1.0.1
       which-builtin-type: 1.2.1
-
-  regenerator-runtime@0.13.11: {}
 
   regexp.prototype.flags@1.5.4:
     dependencies:
