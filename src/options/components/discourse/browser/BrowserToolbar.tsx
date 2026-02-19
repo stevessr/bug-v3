@@ -18,7 +18,15 @@ export default defineComponent({
     modelValue: { type: String, required: true },
     activeTab: { type: Object as () => BrowserTab | null, default: null }
   },
-  emits: ['update:modelValue', 'goBack', 'goForward', 'refresh', 'goHome', 'updateBaseUrl'],
+  emits: [
+    'update:modelValue',
+    'goBack',
+    'goForward',
+    'refresh',
+    'goHome',
+    'updateBaseUrl',
+    'toggleQuickSidebar'
+  ],
   setup(props, { emit, slots }) {
     const handleInput = (value: string) => {
       emit('update:modelValue', value)
@@ -31,6 +39,7 @@ export default defineComponent({
             size="small"
             type="text"
             class="toolbar-icon"
+            onClick={() => emit('toggleQuickSidebar')}
             v-slots={{ icon: () => <MenuOutlined /> }}
           />
           <span class="toolbar-brand">Discourse</span>

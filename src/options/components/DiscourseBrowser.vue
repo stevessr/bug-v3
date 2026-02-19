@@ -1050,11 +1050,9 @@ onUnmounted(() => {
       @refresh="refresh"
       @goHome="goHome"
       @updateBaseUrl="updateBaseUrl"
+      @toggleQuickSidebar="toggleQuickSidebar"
     >
       <template #right>
-        <a-button size="small" class="toolbar-sidebar-btn" @click="toggleQuickSidebar">
-          <template #icon><MenuOutlined /></template>
-        </a-button>
         <NotificationsDropdown
           :notifications="activeTab?.notifications || []"
           :filter="activeTab?.notificationsFilter || 'all'"
