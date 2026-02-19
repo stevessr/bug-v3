@@ -21,12 +21,12 @@ defineEmits([
 </script>
 
 <template>
-  <div class="flex gap-4">
-    <div class="flex-1 min-w-0">
-      <h3 class="text-lg font-semibold mb-3 dark:text-white">通知</h3>
+  <div class="notifications-panel-root">
+    <div class="notifications-panel-main">
       <NotificationsView
         :notifications="activeTab.notifications"
         :filter="activeTab.notificationsFilter"
+        :baseUrl="baseUrl"
         @changeFilter="$emit('changeFilter', $event)"
         @open="$emit('openNotification', $event)"
       />
@@ -45,3 +45,20 @@ defineEmits([
     </div>
   </div>
 </template>
+
+<style scoped>
+.notifications-panel-root {
+  display: flex;
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.notifications-panel-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+</style>

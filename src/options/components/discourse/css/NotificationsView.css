@@ -1,0 +1,244 @@
+/* NotificationsView.css — Discourse-style notification list */
+
+.ntf-root {
+  display: flex;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.dark .ntf-root {
+  border-color: #1f2937;
+  background: #111827;
+}
+
+/* ── Notification list ── */
+
+.ntf-list {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.ntf-loading,
+.ntf-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* ── Individual notification item ── */
+
+.ntf-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s;
+}
+
+.ntf-item:last-child {
+  border-bottom: none;
+}
+
+.ntf-item:hover {
+  background-color: #f9fafb;
+}
+
+.ntf-item.unread {
+  background-color: #eff6ff;
+}
+
+.ntf-item.unread:hover {
+  background-color: #dbeafe;
+}
+
+.dark .ntf-item {
+  border-bottom-color: #1f2937;
+}
+
+.dark .ntf-item:hover {
+  background-color: #1f2937;
+}
+
+.dark .ntf-item.unread {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.dark .ntf-item.unread:hover {
+  background-color: rgba(59, 130, 246, 0.18);
+}
+
+/* ── Avatar ── */
+
+.ntf-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+}
+
+.ntf-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.ntf-avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.ntf-type-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+}
+
+.dark .ntf-type-badge {
+  border-color: #111827;
+}
+
+/* ── Content ── */
+
+.ntf-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ntf-actor-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.ntf-actor {
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.dark .ntf-actor {
+  color: #f3f4f6;
+}
+
+.ntf-type-text {
+  color: #6b7280;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.dark .ntf-type-text {
+  color: #9ca3af;
+}
+
+.ntf-title {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dark .ntf-title {
+  color: #d1d5db;
+}
+
+.ntf-badge-desc {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.ntf-time {
+  font-size: 11.5px;
+  color: #9ca3af;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.dark .ntf-time {
+  color: #6b7280;
+}
+
+/* ── Right filter sidebar ── */
+
+.ntf-filter-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border-left: 1px solid #e5e7eb;
+  background: #fafbfc;
+  flex-shrink: 0;
+}
+
+.dark .ntf-filter-bar {
+  border-left-color: #1f2937;
+  background: #0f1724;
+}
+
+.ntf-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ntf-filter-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.ntf-filter-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.dark .ntf-filter-btn:hover {
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+.dark .ntf-filter-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
