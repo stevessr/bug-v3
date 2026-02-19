@@ -212,6 +212,7 @@ export interface DiscourseNotification {
   data?: Record<string, any>
   fancy_title?: string
   acting_user_avatar_template?: string
+  acting_user_name?: string
 }
 
 export interface DiscoursePost {
