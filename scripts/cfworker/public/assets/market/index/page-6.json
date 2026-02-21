@@ -1,0 +1,24 @@
+{
+  "page": 6,
+  "pageSize": 50,
+  "totalPages": 6,
+  "totalGroups": 252,
+  "groups": [
+    {
+      "id": "group-1767644542108",
+      "name": "墨提斯｜Mortis",
+      "icon": "https://linux.do/uploads/default/original/4X/2/d/d/2dd1788f2e5bdb0f0b15a3c2bd537af1d2f685ca.avif",
+      "order": 250,
+      "emojiCount": 48,
+      "isArchived": false
+    },
+    {
+      "id": "group-1763038870366",
+      "name": "🍟 藤田言音",
+      "icon": "https://linux.do/uploads/default/original/4X/6/d/4/6d490b7ac0c7b80ac7ecae455b9f928ee151df92.avif",
+      "order": 251,
+      "emojiCount": 49,
+      "isArchived": false
+    }
+  ]
+}
