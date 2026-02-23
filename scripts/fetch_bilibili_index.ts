@@ -8,8 +8,8 @@ const __dirname = path.dirname(__filename)
 const OUTPUT_DIR = path.resolve(__dirname, 'cfworker/public/assets/bilibili')
 const INDEX_FILE = path.join(OUTPUT_DIR, 'index.json')
 const CONCURRENCY = 20
-const MIN_ID = 1
-const MAX_ID = 9166
+const MIN_ID = 0
+const MAX_ID = 9476
 
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true })
