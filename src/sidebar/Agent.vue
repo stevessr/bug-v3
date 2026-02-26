@@ -1186,14 +1186,14 @@ const onBypassModeChange = (value: boolean | string | number) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, #ffffff 60%);
+  background: var(--md3-surface);
   font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
 }
 
 .agent-header {
   padding: 12px 14px 10px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-low);
   backdrop-filter: blur(8px);
 }
 
@@ -1201,8 +1201,8 @@ const onBypassModeChange = (value: boolean | string | number) => {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: #111827;
-  color: #f8fafc;
+  background: var(--md3-primary);
+  color: var(--md3-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1228,8 +1228,8 @@ const onBypassModeChange = (value: boolean | string | number) => {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.06);
-  color: #475569;
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
 }
 
 .agent-body {
@@ -1242,22 +1242,22 @@ const onBypassModeChange = (value: boolean | string | number) => {
 }
 
 .agent-empty {
-  border: 1px dashed rgba(148, 163, 184, 0.5);
+  border: 1px dashed var(--md3-outline);
   border-radius: 16px;
   padding: 16px;
-  background: rgba(248, 250, 252, 0.6);
+  background: var(--md3-surface-container-low);
 }
 
 .agent-empty-title {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--md3-on-surface);
 }
 
 .agent-empty-sub {
   margin-top: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--md3-on-surface-variant);
 }
 
 .agent-suggestion-row {
@@ -1268,13 +1268,20 @@ const onBypassModeChange = (value: boolean | string | number) => {
 }
 
 .agent-suggestion {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: white;
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-low);
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 999px;
-  color: #0f172a;
+  color: var(--md3-on-surface);
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agent-suggestion:hover {
+  background: var(--md3-primary-container);
+  color: var(--md3-on-primary-container);
+  border-color: var(--md3-primary);
 }
 
 .agent-message {
@@ -1289,7 +1296,7 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
 .agent-message-role {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--md3-on-surface-variant);
 }
 
 .agent-message-role[data-role='user'] {
@@ -1313,13 +1320,13 @@ const onBypassModeChange = (value: boolean | string | number) => {
 .agent-segment {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--md3-outline-variant);
+  background: var(--md3-surface-container-low);
 }
 
 .agent-segment-title {
   font-size: 11px;
-  color: #64748b;
+  color: var(--md3-on-surface-variant);
   margin-bottom: 4px;
 }
 
@@ -1334,14 +1341,14 @@ const onBypassModeChange = (value: boolean | string | number) => {
 .agent-markdown :deep(pre) {
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.06);
+  background: var(--md3-surface-container-high);
   overflow: auto;
 }
 
 .agent-markdown :deep(code) {
   padding: 2px 6px;
   border-radius: 6px;
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--md3-surface-container-highest);
 }
 
 .agent-markdown :deep(table) {
@@ -1351,7 +1358,7 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
 .agent-markdown :deep(th),
 .agent-markdown :deep(td) {
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border: 1px solid var(--md3-outline-variant);
   padding: 6px 8px;
 }
 
@@ -1366,7 +1373,7 @@ const onBypassModeChange = (value: boolean | string | number) => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--md3-primary);
   animation: agentPulse 0.9s ease-in-out infinite;
 }
 
@@ -1387,28 +1394,28 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
 .agent-user {
   align-self: flex-end;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--md3-primary);
+  color: var(--md3-on-primary);
   border-bottom-right-radius: 4px;
 }
 
 .agent-assistant {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--md3-surface-container);
+  color: var(--md3-on-surface);
   border-bottom-left-radius: 4px;
 }
 
 .agent-action-hint {
   margin-top: 6px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--md3-on-surface-variant);
 }
 
 .agent-actions {
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  border: 1px solid var(--md3-outline-variant);
   border-radius: 14px;
   padding: 12px;
-  background: white;
+  background: var(--md3-surface-container-low);
 }
 
 .agent-actions-header {
@@ -1439,13 +1446,13 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
 .agent-action-type {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--md3-on-surface);
 }
 
 .agent-input {
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  border-top: 1px solid var(--md3-outline-variant);
   padding: 12px;
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--md3-surface-container-low);
 }
 
 .agent-input-inner {
@@ -1456,45 +1463,13 @@ const onBypassModeChange = (value: boolean | string | number) => {
 .agent-textarea :deep(textarea) {
   border-radius: 12px;
   font-size: 13px;
+  background: var(--md3-surface);
+  border-color: var(--md3-outline);
+  color: var(--md3-on-surface);
 }
 
-@media (prefers-color-scheme: dark) {
-  .agent-shell {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, #0b1120 60%);
-  }
-  .agent-header {
-    background: rgba(15, 23, 42, 0.9);
-    border-bottom-color: rgba(51, 65, 85, 0.5);
-  }
-  .agent-tag {
-    background: rgba(148, 163, 184, 0.18);
-    color: #cbd5f5;
-  }
-  .agent-empty {
-    background: rgba(15, 23, 42, 0.5);
-  }
-  .agent-empty-title {
-    color: #f8fafc;
-  }
-  .agent-empty-sub {
-    color: #94a3b8;
-  }
-  .agent-suggestion {
-    background: rgba(15, 23, 42, 0.6);
-    color: #e2e8f0;
-    border-color: rgba(148, 163, 184, 0.3);
-  }
-  .agent-assistant {
-    background: rgba(30, 41, 59, 0.7);
-    color: #e2e8f0;
-  }
-  .agent-actions {
-    background: rgba(15, 23, 42, 0.8);
-    border-color: rgba(51, 65, 85, 0.6);
-  }
-  .agent-input {
-    background: rgba(15, 23, 42, 0.9);
-    border-top-color: rgba(51, 65, 85, 0.5);
-  }
+.agent-textarea :deep(textarea:focus) {
+  border-color: var(--md3-primary);
+  box-shadow: 0 0 0 2px var(--md3-primary-container);
 }
 </style>

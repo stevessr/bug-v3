@@ -193,12 +193,12 @@ const handleSearch = () => {
       token: {}
     }"
   >
-    <div class="sidebar-container bg-white dark:bg-gray-900">
-      <div class="sidebar-header border-b border-gray-100 dark:border-gray-700">
+    <div class="sidebar-container">
+      <div class="sidebar-header">
         <div class="flex items-center justify-between px-3 py-2">
           <div class="flex flex-col">
-            <span class="text-sm font-semibold text-gray-900 dark:text-white">Claude 助手</span>
-            <span class="text-[11px] text-gray-400">自动化任务与网页操作</span>
+            <span class="sidebar-title">Claude 助手</span>
+            <span class="sidebar-subtitle">自动化任务与网页操作</span>
           </div>
           <div class="sidebar-toggle">
             <button
@@ -223,7 +223,7 @@ const handleSearch = () => {
 
       <template v-else>
         <!-- 搜索和分组选择 -->
-        <div class="p-2 border-b border-gray-100 dark:border-gray-700 space-y-2">
+        <div class="sidebar-search-section">
           <!-- 表情搜索 -->
           <div
             v-if="emojiStore.settings.showSearchBar || emojiStore.activeGroupId === 'all-emojis'"
@@ -234,20 +234,20 @@ const handleSearch = () => {
               type="text"
               :placeholder="t('searchEmojiNamesOrTags')"
               :title="t('searchEmojiNamesOrTagsTitle')"
-              class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+              class="sidebar-search-input"
               @input="handleSearch"
             />
             <button
               v-if="searchQuery"
               @click="clearSearch"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              class="sidebar-clear-btn"
               :title="t('clearSearch')"
             >
               ✕
             </button>
             <svg
               v-else
-              class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
+              class="sidebar-search-icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -273,7 +273,7 @@ const handleSearch = () => {
             <a-select-option v-for="g in virtualGroups" :key="g.id" :value="g.id" :label="g.name">
               <span class="inline-block mr-2">{{ g.icon }}</span>
               {{ g.name }}
-              <span class="text-xs text-gray-400 ml-2">{{ t('virtualGroup') }}</span>
+              <span class="sidebar-virtual-label">{{ t('virtualGroup') }}</span>
             </a-select-option>
 
             <!-- 真實分組 -->
@@ -299,12 +299,12 @@ const handleSearch = () => {
           <!-- 搜索模式 - 顯示搜索結果 -->
           <template v-if="searchQuery">
             <div class="p-3">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              <div class="sidebar-search-result-info">
                 {{ t('searchResultsFound', { query: searchQuery, count: filteredEmojis.length }) }}
               </div>
-              <div v-if="filteredEmojis.length === 0" class="text-center py-8">
+              <div v-if="filteredEmojis.length === 0" class="sidebar-empty">
                 <div class="text-2xl mb-2">🔍</div>
-                <div class="text-gray-500 dark:text-gray-400">{{ t('noMatchingEmojisFound') }}</div>
+                <div>{{ t('noMatchingEmojisFound') }}</div>
               </div>
               <div
                 v-else
@@ -317,10 +317,11 @@ const handleSearch = () => {
                   v-for="emoji in filteredEmojis"
                   :key="emoji.id"
                   @click="handleEmojiClick(emoji)"
-                  class="relative group cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                  :title="`${emoji.name} (${emoji.groupName})\\n${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
+                  class="sidebar-emoji-item"
+                  :title="`${emoji.name} (${emoji.groupName})
+${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
                 >
-                  <div class="aspect-square bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+                  <div class="sidebar-emoji-thumb">
                     <CachedImage
                       :src="getSearchEmojiSrc(emoji)"
                       :alt="emoji.name"
@@ -328,7 +329,7 @@ const handleSearch = () => {
                       loading="lazy"
                     />
                   </div>
-                  <div class="text-xs text-center text-gray-600 dark:text-white mt-1 truncate">
+                  <div class="sidebar-emoji-name">
                     {{ emoji.name }}
                   </div>
                   <!-- 標籤顯示 -->
@@ -337,11 +338,11 @@ const handleSearch = () => {
                       <span
                         v-for="tag in emoji.tags.slice(0, 2)"
                         :key="tag"
-                        class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+                        class="sidebar-tag"
                       >
                         {{ tag }}
                       </span>
-                      <span v-if="emoji.tags.length > 2" class="text-xs text-gray-400">
+                      <span v-if="emoji.tags.length > 2" class="sidebar-tag-more">
                         +{{ emoji.tags.length - 2 }}
                       </span>
                     </div>
@@ -354,7 +355,7 @@ const handleSearch = () => {
           <!-- 虛擬分組 - 所有表情 -->
           <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
             <div class="p-3">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              <div class="sidebar-search-result-info">
                 {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
               </div>
               <LazyEmojiGrid
@@ -393,7 +394,7 @@ const handleSearch = () => {
         <!-- 复制成功提示 -->
         <div
           v-if="showCopyToast"
-          class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
+          class="sidebar-toast"
         >
           {{ t('linkCopiedToClipboard') }}
         </div>
@@ -424,16 +425,31 @@ body,
   min-height: 200px;
   box-sizing: border-box;
   overflow: auto;
+  background-color: var(--md3-surface);
+  color: var(--md3-on-surface);
 }
 
 .sidebar-header {
   flex-shrink: 0;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  background-color: var(--md3-surface-container-low);
+}
+
+.sidebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md3-on-surface);
+}
+
+.sidebar-subtitle {
+  font-size: 11px;
+  color: var(--md3-on-surface-variant);
 }
 
 .sidebar-toggle {
   display: inline-flex;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--md3-surface-container-highest);
   padding: 2px;
   gap: 2px;
 }
@@ -444,14 +460,68 @@ body,
   padding: 4px 10px;
   font-size: 12px;
   border-radius: 999px;
-  color: #64748b;
+  color: var(--md3-on-surface-variant);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .sidebar-toggle-button.active {
-  background: #111827;
-  color: #ffffff;
+  background: var(--md3-primary);
+  color: var(--md3-on-primary);
+}
+
+.sidebar-search-section {
+  padding: 8px;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 14px;
+  border: 1px solid var(--md3-outline);
+  border-radius: 8px;
+  background-color: var(--md3-surface);
+  color: var(--md3-on-surface);
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+  border-color: var(--md3-primary);
+  box-shadow: 0 0 0 2px var(--md3-primary-container);
+}
+
+.sidebar-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--md3-on-surface-variant);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.sidebar-clear-btn:hover {
+  color: var(--md3-on-surface);
+}
+
+.sidebar-search-icon {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  color: var(--md3-on-surface-variant);
+}
+
+.sidebar-virtual-label {
+  font-size: 12px;
+  color: var(--md3-on-surface-variant);
+  margin-left: 8px;
 }
 
 .sidebar-body {
@@ -466,6 +536,80 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+}
+
+.sidebar-search-result-info {
+  font-size: 14px;
+  color: var(--md3-on-surface-variant);
+  margin-bottom: 12px;
+}
+
+.sidebar-empty {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--md3-on-surface-variant);
+}
+
+.sidebar-emoji-item {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-emoji-item:hover {
+  background-color: var(--md3-surface-container-high);
+}
+
+.sidebar-emoji-thumb {
+  aspect-ratio: 1;
+  background-color: var(--md3-surface-container);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sidebar-emoji-name {
+  font-size: 12px;
+  text-align: center;
+  color: var(--md3-on-surface);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  background-color: var(--md3-primary-container);
+  color: var(--md3-on-primary-container);
+  border-radius: 4px;
+}
+
+.sidebar-tag-more {
+  font-size: 11px;
+  color: var(--md3-on-surface-variant);
+}
+
+.sidebar-toast {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background-color: var(--md3-tertiary);
+  color: var(--md3-on-tertiary);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--md3-shadow);
+  z-index: 50;
+  font-size: 14px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 @media (min-width: 768px) {
