@@ -108,14 +108,14 @@ const focusLastEmoji = () => {
 <template>
   <!-- 使用 v-show 而不是 v-if，保持 DOM 不被销毁，提升切换性能 -->
   <div v-show="isActive" class="lazy-emoji-grid-wrapper">
-    <div v-if="isLoading" class="flex items-center justify-center py-8">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-      <span class="ml-2 text-sm text-gray-600 dark:text-white">{{ t('loadingText') }}</span>
+    <div v-if="isLoading" class="emoji-grid-loading">
+      <div class="emoji-grid-spinner"></div>
+      <span class="emoji-grid-loading-text">{{ t('loadingText') }}</span>
     </div>
 
-    <div v-else-if="emojis.length > 0" class="p-0 overflow-y-auto" role="grid">
+    <div v-else-if="emojis.length > 0" class="emoji-grid-container" role="grid">
       <div
-        class="emoji-grid overflow-y-auto"
+        class="emoji-grid"
         :style="`display: grid; grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); gap: 12px; min-height: 300px;`"
         role="row"
       >
@@ -125,13 +125,12 @@ const focusLastEmoji = () => {
           @click="$emit('select', emoji)"
           @keydown="handleKeyNavigation($event, index)"
           :data-emoji-index="index"
-          style="width: 100%; height: auto"
-          class="emoji-item relative p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group mobile:p-2 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+          class="emoji-item"
           :title="emoji.name"
           role="gridcell"
           tabindex="0"
         >
-          <div class="w-full aspect-square overflow-hidden rounded">
+          <div class="emoji-item-image">
             <CachedImage
               :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
               :alt="emoji.name"
@@ -142,7 +141,7 @@ const focusLastEmoji = () => {
           <!-- Activity indicator for favorites -->
           <div
             v-if="favorites.has(emoji.id) && emoji.usageCount"
-            class="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs text-white font-bold"
+            class="emoji-item-badge"
             :title="t('usageCountTimes', [emoji.usageCount])"
           >
             {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
@@ -150,7 +149,7 @@ const focusLastEmoji = () => {
           <!-- Star icon for favorites without usage count -->
           <div
             v-else-if="favorites.has(emoji.id)"
-            class="absolute top-0 right-0 w-3 h-3 bg-yellow-400 rounded-full flex items-center justify-center"
+            class="emoji-item-star"
           >
             <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -162,9 +161,9 @@ const focusLastEmoji = () => {
       </div>
     </div>
 
-    <div v-else class="flex flex-col items-center justify-center py-8 text-center">
+    <div v-else class="emoji-grid-empty">
       <svg
-        class="w-12 h-12 text-gray-400 mb-2"
+        class="emoji-grid-empty-icon"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -176,11 +175,11 @@ const focusLastEmoji = () => {
           d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-8v2m0 6v2"
         />
       </svg>
-      <p class="text-sm text-gray-600 dark:text-white">{{ emptyMessage }}</p>
+      <p class="emoji-grid-empty-text">{{ emptyMessage }}</p>
       <a-button
         v-if="showAddButton"
         @click="$emit('openOptions')"
-        class="mt-2 text-xs text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-white"
+        class="emoji-grid-empty-btn"
       >
         {{ t('goAddEmojis') }}
       </a-button>
@@ -193,5 +192,144 @@ const focusLastEmoji = () => {
   width: 100%;
   height: 100%;
   overflow-y: auto;
+  background-color: var(--md3-surface);
+}
+
+/* Loading state */
+.emoji-grid-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.emoji-grid-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--md3-surface-container-highest);
+  border-bottom-color: var(--md3-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emoji-grid-loading-text {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--md3-on-surface-variant);
+}
+
+/* Grid container */
+.emoji-grid-container {
+  padding: 0;
+  overflow-y: auto;
+}
+
+.emoji-grid {
+  overflow-y: auto;
+}
+
+/* Emoji item */
+.emoji-item {
+  position: relative;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border-radius: 0.5rem;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.emoji-item:hover {
+  background-color: var(--md3-surface-container-high);
+}
+
+.emoji-item:focus {
+  outline: 2px solid var(--md3-primary);
+  outline-offset: 2px;
+}
+
+.emoji-item-image {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 0.25rem;
+}
+
+/* Badge for usage count */
+.emoji-item-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--md3-tertiary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  color: var(--md3-on-tertiary);
+  font-weight: bold;
+}
+
+/* Star badge */
+.emoji-item-star {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: var(--md3-tertiary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty state */
+.emoji-grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.emoji-grid-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--md3-on-surface-variant);
+  margin-bottom: 0.5rem;
+}
+
+.emoji-grid-empty-text {
+  font-size: 0.875rem;
+  color: var(--md3-on-surface-variant);
+}
+
+.emoji-grid-empty-btn {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--md3-primary);
+  background-color: transparent;
+}
+
+.emoji-grid-empty-btn:hover {
+  color: var(--md3-primary);
+  background-color: var(--md3-primary-container);
+}
+
+/* Mobile responsive */
+@media (min-width: 640px) {
+  .emoji-item {
+    padding: 0.5rem;
+  }
 }
 </style>

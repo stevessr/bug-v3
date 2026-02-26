@@ -44,17 +44,17 @@ const openDiscourseBrowser = () => {
 <template>
   <AConfigProvider>
     <ErrorBoundary />
-    <div class="popup-container bg-white dark:bg-gray-900">
+    <div class="popup-container">
       <!-- Header with scale control -->
-      <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+      <div class="popup-header">
+        <div class="popup-header-row">
+          <h2 class="popup-title">
             {{ t('emojiManagement') }}
           </h2>
-          <div class="flex items-center gap-2">
+          <div class="popup-header-actions">
             <a-button
               @click="openOptions"
-              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="popup-icon-btn"
               :title="t('settings')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +74,7 @@ const openDiscourseBrowser = () => {
             </a-button>
             <a-button
               @click="openOptionsInNewWindow"
-              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="popup-icon-btn"
               :title="t('openInNewWindow')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,7 @@ const openDiscourseBrowser = () => {
             </a-button>
             <a-button
               @click="openDiscourseBrowser"
-              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="popup-icon-btn"
               :title="t('openDiscourseBrowser')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@ const openDiscourseBrowser = () => {
             </a-button>
             <a-button
               @click="openSidebar"
-              class="p-1 text-gray-500 hover:text-gray-700 rounded dark:text-white bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="popup-icon-btn"
               :title="t('openSidebar')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,8 +118,8 @@ const openDiscourseBrowser = () => {
         </div>
 
         <!-- Scale Control -->
-        <div class="flex items-center gap-2 text-xs">
-          <span class="text-gray-600 dark:text-white">{{ t('zoom') }}：</span>
+        <div class="popup-scale-control">
+          <span class="popup-scale-label">{{ t('zoom') }}：</span>
           <input
             v-model.number="localScale"
             type="range"
@@ -127,7 +127,7 @@ const openDiscourseBrowser = () => {
             max="150"
             step="5"
             :title="t('zoomTitle')"
-            class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="popup-scale-slider"
             @input="updateScale"
             role="slider"
             :aria-label="t('zoomControl')"
@@ -135,22 +135,22 @@ const openDiscourseBrowser = () => {
             aria-valuemax="150"
             :aria-valuenow="localScale"
           />
-          <span class="w-10 text-right text-gray-600 dark:text-white">{{ localScale }}%</span>
+          <span class="popup-scale-value">{{ localScale }}%</span>
         </div>
       </div>
 
       <!-- Search Bar -->
-      <div v-if="emojiStore.settings.showSearchBar" class="p-2 border-b border-gray-100">
-        <div class="relative">
+      <div v-if="emojiStore.settings.showSearchBar" class="popup-search">
+        <div class="popup-search-wrapper">
           <input
             v-model="emojiStore.searchQuery"
             type="text"
             :placeholder="t('searchEmojis')"
             :title="t('searchEmojisTitle')"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-black dark:text-white dark:border-gray-600"
+            class="popup-search-input"
           />
           <svg
-            class="absolute right-2 top-1.5 w-4 h-4 text-gray-400"
+            class="popup-search-icon"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -211,7 +211,7 @@ const openDiscourseBrowser = () => {
       <!-- Copy Success Toast -->
       <div
         v-if="showCopyToast"
-        class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-pulse"
+        class="popup-toast"
       >
         {{ t('linkCopiedToClipboard') }}
       </div>
@@ -231,16 +231,11 @@ body,
   margin: 0;
 }
 
-/* Popup container base styles
-   - Use 100% width/height so the popup fills available space when larger than min sizes
-   - Keep reasonable min-width/min-height to prevent extremely small windows
-   - Allow scrolling if content overflows
-*/
+/* Popup container base styles - MD3 themed */
 .popup-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* use percentage height when parent provides it; fallback to viewport */
   height: 100%;
   min-height: 100vh;
   max-width: 100%;
@@ -249,19 +244,179 @@ body,
   min-height: 200px;
   box-sizing: border-box;
   overflow: auto;
+  background-color: var(--md3-surface);
+  color: var(--md3-on-surface);
+}
+
+/* Header - MD3 themed */
+.popup-header {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  background-color: var(--md3-surface-container-low);
+}
+
+.popup-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.popup-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--md3-on-surface);
+}
+
+.popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.popup-icon-btn {
+  padding: 0.25rem;
+  color: var(--md3-on-surface-variant);
+  background-color: transparent;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.popup-icon-btn:hover {
+  color: var(--md3-on-surface);
+  background-color: var(--md3-surface-container-high);
+}
+
+/* Scale Control - MD3 themed */
+.popup-scale-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.popup-scale-label {
+  color: var(--md3-on-surface-variant);
+}
+
+.popup-scale-slider {
+  flex: 1;
+  height: 0.25rem;
+  background-color: var(--md3-surface-container-highest);
+  border-radius: 0.25rem;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.popup-scale-slider:focus {
+  outline: 2px solid var(--md3-primary);
+  outline-offset: 2px;
+}
+
+.popup-scale-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--md3-primary);
+  cursor: pointer;
+  border: 2px solid var(--md3-on-primary);
+}
+
+.popup-scale-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--md3-primary);
+  cursor: pointer;
+  border: 2px solid var(--md3-on-primary);
+}
+
+.popup-scale-value {
+  width: 2.5rem;
+  text-align: right;
+  color: var(--md3-on-surface-variant);
+}
+
+/* Search Bar - MD3 themed */
+.popup-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--md3-outline-variant);
+}
+
+.popup-search-wrapper {
+  position: relative;
+}
+
+.popup-search-input {
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  padding-right: 2rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--md3-outline);
+  border-radius: 0.375rem;
+  background-color: var(--md3-surface);
+  color: var(--md3-on-surface);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.popup-search-input::placeholder {
+  color: var(--md3-on-surface-variant);
+}
+
+.popup-search-input:focus {
+  border-color: var(--md3-primary);
+  box-shadow: 0 0 0 1px var(--md3-primary-container);
+}
+
+.popup-search-icon {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--md3-on-surface-variant);
+}
+
+/* Toast - MD3 themed */
+.popup-toast {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background-color: var(--md3-primary);
+  color: var(--md3-on-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px var(--md3-shadow);
+  z-index: 50;
+  font-size: 0.875rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* popup-body fills remaining space below header/tabs and enables internal scrolling */
 .popup-body {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto; /* allow grow and shrink */
-  min-height: 0; /* allow proper flex child scrolling */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
+  background-color: var(--md3-surface);
 }
 
 .popup-body > * {
-  /* child (EmojiGrid) should scroll internally */
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -277,7 +432,7 @@ body,
   }
 }
 
-/* Mobile: full-screen fallback, no forced large min-width on html/body */
+/* Mobile: full-screen fallback */
 @media (max-width: 767px) {
   html,
   body {
@@ -298,7 +453,7 @@ body,
   }
 }
 
-/* Enforce absolute minimum sizes to prevent extremely small windows */
+/* Enforce absolute minimum sizes */
 @media screen {
   .popup-container {
     min-width: 200px !important;

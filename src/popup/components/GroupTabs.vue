@@ -122,7 +122,7 @@ const focusLastTab = () => {
 
 <template>
   <div
-    class="group-tabs-scroll flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto"
+    class="group-tabs-scroll"
     role="tablist"
     :aria-label="t('groupTabs')"
   >
@@ -132,24 +132,20 @@ const focusLastTab = () => {
       @click="setActive(group.id)"
       @keydown="handleKeyNavigation($event, index)"
       :data-tab-index="index"
-      class="group-tab-button flex-shrink-0 px-3 py-2 mobile:px-4 mobile:py-3 text-xs mobile:text-sm font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-      :class="[
-        activeGroupId === group.id
-          ? 'border-blue-500 text-blue-600 bg-blue-50 dark:border-blue-500 dark:text-white dark:bg-gray-700'
-          : 'border-transparent bg-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-white dark:hover:text-white dark:hover:border-gray-600'
-      ]"
+      class="group-tab-button"
+      :class="{ 'group-tab-active': activeGroupId === group.id }"
       role="tab"
       :aria-selected="activeGroupId === group.id"
       :aria-controls="`panel-${group.id}`"
       :id="`tab-${group.id}`"
       tabindex="0"
     >
-      <span class="mr-1">
+      <span class="group-tab-icon">
         <template v-if="isImageUrl && isImageUrl(normalizeImageUrl(group.icon))">
           <CachedImage
             :src="getGroupIconSrc(group.icon, group.id)"
             :alt="group.name ? `${group.name} ${t('groupIcon')}` : t('groupIcon')"
-            class="w-4 h-4 mobile:w-5 mobile:h-5 object-contain inline-block"
+            class="group-tab-icon-img"
           />
         </template>
         <template v-else>
@@ -162,34 +158,88 @@ const focusLastTab = () => {
 </template>
 
 <style scoped>
-/* WebKit browsers */
+.group-tabs-scroll {
+  display: flex;
+  border-bottom: 1px solid var(--md3-outline-variant);
+  overflow-x: auto;
+  min-height: fit-content;
+}
+
+.group-tab-button {
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  background-color: transparent;
+  color: var(--md3-on-surface-variant);
+  outline: none;
+}
+
+.group-tab-button:hover {
+  color: var(--md3-on-surface);
+  background-color: var(--md3-surface-container-high);
+}
+
+.group-tab-button:focus {
+  outline: 2px solid var(--md3-primary);
+  outline-offset: -2px;
+}
+
+.group-tab-active {
+  border-bottom-color: var(--md3-primary);
+  color: var(--md3-primary);
+  background-color: var(--md3-primary-container);
+}
+
+.group-tab-active:hover {
+  color: var(--md3-primary);
+  background-color: var(--md3-primary-container);
+}
+
+.group-tab-icon {
+  margin-right: 0.25rem;
+}
+
+.group-tab-icon-img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  display: inline-block;
+}
+
+/* Mobile responsive */
+@media (min-width: 640px) {
+  .group-tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .group-tab-icon-img {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* WebKit browsers scrollbar */
 .group-tabs-scroll::-webkit-scrollbar {
   height: 10px;
 }
+
 .group-tabs-scroll::-webkit-scrollbar-track {
-  background: #f3f4f6; /* tailwind gray-100 */
-  border-radius: 9999px;
-}
-.group-tabs-scroll::-webkit-scrollbar-thumb {
-  background: #3b82f6; /* tailwind blue-500 */
+  background: var(--md3-surface-container);
   border-radius: 9999px;
 }
 
-/* Dark mode overrides using parent .dark class */
-:global(.dark) .group-tabs-scroll::-webkit-scrollbar-track {
-  background: #1f2937; /* tailwind gray-800 */
-}
-:global(.dark) .group-tabs-scroll::-webkit-scrollbar-thumb {
-  background: #9ca3af; /* tailwind gray-400 (light thumb on dark bg) */
+.group-tabs-scroll::-webkit-scrollbar-thumb {
+  background: var(--md3-primary);
+  border-radius: 9999px;
 }
 
 /* Firefox */
 .group-tabs-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #3b82f6 #f3f4f6;
-  min-height: fit-content;
-}
-:global(.dark) .group-tabs-scroll {
-  scrollbar-color: #9ca3af #1f2937;
+  scrollbar-color: var(--md3-primary) var(--md3-surface-container);
 }
 </style>
