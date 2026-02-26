@@ -458,8 +458,50 @@ function createTarHelpers(encoder: TextEncoder) {
         }
       })
 
-      if (!res.ok) return null
-      return res.blob()
+      if (res.ok) {
+        return res.blob()
+      }
+
+      // Fallback to pageFetch proxy for CORS/403 errors (e.g., linux.do images)
+      const chromeAPI = (globalThis as any).chrome
+      if (chromeAPI?.runtime?.sendMessage) {
+        try {
+          const blob = await new Promise<Blob | null>((resolve, reject) => {
+            chromeAPI.runtime.sendMessage(
+              {
+                type: 'PAGE_FETCH',
+                options: {
+                  url,
+                  method: 'GET',
+                  responseType: 'blob'
+                }
+              },
+              (resp: {
+                success: boolean
+                data?: { status: number; ok: boolean; data: any }
+                error?: string
+              }) => {
+                if (resp?.success && resp.data?.data) {
+                  const payload = resp.data.data
+                  if (payload && typeof payload === 'object' && Array.isArray(payload.arrayData)) {
+                    const blob = new Blob([new Uint8Array(payload.arrayData)], {
+                      type: payload.mimeType || 'image/webp'
+                    })
+                    resolve(blob)
+                    return
+                  }
+                }
+                reject(new Error(resp?.error || 'Page fetch failed'))
+              }
+            )
+          })
+          return blob
+        } catch {
+          return null
+        }
+      }
+
+      return null
     } catch (e) {
       if ((e as any)?.name === 'AbortError') throw e
       return null

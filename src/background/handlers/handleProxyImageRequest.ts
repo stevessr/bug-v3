@@ -120,12 +120,12 @@ async function fetchViaContentScript(
           url
         })
 
-        if (response?.success && response.data) {
+        if (response?.success && response.data?.arrayData) {
           return {
             success: true,
-            data: response.data,
-            mimeType: response.mimeType,
-            size: response.size
+            data: response.data.arrayData,
+            mimeType: response.data.mimeType,
+            size: response.data.size
           }
         }
       } catch (tabError) {
@@ -162,7 +162,7 @@ export async function handleProxyImageRequest(
       )
     }
 
-    // Fallback: Direct fetch with cookies
+    // Fallback 1: Direct fetch with cookies
     const headers: Record<string, string> = {
       Accept: 'image/*,*/*'
     }
@@ -180,31 +180,92 @@ export async function handleProxyImageRequest(
       }
     }
 
-    const response = await fetch(opts.url, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'include',
-      headers
-    })
-
-    if (!response.ok) {
-      sendResponse({
-        success: false,
-        status: response.status,
-        error: `HTTP ${response.status}: ${response.statusText}`
+    try {
+      const response = await fetch(opts.url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+        headers
       })
-      return
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const arrayBuffer = await blob.arrayBuffer()
+
+        sendResponse({
+          success: true,
+          data: Array.from(new Uint8Array(arrayBuffer)),
+          mimeType: blob.type,
+          size: blob.size,
+          status: response.status
+        })
+        return
+      }
+
+      console.log(
+        `[ProxyImage] Direct fetch failed with status ${response.status}, trying PAGE_FETCH fallback...`
+      )
+    } catch (fetchError) {
+      console.log(
+        '[ProxyImage] Direct fetch failed:',
+        fetchError,
+        ', trying PAGE_FETCH fallback...'
+      )
     }
 
-    const blob = await response.blob()
-    const arrayBuffer = await blob.arrayBuffer()
+    // Fallback 2: Try PAGE_FETCH via any available tab's content script
+    if (chromeAPI?.tabs) {
+      try {
+        // Find any tab that might have content script injected
+        const allTabs = await chromeAPI.tabs.query({})
+        // Prefer tabs with http/https URLs (content script is more likely to be active)
+        const candidateTabs = allTabs.filter(
+          (tab: any) =>
+            tab.url &&
+            (tab.url.startsWith('http://') || tab.url.startsWith('https://')) &&
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('chrome-extension://')
+        )
 
+        for (const tab of candidateTabs) {
+          if (!tab.id) continue
+
+          try {
+            const pageFetchResponse = await chromeAPI.tabs.sendMessage(tab.id, {
+              type: 'PAGE_FETCH',
+              options: {
+                url: opts.url,
+                method: 'GET',
+                responseType: 'blob'
+              }
+            })
+
+            if (pageFetchResponse?.success && pageFetchResponse?.data?.data) {
+              const payload = pageFetchResponse.data.data
+              if (payload.arrayData && Array.isArray(payload.arrayData)) {
+                sendResponse({
+                  success: true,
+                  data: payload.arrayData,
+                  mimeType: payload.mimeType || 'image/webp',
+                  size: payload.arrayData.length
+                })
+                return
+              }
+            }
+          } catch {
+            // This tab couldn't handle the request, try next
+            continue
+          }
+        }
+      } catch (pageFetchError) {
+        console.warn('[ProxyImage] PAGE_FETCH fallback failed:', pageFetchError)
+      }
+    }
+
+    // All fallbacks failed
     sendResponse({
-      success: true,
-      data: Array.from(new Uint8Array(arrayBuffer)),
-      mimeType: blob.type,
-      size: blob.size,
-      status: response.status
+      success: false,
+      error: 'All proxy methods failed (content script, direct fetch, PAGE_FETCH)'
     })
   } catch (error: any) {
     console.error('Proxy image request failed:', error)

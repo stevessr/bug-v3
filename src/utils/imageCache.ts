@@ -416,6 +416,16 @@ export class ImageCache {
             return
           }
 
+          // 验证缓存是否有效：blob 存在且 size > 0
+          if (!entry.blob || entry.size <= 0) {
+            warnCache(`Invalid cache entry (empty blob), removing: ${url.slice(0, 50)}...`)
+            // 删除无效缓存
+            store.delete(entry.id)
+            this.memoryCache.delete(url)
+            resolve(null)
+            return
+          }
+
           logCache(`IndexedDB cache hit for: ${url.slice(0, 50)}...`)
 
           // 更新访问统计
@@ -525,6 +535,11 @@ export class ImageCache {
       // 获取图片 (通过代理绕过 CORP 限制)
       const blob = await fetchImageViaProxy(url)
 
+      // 验证 blob 是否有效
+      if (!blob || blob.size <= 0) {
+        throw new Error('Fetched empty or invalid blob')
+      }
+
       // 注意：不再自动清理缓存，只能通过用户手动清理
       // 这样可以避免意外清空用户缓存的图片
 
@@ -619,7 +634,7 @@ export class ImageCache {
 
       for (const url of batch) {
         const entry = cachedEntries.get(url)
-        if (entry) {
+        if (entry && entry.blob && entry.size > 0) {
           try {
             const blobUrl = URL.createObjectURL(entry.blob)
             this.memoryCache.set(url, blobUrl, entry.size)
@@ -629,6 +644,7 @@ export class ImageCache {
             urlsToDownload.push(url)
           }
         } else {
+          // 缓存无效或不存在，重新下载
           urlsToDownload.push(url)
         }
       }
@@ -705,7 +721,7 @@ export class ImageCache {
 
       for (const url of batch) {
         const entry = cachedEntries.get(url)
-        if (entry) {
+        if (entry && entry.blob && entry.size > 0) {
           try {
             const blobUrl = URL.createObjectURL(entry.blob)
             this.memoryCache.set(url, blobUrl, entry.size)
