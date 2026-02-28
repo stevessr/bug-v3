@@ -99,6 +99,17 @@ const scrollToTop = () => {
   }
 }
 
+const scrollToIndex = (index: number, behavior: ScrollBehavior = 'auto') => {
+  if (!containerRef.value || props.items.length === 0) return
+
+  const safeIndex = Math.min(Math.max(index, 0), props.items.length - 1)
+  const rowIndex = Math.floor(safeIndex / itemsPerRow.value)
+  const nextScrollTop = rowIndex * props.itemHeight
+
+  containerRef.value.scrollTo({ top: nextScrollTop, behavior })
+  scrollTop.value = nextScrollTop
+}
+
 // 清理资源：取消待处理的 RAF
 onUnmounted(() => {
   if (scrollRafId !== null) {
@@ -118,7 +129,8 @@ defineExpose({
   enableAutoScroll,
   disableAutoScroll,
   scrollToTop,
-  scrollToBottom
+  scrollToBottom,
+  scrollToIndex
 })
 </script>
 

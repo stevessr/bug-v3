@@ -329,6 +329,10 @@ export default defineConfig(({ mode }) => {
                   ) {
                     return 'vendor-core'
                   }
+                  // 避免内容脚本引入重工具依赖
+                  if (id.includes('katex') || id.includes('dayjs') || id.includes('lodash')) {
+                    return 'vendor-utils'
+                  }
                   // 其他第三方依赖
                   return 'vendor-libs'
                 }

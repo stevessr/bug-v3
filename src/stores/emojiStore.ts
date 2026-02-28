@@ -1046,7 +1046,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     favorites,
     isSaving,
     isLoading,
-    applyUngroupedAddition
+    applyUngroupedAddition,
+    onEmojiAdded: emoji => searchIndexStore.addEmojiToIndex(emoji),
+    onEmojiRemoved: emoji => searchIndexStore.removeEmojiFromIndex(emoji),
+    onEmojiUpdated: (oldEmoji, newEmoji) => searchIndexStore.updateEmojiInIndex(oldEmoji, newEmoji),
+    onTagsAdded: tags => tagCountStore.incrementTagCounts(tags),
+    onTagsRemoved: tags => tagCountStore.decrementTagCounts(tags)
   })
 
   setupStorageListener()

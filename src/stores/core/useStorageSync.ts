@@ -13,6 +13,11 @@ interface StorageSyncOptions {
   isSaving: Ref<boolean>
   isLoading: Ref<boolean>
   applyUngroupedAddition: (payload: { emoji: Emoji; group?: EmojiGroup }) => void
+  onEmojiAdded?: (emoji: Emoji) => void
+  onEmojiRemoved?: (emoji: Emoji) => void
+  onEmojiUpdated?: (oldEmoji: Emoji, newEmoji: Emoji) => void
+  onTagsAdded?: (tags: string[] | undefined) => void
+  onTagsRemoved?: (tags: string[] | undefined) => void
 }
 
 export function useStorageSync({
@@ -21,7 +26,12 @@ export function useStorageSync({
   favorites,
   isSaving,
   isLoading,
-  applyUngroupedAddition
+  applyUngroupedAddition,
+  onEmojiAdded,
+  onEmojiRemoved,
+  onEmojiUpdated,
+  onTagsAdded,
+  onTagsRemoved
 }: StorageSyncOptions) {
   // Listen for changes from other extension contexts (e.g., options page)
   let isUpdatingFromStorage = false
@@ -63,7 +73,7 @@ export function useStorageSync({
   const handleGroupChange = async (
     groupId: string,
     change: chrome.storage.StorageChange
-  ): Promise<void> => {
+  ): Promise<EmojiGroup | null> => {
     // 尝试从 change payload 获取新数据
     let newGroup: EmojiGroup | null = null
     if (change?.newValue && typeof change.newValue === 'object') {
@@ -83,7 +93,7 @@ export function useStorageSync({
     if (newGroup == null) {
       groups.value = groups.value.filter(g => g.id !== groupId)
       console.log('[EmojiStore] Removed group from store due to external change', groupId)
-      return
+      return null
     }
 
     // 规范化图片 URL
@@ -114,6 +124,8 @@ export function useStorageSync({
         console.log('[EmojiStore] Inserted new group from external change', targetId)
       }
     }
+
+    return newGroup
   }
 
   /**
@@ -190,6 +202,68 @@ export function useStorageSync({
     }
   }
 
+  const hasIndexCallbacks = !!(
+    onEmojiAdded ||
+    onEmojiRemoved ||
+    onEmojiUpdated ||
+    onTagsAdded ||
+    onTagsRemoved
+  )
+
+  const applyGroupDiff = (before?: EmojiGroup | null, after?: EmojiGroup | null) => {
+    if (!hasIndexCallbacks) return
+
+    const beforeEmojis = Array.isArray(before?.emojis) ? before!.emojis : []
+    const afterEmojis = Array.isArray(after?.emojis) ? after!.emojis : []
+
+    const beforeMap = new Map<string, Emoji>()
+    for (const emoji of beforeEmojis) {
+      if (emoji?.id) beforeMap.set(emoji.id, emoji)
+    }
+
+    const afterMap = new Map<string, Emoji>()
+    for (const emoji of afterEmojis) {
+      if (emoji?.id) afterMap.set(emoji.id, emoji)
+    }
+
+    for (const [id, emoji] of afterMap) {
+      if (!beforeMap.has(id)) {
+        onEmojiAdded?.(emoji)
+        onTagsAdded?.(emoji.tags)
+      }
+    }
+
+    for (const [id, emoji] of beforeMap) {
+      if (!afterMap.has(id)) {
+        onEmojiRemoved?.(emoji)
+        onTagsRemoved?.(emoji.tags)
+      }
+    }
+
+    for (const [id, afterEmoji] of afterMap) {
+      const beforeEmoji = beforeMap.get(id)
+      if (!beforeEmoji) continue
+
+      const beforeTags = beforeEmoji.tags || []
+      const afterTags = afterEmoji.tags || []
+      const tagsChanged =
+        beforeTags.length !== afterTags.length ||
+        beforeTags.some((tag, index) => tag !== afterTags[index])
+      const nameChanged = beforeEmoji.name !== afterEmoji.name
+      const urlChanged = beforeEmoji.url !== afterEmoji.url || beforeEmoji.displayUrl !== afterEmoji.displayUrl
+      const groupChanged = beforeEmoji.groupId !== afterEmoji.groupId
+
+      if (tagsChanged) {
+        onTagsRemoved?.(beforeEmoji.tags)
+        onTagsAdded?.(afterEmoji.tags)
+      }
+
+      if (tagsChanged || nameChanged || urlChanged || groupChanged) {
+        onEmojiUpdated?.(beforeEmoji, afterEmoji)
+      }
+    }
+  }
+
   /**
    * 处理存储变更事件的分派器
    */
@@ -202,6 +276,16 @@ export function useStorageSync({
       handleLegacyGroupsChange(changes['emojiGroups'])
     }
 
+    const previousGroups = new Map<string, EmojiGroup | null>()
+    if (hasIndexCallbacks) {
+      for (const key of keys) {
+        if (!key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) continue
+        const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
+        const existing = groups.value.find(g => g.id === groupId) || null
+        previousGroups.set(groupId, existing)
+      }
+    }
+
     // 按 key 类型分派处理
     for (const key of keys) {
       try {
@@ -209,7 +293,9 @@ export function useStorageSync({
 
         if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
           const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
-          await handleGroupChange(groupId, changes[key])
+          const updatedGroup = await handleGroupChange(groupId, changes[key])
+          const previousGroup = previousGroups.get(groupId) || null
+          applyGroupDiff(previousGroup, updatedGroup)
         } else if (key === STORAGE_KEYS.SETTINGS) {
           handleSettingsChange(changes[key])
         } else if (key === STORAGE_KEYS.FAVORITES) {

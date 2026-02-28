@@ -3,9 +3,6 @@
  * 使用动态加载减少初始体积，按需加载平台特定模块
  */
 
-import { initializeEmojiFeature } from './utils/init'
-import { postTimings } from './discourse/utils/timingsBinder'
-import { autoReadAllv2 } from './discourse/utils/autoReadReplies'
 import {
   detectPlatform,
   shouldInjectEmojiFeature,
@@ -34,7 +31,27 @@ async function initialize(): Promise<void> {
   // 2. 处理 Discourse 平台（最常用，保留静态加载）
   if (shouldInjectEmojiFeature()) {
     log.info('Initializing emoji feature for Discourse/forum platform')
-    initializeEmojiFeature()
+    try {
+      const [{ initializeEmojiFeature }, { postTimings }, { autoReadAllv2 }] = await Promise.all([
+        import('./utils/init'),
+        import('./discourse/utils/timingsBinder'),
+        import('./discourse/utils/autoReadReplies')
+      ])
+      initializeEmojiFeature()
+
+      // Expose helpers to page context for testing and manual triggers.
+      try {
+        const domains = getDiscourseDomains()
+        if (domains.some(domain => window.location.hostname.includes(domain))) {
+          window.postTimings = postTimings
+          window.autoReadAllRepliesV2 = autoReadAllv2
+        }
+      } catch (e) {
+        console.warn('[Emoji Extension] failed to expose postTimings to window', e)
+      }
+    } catch (error) {
+      log.error('Failed to initialize Discourse emoji feature:', error)
+    }
   }
 
   // 3. 动态加载其他平台模块
@@ -58,19 +75,6 @@ if (chrome?.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return dispatchMessage(message, sender, sendResponse)
   })
-}
-
-// Expose postTimings helper to page context for testing and manual triggers.
-// We attach it to window only on linux.do pages to avoid polluting other sites.
-try {
-  if (DISCOURSE_DOMAINS.some(domain => window.location.hostname.includes(domain))) {
-    // Directly bind the statically imported postTimings
-    window.postTimings = postTimings
-    // expose autoReadAllv2 for page scripts
-    window.autoReadAllRepliesV2 = autoReadAllv2
-  }
-} catch (e) {
-  console.warn('[Emoji Extension] failed to expose postTimings to window', e)
 }
 
 // Initialize 429 error interceptor for linux.do
