@@ -774,6 +774,7 @@
     postTopicCache: new Map(),
     topicPostContextMap: new Map(),
     postByNumberCache: new Map(),
+    topicStreamCache: new Map(),
 
     getSelectedReaction() {
       const selector = document.getElementById('ld-reaction-select')
@@ -794,6 +795,147 @@
       const topicId = numericParts[0]
       const postNumber = numericParts[1] || 1
       return { topicId, postNumber }
+    },
+
+    getTopicContextFromAction(item) {
+      if (!item || typeof item !== 'object') return null
+
+      const toPositiveNumber = value => {
+        const n = Number(value)
+        return Number.isFinite(n) && n > 0 ? n : null
+      }
+
+      const directTopicId =
+        toPositiveNumber(item.topic_id) ||
+        toPositiveNumber(item.topicId) ||
+        toPositiveNumber(item.target_topic_id) ||
+        toPositiveNumber(item.targetTopicId)
+      const directPostNumber =
+        toPositiveNumber(item.post_number) ||
+        toPositiveNumber(item.postNumber) ||
+        toPositiveNumber(item.target_post_number) ||
+        toPositiveNumber(item.targetPostNumber)
+
+      if (directTopicId && directPostNumber) {
+        return { topicId: directTopicId, postNumber: directPostNumber }
+      }
+
+      const candidates = [
+        item.url,
+        item.path,
+        item.relative_url,
+        item.relativeUrl,
+        item.target_url,
+        item.targetUrl,
+        item.post_url,
+        item.postUrl,
+        item.permalink,
+        item.link
+      ]
+
+      for (const candidate of candidates) {
+        if (typeof candidate !== 'string') continue
+        const match = candidate.match(/\/t\/(?:[^/]+\/)?(\d+)\/(\d+)/)
+        if (!match) continue
+
+        const topicId = toPositiveNumber(match[1])
+        const postNumber = toPositiveNumber(match[2])
+        if (topicId && postNumber) {
+          return { topicId, postNumber }
+        }
+      }
+
+      return null
+    },
+
+    async fetchPostByNumber(topicId, postNumber, tabId = 'user') {
+      const topic = Number(topicId)
+      const postNum = Number(postNumber)
+      if (!Number.isFinite(topic) || topic <= 0 || !Number.isFinite(postNum) || postNum <= 0) {
+        return null
+      }
+
+      const byNumberUrl = `/posts/by_number/${topic}/${postNum}.json`
+      const byNumberRes = await fetch(byNumberUrl)
+      if (!byNumberRes.ok) {
+        this.log(`❌ 获取楼层失败: ${topic}/${postNum} (${byNumberRes.status})`, tabId)
+        return null
+      }
+
+      const byNumberData = await byNumberRes.json()
+      const postData = this.normalizePostData(byNumberData)
+      const postId = Number(postData?.id)
+      if (!Number.isFinite(postId) || postId <= 0) {
+        this.log(`❌ 楼层数据无效: ${topic}/${postNum}`, tabId)
+        return null
+      }
+
+      const postCategoryId = Number(postData?.category_id)
+      if (Number.isFinite(postCategoryId) && postCategoryId > 0) {
+        this.topicCategoryCache.set(topic, postCategoryId)
+      }
+
+      this.postByNumberCache.set(postId, postData)
+      this.postTopicCache.set(postId, topic)
+
+      const streamKey = `${topic}:${postNum}`
+      if (!this.topicStreamCache.has(streamKey)) {
+        const streamUrl = `/t/${topic}/${postNum}.json?track_visit=true&forceLoad=true`
+        const streamRes = await fetch(streamUrl)
+        if (streamRes.ok) {
+          const streamData = await streamRes.json()
+          const streamIds = Array.isArray(streamData?.post_stream?.stream)
+            ? streamData.post_stream.stream
+                .map(id => Number(id))
+                .filter(id => Number.isFinite(id) && id > 0)
+            : []
+          const streamPosts = Array.isArray(streamData?.post_stream?.posts)
+            ? streamData.post_stream.posts
+            : []
+
+          streamPosts.forEach(post => {
+            const normalized = this.normalizePostData(post)
+            const id = Number(normalized?.id)
+            if (Number.isFinite(id) && id > 0) {
+              this.postByNumberCache.set(id, normalized)
+              this.postTopicCache.set(id, topic)
+            }
+          })
+
+          this.topicPostContextMap.set(topic, {
+            topicId: topic,
+            anchorPostNumber: postNum,
+            postIds: new Set(streamIds)
+          })
+          this.topicStreamCache.set(streamKey, true)
+        } else {
+          this.log(`⚠️ track_visit 访问失败: ${topic}/${postNum} (${streamRes.status})`, tabId)
+        }
+      }
+
+      return postData
+    },
+
+    async prepareActionPost(item, tabId = 'user') {
+      if (!item) return null
+
+      const existingPostId = Number(item.id || item.post_id || item.postId || 0)
+      if (
+        Number.isFinite(existingPostId) &&
+        existingPostId > 0 &&
+        this.postByNumberCache.has(existingPostId)
+      ) {
+        return existingPostId
+      }
+
+      const context = this.getTopicContextFromAction(item)
+      if (!context) return null
+
+      const postData = await this.fetchPostByNumber(context.topicId, context.postNumber, tabId)
+      const resolvedPostId = Number(postData?.id || existingPostId)
+      if (!Number.isFinite(resolvedPostId) || resolvedPostId <= 0) return null
+
+      return resolvedPostId
     },
 
     pickAutoReactionId(postData) {
@@ -875,26 +1017,6 @@
       }
     },
 
-    async getTopicIdByPostId(postId) {
-      if (this.postTopicCache.has(postId)) return this.postTopicCache.get(postId)
-      const url = `/posts/${postId}.json`
-      try {
-        const res = await fetch(url)
-        if (!res.ok) {
-          this.postTopicCache.set(postId, null)
-          return null
-        }
-        const data = await res.json()
-        const postData = this.normalizePostData(data)
-        const topicId = postData?.topic_id || data?.topic_id || null
-        this.postTopicCache.set(postId, topicId)
-        return topicId
-      } catch (e) {
-        this.postTopicCache.set(postId, null)
-        return null
-      }
-    },
-
     async getTopicCategoryId(topicId) {
       if (this.topicCategoryCache.has(topicId)) return this.topicCategoryCache.get(topicId)
       const url = `/t/topic/${topicId}.json`
@@ -912,19 +1034,6 @@
         this.topicCategoryCache.set(topicId, null)
         return null
       }
-    },
-
-    async getCategoryIdForAction(item) {
-      if (!item) return null
-      const directCategoryId = item.category_id || item.categoryId || null
-      if (directCategoryId) return directCategoryId
-      const topicId = item.topic_id || item.topicId || null
-      if (topicId) return await this.getTopicCategoryId(topicId)
-      const postId = item.post_id || item.postId || item.id || null
-      if (!postId) return null
-      const topicIdFromPost = await this.getTopicIdByPostId(postId)
-      if (!topicIdFromPost) return null
-      return await this.getTopicCategoryId(topicIdFromPost)
     },
 
     // 从 localStorage 加载位置
@@ -1375,14 +1484,29 @@
           for (let item of data.user_actions) {
             if (results.length >= count) break
 
-            const categoryId = await this.getCategoryIdForAction(item)
-            if (!categoryId || !this.isCategoryAllowed(categoryId)) {
+            const context = this.getTopicContextFromAction(item)
+            if (!context) continue
+
+            const preparedPostId = await this.prepareActionPost(item, 'user')
+            if (!preparedPostId) {
+              this.log(
+                `⏭️ 跳过无法解析楼层的数据：${context.topicId}/${context.postNumber}`,
+                'user'
+              )
               continue
             }
 
-            if (!results.find(r => r.id === item.post_id)) {
+            const cachedPost = this.postByNumberCache.get(preparedPostId) || null
+            const categoryId = Number(cachedPost?.category_id || item.category_id || item.categoryId || 0)
+            if (!Number.isFinite(categoryId) || categoryId <= 0 || !this.isCategoryAllowed(categoryId)) {
+              continue
+            }
+
+            if (!results.find(r => r.id === preparedPostId)) {
               results.push({
-                id: item.post_id,
+                id: preparedPostId,
+                topicId: context.topicId,
+                postNumber: context.postNumber,
                 title: item.title,
                 excerpt: item.excerpt ? item.excerpt.substring(0, 30) + '...' : '(无预览)'
               })
