@@ -696,13 +696,29 @@
     },
 
     init() {
+      let injectPending = false
+      const scheduleInject = () => {
+        if (injectPending) return
+        injectPending = true
+        requestAnimationFrame(() => {
+          injectPending = false
+          this.injectTimerButton()
+        })
+      }
+
+      const observerRoot =
+        document.getElementById('reply-control') ||
+        document.querySelector('.composer-controls')?.closest('#reply-control') ||
+        document.querySelector('#main-outlet') ||
+        document.body
+      const useSubtree = observerRoot !== document.body
+
       const observer = new MutationObserver(() => {
-        this.injectTimerButton()
+        scheduleInject()
       })
 
-      observer.observe(document.body, { childList: true, subtree: true })
-      setInterval(() => this.injectTimerButton(), 1000)
-      this.injectTimerButton()
+      observer.observe(observerRoot, { childList: true, subtree: useSubtree })
+      scheduleInject()
     }
   }
 
@@ -1883,6 +1899,9 @@
 
     // ===== 用户卡片快捷点赞功能 =====
     observeUserCard() {
+      const observerRoot = document.querySelector('#main-outlet') || document.body
+      const useSubtree = observerRoot !== document.body
+
       const observer = new MutationObserver(mutations => {
         for (const mutation of mutations) {
           if (mutation.addedNodes.length) {
@@ -1900,7 +1919,7 @@
         }
       })
 
-      observer.observe(document.body, { childList: true, subtree: true })
+      observer.observe(observerRoot, { childList: true, subtree: useSubtree })
 
       // 检查是否已存在用户卡片
       const existingCard = document.getElementById('user-card')
@@ -2426,6 +2445,11 @@
       this.isInitialized = true
 
       let observerTimer = null
+      const observerRoot =
+        document.querySelector('#main-outlet') ||
+        document.querySelector('.discourse-reactions-picker')?.parentElement ||
+        document.body
+      const useSubtree = observerRoot !== document.body
       const observer = new MutationObserver(mutations => {
         let reactionPickerFound = false
         for (const m of mutations) {
@@ -2463,7 +2487,7 @@
         } catch (e) {}
         setTimeout(() => this.syncRemote(), 3000)
         setInterval(() => this.syncRemote(), this.CONFIG.SYNC_INTERVAL)
-        observer.observe(document.body, { childList: true, subtree: true })
+        observer.observe(observerRoot, { childList: true, subtree: useSubtree })
       })
     }
   }
