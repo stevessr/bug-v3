@@ -2,7 +2,7 @@
   "page": 1,
   "pageSize": 50,
   "totalPages": 6,
-  "totalGroups": 257,
+  "totalGroups": 259,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -297,7 +297,7 @@
       "name": "saba 和 gura 的奇奇怪怪",
       "icon": "https://linux.do/uploads/default/original/4X/1/4/b/14b2322732c31a11987b70e80c0b0da0a0c0122e.webp?v=telegram",
       "order": 36,
-      "emojiCount": 94,
+      "emojiCount": 120,
       "isArchived": false
     },
     {
