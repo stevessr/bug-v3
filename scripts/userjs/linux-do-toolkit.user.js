@@ -714,6 +714,7 @@
     // 可用表情列表
     REACTIONS: [
       { id: 'heart', name: '❤️ Heart', emoji: '❤️' },
+      { id: '__auto__', name: '🤖 自动分析（热门/❤️）', emoji: '🤖' },
       { id: '+1', name: '👍 +1', emoji: '👍' },
       { id: 'laughing', name: '😆 Laughing', emoji: '😆' },
       { id: 'open_mouth', name: '😮 Open Mouth', emoji: '😮' },
@@ -771,10 +772,49 @@
     reactionStatusCache: new Map(),
     topicCategoryCache: new Map(),
     postTopicCache: new Map(),
+    topicPostContextMap: new Map(),
+    postByNumberCache: new Map(),
 
     getSelectedReaction() {
       const selector = document.getElementById('ld-reaction-select')
-      return selector ? selector.value : 'distorted_face'
+      return selector ? selector.value : 'heart'
+    },
+
+    getTopicContextFromUrl() {
+      const parts = window.location.pathname.split('/').filter(Boolean)
+      if (parts[0] !== 't') return null
+
+      const numericParts = parts
+        .slice(1)
+        .map(p => Number(p))
+        .filter(n => Number.isFinite(n) && n > 0)
+
+      if (numericParts.length === 0) return null
+
+      const topicId = numericParts[0]
+      const postNumber = numericParts[1] || 1
+      return { topicId, postNumber }
+    },
+
+    pickAutoReactionId(postData) {
+      const fallback = 'heart'
+      const reactions = Array.isArray(postData?.reactions) ? postData.reactions : []
+      if (reactions.length === 0) return fallback
+
+      const allowed = new Set(this.REACTIONS.map(r => r.id).filter(id => id !== '__auto__'))
+      let best = null
+
+      for (const reaction of reactions) {
+        const id = typeof reaction?.id === 'string' ? reaction.id : null
+        const count = Number(reaction?.count || 0)
+        if (!id || !allowed.has(id) || count <= 0) continue
+
+        if (!best || count > best.count) {
+          best = { id, count }
+        }
+      }
+
+      return best?.id || fallback
     },
 
     normalizePostData(data) {
@@ -809,22 +849,25 @@
       return { any: unique.length > 0, list: unique }
     },
 
-    async isAlreadyReacted(postId, reactionId) {
+    async isAlreadyReacted(postId, reactionId, postData = null) {
       const cacheKey = `${postId}:${reactionId || '*'}`
       if (this.reactionStatusCache.has(cacheKey)) return this.reactionStatusCache.get(cacheKey)
 
-      const url = `/posts/${postId}.json`
       try {
-        const res = await fetch(url)
-        if (!res.ok) {
+        const finalPostData = postData ? this.normalizePostData(postData) : null
+        if (!finalPostData) {
           this.reactionStatusCache.set(cacheKey, false)
           return false
         }
-        const data = await res.json()
-        const postData = this.normalizePostData(data)
-        const status = this.extractCurrentReactions(postData)
-        const matched = reactionId ? status.list.includes(reactionId) : status.any
+
+        const status = this.extractCurrentReactions(finalPostData)
+        const effectiveReactionId =
+          reactionId === '__auto__' ? this.pickAutoReactionId(finalPostData) : reactionId
+        const matched = effectiveReactionId ? status.list.includes(effectiveReactionId) : status.any
         this.reactionStatusCache.set(cacheKey, matched)
+        if (effectiveReactionId && effectiveReactionId !== reactionId) {
+          this.reactionStatusCache.set(`${postId}:${effectiveReactionId}`, matched)
+        }
         return matched
       } catch (e) {
         this.reactionStatusCache.set(cacheKey, false)
@@ -1095,26 +1138,76 @@
 
     // ===== 全员表情功能 =====
     async getAllPostIds() {
-      const match = window.location.pathname.match(/\/t\/[^\/]+\/(\d+)/)
-      if (!match) {
+      const context = this.getTopicContextFromUrl()
+      if (!context) {
         alert('无法获取帖子 ID，请确认要在帖子详情页使用')
         return null
       }
-      const topicId = match[1]
+
+      const { topicId, postNumber } = context
 
       try {
-        const response = await fetch(`/t/topic/${topicId}.json`)
-        if (!response.ok) throw new Error('网络请求失败')
-        const data = await response.json()
+        const primaryRes = await fetch(`/posts/by_number/${topicId}/${postNumber}.json`)
+        if (!primaryRes.ok) throw new Error(`主接口请求失败 (${primaryRes.status})`)
+        const primaryData = await primaryRes.json()
+        const primaryPost = this.normalizePostData(primaryData)
 
-        if (data.post_stream && data.post_stream.stream) {
-          return {
-            postIds: data.post_stream.stream,
-            categoryId: data.category_id
+        if (!primaryPost?.id) {
+          throw new Error('主接口未返回有效楼层数据')
+        }
+
+        const anchorId = Number(primaryPost.id)
+        if (!Number.isFinite(anchorId) || anchorId <= 0) {
+          throw new Error('主接口返回的楼层 ID 无效')
+        }
+
+        this.postByNumberCache.set(anchorId, primaryPost)
+
+        let categoryId = primaryPost.category_id || null
+        if (!categoryId) {
+          categoryId = await this.getTopicCategoryId(topicId)
+        }
+
+        const streamRes = await fetch(
+          `/t/${topicId}/${postNumber}.json?track_visit=true&forceLoad=true`
+        )
+        if (!streamRes.ok) throw new Error(`楼层列表接口请求失败 (${streamRes.status})`)
+        const streamData = await streamRes.json()
+        const rawPostIds = Array.isArray(streamData?.post_stream?.stream)
+          ? streamData.post_stream.stream
+          : []
+        const postIds = rawPostIds
+          .map(id => Number(id))
+          .filter(id => Number.isFinite(id) && id > 0)
+
+        const streamPosts = Array.isArray(streamData?.post_stream?.posts)
+          ? streamData.post_stream.posts
+          : []
+        streamPosts.forEach(post => {
+          const normalized = this.normalizePostData(post)
+          const id = Number(normalized?.id)
+          if (Number.isFinite(id) && id > 0) {
+            this.postByNumberCache.set(id, normalized)
           }
-        } else {
+        })
+
+        if (postIds.length === 0) {
           this.log('未找到楼层数据', 'all')
           return null
+        }
+
+        this.topicPostContextMap.set(topicId, {
+          topicId,
+          anchorPostNumber: primaryPost.post_number || postNumber,
+          postIds: new Set(postIds)
+        })
+
+        return {
+          postIds,
+          categoryId,
+          topicId,
+          anchorPostId: anchorId,
+          anchorPostNumber: primaryPost.post_number || postNumber
         }
       } catch (e) {
         console.error(e)
@@ -1124,17 +1217,25 @@
     },
 
     async sendReactionToPost(postId, current, total, tabId) {
-      const reactionId = this.getSelectedReaction()
-      const url = `https://linux.do/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
+      const selectedReactionId = this.getSelectedReaction()
+      let reactionId = selectedReactionId
 
       try {
+        const postData = this.postByNumberCache.get(postId) || null
+
+        if (selectedReactionId === '__auto__') {
+          reactionId = this.pickAutoReactionId(postData)
+        }
+
         if (this.SKIP_ALREADY_REACTED) {
-          const alreadyReacted = await this.isAlreadyReacted(postId, reactionId)
+          const alreadyReacted = await this.isAlreadyReacted(postId, selectedReactionId, postData)
           if (alreadyReacted) {
             this.log(`⏭️ (${current}/${total}) ID:${postId} 已点过，跳过`, tabId)
             return 'skipped'
           }
         }
+
+        const url = `https://linux.do/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
 
         const res = await fetch(url, {
           method: 'PUT',
@@ -1149,7 +1250,12 @@
         })
 
         if (res.status === 200) {
-          this.log(`✅ (${current}/${total}) ID:${postId} 成功`, tabId)
+          const reactionLabel = selectedReactionId === '__auto__' ? ` 自动(${reactionId})` : ''
+          this.log(`✅ (${current}/${total}) ID:${postId}${reactionLabel} 成功`, tabId)
+          this.reactionStatusCache.set(`${postId}:${reactionId}`, true)
+          if (selectedReactionId !== reactionId) {
+            this.reactionStatusCache.set(`${postId}:${selectedReactionId}`, true)
+          }
           return true
         } else if (res.status === 429) {
           this.log(`⚠️ (${current}/${total}) ID:${postId} 触发限流，暂停 5 秒`, tabId)
@@ -1170,13 +1276,12 @@
       const btn = document.getElementById('ld-all-start-btn')
       const reactionId = this.getSelectedReaction()
       const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId
+      const tip =
+        reactionId === '__auto__'
+          ? '自动模式会按每层当前最多反应发送，若无反应则发送 ❤️。'
+          : '注意：此接口为 toggle (切换)，如果已点过则会取消。'
 
-      if (
-        !confirm(
-          `确定要给当前帖子下的所有楼层发送 "${reactionName}" 表情吗？\n注意：此接口为 toggle (切换)，如果已点过则会取消。`
-        )
-      )
-        return
+      if (!confirm(`确定要给当前帖子下的所有楼层发送 "${reactionName}" 表情吗？\n${tip}`)) return
 
       this.isRunning = true
       btn.disabled = true
@@ -1194,7 +1299,18 @@
         return
       }
 
-      const { postIds, categoryId } = result
+      const { postIds, categoryId, topicId } = result
+
+      if (Number.isFinite(topicId)) {
+        const context = this.topicPostContextMap.get(topicId)
+        if (context && context.postIds instanceof Set) {
+          this.postByNumberCache.forEach((_, pid) => {
+            if (!context.postIds.has(pid)) {
+              this.postByNumberCache.delete(pid)
+            }
+          })
+        }
+      }
 
       // 检查分类是否允许
       if (!this.isCategoryAllowed(categoryId)) {
@@ -1317,9 +1433,13 @@
 
       const reactionId = this.getSelectedReaction()
       const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId
+      const tip =
+        reactionId === '__auto__' ? '自动模式会按每层当前最多反应发送，若无反应则发送 ❤️。' : ''
 
       if (
-        !confirm(`确定要对这 ${this.targetPostIds.length} 个帖子/回复发送 "${reactionName}" 吗？`)
+        !confirm(
+          `确定要对这 ${this.targetPostIds.length} 个帖子/回复发送 "${reactionName}" 吗？${tip ? `\n${tip}` : ''}`
+        )
       )
         return
 
@@ -1725,9 +1845,13 @@
         // 确认操作
         const reactionId = this.getSelectedReaction()
         const reactionName = this.REACTIONS.find(r => r.id === reactionId)?.name || reactionId
+        const tip =
+          reactionId === '__auto__' ? '自动模式会按每层当前最多反应发送，若无反应则发送 ❤️。' : ''
 
         if (
-          !confirm(`确定要给 ${username} 的 ${posts.length} 个最近帖子发送 "${reactionName}" 吗？`)
+          !confirm(
+            `确定要给 ${username} 的 ${posts.length} 个最近帖子发送 "${reactionName}" 吗？${tip ? `\n${tip}` : ''}`
+          )
         ) {
           btn.disabled = false
           btn.innerHTML = originalHTML
