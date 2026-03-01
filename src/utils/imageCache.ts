@@ -766,6 +766,7 @@ export class ImageCache {
    * 优化：使用 cursor 遍历，只读取元数据，避免加载大量 Blob 到内存
    * 注意：只在超出限制 20% 时才清理，避免频繁清理
    */
+  // @ts-expect-error kept for API compatibility
   private async ensureCacheLimits(): Promise<void> {
     if (!this.db) return
 

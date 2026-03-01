@@ -4,10 +4,7 @@ import {
   Input,
   Select,
   Switch,
-  Tag,
-  Collapse,
-  DatePicker,
-  InputNumber
+  Tag
 } from 'ant-design-vue'
 
 import type {
@@ -140,10 +137,7 @@ export default defineComponent({
       })
     })
 
-    const filterCategoryOption = (
-      input: string,
-      option?: { label?: string; value?: string; id?: number }
-    ) => {
+    const filterCategoryOption = (input: string, option?: any) => {
       const keyword = input.trim().toLowerCase()
       if (!keyword) return true
       const label = String(option?.label || '').toLowerCase()
@@ -314,7 +308,7 @@ export default defineComponent({
               <span class="text-gray-500 shrink-0">分类</span>
               <Select
                 size="small"
-                mode="combobox"
+                mode="SECRET_COMBOBOX_MODE_DO_NOT_USE"
                 showSearch
                 allowClear
                 class="flex-1"
@@ -322,8 +316,8 @@ export default defineComponent({
                 placeholder="选择分类"
                 options={categoryOptions.value}
                 filterOption={filterCategoryOption}
-                onUpdate:value={(value: string | undefined) => {
-                  localFilters.value.category = value ? value.trim() : ''
+                onUpdate:value={(value: any) => {
+                  localFilters.value.category = value ? String(value).trim() : ''
                 }}
               />
             </div>
@@ -344,7 +338,7 @@ export default defineComponent({
               tokenSeparators={[',', ' ']}
               onSearch={handleTagSearch}
               onDropdownVisibleChange={handleTagDropdown}
-              onUpdate:value={(value: string[]) => updateSelectedTags(value)}
+              onUpdate:value={(value: any) => updateSelectedTags((value || []) as string[])}
               v-slots={{
                 tagRender: ({ value, closable, onClose }: any) => (
                   <span class="inline-flex items-center gap-1 mr-1">
@@ -415,8 +409,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inTitle}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inTitle = checked
+                    onChange={checked => {
+                      localFilters.value.inTitle = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">标题内</span>
@@ -425,8 +419,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inFirst}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inFirst = checked
+                    onChange={checked => {
+                      localFilters.value.inFirst = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">仅首帖</span>
@@ -435,8 +429,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inPinned}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inPinned = checked
+                    onChange={checked => {
+                      localFilters.value.inPinned = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">置顶</span>
@@ -445,8 +439,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inWiki}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inWiki = checked
+                    onChange={checked => {
+                      localFilters.value.inWiki = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">Wiki</span>
@@ -455,8 +449,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inMessages}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inMessages = checked
+                    onChange={checked => {
+                      localFilters.value.inMessages = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">私信</span>
@@ -470,8 +464,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inPosted}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inPosted = checked
+                    onChange={checked => {
+                      localFilters.value.inPosted = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">我发布的</span>
@@ -480,8 +474,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inBookmarks}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inBookmarks = checked
+                    onChange={checked => {
+                      localFilters.value.inBookmarks = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">我的书签</span>
@@ -490,8 +484,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inLikes}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inLikes = checked
+                    onChange={checked => {
+                      localFilters.value.inLikes = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">我点赞的</span>
@@ -500,8 +494,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inWatching}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inWatching = checked
+                    onChange={checked => {
+                      localFilters.value.inWatching = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">关注中</span>
@@ -510,8 +504,8 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inTracking}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inTracking = checked
+                    onChange={checked => {
+                      localFilters.value.inTracking = Boolean(checked)
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">跟踪中</span>
@@ -520,9 +514,10 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inSeen}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inSeen = checked
-                      if (checked) localFilters.value.inUnseen = false
+                    onChange={checked => {
+                      const next = Boolean(checked)
+                      localFilters.value.inSeen = next
+                      if (next) localFilters.value.inUnseen = false
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">已读</span>
@@ -531,9 +526,10 @@ export default defineComponent({
                   <Switch
                     size="small"
                     checked={localFilters.value.inUnseen}
-                    onChange={(checked: boolean) => {
-                      localFilters.value.inUnseen = checked
-                      if (checked) localFilters.value.inSeen = false
+                    onChange={checked => {
+                      const next = Boolean(checked)
+                      localFilters.value.inUnseen = next
+                      if (next) localFilters.value.inSeen = false
                     }}
                   />
                   <span class="text-gray-600 dark:text-gray-400">未读</span>

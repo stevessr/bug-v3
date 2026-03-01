@@ -14,10 +14,10 @@ import BufferEmojiGrid from '../components/BufferEmojiGrid'
 import { useBufferBatch } from './composables/useBufferBatch'
 import { useFilePersistence } from './composables/useFilePersistence'
 import { useCollaborativeUpload } from './composables/useCollaborativeUpload'
-import { useUpload } from './composables/useUpload'
+import { useUpload, type UploadProgressItem } from './composables/useUpload'
 
 import { requestConfirmation } from '@/options/utils/confirmService'
-import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '@/utils/imageUrlHelper'
+import { getEmojiImageUrlWithLoading } from '@/utils/imageUrlHelper'
 import { shouldPreferCache, shouldUseImageCache } from '@/utils/imageCachePolicy'
 import CachedImage from '@/components/CachedImage.vue'
 
@@ -53,15 +53,7 @@ interface UploadCardItem {
 }
 
 // Upload progress state (must be defined before categorizedUploadItems)
-const uploadProgress = ref<
-  Array<{
-    fileName: string
-    percent: number
-    error?: string
-    waitingFor?: number
-    waitStart?: number
-  }>
->([])
+const uploadProgress = ref<UploadProgressItem[]>([])
 
 const categorizedUploadItems = computed(() => {
   if (uploadProgress.value.length === 0)

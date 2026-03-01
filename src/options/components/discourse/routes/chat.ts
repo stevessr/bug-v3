@@ -114,7 +114,7 @@ const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boo
       : Array.isArray(data)
         ? data
         : []
-  const messages = rawMessages.map(item => normalizeSingleMessage(item))
+  const messages = rawMessages.map((item: any) => normalizeSingleMessage(item))
 
   const meta = data.meta || data
   const hasMore = !!(

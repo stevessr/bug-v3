@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, isRef } from 'vue'
+import { ref, computed, nextTick, watch, isRef, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import CachedImage from '@/components/CachedImage.vue'
@@ -23,9 +23,7 @@ import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
-const safeSettings = computed(
-  () => (isRef(store.settings) ? store.settings.value : store.settings) || defaultSettings
-)
+const safeSettings = computed(() => store.settings || defaultSettings)
 
 // --- 状态 ---
 const telegramBotToken = ref('')

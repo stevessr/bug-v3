@@ -6,7 +6,7 @@ import FavoritesTab from '../components/FavoritesTab'
 
 const options = inject<OptionsInject>('options')!
 
-const { emojiStore, removeEmojiFromGroup, openEditEmoji } = options
+const { removeEmojiFromGroup, openEditEmoji } = options
 </script>
 
 <template>

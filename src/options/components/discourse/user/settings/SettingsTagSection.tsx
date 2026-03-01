@@ -99,27 +99,29 @@ export default defineComponent({
             <Select
               {...commonProps}
               value={props.form.value.watched_tags}
-              onUpdate:value={(value: string[]) => (props.form.value.watched_tags = value || [])}
+              onUpdate:value={value =>
+                (props.form.value.watched_tags = (value || []) as string[])
+              }
             />
             <div class="text-gray-500">追踪</div>
             <Select
               {...commonProps}
               value={props.form.value.tracked_tags}
-              onUpdate:value={(value: string[]) => (props.form.value.tracked_tags = value || [])}
+              onUpdate:value={value => (props.form.value.tracked_tags = (value || []) as string[])}
             />
             <div class="text-gray-500">关注首帖</div>
             <Select
               {...commonProps}
               value={props.form.value.watching_first_post_tags}
-              onUpdate:value={(value: string[]) =>
-                (props.form.value.watching_first_post_tags = value || [])
+              onUpdate:value={value =>
+                (props.form.value.watching_first_post_tags = (value || []) as string[])
               }
             />
             <div class="text-gray-500">静音</div>
             <Select
               {...commonProps}
               value={props.form.value.muted_tags}
-              onUpdate:value={(value: string[]) => (props.form.value.muted_tags = value || [])}
+              onUpdate:value={value => (props.form.value.muted_tags = (value || []) as string[])}
             />
           </div>
         </div>

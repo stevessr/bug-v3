@@ -1,4 +1,4 @@
-import type { Element, Parent, Properties, ElementContent } from 'hast'
+import type { Element, Parent, Properties, ElementContent, Node } from 'hast'
 
 import { buildLightbox, ParseContext, resolveUrl } from './context'
 import {

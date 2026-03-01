@@ -1,5 +1,3 @@
-import type { Ref } from 'vue'
-
 export async function loadUsernameFromExtension(): Promise<string | null> {
   try {
     const chromeAPI = (globalThis as any).chrome

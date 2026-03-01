@@ -39,8 +39,8 @@ export default defineComponent({
             placeholder="选择范围"
             options={props.newTopicDurationOptions}
             value={props.form.value.new_topic_duration_minutes}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.new_topic_duration_minutes = value)
+            onUpdate:value={value =>
+              (props.form.value.new_topic_duration_minutes = value as number | undefined)
             }
           />
           <div class="text-gray-500">自动追踪话题</div>
@@ -51,8 +51,8 @@ export default defineComponent({
             placeholder="选择延迟"
             options={props.autoTrackOptions}
             value={props.form.value.auto_track_topics_after_msecs}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.auto_track_topics_after_msecs = value)
+            onUpdate:value={value =>
+              (props.form.value.auto_track_topics_after_msecs = value as number | undefined)
             }
           />
           <div class="text-gray-500">回复时通知级别</div>

@@ -279,7 +279,9 @@ export async function getEmojiImageUrls(
   if (!preferCache || strategy === 'force-source' || strategy === 'auto') {
     for (const emoji of emojis) {
       const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
-      results.set(emoji.id, url)
+      if (emoji.id) {
+        results.set(emoji.id, url)
+      }
     }
     return results
   }
@@ -292,7 +294,9 @@ export async function getEmojiImageUrls(
     const adaptiveUrls = urls.filter(url => shouldPreferCache(emojiStore.settings, url))
     if (adaptiveUrls.length === 0) {
       for (let i = 0; i < emojis.length; i++) {
-        results.set(emojis[i].id, urls[i])
+        if (emojis[i].id) {
+          results.set(emojis[i].id, urls[i])
+        }
       }
       return results
     }
@@ -301,7 +305,9 @@ export async function getEmojiImageUrls(
     for (let i = 0; i < emojis.length; i++) {
       const url = urls[i]
       const cachedUrl = cacheResults.get(url)
-      results.set(emojis[i].id, cachedUrl || url)
+      if (emojis[i].id) {
+        results.set(emojis[i].id, cachedUrl || url)
+      }
     }
     return results
   }
@@ -314,9 +320,13 @@ export async function getEmojiImageUrls(
     const cachedUrl = cacheResults.get(url)
 
     if (cachedUrl && typeof cachedUrl === 'string') {
-      results.set(emoji.id, cachedUrl)
+      if (emoji.id) {
+        results.set(emoji.id, cachedUrl)
+      }
     } else {
-      results.set(emoji.id, addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+      if (emoji.id) {
+        results.set(emoji.id, addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+      }
     }
   }
 

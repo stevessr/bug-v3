@@ -365,7 +365,11 @@ async function isAlreadyReacted(postId: number, reactionId: string): Promise<boo
     // Check current_user_reaction (single object or ID)
     if (postData.current_user_reaction) {
       const r = postData.current_user_reaction
-      currentReactions.push(typeof r === 'object' && r.id ? r.id : r)
+      if (typeof r === 'string') {
+        currentReactions.push(r)
+      } else if (r && r.id) {
+        currentReactions.push(r.id)
+      }
     }
 
     // Check current_user_reactions (array)
@@ -465,7 +469,7 @@ export async function checkDailyLimit(): Promise<DailyLimitInfo | null> {
     const username = user.username
 
     const LIMITS: Record<number, number> = { 0: 50, 1: 50, 2: 75, 3: 100, 4: 150 }
-    const limit = LIMITS[trustLevel] || 50
+    const limit = LIMITS[trustLevel ?? 0] || 50
 
     // 2. Count today's actions
     let used = 0
