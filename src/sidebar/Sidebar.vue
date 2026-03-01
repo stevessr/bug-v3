@@ -335,11 +335,7 @@ ${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
                   <!-- 標籤顯示 -->
                   <div v-if="emoji.tags && emoji.tags.length > 0" class="mt-1">
                     <div class="flex flex-wrap gap-1">
-                      <span
-                        v-for="tag in emoji.tags.slice(0, 2)"
-                        :key="tag"
-                        class="sidebar-tag"
-                      >
+                      <span v-for="tag in emoji.tags.slice(0, 2)" :key="tag" class="sidebar-tag">
                         {{ tag }}
                       </span>
                       <span v-if="emoji.tags.length > 2" class="sidebar-tag-more">
@@ -392,10 +388,7 @@ ${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
         </div>
 
         <!-- 复制成功提示 -->
-        <div
-          v-if="showCopyToast"
-          class="sidebar-toast"
-        >
+        <div v-if="showCopyToast" class="sidebar-toast">
           {{ t('linkCopiedToClipboard') }}
         </div>
       </template>
@@ -608,8 +601,13 @@ body,
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @media (min-width: 768px) {

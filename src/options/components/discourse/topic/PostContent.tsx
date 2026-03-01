@@ -593,6 +593,7 @@ export default defineComponent({
                 wrapperClassName="post-inline-image-wrapper"
                 src={getLightboxThumb(segment.image)}
                 preview={getLightboxPreview(segment.image)}
+                // @ts-ignore
                 alt={segment.image.alt || ''}
                 width={segment.image.width}
                 height={segment.image.height}

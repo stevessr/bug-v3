@@ -1,4 +1,4 @@
-import { defineComponent, computed, resolveComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
 
 import type { DiscoursePost, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'

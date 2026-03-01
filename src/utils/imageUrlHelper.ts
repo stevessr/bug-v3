@@ -76,8 +76,8 @@ export async function getEmojiImageUrl(
   const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
-  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
-  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji)
+  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url || '', emoji)
 
   const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
 
@@ -121,7 +121,7 @@ export function getEmojiImageUrlSync(
   const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
-  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji)
 
   const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
 
@@ -154,8 +154,8 @@ export async function getEmojiImageUrlWithLoading(
   const strategy = resolveImageCacheStrategy(emojiStore.settings)
 
   // Determine the primary URL to use with cache-busting
-  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
-  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url, emoji)
+  const primaryUrl = addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji)
+  const finalFallbackUrl = addCacheBustingParam(fallbackUrl || emoji.url || '', emoji)
 
   const preferCacheNow = preferCache && shouldPreferCache(emojiStore.settings, primaryUrl)
 
@@ -229,7 +229,7 @@ export async function preloadImages(
   }
 
   // 构建 URL 列表
-  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji))
 
   // 如果只需要加载到内存，使用更快的方法
   if (toMemory) {
@@ -278,7 +278,7 @@ export async function getEmojiImageUrls(
   // If caching is disabled or strategy prefers source, just return direct URLs
   if (!preferCache || strategy === 'force-source' || strategy === 'auto') {
     for (const emoji of emojis) {
-      const url = addCacheBustingParam(emoji.displayUrl || emoji.url, emoji)
+      const url = addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji)
       if (emoji.id) {
         results.set(emoji.id, url)
       }
@@ -288,26 +288,27 @@ export async function getEmojiImageUrls(
 
   // 批量处理
   const { cacheImages } = await import('./imageCache')
-  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+  const urls = emojis.map(emoji => addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji))
 
   if (strategy === 'adaptive') {
     const adaptiveUrls = urls.filter(url => shouldPreferCache(emojiStore.settings, url))
     if (adaptiveUrls.length === 0) {
       for (let i = 0; i < emojis.length; i++) {
-        if (emojis[i].id) {
-          results.set(emojis[i].id, urls[i])
-        }
+        const id = emojis[i]?.id
+        if (!id) continue
+        results.set(id, urls[i] || '')
       }
       return results
     }
 
     const cacheResults = await cacheImages(adaptiveUrls, { concurrency: 4 })
     for (let i = 0; i < emojis.length; i++) {
+      const id = emojis[i]?.id
+      if (!id) continue
       const url = urls[i]
       const cachedUrl = cacheResults.get(url)
-      if (emojis[i].id) {
-        results.set(emojis[i].id, cachedUrl || url)
-      }
+      const resolved = typeof cachedUrl === 'string' ? cachedUrl : undefined
+      results.set(id, resolved || url || '')
     }
     return results
   }
@@ -325,7 +326,7 @@ export async function getEmojiImageUrls(
       }
     } else {
       if (emoji.id) {
-        results.set(emoji.id, addCacheBustingParam(emoji.displayUrl || emoji.url, emoji))
+        results.set(emoji.id, addCacheBustingParam(emoji.displayUrl || emoji.url || '', emoji))
       }
     }
   }

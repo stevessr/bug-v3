@@ -147,7 +147,7 @@ export default defineComponent({
                         srcset={image.srcset}
                         data-base62-sha1={image.base62Sha1}
                         data-dominant-color={image.dominantColor}
-                        loading={image.loading || 'lazy'}
+                        loading={(image.loading as 'eager' | 'lazy' | undefined) || 'lazy'}
                       />
                     </a>
                   </div>

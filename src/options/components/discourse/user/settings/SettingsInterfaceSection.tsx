@@ -64,7 +64,9 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_markdown_monospace_font}
-            onChange={checked => (props.form.value.enable_markdown_monospace_font = Boolean(checked))}
+            onChange={checked =>
+              (props.form.value.enable_markdown_monospace_font = Boolean(checked))
+            }
           />
           <div class="text-gray-500">自动取消置顶</div>
           <Switch
@@ -100,9 +102,7 @@ export default defineComponent({
             placeholder="选择大小"
             options={props.textSizeOptions}
             value={props.form.value.text_size}
-            onUpdate:value={value =>
-              (props.form.value.text_size = value as string | undefined)
-            }
+            onUpdate:value={value => (props.form.value.text_size = value as string | undefined)}
           />
           <div class="text-gray-500">主页</div>
           <Select
@@ -112,9 +112,7 @@ export default defineComponent({
             placeholder="选择主页"
             options={props.homepageOptions}
             value={props.form.value.homepage_id}
-            onUpdate:value={value =>
-              (props.form.value.homepage_id = value as number | undefined)
-            }
+            onUpdate:value={value => (props.form.value.homepage_id = value as number | undefined)}
           />
         </div>
       </div>

@@ -79,7 +79,9 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.watched_precedence_over_muted}
-            onChange={checked => (props.form.value.watched_precedence_over_muted = Boolean(checked))}
+            onChange={checked =>
+              (props.form.value.watched_precedence_over_muted = Boolean(checked))
+            }
           />
         </div>
       </div>

@@ -1,8 +1,7 @@
 import { unified } from 'unified'
 import rehypeParse from 'rehype-parse'
 import rehypeStringify from 'rehype-stringify'
-import type { Root } from 'hast'
-import type { Node } from 'hast'
+import type { Root, Node } from 'hast'
 
 import type { ParsedContent } from '../types'
 

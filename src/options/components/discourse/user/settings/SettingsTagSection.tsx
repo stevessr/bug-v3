@@ -47,7 +47,7 @@ export default defineComponent({
         <TagPill
           name={String(value)}
           text={renderTagOption(String(value)).label || String(value)}
-          description={renderTagOption(String(value)).description || null}
+          description={renderTagOption(String(value)).description || undefined}
           compact
         />
         {closable ? (
@@ -69,7 +69,7 @@ export default defineComponent({
           <TagPill
             name={tag.value}
             text={tag.label}
-            description={tag.description || null}
+            description={tag.description || undefined}
             compact
           />
         </Select.Option>
@@ -99,9 +99,7 @@ export default defineComponent({
             <Select
               {...commonProps}
               value={props.form.value.watched_tags}
-              onUpdate:value={value =>
-                (props.form.value.watched_tags = (value || []) as string[])
-              }
+              onUpdate:value={value => (props.form.value.watched_tags = (value || []) as string[])}
             />
             <div class="text-gray-500">追踪</div>
             <Select

@@ -121,11 +121,7 @@ const focusLastTab = () => {
 </script>
 
 <template>
-  <div
-    class="group-tabs-scroll"
-    role="tablist"
-    :aria-label="t('groupTabs')"
-  >
+  <div class="group-tabs-scroll" role="tablist" :aria-label="t('groupTabs')">
     <a-button
       v-for="(group, index) in groups"
       :key="group.id"
@@ -171,7 +167,10 @@ const focusLastTab = () => {
   font-size: 0.75rem;
   font-weight: 500;
   border-bottom: 2px solid transparent;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   background-color: transparent;
   color: var(--md3-on-surface-variant);
   outline: none;

@@ -477,7 +477,7 @@ onMounted(() => {
             </div>
             <a-switch
               :checked="Boolean(builtinMcpEnabled[server.id])"
-              :disabled="server.requiresApiKey && !isMcpAvailable(server)"
+              :disabled="!!server.requiresApiKey && !isMcpAvailable(server)"
               @change="value => toggleBuiltinMcp(server.id, Boolean(value))"
             />
           </div>

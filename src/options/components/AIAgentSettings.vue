@@ -198,7 +198,10 @@ onMounted(() => {
             手动启用 Native Messaging 后才可生效，关闭会停止自动探测。
           </p>
         </div>
-        <a-switch :checked="mcpBridgeEnabled" @change="checked => onMcpBridgeToggle(Boolean(checked))" />
+        <a-switch
+          :checked="mcpBridgeEnabled"
+          @change="checked => onMcpBridgeToggle(Boolean(checked))"
+        />
       </div>
       <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <div>启用步骤：</div>

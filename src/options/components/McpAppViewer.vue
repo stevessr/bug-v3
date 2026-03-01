@@ -7,11 +7,7 @@ import {
   CloseOutlined
 } from '@ant-design/icons-vue'
 
-import {
-  fetchUIResource,
-  createAppSandbox,
-  sendMessageToApp
-} from '@/agent/mcpUI'
+import { fetchUIResource, createAppSandbox, sendMessageToApp } from '@/agent/mcpUI'
 import type { McpServerConfig } from '@/agent/types'
 
 const props = defineProps<{

@@ -27,7 +27,10 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     postId: { type: Number, required: true },
     requestPollVote: {
-      type: Function as () => (method: 'PUT' | 'DELETE', body: URLSearchParams) => Promise<any>,
+      type: Function as unknown as () => (
+        method: 'PUT' | 'DELETE',
+        body: URLSearchParams
+      ) => Promise<any>,
       required: true
     },
     pollMeta: { type: Object as () => PollMeta, required: true }

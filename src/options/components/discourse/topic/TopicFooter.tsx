@@ -56,7 +56,7 @@ export default defineComponent({
               value={levelOption.value.value}
               class="topic-footer__select"
               disabled={props.loading}
-              onChange={(value: number) => emit('changeLevel', value)}
+              onChange={value => emit('changeLevel', value as number)}
               options={LEVEL_OPTIONS.map(option => ({
                 value: option.value,
                 label: option.label

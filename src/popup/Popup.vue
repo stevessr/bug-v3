@@ -52,11 +52,7 @@ const openDiscourseBrowser = () => {
             {{ t('emojiManagement') }}
           </h2>
           <div class="popup-header-actions">
-            <a-button
-              @click="openOptions"
-              class="popup-icon-btn"
-              :title="t('settings')"
-            >
+            <a-button @click="openOptions" class="popup-icon-btn" :title="t('settings')">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -100,11 +96,7 @@ const openDiscourseBrowser = () => {
                 ></path>
               </svg>
             </a-button>
-            <a-button
-              @click="openSidebar"
-              class="popup-icon-btn"
-              :title="t('openSidebar')"
-            >
+            <a-button @click="openSidebar" class="popup-icon-btn" :title="t('openSidebar')">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -149,12 +141,7 @@ const openDiscourseBrowser = () => {
             :title="t('searchEmojisTitle')"
             class="popup-search-input"
           />
-          <svg
-            class="popup-search-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="popup-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -209,10 +196,7 @@ const openDiscourseBrowser = () => {
       </div>
 
       <!-- Copy Success Toast -->
-      <div
-        v-if="showCopyToast"
-        class="popup-toast"
-      >
+      <div v-if="showCopyToast" class="popup-toast">
         {{ t('linkCopiedToClipboard') }}
       </div>
     </div>
@@ -279,7 +263,9 @@ body,
   color: var(--md3-on-surface-variant);
   background-color: transparent;
   border-radius: 0.25rem;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .popup-icon-btn:hover {
@@ -359,7 +345,9 @@ body,
   background-color: var(--md3-surface);
   color: var(--md3-on-surface);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .popup-search-input::placeholder {

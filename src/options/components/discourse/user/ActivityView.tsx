@@ -258,7 +258,7 @@ export default defineComponent({
                       </div>
                       <div
                         class="font-medium dark:text-white truncate"
-                        innerHTML={reaction.post.topic_html_title || reaction.post.topic_title}
+                        innerHTML={reaction.post.topic_title}
                       />
                       {reaction.post.excerpt && (
                         <div

@@ -1,11 +1,5 @@
 import { defineComponent, ref, computed, watch } from 'vue'
-import {
-  Button,
-  Input,
-  Select,
-  Switch,
-  Tag
-} from 'ant-design-vue'
+import { Button, Input, Select, Switch, Tag } from 'ant-design-vue'
 
 import type {
   SearchState,
@@ -345,7 +339,7 @@ export default defineComponent({
                     <TagPill
                       name={String(value)}
                       text={getTagOption(String(value))?.label || String(value)}
-                      description={getTagOption(String(value))?.description || null}
+                      description={getTagOption(String(value))?.description || undefined}
                       compact
                     />
                     {closable ? (
@@ -366,7 +360,7 @@ export default defineComponent({
                       <TagPill
                         name={tag.value}
                         text={tag.label}
-                        description={tag.description || null}
+                        description={tag.description || undefined}
                         compact
                       />
                     </Select.Option>

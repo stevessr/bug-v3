@@ -1,4 +1,4 @@
-import { defineComponent, resolveComponent } from 'vue'
+import { defineComponent } from 'vue'
 
 import type { DiscoursePost, ParsedContent } from '../types'
 

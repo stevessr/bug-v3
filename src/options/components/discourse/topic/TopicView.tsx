@@ -36,7 +36,7 @@ export default defineComponent({
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
     currentUsername: { type: String, default: undefined },
     ensurePostLoaded: {
-      type: Function as () => (postNumber: number) => Promise<void> | void,
+      type: Function as unknown as () => (postNumber: number) => Promise<void> | void,
       default: null
     }
   },
@@ -228,6 +228,10 @@ export default defineComponent({
       parsePostContent
     })
 
+    const getParentParsed = (post: DiscoursePost) => {
+      return getParsedParent(post, getParsedPost)
+    }
+
     const handleSuggestedClick = (topic: SuggestedTopic) => {
       emit('openSuggestedTopic', topic)
     }
@@ -402,7 +406,8 @@ export default defineComponent({
                 isParentExpanded={isParentExpanded}
                 isParentLoading={isParentLoading}
                 getParentPost={getParentPost}
-                getParsedParent={getParsedParent}
+                getParsedParent={getParentParsed}
+                getParsedPostByItem={post => getParsedPost(post.id)}
                 isRepliesExpanded={isRepliesExpanded}
                 getRepliesForPost={getRepliesForPost}
                 getParsedReply={getParsedReply}
@@ -411,7 +416,7 @@ export default defineComponent({
                 isLiking={(postId: number) => likingPostIds.value.has(postId)}
                 onOpenUser={handleUserClick}
                 onReplyTo={handleReplyClick}
-                onToggleLike={toggleLike}
+                onToggleLike={post => toggleLike(post, 'heart')}
                 onToggleReplies={handleToggleReplies}
                 onToggleParent={handleToggleParent}
                 onNavigate={handleContentNavigation}
@@ -494,9 +499,9 @@ export default defineComponent({
 
         <AiSummaryModal
           open={showAiSummaryModal.value}
-          summary={aiSummary.value}
+          summary={aiSummary.value || ''}
           loading={aiLoading.value}
-          errorMessage={aiErrorMessage.value}
+          errorMessage={aiErrorMessage.value || undefined}
           meta={aiMeta.value}
           onCancel={() => {
             showAiSummaryModal.value = false

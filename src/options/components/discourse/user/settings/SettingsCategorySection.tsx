@@ -16,9 +16,7 @@ export default defineComponent({
       required: true
     },
     filterCategoryOption: {
-      type: Function as PropType<
-        (input: string, option?: { label?: string; value?: number; slug?: string }) => boolean
-      >,
+      type: Function as PropType<(input: string, option?: any) => boolean>,
       required: true
     }
   },
@@ -36,8 +34,8 @@ export default defineComponent({
             options={props.categoryOptions}
             value={props.form.value.watched_category_ids}
             filterOption={props.filterCategoryOption}
-            onUpdate:value={(value: number[]) =>
-              (props.form.value.watched_category_ids = value || [])
+            onUpdate:value={value =>
+              (props.form.value.watched_category_ids = (value || []) as number[])
             }
           />
           <div class="text-gray-500">追踪</div>
@@ -49,8 +47,8 @@ export default defineComponent({
             options={props.categoryOptions}
             value={props.form.value.tracked_category_ids}
             filterOption={props.filterCategoryOption}
-            onUpdate:value={(value: number[]) =>
-              (props.form.value.tracked_category_ids = value || [])
+            onUpdate:value={value =>
+              (props.form.value.tracked_category_ids = (value || []) as number[])
             }
           />
           <div class="text-gray-500">关注首帖</div>
@@ -62,8 +60,8 @@ export default defineComponent({
             options={props.categoryOptions}
             value={props.form.value.watched_first_post_category_ids}
             filterOption={props.filterCategoryOption}
-            onUpdate:value={(value: number[]) =>
-              (props.form.value.watched_first_post_category_ids = value || [])
+            onUpdate:value={value =>
+              (props.form.value.watched_first_post_category_ids = (value || []) as number[])
             }
           />
           <div class="text-gray-500">静音</div>
@@ -75,8 +73,8 @@ export default defineComponent({
             options={props.categoryOptions}
             value={props.form.value.muted_category_ids}
             filterOption={props.filterCategoryOption}
-            onUpdate:value={(value: number[]) =>
-              (props.form.value.muted_category_ids = value || [])
+            onUpdate:value={value =>
+              (props.form.value.muted_category_ids = (value || []) as number[])
             }
           />
         </div>

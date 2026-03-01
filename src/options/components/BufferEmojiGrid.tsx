@@ -75,10 +75,7 @@ export default defineComponent({
               {/* Multi-select checkbox */}
               {props.isMultiSelectMode ? (
                 <div class="absolute bottom-6 right-1">
-                  <Checkbox
-                    checked={isSelected}
-                    onChange={() => handleToggleSelection(idx)}
-                  />
+                  <Checkbox checked={isSelected} onChange={() => handleToggleSelection(idx)} />
                   <span class="sr-only">{`选择表情 ${emoji.name}`}</span>
                 </div>
               ) : (

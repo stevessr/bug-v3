@@ -15,9 +15,22 @@ export default defineComponent({
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
     currentUsername: { type: String, default: undefined },
     highlightedPostNumber: { type: Number as () => number | null, default: null },
-    getParsedPost: { type: Function as PropType<(postId: number) => ParsedContent>, required: true },
-    isParentExpanded: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
-    isParentLoading: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
+    getParsedPost: {
+      type: Function as PropType<(postId: number) => ParsedContent>,
+      required: true
+    },
+    getParsedPostByItem: {
+      type: Function as PropType<(post: DiscoursePost) => ParsedContent>,
+      required: true
+    },
+    isParentExpanded: {
+      type: Function as PropType<(postNumber: number) => boolean>,
+      required: true
+    },
+    isParentLoading: {
+      type: Function as PropType<(postNumber: number) => boolean>,
+      required: true
+    },
     getParentPost: {
       type: Function as PropType<(post: DiscoursePost) => DiscoursePost | null>,
       required: true
@@ -26,16 +39,22 @@ export default defineComponent({
       type: Function as PropType<(post: DiscoursePost) => ParsedContent | null>,
       required: true
     },
-    isRepliesExpanded: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
+    isRepliesExpanded: {
+      type: Function as PropType<(postNumber: number) => boolean>,
+      required: true
+    },
     getRepliesForPost: {
       type: Function as PropType<(postNumber: number) => DiscoursePost[]>,
       required: true
     },
     getParsedReply: {
-      type: Function as PropType<(postId: number) => ParsedContent>,
+      type: Function as PropType<(post: DiscoursePost) => ParsedContent>,
       required: true
     },
-    isPostLiked: { type: Function as PropType<(post: DiscoursePost) => boolean>, required: true },
+    isPostLiked: {
+      type: Function as PropType<(post: DiscoursePost, reactionId: string) => boolean>,
+      required: true
+    },
     getReactionCount: {
       type: Function as PropType<(post: DiscoursePost, reactionId: string) => number>,
       required: true
@@ -61,6 +80,10 @@ export default defineComponent({
     isArchiving: { type: Boolean, required: true }
   },
   setup(props) {
+    const handlePostLike = (post: DiscoursePost, reactionId: string) => {
+      return props.isPostLiked(post, reactionId)
+    }
+
     return () => (
       <div class="posts-list space-y-4">
         {props.posts.map(post => (
@@ -72,7 +95,7 @@ export default defineComponent({
                 ) : props.getParentPost(post) && props.getParsedParent(post) ? (
                   <PostParentPreview
                     post={props.getParentPost(post)!}
-                    parsed={props.getParsedParent(post)!}
+                    parsed={props.getParsedPostByItem(props.getParentPost(post)!)}
                     baseUrl={props.baseUrl}
                     getParentPost={props.getParentPost}
                     getParentParsed={props.getParsedParent}
@@ -99,7 +122,7 @@ export default defineComponent({
               parsed={props.getParsedPost(post.id)}
               isParentExpanded={props.isParentExpanded(post.post_number)}
               isHighlighted={props.highlightedPostNumber === post.post_number}
-              isPostLiked={props.isPostLiked}
+              isPostLiked={handlePostLike}
               getReactionCount={props.getReactionCount}
               isLiking={props.isLiking(post.id)}
               currentUser={props.currentUser}

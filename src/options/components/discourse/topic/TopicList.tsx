@@ -184,7 +184,9 @@ export default defineComponent({
                     <TagPill
                       name={getTagLabel(tag)}
                       text={getTagLabel(tag)}
-                      description={typeof tag === 'string' ? null : tag.description || null}
+                      description={
+                        typeof tag === 'string' ? undefined : tag.description || undefined
+                      }
                       compact
                       clickable
                     />

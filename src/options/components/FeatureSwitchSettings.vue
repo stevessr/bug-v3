@@ -125,9 +125,7 @@ const enableDiscourseRouterRefresh = computed(() =>
   getSetting('enableDiscourseRouterRefresh', false)
 )
 
-const enableExperimentalFeatures = computed(() =>
-  getSetting('enableExperimentalFeatures', false)
-)
+const enableExperimentalFeatures = computed(() => getSetting('enableExperimentalFeatures', false))
 
 // 监听 settings 变化，同步到本地状态
 watch(
