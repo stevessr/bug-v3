@@ -11,7 +11,7 @@ export default defineComponent({
   props: {
     messages: { type: Array as () => ChatMessage[], required: true },
     baseUrl: { type: String, required: true },
-    currentUsername: { type: String, default: null },
+    currentUsername: { type: String, default: undefined },
     loading: { type: Boolean, required: true },
     hasMore: { type: Boolean, required: true }
   },

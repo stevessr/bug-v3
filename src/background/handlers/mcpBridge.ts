@@ -521,7 +521,8 @@ async function captureScreenshot(
   }
 
   return new Promise((resolve, reject) => {
-    chromeAPI.tabs.captureVisibleTab(windowId, { format }, dataUrl => {
+    const targetWindowId = typeof windowId === 'number' ? windowId : undefined
+    chromeAPI.tabs.captureVisibleTab(targetWindowId as number, { format }, dataUrl => {
       if (chromeAPI.runtime.lastError) {
         reject(new Error(chromeAPI.runtime.lastError.message))
         return
@@ -704,7 +705,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
       if (tabIds.length === 0) throw new Error('缺少 tabIds')
       const windowId = typeof args.windowId === 'number' ? args.windowId : undefined
-      await chromeAPI.tabs.highlight({ tabIds, windowId })
+      await chromeAPI.tabs.highlight({ tabs: tabIds, windowId })
       return { success: true }
     }
 
@@ -729,7 +730,10 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       if (!chromeAPI.tabs?.group) throw new Error('无法分组标签页')
       const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
       if (tabIds.length === 0) throw new Error('缺少 tabIds')
-      const groupId = await chromeAPI.tabs.group({ tabIds, groupId: args.groupId })
+      const groupId = await chromeAPI.tabs.group({
+        tabIds: tabIds as [number, ...number[]],
+        groupId: args.groupId
+      })
       return { groupId }
     }
 
@@ -737,7 +741,10 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       if (!chromeAPI.tabs?.group) throw new Error('无法分组标签页')
       const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
       if (tabIds.length === 0) throw new Error('缺少 tabIds')
-      const groupId = await chromeAPI.tabs.group({ tabIds, groupId: args.groupId })
+      const groupId = await chromeAPI.tabs.group({
+        tabIds: tabIds as [number, ...number[]],
+        groupId: args.groupId
+      })
       if (chromeAPI.tabGroups?.update && (args.title || args.color)) {
         await chromeAPI.tabGroups.update(groupId, {
           title: args.title,
@@ -751,7 +758,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       if (!chromeAPI.tabs?.ungroup) throw new Error('无法取消分组标签页')
       const tabIds = Array.isArray(args.tabIds) ? args.tabIds : []
       if (tabIds.length === 0) throw new Error('缺少 tabIds')
-      await chromeAPI.tabs.ungroup(tabIds)
+      await chromeAPI.tabs.ungroup(tabIds as [number, ...number[]])
       return { success: true }
     }
 
@@ -768,12 +775,14 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       const window = await chromeAPI.windows.get(args.windowId, {
         populate: Boolean(args.populate)
       })
+      if (!window) throw new Error('无法获取窗口')
       return mapWindow(window)
     }
 
     case 'chrome.window_current': {
       if (!chromeAPI.windows?.getCurrent) throw new Error('无法获取当前窗口')
       const window = await chromeAPI.windows.getCurrent({ populate: Boolean(args.populate) })
+      if (!window) throw new Error('无法获取当前窗口')
       return mapWindow(window)
     }
 
@@ -789,6 +798,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         width: args.width,
         height: args.height
       })
+      if (!window) throw new Error('无法创建窗口')
       return mapWindow(window)
     }
 
@@ -803,6 +813,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
         width: args.width,
         height: args.height
       })
+      if (!window) throw new Error('无法更新窗口')
       return mapWindow(window)
     }
 
@@ -810,6 +821,7 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       if (!chromeAPI.windows?.update) throw new Error('无法更新窗口')
       if (typeof args.windowId !== 'number') throw new Error('缺少 windowId')
       const window = await chromeAPI.windows.update(args.windowId, { focused: true })
+      if (!window) throw new Error('无法更新窗口')
       return mapWindow(window)
     }
 

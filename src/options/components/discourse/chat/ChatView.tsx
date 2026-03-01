@@ -12,7 +12,7 @@ export default defineComponent({
   props: {
     chatState: { type: Object as () => ChatState, required: true },
     baseUrl: { type: String, required: true },
-    currentUsername: { type: String, default: null }
+    currentUsername: { type: String, default: undefined }
   },
   emits: [
     'selectChannel',

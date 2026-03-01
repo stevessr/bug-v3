@@ -34,7 +34,7 @@ export default defineComponent({
     hasMorePosts: { type: Boolean, required: true },
     targetPostNumber: { type: Number as () => number | null, default: null },
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
-    currentUsername: { type: String, default: null },
+    currentUsername: { type: String, default: undefined },
     ensurePostLoaded: {
       type: Function as () => (postNumber: number) => Promise<void> | void,
       default: null

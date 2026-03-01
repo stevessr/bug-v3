@@ -29,6 +29,7 @@ export interface StringPropertySchema {
   pattern?: string
   format?: 'email' | 'uri' | 'date' | 'date-time'
   default?: string
+  enum?: string[]
 }
 
 export interface NumberPropertySchema {
@@ -393,7 +394,7 @@ export function schemaToFormFields(schema: ElicitationSchema): FormField[] {
         field.type = 'datetime'
       } else if (stringProp.enum) {
         field.type = 'select'
-        field.options = stringProp.enum.map(v => ({ value: v, label: v }))
+        field.options = stringProp.enum.map((v: string) => ({ value: v, label: v }))
       } else if ((prop as EnumPropertySchema).oneOf) {
         field.type = 'select'
         field.options = ((prop as EnumPropertySchema).oneOf ?? []).map(o => ({

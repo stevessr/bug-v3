@@ -1,11 +1,7 @@
+/* @jsxImportSource vue */
 import { defineComponent, ref, computed, onMounted, Teleport, Transition } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
-
-type PluginEmojiPickerProps = {
-  show?: boolean
-  position?: { x: number; y: number } | null
-}
 
 type PickerEmoji = { id: string; name: string; url: string }
 

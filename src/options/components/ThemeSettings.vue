@@ -100,7 +100,7 @@ const handleThemeSelectInfo = (info: { key: string | number }) => {
   handleThemeSelect(String(info.key))
 }
 
-const handleMd3ColorSchemeUpdate = (val: string) => {
+const handleMd3ColorSchemeUpdate = (val?: string) => {
   // 预设方案才清空自定义种子色；空值用于保留自定义颜色
   if (!val) {
     localMd3ColorScheme.value = ''
@@ -113,7 +113,8 @@ const handleMd3ColorSchemeUpdate = (val: string) => {
   emit('update:md3ColorScheme', val)
 }
 
-const handleMd3SeedColorUpdate = (val: string) => {
+const handleMd3SeedColorUpdate = (val?: string) => {
+  if (!val) return
   localMd3SeedColor.value = val
   // 同时清空本地预设方案状态，确保 UI 立即更新
   localMd3ColorScheme.value = ''

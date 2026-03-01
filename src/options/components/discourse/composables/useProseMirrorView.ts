@@ -1,5 +1,6 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import type { EditorState, Schema } from 'prosemirror-state'
+import type { EditorState } from 'prosemirror-state'
+import type { Schema } from 'prosemirror-model'
 import { EditorView } from 'prosemirror-view'
 
 type UseProseMirrorViewOptions = {
@@ -54,7 +55,7 @@ export function useProseMirrorView(options: UseProseMirrorViewOptions) {
 
   onUnmounted(() => {
     if (editorView.value) {
-      options.onBeforeDestroy?.(editorView.value)
+      options.onBeforeDestroy?.(editorView.value as EditorView)
       editorView.value.destroy()
       editorView.value = null
     }
@@ -65,7 +66,7 @@ export function useProseMirrorView(options: UseProseMirrorViewOptions) {
     newValue => {
       if (!editorView.value || isInternalUpdate) return
       const currentContent = options.serializeDoc
-        ? options.serializeDoc(editorView.value.state)
+        ? options.serializeDoc(editorView.value.state as EditorState)
         : editorView.value.state.doc.textContent
       if (newValue === currentContent || newValue === lastEmittedValue) return
       isInternalUpdate = true

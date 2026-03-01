@@ -67,7 +67,7 @@ export async function updateBookmark(baseUrl: string, payload: BookmarkPayload) 
   params.append('auto_delete_preference', String(payload.auto_delete_preference ?? 3))
 
   if (payload.reminder_at !== undefined) {
-    params.append('reminder_at', payload.reminder_at)
+    params.append('reminder_at', payload.reminder_at ?? '')
   }
   if (payload.name) {
     params.append('name', payload.name)

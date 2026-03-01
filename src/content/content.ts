@@ -19,6 +19,7 @@ log.info('Content script loaded (entry)')
 
 // 获取 Discourse 域名列表（向后兼容）
 const DISCOURSE_DOMAINS = getDiscourseDomains()
+void DISCOURSE_DOMAINS
 
 /**
  * 初始化函数 - 使用动态加载优化

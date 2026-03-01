@@ -17,7 +17,7 @@ export default defineComponent({
     parsed: { type: Object as () => ParsedContent, required: true },
     isParentExpanded: { type: Boolean, required: true },
     isHighlighted: { type: Boolean, default: false },
-    currentUsername: { type: String, default: null },
+    currentUsername: { type: String, default: undefined },
     isArchiving: { type: Boolean, default: false },
     isPostLiked: {
       type: Function as unknown as () => (post: DiscoursePost, reactionId: string) => boolean,

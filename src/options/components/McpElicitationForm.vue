@@ -14,7 +14,6 @@ import {
   schemaToFormFields,
   validateFormData,
   type ElicitationRequest,
-  type ElicitationSchema,
   type FormField
 } from '@/agent/mcpUI'
 
@@ -30,7 +29,7 @@ const currentRequest = ref<{
 const formFields = ref<FormField[]>([])
 
 // 表单数据
-const formData = ref<Record<string, unknown>>({})
+const formData = ref<Record<string, any>>({})
 
 // 验证错误
 const formErrors = ref<Record<string, string>>({})

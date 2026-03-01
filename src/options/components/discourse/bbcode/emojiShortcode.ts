@@ -51,7 +51,6 @@ export function parseEmojiShortcodeToBBCode(text: string): string {
       const emoji = findEmojiByName(name)
       if (emoji) {
         // 使用表情的实际尺寸（如果有）
-        const sizeAttr = emoji.width && emoji.height ? `|${emoji.width}x${emoji.height}` : ''
         return `${before}[img]${emoji.url}[/img]${after}`
       }
       return match

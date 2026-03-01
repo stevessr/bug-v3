@@ -1,3 +1,4 @@
+/* @jsxImportSource vue */
 import { defineComponent, ref, watch, nextTick } from 'vue'
 import dayjs from 'dayjs'
 

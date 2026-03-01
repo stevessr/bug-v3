@@ -1,3 +1,4 @@
+/* @jsxImportSource vue */
 import { defineComponent } from 'vue'
 import { Button, Popconfirm } from 'ant-design-vue'
 import { QuestionCircleOutlined, TagOutlined } from '@ant-design/icons-vue'

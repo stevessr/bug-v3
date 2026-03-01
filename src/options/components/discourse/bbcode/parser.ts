@@ -56,9 +56,9 @@ export function parseBBCode(bbcode: string): string {
   html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/g, (_, content) => {
     const items = content
       .split('[*]')
-      .map(item => item.trim())
+      .map((item: string) => item.trim())
       .filter(Boolean)
-      .map(item => `<li>${item}</li>`)
+      .map((item: string) => `<li>${item}</li>`)
       .join('')
     return `<ul>${items}</ul>`
   })
@@ -67,9 +67,9 @@ export function parseBBCode(bbcode: string): string {
   html = html.replace(/\[list=1\]([\s\S]*?)\[\/list\]/g, (_, content) => {
     const items = content
       .split('[*]')
-      .map(item => item.trim())
+      .map((item: string) => item.trim())
       .filter(Boolean)
-      .map(item => `<li>${item}</li>`)
+      .map((item: string) => `<li>${item}</li>`)
       .join('')
     return `<ol>${items}</ol>`
   })

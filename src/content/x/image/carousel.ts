@@ -87,7 +87,7 @@ function createCarouselBtn(data: AddEmojiButtonData) {
   const wrapper = createE('div', {
     attrs: { dir: 'ltr' },
     style: 'color: rgb(255, 255, 255)',
-    child: [svg]
+    child: [svg as unknown as HTMLElement]
   })
   btn.appendChild(wrapper)
   setupButtonClick(btn, data)
@@ -181,7 +181,7 @@ function createDownloadBtn(data: AddEmojiButtonData) {
   const wrapper = createE('div', {
     attrs: { dir: 'ltr' },
     style: 'color: rgb(255, 255, 255)',
-    child: [svg]
+    child: [svg as unknown as HTMLElement]
   })
   btn.appendChild(wrapper)
 

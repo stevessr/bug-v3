@@ -1,3 +1,4 @@
+/* @jsxImportSource vue */
 import { defineComponent, ref, watch, computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -419,8 +420,8 @@ export default defineComponent({
       closePanels()
     }
 
-    const handleEmojiPickerOpen = (event: MouseEvent) => {
-      const target = event.currentTarget as HTMLElement | null
+    const handleEmojiPickerOpen = (event?: MouseEvent) => {
+      const target = event?.currentTarget as HTMLElement | null | undefined
       if (target) {
         const rect = target.getBoundingClientRect()
         emojiPickerPos.value = { x: rect.left, y: rect.bottom + 8 }
@@ -430,8 +431,8 @@ export default defineComponent({
       showEmojiPicker.value = true
     }
 
-    const handlePluginEmojiPickerOpen = (event: MouseEvent) => {
-      const target = event.currentTarget as HTMLElement | null
+    const handlePluginEmojiPickerOpen = (event?: MouseEvent) => {
+      const target = event?.currentTarget as HTMLElement | null | undefined
       if (target) {
         const rect = target.getBoundingClientRect()
         pluginEmojiPickerPos.value = { x: rect.left, y: rect.bottom + 8 }
@@ -518,8 +519,8 @@ export default defineComponent({
       toggleItalic,
       toggleUnderline,
       toggleStrike,
-      openEmojiPicker: handleEmojiPickerOpen,
-      openPluginEmojiPicker: handlePluginEmojiPickerOpen,
+      openEmojiPicker: () => handleEmojiPickerOpen(),
+      openPluginEmojiPicker: () => handlePluginEmojiPickerOpen(),
       handleUploadClick,
       openLinkPanel,
       openImagePanel,
@@ -555,10 +556,10 @@ export default defineComponent({
       closePanels,
       insertLink: insertLinkMarkup,
       insertImage: insertImageMarkup,
-      onLinkInput: value => (linkUrl.value = value),
-      onLinkTextInput: value => (linkText.value = value),
-      onImageInput: value => (imageUrl.value = value),
-      onImageAltInput: value => (imageAlt.value = value)
+      onLinkInput: (value: string) => (linkUrl.value = value),
+      onLinkTextInput: (value: string) => (linkText.value = value),
+      onImageInput: (value: string) => (imageUrl.value = value),
+      onImageAltInput: (value: string) => (imageAlt.value = value)
     }
 
     return () => (

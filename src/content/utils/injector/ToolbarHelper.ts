@@ -3,7 +3,7 @@
  * 负责查找不同平台的工具栏元素
  */
 
-import { DQSA, DQS } from '../createEl'
+import { DQSA, DQS } from '../dom/createEl'
 
 // 不同上下文的工具栏选择器
 const TOOLBAR_SELECTORS = [

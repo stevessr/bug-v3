@@ -9,7 +9,6 @@ import {
   categoryNames,
   getAllCategories,
   extractColorsFromImage,
-  type ColorSchemeCategory,
   type ExtractedColor
 } from '../../styles/md3Theme'
 

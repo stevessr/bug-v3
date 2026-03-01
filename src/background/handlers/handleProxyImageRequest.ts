@@ -12,6 +12,10 @@ import { getChromeAPI } from '../utils/main.ts'
 let isOpeningBackgroundTab = false
 let backgroundTabPromise: Promise<number | null> | null = null
 
+type TabChangeInfo = {
+  status?: 'loading' | 'complete'
+}
+
 /**
  * Open a background tab for the specified domain and wait for it to load
  */
@@ -47,7 +51,7 @@ async function openBackgroundTab(domain: string): Promise<number | null> {
           resolve()
         }, 15000) // 15 second timeout
 
-        const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+        const listener = (updatedTabId: number, changeInfo: TabChangeInfo) => {
           if (updatedTabId === tabId && changeInfo.status === 'complete') {
             chromeAPI.tabs.onUpdated.removeListener(listener)
             clearTimeout(timeout)

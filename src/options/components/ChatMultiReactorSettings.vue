@@ -445,7 +445,7 @@ const fetchEmojis = async () => {
       throw new Error(`HTTP ${result.status}: Failed to fetch emojis`)
     }
 
-    const data = result.data.data as DiscourseEmojisResponse
+    const data = result.data.data as unknown as DiscourseEmojisResponse
 
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid emoji data format')
@@ -598,7 +598,7 @@ watch(
           class="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 p-3 rounded text-sm"
         >
           <div class="flex items-center gap-4">
-            <a-button size="small" @click="checkLimit">检查额度</a-button>
+            <a-button size="small" @click="() => checkLimit()">检查额度</a-button>
             <div v-if="dailyLimit">
               <span class="text-gray-500 dark:text-gray-400">剩余额度：</span>
               <span

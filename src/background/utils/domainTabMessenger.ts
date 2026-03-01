@@ -51,7 +51,7 @@ export async function sendMessageToDomainTab<T extends { success: boolean; error
 
     if (!tabs.length) {
       const allTabs = await chromeAPI.tabs.query({})
-      tabs = allTabs.filter(tab => getTabOrigin(tab.url) === targetOrigin)
+      tabs = allTabs.filter((tab: chrome.tabs.Tab) => getTabOrigin(tab.url) === targetOrigin)
     }
 
     if (!tabs.length) {

@@ -25,12 +25,6 @@ import '@/components/editor/wysiwyg/styles/EmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/PluginEmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/ProseMirrorEditor.css'
 
-type Props = {
-  modelValue: string
-  inputFormat: 'markdown' | 'bbcode'
-  baseUrl?: string
-}
-
 export default defineComponent({
   name: 'ProseMirrorEditor',
   props: {

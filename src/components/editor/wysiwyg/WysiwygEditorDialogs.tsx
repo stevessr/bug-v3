@@ -1,3 +1,4 @@
+/* @jsxImportSource vue */
 import { defineComponent, PropType } from 'vue'
 
 export type DialogState = {

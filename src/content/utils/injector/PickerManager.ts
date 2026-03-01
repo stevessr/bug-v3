@@ -4,8 +4,8 @@
  */
 
 import { createEmojiPicker } from '../../discourse/utils/picker'
-import { createE, DQS } from '../createEl'
-import { animateEnter, animateExit, ANIMATION_DURATION } from '../animation'
+import { createE, DQS } from '../dom/createEl'
+import { animateEnter, animateExit, ANIMATION_DURATION } from '../dom/animation'
 
 export class PickerManager {
   private currentPicker: HTMLElement | null = null

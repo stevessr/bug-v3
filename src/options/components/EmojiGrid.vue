@@ -1,5 +1,5 @@
 <script lang="tsx">
-import { defineComponent, ref, type PropType } from 'vue'
+import { defineComponent, ref, type PropType, type ComponentPublicInstance } from 'vue'
 
 import QuickTagEditor from './QuickTagEditor.vue'
 import EmojiCard from './EmojiCard'
@@ -61,7 +61,7 @@ export default defineComponent({
               onDragstart={(event: DragEvent) => handleEmojiDragStart(emoji, index, event)}
               onDragover={(event: DragEvent) => event.preventDefault()}
               onDrop={(event: DragEvent) => handleEmojiDrop(index, event)}
-              ref={(el: Element | null) => {
+              ref={(el: Element | ComponentPublicInstance | null) => {
                 if (el instanceof HTMLElement) addEmojiTouchEvents(el, emoji, index)
               }}
             >

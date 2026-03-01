@@ -3,7 +3,7 @@
  * 负责文本插入、光标处理等
  */
 
-import { DQS } from '../createEl'
+import { DQS } from '../dom/createEl'
 
 export class EditorManager {
   /**

@@ -10,8 +10,7 @@ import {
 import {
   fetchUIResource,
   createAppSandbox,
-  sendMessageToApp,
-  type McpAppResource
+  sendMessageToApp
 } from '@/agent/mcpUI'
 import type { McpServerConfig } from '@/agent/types'
 

@@ -1,4 +1,5 @@
-import { defineComponent, computed, type PropType } from 'vue'
+/* @jsxImportSource vue */
+import { defineComponent, type PropType } from 'vue'
 import { Button, Checkbox, Popconfirm } from 'ant-design-vue'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 
@@ -77,8 +78,8 @@ export default defineComponent({
                   <Checkbox
                     checked={isSelected}
                     onChange={() => handleToggleSelection(idx)}
-                    title={`选择表情 ${emoji.name}`}
                   />
+                  <span class="sr-only">{`选择表情 ${emoji.name}`}</span>
                 </div>
               ) : (
                 /* Edit/Remove buttons */

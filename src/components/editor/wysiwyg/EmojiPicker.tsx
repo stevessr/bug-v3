@@ -1,12 +1,7 @@
+/* @jsxImportSource vue */
 import { defineComponent, ref, computed, watch, onMounted, Teleport, Transition } from 'vue'
 
 import { pageFetch, extractData } from '@/options/components/discourse/utils'
-
-type EmojiPickerProps = {
-  show?: boolean
-  position?: { x: number; y: number } | null
-  baseUrl?: string | null
-}
 
 type DiscourseEmojiItem = {
   name: string

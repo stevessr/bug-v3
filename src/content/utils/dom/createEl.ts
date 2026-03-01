@@ -70,6 +70,6 @@ export const DEBI = document.getElementById.bind(document)
 
 export const DAEL = document.addEventListener.bind(document)
 
-export const DQSA = document.querySelectorAll.bind(document)
+export const DQSA = document.querySelectorAll.bind(document) as typeof document.querySelectorAll
 
-export const DQS = document.querySelector.bind(document)
+export const DQS = document.querySelector.bind(document) as typeof document.querySelector

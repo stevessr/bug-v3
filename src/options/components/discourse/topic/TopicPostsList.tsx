@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 
@@ -13,51 +13,51 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     topicId: { type: Number, required: true },
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
-    currentUsername: { type: String, default: null },
+    currentUsername: { type: String, default: undefined },
     highlightedPostNumber: { type: Number as () => number | null, default: null },
-    getParsedPost: { type: Function as () => (postId: number) => ParsedContent, required: true },
-    isParentExpanded: { type: Function as () => (postNumber: number) => boolean, required: true },
-    isParentLoading: { type: Function as () => (postNumber: number) => boolean, required: true },
+    getParsedPost: { type: Function as PropType<(postId: number) => ParsedContent>, required: true },
+    isParentExpanded: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
+    isParentLoading: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
     getParentPost: {
-      type: Function as () => (post: DiscoursePost) => DiscoursePost | null,
+      type: Function as PropType<(post: DiscoursePost) => DiscoursePost | null>,
       required: true
     },
     getParsedParent: {
-      type: Function as () => (post: DiscoursePost) => ParsedContent | null,
+      type: Function as PropType<(post: DiscoursePost) => ParsedContent | null>,
       required: true
     },
-    isRepliesExpanded: { type: Function as () => (postNumber: number) => boolean, required: true },
+    isRepliesExpanded: { type: Function as PropType<(postNumber: number) => boolean>, required: true },
     getRepliesForPost: {
-      type: Function as () => (postNumber: number) => DiscoursePost[],
+      type: Function as PropType<(postNumber: number) => DiscoursePost[]>,
       required: true
     },
     getParsedReply: {
-      type: Function as () => (postId: number) => ParsedContent,
+      type: Function as PropType<(postId: number) => ParsedContent>,
       required: true
     },
-    isPostLiked: { type: Function as () => (post: DiscoursePost) => boolean, required: true },
+    isPostLiked: { type: Function as PropType<(post: DiscoursePost) => boolean>, required: true },
     getReactionCount: {
-      type: Function as () => (post: DiscoursePost, reactionId: string) => number,
+      type: Function as PropType<(post: DiscoursePost, reactionId: string) => number>,
       required: true
     },
-    isLiking: { type: Function as () => (postId: number) => boolean, required: true },
-    onOpenUser: { type: Function as () => (username: string) => void, required: true },
+    isLiking: { type: Function as PropType<(postId: number) => boolean>, required: true },
+    onOpenUser: { type: Function as PropType<(username: string) => void>, required: true },
     onReplyTo: {
-      type: Function as () => (payload: { postNumber: number; username: string }) => void,
+      type: Function as PropType<(payload: { postNumber: number; username: string }) => void>,
       required: true
     },
-    onToggleLike: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onToggleReplies: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onToggleParent: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onNavigate: { type: Function as () => (url: string) => void, required: true },
-    onJumpToPost: { type: Function as () => (postNumber: number) => void, required: true },
-    onBookmark: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onFlag: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onAssign: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onEdit: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onDelete: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onWiki: { type: Function as () => (post: DiscoursePost) => void, required: true },
-    onArchiveTopic: { type: Function as () => () => void, required: true },
+    onToggleLike: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onToggleReplies: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onToggleParent: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onNavigate: { type: Function as PropType<(url: string) => void>, required: true },
+    onJumpToPost: { type: Function as PropType<(postNumber: number) => void>, required: true },
+    onBookmark: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onFlag: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onAssign: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onEdit: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onDelete: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onWiki: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onArchiveTopic: { type: Function as PropType<() => void>, required: true },
     isArchiving: { type: Boolean, required: true }
   },
   setup(props) {

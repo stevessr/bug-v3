@@ -25,20 +25,6 @@ marked.setOptions({ breaks: true, gfm: true })
 
 type ComposerMode = 'topic' | 'reply' | 'edit'
 
-type Props = {
-  mode: ComposerMode
-  baseUrl: string
-  topicId?: number
-  postId?: number
-  initialRaw?: string | null
-  originalRaw?: string | null
-  replyToPostNumber?: number | null
-  replyToUsername?: string | null
-  categories?: DiscourseCategory[]
-  currentCategory?: DiscourseCategory | null
-  defaultCategoryId?: number | null
-}
-
 export default defineComponent({
   name: 'Composer',
   props: {
