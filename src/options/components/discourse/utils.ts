@@ -8,6 +8,41 @@ type BlobPayload = {
   mimeType?: string
 }
 
+type PageFetchResponse<T> = {
+  success: boolean
+  data?: { status: number; ok: boolean; data: T }
+  error?: string
+}
+
+const PAGE_FETCH_MAX_CONCURRENCY = 2
+const PAGE_FETCH_TIMEOUT_MS = 30000
+const pageFetchQueue: Array<() => void> = []
+let pageFetchInFlight = 0
+
+function drainPageFetchQueue() {
+  while (pageFetchInFlight < PAGE_FETCH_MAX_CONCURRENCY && pageFetchQueue.length > 0) {
+    const task = pageFetchQueue.shift()
+    if (!task) return
+    pageFetchInFlight += 1
+    task()
+  }
+}
+
+function enqueuePageFetch<T>(task: () => Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    pageFetchQueue.push(() => {
+      return task()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          pageFetchInFlight = Math.max(0, pageFetchInFlight - 1)
+          drainPageFetchQueue()
+        })
+    })
+    drainPageFetchQueue()
+  })
+}
+
 function toBlobIfNeeded(data: unknown, responseType: 'json' | 'text' | 'blob') {
   if (responseType !== 'blob') return data
   if (!data || typeof data !== 'object') return null
@@ -29,36 +64,70 @@ export async function pageFetch<T>(
     throw new Error('Page fetch unavailable: chrome.runtime is not accessible')
   }
 
-  return await new Promise((resolve, reject) => {
-    chromeAPI.runtime.sendMessage(
-      {
-        type: 'PAGE_FETCH',
-        options: {
-          url,
-          method: options?.method || 'GET',
-          headers: options?.headers,
-          body: options?.body,
-          responseType
+  return await enqueuePageFetch(
+    () =>
+      new Promise((resolve, reject) => {
+        let settled = false
+        const timeoutId = globalThis.setTimeout(() => {
+          if (settled) return
+          settled = true
+          reject(new Error(`Page fetch timeout after ${PAGE_FETCH_TIMEOUT_MS}ms`))
+        }, PAGE_FETCH_TIMEOUT_MS)
+
+        const finish = (fn: () => void) => {
+          if (settled) return
+          settled = true
+          globalThis.clearTimeout(timeoutId)
+          fn()
         }
-      },
-      (resp: {
-        success: boolean
-        data?: { status: number; ok: boolean; data: T }
-        error?: string
-      }) => {
-        if (resp?.success && resp.data) {
-          const normalizedData = toBlobIfNeeded(resp.data.data, responseType) as T | null
-          resolve({
-            status: resp.data.status || 200,
-            ok: resp.data.ok !== false,
-            data: normalizedData ?? resp.data.data ?? null
-          })
-          return
+
+        try {
+          chromeAPI.runtime.sendMessage(
+            {
+              type: 'PAGE_FETCH',
+              options: {
+                url,
+                method: options?.method || 'GET',
+                headers: options?.headers,
+                body: options?.body,
+                responseType
+              }
+            },
+            (resp: PageFetchResponse<T>) => {
+              const runtimeError = chromeAPI.runtime?.lastError
+              if (runtimeError) {
+                finish(() => reject(new Error(runtimeError.message || 'Page fetch runtime error')))
+                return
+              }
+
+              if (resp?.success && resp.data) {
+                const normalizedData = toBlobIfNeeded(resp.data.data, responseType) as T | null
+                finish(() =>
+                  resolve({
+                    status: resp.data?.status || 200,
+                    ok: resp.data?.ok !== false,
+                    data: normalizedData ?? resp.data?.data ?? null
+                  })
+                )
+                return
+              }
+
+              finish(() =>
+                reject(
+                  new Error(resp?.error || `Page fetch failed: ${resp?.data?.status || 'unknown'}`)
+                )
+              )
+            }
+          )
+        } catch (error) {
+          finish(() =>
+            reject(
+              error instanceof Error ? error : new Error(error ? String(error) : 'Unknown error')
+            )
+          )
         }
-        reject(new Error(resp?.error || `Page fetch failed: ${resp?.data?.status || 'unknown'}`))
-      }
-    )
-  })
+      })
+  )
 }
 
 // Extract data from API response (handles nesting)
