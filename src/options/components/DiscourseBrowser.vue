@@ -120,20 +120,24 @@ const editInitialRaw = ref('')
 const editOriginalRaw = ref('')
 const proxiedBlobUrls = new Set<string>()
 const proxyingImages = new WeakSet<HTMLImageElement>()
-const pollingBusy = ref(false)
-const lastTopicPollAt = ref(0)
-const lastListPollAt = ref(0)
-const lastNotificationsPollAt = ref(0)
-const pollTimer = ref<number | null>(null)
+const messageBusClientId = ref('')
+const messageBusUserId = ref<number | null>(null)
+const messageBusChannels = new Map<string, number>()
+const messageBusState = ref<'idle' | 'connecting' | 'connected' | 'error'>('idle')
+let messageBusUserIdFor = ''
+let messageBusUserIdPromise: Promise<void> | null = null
+let messageBusLoopToken = 0
+let messageBusSeq = 0
+let messageBusRetryTimer: number | null = null
 const quickSidebarOpen = ref(false)
 const quickSidebarLoading = ref(false)
 const quickSidebarSections = ref<QuickSidebarSection[]>([])
 const quickSidebarError = ref<string | null>(null)
 const quickSidebarFetchedAt = ref(0)
-const POLL_TICK_MS = 5000
-const TOPIC_POLL_INTERVAL_MS = 15000
-const LIST_POLL_INTERVAL_MS = 60000
-const NOTIFICATIONS_POLL_INTERVAL_MS = 60000
+const MESSAGE_BUS_RETRY_MS = 2000
+const MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS = 1200
+const MESSAGE_BUS_LIST_REFRESH_COOLDOWN_MS = 1500
+const MESSAGE_BUS_NOTIFICATIONS_REFRESH_COOLDOWN_MS = 1500
 const floatingState = ref({
   left: null as number | null,
   top: null as number | null,
@@ -1293,13 +1297,299 @@ const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
 }
 
-watch(
-  () => activeTab.value?.viewType,
-  () => {
-    lastTopicPollAt.value = 0
-    lastListPollAt.value = 0
-    lastNotificationsPollAt.value = 0
+type MessageBusPayload = {
+  channel?: string
+  message_id?: number
+  data?: unknown
+}
+
+function createMessageBusClientId(): string {
+  return `mb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function resetMessageBusClient() {
+  messageBusClientId.value = createMessageBusClientId()
+  messageBusSeq = 0
+  messageBusChannels.clear()
+}
+
+function stopMessageBusLoop() {
+  messageBusLoopToken += 1
+  messageBusState.value = 'idle'
+  if (messageBusRetryTimer !== null) {
+    window.clearTimeout(messageBusRetryTimer)
+    messageBusRetryTimer = null
   }
+}
+
+const waitFor = (ms: number) =>
+  new Promise<void>(resolve => {
+    window.setTimeout(resolve, ms)
+  })
+
+function createCoalescedMessageBusRefresh(
+  cooldownMs: number,
+  task: () => Promise<void>,
+  label: string
+) {
+  let running = false
+  let queued = false
+  let lastRunAt = 0
+
+  return () => {
+    queued = true
+    if (running) return
+    running = true
+
+    void (async () => {
+      try {
+        while (queued) {
+          queued = false
+          const waitMs = cooldownMs - (Date.now() - lastRunAt)
+          if (waitMs > 0) {
+            await waitFor(waitMs)
+          }
+          try {
+            await task()
+          } catch (error) {
+            console.warn(`[DiscourseBrowser] ${label} refresh via message_bus failed:`, error)
+          }
+          lastRunAt = Date.now()
+        }
+      } finally {
+        running = false
+      }
+    })()
+  }
+}
+
+const triggerTopicRefresh = createCoalescedMessageBusRefresh(
+  MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS,
+  async () => {
+    const tab = activeTab.value
+    if (!tab || tab.loading || tab.viewType !== 'topic' || !tab.currentTopic) return
+    await pollTopicUpdates(tab)
+  },
+  'topic'
+)
+
+const triggerListRefresh = createCoalescedMessageBusRefresh(
+  MESSAGE_BUS_LIST_REFRESH_COOLDOWN_MS,
+  async () => {
+    const tab = activeTab.value
+    if (!tab || tab.loading) return
+    if (!['home', 'category', 'tag'].includes(tab.viewType)) return
+    await checkTopicListUpdates(tab)
+  },
+  'topic list'
+)
+
+const triggerNotificationsRefresh = createCoalescedMessageBusRefresh(
+  MESSAGE_BUS_NOTIFICATIONS_REFRESH_COOLDOWN_MS,
+  async () => {
+    const tab = activeTab.value
+    if (!tab || tab.loading) return
+    await loadNotifications(tab, tab.notificationsFilter)
+  },
+  'notifications'
+)
+
+const messageBusDesiredChannels = computed(() => {
+  const channels = new Set<string>()
+  const tab = activeTab.value
+
+  if (tab?.viewType === 'topic' && tab.currentTopic?.id) {
+    channels.add(`/topic/${tab.currentTopic.id}`)
+  }
+
+  if (tab && ['home', 'category', 'tag'].includes(tab.viewType)) {
+    channels.add('/latest')
+    if (tab.topicListType === 'new') channels.add('/new')
+    if (tab.topicListType === 'unread') channels.add('/unread')
+  }
+
+  if (messageBusUserId.value) {
+    channels.add(`/notification/${messageBusUserId.value}`)
+    channels.add(`/unread/${messageBusUserId.value}`)
+  }
+
+  return Array.from(channels)
+})
+
+const messageBusDesiredChannelsKey = computed(() =>
+  messageBusDesiredChannels.value.slice().sort().join('|')
+)
+
+function syncMessageBusChannels() {
+  const desired = new Set(messageBusDesiredChannels.value)
+
+  for (const channel of Array.from(messageBusChannels.keys())) {
+    if (!desired.has(channel)) {
+      messageBusChannels.delete(channel)
+    }
+  }
+
+  desired.forEach(channel => {
+    if (!messageBusChannels.has(channel)) {
+      messageBusChannels.set(channel, -1)
+    }
+  })
+}
+
+async function ensureMessageBusUserId() {
+  const username = currentUsername.value?.trim() || ''
+  if (!username) {
+    messageBusUserId.value = null
+    messageBusUserIdFor = ''
+    return
+  }
+
+  if (messageBusUserId.value && messageBusUserIdFor === username) {
+    return
+  }
+
+  if (messageBusUserIdPromise) {
+    return messageBusUserIdPromise
+  }
+
+  const requestUsername = username
+  const requestBaseUrl = baseUrl.value
+  messageBusUserIdPromise = (async () => {
+    try {
+      const result = await pageFetch<any>(
+        `${requestBaseUrl}/u/${encodeURIComponent(requestUsername)}.json`
+      )
+      if (currentUsername.value?.trim() !== requestUsername || baseUrl.value !== requestBaseUrl) {
+        return
+      }
+      const data = extractData(result)
+      const userId = Number(data?.user?.id)
+      if (Number.isFinite(userId) && userId > 0) {
+        messageBusUserId.value = userId
+        messageBusUserIdFor = requestUsername
+      } else {
+        messageBusUserId.value = null
+        messageBusUserIdFor = ''
+      }
+    } catch (error) {
+      console.warn('[DiscourseBrowser] resolve message_bus user id failed:', error)
+      messageBusUserId.value = null
+      messageBusUserIdFor = ''
+    } finally {
+      messageBusUserIdPromise = null
+    }
+  })()
+
+  return messageBusUserIdPromise
+}
+
+async function runMessageBusLoop(token: number) {
+  if (token !== messageBusLoopToken) return
+
+  syncMessageBusChannels()
+  if (messageBusChannels.size === 0) {
+    messageBusState.value = 'idle'
+    return
+  }
+
+  messageBusState.value = 'connecting'
+
+  const payload: Record<string, number> = { __seq: messageBusSeq }
+  messageBusSeq += 1
+  messageBusChannels.forEach((lastId, channel) => {
+    payload[channel] = lastId
+  })
+
+  try {
+    const result = await pageFetch<any>(
+      `${baseUrl.value}/message-bus/${messageBusClientId.value}/poll`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }
+    )
+    if (token !== messageBusLoopToken) return
+
+    if (!result.ok) {
+      throw new Error(`message_bus poll failed: ${result.status}`)
+    }
+
+    const messages = Array.isArray(result.data) ? (result.data as MessageBusPayload[]) : []
+    for (const item of messages) {
+      const channel = typeof item?.channel === 'string' ? item.channel : ''
+      const messageId = Number(item?.message_id)
+
+      if (channel && Number.isFinite(messageId) && messageBusChannels.has(channel)) {
+        const lastId = messageBusChannels.get(channel) ?? -1
+        messageBusChannels.set(channel, Math.max(lastId, messageId))
+      }
+
+      if (channel === '/__status' && item?.data && typeof item.data === 'object') {
+        const statusMap = item.data as Record<string, unknown>
+        Object.entries(statusMap).forEach(([statusChannel, statusId]) => {
+          if (!messageBusChannels.has(statusChannel)) return
+          const numericId = Number(statusId)
+          if (!Number.isFinite(numericId)) return
+          const lastId = messageBusChannels.get(statusChannel) ?? -1
+          messageBusChannels.set(statusChannel, Math.max(lastId, numericId))
+        })
+        continue
+      }
+
+      if (channel.startsWith('/topic/')) {
+        triggerTopicRefresh()
+        continue
+      }
+
+      if (
+        channel === '/latest' ||
+        channel === '/new' ||
+        channel === '/unread' ||
+        channel.startsWith('/unread/')
+      ) {
+        triggerListRefresh()
+      }
+
+      if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {
+        triggerNotificationsRefresh()
+      }
+    }
+
+    messageBusState.value = 'connected'
+    if (token !== messageBusLoopToken) return
+    void runMessageBusLoop(token)
+  } catch (error) {
+    if (token !== messageBusLoopToken) return
+    messageBusState.value = 'error'
+    console.warn('[DiscourseBrowser] message_bus poll failed:', error)
+    messageBusRetryTimer = window.setTimeout(() => {
+      if (token !== messageBusLoopToken) return
+      void runMessageBusLoop(token)
+    }, MESSAGE_BUS_RETRY_MS)
+  }
+}
+
+function restartMessageBusLoop() {
+  const token = ++messageBusLoopToken
+  if (messageBusRetryTimer !== null) {
+    window.clearTimeout(messageBusRetryTimer)
+    messageBusRetryTimer = null
+  }
+  void runMessageBusLoop(token)
+}
+
+resetMessageBusClient()
+
+watch(
+  () => messageBusDesiredChannelsKey.value,
+  () => {
+    syncMessageBusChannels()
+    restartMessageBusLoop()
+  },
+  { immediate: true }
 )
 
 watch(
@@ -1322,6 +1612,14 @@ watch(
     }
     void syncCategoryNotificationLevel()
     void syncTagNotificationLevel()
+
+    messageBusUserId.value = null
+    messageBusUserIdFor = ''
+    resetMessageBusClient()
+    void ensureMessageBusUserId().finally(() => {
+      syncMessageBusChannels()
+      restartMessageBusLoop()
+    })
   }
 )
 
@@ -1339,38 +1637,6 @@ watch(
   }
 )
 
-const pollUpdates = async () => {
-  const tab = activeTab.value
-  if (!tab || tab.loading || pollingBusy.value) return
-  const now = Date.now()
-
-  pollingBusy.value = true
-  try {
-    if (tab.viewType === 'topic' && tab.currentTopic) {
-      if (now - lastTopicPollAt.value >= TOPIC_POLL_INTERVAL_MS) {
-        lastTopicPollAt.value = now
-        await pollTopicUpdates(tab)
-      }
-    }
-
-    if (now - lastNotificationsPollAt.value >= NOTIFICATIONS_POLL_INTERVAL_MS) {
-      lastNotificationsPollAt.value = now
-      await loadNotifications(tab, tab.notificationsFilter)
-    }
-
-    if (tab.viewType === 'home' || tab.viewType === 'category' || tab.viewType === 'tag') {
-      if (now - lastListPollAt.value >= LIST_POLL_INTERVAL_MS) {
-        lastListPollAt.value = now
-        await checkTopicListUpdates(tab)
-      }
-    }
-  } catch (error) {
-    console.warn('[DiscourseBrowser] pollUpdates failed:', error)
-  } finally {
-    pollingBusy.value = false
-  }
-}
-
 // Initialize
 onMounted(() => {
   ensureSessionUser()
@@ -1386,10 +1652,15 @@ onMounted(() => {
   window.addEventListener('touchend', stopPointer)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('load', handleGlobalImageLoad, true)
-  pollTimer.value = window.setInterval(pollUpdates, POLL_TICK_MS)
+  void ensureMessageBusUserId().finally(() => {
+    syncMessageBusChannels()
+    restartMessageBusLoop()
+  })
 })
 
 onUnmounted(() => {
+  stopMessageBusLoop()
+  messageBusChannels.clear()
   if (contentAreaRef.value) {
     contentAreaRef.value.removeEventListener('scroll', handleScroll)
   }
@@ -1401,10 +1672,6 @@ onUnmounted(() => {
   window.removeEventListener('load', handleGlobalImageLoad, true)
   proxiedBlobUrls.forEach(url => URL.revokeObjectURL(url))
   proxiedBlobUrls.clear()
-  if (pollTimer.value !== null) {
-    window.clearInterval(pollTimer.value)
-    pollTimer.value = null
-  }
 })
 </script>
 
