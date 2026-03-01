@@ -162,8 +162,46 @@ export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
   const isFastBuild = process.env.BUILD_FAST === 'true'
   const minifier = process.env.BUILD_MINIFIER === 'terser' ? 'terser' : 'esbuild'
+  const enableForumBrowser = process.env.ENABLE_FORUM_BROWSER !== 'false'
   // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
   const enableLogging = isDev && process.env.ENABLE_LOGGING !== 'false'
+
+  const buildInputs: Record<string, string> = {
+    index: fileURLToPath(new URL('index.html', import.meta.url)),
+    content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
+    background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
+  }
+  const resolveAliases: Array<{ find: string | RegExp; replacement: string }> = [
+    {
+      find: '@',
+      replacement: fileURLToPath(new URL('./src', import.meta.url))
+    }
+  ]
+
+  if (enableForumBrowser) {
+    buildInputs.discourse = fileURLToPath(new URL('discourse.html', import.meta.url))
+  } else {
+    const noForumBrowserPage = fileURLToPath(
+      new URL('./src/options/pages/NoForumBrowserPage.vue', import.meta.url)
+    )
+    const noForumBrowserComponent = fileURLToPath(
+      new URL('./src/options/components/NoForumBrowser.vue', import.meta.url)
+    )
+    resolveAliases.push(
+      {
+        find: '../pages/DiscourseBrowserPage.vue',
+        replacement: noForumBrowserPage
+      },
+      {
+        find: '../components/DiscourseBrowser.vue',
+        replacement: noForumBrowserComponent
+      },
+      {
+        find: './options/components/DiscourseBrowser.vue',
+        replacement: noForumBrowserComponent
+      }
+    )
+  }
 
   return {
     css: {
@@ -173,13 +211,12 @@ export default defineConfig(({ mode }) => {
     },
     // resolve alias so imports using @/xxx map to src/xxx
     resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      }
+      alias: resolveAliases
     },
     define: {
       // 编译期标志定义
-      __ENABLE_LOGGING__: enableLogging
+      __ENABLE_LOGGING__: enableLogging,
+      __ENABLE_FORUM_BROWSER__: enableForumBrowser
     },
     plugins: [
       createAntDesignVueOnDemandPlugin(),
@@ -241,7 +278,7 @@ export default defineConfig(({ mode }) => {
     ],
     // 优化：预构建依赖
     optimizeDeps: {
-      include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue'],
+      include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue']
     },
     build: {
       sourcemap: !isFastBuild && process.env.BUILD_SOURCEMAP === 'true',
@@ -254,7 +291,7 @@ export default defineConfig(({ mode }) => {
       // 优化：启用 CSS 代码分割
       cssCodeSplit: !isFastBuild,
       cssMinify: isFastBuild ? false : 'esbuild',
-      emptyOutDir: !isFastBuild,
+      emptyOutDir: !isFastBuild || !enableForumBrowser,
       terserOptions:
         process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
           ? undefined
@@ -300,12 +337,7 @@ export default defineConfig(({ mode }) => {
               }
             },
       rollupOptions: {
-        input: {
-          index: fileURLToPath(new URL('index.html', import.meta.url)),
-          discourse: fileURLToPath(new URL('discourse.html', import.meta.url)),
-          content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
-          background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
-        },
+        input: buildInputs,
         output: {
           entryFileNames: 'js/[name].js',
           chunkFileNames: 'js/[name].js',

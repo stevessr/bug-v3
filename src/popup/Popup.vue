@@ -8,6 +8,7 @@ import { usePopup } from './usePopup'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
 const { t, initI18n } = useI18n()
+const enableForumBrowser = __ENABLE_FORUM_BROWSER__
 
 // 初始化 i18n
 initI18n()
@@ -83,6 +84,7 @@ const openDiscourseBrowser = () => {
               </svg>
             </a-button>
             <a-button
+              v-if="enableForumBrowser"
               @click="openDiscourseBrowser"
               class="popup-icon-btn"
               :title="t('openDiscourseBrowser')"

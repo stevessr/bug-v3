@@ -31,6 +31,7 @@ watchEffect(() => {
 const router = useRouter()
 const route = useRoute()
 const options = useOptions()
+const enableForumBrowser = __ENABLE_FORUM_BROWSER__
 
 // 提供 options 给子组件使用
 provide('options', options)
@@ -129,10 +130,17 @@ const menuItems = computed(() => {
     { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
     { key: 'stats', label: t('statistics'), route: '/stats' },
     { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
-    { key: 'discourse-browser', label: '论坛浏览器', route: '/discourse-browser' },
     { key: 'workflows', label: '工作流', route: '/workflows' },
     { key: 'about', label: t('about'), route: '/about' }
   ]
+
+  if (enableForumBrowser) {
+    routes.splice(routes.length - 2, 0, {
+      key: 'discourse-browser',
+      label: '论坛浏览器',
+      route: '/discourse-browser'
+    })
+  }
 
   return routes.map(item => ({
     key: item.key,
@@ -177,9 +185,11 @@ const handleMenuSelect = (info: any) => {
     'telegram-import': '/telegram-import',
     stats: '/stats',
     'ai-rename': '/ai-rename',
-    'discourse-browser': '/discourse-browser',
     workflows: '/workflows',
     about: '/about'
+  }
+  if (enableForumBrowser) {
+    routeMap['discourse-browser'] = '/discourse-browser'
   }
 
   const targetRoute = routeMap[key]
@@ -259,8 +269,10 @@ onMounted(async () => {
         'bilibili-import': '/bilibili-import',
         stats: '/stats',
         'ai-rename': '/ai-rename',
-        'discourse-browser': '/discourse-browser',
         about: '/about'
+      }
+      if (enableForumBrowser) {
+        routeMap['discourse-browser'] = '/discourse-browser'
       }
       const targetRoute = routeMap[queryTabs]
       if (targetRoute) {

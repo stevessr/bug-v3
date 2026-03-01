@@ -113,14 +113,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/discourse-browser',
-    name: 'discourse-browser',
-    component: () => import('../pages/DiscourseBrowserPage.vue'),
-    meta: {
-      title: '论坛浏览器'
-    }
-  },
-  {
     path: '/workflows',
     name: 'workflows',
     component: () => import('../pages/WorkflowPage.vue'),
@@ -129,6 +121,17 @@ const routes: RouteRecordRaw[] = [
     }
   }
 ]
+
+if (__ENABLE_FORUM_BROWSER__) {
+  routes.splice(routes.length - 1, 0, {
+    path: '/discourse-browser',
+    name: 'discourse-browser',
+    component: () => import('../pages/DiscourseBrowserPage.vue'),
+    meta: {
+      title: '论坛浏览器'
+    }
+  })
+}
 
 const router = createRouter({
   // Use hash history for browser environments, memory history for SSR

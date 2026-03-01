@@ -79,8 +79,17 @@ if (!config) {
   process.exit(1)
 }
 
+const disableForumBrowser =
+  args.includes('--no-browser') ||
+  process.env.npm_config_no_browser === 'true' ||
+  process.env.npm_config_browser === 'false'
+const buildEnv = {
+  ...config,
+  ENABLE_FORUM_BROWSER: disableForumBrowser ? 'false' : 'true'
+}
+
 // 设置环境变量
-Object.assign(process.env, config)
+Object.assign(process.env, buildEnv)
 
 // Note: JSON asset preparation has been moved to a separate script.
 // Run `node scripts/prepare-json-assets.js` to generate CloudFlare Worker JSON assets.
@@ -89,7 +98,7 @@ Object.assign(process.env, config)
 // 打印配置信息
 console.log(`🚀 开始构建 (${buildType})`)
 console.log(`📋 配置:`)
-Object.entries(config).forEach(([key, value]) => {
+Object.entries(buildEnv).forEach(([key, value]) => {
   console.log(`   ${key}: ${value}`)
 })
 
