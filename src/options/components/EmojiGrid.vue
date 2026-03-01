@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 import QuickTagEditor from './QuickTagEditor.vue'
-import EmojiCard from './EmojiCard.vue'
+import EmojiCard from './EmojiCard'
 
 import { useEmojiImages } from '@/composables/useEmojiImages'
 import type { Emoji } from '@/types/type'
