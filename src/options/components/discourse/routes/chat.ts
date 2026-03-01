@@ -74,8 +74,8 @@ const normalizeChatChannels = (data: any): ChatChannel[] => {
         ? data.chat_channels
         : []
 
-  const direct = directRaw.map(channel => normalizeSingleChannel(channel, 'direct'))
-  const publicChannels = publicRaw.map(channel => normalizeSingleChannel(channel, 'public'))
+  const direct = directRaw.map((channel: any) => normalizeSingleChannel(channel, 'direct'))
+  const publicChannels = publicRaw.map((channel: any) => normalizeSingleChannel(channel, 'public'))
   const channels: ChatChannel[] = [...publicChannels, ...direct]
 
   const tracking = data.tracking?.channel_tracking || {}

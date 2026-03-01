@@ -32,13 +32,13 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     topicId: { type: Number, default: undefined },
     postId: { type: Number, default: undefined },
-    initialRaw: { type: String, default: null },
-    originalRaw: { type: String, default: null },
-    replyToPostNumber: { type: Number, default: null },
-    replyToUsername: { type: String, default: null },
+    initialRaw: { type: String, default: undefined },
+    originalRaw: { type: String, default: undefined },
+    replyToPostNumber: { type: Number, default: undefined },
+    replyToUsername: { type: String, default: undefined },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     currentCategory: { type: Object as () => DiscourseCategory | null, default: null },
-    defaultCategoryId: { type: Number, default: null }
+    defaultCategoryId: { type: Number, default: undefined }
   },
   emits: ['posted', 'clearReply'],
   setup(props, { emit }) {
@@ -183,7 +183,16 @@ export default defineComponent({
 
       const nodeMap = new Map<
         number,
-        { title: string; value: number; key: number; children: any[] }
+        {
+          title: string
+          value: number
+          key: number
+          children: any[]
+          icon?: string | null
+          emoji?: string | null
+          color?: string | null
+          logoUrl?: string
+        }
       >()
       const childrenByParent = new Map<number, Set<number>>()
 
@@ -662,7 +671,7 @@ export default defineComponent({
                       <TagPill
                         name={String(value)}
                         text={getTagOption(String(value))?.label || String(value)}
-                        description={getTagOption(String(value))?.description || null}
+                        description={getTagOption(String(value))?.description || undefined}
                         compact
                       />
                       {closable ? (
@@ -683,7 +692,7 @@ export default defineComponent({
                         <TagPill
                           name={tag.value}
                           text={tag.label}
-                          description={tag.description || null}
+                          description={tag.description || undefined}
                           compact
                         />
                       </Select.Option>

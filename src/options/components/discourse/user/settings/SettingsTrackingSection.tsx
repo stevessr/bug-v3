@@ -63,8 +63,8 @@ export default defineComponent({
             placeholder="选择级别"
             options={props.notificationLevelOptions}
             value={props.form.value.notification_level_when_replying}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.notification_level_when_replying = value)
+            onUpdate:value={value =>
+              (props.form.value.notification_level_when_replying = value as number | undefined)
             }
           />
           <div class="text-gray-500">关闭话题仍显示未读</div>
@@ -72,14 +72,14 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.topics_unread_when_closed}
-            onChange={(val: boolean) => (props.form.value.topics_unread_when_closed = val)}
+            onChange={checked => (props.form.value.topics_unread_when_closed = Boolean(checked))}
           />
           <div class="text-gray-500">关注优先于静音</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.watched_precedence_over_muted}
-            onChange={(val: boolean) => (props.form.value.watched_precedence_over_muted = val)}
+            onChange={checked => (props.form.value.watched_precedence_over_muted = Boolean(checked))}
           />
         </div>
       </div>

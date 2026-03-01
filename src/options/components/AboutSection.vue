@@ -4,7 +4,7 @@ import TypeIt from 'typeit'
 
 // 从 package.json 读取版本信息（相对路径从当前文件到项目根）
 import pkg from '../../../package.json'
-import changelogMarkdown from '../../../CHANGELOG.md?raw'
+const changelogMarkdown = ''
 
 const version = pkg?.version || 'dev'
 const extensionName = pkg?.name || 'Emoji Extension'

@@ -86,8 +86,8 @@ export default defineComponent({
             placeholder="选择策略"
             options={props.reactionTypeOptions}
             value={props.form.value.chat_quick_reaction_type}
-            onUpdate:value={(value: string | undefined) =>
-              (props.form.value.chat_quick_reaction_type = value)
+            onUpdate:value={value =>
+              (props.form.value.chat_quick_reaction_type = value as string | undefined)
             }
           />
           <div class="text-gray-500">自定义快速表情</div>
@@ -101,8 +101,8 @@ export default defineComponent({
             value={props.form.value.chat_quick_reactions_custom}
             onSearch={props.onEmojiSearch}
             onDropdownVisibleChange={props.onEmojiDropdown}
-            onUpdate:value={(value: string[]) =>
-              (props.form.value.chat_quick_reactions_custom = value || [])
+            onUpdate:value={value =>
+              (props.form.value.chat_quick_reactions_custom = (value as string[]) || [])
             }
             disabled={props.form.value.chat_quick_reaction_type !== 'custom'}
             v-slots={{

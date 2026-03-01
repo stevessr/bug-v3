@@ -43,7 +43,7 @@ export default defineComponent({
             placeholder="选择级别"
             options={props.emailLevelOptions}
             value={props.form.value.email_level}
-            onUpdate:value={(value: number | undefined) => (props.form.value.email_level = value)}
+            onUpdate:value={value => (props.form.value.email_level = value as number | undefined)}
           />
           <div class="text-gray-500">私信邮件级别</div>
           <Select
@@ -53,8 +53,8 @@ export default defineComponent({
             placeholder="选择级别"
             options={props.emailLevelOptions}
             value={props.form.value.email_messages_level}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.email_messages_level = value)
+            onUpdate:value={value =>
+              (props.form.value.email_messages_level = value as number | undefined)
             }
           />
           <div class="text-gray-500">邮件包含回复</div>
@@ -65,8 +65,8 @@ export default defineComponent({
             placeholder="选择策略"
             options={props.emailPreviousRepliesOptions}
             value={props.form.value.email_previous_replies}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.email_previous_replies = value)
+            onUpdate:value={value =>
+              (props.form.value.email_previous_replies = value as number | undefined)
             }
           />
           <div class="text-gray-500">邮件中包含回复指向链接</div>
@@ -74,14 +74,14 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.email_in_reply_to}
-            onChange={(val: boolean) => (props.form.value.email_in_reply_to = val)}
+            onChange={checked => (props.form.value.email_in_reply_to = Boolean(checked))}
           />
           <div class="text-gray-500">邮件摘要</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.email_digests}
-            onChange={(val: boolean) => (props.form.value.email_digests = val)}
+            onChange={checked => (props.form.value.email_digests = Boolean(checked))}
           />
           <div class="text-gray-500">摘要频率</div>
           <Select
@@ -92,8 +92,8 @@ export default defineComponent({
             placeholder="选择频率"
             options={props.digestFrequencyOptions}
             value={props.form.value.digest_after_minutes}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.digest_after_minutes = value)
+            onUpdate:value={value =>
+              (props.form.value.digest_after_minutes = value as number | undefined)
             }
           />
           <div class="text-gray-500">摘要包含 TL0</div>
@@ -102,14 +102,14 @@ export default defineComponent({
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.include_tl0_in_digests}
             disabled={!props.form.value.email_digests}
-            onChange={(val: boolean) => (props.form.value.include_tl0_in_digests = val)}
+            onChange={checked => (props.form.value.include_tl0_in_digests = Boolean(checked))}
           />
           <div class="text-gray-500">邮件列表模式</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.mailing_list_mode}
-            onChange={(val: boolean) => (props.form.value.mailing_list_mode = val)}
+            onChange={checked => (props.form.value.mailing_list_mode = Boolean(checked))}
           />
           <div class="text-gray-500">邮件列表模式频率</div>
           <Select
@@ -120,8 +120,8 @@ export default defineComponent({
             placeholder="选择方式"
             options={props.mailingListModeOptions}
             value={props.form.value.mailing_list_mode_frequency}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.mailing_list_mode_frequency = value)
+            onUpdate:value={value =>
+              (props.form.value.mailing_list_mode_frequency = value as number | undefined)
             }
           />
         </div>

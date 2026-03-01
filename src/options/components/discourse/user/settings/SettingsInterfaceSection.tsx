@@ -36,49 +36,49 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.external_links_in_new_tab}
-            onChange={(val: boolean) => (props.form.value.external_links_in_new_tab = val)}
+            onChange={checked => (props.form.value.external_links_in_new_tab = Boolean(checked))}
           />
           <div class="text-gray-500">引用回复</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_quoting}
-            onChange={(val: boolean) => (props.form.value.enable_quoting = val)}
+            onChange={checked => (props.form.value.enable_quoting = Boolean(checked))}
           />
           <div class="text-gray-500">智能列表</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_smart_lists}
-            onChange={(val: boolean) => (props.form.value.enable_smart_lists = val)}
+            onChange={checked => (props.form.value.enable_smart_lists = Boolean(checked))}
           />
           <div class="text-gray-500">延迟加载</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_defer}
-            onChange={(val: boolean) => (props.form.value.enable_defer = val)}
+            onChange={checked => (props.form.value.enable_defer = Boolean(checked))}
           />
           <div class="text-gray-500">等宽字体显示 Markdown</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.enable_markdown_monospace_font}
-            onChange={(val: boolean) => (props.form.value.enable_markdown_monospace_font = val)}
+            onChange={checked => (props.form.value.enable_markdown_monospace_font = Boolean(checked))}
           />
           <div class="text-gray-500">自动取消置顶</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.automatically_unpin_topics}
-            onChange={(val: boolean) => (props.form.value.automatically_unpin_topics = val)}
+            onChange={checked => (props.form.value.automatically_unpin_topics = Boolean(checked))}
           />
           <div class="text-gray-500">动态图标</div>
           <Switch
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.dynamic_favicon}
-            onChange={(val: boolean) => (props.form.value.dynamic_favicon = val)}
+            onChange={checked => (props.form.value.dynamic_favicon = Boolean(checked))}
           />
           <div class="text-gray-500">标题计数模式</div>
           <Select
@@ -88,8 +88,8 @@ export default defineComponent({
             placeholder="选择模式"
             options={props.titleCountModeOptions}
             value={props.form.value.title_count_mode}
-            onUpdate:value={(value: string | undefined) =>
-              (props.form.value.title_count_mode = value)
+            onUpdate:value={value =>
+              (props.form.value.title_count_mode = value as string | undefined)
             }
           />
           <div class="text-gray-500">文字大小</div>
@@ -100,7 +100,9 @@ export default defineComponent({
             placeholder="选择大小"
             options={props.textSizeOptions}
             value={props.form.value.text_size}
-            onUpdate:value={(value: string | undefined) => (props.form.value.text_size = value)}
+            onUpdate:value={value =>
+              (props.form.value.text_size = value as string | undefined)
+            }
           />
           <div class="text-gray-500">主页</div>
           <Select
@@ -110,7 +112,9 @@ export default defineComponent({
             placeholder="选择主页"
             options={props.homepageOptions}
             value={props.form.value.homepage_id}
-            onUpdate:value={(value: number | undefined) => (props.form.value.homepage_id = value)}
+            onUpdate:value={value =>
+              (props.form.value.homepage_id = value as number | undefined)
+            }
           />
         </div>
       </div>

@@ -2,6 +2,7 @@ import { unified } from 'unified'
 import rehypeParse from 'rehype-parse'
 import rehypeStringify from 'rehype-stringify'
 import type { Root } from 'hast'
+import type { Node } from 'hast'
 
 import type { ParsedContent } from '../types'
 
@@ -32,7 +33,7 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   const tree = unified().use(rehypeParse, { fragment: true }).parse(cooked) as Root
 
-  transformQuotes(tree, ctx)
+  transformQuotes(tree as Node, ctx)
 
   const footnotes = extractFootnotes(tree, ctx)
 

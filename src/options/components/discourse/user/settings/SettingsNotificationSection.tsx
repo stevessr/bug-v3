@@ -31,8 +31,8 @@ export default defineComponent({
             placeholder="选择频率"
             options={props.likeNotificationOptions}
             value={props.form.value.like_notification_frequency}
-            onUpdate:value={(value: number | undefined) =>
-              (props.form.value.like_notification_frequency = value)
+            onUpdate:value={value =>
+              (props.form.value.like_notification_frequency = value as number | undefined)
             }
           />
           <div class="text-gray-500">引用回复提醒</div>
@@ -40,7 +40,7 @@ export default defineComponent({
             size="small"
             class="justify-self-start md:justify-self-end"
             checked={props.form.value.notify_on_linked_posts}
-            onChange={(val: boolean) => (props.form.value.notify_on_linked_posts = val)}
+            onChange={checked => (props.form.value.notify_on_linked_posts = Boolean(checked))}
           />
         </div>
       </div>

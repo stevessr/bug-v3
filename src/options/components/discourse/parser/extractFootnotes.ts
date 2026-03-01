@@ -1,4 +1,4 @@
-import type { Node, Parent, Element } from 'hast'
+import type { Node, Parent } from 'hast'
 
 import {
   getPropString,

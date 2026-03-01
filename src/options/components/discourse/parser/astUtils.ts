@@ -1,4 +1,4 @@
-import type { Element, Parent, Root, Node, Properties } from 'hast'
+import type { Element, Parent, Root, Node, Properties, Text } from 'hast'
 
 export type Ancestors = Element[]
 
@@ -42,7 +42,7 @@ export const hasClass = (node: Element, className: string): boolean => {
   return getClassList(node).includes(className)
 }
 
-export const createTextNode = (value: string): Node => {
+export const createTextNode = (value: string): Text => {
   return { type: 'text', value }
 }
 

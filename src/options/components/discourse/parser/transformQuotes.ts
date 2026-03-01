@@ -1,4 +1,4 @@
-import type { Element, Node, Parent, Properties } from 'hast'
+import type { Element, Parent, Properties, ElementContent } from 'hast'
 
 import { buildLightbox, ParseContext, resolveUrl } from './context'
 import {
@@ -45,7 +45,7 @@ const isEmojiOrAvatar = (node: Element) => {
 const createElement = (
   tagName: string,
   properties: Properties = {},
-  children: Node[] = []
+  children: ElementContent[] = []
 ): Element => {
   return {
     type: 'element',
