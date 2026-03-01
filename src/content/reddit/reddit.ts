@@ -57,7 +57,12 @@ function createRedditFloatingButton(data: AddEmojiButtonData): HTMLElement {
 
       // send direct URL to background to avoid converting to base64 in content
       chromeAPI.runtime.sendMessage(
-        { action: 'addEmojiFromWeb', emojiData: data },
+        {
+          type: 'ADD_EMOJI_FROM_WEB',
+          payload: {
+            emojiData: data
+          }
+        },
         (resp: unknown) => {
           try {
             const response = resp as { success?: boolean }

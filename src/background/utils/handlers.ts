@@ -63,9 +63,10 @@ export function setupMessageListener() {
       ) => {
         console.log('Background received message:', message)
 
-        // 首先检查 message.type
-        if (typeof message === 'object' && message !== null && 'type' in message) {
-          const typedMsg = message as TypedMessage
+        const normalized = normalizeMessage(message)
+
+        if (normalized) {
+          const typedMsg = normalized as TypedMessage
           switch (typedMsg.type) {
             case 'GET_EMOJI_DATA':
               handleGetEmojiData(typedMsg as any, sendResponse)
@@ -216,42 +217,36 @@ export function setupMessageListener() {
                 )
               return true
 
+            case 'ADD_TO_FAVORITES':
+              if ('payload' in typedMsg && (typedMsg as any).payload?.emoji) {
+                handleAddToFavorites((typedMsg as any).payload.emoji, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing emoji for ADD_TO_FAVORITES' })
+                return false
+              }
+
+            case 'ADD_EMOJI_FROM_WEB':
+              if ('payload' in typedMsg && (typedMsg as any).payload?.emojiData) {
+                handleAddEmojiFromWeb((typedMsg as any).payload.emojiData, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing emojiData for ADD_EMOJI_FROM_WEB' })
+                return false
+              }
+
+            case 'UPLOAD_AND_ADD_EMOJI':
+              if ('payload' in typedMsg) {
+                handleUploadAndAddEmoji(typedMsg as any, sendResponse)
+                return true
+              } else {
+                sendResponse({ success: false, error: 'Missing payload for UPLOAD_AND_ADD_EMOJI' })
+                return false
+              }
+
             default:
               console.log('Unknown message type:', (typedMsg as any).type)
               sendResponse({ success: false, error: 'Unknown message type' })
-              return false
-          }
-        }
-
-        // 然后检查 message.action
-        if (typeof message === 'object' && message !== null && 'action' in message) {
-          const actionMsg = message as ActionMessage
-          switch (actionMsg.action) {
-            case 'addToFavorites':
-              if ('emoji' in actionMsg) {
-                handleAddToFavorites((actionMsg as any).emoji, sendResponse)
-                return true
-              } else {
-                sendResponse({ success: false, error: 'Missing emoji for addToFavorites' })
-                return false
-              }
-
-            case 'addEmojiFromWeb':
-              if ('emojiData' in actionMsg) {
-                handleAddEmojiFromWeb((actionMsg as any).emojiData, sendResponse)
-                return true
-              } else {
-                sendResponse({ success: false, error: 'Missing emojiData for addEmojiFromWeb' })
-                return false
-              }
-
-            case 'uploadAndAddEmoji':
-              handleUploadAndAddEmoji(actionMsg as any, sendResponse)
-              return true
-
-            default:
-              console.log('Unknown action:', (actionMsg as any).action)
-              sendResponse({ success: false, error: 'Unknown action' })
               return false
           }
         }
@@ -263,4 +258,41 @@ export function setupMessageListener() {
       }
     )
   }
+}
+
+function normalizeMessage(message: BackgroundMessage): TypedMessage | null {
+  if (typeof message !== 'object' || message === null) return null
+
+  if ('type' in message) {
+    return message as TypedMessage
+  }
+
+  if ('action' in message) {
+    const actionMsg = message as ActionMessage
+    switch (actionMsg.action) {
+      case 'addToFavorites':
+        return {
+          type: 'ADD_TO_FAVORITES',
+          payload: {
+            emoji: (actionMsg as any).emoji
+          }
+        }
+      case 'addEmojiFromWeb':
+        return {
+          type: 'ADD_EMOJI_FROM_WEB',
+          payload: {
+            emojiData: (actionMsg as any).emojiData
+          }
+        }
+      case 'uploadAndAddEmoji':
+        return {
+          type: 'UPLOAD_AND_ADD_EMOJI',
+          payload: (actionMsg as any).payload
+        }
+      default:
+        return null
+    }
+  }
+
+  return null
 }

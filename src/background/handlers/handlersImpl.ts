@@ -216,7 +216,6 @@ export function setupStorageChangeListener() {
 
         // 优化：当相关存储键变化时，立即失效缓存确保数据一致性
         if (
-          changes['emojiGroups'] ||
           changes['settings'] ||
           changes['favorites'] ||
           Object.keys(changes).some(key => key.startsWith('group_'))
@@ -248,8 +247,8 @@ export function setupPeriodicCleanup() {
     if (alarm.name !== CLEANUP_ALARM_NAME) return
 
     try {
-      const data = await chromeAPI.storage.local.get(['emojiGroups'])
-      if (data.emojiGroups) {
+      const data = await chromeAPI.storage.local.get(['emojiGroupIndex'])
+      if (data.emojiGroupIndex) {
         console.log('[PeriodicCleanup] Storage cleanup check completed')
       }
     } catch (error) {

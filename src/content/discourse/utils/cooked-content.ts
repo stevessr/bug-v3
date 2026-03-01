@@ -143,8 +143,10 @@ function createBatchParseButton(cookedElement: Element): HTMLElement {
           for (const emojiData of allEmojiData) {
             try {
               await chrome.runtime.sendMessage({
-                action: 'addEmojiFromWeb',
-                emojiData: { ...emojiData, sourceDomain: window.location.hostname }
+                type: 'ADD_EMOJI_FROM_WEB',
+                payload: {
+                  emojiData: { ...emojiData, sourceDomain: window.location.hostname }
+                }
               })
               successCount++
             } catch (e) {

@@ -162,18 +162,6 @@ export class ContentStorageAdapter {
       }
     }
 
-    // Fallback to legacy emojiGroups key
-    console.log('[Content Storage] Trying legacy emojiGroups key')
-    const legacyGroups = await this.get('emojiGroups')
-    if (legacyGroups && Array.isArray(legacyGroups) && legacyGroups.length > 0) {
-      console.log(`[Content Storage] Loaded ${legacyGroups.length} groups from legacy storage`)
-      // Ensure favorites group is always first for legacy data too
-      const favoritesGroup = legacyGroups.find(g => g.id === 'favorites')
-      const otherGroups = legacyGroups
-        .filter(g => g.id !== 'favorites')
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-      return favoritesGroup ? [favoritesGroup, ...otherGroups] : otherGroups
-    }
 
     console.log('[Content Storage] No groups found in storage')
     return []

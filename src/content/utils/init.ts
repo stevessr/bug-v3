@@ -306,7 +306,7 @@ export async function initializeEmojiFeature(
 
     ;(window as any).chrome.storage.onChanged.addListener((changes: any, _namespace: string) => {
       if (_namespace === 'local') {
-        const relevantKeys = ['emojiGroups', 'emojiGroupIndex', 'appSettings']
+        const relevantKeys = ['emojiGroupIndex', 'appSettings']
         const hasRelevant = Object.keys(changes).some(
           k => relevantKeys.includes(k) || k.startsWith('emojiGroup_')
         )

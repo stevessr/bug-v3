@@ -10,14 +10,9 @@ export async function handleAddToFavorites(
   // mark callback as referenced to avoid unused-var lint
   void sendResponse
   try {
-    // Use the unified storage to read/update groups for consistency
-    const groups = await storage.getAllEmojiGroups()
-    let favoritesGroup = groups.find((g: EmojiGroup) => g.id === 'favorites')
-    if (!favoritesGroup) {
-      console.warn('Favorites group not found - creating one')
-      favoritesGroup = { id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] }
-      groups.unshift(favoritesGroup)
-    }
+    const favoritesGroup =
+      (await storage.getEmojiGroup('favorites')) ||
+      ({ id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] } as EmojiGroup)
 
     // Ensure emojis array exists
     if (!Array.isArray(favoritesGroup.emojis)) {
@@ -58,68 +53,54 @@ export async function handleAddToFavorites(
 
     favoritesGroup.emojis.sort((a: Emoji, b: Emoji) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
-    // Persist via storage which updates group index and individual groups
-    await storage.setAllEmojiGroups(groups)
-
-    // 确保 localStorage 也被更新 - 直接操作 localStorage 作为备用
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(
-          'emojiGroups',
-          JSON.stringify({
-            data: groups,
-            timestamp: Date.now()
-          })
-        )
-        console.log('[handleAddToFavorites] localStorage updated directly')
-      }
-    } catch (e) {
-      console.warn('[handleAddToFavorites] Failed to update localStorage directly:', e)
+    const currentIndex = await storage.getEmojiGroupIndex()
+    const favoritesIndex = currentIndex.findIndex(entry => entry.id === 'favorites')
+    if (favoritesIndex === -1) {
+      const updatedIndex = [
+        { id: 'favorites', order: 0 },
+        ...currentIndex.map((entry, idx) => ({ ...entry, order: idx + 1 }))
+      ]
+      await storage.setEmojiGroupIndex(updatedIndex)
+    } else if (favoritesIndex !== 0) {
+      const reordered = currentIndex.filter(entry => entry.id !== 'favorites')
+      const updatedIndex = [
+        { id: 'favorites', order: 0 },
+        ...reordered.map((entry, idx) => ({ ...entry, order: idx + 1 }))
+      ]
+      await storage.setEmojiGroupIndex(updatedIndex)
     }
 
-    // Notify content scripts by updating chrome.storage (legacy compatibility)
+    await storage.setEmojiGroup('favorites', favoritesGroup)
+
+    const favoriteIds = favoritesGroup.emojis.reduce((acc, e) => {
+      if (e.id) acc.push(e.id)
+      return acc
+    }, [] as string[])
+    await storage.setFavorites(favoriteIds)
+
     const chromeAPI = getChromeAPI()
-    if (chromeAPI && chromeAPI.storage && chromeAPI.storage.local) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          chromeAPI.storage.local.set({ emojiGroups: groups }, () => {
-            if (chromeAPI.runtime.lastError) reject(chromeAPI.runtime.lastError)
-            else resolve()
-          })
-        })
-        console.log('[handleAddToFavorites] chrome.storage.local updated')
-      } catch (_e) {
-        console.warn('[handleAddToFavorites] Failed to update chrome.storage.local:', _e)
-      }
-    }
-
-    // 发送收藏夹更新通知到所有上下文，特别是 Options 页面
     if (chromeAPI && chromeAPI.runtime && chromeAPI.runtime.sendMessage) {
       try {
-        // 向所有标签页发送消息
+        const payload = {
+          favoritesGroup,
+          timestamp: Date.now()
+        }
+
         const tabs = await chromeAPI.tabs.query({})
         for (const tab of tabs) {
           try {
             await chromeAPI.tabs.sendMessage(tab.id, {
               type: 'FAVORITES_UPDATED',
-              payload: {
-                favoritesGroup: favoritesGroup,
-                timestamp: Date.now()
-              }
+              payload
             })
           } catch (e) {
-            // 忽略无法发送消息的标签页
             void e
           }
         }
 
-        // 向扩展的 runtime 发送消息（通知 Options 页面）
         await chromeAPI.runtime.sendMessage({
           type: 'FAVORITES_UPDATED',
-          payload: {
-            favoritesGroup: favoritesGroup,
-            timestamp: Date.now()
-          }
+          payload
         })
       } catch (e) {
         console.warn('Failed to send favorites update notification:', e)

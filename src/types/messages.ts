@@ -220,7 +220,63 @@ export interface McpServerTestMessage extends BaseMessage {
 }
 
 /**
- * ADD_TO_FAVORITES 操作消息
+ * ADD_TO_FAVORITES 消息
+ */
+export interface AddToFavoritesTypedMessage extends BaseMessage {
+  type: 'ADD_TO_FAVORITES'
+  payload: {
+    emoji: Partial<Emoji>
+  }
+}
+
+/**
+ * ADD_EMOJI_FROM_WEB 消息
+ */
+export interface AddEmojiFromWebTypedMessage extends BaseMessage {
+  type: 'ADD_EMOJI_FROM_WEB'
+  payload: {
+    emojiData: {
+      url: string
+      name?: string
+      groupId?: string
+      width?: number
+      height?: number
+      displayUrl?: string
+      customOutput?: string
+      sourceDomain?: string
+      targetGroupId?: string
+      targetGroupName?: string
+    }
+  }
+}
+
+/**
+ * UPLOAD_AND_ADD_EMOJI 消息
+ */
+export interface UploadAndAddEmojiTypedMessage extends BaseMessage {
+  type: 'UPLOAD_AND_ADD_EMOJI'
+  payload: {
+    arrayData: number[]
+    filename: string
+    mimeType: string
+    name: string
+    originUrl?: string
+  }
+}
+
+/**
+ * FAVORITES_UPDATED 消息
+ */
+export interface FavoritesUpdatedMessage extends BaseMessage {
+  type: 'FAVORITES_UPDATED'
+  payload: {
+    favoritesGroup: EmojiGroup
+    timestamp?: number
+  }
+}
+
+/**
+ * ADD_TO_FAVORITES legacy 操作消息（兼容）
  */
 export interface AddToFavoritesMessage {
   action: 'addToFavorites'
@@ -228,7 +284,7 @@ export interface AddToFavoritesMessage {
 }
 
 /**
- * ADD_EMOJI_FROM_WEB 操作消息
+ * ADD_EMOJI_FROM_WEB legacy 操作消息（兼容）
  */
 export interface AddEmojiFromWebMessage {
   action: 'addEmojiFromWeb'
@@ -238,11 +294,16 @@ export interface AddEmojiFromWebMessage {
     groupId?: string
     width?: number
     height?: number
+    displayUrl?: string
+    customOutput?: string
+    sourceDomain?: string
+    targetGroupId?: string
+    targetGroupName?: string
   }
 }
 
 /**
- * UPLOAD_AND_ADD_EMOJI 操作消息
+ * UPLOAD_AND_ADD_EMOJI legacy 操作消息（兼容）
  */
 export interface UploadAndAddEmojiMessage {
   action: 'uploadAndAddEmoji'
@@ -282,6 +343,10 @@ export type TypedMessage =
   | McpBridgeSetDisabledMessage
   | McpBridgeTestMessage
   | McpServerTestMessage
+  | AddToFavoritesTypedMessage
+  | AddEmojiFromWebTypedMessage
+  | UploadAndAddEmojiTypedMessage
+  | FavoritesUpdatedMessage
 
 /**
  * 所有基于 action 的消息联合类型
@@ -384,4 +449,24 @@ export function isAddEmojiFromWebMessage(message: any): message is AddEmojiFromW
 
 export function isUploadAndAddEmojiMessage(message: any): message is UploadAndAddEmojiMessage {
   return isActionMessage(message) && message.action === 'uploadAndAddEmoji'
+}
+
+export function isAddToFavoritesTypedMessage(message: any): message is AddToFavoritesTypedMessage {
+  return isTypedMessage(message) && message.type === 'ADD_TO_FAVORITES'
+}
+
+export function isAddEmojiFromWebTypedMessage(
+  message: any
+): message is AddEmojiFromWebTypedMessage {
+  return isTypedMessage(message) && message.type === 'ADD_EMOJI_FROM_WEB'
+}
+
+export function isUploadAndAddEmojiTypedMessage(
+  message: any
+): message is UploadAndAddEmojiTypedMessage {
+  return isTypedMessage(message) && message.type === 'UPLOAD_AND_ADD_EMOJI'
+}
+
+export function isFavoritesUpdatedMessage(message: any): message is FavoritesUpdatedMessage {
+  return isTypedMessage(message) && message.type === 'FAVORITES_UPDATED'
 }

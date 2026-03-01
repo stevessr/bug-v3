@@ -87,7 +87,7 @@ export async function sendEmojiToBackground(
       try {
         chromeAPI.runtime.sendMessage(
           {
-            action: 'uploadAndAddEmoji',
+            type: 'UPLOAD_AND_ADD_EMOJI',
             payload: {
               arrayData,
               filename,

@@ -13,13 +13,20 @@ export function insertEmojiIntoEditor(emoji: unknown) {
   // Add emoji to favorites automatically
   try {
     chrome.runtime.sendMessage({
-      action: 'addToFavorites',
-      emoji: emoji
+      type: 'ADD_TO_FAVORITES',
+      payload: {
+        emoji: emoji
+      }
     })
   } catch (_e) {
     // Some environments may not support promise-based sendMessage
     try {
-      ;(chrome as any).runtime.sendMessage({ action: 'addToFavorites', emoji })
+      ;(chrome as any).runtime.sendMessage({
+        type: 'ADD_TO_FAVORITES',
+        payload: {
+          emoji
+        }
+      })
     } catch (_ignored) {
       void _ignored
     }

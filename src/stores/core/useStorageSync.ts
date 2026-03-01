@@ -45,29 +45,6 @@ export function useStorageSync({
   let runtimeMessageListenerRegistered = false
 
   /**
-   * 处理 legacy emojiGroups key 的变更
-   */
-  const handleLegacyGroupsChange = (change: chrome.storage.StorageChange) => {
-    const legacyGroups = change?.newValue
-    if (!Array.isArray(legacyGroups)) return
-
-    console.log('[EmojiStore] Processing legacy emojiGroups change')
-    const legacyFavorites = legacyGroups.find((g: any) => g.id === 'favorites')
-    if (!legacyFavorites) return
-
-    const idx = groups.value.findIndex(g => g.id === 'favorites')
-    if (idx !== -1) {
-      const updatedGroups = [...groups.value]
-      updatedGroups[idx] = legacyFavorites
-      groups.value = updatedGroups
-      console.log('[EmojiStore] Updated favorites group from legacy data')
-    } else {
-      groups.value = [...groups.value, legacyFavorites]
-      console.log('[EmojiStore] Added favorites group from legacy data')
-    }
-  }
-
-  /**
    * 处理单个分组的变更
    */
   const handleGroupChange = async (
@@ -250,7 +227,8 @@ export function useStorageSync({
         beforeTags.length !== afterTags.length ||
         beforeTags.some((tag, index) => tag !== afterTags[index])
       const nameChanged = beforeEmoji.name !== afterEmoji.name
-      const urlChanged = beforeEmoji.url !== afterEmoji.url || beforeEmoji.displayUrl !== afterEmoji.displayUrl
+      const urlChanged =
+        beforeEmoji.url !== afterEmoji.url || beforeEmoji.displayUrl !== afterEmoji.displayUrl
       const groupChanged = beforeEmoji.groupId !== afterEmoji.groupId
 
       if (tagsChanged) {
@@ -271,11 +249,6 @@ export function useStorageSync({
     changes: { [key: string]: chrome.storage.StorageChange },
     keys: string[]
   ): Promise<void> => {
-    // 处理 legacy key
-    if (keys.includes('emojiGroups')) {
-      handleLegacyGroupsChange(changes['emojiGroups'])
-    }
-
     const previousGroups = new Map<string, EmojiGroup | null>()
     if (hasIndexCallbacks) {
       for (const key of keys) {
@@ -289,8 +262,6 @@ export function useStorageSync({
     // 按 key 类型分派处理
     for (const key of keys) {
       try {
-        if (key === 'emojiGroups') continue // 已处理
-
         if (key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) {
           const groupId = key.replace(STORAGE_KEYS.GROUP_PREFIX, '')
           const updatedGroup = await handleGroupChange(groupId, changes[key])
@@ -352,14 +323,12 @@ export function useStorageSync({
           if (!changedKeys.length) return
 
           // Only consider changes to settings, favorites, group index or individual group keys
-          // Also check for legacy emojiGroups key for backward compatibility
           const isRelevant = changedKeys.some(
             k =>
               k === STORAGE_KEYS.SETTINGS ||
               k === STORAGE_KEYS.FAVORITES ||
               k === STORAGE_KEYS.GROUP_INDEX ||
-              k.startsWith(STORAGE_KEYS.GROUP_PREFIX) ||
-              k === 'emojiGroups' // Legacy support
+              k.startsWith(STORAGE_KEYS.GROUP_PREFIX)
           )
 
           if (!isRelevant) {

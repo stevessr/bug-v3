@@ -10,8 +10,10 @@ export function setupButtonClickHandler(button: HTMLElement, data: AddEmojiButto
     const originalStyle = button.style.cssText
     try {
       await chrome.runtime.sendMessage({
-        action: 'addEmojiFromWeb',
-        emojiData: { ...data, sourceDomain: window.location.hostname }
+        type: 'ADD_EMOJI_FROM_WEB',
+        payload: {
+          emojiData: { ...data, sourceDomain: window.location.hostname }
+        }
       })
       button.textContent = '已添加'
       button.style.background = 'linear-gradient(135deg, #10b981, #059669)'

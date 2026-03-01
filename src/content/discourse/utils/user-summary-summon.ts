@@ -58,13 +58,15 @@ const createSummonButton = () => {
 
         try {
           await chrome.runtime.sendMessage({
-            action: 'addEmojiFromWeb',
-            emojiData: {
-              name: name || username,
-              url: avatarUrl,
-              customOutput: `@${username}`,
-              targetGroupName: TARGET_GROUP_NAME,
-              sourceDomain: window.location.hostname
+            type: 'ADD_EMOJI_FROM_WEB',
+            payload: {
+              emojiData: {
+                name: name || username,
+                url: avatarUrl,
+                customOutput: `@${username}`,
+                targetGroupName: TARGET_GROUP_NAME,
+                sourceDomain: window.location.hostname
+              }
             }
           })
           label.textContent = '已添加'
