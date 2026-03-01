@@ -8,6 +8,7 @@ import type {
   DiscourseTopic,
   DiscourseUser,
   DiscoursePost,
+  DiscourseNotification,
   ActivityTabType,
   MessagesTabType,
   TopicListType,
@@ -58,7 +59,115 @@ import {
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
 
+type ShortLivedCacheEntry = {
+  expiresAt: number
+  data: unknown
+}
+
 export function useDiscourseBrowser() {
+  const UPDATE_CACHE_MAX_ENTRIES = 80
+  const TOPIC_LIST_UPDATE_CACHE_TTL_MS = 2500
+  const TOPIC_STREAM_UPDATE_CACHE_TTL_MS = 1200
+  const TOPIC_POSTS_UPDATE_CACHE_TTL_MS = 1200
+  const NOTIFICATIONS_CACHE_TTL_MS = 3000
+
+  const updateResponseCache = new Map<string, ShortLivedCacheEntry>()
+  const updateInFlight = new Map<string, Promise<unknown>>()
+  const tabScopedUpdatesInFlight = new Map<string, Promise<void>>()
+  const notificationsSnapshotCache = new Map<
+    string,
+    { expiresAt: number; notifications: DiscourseNotification[] }
+  >()
+  const notificationsInFlight = new Map<string, Promise<void>>()
+
+  const cloneNotifications = (notifications: DiscourseNotification[]): DiscourseNotification[] =>
+    notifications.map(item => ({
+      ...item,
+      data:
+        item.data && typeof item.data === 'object'
+          ? ({ ...(item.data as Record<string, unknown>) } as Record<string, any>)
+          : item.data
+    }))
+
+  const compactUpdateCache = () => {
+    const now = Date.now()
+
+    for (const [key, entry] of updateResponseCache) {
+      if (entry.expiresAt <= now) {
+        updateResponseCache.delete(key)
+      }
+    }
+
+    if (updateResponseCache.size <= UPDATE_CACHE_MAX_ENTRIES) return
+
+    const sorted = Array.from(updateResponseCache.entries()).sort(
+      (a, b) => a[1].expiresAt - b[1].expiresAt
+    )
+
+    while (updateResponseCache.size > UPDATE_CACHE_MAX_ENTRIES && sorted.length > 0) {
+      const candidate = sorted.shift()
+      if (!candidate) break
+      updateResponseCache.delete(candidate[0])
+    }
+  }
+
+  const clearTransientCaches = () => {
+    updateResponseCache.clear()
+    updateInFlight.clear()
+    tabScopedUpdatesInFlight.clear()
+    notificationsSnapshotCache.clear()
+    notificationsInFlight.clear()
+  }
+
+  async function runTabScopedUpdate(
+    tabId: string,
+    updateKey: string,
+    task: () => Promise<void>
+  ): Promise<void> {
+    const scopedKey = `${tabId}|${updateKey}`
+    const existing = tabScopedUpdatesInFlight.get(scopedKey)
+    if (existing) {
+      await existing
+      return
+    }
+
+    const running = task().finally(() => {
+      tabScopedUpdatesInFlight.delete(scopedKey)
+    })
+    tabScopedUpdatesInFlight.set(scopedKey, running)
+    await running
+  }
+
+  async function fetchUpdateDataWithCache<T>(cacheKey: string, url: string, ttlMs: number) {
+    const now = Date.now()
+    const cached = updateResponseCache.get(cacheKey)
+    if (cached && cached.expiresAt > now) {
+      return cached.data as T | null
+    }
+
+    const inFlight = updateInFlight.get(cacheKey)
+    if (inFlight) {
+      return (await inFlight) as T | null
+    }
+
+    const requestPromise = pageFetch<any>(url)
+      .then(result => {
+        const data = extractData(result) as T | null
+        updateResponseCache.set(cacheKey, {
+          expiresAt: Date.now() + ttlMs,
+          data
+        })
+        compactUpdateCache()
+        return data
+      })
+      .finally(() => {
+        updateInFlight.delete(cacheKey)
+      })
+
+    updateInFlight.set(cacheKey, requestPromise)
+    return (await requestPromise) as T | null
+  }
+
   // Base URL
   const baseUrl = ref('https://linux.do')
   const urlInput = ref('https://linux.do')
@@ -114,6 +223,7 @@ export function useDiscourseBrowser() {
   watch(
     baseUrl,
     () => {
+      clearTransientCaches()
       void ensureSessionUser(true)
     },
     { immediate: true }
@@ -494,7 +604,40 @@ export function useDiscourseBrowser() {
   }
 
   async function loadNotifications(tab: BrowserTab, filter: DiscourseNotificationFilter) {
-    await loadNotificationsRoute(tab, baseUrl, filter)
+    const cacheKey = `${baseUrl.value}|${filter}`
+    const now = Date.now()
+    const cached = notificationsSnapshotCache.get(cacheKey)
+    if (cached && cached.expiresAt > now) {
+      tab.notifications = cloneNotifications(cached.notifications)
+      tab.notificationsFilter = filter
+      return
+    }
+
+    const existingRequest = notificationsInFlight.get(cacheKey)
+    if (existingRequest) {
+      await existingRequest
+      const refreshed = notificationsSnapshotCache.get(cacheKey)
+      if (refreshed) {
+        tab.notifications = cloneNotifications(refreshed.notifications)
+        tab.notificationsFilter = filter
+      }
+      return
+    }
+
+    const request = (async () => {
+      await loadNotificationsRoute(tab, baseUrl, filter)
+      notificationsSnapshotCache.set(cacheKey, {
+        expiresAt: Date.now() + NOTIFICATIONS_CACHE_TTL_MS,
+        notifications: cloneNotifications(tab.notifications || [])
+      })
+    })()
+
+    notificationsInFlight.set(cacheKey, request)
+    try {
+      await request
+    } finally {
+      notificationsInFlight.delete(cacheKey)
+    }
   }
 
   async function loadSearch(tab: BrowserTab, query: string) {
@@ -505,34 +648,39 @@ export function useDiscourseBrowser() {
   async function checkTopicListUpdates(tab: BrowserTab) {
     if (!tab || !['home', 'category', 'tag'].includes(tab.viewType)) return
 
-    let url = ''
-    if (tab.viewType === 'home') {
-      url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json`
-    } else if (tab.viewType === 'category') {
-      url = tab.currentCategoryId
-        ? `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json`
-        : `${baseUrl.value}/c/${tab.currentCategorySlug}.json`
-    } else if (tab.viewType === 'tag') {
-      const encoded = encodeURIComponent(tab.currentTagName || '')
-      if (!encoded) return
-      url = `${baseUrl.value}/tag/${encoded}.json`
-    }
+    await runTabScopedUpdate(tab.id, 'topic-list', async () => {
+      let url = ''
+      if (tab.viewType === 'home') {
+        url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json`
+      } else if (tab.viewType === 'category') {
+        url = tab.currentCategoryId
+          ? `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json`
+          : `${baseUrl.value}/c/${tab.currentCategorySlug}.json`
+      } else if (tab.viewType === 'tag') {
+        const encoded = encodeURIComponent(tab.currentTagName || '')
+        if (!encoded) return
+        url = `${baseUrl.value}/tag/${encoded}.json`
+      }
 
-    if (!url) return
+      if (!url) return
 
-    const result = await pageFetch<any>(url)
-    const data = extractData(result)
-    const topics = data?.topic_list?.topics || []
-    if (!Array.isArray(topics)) return
+      const data = await fetchUpdateDataWithCache<any>(
+        `topic-list|${url}`,
+        url,
+        TOPIC_LIST_UPDATE_CACHE_TTL_MS
+      )
+      const topics = data?.topic_list?.topics || []
+      if (!Array.isArray(topics)) return
 
-    const existingIds = new Set(tab.topics.map(topic => topic.id))
-    const pending = topics.filter(topic => !existingIds.has(topic.id))
-    tab.pendingTopics = pending.length > 0 ? pending : null
-    tab.pendingTopicsCount = pending.length
+      const existingIds = new Set(tab.topics.map(topic => topic.id))
+      const pending = topics.filter(topic => !existingIds.has(topic.id))
+      tab.pendingTopics = pending.length > 0 ? pending : null
+      tab.pendingTopicsCount = pending.length
 
-    if (Array.isArray(data?.users)) {
-      data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
-    }
+      if (Array.isArray(data?.users)) {
+        data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+      }
+    })
   }
 
   function applyPendingTopics(tab: BrowserTab) {
@@ -548,40 +696,50 @@ export function useDiscourseBrowser() {
   async function pollTopicUpdates(tab: BrowserTab) {
     if (!tab?.currentTopic) return
     const topicId = tab.currentTopic.id
-    const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}.json`)
-    const data = extractData(result)
-    if (!data?.post_stream?.stream || !tab.currentTopic) return
-    if (tab.currentTopic.id !== topicId) return
 
-    const stream = data.post_stream.stream as number[]
-    const newIds = stream.filter(id => !tab.loadedPostIds.has(id))
-    if (newIds.length === 0) {
+    await runTabScopedUpdate(tab.id, `topic-stream:${topicId}`, async () => {
+      const streamUrl = `${baseUrl.value}/t/${topicId}.json`
+      const data = await fetchUpdateDataWithCache<any>(
+        `topic-stream|${streamUrl}`,
+        streamUrl,
+        TOPIC_STREAM_UPDATE_CACHE_TTL_MS
+      )
+      if (!data?.post_stream?.stream || !tab.currentTopic) return
+      if (tab.currentTopic.id !== topicId) return
+
+      const stream = data.post_stream.stream as number[]
+      const newIds = stream.filter(id => !tab.loadedPostIds.has(id))
+      if (newIds.length === 0) {
+        tab.currentTopic.post_stream.stream = stream
+        tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
+        return
+      }
+
+      const requestIds = newIds.slice(-30)
+      const idsParam = requestIds.map(id => `post_ids[]=${id}`).join('&')
+      const postsUrl = `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}&include_suggested=false`
+      const postData = await fetchUpdateDataWithCache<any>(
+        `topic-posts|${postsUrl}`,
+        postsUrl,
+        TOPIC_POSTS_UPDATE_CACHE_TTL_MS
+      )
+      const newPosts = postData?.post_stream?.posts || []
+      if (!Array.isArray(newPosts) || newPosts.length === 0) return
+
+      tab.currentTopic.post_stream.posts = [
+        ...tab.currentTopic.post_stream.posts,
+        ...newPosts
+      ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
+      newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
       tab.currentTopic.post_stream.stream = stream
+      tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count
+      tab.currentTopic.highest_post_number =
+        data.highest_post_number ?? tab.currentTopic.highest_post_number
+      tab.currentTopic.last_posted_at = data.last_posted_at ?? tab.currentTopic.last_posted_at
       tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
-      return
-    }
 
-    const requestIds = newIds.slice(-30)
-    const idsParam = requestIds.map(id => `post_ids[]=${id}`).join('&')
-    const postsResult = await pageFetch<any>(
-      `${baseUrl.value}/t/${topicId}/posts.json?${idsParam}&include_suggested=false`
-    )
-    const postData = extractData(postsResult)
-    const newPosts = postData?.post_stream?.posts || []
-    if (!Array.isArray(newPosts) || newPosts.length === 0) return
-
-    tab.currentTopic.post_stream.posts = [...tab.currentTopic.post_stream.posts, ...newPosts].sort(
-      (a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number
-    )
-    newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
-    tab.currentTopic.post_stream.stream = stream
-    tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count
-    tab.currentTopic.highest_post_number =
-      data.highest_post_number ?? tab.currentTopic.highest_post_number
-    tab.currentTopic.last_posted_at = data.last_posted_at ?? tab.currentTopic.last_posted_at
-    tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
-
-    void sendReadTimings(tab, topicId, baseUrl.value, newPosts)
+      void sendReadTimings(tab, topicId, baseUrl.value, newPosts)
+    })
   }
 
   // Load single tag topic list

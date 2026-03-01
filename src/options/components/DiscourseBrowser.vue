@@ -128,6 +128,8 @@ let messageBusUserIdFor = ''
 let messageBusUserIdPromise: Promise<void> | null = null
 let messageBusLoopToken = 0
 let messageBusSeq = 0
+let messageBusPollInFlight = false
+let messageBusPendingRestart = false
 let messageBusRetryTimer: number | null = null
 const quickSidebarOpen = ref(false)
 const quickSidebarLoading = ref(false)
@@ -1315,6 +1317,8 @@ function resetMessageBusClient() {
 
 function stopMessageBusLoop() {
   messageBusLoopToken += 1
+  messageBusPollInFlight = false
+  messageBusPendingRestart = false
   messageBusState.value = 'idle'
   if (messageBusRetryTimer !== null) {
     window.clearTimeout(messageBusRetryTimer)
@@ -1501,6 +1505,7 @@ async function runMessageBusLoop(token: number) {
   })
 
   try {
+    messageBusPollInFlight = true
     const result = await pageFetch<any>(
       `${baseUrl.value}/message-bus/${messageBusClientId.value}/poll`,
       {
@@ -1559,9 +1564,19 @@ async function runMessageBusLoop(token: number) {
     }
 
     messageBusState.value = 'connected'
+    messageBusPollInFlight = false
+
+    if (messageBusPendingRestart) {
+      messageBusPendingRestart = false
+      const nextToken = ++messageBusLoopToken
+      void runMessageBusLoop(nextToken)
+      return
+    }
+
     if (token !== messageBusLoopToken) return
     void runMessageBusLoop(token)
   } catch (error) {
+    messageBusPollInFlight = false
     if (token !== messageBusLoopToken) return
     messageBusState.value = 'error'
     console.warn('[DiscourseBrowser] message_bus poll failed:', error)
@@ -1573,11 +1588,14 @@ async function runMessageBusLoop(token: number) {
 }
 
 function restartMessageBusLoop() {
-  const token = ++messageBusLoopToken
+  messageBusPendingRestart = true
   if (messageBusRetryTimer !== null) {
     window.clearTimeout(messageBusRetryTimer)
     messageBusRetryTimer = null
   }
+  if (messageBusPollInFlight) return
+  messageBusPendingRestart = false
+  const token = ++messageBusLoopToken
   void runMessageBusLoop(token)
 }
 
