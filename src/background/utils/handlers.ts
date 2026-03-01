@@ -69,12 +69,12 @@ export function setupMessageListener() {
           const typedMsg = normalized as TypedMessage
           switch (typedMsg.type) {
             case 'GET_EMOJI_DATA':
-              handleGetEmojiData(typedMsg as any, sendResponse)
+              handleGetEmojiData(typedMsg as any, sendResponse as any)
               return true
 
             case 'GET_EMOJI_SETTING':
               if ('key' in typedMsg && typedMsg.key) {
-                handleGetEmojiSetting(typedMsg.key as any, sendResponse)
+                handleGetEmojiSetting(typedMsg.key as any, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing key for GET_EMOJI_SETTING' })
@@ -92,7 +92,7 @@ export function setupMessageListener() {
 
             case 'SAVE_EMOJI_DATA':
               if ('data' in typedMsg) {
-                handleSaveEmojiData((typedMsg as any).data, sendResponse)
+                handleSaveEmojiData((typedMsg as any).data, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing data for SAVE_EMOJI_DATA' })
@@ -219,7 +219,7 @@ export function setupMessageListener() {
 
             case 'ADD_TO_FAVORITES':
               if ('payload' in typedMsg && (typedMsg as any).payload?.emoji) {
-                handleAddToFavorites((typedMsg as any).payload.emoji, sendResponse)
+                handleAddToFavorites((typedMsg as any).payload.emoji, sendResponse as any)
                 return true
               } else {
                 sendResponse({ success: false, error: 'Missing emoji for ADD_TO_FAVORITES' })

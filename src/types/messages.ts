@@ -219,6 +219,23 @@ export interface McpServerTestMessage extends BaseMessage {
   options?: any
 }
 
+export interface McpBridgeReconnectMessage extends BaseMessage {
+  type: 'MCP_BRIDGE_RECONNECT'
+}
+
+export interface McpGetStatusMessage extends BaseMessage {
+  type: 'MCP_GET_STATUS'
+}
+
+export interface McpGetBridgeSettingsMessage extends BaseMessage {
+  type: 'MCP_GET_BRIDGE_SETTINGS'
+}
+
+export interface McpSetBridgeSettingsMessage extends BaseMessage {
+  type: 'MCP_SET_BRIDGE_SETTINGS'
+  data?: any
+}
+
 /**
  * ADD_TO_FAVORITES 消息
  */
@@ -343,6 +360,10 @@ export type TypedMessage =
   | McpBridgeSetDisabledMessage
   | McpBridgeTestMessage
   | McpServerTestMessage
+  | McpBridgeReconnectMessage
+  | McpGetStatusMessage
+  | McpGetBridgeSettingsMessage
+  | McpSetBridgeSettingsMessage
   | AddToFavoritesTypedMessage
   | AddEmojiFromWebTypedMessage
   | UploadAndAddEmojiTypedMessage

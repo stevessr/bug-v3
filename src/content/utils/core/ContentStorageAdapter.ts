@@ -162,7 +162,6 @@ export class ContentStorageAdapter {
       }
     }
 
-
     console.log('[Content Storage] No groups found in storage')
     return []
   }
