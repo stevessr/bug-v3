@@ -39,6 +39,10 @@ import ChatView from './discourse/chat/ChatView'
 import SearchView from './discourse/search/SearchView'
 import { pageFetch, extractData } from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
+import {
+  createDiscourseMessageBusClient,
+  type MessageBusCallback
+} from './discourse/messageBusClient'
 
 const {
   baseUrl,
@@ -120,26 +124,31 @@ const editInitialRaw = ref('')
 const editOriginalRaw = ref('')
 const proxiedBlobUrls = new Set<string>()
 const proxyingImages = new WeakSet<HTMLImageElement>()
-const messageBusClientId = ref('')
 const messageBusUserId = ref<number | null>(null)
-const messageBusChannels = new Map<string, number>()
-const messageBusState = ref<'idle' | 'connecting' | 'connected' | 'error'>('idle')
 let messageBusUserIdFor = ''
 let messageBusUserIdPromise: Promise<void> | null = null
-let messageBusLoopToken = 0
-let messageBusSeq = 0
-let messageBusPollInFlight = false
-let messageBusPendingRestart = false
-let messageBusRetryTimer: number | null = null
 const quickSidebarOpen = ref(false)
 const quickSidebarLoading = ref(false)
 const quickSidebarSections = ref<QuickSidebarSection[]>([])
 const quickSidebarError = ref<string | null>(null)
 const quickSidebarFetchedAt = ref(0)
-const MESSAGE_BUS_RETRY_MS = 2000
+const MESSAGE_BUS_USER_ID_CACHE_TTL_MS = 5 * 60 * 1000
+const MESSAGE_BUS_USER_ID_ERROR_CACHE_TTL_MS = 60 * 1000
 const MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS = 1200
 const MESSAGE_BUS_LIST_REFRESH_COOLDOWN_MS = 1500
 const MESSAGE_BUS_NOTIFICATIONS_REFRESH_COOLDOWN_MS = 1500
+const messageBusUserIdCache = new Map<string, { expiresAt: number; userId: number | null }>()
+type MessageBusSubscriptionRecord = { handler: MessageBusCallback; unsubscribe: () => void }
+const activeMessageBusSubscriptions = new Map<string, MessageBusSubscriptionRecord>()
+const messageBus = createDiscourseMessageBusClient({
+  getBaseUrl: () => baseUrl.value,
+  callbackInterval: 15000,
+  backgroundCallbackInterval: 60000,
+  minPollInterval: 100,
+  maxPollInterval: 3 * 60 * 1000,
+  minHiddenPollInterval: 1500,
+  retryAfter429Ms: 15000
+})
 const floatingState = ref({
   left: null as number | null,
   top: null as number | null,
@@ -1299,33 +1308,6 @@ const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
 }
 
-type MessageBusPayload = {
-  channel?: string
-  message_id?: number
-  data?: unknown
-}
-
-function createMessageBusClientId(): string {
-  return `mb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function resetMessageBusClient() {
-  messageBusClientId.value = createMessageBusClientId()
-  messageBusSeq = 0
-  messageBusChannels.clear()
-}
-
-function stopMessageBusLoop() {
-  messageBusLoopToken += 1
-  messageBusPollInFlight = false
-  messageBusPendingRestart = false
-  messageBusState.value = 'idle'
-  if (messageBusRetryTimer !== null) {
-    window.clearTimeout(messageBusRetryTimer)
-    messageBusRetryTimer = null
-  }
-}
-
 const waitFor = (ms: number) =>
   new Promise<void>(resolve => {
     window.setTimeout(resolve, ms)
@@ -1398,46 +1380,84 @@ const triggerNotificationsRefresh = createCoalescedMessageBusRefresh(
   'notifications'
 )
 
-const messageBusDesiredChannels = computed(() => {
-  const channels = new Set<string>()
+const handleTopicChannelMessage: MessageBusCallback = () => {
+  triggerTopicRefresh()
+}
+
+const handleListChannelMessage: MessageBusCallback = () => {
+  triggerListRefresh()
+}
+
+const handleNotificationChannelMessage: MessageBusCallback = () => {
+  triggerNotificationsRefresh()
+}
+
+const handleUnreadNotificationChannelMessage: MessageBusCallback = () => {
+  triggerListRefresh()
+  triggerNotificationsRefresh()
+}
+
+const messageBusDesiredSubscriptions = computed(() => {
+  const subscriptions = new Map<string, MessageBusCallback>()
   const tab = activeTab.value
 
   if (tab?.viewType === 'topic' && tab.currentTopic?.id) {
-    channels.add(`/topic/${tab.currentTopic.id}`)
+    subscriptions.set(`/topic/${tab.currentTopic.id}`, handleTopicChannelMessage)
   }
 
   if (tab && ['home', 'category', 'tag'].includes(tab.viewType)) {
-    channels.add('/latest')
-    if (tab.topicListType === 'new') channels.add('/new')
-    if (tab.topicListType === 'unread') channels.add('/unread')
+    subscriptions.set('/latest', handleListChannelMessage)
+    if (tab.topicListType === 'new') subscriptions.set('/new', handleListChannelMessage)
+    if (tab.topicListType === 'unread') subscriptions.set('/unread', handleListChannelMessage)
   }
 
   if (messageBusUserId.value) {
-    channels.add(`/notification/${messageBusUserId.value}`)
-    channels.add(`/unread/${messageBusUserId.value}`)
+    subscriptions.set(`/notification/${messageBusUserId.value}`, handleNotificationChannelMessage)
+    subscriptions.set(`/unread/${messageBusUserId.value}`, handleUnreadNotificationChannelMessage)
   }
 
-  return Array.from(channels)
+  return Array.from(subscriptions.entries()).map(([channel, handler]) => ({
+    channel,
+    handler
+  }))
 })
 
-const messageBusDesiredChannelsKey = computed(() =>
-  messageBusDesiredChannels.value.slice().sort().join('|')
+const messageBusDesiredSubscriptionsKey = computed(() =>
+  messageBusDesiredSubscriptions.value
+    .map(subscription => subscription.channel)
+    .sort()
+    .join('|')
 )
 
-function syncMessageBusChannels() {
-  const desired = new Set(messageBusDesiredChannels.value)
+function syncMessageBusSubscriptions() {
+  const desired = new Map(
+    messageBusDesiredSubscriptions.value.map(subscription => [
+      subscription.channel,
+      subscription.handler
+    ])
+  )
 
-  for (const channel of Array.from(messageBusChannels.keys())) {
-    if (!desired.has(channel)) {
-      messageBusChannels.delete(channel)
+  for (const [channel, current] of Array.from(activeMessageBusSubscriptions.entries())) {
+    const desiredHandler = desired.get(channel)
+    if (!desiredHandler || desiredHandler !== current.handler) {
+      current.unsubscribe()
+      activeMessageBusSubscriptions.delete(channel)
     }
   }
 
-  desired.forEach(channel => {
-    if (!messageBusChannels.has(channel)) {
-      messageBusChannels.set(channel, -1)
-    }
+  desired.forEach((handler, channel) => {
+    const current = activeMessageBusSubscriptions.get(channel)
+    if (current && current.handler === handler) return
+    const unsubscribe = messageBus.subscribe(channel, handler, -1)
+    activeMessageBusSubscriptions.set(channel, { handler, unsubscribe })
   })
+}
+
+function clearMessageBusSubscriptions() {
+  activeMessageBusSubscriptions.forEach(record => {
+    record.unsubscribe()
+  })
+  activeMessageBusSubscriptions.clear()
 }
 
 async function ensureMessageBusUserId() {
@@ -1445,6 +1465,15 @@ async function ensureMessageBusUserId() {
   if (!username) {
     messageBusUserId.value = null
     messageBusUserIdFor = ''
+    return
+  }
+
+  const cacheKey = `${baseUrl.value}|${username}`
+  const now = Date.now()
+  const cached = messageBusUserIdCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    messageBusUserId.value = cached.userId
+    messageBusUserIdFor = cached.userId ? username : ''
     return
   }
 
@@ -1458,28 +1487,33 @@ async function ensureMessageBusUserId() {
 
   const requestUsername = username
   const requestBaseUrl = baseUrl.value
+  const requestCacheKey = cacheKey
   messageBusUserIdPromise = (async () => {
+    let resolvedUserId: number | null = null
+    let cacheTtlMs = MESSAGE_BUS_USER_ID_CACHE_TTL_MS
     try {
       const result = await pageFetch<any>(
         `${requestBaseUrl}/u/${encodeURIComponent(requestUsername)}.json`
       )
-      if (currentUsername.value?.trim() !== requestUsername || baseUrl.value !== requestBaseUrl) {
-        return
-      }
       const data = extractData(result)
       const userId = Number(data?.user?.id)
       if (Number.isFinite(userId) && userId > 0) {
-        messageBusUserId.value = userId
-        messageBusUserIdFor = requestUsername
-      } else {
-        messageBusUserId.value = null
-        messageBusUserIdFor = ''
+        resolvedUserId = userId
       }
     } catch (error) {
       console.warn('[DiscourseBrowser] resolve message_bus user id failed:', error)
-      messageBusUserId.value = null
-      messageBusUserIdFor = ''
+      cacheTtlMs = MESSAGE_BUS_USER_ID_ERROR_CACHE_TTL_MS
     } finally {
+      messageBusUserIdCache.set(requestCacheKey, {
+        expiresAt: Date.now() + cacheTtlMs,
+        userId: resolvedUserId
+      })
+
+      if (currentUsername.value?.trim() === requestUsername && baseUrl.value === requestBaseUrl) {
+        messageBusUserId.value = resolvedUserId
+        messageBusUserIdFor = resolvedUserId ? requestUsername : ''
+      }
+
       messageBusUserIdPromise = null
     }
   })()
@@ -1487,125 +1521,10 @@ async function ensureMessageBusUserId() {
   return messageBusUserIdPromise
 }
 
-async function runMessageBusLoop(token: number) {
-  if (token !== messageBusLoopToken) return
-
-  syncMessageBusChannels()
-  if (messageBusChannels.size === 0) {
-    messageBusState.value = 'idle'
-    return
-  }
-
-  messageBusState.value = 'connecting'
-
-  const payload: Record<string, number> = { __seq: messageBusSeq }
-  messageBusSeq += 1
-  messageBusChannels.forEach((lastId, channel) => {
-    payload[channel] = lastId
-  })
-
-  try {
-    messageBusPollInFlight = true
-    const result = await pageFetch<any>(
-      `${baseUrl.value}/message-bus/${messageBusClientId.value}/poll`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      }
-    )
-    if (token !== messageBusLoopToken) return
-
-    if (!result.ok) {
-      throw new Error(`message_bus poll failed: ${result.status}`)
-    }
-
-    const messages = Array.isArray(result.data) ? (result.data as MessageBusPayload[]) : []
-    for (const item of messages) {
-      const channel = typeof item?.channel === 'string' ? item.channel : ''
-      const messageId = Number(item?.message_id)
-
-      if (channel && Number.isFinite(messageId) && messageBusChannels.has(channel)) {
-        const lastId = messageBusChannels.get(channel) ?? -1
-        messageBusChannels.set(channel, Math.max(lastId, messageId))
-      }
-
-      if (channel === '/__status' && item?.data && typeof item.data === 'object') {
-        const statusMap = item.data as Record<string, unknown>
-        Object.entries(statusMap).forEach(([statusChannel, statusId]) => {
-          if (!messageBusChannels.has(statusChannel)) return
-          const numericId = Number(statusId)
-          if (!Number.isFinite(numericId)) return
-          const lastId = messageBusChannels.get(statusChannel) ?? -1
-          messageBusChannels.set(statusChannel, Math.max(lastId, numericId))
-        })
-        continue
-      }
-
-      if (channel.startsWith('/topic/')) {
-        triggerTopicRefresh()
-        continue
-      }
-
-      if (
-        channel === '/latest' ||
-        channel === '/new' ||
-        channel === '/unread' ||
-        channel.startsWith('/unread/')
-      ) {
-        triggerListRefresh()
-      }
-
-      if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {
-        triggerNotificationsRefresh()
-      }
-    }
-
-    messageBusState.value = 'connected'
-    messageBusPollInFlight = false
-
-    if (messageBusPendingRestart) {
-      messageBusPendingRestart = false
-      const nextToken = ++messageBusLoopToken
-      void runMessageBusLoop(nextToken)
-      return
-    }
-
-    if (token !== messageBusLoopToken) return
-    void runMessageBusLoop(token)
-  } catch (error) {
-    messageBusPollInFlight = false
-    if (token !== messageBusLoopToken) return
-    messageBusState.value = 'error'
-    console.warn('[DiscourseBrowser] message_bus poll failed:', error)
-    messageBusRetryTimer = window.setTimeout(() => {
-      if (token !== messageBusLoopToken) return
-      void runMessageBusLoop(token)
-    }, MESSAGE_BUS_RETRY_MS)
-  }
-}
-
-function restartMessageBusLoop() {
-  messageBusPendingRestart = true
-  if (messageBusRetryTimer !== null) {
-    window.clearTimeout(messageBusRetryTimer)
-    messageBusRetryTimer = null
-  }
-  if (messageBusPollInFlight) return
-  messageBusPendingRestart = false
-  const token = ++messageBusLoopToken
-  void runMessageBusLoop(token)
-}
-
-resetMessageBusClient()
-
 watch(
-  () => messageBusDesiredChannelsKey.value,
+  () => messageBusDesiredSubscriptionsKey.value,
   () => {
-    syncMessageBusChannels()
-    restartMessageBusLoop()
+    syncMessageBusSubscriptions()
   },
   { immediate: true }
 )
@@ -1633,10 +1552,9 @@ watch(
 
     messageBusUserId.value = null
     messageBusUserIdFor = ''
-    resetMessageBusClient()
+    messageBus.reset()
     void ensureMessageBusUserId().finally(() => {
-      syncMessageBusChannels()
-      restartMessageBusLoop()
+      syncMessageBusSubscriptions()
     })
   }
 )
@@ -1670,15 +1588,15 @@ onMounted(() => {
   window.addEventListener('touchend', stopPointer)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('load', handleGlobalImageLoad, true)
+  messageBus.start()
   void ensureMessageBusUserId().finally(() => {
-    syncMessageBusChannels()
-    restartMessageBusLoop()
+    syncMessageBusSubscriptions()
   })
 })
 
 onUnmounted(() => {
-  stopMessageBusLoop()
-  messageBusChannels.clear()
+  clearMessageBusSubscriptions()
+  messageBus.stop()
   if (contentAreaRef.value) {
     contentAreaRef.value.removeEventListener('scroll', handleScroll)
   }
