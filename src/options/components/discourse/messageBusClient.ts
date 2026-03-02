@@ -6,6 +6,12 @@ export type MessageBusConnectionState = 'idle' | 'connecting' | 'connected' | 'e
 
 export type MessageBusCallback = (data: unknown, channel: string, messageId: number | null) => void
 
+export type MessageBusSubscriptionSpec = {
+  channel: string
+  callback: MessageBusCallback
+  lastId?: number
+}
+
 type MessageBusPayload = {
   channel?: string
   message_id?: number
@@ -362,6 +368,68 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
     requestRestart()
   }
 
+  const replaceSubscriptions = (
+    nextSubscriptions: MessageBusSubscriptionSpec[],
+    defaultLastId = -1
+  ) => {
+    const normalized = new Map<string, { callback: MessageBusCallback; lastId: number }>()
+
+    nextSubscriptions.forEach(item => {
+      if (!item || typeof item.channel !== 'string' || item.channel.length === 0) return
+      if (typeof item.callback !== 'function') return
+      const providedLastId = item.lastId ?? defaultLastId
+      const lastId = Number.isFinite(providedLastId) ? providedLastId : defaultLastId
+      normalized.set(item.channel, {
+        callback: item.callback,
+        lastId
+      })
+    })
+
+    let changed = false
+
+    for (const channel of Array.from(subscriptions.keys())) {
+      if (!normalized.has(channel)) {
+        subscriptions.delete(channel)
+        changed = true
+      }
+    }
+
+    normalized.forEach((item, channel) => {
+      const existing = subscriptions.get(channel)
+      if (!existing) {
+        subscriptions.set(channel, {
+          callbacks: new Set([item.callback]),
+          lastId: item.lastId
+        })
+        changed = true
+        return
+      }
+
+      if (existing.callbacks.size !== 1 || !existing.callbacks.has(item.callback)) {
+        existing.callbacks.clear()
+        existing.callbacks.add(item.callback)
+        changed = true
+      }
+
+      if (existing.lastId < 0 || item.lastId < 0) {
+        const merged = mergeLastId(existing.lastId, item.lastId)
+        if (merged !== existing.lastId) {
+          existing.lastId = merged
+          changed = true
+        }
+      }
+    })
+
+    if (normalized.size > 0 && !started) {
+      start()
+      return
+    }
+
+    if (changed) {
+      requestRestart()
+    }
+  }
+
   const start = () => {
     if (started) return
     started = true
@@ -414,6 +482,7 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
     reset,
     subscribe,
     unsubscribe,
-    clearSubscriptions
+    clearSubscriptions,
+    replaceSubscriptions
   }
 }

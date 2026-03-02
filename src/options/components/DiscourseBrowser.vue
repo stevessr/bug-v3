@@ -41,7 +41,8 @@ import { pageFetch, extractData } from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 import {
   createDiscourseMessageBusClient,
-  type MessageBusCallback
+  type MessageBusCallback,
+  type MessageBusSubscriptionSpec
 } from './discourse/messageBusClient'
 
 const {
@@ -138,8 +139,7 @@ const MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS = 1200
 const MESSAGE_BUS_LIST_REFRESH_COOLDOWN_MS = 1500
 const MESSAGE_BUS_NOTIFICATIONS_REFRESH_COOLDOWN_MS = 1500
 const messageBusUserIdCache = new Map<string, { expiresAt: number; userId: number | null }>()
-type MessageBusSubscriptionRecord = { handler: MessageBusCallback; unsubscribe: () => void }
-const activeMessageBusSubscriptions = new Map<string, MessageBusSubscriptionRecord>()
+let messageBusRefreshChain = Promise.resolve()
 const messageBus = createDiscourseMessageBusClient({
   getBaseUrl: () => baseUrl.value,
   callbackInterval: 15000,
@@ -1313,6 +1313,23 @@ const waitFor = (ms: number) =>
     window.setTimeout(resolve, ms)
   })
 
+function runSerialMessageBusRefresh(task: () => Promise<void>, label: string) {
+  const next = messageBusRefreshChain.then(async () => {
+    try {
+      await task()
+    } catch (error) {
+      console.warn(`[DiscourseBrowser] ${label} refresh via message_bus failed:`, error)
+    }
+  })
+
+  messageBusRefreshChain = next.then(
+    () => undefined,
+    () => undefined
+  )
+
+  return next
+}
+
 function createCoalescedMessageBusRefresh(
   cooldownMs: number,
   task: () => Promise<void>,
@@ -1335,11 +1352,7 @@ function createCoalescedMessageBusRefresh(
           if (waitMs > 0) {
             await waitFor(waitMs)
           }
-          try {
-            await task()
-          } catch (error) {
-            console.warn(`[DiscourseBrowser] ${label} refresh via message_bus failed:`, error)
-          }
+          await runSerialMessageBusRefresh(task, label)
           lastRunAt = Date.now()
         }
       } finally {
@@ -1398,28 +1411,47 @@ const handleUnreadNotificationChannelMessage: MessageBusCallback = () => {
 }
 
 const messageBusDesiredSubscriptions = computed(() => {
-  const subscriptions = new Map<string, MessageBusCallback>()
+  const subscriptions = new Map<string, MessageBusSubscriptionSpec>()
   const tab = activeTab.value
 
   if (tab?.viewType === 'topic' && tab.currentTopic?.id) {
-    subscriptions.set(`/topic/${tab.currentTopic.id}`, handleTopicChannelMessage)
+    subscriptions.set(`/topic/${tab.currentTopic.id}`, {
+      channel: `/topic/${tab.currentTopic.id}`,
+      callback: handleTopicChannelMessage
+    })
   }
 
   if (tab && ['home', 'category', 'tag'].includes(tab.viewType)) {
-    subscriptions.set('/latest', handleListChannelMessage)
-    if (tab.topicListType === 'new') subscriptions.set('/new', handleListChannelMessage)
-    if (tab.topicListType === 'unread') subscriptions.set('/unread', handleListChannelMessage)
+    subscriptions.set('/latest', {
+      channel: '/latest',
+      callback: handleListChannelMessage
+    })
+    if (tab.topicListType === 'new') {
+      subscriptions.set('/new', {
+        channel: '/new',
+        callback: handleListChannelMessage
+      })
+    }
+    if (tab.topicListType === 'unread') {
+      subscriptions.set('/unread', {
+        channel: '/unread',
+        callback: handleListChannelMessage
+      })
+    }
   }
 
   if (messageBusUserId.value) {
-    subscriptions.set(`/notification/${messageBusUserId.value}`, handleNotificationChannelMessage)
-    subscriptions.set(`/unread/${messageBusUserId.value}`, handleUnreadNotificationChannelMessage)
+    subscriptions.set(`/notification/${messageBusUserId.value}`, {
+      channel: `/notification/${messageBusUserId.value}`,
+      callback: handleNotificationChannelMessage
+    })
+    subscriptions.set(`/unread/${messageBusUserId.value}`, {
+      channel: `/unread/${messageBusUserId.value}`,
+      callback: handleUnreadNotificationChannelMessage
+    })
   }
 
-  return Array.from(subscriptions.entries()).map(([channel, handler]) => ({
-    channel,
-    handler
-  }))
+  return Array.from(subscriptions.values())
 })
 
 const messageBusDesiredSubscriptionsKey = computed(() =>
@@ -1430,34 +1462,11 @@ const messageBusDesiredSubscriptionsKey = computed(() =>
 )
 
 function syncMessageBusSubscriptions() {
-  const desired = new Map(
-    messageBusDesiredSubscriptions.value.map(subscription => [
-      subscription.channel,
-      subscription.handler
-    ])
-  )
-
-  for (const [channel, current] of Array.from(activeMessageBusSubscriptions.entries())) {
-    const desiredHandler = desired.get(channel)
-    if (!desiredHandler || desiredHandler !== current.handler) {
-      current.unsubscribe()
-      activeMessageBusSubscriptions.delete(channel)
-    }
-  }
-
-  desired.forEach((handler, channel) => {
-    const current = activeMessageBusSubscriptions.get(channel)
-    if (current && current.handler === handler) return
-    const unsubscribe = messageBus.subscribe(channel, handler, -1)
-    activeMessageBusSubscriptions.set(channel, { handler, unsubscribe })
-  })
+  messageBus.replaceSubscriptions(messageBusDesiredSubscriptions.value, -1)
 }
 
 function clearMessageBusSubscriptions() {
-  activeMessageBusSubscriptions.forEach(record => {
-    record.unsubscribe()
-  })
-  activeMessageBusSubscriptions.clear()
+  messageBus.clearSubscriptions()
 }
 
 async function ensureMessageBusUserId() {
