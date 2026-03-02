@@ -1,59 +1,110 @@
 .discourse-toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
-  background: var(--theme-surface);
-  border-bottom: 1px solid var(--theme-outline-variant);
-}
-
-.dark .discourse-toolbar {
-  background: var(--theme-surface);
-  border-color: var(--theme-outline-variant);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
 }
 
 .toolbar-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  color: var(--theme-on-surface);
-}
-
-.dark .toolbar-left {
-  color: var(--theme-on-surface);
+  min-width: 0;
 }
 
 .toolbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--d-text, var(--theme-on-background));
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.toolbar-brand-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--primary, var(--theme-primary));
+  color: var(--theme-on-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.toolbar-brand-text {
   font-size: 14px;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.toolbar-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .toolbar-search {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 520px;
-  margin: 0 auto;
 }
 
 .toolbar-search-input {
   flex: 1;
+  min-width: 0;
+}
+
+.toolbar-open-btn {
+  flex-shrink: 0;
 }
 
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .toolbar-icon {
-  color: var(--theme-on-surface-variant);
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.toolbar-home {
+  margin-right: 2px;
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 960px) {
+  .toolbar-brand-text {
+    display: none;
+  }
+
+  .toolbar-open-btn {
+    padding-inline: 8px;
+  }
 }

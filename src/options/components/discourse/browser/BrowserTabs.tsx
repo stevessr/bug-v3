@@ -3,6 +3,7 @@ import { LoadingOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons-
 import { Button } from 'ant-design-vue'
 
 import type { BrowserTab } from '../types'
+import '../css/BrowserTabs.css'
 
 export default defineComponent({
   name: 'BrowserTabs',
@@ -13,37 +14,45 @@ export default defineComponent({
   emits: ['switchTab', 'closeTab', 'createTab'],
   setup(props, { emit }) {
     return () => (
-      <div class="tab-bar bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700 flex items-center overflow-x-auto">
-        {props.tabs.map(tab => (
-          <div
-            key={tab.id}
-            class={[
-              'tab-item flex items-center gap-2 px-3 py-2 border-r dark:border-gray-700 cursor-pointer min-w-[120px] max-w-[200px] hover:bg-gray-100 dark:hover:bg-gray-800',
-              tab.id === props.activeTabId
-                ? 'bg-white dark:bg-gray-800'
-                : 'bg-gray-50 dark:bg-gray-900'
-            ]}
-            onClick={() => emit('switchTab', tab.id)}
-          >
-            {tab.loading && <LoadingOutlined class="text-blue-500" />}
-            <span class="flex-1 truncate text-sm dark:text-white">{tab.title}</span>
-            <CloseOutlined
-              class="text-gray-400 hover:text-red-500 text-xs"
-              onClick={(e: Event) => {
-                e.stopPropagation()
-                emit('closeTab', tab.id)
-              }}
-            />
-          </div>
-        ))}
+      <nav class="browser-tabs" aria-label="页面标签">
+        <div class="browser-tabs__list">
+          {props.tabs.map(tab => (
+            <div
+              key={tab.id}
+              class={[
+                'browser-tabs__item',
+                tab.id === props.activeTabId ? 'is-active' : '',
+                tab.loading ? 'is-loading' : ''
+              ]}
+              onClick={() => emit('switchTab', tab.id)}
+            >
+              <span class="browser-tabs__state" aria-hidden="true">
+                {tab.loading ? <LoadingOutlined /> : null}
+              </span>
+              <span class="browser-tabs__title">{tab.title}</span>
+              <button
+                type="button"
+                class="browser-tabs__close"
+                aria-label="关闭标签"
+                onClick={(e: Event) => {
+                  e.stopPropagation()
+                  emit('closeTab', tab.id)
+                }}
+              >
+                <CloseOutlined />
+              </button>
+            </div>
+          ))}
+        </div>
         <Button
           type="text"
           size="small"
-          class="ml-1"
+          class="browser-tabs__add"
           onClick={() => emit('createTab')}
+          aria-label="新建标签"
           v-slots={{ icon: () => <PlusOutlined /> }}
         />
-      </div>
+      </nav>
     )
   }
 })

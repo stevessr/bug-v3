@@ -1,0 +1,86 @@
+.browser-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--d-surface, var(--theme-surface));
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
+}
+
+.browser-tabs__list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.browser-tabs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 136px;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-right: 1px solid var(--d-border, var(--theme-outline-variant));
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  background: transparent;
+  box-shadow: inset 0 -2px 0 transparent;
+  cursor: pointer;
+  user-select: none;
+}
+
+.browser-tabs__item:hover {
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+}
+
+.browser-tabs__item.is-active {
+  color: var(--d-text, var(--theme-on-background));
+  background: var(--d-background, var(--theme-background));
+  box-shadow: inset 0 -2px 0 var(--primary, var(--theme-primary));
+}
+
+.browser-tabs__state {
+  width: 14px;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--primary, var(--theme-primary));
+}
+
+.browser-tabs__item:not(.is-loading) .browser-tabs__state {
+  opacity: 0;
+}
+
+.browser-tabs__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.browser-tabs__close {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.browser-tabs__close:hover {
+  color: var(--danger, var(--theme-error));
+  background: color-mix(in oklab, var(--danger, var(--theme-error)) 16%, transparent);
+}
+
+.browser-tabs__add {
+  flex-shrink: 0;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}

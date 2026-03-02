@@ -1622,9 +1622,7 @@ onUnmounted(() => {
 
 <template>
   <Icon />
-  <div
-    class="discourse-browser flex flex-col h-full min-h-0 border dark:border-gray-700 rounded-lg overflow-hidden"
-  >
+  <div class="discourse-browser flex flex-col h-full min-h-0 overflow-hidden">
     <!-- Toolbar -->
     <BrowserToolbar
       v-model="urlInput"
@@ -1673,7 +1671,10 @@ onUnmounted(() => {
     />
 
     <!-- Content area -->
-    <div ref="contentAreaRef" class="content-area flex-1 overflow-y-auto discourse-body">
+    <div
+      ref="contentAreaRef"
+      class="content-area discourse-main flex-1 overflow-y-auto discourse-body"
+    >
       <!-- Loading -->
       <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
         <a-spin size="large" />
@@ -1974,15 +1975,17 @@ onUnmounted(() => {
     -apple-system,
     sans-serif;
   position: relative;
+  background: var(--d-background, var(--theme-background));
+  color: var(--d-text, var(--theme-on-background));
+}
+
+.discourse-main {
+  background: var(--d-background, var(--theme-background));
 }
 
 .discourse-body {
-  background: var(--theme-background);
-  padding: 16px;
-}
-
-.dark .discourse-body {
-  background: var(--theme-background);
+  background: transparent;
+  padding: 12px 16px 16px;
 }
 
 .tab-item {

@@ -12,7 +12,7 @@
 .quick-sidebar-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: color-mix(in oklab, var(--d-text, #000) 24%, transparent);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -26,10 +26,11 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 248px;
-  background: #f8f9fa;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 6px 0 16px rgba(15, 23, 42, 0.12);
+  width: 272px;
+  background: var(--d-surface, var(--theme-surface));
+  border-right: 1px solid var(--d-border, var(--theme-outline-variant));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--d-border, #000) 35%, transparent),
+    0 12px 28px color-mix(in oklab, var(--d-text, #000) 20%, transparent);
   transform: translateX(-100%);
   transition: transform 0.2s ease;
   display: flex;
@@ -40,41 +41,44 @@
   transform: translateX(0);
 }
 
-.dark .quick-sidebar-panel {
-  background: #0f172a;
-  border-right-color: #374151;
-}
-
 .quick-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 12px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
 }
 
-.dark .quick-sidebar-header {
-  border-bottom-color: #374151;
+.quick-sidebar-header__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick-sidebar-header__eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
 }
 
 .quick-sidebar-header .title {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--d-text, var(--theme-on-background));
 }
 
 .quick-sidebar-header .actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
 }
 
 .quick-sidebar-body {
   flex: 1;
   overflow: auto;
-  padding: 8px 6px 16px;
+  padding: 10px 8px 16px;
 }
 
 .quick-sidebar-section {
@@ -82,62 +86,56 @@
 }
 
 .quick-sidebar-section__title {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #9ca3af;
-  padding: 0 12px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  padding: 0 10px;
   margin-bottom: 6px;
 }
 
 .quick-sidebar-section__items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .quick-sidebar-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 0;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  color: #374151;
+  color: var(--d-text, var(--theme-on-background));
   font-size: 13px;
+  line-height: 1.35;
 }
 
 .quick-sidebar-item:hover {
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
 }
 
 .quick-sidebar-item.is-muted {
-  color: #9ca3af;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
 }
 
 .quick-sidebar-item.is-muted .quick-sidebar-label::after {
   content: '（静音）';
   margin-left: 6px;
   font-size: 11px;
-  color: #9ca3af;
-}
-
-.dark .quick-sidebar-item {
-  color: #e5e7eb;
-}
-
-.dark .quick-sidebar-item.is-muted {
-  color: #94a3b8;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
 }
 
 .quick-sidebar-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: #cbd5f5;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--primary, var(--theme-primary));
   flex: 0 0 auto;
 }
 
@@ -147,7 +145,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   flex: 0 0 auto;
 }
 
@@ -155,17 +153,17 @@
   color: transparent;
 }
 
-.dark .quick-sidebar-icon {
-  color: #94a3b8;
-}
-
 .quick-sidebar-label {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-sidebar-empty {
   padding: 16px;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   text-align: center;
 }

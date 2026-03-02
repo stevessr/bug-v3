@@ -37,12 +37,20 @@ export default defineComponent({
         <div class="quick-sidebar-backdrop" onClick={() => emit('close')} />
         <aside class="quick-sidebar-panel">
           <div class="quick-sidebar-header">
-            <span class="title">快捷导航</span>
+            <div class="quick-sidebar-header__meta">
+              <span class="quick-sidebar-header__eyebrow">Navigation</span>
+              <span class="title">快捷侧栏</span>
+            </div>
             <div class="actions">
-              <Button size="small" onClick={() => emit('refresh')}>
+              <Button
+                size="small"
+                type="text"
+                onClick={() => emit('refresh')}
+                aria-label="刷新侧栏"
+              >
                 <ReloadOutlined />
               </Button>
-              <Button size="small" onClick={() => emit('close')}>
+              <Button size="small" type="text" onClick={() => emit('close')} aria-label="关闭侧栏">
                 <CloseOutlined />
               </Button>
             </div>

@@ -20,22 +20,42 @@ body,
 }
 
 .discourse-browser {
-  background: var(--theme-background);
-  color: var(--theme-on-background);
-  border-color: var(--theme-outline-variant);
+  --primary: var(--theme-primary);
+  --secondary: var(--theme-secondary);
+  --tertiary: var(--theme-tertiary);
+  --danger: var(--theme-error);
+  --success: #16a34a;
+
+  --primary-low: color-mix(in oklab, var(--primary) 12%, transparent);
+  --primary-medium: color-mix(in oklab, var(--primary) 22%, transparent);
+
+  --d-background: var(--theme-background);
+  --d-surface: var(--theme-surface);
+  --d-surface-1: var(--theme-surface-container-low);
+  --d-surface-2: var(--theme-surface-container);
+  --d-surface-3: var(--theme-surface-container-high);
+
+  --d-text: var(--theme-on-background);
+  --d-text-muted: var(--theme-on-surface-variant);
+  --d-border: var(--theme-outline-variant);
+  --d-border-strong: var(--theme-outline);
+
+  background: var(--d-background);
+  color: var(--d-text);
+  border-color: var(--d-border);
 }
 
 .discourse-browser a {
-  color: var(--theme-primary);
+  color: var(--primary);
 }
 
 .discourse-browser a:hover {
-  color: var(--theme-primary);
+  color: var(--primary);
 }
 
 .discourse-browser .ant-btn-primary,
 .discourse-browser .is-primary {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
+  background: var(--primary);
+  border-color: var(--primary);
   color: var(--theme-on-primary);
 }
