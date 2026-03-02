@@ -14,8 +14,8 @@ export default defineComponent({
   emits: ['change'],
   setup(props, { emit }) {
     return () => (
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-        <h3 class="text-sm font-semibold mb-3 dark:text-white">首页类型</h3>
+      <div class="sidebar-card">
+        <h3 class="sidebar-title">首页类型</h3>
         <div class="flex flex-wrap gap-2">
           {props.items.map(item => (
             <button

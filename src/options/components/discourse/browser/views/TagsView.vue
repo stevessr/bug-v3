@@ -14,15 +14,15 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
 </script>
 
 <template>
-  <div class="flex gap-4">
-    <div class="flex-1 min-w-0">
+  <div class="discourse-list-view">
+    <div class="discourse-list-view__main">
       <TagGrid
         :tags="activeTab.tags"
         :groups="activeTab.tagGroups"
         @click="$emit('tagClick', $event)"
       />
     </div>
-    <div class="w-64 flex-shrink-0 hidden lg:block">
+    <div class="discourse-list-view__side">
       <Sidebar
         :categories="activeTab.categories"
         :users="activeTab.activeUsers"
@@ -36,3 +36,27 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
     </div>
   </div>
 </template>
+
+<style scoped>
+.discourse-list-view {
+  display: flex;
+  gap: 16px;
+}
+
+.discourse-list-view__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.discourse-list-view__side {
+  width: 256px;
+  flex-shrink: 0;
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .discourse-list-view__side {
+    display: block;
+  }
+}
+</style>

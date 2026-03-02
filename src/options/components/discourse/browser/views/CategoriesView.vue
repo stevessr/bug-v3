@@ -14,9 +14,9 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
 </script>
 
 <template>
-  <div class="flex gap-4">
-    <div class="flex-1 min-w-0">
-      <h3 class="text-lg font-semibold mb-6 dark:text-white">分类目录</h3>
+  <div class="discourse-list-view">
+    <div class="discourse-list-view__main">
+      <h3 class="categories-title">分类目录</h3>
       <CategoryGrid
         :categories="activeTab.categories"
         :baseUrl="baseUrl"
@@ -25,7 +25,7 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
         @topicClick="$emit('topicClick', $event)"
       />
     </div>
-    <div class="w-64 flex-shrink-0 hidden lg:block">
+    <div class="discourse-list-view__side">
       <Sidebar
         :categories="activeTab.categories"
         :users="activeTab.activeUsers"
@@ -39,3 +39,34 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
     </div>
   </div>
 </template>
+
+<style scoped>
+.discourse-list-view {
+  display: flex;
+  gap: 16px;
+}
+
+.discourse-list-view__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.categories-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--d-text, var(--theme-on-background));
+}
+
+.discourse-list-view__side {
+  width: 256px;
+  flex-shrink: 0;
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .discourse-list-view__side {
+    display: block;
+  }
+}
+</style>

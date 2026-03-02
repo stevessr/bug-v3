@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: rgba(148, 163, 184, 0.15);
+  background: color-mix(in oklab, var(--d-text-muted, #000) 16%, transparent);
   flex-shrink: 0;
 }
 
@@ -45,7 +45,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  background: rgba(148, 163, 184, 0.15);
+  background: color-mix(in oklab, var(--d-text-muted, #000) 16%, transparent);
   flex-shrink: 0;
 }
 
@@ -90,16 +90,16 @@
 .category-directory-row {
   display: grid;
   grid-template-columns: minmax(240px, 32%) 1fr;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-left: 4px solid #32c3c3;
-  border-radius: 10px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-left: 4px solid var(--primary, #32c3c3);
+  border-radius: 8px;
   overflow: hidden;
-  background: #f8f5e9;
+  background: var(--d-surface, var(--theme-surface));
 }
 
 .category-directory-left {
   padding: 12px;
-  border-right: 1px solid rgba(148, 163, 184, 0.3);
+  border-right: 1px solid var(--d-border, var(--theme-outline-variant));
   cursor: pointer;
 }
 
@@ -113,13 +113,12 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: #0f766e;
+  color: var(--primary, var(--theme-primary));
   font-size: 12px;
   cursor: pointer;
 }
 
 .subcategory-chip:hover {
-  color: #0e7490;
   text-decoration: underline;
 }
 
@@ -135,7 +134,7 @@
   gap: 8px;
   min-height: 34px;
   padding: 6px 10px;
-  border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+  border-bottom: 1px dashed color-mix(in oklab, var(--d-border, #000) 80%, transparent);
   cursor: pointer;
 }
 
@@ -144,12 +143,12 @@
 }
 
 .category-topic-row:hover {
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 10%, transparent));
 }
 
 .category-topic-title {
   font-size: 13px;
-  color: #1f2937;
+  color: var(--d-text, var(--theme-on-background));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -159,7 +158,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #6b7280;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
 }
 
@@ -176,6 +175,6 @@
 
   .category-directory-left {
     border-right: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+    border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
   }
 }

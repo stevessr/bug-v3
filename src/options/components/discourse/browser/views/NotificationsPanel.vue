@@ -33,7 +33,7 @@ defineEmits([
         @open="$emit('openNotification', $event)"
       />
     </div>
-    <div class="w-64 flex-shrink-0 hidden lg:block">
+    <div class="notifications-panel-side">
       <Sidebar
         :categories="[]"
         :users="activeTab.activeUsers"
@@ -51,8 +51,7 @@ defineEmits([
 <style scoped>
 .notifications-panel-root {
   display: flex;
-  gap: 1rem;
-  height: 100%;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -62,5 +61,17 @@ defineEmits([
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.notifications-panel-side {
+  width: 256px;
+  flex-shrink: 0;
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .notifications-panel-side {
+    display: block;
+  }
 }
 </style>

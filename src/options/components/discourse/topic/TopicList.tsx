@@ -124,19 +124,34 @@ export default defineComponent({
             <div class="topic-list-header-main">主题</div>
             <div class="topic-list-header-stats">
               <button
-                class={['topic-sort-btn', props.sortKey === 'replies' ? 'active' : '']}
+                class={[
+                  'topic-sort-btn',
+                  'topic-col',
+                  'topic-col--replies',
+                  props.sortKey === 'replies' ? 'active' : ''
+                ]}
                 onClick={() => handleSortClick('replies')}
               >
                 回复 {getSortIndicator('replies')}
               </button>
               <button
-                class={['topic-sort-btn', props.sortKey === 'views' ? 'active' : '']}
+                class={[
+                  'topic-sort-btn',
+                  'topic-col',
+                  'topic-col--views',
+                  props.sortKey === 'views' ? 'active' : ''
+                ]}
                 onClick={() => handleSortClick('views')}
               >
                 浏览 {getSortIndicator('views')}
               </button>
               <button
-                class={['topic-sort-btn', props.sortKey === 'activity' ? 'active' : '']}
+                class={[
+                  'topic-sort-btn',
+                  'topic-col',
+                  'topic-col--activity',
+                  props.sortKey === 'activity' ? 'active' : ''
+                ]}
                 onClick={() => handleSortClick('activity')}
               >
                 活动 {getSortIndicator('activity')}
@@ -226,9 +241,9 @@ export default defineComponent({
                 </div>
               )}
               <div class="topic-numbers">
-                <span class="topic-stat">{topic.posts_count}</span>
-                <span class="topic-stat">{topic.views}</span>
-                <span class="topic-stat topic-stat-time">
+                <span class="topic-stat topic-col topic-col--replies">{topic.posts_count}</span>
+                <span class="topic-stat topic-col topic-col--views">{topic.views}</span>
+                <span class="topic-stat topic-col topic-col--activity topic-stat-time">
                   {formatTime(topic.last_posted_at || topic.created_at)}
                 </span>
               </div>

@@ -42,8 +42,8 @@ defineEmits([
 </script>
 
 <template>
-  <div class="flex gap-4">
-    <div class="flex-1 min-w-0 space-y-4">
+  <div class="discourse-list-view">
+    <div class="discourse-list-view__main">
       <div class="home-nav">
         <div class="home-nav-links">
           <button
@@ -73,7 +73,7 @@ defineEmits([
         </a-button>
       </div>
 
-      <div v-if="activeTab.topics.length > 0" class="space-y-4">
+      <div v-if="activeTab.topics.length > 0" class="discourse-list-view__list">
         <TopicList
           :topics="sortedTopics"
           :baseUrl="baseUrl"
@@ -88,22 +88,22 @@ defineEmits([
           @openTag="$emit('openTag', $event)"
         />
 
-        <div v-if="isLoadingMore" class="flex items-center justify-center py-4">
+        <div v-if="isLoadingMore" class="discourse-list-view__loading">
           <a-spin />
-          <span class="ml-2 text-gray-500">加载更多话题...</span>
+          <span class="ml-2">加载更多话题...</span>
         </div>
 
         <div
           v-if="!activeTab.hasMoreTopics && !isLoadingMore"
-          class="text-center text-gray-400 py-4 text-sm"
+          class="discourse-list-view__end text-center text-sm"
         >
           已加载全部话题
         </div>
       </div>
-      <div v-else class="text-center text-gray-400 py-12">暂无话题</div>
+      <div v-else class="discourse-list-view__empty">暂无话题</div>
     </div>
 
-    <div class="w-64 flex-shrink-0 hidden lg:block">
+    <div class="discourse-list-view__side">
       <Sidebar
         :categories="[]"
         :users="activeTab.activeUsers"
@@ -119,62 +119,91 @@ defineEmits([
 </template>
 
 <style scoped>
+.discourse-list-view {
+  display: flex;
+  gap: 16px;
+}
+
+.discourse-list-view__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discourse-list-view__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discourse-list-view__loading,
+.discourse-list-view__end,
+.discourse-list-view__empty {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.discourse-list-view__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.discourse-list-view__end {
+  padding: 12px 0;
+}
+
+.discourse-list-view__empty {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.discourse-list-view__side {
+  width: 256px;
+  flex-shrink: 0;
+  display: none;
+}
+
 .home-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 12px;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-outline-variant);
-  border-radius: 10px;
-}
-
-.dark .home-nav {
-  background: var(--theme-surface);
-  border-color: var(--theme-outline-variant);
+  gap: 14px;
+  padding: 8px 12px;
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: 8px;
 }
 
 .home-nav-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .home-nav-link {
   border: 1px solid transparent;
   background: transparent;
-  color: var(--theme-on-surface-variant);
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 13px;
-  padding: 6px 12px;
+  line-height: 1.2;
+  padding: 5px 10px;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .home-nav-link:hover {
-  background: var(--theme-surface-variant);
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
 }
 
 .home-nav-link.active {
-  background: var(--theme-primary-container);
-  border-color: var(--theme-primary);
-  color: var(--theme-on-primary-container);
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 16%, transparent));
+  border-color: var(--primary, var(--theme-primary));
+  color: var(--primary, var(--theme-primary));
   font-weight: 600;
-}
-
-.dark .home-nav-link {
-  color: var(--theme-on-surface-variant);
-}
-
-.dark .home-nav-link:hover {
-  background: var(--theme-surface-variant);
-}
-
-.dark .home-nav-link.active {
-  background: var(--theme-primary-container);
-  border-color: var(--theme-primary);
-  color: var(--theme-on-primary-container);
 }
 
 .home-nav-actions {
@@ -186,5 +215,11 @@ defineEmits([
 .pending-topics {
   display: flex;
   justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .discourse-list-view__side {
+    display: block;
+  }
 }
 </style>

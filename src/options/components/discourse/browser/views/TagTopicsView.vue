@@ -41,14 +41,12 @@ defineEmits([
 </script>
 
 <template>
-  <div class="flex gap-4">
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center justify-between gap-3 mb-3">
-        <h3 class="text-lg font-semibold mb-0 dark:text-white">
-          标签：{{ activeTab.currentTagName }}
-        </h3>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-500 dark:text-gray-400">通知等级</span>
+  <div class="discourse-list-view">
+    <div class="discourse-list-view__main">
+      <div class="list-topbar">
+        <h3 class="list-topbar__title">标签：{{ activeTab.currentTagName }}</h3>
+        <div class="list-topbar__actions">
+          <span class="list-topbar__label">通知等级</span>
           <a-select
             size="small"
             style="width: 128px"
@@ -65,11 +63,13 @@ defineEmits([
           </a-select>
         </div>
       </div>
-      <div v-if="activeTab.pendingTopicsCount" class="mb-3">
+
+      <div v-if="activeTab.pendingTopicsCount" class="pending-topics">
         <a-button type="primary" size="small" @click="$emit('applyPendingTopics')">
           发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
         </a-button>
       </div>
+
       <TopicList
         :topics="sortedTopics"
         :baseUrl="baseUrl"
@@ -83,8 +83,21 @@ defineEmits([
         @openUser="$emit('openUser', $event)"
         @openTag="$emit('openTag', $event)"
       />
+
+      <div v-if="isLoadingMore" class="discourse-list-view__loading">
+        <a-spin />
+        <span class="ml-2">加载更多话题...</span>
+      </div>
+
+      <div
+        v-if="!activeTab.hasMoreTopics && !isLoadingMore && activeTab.topics.length > 0"
+        class="discourse-list-view__end"
+      >
+        已加载全部话题
+      </div>
     </div>
-    <div class="w-64 flex-shrink-0 hidden lg:block">
+
+    <div class="discourse-list-view__side">
       <Sidebar
         :categories="[]"
         :users="activeTab.activeUsers"
@@ -98,3 +111,82 @@ defineEmits([
     </div>
   </div>
 </template>
+
+<style scoped>
+.discourse-list-view {
+  display: flex;
+  gap: 16px;
+}
+
+.discourse-list-view__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discourse-list-view__loading,
+.discourse-list-view__end {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.discourse-list-view__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.discourse-list-view__end {
+  text-align: center;
+  padding: 12px 0;
+  font-size: 13px;
+}
+
+.discourse-list-view__side {
+  width: 256px;
+  flex-shrink: 0;
+  display: none;
+}
+
+.list-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: 8px;
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+}
+
+.list-topbar__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--d-text, var(--theme-on-background));
+}
+
+.list-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-topbar__label {
+  font-size: 12px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.pending-topics {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .discourse-list-view__side {
+    display: block;
+  }
+}
+</style>

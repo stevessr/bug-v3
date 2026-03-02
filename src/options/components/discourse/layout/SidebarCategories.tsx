@@ -69,15 +69,12 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-        <h3 class="text-sm font-semibold mb-3 dark:text-white">分类</h3>
+      <div class="sidebar-card">
+        <h3 class="sidebar-title">分类</h3>
         <div class="space-y-1">
           {topCategories.value.map(cat => (
             <div key={cat.id}>
-              <div
-                class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                onClick={() => emit('select', cat)}
-              >
+              <div class="sidebar-item" onClick={() => emit('select', cat)}>
                 <div class="sidebar-icon">
                   {cat.uploaded_logo?.url ? (
                     <img
@@ -101,8 +98,8 @@ export default defineComponent({
                     <span class="sidebar-icon-dot" style={{ backgroundColor: `#${cat.color}` }} />
                   )}
                 </div>
-                <span class="text-sm dark:text-gray-300 truncate flex-1">{cat.name}</span>
-                <span class="text-xs text-gray-400">{cat.topic_count}</span>
+                <span class="sidebar-item__label text-sm">{cat.name}</span>
+                <span class="sidebar-item__meta">{cat.topic_count}</span>
               </div>
               {hasHierarchy.value && (childrenByParent.value.get(cat.id)?.length || 0) > 0 && (
                 <div class="ml-4 space-y-1">
@@ -112,7 +109,7 @@ export default defineComponent({
                     .map(child => (
                       <div
                         key={child.id}
-                        class="flex items-center gap-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                        class="sidebar-item"
                         onClick={() => emit('select', child)}
                       >
                         <span class="sidebar-icon">
@@ -141,11 +138,11 @@ export default defineComponent({
                             />
                           )}
                         </span>
-                        <span class="text-xs dark:text-gray-300 truncate flex-1">{child.name}</span>
+                        <span class="sidebar-item__label text-xs">{child.name}</span>
                       </div>
                     ))}
                   {(childrenByParent.value.get(cat.id)?.length || 0) > 6 && (
-                    <div class="text-xs text-gray-400 ml-1">
+                    <div class="sidebar-item__meta ml-1">
                       还有 {(childrenByParent.value.get(cat.id)?.length || 0) - 6} 个子分类...
                     </div>
                   )}

@@ -1,3 +1,58 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-card {
+  background: var(--d-surface, var(--theme-surface));
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.sidebar-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--d-text, var(--theme-on-background));
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.sidebar-item:hover {
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+}
+
+.sidebar-item__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item__meta {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+}
+
 .sidebar-icon {
   width: 18px;
   height: 18px;
@@ -5,7 +60,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--theme-on-surface-variant) 12%, transparent);
+  background: color-mix(in oklab, var(--d-text-muted, #000) 16%, transparent);
   flex-shrink: 0;
 }
 
@@ -32,63 +87,34 @@
   display: inline-block;
 }
 
-/* Topic list type selector buttons */
 .topic-type-btn {
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 6px;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-outline-variant);
-  color: var(--theme-on-surface-variant);
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 9999px;
+  background: transparent;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   cursor: pointer;
   transition: all 0.15s;
   font-weight: 500;
 }
 
 .topic-type-btn:hover {
-  background: var(--theme-surface-variant);
-  border-color: var(--theme-outline);
-  color: var(--theme-on-surface);
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 10%, transparent));
+  border-color: var(--primary, var(--theme-primary));
+  color: var(--primary, var(--theme-primary));
 }
 
 .topic-type-btn.active {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
+  background: var(--primary, var(--theme-primary));
+  border-color: var(--primary, var(--theme-primary));
   color: var(--theme-on-primary);
 }
 
-.dark .topic-type-btn {
-  background: var(--theme-surface);
-  border-color: var(--theme-outline-variant);
-  color: var(--theme-on-surface-variant);
-}
-
-.dark .topic-type-btn:hover {
-  background: var(--theme-surface-variant);
-  border-color: var(--theme-outline);
-  color: var(--theme-on-surface);
-}
-
-.dark .topic-type-btn.active {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
-  color: var(--theme-on-primary);
-}
-
-/* Quick links */
 .quick-link {
-  color: var(--theme-on-surface-variant);
-  transition: color 0.15s;
+  color: var(--d-text, var(--theme-on-background));
 }
 
 .quick-link:hover {
-  color: var(--theme-primary);
-}
-
-.dark .quick-link {
-  color: var(--theme-on-surface-variant);
-}
-
-.dark .quick-link:hover {
-  color: var(--theme-primary);
+  color: var(--primary, var(--theme-primary));
 }
