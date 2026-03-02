@@ -85,7 +85,8 @@ const disableForumBrowser =
   process.env.npm_config_browser === 'false'
 const buildEnv = {
   ...config,
-  ENABLE_FORUM_BROWSER: disableForumBrowser ? 'false' : 'true'
+  ENABLE_FORUM_BROWSER: disableForumBrowser ? 'false' : 'true',
+  ENABLE_LOCAL_MCP_BRIDGE: disableForumBrowser ? 'false' : 'true'
 }
 
 // 设置环境变量

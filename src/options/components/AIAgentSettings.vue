@@ -8,6 +8,7 @@ import { useAgentSettings } from '@/agent/useAgentSettings'
 import type { AgentPermissions, McpServerConfig, SubAgentConfig } from '@/agent/types'
 
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
+const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
 
 const headerDrafts = reactive<Record<string, string>>({})
 const headerErrors = reactive<Record<string, string>>({})
@@ -97,6 +98,7 @@ const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, va
 }
 
 const loadMcpBridgeState = () => {
+  if (!enableLocalMcpBridge) return
   if (typeof localStorage === 'undefined') return
   const raw = localStorage.getItem(MCP_BRIDGE_DISABLE_KEY)
   mcpBridgeEnabled.value = raw ? raw !== 'true' : true
@@ -109,6 +111,7 @@ const loadMcpBridgeState = () => {
 }
 
 const onMcpBridgeToggle = (value: boolean) => {
+  if (!enableLocalMcpBridge) return
   mcpBridgeEnabled.value = value
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(MCP_BRIDGE_DISABLE_KEY, value ? 'false' : 'true')
@@ -119,6 +122,10 @@ const onMcpBridgeToggle = (value: boolean) => {
 }
 
 const testMcpBridgeConnection = async () => {
+  if (!enableLocalMcpBridge) {
+    mcpTestStatus.value = '当前构建已禁用本地 MCP 桥接'
+    return
+  }
   if (!chrome?.runtime?.sendMessage) {
     mcpTestStatus.value = '无法调用扩展后台'
     return
@@ -191,33 +198,38 @@ onMounted(() => {
         <a-input v-model:value="settings.apiKey" placeholder="API Key" type="password"></a-input>
       </div>
 
-      <div class="flex items-center justify-between">
-        <div>
-          <h4 class="text-sm font-medium dark:text-white">本地 MCP 桥接</h4>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            手动启用 Native Messaging 后才可生效，关闭会停止自动探测。
-          </p>
+      <template v-if="enableLocalMcpBridge">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-sm font-medium dark:text-white">本地 MCP 桥接</h4>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              手动启用 Native Messaging 后才可生效，关闭会停止自动探测。
+            </p>
+          </div>
+          <a-switch
+            :checked="mcpBridgeEnabled"
+            @change="checked => onMcpBridgeToggle(Boolean(checked))"
+          />
         </div>
-        <a-switch
-          :checked="mcpBridgeEnabled"
-          @change="checked => onMcpBridgeToggle(Boolean(checked))"
-        />
-      </div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-        <div>启用步骤：</div>
-        <div>1. 运行：chmod +x scripts/mcp-bridge/server.js</div>
-        <div>
-          2. 生成 manifest：
-          <span class="font-mono">
-            node scripts/mcp-bridge/create-host-manifest.js --extension-id &lt;扩展 ID&gt;
-            --host-path &quot;/绝对路径/scripts/mcp-bridge/server.js&quot;
-          </span>
+        <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <div>启用步骤：</div>
+          <div>1. 运行：chmod +x scripts/mcp-bridge/server.js</div>
+          <div>
+            2. 生成 manifest：
+            <span class="font-mono">
+              node scripts/mcp-bridge/create-host-manifest.js --extension-id &lt;扩展 ID&gt;
+              --host-path &quot;/绝对路径/scripts/mcp-bridge/server.js&quot;
+            </span>
+          </div>
+          <div>3. 将 manifest 放到系统目录：</div>
+          <div>macOS: ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/</div>
+          <div>Linux: ~/.config/google-chrome/NativeMessagingHosts/</div>
+          <div>Windows: 注册表指向 manifest</div>
+          <div>4. 重启浏览器或重载扩展</div>
         </div>
-        <div>3. 将 manifest 放到系统目录：</div>
-        <div>macOS: ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/</div>
-        <div>Linux: ~/.config/google-chrome/NativeMessagingHosts/</div>
-        <div>Windows: 注册表指向 manifest</div>
-        <div>4. 重启浏览器或重载扩展</div>
+      </template>
+      <div v-else class="text-xs text-amber-600 dark:text-amber-400">
+        当前构建（--no-browser）已在编译期移除本地 MCP 桥接支持。
       </div>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -279,6 +291,7 @@ onMounted(() => {
 
       <div v-if="settings.enableMcp" class="space-y-4">
         <div
+          v-if="enableLocalMcpBridge"
           class="flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2"
         >
           <div class="text-xs text-gray-500 dark:text-gray-400">

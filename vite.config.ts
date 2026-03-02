@@ -163,6 +163,7 @@ export default defineConfig(({ mode }) => {
   const isFastBuild = process.env.BUILD_FAST === 'true'
   const minifier = process.env.BUILD_MINIFIER === 'terser' ? 'terser' : 'esbuild'
   const enableForumBrowser = process.env.ENABLE_FORUM_BROWSER !== 'false'
+  const enableLocalMcpBridge = process.env.ENABLE_LOCAL_MCP_BRIDGE !== 'false'
   // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
   const enableLogging = isDev && process.env.ENABLE_LOGGING !== 'false'
 
@@ -203,6 +204,16 @@ export default defineConfig(({ mode }) => {
     )
   }
 
+  if (!enableLocalMcpBridge) {
+    const disabledMcpBridge = fileURLToPath(
+      new URL('./src/background/handlers/mcpBridge.disabled.ts', import.meta.url)
+    )
+    resolveAliases.push({
+      find: '../handlers/mcpBridge.ts',
+      replacement: disabledMcpBridge
+    })
+  }
+
   return {
     css: {
       postcss: './postcss.config.js',
@@ -216,7 +227,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // 编译期标志定义
       __ENABLE_LOGGING__: enableLogging,
-      __ENABLE_FORUM_BROWSER__: enableForumBrowser
+      __ENABLE_FORUM_BROWSER__: enableForumBrowser,
+      __ENABLE_LOCAL_MCP_BRIDGE__: enableLocalMcpBridge
     },
     plugins: [
       createAntDesignVueOnDemandPlugin(),

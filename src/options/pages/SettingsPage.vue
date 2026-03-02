@@ -24,6 +24,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const options = inject<OptionsInject>('options')!
 const { t } = useI18n()
+const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
 
 const {
   emojiStore,
@@ -285,7 +286,7 @@ onMounted(async () => {
           </div>
         </a-tab-pane>
 
-        <a-tab-pane key="mcp" tab="MCP">
+        <a-tab-pane v-if="enableLocalMcpBridge" key="mcp" tab="MCP">
           <div class="py-4">
             <McpSettings />
           </div>
