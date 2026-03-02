@@ -25,7 +25,7 @@ export const DEFAULT_MCP_BRIDGE_SETTINGS: McpBridgeSettings = {
   port: 7465,
   path: '/ws',
   protocol: 'auto',
-  autoConnect: true,
+  autoConnect: false,
   reconnectOnFailure: true,
   experimentalUI: {
     enableElicitation: true,

@@ -190,12 +190,6 @@ export function getMcpBridgeSettingsSync(): McpBridgeSettings {
   return cachedSettings || { ...DEFAULT_MCP_BRIDGE_SETTINGS }
 }
 
-async function getWsUrl(): Promise<string> {
-  const settings = await loadMcpBridgeSettings()
-  const protocol = await detectProtocol(settings)
-  return `${protocol}://${settings.host}:${settings.port}${settings.path}`
-}
-
 // 检测应该使用的协议
 async function detectProtocol(settings: McpBridgeSettings): Promise<'ws' | 'wss'> {
   // 如果明确指定了协议，直接使用
@@ -302,6 +296,7 @@ function calculateReconnectDelay(): number {
 
 function scheduleReconnect() {
   if (reconnectTimer !== null || disabled) return
+  if (cachedSettings?.autoConnect === false) return
 
   const delay = calculateReconnectDelay()
   reconnectAttempts++
@@ -1710,10 +1705,16 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
   }
 }
 
-async function connect() {
+async function connect(force = false) {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI) return
   if (disabled) return
+
+  const settings = await loadMcpBridgeSettings()
+  if (!force && !settings.autoConnect) {
+    updateStatus('disconnected')
+    return
+  }
 
   clearReconnectTimer()
   clearHeartbeatTimers()
@@ -1729,7 +1730,7 @@ async function connect() {
     ws = null
   }
 
-  const wsUrl = await getWsUrl()
+  const wsUrl = `${await detectProtocol(settings)}://${settings.host}:${settings.port}${settings.path}`
   console.log('[MCP] Connecting to WebSocket:', wsUrl)
 
   try {
@@ -1798,14 +1799,19 @@ async function connect() {
   }
 }
 
-export function setupMcpBridge() {
+export async function setupMcpBridge() {
+  const settings = await loadMcpBridgeSettings()
+  if (!settings.autoConnect) {
+    updateStatus('disconnected')
+    return
+  }
   void connect()
 }
 
-export function reconnectMcpBridge() {
+export async function reconnectMcpBridge() {
   reconnectAttempts = 0
   clearReconnectTimer()
-  void connect()
+  void connect(true)
 }
 
 export function getMcpConnectionStatus(): McpConnectionStatus {

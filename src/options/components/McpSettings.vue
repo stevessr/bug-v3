@@ -42,7 +42,7 @@ const bridgeSettings = ref<BridgeSettings>({
   port: 7465,
   path: '/ws',
   protocol: 'auto',
-  autoConnect: true,
+  autoConnect: false,
   reconnectOnFailure: true,
   experimentalUI: {
     enableElicitation: true,
@@ -101,8 +101,13 @@ const saveSettings = async () => {
     if (response?.success) {
       message.success('设置已保存')
       showSettings.value = false
-      // 重新连接
-      reconnectBridge()
+      if (bridgeSettings.value.autoConnect) {
+        // 启用自动连接时，保存后立即重连
+        reconnectBridge()
+      } else {
+        // 关闭自动连接时，保持被动模式
+        fetchConnectionStatus()
+      }
     } else {
       message.error('保存失败：' + (response?.error || '未知错误'))
     }
@@ -375,7 +380,7 @@ onUnmounted(() => {
             启动服务器
           </li>
           <li>
-            扩展自动通过 WebSocket 连接
+            点击“重连”后通过 WebSocket 连接
             <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">{{ wsUrl }}</code>
           </li>
           <li>
