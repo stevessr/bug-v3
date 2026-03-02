@@ -16,7 +16,7 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="flex justify-end">
+      <div class="user-settings-actions">
         <Button type="primary" size="small" onClick={props.onSave} loading={props.saving}>
           保存设置
         </Button>

@@ -14,35 +14,35 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">隐私与私信</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">允许私信</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">隐私与私信</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">允许私信</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.allow_private_messages}
             onChange={checked => (props.form.value.allow_private_messages = Boolean(checked))}
           />
-          <div class="text-gray-500">仅允许指定用户私信</div>
+          <div class="user-settings-label">仅允许指定用户私信</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.enable_allowed_pm_users}
             disabled={!props.form.value.allow_private_messages}
             onChange={checked => (props.form.value.enable_allowed_pm_users = Boolean(checked))}
           />
-          <div class="text-gray-500">隐藏个人资料</div>
+          <div class="user-settings-label">隐藏个人资料</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.hide_profile}
             onChange={checked => (props.form.value.hide_profile = Boolean(checked))}
           />
-          <div class="text-gray-500">隐藏在线状态</div>
+          <div class="user-settings-label">隐藏在线状态</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.hide_presence}
             onChange={checked => (props.form.value.hide_presence = Boolean(checked))}
           />

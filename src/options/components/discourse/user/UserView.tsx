@@ -97,9 +97,9 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="user-profile space-y-6">
+      <div class="user-profile">
         <div
-          class="user-header relative rounded-lg overflow-hidden"
+          class="user-profile-header"
           style={{
             backgroundImage: props.user.card_background_upload_url
               ? `url(${props.baseUrl}${props.user.card_background_upload_url})`
@@ -108,55 +108,53 @@ export default defineComponent({
             backgroundPosition: 'center'
           }}
         >
-          <div class="bg-black/40 p-6">
-            <div class="flex items-start gap-4">
+          <div class="user-profile-header__overlay">
+            <div class="user-profile-header__main">
               <img
                 src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 120)}
                 alt={props.user.username}
-                class="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+                class="user-profile-header__avatar"
               />
 
-              <div class="flex-1 text-white">
-                <div class="flex items-center gap-2">
-                  <h1 class="text-2xl font-bold">{props.user.username}</h1>
+              <div class="user-profile-header__info">
+                <div class="user-profile-header__name-row">
+                  <h1 class="user-profile-header__username">{props.user.username}</h1>
                   {props.user.admin ? (
-                    <span class="px-2 py-0.5 text-xs bg-red-500 rounded">管理员</span>
+                    <span class="user-profile-header__badge is-admin">管理员</span>
                   ) : props.user.moderator ? (
-                    <span class="px-2 py-0.5 text-xs bg-blue-500 rounded">版主</span>
+                    <span class="user-profile-header__badge is-moderator">版主</span>
                   ) : null}
                 </div>
 
-                {props.user.name && <div class="text-sm opacity-80">{props.user.name}</div>}
+                {props.user.name && <div class="user-profile-header__name">{props.user.name}</div>}
 
                 {props.user.title && (
-                  <div class="text-sm mt-1 text-yellow-300">{props.user.title}</div>
+                  <div class="user-profile-header__title">{props.user.title}</div>
                 )}
 
                 {props.user.status && (
-                  <div class="flex items-center gap-1 mt-2 text-sm">
+                  <div class="user-profile-header__status">
                     <span>{props.user.status.emoji}</span>
                     <span>{props.user.status.description}</span>
                   </div>
                 )}
 
-                <div class="flex items-center gap-4 mt-2 text-sm opacity-80">
+                <div class="user-profile-header__meta-row">
                   <span>{getTrustLevelName(props.user.trust_level)}</span>
-                  {props.user.location && <span>📍 {props.user.location}</span>}
+                  {props.user.location && <span>{props.user.location}</span>}
                   {props.user.website && (
-                    <span>
-                      <a
-                        href={props.user.website}
-                        target="_blank"
-                        rel="noopener"
-                        class="hover:underline"
-                      >
-                        🔗 {props.user.website_name || props.user.website}
-                      </a>
-                    </span>
+                    <a
+                      href={props.user.website}
+                      target="_blank"
+                      rel="noopener"
+                      class="user-profile-link"
+                    >
+                      {props.user.website_name || props.user.website}
+                    </a>
                   )}
                 </div>
 
-                <div class="mt-3 text-sm opacity-80">用户概览</div>
+                <div class="user-profile-header__hint">用户概览</div>
               </div>
             </div>
           </div>
@@ -170,156 +168,160 @@ export default defineComponent({
         />
 
         {props.user.bio_cooked && (
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-            <h3 class="text-sm font-semibold mb-2 dark:text-white">个人简介</h3>
-            <div
-              class="user-bio-content prose dark:prose-invert max-w-none text-sm"
-              innerHTML={props.user.bio_cooked}
-            />
-          </div>
+          <section class="user-profile-card user-profile-card--bio">
+            <h3 class="user-profile-card__title">个人简介</h3>
+            <div class="user-bio-content" innerHTML={props.user.bio_cooked} />
+          </section>
         )}
 
         {props.user._summary && (
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-blue-500">{props.user._summary.topic_count}</div>
-              <div class="text-xs text-gray-500">发布话题</div>
+          <section class="user-profile-stats-grid">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-blue">
+                {props.user._summary.topic_count}
+              </div>
+              <div class="user-profile-stat-card__label">发布话题</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-green-500">{props.user._summary.post_count}</div>
-              <div class="text-xs text-gray-500">发布帖子</div>
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-green">
+                {props.user._summary.post_count}
+              </div>
+              <div class="user-profile-stat-card__label">发布帖子</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-red-500">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-red">
                 {props.user._summary.likes_received}
               </div>
-              <div class="text-xs text-gray-500">收到赞</div>
+              <div class="user-profile-stat-card__label">收到赞</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-purple-500">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-purple">
                 {props.user._summary.likes_given}
               </div>
-              <div class="text-xs text-gray-500">送出赞</div>
+              <div class="user-profile-stat-card__label">送出赞</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-orange-500">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-orange">
                 {props.user._summary.days_visited}
               </div>
-              <div class="text-xs text-gray-500">访问天数</div>
+              <div class="user-profile-stat-card__label">访问天数</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-cyan-500">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-cyan">
                 {formatTimeRead(props.user._summary.time_read)}
               </div>
-              <div class="text-xs text-gray-500">阅读时间</div>
+              <div class="user-profile-stat-card__label">阅读时间</div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-              <div class="text-2xl font-bold text-pink-500">
+            <div class="user-profile-stat-card">
+              <div class="user-profile-stat-card__value is-pink">
                 {props.user._summary.topics_entered}
               </div>
-              <div class="text-xs text-gray-500">浏览话题</div>
+              <div class="user-profile-stat-card__label">浏览话题</div>
             </div>
             {props.user._summary.solved_count && (
-              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700 text-center">
-                <div class="text-2xl font-bold text-emerald-500">
+              <div class="user-profile-stat-card">
+                <div class="user-profile-stat-card__value is-emerald">
                   {props.user._summary.solved_count}
                 </div>
-                <div class="text-xs text-gray-500">解决问题</div>
+                <div class="user-profile-stat-card__label">解决问题</div>
               </div>
             )}
-          </div>
+          </section>
         )}
 
         {props.user.featured_topic && (
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-            <h3 class="text-sm font-semibold mb-2 dark:text-white">置顶话题</h3>
+          <section class="user-profile-card">
+            <h3 class="user-profile-card__title">置顶话题</h3>
             <div
-              class="cursor-pointer hover:text-blue-500 dark:text-gray-300"
-              onClick={() => emit('openTopic', props.user.featured_topic!)}
+              class="user-profile-featured-topic"
+              onClick={() => emit('openTopic', props.user.featured_topic)}
             >
               <span
                 innerHTML={props.user.featured_topic.fancy_title || props.user.featured_topic.title}
               />
-              <span class="text-xs text-gray-500 ml-2">
+              <span class="user-profile-featured-topic__meta">
                 ({props.user.featured_topic.posts_count} 帖子)
               </span>
             </div>
-          </div>
+          </section>
         )}
 
         {props.user._summary?.top_categories && props.user._summary.top_categories.length > 0 && (
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-            <h3 class="text-sm font-semibold mb-3 dark:text-white">活跃分类</h3>
-            <div class="space-y-2">
+          <section class="user-profile-card">
+            <h3 class="user-profile-card__title">活跃分类</h3>
+            <div class="user-profile-category-list">
               {props.user._summary.top_categories.slice(0, 5).map(cat => (
-                <div key={cat.id} class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded" style={{ backgroundColor: `#${cat.color}` }} />
-                    <span class="text-sm dark:text-gray-300">{cat.name}</span>
+                <div key={cat.id} class="user-profile-category-row">
+                  <div class="user-profile-category-row__left">
+                    <div
+                      class="user-profile-category-row__dot"
+                      style={{ backgroundColor: `#${cat.color}` }}
+                    />
+                    <span>{cat.name}</span>
                   </div>
-                  <div class="text-xs text-gray-500">
+                  <div class="user-profile-category-row__meta">
                     {cat.topic_count} 话题 · {cat.post_count} 帖子
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {props.user._topics && props.user._topics.length > 0 && (
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-            <h3 class="text-sm font-semibold mb-3 dark:text-white">热门话题</h3>
-            <div class="space-y-2">
+          <section class="user-profile-card">
+            <h3 class="user-profile-card__title">热门话题</h3>
+            <div class="user-profile-topic-list">
               {props.user._topics.slice(0, 6).map(topic => (
                 <div
                   key={topic.id}
-                  class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  class="user-profile-topic-item"
                   onClick={() => emit('openTopic', topic)}
                 >
                   <div
-                    class="text-sm dark:text-gray-300 truncate"
+                    class="user-profile-topic-item__title"
                     innerHTML={topic.fancy_title || topic.title}
                   />
-                  <div class="text-xs text-gray-500 mt-1">
+                  <div class="user-profile-topic-item__meta">
                     {topic.posts_count} 帖子 · {topic.like_count} 赞
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border dark:border-gray-700">
-          <h3 class="text-sm font-semibold mb-2 dark:text-white">账户信息</h3>
-          <div class="grid grid-cols-2 gap-2 text-sm">
-            <div class="text-gray-500">注册时间</div>
-            <div class="dark:text-gray-300">{formatTime(props.user.created_at)}</div>
+        <section class="user-profile-card">
+          <h3 class="user-profile-card__title">账户信息</h3>
+          <div class="user-profile-account-grid">
+            <div class="user-profile-account-grid__label">注册时间</div>
+            <div>{formatTime(props.user.created_at)}</div>
             {props.user.last_seen_at && (
               <>
-                <div class="text-gray-500">最后在线</div>
-                <div class="dark:text-gray-300">{formatTime(props.user.last_seen_at)}</div>
+                <div class="user-profile-account-grid__label">最后在线</div>
+                <div>{formatTime(props.user.last_seen_at)}</div>
               </>
             )}
             {props.user.last_posted_at && (
               <>
-                <div class="text-gray-500">最后发帖</div>
-                <div class="dark:text-gray-300">{formatTime(props.user.last_posted_at)}</div>
+                <div class="user-profile-account-grid__label">最后发帖</div>
+                <div>{formatTime(props.user.last_posted_at)}</div>
               </>
             )}
             {props.user.profile_view_count && (
               <>
-                <div class="text-gray-500">主页浏览</div>
-                <div class="dark:text-gray-300">{props.user.profile_view_count} 次</div>
+                <div class="user-profile-account-grid__label">主页浏览</div>
+                <div>{props.user.profile_view_count} 次</div>
               </>
             )}
             {props.user.badge_count && (
               <>
-                <div class="text-gray-500">徽章数量</div>
-                <div class="dark:text-gray-300">{props.user.badge_count} 个</div>
+                <div class="user-profile-account-grid__label">徽章数量</div>
+                <div>{props.user.badge_count} 个</div>
               </>
             )}
           </div>
-        </div>
+        </section>
       </div>
     )
   }

@@ -13,13 +13,16 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-        <div class="text-gray-500">邮箱</div>
-        <div class="dark:text-gray-300">{props.preferences.email || '-'}</div>
-        <div class="text-gray-500">语言</div>
-        <div class="dark:text-gray-300">{props.preferences.locale || '-'}</div>
-        <div class="text-gray-500">时区</div>
-        <div class="dark:text-gray-300">{props.preferences.timezone || '-'}</div>
+      <div class="user-settings-section user-settings-section--basic">
+        <div class="user-settings-section__title">基本信息</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">邮箱</div>
+          <div class="user-settings-value">{props.preferences.email || '-'}</div>
+          <div class="user-settings-label">语言</div>
+          <div class="user-settings-value">{props.preferences.locale || '-'}</div>
+          <div class="user-settings-label">时区</div>
+          <div class="user-settings-value">{props.preferences.timezone || '-'}</div>
+        </div>
       </div>
     )
   }

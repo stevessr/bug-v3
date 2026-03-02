@@ -1,3 +1,42 @@
-.user-tabs :deep(button) {
+.user-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
+  scrollbar-width: thin;
+}
+
+.user-tabs__item {
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 13px;
   line-height: 1.2;
+  padding: 8px 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.user-tabs__item:hover {
+  color: var(--d-text, var(--theme-on-background));
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+}
+
+.user-tabs__item.is-active {
+  color: var(--d-text, var(--theme-on-background));
+  background: var(--d-surface, var(--theme-surface));
+  box-shadow: inset 0 -2px 0 var(--primary, var(--theme-primary));
+  font-weight: 600;
+}
+
+.user-tabs__item:focus-visible {
+  outline: 2px solid var(--primary, var(--theme-primary));
+  outline-offset: 2px;
 }

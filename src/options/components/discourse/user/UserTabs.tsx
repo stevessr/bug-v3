@@ -23,18 +23,13 @@ export default defineComponent({
     ]
 
     return () => (
-      <div class="user-tabs flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
+      <div class="user-tabs">
         {tabs
           .filter(tab => (tab.visible ? tab.visible() : true))
           .map(tab => (
             <button
               key={tab.key}
-              class={[
-                'px-4 py-2 text-sm rounded-t whitespace-nowrap transition-colors',
-                props.active === tab.key
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-              ]}
+              class={['user-tabs__item', props.active === tab.key ? 'is-active' : '']}
               onClick={() => emit('switchTab', tab.key)}
             >
               {tab.label}

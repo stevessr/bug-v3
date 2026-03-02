@@ -1,4 +1,4 @@
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
@@ -288,6 +288,15 @@ export default defineComponent({
       return { url: '', username }
     }
 
+    const brokenAvatarKeys = ref(new Set<number>())
+
+    const getAvatarKey = (n: DiscourseNotification) => n.id
+
+    const handleAvatarError = (notificationId: number) => {
+      if (brokenAvatarKeys.value.has(notificationId)) return
+      brokenAvatarKeys.value = new Set(brokenAvatarKeys.value).add(notificationId)
+    }
+
     const handleOpen = (n: DiscourseNotification) => {
       const path = buildPath(n)
       if (path) emit('open', path)
@@ -320,23 +329,12 @@ export default defineComponent({
                 >
                   {/* Avatar + type badge */}
                   <div class="ntf-avatar-wrap">
-                    {avatar.url ? (
+                    {avatar.url && !brokenAvatarKeys.value.has(getAvatarKey(item)) ? (
                       <img
                         src={avatar.url}
                         alt={avatar.username}
                         class="ntf-avatar"
-                        onError={(e: Event) => {
-                          const img = e.target as HTMLImageElement
-                          img.style.display = 'none'
-                          const parent = img.parentElement
-                          if (parent && !parent.querySelector('.ntf-avatar-letter')) {
-                            const fallback = document.createElement('div')
-                            fallback.className = 'ntf-avatar ntf-avatar-letter'
-                            fallback.style.backgroundColor = usernameColor(avatar.username || 'U')
-                            fallback.textContent = (avatar.username || 'U')[0].toUpperCase()
-                            parent.insertBefore(fallback, img)
-                          }
-                        }}
+                        onError={() => handleAvatarError(getAvatarKey(item))}
                       />
                     ) : (
                       <div

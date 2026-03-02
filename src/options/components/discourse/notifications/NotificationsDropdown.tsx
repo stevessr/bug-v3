@@ -55,12 +55,20 @@ export default defineComponent({
           overlay: () => (
             <div class="notifications-dropdown">
               <div class="notifications-dropdown__header">
-                <span class="title">通知</span>
-                <div class="actions">
-                  <Button size="small" onClick={() => emit('refresh')}>
+                <span class="notifications-dropdown__title">通知</span>
+                <div class="notifications-dropdown__actions">
+                  <Button
+                    size="small"
+                    class="notifications-dropdown__action"
+                    onClick={() => emit('refresh')}
+                  >
                     刷新
                   </Button>
-                  <Button size="small" onClick={() => emit('openAll')}>
+                  <Button
+                    size="small"
+                    class="notifications-dropdown__action"
+                    onClick={() => emit('openAll')}
+                  >
                     查看全部
                   </Button>
                 </div>

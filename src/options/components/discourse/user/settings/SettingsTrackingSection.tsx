@@ -28,14 +28,14 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">追踪</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">新话题判定为新</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">追踪</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">新话题判定为新</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择范围"
             options={props.newTopicDurationOptions}
             value={props.form.value.new_topic_duration_minutes}
@@ -43,11 +43,11 @@ export default defineComponent({
               (props.form.value.new_topic_duration_minutes = value as number | undefined)
             }
           />
-          <div class="text-gray-500">自动追踪话题</div>
+          <div class="user-settings-label">自动追踪话题</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择延迟"
             options={props.autoTrackOptions}
             value={props.form.value.auto_track_topics_after_msecs}
@@ -55,11 +55,11 @@ export default defineComponent({
               (props.form.value.auto_track_topics_after_msecs = value as number | undefined)
             }
           />
-          <div class="text-gray-500">回复时通知级别</div>
+          <div class="user-settings-label">回复时通知级别</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择级别"
             options={props.notificationLevelOptions}
             value={props.form.value.notification_level_when_replying}
@@ -67,17 +67,17 @@ export default defineComponent({
               (props.form.value.notification_level_when_replying = value as number | undefined)
             }
           />
-          <div class="text-gray-500">关闭话题仍显示未读</div>
+          <div class="user-settings-label">关闭话题仍显示未读</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.topics_unread_when_closed}
             onChange={checked => (props.form.value.topics_unread_when_closed = Boolean(checked))}
           />
-          <div class="text-gray-500">关注优先于静音</div>
+          <div class="user-settings-label">关注优先于静音</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.watched_precedence_over_muted}
             onChange={checked =>
               (props.form.value.watched_precedence_over_muted = Boolean(checked))

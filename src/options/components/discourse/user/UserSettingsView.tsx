@@ -1,4 +1,4 @@
-import { defineComponent, computed, ref, watch } from 'vue'
+import { defineComponent, computed, ref, watch, onBeforeUnmount } from 'vue'
 import { message } from 'ant-design-vue'
 
 import type { DiscourseCategory, DiscourseUserPreferences, DiscourseUserProfile } from '../types'
@@ -265,6 +265,11 @@ export default defineComponent({
 
     const getEmojiOption = (value: string) => findEmojiByName(value) || null
 
+    onBeforeUnmount(() => {
+      if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+      if (emojiSearchTimer) window.clearTimeout(emojiSearchTimer)
+    })
+
     watch(
       preferences,
       value => {
@@ -371,10 +376,6 @@ export default defineComponent({
           const msg = data?.errors?.join(', ') || '保存失败'
           throw new Error(msg)
         }
-        ;(props.user as any)._preferences = {
-          ...(preferences.value || {}),
-          ...form.value
-        }
         message.success('设置已保存')
       } catch (e: any) {
         message.error(e?.message || '设置保存失败')
@@ -384,7 +385,7 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="user-extras space-y-4">
+      <div class="user-extras">
         <UserTabs
           active="settings"
           showSettings={true}
@@ -394,22 +395,19 @@ export default defineComponent({
           ) => emit('switchMainTab', tab)}
         />
 
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold dark:text-white">个人设置</h3>
-          <button
-            class="px-3 py-1 text-sm rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-            onClick={() => emit('goToProfile')}
-          >
+        <div class="user-extras-toolbar user-extras-toolbar--settings">
+          <h3 class="user-extras-section-title">个人设置</h3>
+          <button class="user-extras-back-btn" onClick={() => emit('goToProfile')}>
             返回主页
           </button>
         </div>
 
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border space-y-4">
+        <section class="user-extras-card user-extras-card--settings">
           {!preferences.value ? (
-            <div class="text-sm text-gray-500">暂无设置数据（可能需要登录自己的账号）</div>
+            <div class="user-extras-empty">暂无设置数据（可能需要登录自己的账号）</div>
           ) : (
             <>
-              <SettingsBasicInfo preferences={preferences.value!} />
+              <SettingsBasicInfo preferences={preferences.value} />
               <SettingsEmailSection
                 form={form}
                 emailLevelOptions={emailLevelOptions}
@@ -459,7 +457,7 @@ export default defineComponent({
               <SettingsSaveActions saving={saving.value} onSave={handleSave} />
             </>
           )}
-        </div>
+        </section>
       </div>
     )
   }

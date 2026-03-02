@@ -29,26 +29,24 @@ export default defineComponent({
     ]
 
     return () => (
-      <div class="messages-view space-y-4">
-        {/* User header (compact) */}
-        <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+      <div class="messages-view">
+        <div class="messages-view-header-card">
           <img
             src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 64)}
             alt={props.user.username}
-            class="w-16 h-16 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
+            class="messages-view-header-card__avatar"
             onClick={() => emit('goToProfile')}
           />
-          <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <h2
-                class="text-xl font-bold dark:text-white cursor-pointer hover:text-blue-500"
-                onClick={() => emit('goToProfile')}
-              >
+          <div class="messages-view-header-card__info">
+            <div class="messages-view-header-card__title-row">
+              <h2 class="messages-view-header-card__title" onClick={() => emit('goToProfile')}>
                 {props.user.username}
               </h2>
-              <span class="px-2 py-0.5 text-xs bg-purple-500 text-white rounded">私信</span>
+              <span class="messages-view-header-card__badge">私信</span>
             </div>
-            {props.user.name && <div class="text-sm text-gray-500">{props.user.name}</div>}
+            {props.user.name && (
+              <div class="messages-view-header-card__subtitle">{props.user.name}</div>
+            )}
           </div>
         </div>
 
@@ -61,16 +59,13 @@ export default defineComponent({
           ) => emit('switchMainTab', tab)}
         />
 
-        {/* Tab navigation */}
-        <div class="flex gap-1 overflow-x-auto border-b dark:border-gray-700 pb-1">
+        <div class="messages-subtabs">
           {tabs.map(tab => (
             <button
               key={tab.key}
               class={[
-                'px-4 py-2 text-sm rounded-t whitespace-nowrap transition-colors',
-                props.messagesState.activeTab === tab.key
-                  ? 'bg-purple-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                'messages-subtabs__item',
+                props.messagesState.activeTab === tab.key ? 'is-active' : ''
               ]}
               onClick={() => emit('switchTab', tab.key)}
             >
@@ -79,69 +74,63 @@ export default defineComponent({
           ))}
         </div>
 
-        {/* Messages list */}
-        <div class="messages-content space-y-2">
+        <div class="messages-content">
           {props.messagesState.topics.map(topic => (
             <div
               key={topic.id}
-              class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 cursor-pointer transition-colors"
+              class="messages-topic-item"
               onClick={() => emit('openTopic', topic)}
             >
-              <div class="flex items-start gap-3">
-                {/* Participants avatars */}
-                <div class="flex -space-x-2 flex-shrink-0">
+              <div class="messages-topic-item__main">
+                <div class="messages-topic-item__avatars">
                   {topic.participants && topic.participants.length > 0 ? (
-                    topic.participants.slice(0, 3).map((participant, index) => (
-                      <div key={participant.user_id} class="relative" style={{ zIndex: 3 - index }}>
-                        {props.users.get(participant.user_id) ? (
-                          <img
-                            src={getAvatarUrl(
-                              props.users.get(participant.user_id)!.avatar_template,
-                              props.baseUrl,
-                              40
-                            )}
-                            alt={props.users.get(participant.user_id)!.username}
-                            class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
-                          />
-                        ) : (
-                          <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300">
-                            {index + 1}
-                          </div>
-                        )}
-                      </div>
-                    ))
+                    topic.participants.slice(0, 3).map((participant, index) => {
+                      const participantUser = props.users.get(participant.user_id)
+                      return (
+                        <div
+                          key={participant.user_id}
+                          class="messages-topic-item__avatar-wrap"
+                          style={{ zIndex: 3 - index }}
+                        >
+                          {participantUser ? (
+                            <img
+                              src={getAvatarUrl(participantUser.avatar_template, props.baseUrl, 40)}
+                              alt={participantUser.username}
+                              class="messages-topic-item__avatar"
+                            />
+                          ) : (
+                            <div class="messages-topic-item__avatar-fallback">{index + 1}</div>
+                          )}
+                        </div>
+                      )
+                    })
                   ) : (
-                    <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                      <span class="text-purple-500 text-lg">@</span>
-                    </div>
+                    <div class="messages-topic-item__avatar-empty">@</div>
                   )}
                 </div>
 
-                <div class="flex-1 min-w-0">
-                  {/* Title */}
+                <div class="messages-topic-item__body">
                   <div
-                    class="font-medium dark:text-white truncate"
+                    class="messages-topic-item__title"
                     innerHTML={topic.fancy_title || topic.title}
                   />
 
-                  {/* Meta info */}
-                  <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+                  <div class="messages-topic-item__meta">
                     <span>{topic.posts_count} 条消息</span>
                     {topic.allowed_user_count && <span>{topic.allowed_user_count} 位参与者</span>}
                     <span>{topic.like_count} 赞</span>
                     <span>{formatTime(topic.last_posted_at || topic.created_at)}</span>
                   </div>
 
-                  {/* Unread indicator */}
                   {((topic.unread || 0) > 0 || (topic.new_posts || 0) > 0) && (
-                    <div class="mt-2">
+                    <div class="messages-topic-item__badges">
                       {(topic.unread || 0) > 0 && (
-                        <span class="inline-block px-2 py-0.5 text-xs bg-red-500 text-white rounded mr-2">
+                        <span class="messages-topic-item__badge is-unread">
                           {topic.unread} 未读
                         </span>
                       )}
                       {(topic.new_posts || 0) > 0 && (
-                        <span class="inline-block px-2 py-0.5 text-xs bg-blue-500 text-white rounded">
+                        <span class="messages-topic-item__badge is-new">
                           {topic.new_posts} 新消息
                         </span>
                       )}
@@ -152,9 +141,8 @@ export default defineComponent({
             </div>
           ))}
 
-          {/* Empty state */}
           {props.messagesState.topics.length === 0 && !props.isLoadingMore && (
-            <div class="text-center text-gray-400 py-8">
+            <div class="messages-state-empty">
               {props.messagesState.activeTab === 'all'
                 ? '暂无私信'
                 : props.messagesState.activeTab === 'sent'
@@ -167,19 +155,17 @@ export default defineComponent({
             </div>
           )}
 
-          {/* Loading more indicator */}
           {props.isLoadingMore && (
-            <div class="flex items-center justify-center py-4">
+            <div class="messages-state-loading">
               <Spin />
-              <span class="ml-2 text-gray-500">加载更多...</span>
+              <span>加载更多...</span>
             </div>
           )}
 
-          {/* End indicator */}
           {!props.messagesState.hasMore &&
             !props.isLoadingMore &&
             props.messagesState.topics.length > 0 && (
-              <div class="text-center text-gray-400 py-4 text-sm">已加载全部</div>
+              <div class="messages-state-end">已加载全部</div>
             )}
         </div>
       </div>

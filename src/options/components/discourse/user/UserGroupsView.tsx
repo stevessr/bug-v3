@@ -39,7 +39,7 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="user-extras space-y-4">
+      <div class="user-extras">
         <UserTabs
           active="groups"
           showSettings={props.showSettings}
@@ -49,62 +49,54 @@ export default defineComponent({
           ) => emit('switchMainTab', tab)}
         />
 
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold dark:text-white">用户组</h3>
-          <button
-            class="px-3 py-1 text-sm rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-            onClick={() => emit('goToProfile')}
-          >
+        <div class="user-extras-toolbar user-extras-toolbar--groups">
+          <h3 class="user-extras-section-title">用户组</h3>
+          <button class="user-extras-back-btn" onClick={() => emit('goToProfile')}>
             返回主页
           </button>
         </div>
 
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border">
+        <section class="user-extras-card">
           {!props.user._groups || props.user._groups.length === 0 ? (
-            <div class="text-sm text-gray-500">暂无加入的用户组</div>
+            <div class="user-extras-empty">暂无加入的用户组</div>
           ) : (
-            <div class="space-y-3">
+            <div class="user-extras-group-list">
               {props.user._groups.map(group => (
                 <div
                   key={group.id}
-                  class="p-3 rounded bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700 cursor-pointer"
+                  class="user-extras-group-item"
                   onClick={() => loadGroupDetail(group)}
                 >
-                  <div class="flex items-center justify-between">
+                  <div class="user-extras-group-item__header">
                     <div>
-                      <div class="text-sm font-medium dark:text-white">
+                      <div class="user-extras-group-item__title">
                         {group.title || group.full_name || group.name}
                       </div>
-                      <div class="text-xs text-gray-500">@{group.name}</div>
+                      <div class="user-extras-group-item__slug">@{group.name}</div>
                     </div>
                     {group.user_count !== undefined && (
-                      <div class="text-xs text-gray-400">{group.user_count} 成员</div>
+                      <div class="user-extras-group-item__count">{group.user_count} 成员</div>
                     )}
                   </div>
                   {group.description && (
-                    <div class="text-xs text-gray-500 mt-2 whitespace-pre-line">
-                      {group.description}
-                    </div>
+                    <div class="user-extras-group-item__desc">{group.description}</div>
                   )}
                 </div>
               ))}
 
               {activeGroup.value && (
-                <div class="mt-2 rounded border border-gray-200/70 dark:border-gray-700 p-3">
-                  <div class="text-xs text-gray-500 mb-2">
+                <div class="user-extras-group-members">
+                  <div class="user-extras-group-members__title">
                     {activeGroup.value.title || activeGroup.value.name} 成员
                   </div>
                   {loading.value ? (
-                    <div class="text-xs text-gray-400">加载中...</div>
+                    <div class="user-extras-state-loading">加载中...</div>
                   ) : groupMembers.value.length === 0 ? (
-                    <div class="text-xs text-gray-400">暂无成员数据</div>
+                    <div class="user-extras-state-end">暂无成员数据</div>
                   ) : (
-                    <div class="flex flex-wrap gap-2">
+                    <div class="user-extras-member-grid">
                       {groupMembers.value.slice(0, 30).map(member => (
-                        <div
-                          key={member.id}
-                          class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800"
-                        >
+                        <div key={member.id} class="user-extras-member-pill">
                           {member.name || member.username}
                         </div>
                       ))}
@@ -114,7 +106,7 @@ export default defineComponent({
               )}
             </div>
           )}
-        </div>
+        </section>
       </div>
     )
   }

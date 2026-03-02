@@ -22,14 +22,14 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">分类偏好</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">关注</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">分类偏好</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">关注</div>
           <Select
             mode="multiple"
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择分类"
             options={props.categoryOptions}
             value={props.form.value.watched_category_ids}
@@ -38,11 +38,11 @@ export default defineComponent({
               (props.form.value.watched_category_ids = (value || []) as number[])
             }
           />
-          <div class="text-gray-500">追踪</div>
+          <div class="user-settings-label">追踪</div>
           <Select
             mode="multiple"
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择分类"
             options={props.categoryOptions}
             value={props.form.value.tracked_category_ids}
@@ -51,11 +51,11 @@ export default defineComponent({
               (props.form.value.tracked_category_ids = (value || []) as number[])
             }
           />
-          <div class="text-gray-500">关注首帖</div>
+          <div class="user-settings-label">关注首帖</div>
           <Select
             mode="multiple"
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择分类"
             options={props.categoryOptions}
             value={props.form.value.watched_first_post_category_ids}
@@ -64,11 +64,11 @@ export default defineComponent({
               (props.form.value.watched_first_post_category_ids = (value || []) as number[])
             }
           />
-          <div class="text-gray-500">静音</div>
+          <div class="user-settings-label">静音</div>
           <Select
             mode="multiple"
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择分类"
             options={props.categoryOptions}
             value={props.form.value.muted_category_ids}

@@ -45,20 +45,25 @@ export default defineComponent({
         return <span>:{value}:</span>
       }
       return (
-        <span class="inline-flex items-center gap-2">
-          <img src={emoji.url} alt={emoji.name} class="w-4 h-4" loading="lazy" />
+        <span class="user-settings-emoji-inline">
+          <img
+            src={emoji.url}
+            alt={emoji.name}
+            class="user-settings-emoji-inline__icon"
+            loading="lazy"
+          />
           <span>:{emoji.name}:</span>
         </span>
       )
     }
 
     const renderTag = ({ value, closable, onClose }: any) => (
-      <span class="inline-flex items-center gap-1 mr-1">
+      <span class="user-settings-tag-render">
         {renderEmoji(String(value))}
         {closable ? (
           <button
             type="button"
-            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            class="user-settings-tag-close"
             onMousedown={(event: Event) => event.preventDefault()}
             onClick={onClose}
           >
@@ -76,13 +81,13 @@ export default defineComponent({
       ))
 
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">表情偏好</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">快速表情来源</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">表情偏好</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">快速表情来源</div>
           <Select
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择策略"
             options={props.reactionTypeOptions}
             value={props.form.value.chat_quick_reaction_type}
@@ -90,11 +95,11 @@ export default defineComponent({
               (props.form.value.chat_quick_reaction_type = value as string | undefined)
             }
           />
-          <div class="text-gray-500">自定义快速表情</div>
+          <div class="user-settings-label">自定义快速表情</div>
           <Select
             mode="multiple"
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="搜索表情名称"
             filterOption={false}
             notFoundContent={props.emojiLoading.value ? '加载中...' : '无结果'}

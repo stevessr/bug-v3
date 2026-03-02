@@ -3,17 +3,11 @@
 .ntf-root {
   display: flex;
   gap: 0;
-  height: 100%;
   min-height: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
-}
-
-.dark .ntf-root {
-  border-color: #1f2937;
-  background: #111827;
+  background: var(--d-surface, var(--theme-surface));
 }
 
 /* ── Notification list ── */
@@ -31,7 +25,7 @@
   justify-content: center;
   gap: 8px;
   padding: 32px 16px;
-  color: #6b7280;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 13px;
 }
 
@@ -39,10 +33,10 @@
 
 .ntf-item {
   display: flex;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 10px 12px;
   cursor: pointer;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
   transition: background-color 0.15s;
 }
 
@@ -51,31 +45,15 @@
 }
 
 .ntf-item:hover {
-  background-color: #f9fafb;
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 10%, transparent));
 }
 
 .ntf-item.unread {
-  background-color: #eff6ff;
+  background: color-mix(in oklab, var(--theme-primary) 16%, transparent);
 }
 
 .ntf-item.unread:hover {
-  background-color: #dbeafe;
-}
-
-.dark .ntf-item {
-  border-bottom-color: #1f2937;
-}
-
-.dark .ntf-item:hover {
-  background-color: #1f2937;
-}
-
-.dark .ntf-item.unread {
-  background-color: rgba(59, 130, 246, 0.1);
-}
-
-.dark .ntf-item.unread:hover {
-  background-color: rgba(59, 130, 246, 0.18);
+  background: color-mix(in oklab, var(--theme-primary) 24%, transparent);
 }
 
 /* ── Avatar ── */
@@ -83,13 +61,13 @@
 .ntf-avatar-wrap {
   position: relative;
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
 }
 
 .ntf-avatar {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -99,7 +77,7 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   user-select: none;
 }
@@ -111,15 +89,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 2px solid #fff;
+  border: 2px solid var(--d-surface, var(--theme-surface));
   box-sizing: content-box;
-}
-
-.dark .ntf-type-badge {
-  border-color: #111827;
 }
 
 /* ── Content ── */
@@ -142,28 +116,20 @@
 
 .ntf-actor {
   font-weight: 600;
-  color: #111827;
+  color: var(--d-text, var(--theme-on-background));
   white-space: nowrap;
-}
-
-.dark .ntf-actor {
-  color: #f3f4f6;
 }
 
 .ntf-type-text {
-  color: #6b7280;
-  font-size: 12.5px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
   white-space: nowrap;
-}
-
-.dark .ntf-type-text {
-  color: #9ca3af;
 }
 
 .ntf-title {
   font-size: 13px;
-  color: #374151;
-  line-height: 1.4;
+  color: var(--d-text, var(--theme-on-background));
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -171,24 +137,16 @@
   -webkit-box-orient: vertical;
 }
 
-.dark .ntf-title {
-  color: #d1d5db;
-}
-
 .ntf-badge-desc {
-  color: #9ca3af;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
 }
 
 .ntf-time {
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   white-space: nowrap;
   margin-top: 1px;
-}
-
-.dark .ntf-time {
-  color: #6b7280;
 }
 
 /* ── Right filter sidebar ── */
@@ -199,46 +157,31 @@
   align-items: center;
   gap: 2px;
   padding: 8px 6px;
-  border-left: 1px solid #e5e7eb;
-  background: #fafbfc;
+  border-left: 1px solid var(--d-border, var(--theme-outline-variant));
+  background: var(--d-surface-1, var(--theme-surface-container-low));
   flex-shrink: 0;
-}
-
-.dark .ntf-filter-bar {
-  border-left-color: #1f2937;
-  background: #0f1724;
 }
 
 .ntf-filter-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #9ca3af;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .ntf-filter-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+  color: var(--primary, var(--theme-primary));
 }
 
 .ntf-filter-btn.active {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.dark .ntf-filter-btn:hover {
-  background: #1f2937;
-  color: #d1d5db;
-}
-
-.dark .ntf-filter-btn.active {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
+  background: color-mix(in oklab, var(--theme-primary) 18%, transparent);
+  color: var(--primary, var(--theme-primary));
 }

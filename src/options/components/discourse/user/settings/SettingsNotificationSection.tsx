@@ -20,14 +20,14 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">通知</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">点赞通知频率</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">通知</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">点赞通知频率</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择频率"
             options={props.likeNotificationOptions}
             value={props.form.value.like_notification_frequency}
@@ -35,10 +35,10 @@ export default defineComponent({
               (props.form.value.like_notification_frequency = value as number | undefined)
             }
           />
-          <div class="text-gray-500">引用回复提醒</div>
+          <div class="user-settings-label">引用回复提醒</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.notify_on_linked_posts}
             onChange={checked => (props.form.value.notify_on_linked_posts = Boolean(checked))}
           />

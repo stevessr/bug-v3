@@ -32,24 +32,24 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-t border-gray-200/70 dark:border-gray-700 pt-3">
-        <div class="text-xs font-semibold text-gray-400 mb-2">邮件</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs items-center">
-          <div class="text-gray-500">邮件通知级别</div>
+      <div class="user-settings-section">
+        <div class="user-settings-section__title">邮件</div>
+        <div class="user-settings-grid">
+          <div class="user-settings-label">邮件通知级别</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择级别"
             options={props.emailLevelOptions}
             value={props.form.value.email_level}
             onUpdate:value={value => (props.form.value.email_level = value as number | undefined)}
           />
-          <div class="text-gray-500">私信邮件级别</div>
+          <div class="user-settings-label">私信邮件级别</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择级别"
             options={props.emailLevelOptions}
             value={props.form.value.email_messages_level}
@@ -57,11 +57,11 @@ export default defineComponent({
               (props.form.value.email_messages_level = value as number | undefined)
             }
           />
-          <div class="text-gray-500">邮件包含回复</div>
+          <div class="user-settings-label">邮件包含回复</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             placeholder="选择策略"
             options={props.emailPreviousRepliesOptions}
             value={props.form.value.email_previous_replies}
@@ -69,25 +69,25 @@ export default defineComponent({
               (props.form.value.email_previous_replies = value as number | undefined)
             }
           />
-          <div class="text-gray-500">邮件中包含回复指向链接</div>
+          <div class="user-settings-label">邮件中包含回复指向链接</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.email_in_reply_to}
             onChange={checked => (props.form.value.email_in_reply_to = Boolean(checked))}
           />
-          <div class="text-gray-500">邮件摘要</div>
+          <div class="user-settings-label">邮件摘要</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.email_digests}
             onChange={checked => (props.form.value.email_digests = Boolean(checked))}
           />
-          <div class="text-gray-500">摘要频率</div>
+          <div class="user-settings-label">摘要频率</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             disabled={!props.form.value.email_digests}
             placeholder="选择频率"
             options={props.digestFrequencyOptions}
@@ -96,26 +96,26 @@ export default defineComponent({
               (props.form.value.digest_after_minutes = value as number | undefined)
             }
           />
-          <div class="text-gray-500">摘要包含 TL0</div>
+          <div class="user-settings-label">摘要包含 TL0</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.include_tl0_in_digests}
             disabled={!props.form.value.email_digests}
             onChange={checked => (props.form.value.include_tl0_in_digests = Boolean(checked))}
           />
-          <div class="text-gray-500">邮件列表模式</div>
+          <div class="user-settings-label">邮件列表模式</div>
           <Switch
             size="small"
-            class="justify-self-start md:justify-self-end"
+            class="user-settings-switch"
             checked={props.form.value.mailing_list_mode}
             onChange={checked => (props.form.value.mailing_list_mode = Boolean(checked))}
           />
-          <div class="text-gray-500">邮件列表模式频率</div>
+          <div class="user-settings-label">邮件列表模式频率</div>
           <Select
             allowClear
             size="small"
-            class="w-full"
+            class="user-settings-control"
             disabled={!props.form.value.mailing_list_mode}
             placeholder="选择方式"
             options={props.mailingListModeOptions}
