@@ -1,6 +1,5 @@
 import type { AddEmojiButtonData } from '../types/main'
 import { createE, DQSA } from '../../utils/dom/createEl'
-import { getCachedImageUrl } from '../../utils/core/contentImageCache'
 
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
@@ -78,30 +77,6 @@ function addEmojiButtonToLightbox(lightboxWrapper: Element) {
 
   // 注入位置：在 lightbox-wrapper 内部的最后
   lightboxWrapper.appendChild(button)
-
-  // 处理图片缓存
-  processImageCache(lightboxWrapper)
-}
-
-// 处理图片缓存，将图片替换为缓存版本
-async function processImageCache(lightboxWrapper: Element) {
-  const img = lightboxWrapper.querySelector('img') as HTMLImageElement
-  if (!img || !img.src || !img.src.startsWith('http')) return
-
-  try {
-    const cachedUrl = await getCachedImageUrl(img.src)
-    if (cachedUrl !== img.src) {
-      // 保存原始 URL
-      if (!img.hasAttribute('data-original-url')) {
-        img.setAttribute('data-original-url', img.src)
-      }
-      // 替换为缓存版本
-      img.src = cachedUrl
-      img.setAttribute('data-cached', 'true')
-    }
-  } catch (error) {
-    console.warn('[DiscourseOneClick] Failed to cache image:', error)
-  }
 }
 
 // ========== 注入位置：批量处理按钮 ==========

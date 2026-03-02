@@ -1,31 +1,10 @@
 import { createE } from '../../utils/dom/createEl'
-import { getCachedImageUrl } from '../../utils/core/contentImageCache'
 import { animateExit, ANIMATION_DURATION, injectAnimationStyles } from '../../utils/dom/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
 
 import { isImageUrl } from '@/utils/isImageUrl'
-
-/**
- * 异步替换图片元素的 src 为缓存版本
- */
-async function replaceWithCachedImage(
-  imgElement: HTMLImageElement,
-  originalUrl: string
-): Promise<void> {
-  try {
-    const cachedUrl = await getCachedImageUrl(originalUrl)
-    if (cachedUrl && cachedUrl !== originalUrl) {
-      imgElement.src = cachedUrl
-      imgElement.setAttribute('data-original-url', originalUrl)
-      imgElement.setAttribute('data-cached', 'true')
-    }
-  } catch (error) {
-    // 如果缓存获取失败，保持原始 URL
-    console.warn('[Mobile Emoji Picker] Failed to get cached image:', error)
-  }
-}
 
 export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   // Ensure animation styles are injected first
@@ -162,13 +141,8 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
           width: 18px,
           height: 18px,
           objectFit: contain
-        `,
-        attrs: {
-          'data-original-url': iconVal
-        }
+        `
       }) as HTMLImageElement
-      // 异步替换为缓存版本
-      replaceWithCachedImage(img, iconVal)
       navButton.appendChild(img)
     } else {
       navButton.textContent = String(iconVal)
@@ -213,9 +187,6 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
         dataset: { emoji: emoji.name },
         ti: `:${emoji.name}:`,
         ld: 'lazy',
-        attrs: {
-          'data-original-url': originalUrl
-        },
         on: {
           click: () => {
             insertEmojiIntoEditor(emoji)
@@ -230,9 +201,6 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
           }
         }
       }) as HTMLImageElement
-
-      // 异步替换为缓存版本
-      replaceWithCachedImage(img, originalUrl)
 
       sectionEmojis.appendChild(img)
     })

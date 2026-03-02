@@ -37,7 +37,6 @@ export const defaultSettings: AppSettings = {
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
   imageCacheStrategy: 'auto', // 图片缓存策略：auto/force-indexeddb/force-source/adaptive
-  enableContentImageCache: false, // 默认禁用前端图片缓存（试验性功能）
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
   cloudMarketDomain: 's.pwsh.us.kg', // 云端市场默认域名
   enableLinuxDoSeeking: false, // 默认禁用 LinuxDo 追觅功能

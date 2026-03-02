@@ -891,14 +891,6 @@
     "message": "Add buttons next to chat messages in Discourse to send multiple emoji reactions with one click",
     "description": "Enable chat multi-reactor description"
   },
-  "enableContentImageCache": {
-    "message": "Enable Frontend Image Cache (Experimental)",
-    "description": "Enable frontend image cache"
-  },
-  "enableContentImageCacheDescription": {
-    "message": "Allow frontend injected content scripts to use locally cached images instead of directly requesting emoji URLs",
-    "description": "Enable frontend image cache description"
-  },
   "enableIndexedDBCacheImages": {
     "message": "Enable IndexedDB Cache Images",
     "description": "Enable IndexedDB cache images"

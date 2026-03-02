@@ -1,31 +1,10 @@
 import { createE, DOA } from '../../utils/dom/createEl'
-import { getCachedImageUrl } from '../../utils/core/contentImageCache'
 import { animateExit } from '../../utils/dom/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
 
 import { isImageUrl } from '@/utils/isImageUrl'
-
-/**
- * 异步替换图片元素的 src 为缓存版本
- */
-async function replaceWithCachedImage(
-  imgElement: HTMLImageElement,
-  originalUrl: string
-): Promise<void> {
-  try {
-    const cachedUrl = await getCachedImageUrl(originalUrl)
-    if (cachedUrl && cachedUrl !== originalUrl) {
-      imgElement.src = cachedUrl
-      imgElement.setAttribute('data-original-url', originalUrl)
-      imgElement.setAttribute('data-cached', 'true')
-    }
-  } catch (error) {
-    // 如果缓存获取失败，保持原始 URL
-    console.warn('[Desktop Emoji Picker] Failed to get cached image:', error)
-  }
-}
 
 export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
@@ -101,13 +80,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           width: 18px;
           height: 18px;
           object-fit: contain;
-        `,
-        attrs: {
-          'data-original-url': iconVal
-        }
+        `
       }) as HTMLImageElement
-      // 异步替换为缓存版本
-      replaceWithCachedImage(img, iconVal)
       navButton.appendChild(img)
     } else {
       navButton.textContent = String(iconVal)
@@ -166,7 +140,6 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         attrs: {
           tabindex: '0',
           'data-emoji': emoji.name,
-          'data-original-url': originalUrl,
           loading: 'lazy'
         },
         on: {
@@ -177,9 +150,6 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           }
         }
       }) as HTMLImageElement
-
-      // 异步替换为缓存版本
-      replaceWithCachedImage(img, originalUrl)
 
       img.addEventListener('keydown', (e: any) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -300,8 +270,6 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const originalUrl = emoji.displayUrl || emoji.url || ''
     if (img) {
       img.src = originalUrl
-      // 异步替换为缓存版本
-      replaceWithCachedImage(img, originalUrl)
     }
     if (label) label.textContent = emoji.name || ''
     movePreviewToEvent(ev)

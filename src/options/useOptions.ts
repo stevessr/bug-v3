@@ -267,10 +267,6 @@ export default function useOptions() {
     emojiStore.updateSettings({ imageCacheStrategy: strategy })
   }
 
-  const updateEnableContentImageCache = (value: boolean) => {
-    emojiStore.updateSettings({ enableContentImageCache: value })
-  }
-
   const updateEnableSubmenuInjector = (value: boolean) => {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
@@ -821,7 +817,6 @@ export default function useOptions() {
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateImageCacheStrategy,
-    updateEnableContentImageCache,
     updateEnableSubmenuInjector,
     updateEnableDiscourseRouterRefresh,
     updateDiscourseRouterRefreshInterval,

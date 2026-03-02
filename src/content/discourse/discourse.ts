@@ -1,6 +1,5 @@
 // 导入各个功能模块
 import { requestSettingsBatch } from '../utils/core/requestSetting'
-import { contentImageCache, processEmojiImages } from '../utils/core/contentImageCache'
 
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
 import { scanForCookedContent, observeCookedContent } from './utils/cooked-content'
@@ -32,7 +31,6 @@ export async function initDiscourse() {
       'enableCalloutSuggestions',
       'enableChatMultiReactor',
       'chatMultiReactorEmojis',
-      'enableContentImageCache',
       'enableSubmenuInjector',
       'enableLinuxDoSeeking',
       'enableLinuxDoCredit',
@@ -62,24 +60,6 @@ export async function initDiscourse() {
       const customEmojis = settings.chatMultiReactorEmojis
       initChatMultiReactor(Array.isArray(customEmojis) ? customEmojis : undefined)
       console.log('[DiscourseOneClick] chat multi-reactor enabled')
-    }
-
-    // 图片缓存功能（默认启用）
-    if (settings.enableContentImageCache !== false) {
-      try {
-        await contentImageCache.init()
-        setTimeout(async () => {
-          try {
-            const processedCount = await processEmojiImages()
-            console.log(`[DiscourseOneClick] processed ${processedCount} images with cache`)
-          } catch (e) {
-            console.warn('[DiscourseOneClick] failed to process images with cache:', e)
-          }
-        }, 1000)
-        console.log('[DiscourseOneClick] content image cache enabled')
-      } catch (e) {
-        console.warn('[DiscourseOneClick] failed to initialize content image cache:', e)
-      }
     }
 
     // 子菜单注入（试验性功能）

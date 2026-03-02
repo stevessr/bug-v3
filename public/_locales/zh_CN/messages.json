@@ -891,14 +891,6 @@
     "message": "在 Discourse 聊天消息旁添加按钮，一键发送多个表情反应",
     "description": "启用聊天多表情反应描述"
   },
-  "enableContentImageCache": {
-    "message": "启用前端图片缓存 (试验性功能)",
-    "description": "启用前端图片缓存"
-  },
-  "enableContentImageCacheDescription": {
-    "message": "允许前端注入的 content script 使用本地缓存的图片显示，而不是直接请求表情的 URL",
-    "description": "启用前端图片缓存描述"
-  },
   "enableIndexedDBCacheImages": {
     "message": "启用 IndexedDB 缓存图片",
     "description": "启用 IndexedDB 缓存图片"

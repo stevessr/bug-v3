@@ -41,7 +41,6 @@ const {
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
   updateImageCacheStrategy,
-  updateEnableContentImageCache,
   updateEnableSubmenuInjector,
   updateEnableDiscourseRouterRefresh,
   updateDiscourseRouterRefreshInterval,
@@ -146,7 +145,6 @@ onMounted(async () => {
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
               @update:imageCacheStrategy="updateImageCacheStrategy"
-              @update:enableContentImageCache="updateEnableContentImageCache"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"

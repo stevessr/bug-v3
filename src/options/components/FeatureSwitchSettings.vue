@@ -15,7 +15,6 @@ const emit = defineEmits([
   'update:enableBatchParseImages',
   'update:enableExperimentalFeatures',
   'update:imageCacheStrategy',
-  'update:enableContentImageCache',
   'update:enableSubmenuInjector',
   'update:cloudMarketDomain',
   'update:enableDiscourseRouterRefresh',
@@ -243,13 +242,6 @@ const saveRouterRefreshInterval = async () => {
           </a-button>
         </a-dropdown>
       </div>
-
-      <SettingSwitch
-        :model-value="getSetting('enableContentImageCache', false)"
-        @update:model-value="handleSettingUpdate('enableContentImageCache', $event)"
-        label="启用前端图片缓存 (试验性功能)"
-        description="允许前端注入的content script使用本地缓存的图片显示，而不是直接请求表情的URL"
-      />
 
       <SettingSwitch
         :model-value="getSetting('enableSubmenuInjector', false)"

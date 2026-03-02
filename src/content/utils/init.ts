@@ -4,7 +4,7 @@ import { startReadTracker } from '../discourse/utils/readTracker'
 import { DAEL } from './dom'
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
-import { requestSettingFromBackground, contentImageCache } from './core'
+import { requestSettingFromBackground } from './core'
 import { initOneClickAdd } from './oneClickAdd'
 import { showFloatingButton, checkAndShowFloatingButton, cleanupFloatingButton } from './ui'
 import { applyCustomCssFromCache } from './injectCustomCss'
@@ -210,14 +210,6 @@ export async function initializeEmojiFeature(
   } catch (e) {
     console.warn('[Emoji Extension] Failed to get enableSubmenuInjector setting:', e)
     cachedSubmenuInjectorEnabled = false
-  }
-
-  // 初始化图片缓存功能
-  try {
-    await contentImageCache.init()
-    console.log('[Emoji Extension] Content image cache initialized')
-  } catch (e) {
-    console.warn('[Emoji Extension] Failed to initialize content image cache:', e)
   }
 
   // 初始化一键添加表情功能
