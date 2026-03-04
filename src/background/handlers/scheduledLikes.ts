@@ -1,10 +1,11 @@
 import { getChromeAPI } from '../utils/main'
 
 import * as storage from '@/utils/simpleStorage'
-import type { ScheduledLikeTask } from '@/types/type'
+import type { AppSettings, ScheduledLikeTask } from '@/types/type'
 
 const SCHEDULED_LIKES_ALARM_NAME = 'scheduled-likes-check'
 const CHECK_INTERVAL_MINUTES = 1 // 每分钟检查一次
+const SCHEDULED_LIKES_TOGGLE_KEY: keyof AppSettings = 'enableScheduledLikes'
 
 interface UserActivity {
   post_id: number
@@ -133,7 +134,15 @@ async function executeTask(task: ScheduledLikeTask): Promise<{ liked: number; er
 }
 
 // 检查并执行到期的任务
+let isCheckingScheduledLikes = false
+
 async function checkAndExecuteTasks() {
+  if (isCheckingScheduledLikes) {
+    console.log('[ScheduledLikes] 上一轮检查仍在执行，跳过本次触发')
+    return
+  }
+
+  isCheckingScheduledLikes = true
   console.log('[ScheduledLikes] 检查计划任务...')
 
   try {
@@ -185,7 +194,33 @@ async function checkAndExecuteTasks() {
     }
   } catch (err) {
     console.error('[ScheduledLikes] 检查任务失败：', err)
+  } finally {
+    isCheckingScheduledLikes = false
   }
+}
+
+async function syncScheduledLikesAlarm() {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.alarms) {
+    console.warn('[ScheduledLikes] chrome.alarms API 不可用')
+    return
+  }
+
+  const settings = await storage.getSettings()
+  const enabled = Boolean(settings?.enableScheduledLikes)
+
+  if (!enabled) {
+    await chromeAPI.alarms.clear(SCHEDULED_LIKES_ALARM_NAME)
+    console.log('[ScheduledLikes] 功能未启用，已清理定时器')
+    return
+  }
+
+  chromeAPI.alarms.create(SCHEDULED_LIKES_ALARM_NAME, {
+    delayInMinutes: 1,
+    periodInMinutes: CHECK_INTERVAL_MINUTES
+  })
+
+  console.log('[ScheduledLikes] 计划任务检查器已启动')
 }
 
 // 设置定时检查
@@ -196,19 +231,30 @@ export function setupScheduledLikes() {
     return
   }
 
-  // 创建定时器
-  chromeAPI.alarms.create(SCHEDULED_LIKES_ALARM_NAME, {
-    delayInMinutes: 1,
-    periodInMinutes: CHECK_INTERVAL_MINUTES
-  })
-
-  // 监听定时器
   chromeAPI.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
     if (alarm.name !== SCHEDULED_LIKES_ALARM_NAME) return
     await checkAndExecuteTasks()
   })
 
-  console.log('[ScheduledLikes] 计划任务检查器已启动')
+  chromeAPI.storage?.onChanged?.addListener(
+    (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
+      if (namespace !== 'local' || !changes['appSettings']) return
+
+      const oldRaw = changes['appSettings'].oldValue as { data?: AppSettings } | undefined
+      const newRaw = changes['appSettings'].newValue as { data?: AppSettings } | undefined
+      const oldSettings = oldRaw?.data
+      const newSettings = newRaw?.data
+
+      const oldEnabled = Boolean(oldSettings?.[SCHEDULED_LIKES_TOGGLE_KEY])
+      const newEnabled = Boolean(newSettings?.[SCHEDULED_LIKES_TOGGLE_KEY])
+
+      if (oldEnabled !== newEnabled) {
+        void syncScheduledLikesAlarm()
+      }
+    }
+  )
+
+  void syncScheduledLikesAlarm()
 }
 
 // 清理定时器

@@ -263,7 +263,8 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
             'X-SILENCE-LOGGER': 'true',
             'Dont-Chunk': 'true'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          passHeaders: ['X-Shared-Session-Key']
         }
       )
 

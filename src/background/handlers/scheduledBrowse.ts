@@ -1,10 +1,11 @@
 import { getChromeAPI } from '../utils/main'
 
 import * as storage from '@/utils/simpleStorage'
-import type { ScheduledBrowseTask, BrowseStrategy } from '@/types/type'
+import type { AppSettings, ScheduledBrowseTask, BrowseStrategy } from '@/types/type'
 
 const SCHEDULED_BROWSE_ALARM_NAME = 'scheduled-browse-check'
 const CHECK_INTERVAL_MINUTES = 1
+const SCHEDULED_BROWSE_TOGGLE_KEY: keyof AppSettings = 'enableScheduledBrowse'
 
 interface TopicListItem {
   id: number
@@ -242,7 +243,15 @@ async function executeBrowseTask(
 }
 
 // 检查并执行到期的任务
+let isCheckingScheduledBrowse = false
+
 async function checkAndExecuteBrowseTasks() {
+  if (isCheckingScheduledBrowse) {
+    console.log('[ScheduledBrowse] 上一轮检查仍在执行，跳过本次触发')
+    return
+  }
+
+  isCheckingScheduledBrowse = true
   console.log('[ScheduledBrowse] 检查自动浏览任务...')
 
   try {
@@ -292,7 +301,33 @@ async function checkAndExecuteBrowseTasks() {
     }
   } catch (err) {
     console.error('[ScheduledBrowse] 检查任务失败：', err)
+  } finally {
+    isCheckingScheduledBrowse = false
   }
+}
+
+async function syncScheduledBrowseAlarm() {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.alarms) {
+    console.warn('[ScheduledBrowse] chrome.alarms API 不可用')
+    return
+  }
+
+  const settings = await storage.getSettings()
+  const enabled = Boolean(settings?.enableScheduledBrowse)
+
+  if (!enabled) {
+    await chromeAPI.alarms.clear(SCHEDULED_BROWSE_ALARM_NAME)
+    console.log('[ScheduledBrowse] 功能未启用，已清理定时器')
+    return
+  }
+
+  chromeAPI.alarms.create(SCHEDULED_BROWSE_ALARM_NAME, {
+    delayInMinutes: 1,
+    periodInMinutes: CHECK_INTERVAL_MINUTES
+  })
+
+  console.log('[ScheduledBrowse] 自动浏览任务检查器已启动')
 }
 
 export function setupScheduledBrowse() {
@@ -302,17 +337,30 @@ export function setupScheduledBrowse() {
     return
   }
 
-  chromeAPI.alarms.create(SCHEDULED_BROWSE_ALARM_NAME, {
-    delayInMinutes: 1,
-    periodInMinutes: CHECK_INTERVAL_MINUTES
-  })
-
   chromeAPI.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
     if (alarm.name !== SCHEDULED_BROWSE_ALARM_NAME) return
     await checkAndExecuteBrowseTasks()
   })
 
-  console.log('[ScheduledBrowse] 自动浏览任务检查器已启动')
+  chromeAPI.storage?.onChanged?.addListener(
+    (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
+      if (namespace !== 'local' || !changes['appSettings']) return
+
+      const oldRaw = changes['appSettings'].oldValue as { data?: AppSettings } | undefined
+      const newRaw = changes['appSettings'].newValue as { data?: AppSettings } | undefined
+      const oldSettings = oldRaw?.data
+      const newSettings = newRaw?.data
+
+      const oldEnabled = Boolean(oldSettings?.[SCHEDULED_BROWSE_TOGGLE_KEY])
+      const newEnabled = Boolean(newSettings?.[SCHEDULED_BROWSE_TOGGLE_KEY])
+
+      if (oldEnabled !== newEnabled) {
+        void syncScheduledBrowseAlarm()
+      }
+    }
+  )
+
+  void syncScheduledBrowseAlarm()
 }
 
 export function cleanupScheduledBrowse() {

@@ -84,6 +84,7 @@ export interface LinuxDoPageFetchMessage extends BaseMessage {
     headers?: Record<string, string>
     body?: string
     responseType?: 'json' | 'text' | 'blob'
+    passHeaders?: string[]
   }
 }
 

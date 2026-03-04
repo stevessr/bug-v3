@@ -56,7 +56,12 @@ function toBlobIfNeeded(data: unknown, responseType: 'json' | 'text' | 'blob') {
 // Page proxy request via Chrome extension
 export async function pageFetch<T>(
   url: string,
-  options?: { method?: string; headers?: Record<string, string>; body?: string },
+  options?: {
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    passHeaders?: string[]
+  },
   responseType: 'json' | 'text' | 'blob' = 'json'
 ): Promise<{ status: number; ok: boolean; data: T | null }> {
   const chromeAPI = (globalThis as any).chrome
@@ -90,7 +95,8 @@ export async function pageFetch<T>(
                 method: options?.method || 'GET',
                 headers: options?.headers,
                 body: options?.body,
-                responseType
+                responseType,
+                passHeaders: options?.passHeaders
               }
             },
             (resp: PageFetchResponse<T>) => {

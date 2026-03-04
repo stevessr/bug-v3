@@ -18,7 +18,8 @@ export async function handlePageFetchRequest(
       method: opts.method,
       headers: opts.headers,
       body: opts.body,
-      responseType: opts.responseType
+      responseType: opts.responseType,
+      passHeaders: opts.passHeaders
     }
   })
   sendResponse(resp)
