@@ -50,7 +50,32 @@ const X_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = ['enableXcomExtraS
 
 let cachedDiscourseTabUrlPatterns: string[] | null = null
 let discoursePatternsCacheAt = 0
+let discourseDomainsCacheListenerAttached = false
 const DISCOURSE_PATTERNS_CACHE_TTL_MS = 60_000
+
+function invalidateDiscourseTabUrlPatternsCache() {
+  cachedDiscourseTabUrlPatterns = null
+  discoursePatternsCacheAt = 0
+}
+
+function ensureDiscourseDomainsCacheInvalidationListener() {
+  if (discourseDomainsCacheListenerAttached) return
+
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.storage?.onChanged) return
+
+  chromeAPI.storage.onChanged.addListener(
+    (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
+      if (namespace !== 'local') return
+      if (!changes[storage.STORAGE_KEYS.DISCOURSE_DOMAINS]) return
+
+      invalidateDiscourseTabUrlPatternsCache()
+      console.log('[SyncSettings] discourseDomains changed, invalidated tab pattern cache')
+    }
+  )
+
+  discourseDomainsCacheListenerAttached = true
+}
 
 function buildDomainUrlPatterns(domain: string): string[] {
   const normalized = String(domain || '')
@@ -60,6 +85,8 @@ function buildDomainUrlPatterns(domain: string): string[] {
 
   return [`*://${normalized}/*`, `*://*.${normalized}/*`]
 }
+
+ensureDiscourseDomainsCacheInvalidationListener()
 
 async function getDiscourseTabUrlPatterns(): Promise<string[]> {
   const now = Date.now()
