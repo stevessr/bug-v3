@@ -1,10 +1,9 @@
 import { getChromeAPI } from '../utils/main.ts'
+import { getDiscourseTabUrlPatterns } from '../utils/domainTabMessenger'
 
-import * as storage from '@/utils/simpleStorage'
 import type { AppSettings } from '@/types/type'
 
 const CONTENT_TAB_URL_PATTERNS = ['http://*/*', 'https://*/*']
-const DISCOURSE_BASE_DOMAINS = ['linux.do', 'meta.discourse.org', 'idcflare.com']
 const X_TAB_URL_PATTERNS = [
   '*://x.com/*',
   '*://*.x.com/*',
@@ -47,76 +46,6 @@ const DISCOURSE_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
 ]
 
 const X_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = ['enableXcomExtraSelectors']
-
-let cachedDiscourseTabUrlPatterns: string[] | null = null
-let discoursePatternsCacheAt = 0
-let discourseDomainsCacheListenerAttached = false
-const DISCOURSE_PATTERNS_CACHE_TTL_MS = 60_000
-
-function invalidateDiscourseTabUrlPatternsCache() {
-  cachedDiscourseTabUrlPatterns = null
-  discoursePatternsCacheAt = 0
-}
-
-function ensureDiscourseDomainsCacheInvalidationListener() {
-  if (discourseDomainsCacheListenerAttached) return
-
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI?.storage?.onChanged) return
-
-  chromeAPI.storage.onChanged.addListener(
-    (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
-      if (namespace !== 'local') return
-      if (!changes[storage.STORAGE_KEYS.DISCOURSE_DOMAINS]) return
-
-      invalidateDiscourseTabUrlPatternsCache()
-      console.log('[SyncSettings] discourseDomains changed, invalidated tab pattern cache')
-    }
-  )
-
-  discourseDomainsCacheListenerAttached = true
-}
-
-function buildDomainUrlPatterns(domain: string): string[] {
-  const normalized = String(domain || '')
-    .trim()
-    .toLowerCase()
-  if (!normalized) return []
-
-  return [`*://${normalized}/*`, `*://*.${normalized}/*`]
-}
-
-ensureDiscourseDomainsCacheInvalidationListener()
-
-async function getDiscourseTabUrlPatterns(): Promise<string[]> {
-  const now = Date.now()
-  if (
-    cachedDiscourseTabUrlPatterns &&
-    now - discoursePatternsCacheAt < DISCOURSE_PATTERNS_CACHE_TTL_MS
-  ) {
-    return cachedDiscourseTabUrlPatterns
-  }
-
-  const patternSet = new Set<string>()
-
-  DISCOURSE_BASE_DOMAINS.forEach(domain => {
-    buildDomainUrlPatterns(domain).forEach(pattern => patternSet.add(pattern))
-  })
-
-  try {
-    const domains = await storage.getDiscourseDomains()
-    domains.forEach(entry => {
-      buildDomainUrlPatterns(entry?.domain || '').forEach(pattern => patternSet.add(pattern))
-    })
-  } catch (error) {
-    console.warn('[SyncSettings] Failed to load discourse domains for tab filtering:', error)
-  }
-
-  const patterns = Array.from(patternSet)
-  cachedDiscourseTabUrlPatterns = patterns
-  discoursePatternsCacheAt = now
-  return patterns
-}
 
 async function resolveBroadcastPatterns(updates?: unknown): Promise<string[] | null> {
   if (!updates || typeof updates !== 'object') return CONTENT_TAB_URL_PATTERNS
