@@ -1,17 +1,9 @@
 import { getChromeAPI } from '../utils/main.ts'
-import { getDiscourseTabUrlPatterns } from '../utils/domainTabMessenger'
+import { getDiscourseTabUrlPatterns, getXTabUrlPatterns } from '../utils/domainTabMessenger'
 
 import type { AppSettings } from '@/types/type'
 
 const CONTENT_TAB_URL_PATTERNS = ['http://*/*', 'https://*/*']
-const X_TAB_URL_PATTERNS = [
-  '*://x.com/*',
-  '*://*.x.com/*',
-  '*://twitter.com/*',
-  '*://*.twitter.com/*',
-  '*://twimg.com/*',
-  '*://*.twimg.com/*'
-]
 
 const GLOBAL_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
   'imageScale',
@@ -67,7 +59,8 @@ async function resolveBroadcastPatterns(updates?: unknown): Promise<string[] | n
   }
 
   if (changedKeys.some(key => X_CONTENT_SYNC_SETTING_KEYS.includes(key))) {
-    X_TAB_URL_PATTERNS.forEach(pattern => patternSet.add(pattern))
+    const xPatterns = getXTabUrlPatterns()
+    xPatterns.forEach(pattern => patternSet.add(pattern))
   }
 
   return patternSet.size > 0 ? Array.from(patternSet) : null

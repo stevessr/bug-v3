@@ -19,6 +19,7 @@ export interface DomainTabResponse {
 }
 
 const DISCOURSE_BASE_DOMAINS = ['linux.do', 'meta.discourse.org', 'idcflare.com']
+const X_BASE_DOMAINS = ['x.com', 'twitter.com', 'twimg.com']
 
 let cachedDiscourseTabUrlPatterns: string[] | null = null
 let discoursePatternsCacheAt = 0
@@ -59,6 +60,10 @@ function ensureDiscourseDomainsCacheInvalidationListener() {
 }
 
 ensureDiscourseDomainsCacheInvalidationListener()
+
+export function getXTabUrlPatterns(): string[] {
+  return X_BASE_DOMAINS.flatMap(domain => buildDomainUrlPatterns(domain))
+}
 
 export async function getDiscourseTabUrlPatterns(): Promise<string[]> {
   const now = Date.now()
