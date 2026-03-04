@@ -93,7 +93,7 @@ const normalizeChatChannels = (data: any): ChatChannel[] => {
   return channels
 }
 
-const normalizeSingleMessage = (value: any): ChatMessage => {
+export const normalizeSingleMessage = (value: any): ChatMessage => {
   const message = { ...(value as ChatMessage) }
   if (!Array.isArray(message.reactions)) {
     message.reactions = []
@@ -126,7 +126,7 @@ const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boo
   return { messages, hasMore }
 }
 
-const dedupeMessagesById = (messages: ChatMessage[]): ChatMessage[] => {
+export const dedupeMessagesById = (messages: ChatMessage[]): ChatMessage[] => {
   const byId = new Map<number, ChatMessage>()
   messages.forEach(message => {
     if (!message || typeof message.id !== 'number') return
@@ -178,7 +178,7 @@ const registerMessageUsers = (users: Ref<Map<number, DiscourseUser>>, messages: 
   })
 }
 
-const updateChannelLastMessage = (
+export const updateChannelLastMessage = (
   channels: ChatChannel[],
   channelId: number,
   message: ChatMessage | null | undefined

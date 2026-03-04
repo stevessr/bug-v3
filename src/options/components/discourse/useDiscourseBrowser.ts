@@ -26,7 +26,10 @@ import {
   loadPosted as loadPostedRoute,
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
-import { loadNotifications as loadNotificationsRoute } from './routes/notifications'
+import {
+  loadNotifications as loadNotificationsRoute,
+  normalizeNotificationsFromResponse
+} from './routes/notifications'
 import { loadSearch as loadSearchRoute } from './routes/search'
 import {
   loadCategory as loadCategoryRoute,
@@ -55,9 +58,16 @@ import {
   sendChatMessage,
   toggleChatMessageReaction,
   updateChatChannel as updateChatChannelRoute,
-  interactChatMessage
+  interactChatMessage,
+  dedupeMessagesById,
+  normalizeSingleMessage,
+  updateChannelLastMessage
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
+
+type MessageBusListPatchOptions = {
+  applyToPending?: boolean
+}
 
 type ShortLivedCacheEntry = {
   expiresAt: number
@@ -645,6 +655,142 @@ export function useDiscourseBrowser() {
     await loadSearchRoute(tab, baseUrl, users, query, tab.searchState.filters, 0)
   }
 
+  function applyNotificationPatch(tab: BrowserTab, payload: unknown) {
+    if (!tab) return false
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    if (!data) return false
+
+    const notificationId = Number(data.notification_id ?? data.id)
+    if (!Number.isFinite(notificationId) || notificationId <= 0) {
+      return false
+    }
+
+    const existing = tab.notifications.find(item => item.id === notificationId)
+    if (existing) {
+      existing.read = false
+      return true
+    }
+
+    const normalized = normalizeNotificationsFromResponse({ notifications: [data] })
+    const candidate = normalized[0]
+    if (!candidate) return false
+
+    candidate.read = false
+    tab.notifications = [candidate, ...(tab.notifications || [])]
+    return true
+  }
+
+  function markNotificationReadOptimistic(tab: BrowserTab, path: string) {
+    if (!tab || !path) return
+
+    const normalized = path.replace(/^https?:\/\/[^/]+/i, '')
+
+    if (normalized.startsWith('/t/')) {
+      const parts = normalized.split('/').filter(Boolean)
+      const topicId = Number(parts[2])
+      const postNumber = Number(parts[3])
+
+      tab.notifications = (tab.notifications || []).map(notification => {
+        const notificationTopicId = Number(notification.topic_id || notification.data?.topic_id)
+        const notificationPostNumber = Number(
+          notification.post_number || notification.data?.post_number
+        )
+
+        if (!Number.isFinite(topicId) || notificationTopicId !== topicId) return notification
+        if (
+          Number.isFinite(postNumber) &&
+          notificationPostNumber &&
+          notificationPostNumber !== postNumber
+        ) {
+          return notification
+        }
+
+        return {
+          ...notification,
+          read: true
+        }
+      })
+      return
+    }
+
+    if (normalized.includes('/user-menu-private-messages')) {
+      tab.notifications = (tab.notifications || []).map(notification => {
+        if ([6, 7, 16].includes(notification.notification_type)) {
+          return {
+            ...notification,
+            read: true
+          }
+        }
+        return notification
+      })
+      return
+    }
+
+    if (normalized.includes('/user-menu-bookmarks')) {
+      tab.notifications = (tab.notifications || []).map(notification => {
+        if (notification.notification_type === 24) {
+          return {
+            ...notification,
+            read: true
+          }
+        }
+        return notification
+      })
+    }
+  }
+
+  function mergePendingTopicsIntoTab(
+    tab: BrowserTab,
+    incomingTopics: DiscourseTopic[],
+    mode: 'prepend' | 'replace' = 'prepend'
+  ) {
+    const currentPending = tab.pendingTopics || []
+    const existingIds = new Set(tab.topics.map(topic => topic.id))
+    const pendingMap = new Map<number, DiscourseTopic>()
+
+    currentPending.forEach(topic => {
+      if (!topic || typeof topic.id !== 'number') return
+      if (existingIds.has(topic.id)) return
+      pendingMap.set(topic.id, topic)
+    })
+
+    incomingTopics.forEach(topic => {
+      if (!topic || typeof topic.id !== 'number') return
+      if (existingIds.has(topic.id)) return
+      if (mode === 'replace' || !pendingMap.has(topic.id)) {
+        pendingMap.set(topic.id, topic)
+      }
+    })
+
+    const sortedPending = Array.from(pendingMap.values()).sort(
+      (a, b) =>
+        new Date(b.bumped_at || b.last_posted_at || b.created_at).getTime() -
+        new Date(a.bumped_at || a.last_posted_at || a.created_at).getTime()
+    )
+
+    tab.pendingTopics = sortedPending.length > 0 ? sortedPending : null
+    tab.pendingTopicsCount = sortedPending.length
+  }
+
+  function mergePendingTopicsByIds(tab: BrowserTab, topicIds: number[]) {
+    if (!Array.isArray(topicIds) || topicIds.length === 0) return false
+    const normalizedIds = topicIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)
+    if (normalizedIds.length === 0) return false
+
+    const known = new Map<number, DiscourseTopic>()
+    ;[...(tab.pendingTopics || []), ...tab.topics].forEach(topic => {
+      if (topic && typeof topic.id === 'number') {
+        known.set(topic.id, topic)
+      }
+    })
+
+    const incoming = normalizedIds.map(id => known.get(id)).filter(Boolean) as DiscourseTopic[]
+    if (incoming.length === 0) return false
+
+    mergePendingTopicsIntoTab(tab, incoming)
+    return true
+  }
+
   async function checkTopicListUpdates(tab: BrowserTab) {
     if (!tab || !['home', 'category', 'tag'].includes(tab.viewType)) return
 
@@ -672,10 +818,7 @@ export function useDiscourseBrowser() {
       const topics = data?.topic_list?.topics || []
       if (!Array.isArray(topics)) return
 
-      const existingIds = new Set(tab.topics.map(topic => topic.id))
-      const pending = topics.filter(topic => !existingIds.has(topic.id))
-      tab.pendingTopics = pending.length > 0 ? pending : null
-      tab.pendingTopicsCount = pending.length
+      mergePendingTopicsIntoTab(tab, topics)
 
       if (Array.isArray(data?.users)) {
         data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
@@ -691,6 +834,60 @@ export function useDiscourseBrowser() {
     tab.topics = merged
     tab.pendingTopics = null
     tab.pendingTopicsCount = 0
+  }
+
+  function mergeTopicPosts(tab: BrowserTab, topicId: number, incomingPosts: DiscoursePost[]) {
+    if (!tab.currentTopic || tab.currentTopic.id !== topicId) return
+    if (!Array.isArray(incomingPosts) || incomingPosts.length === 0) return
+
+    const byId = new Map<number, DiscoursePost>()
+    tab.currentTopic.post_stream.posts.forEach(post => {
+      if (!post || typeof post.id !== 'number') return
+      byId.set(post.id, post)
+    })
+    incomingPosts.forEach(post => {
+      if (!post || typeof post.id !== 'number') return
+      const previous = byId.get(post.id)
+      byId.set(post.id, previous ? { ...previous, ...post } : post)
+    })
+
+    const merged = Array.from(byId.values()).sort(
+      (a, b) => (a.post_number || 0) - (b.post_number || 0)
+    )
+    tab.currentTopic.post_stream.posts = merged
+    incomingPosts.forEach(post => {
+      if (post && typeof post.id === 'number') {
+        tab.loadedPostIds.add(post.id)
+      }
+    })
+
+    const stream = tab.currentTopic.post_stream?.stream || []
+    if (Array.isArray(stream) && stream.length > 0) {
+      tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
+    }
+
+    void sendReadTimings(tab, topicId, baseUrl.value, incomingPosts)
+  }
+
+  async function patchTopicFromMessageBus(
+    tab: BrowserTab,
+    topicId: number,
+    postNumber?: number | null
+  ) {
+    if (!tab.currentTopic || tab.currentTopic.id !== topicId) return false
+
+    await runTabScopedUpdate(tab.id, `topic-patch:${topicId}`, async () => {
+      if (typeof postNumber === 'number' && postNumber > 0) {
+        await ensurePostsAroundNumberRoute(tab, topicId, postNumber, baseUrl)
+      } else {
+        const highest = tab.currentTopic?.highest_post_number || tab.currentTopic?.posts_count
+        if (typeof highest === 'number' && highest > 0) {
+          await ensurePostsAroundNumberRoute(tab, topicId, highest, baseUrl)
+        }
+      }
+    })
+
+    return true
   }
 
   async function pollTopicUpdates(tab: BrowserTab) {
@@ -724,21 +921,24 @@ export function useDiscourseBrowser() {
         TOPIC_POSTS_UPDATE_CACHE_TTL_MS
       )
       const newPosts = postData?.post_stream?.posts || []
-      if (!Array.isArray(newPosts) || newPosts.length === 0) return
+      if (!Array.isArray(newPosts) || newPosts.length === 0) {
+        tab.currentTopic.post_stream.stream = stream
+        tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count
+        tab.currentTopic.highest_post_number =
+          data.highest_post_number ?? tab.currentTopic.highest_post_number
+        tab.currentTopic.last_posted_at = data.last_posted_at ?? tab.currentTopic.last_posted_at
+        tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
+        return
+      }
 
-      tab.currentTopic.post_stream.posts = [
-        ...tab.currentTopic.post_stream.posts,
-        ...newPosts
-      ].sort((a: DiscoursePost, b: DiscoursePost) => a.post_number - b.post_number)
-      newPosts.forEach((p: DiscoursePost) => tab.loadedPostIds.add(p.id))
+      mergeTopicPosts(tab, topicId, newPosts as DiscoursePost[])
+      if (!tab.currentTopic || tab.currentTopic.id !== topicId) return
       tab.currentTopic.post_stream.stream = stream
       tab.currentTopic.posts_count = data.posts_count ?? tab.currentTopic.posts_count
       tab.currentTopic.highest_post_number =
         data.highest_post_number ?? tab.currentTopic.highest_post_number
       tab.currentTopic.last_posted_at = data.last_posted_at ?? tab.currentTopic.last_posted_at
       tab.hasMorePosts = stream.some(id => !tab.loadedPostIds.has(id))
-
-      void sendReadTimings(tab, topicId, baseUrl.value, newPosts)
     })
   }
 
@@ -764,6 +964,82 @@ export function useDiscourseBrowser() {
 
   async function loadChat(tab: BrowserTab, targetChannelId?: number | null) {
     await loadChatRoute(tab, baseUrl, users, targetChannelId)
+  }
+
+  function applyChatMessagePatch(tab: BrowserTab, channelId: number, payload: unknown) {
+    const state = tab.chatState
+    if (!state || !Number.isFinite(channelId) || channelId <= 0) return false
+
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    if (!data) return false
+
+    const rawMessage = data.chat_message || data.message || data
+    if (!rawMessage || typeof rawMessage !== 'object') return false
+
+    const normalized = normalizeSingleMessage(rawMessage)
+    if (!normalized || typeof normalized.id !== 'number') return false
+
+    normalized.chat_channel_id =
+      normalized.chat_channel_id || Number(data.chat_channel_id || data.channel_id || channelId)
+
+    const existing = state.messagesByChannel[channelId] || []
+    const merged = dedupeMessagesById([...existing, normalized])
+    state.messagesByChannel[channelId] = merged
+
+    if (merged.length > 0) {
+      state.beforeMessageIdByChannel[channelId] = merged[0].id
+      updateChannelLastMessage(state.channels, channelId, merged[merged.length - 1])
+    }
+
+    const activeChannelId = state.activeChannelId
+    if (activeChannelId !== channelId) {
+      const channel = state.channels.find(item => item.id === channelId)
+      if (channel) {
+        if (!channel.current_user_membership) {
+          channel.current_user_membership = {
+            chat_channel_id: channelId
+          }
+        }
+        const unread = Number(channel.current_user_membership.unread_count || 0)
+        channel.current_user_membership.unread_count = unread + 1
+      }
+    }
+
+    const normalizedUserId = Number(normalized.user?.id ?? normalized.user_id)
+    if (Number.isFinite(normalizedUserId) && normalizedUserId > 0) {
+      const username = normalized.user?.username || normalized.username
+      if (username) {
+        const existingUser = users.value.get(normalizedUserId)
+        users.value.set(normalizedUserId, {
+          id: normalizedUserId,
+          username,
+          name: normalized.user?.name || normalized.name || existingUser?.name,
+          avatar_template:
+            normalized.user?.avatar_template ||
+            normalized.avatar_template ||
+            existingUser?.avatar_template ||
+            ''
+        })
+      }
+    }
+
+    return true
+  }
+
+  async function patchChatFromMessageBus(tab: BrowserTab, channelId: number, payload: unknown) {
+    if (!tab.chatState || !Number.isFinite(channelId) || channelId <= 0) return false
+
+    const patched = applyChatMessagePatch(tab, channelId, payload)
+    if (patched) return true
+
+    if (tab.chatState.activeChannelId === channelId) {
+      await runTabScopedUpdate(tab.id, `chat-channel:${channelId}`, async () => {
+        await loadChatMessages(tab, baseUrl, users, channelId, false)
+      })
+      return true
+    }
+
+    return false
   }
 
   // Load user profile
@@ -875,6 +1151,115 @@ export function useDiscourseBrowser() {
       tab.searchState.filters,
       nextPage
     )
+  }
+
+  function applyMessageBusListPatch(
+    tab: BrowserTab,
+    payload: unknown,
+    options: MessageBusListPatchOptions = {}
+  ) {
+    if (!tab || !['home', 'category', 'tag'].includes(tab.viewType)) return false
+
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    if (!data) return false
+
+    const topicBelongsToCurrentList = (topic: DiscourseTopic) => {
+      if (tab.viewType === 'home') return true
+
+      if (tab.viewType === 'category') {
+        if (!tab.currentCategoryId) return false
+        const categoryId = Number(topic.category_id)
+        return Number.isFinite(categoryId) && categoryId === tab.currentCategoryId
+      }
+
+      if (tab.viewType === 'tag') {
+        const normalizedTag = tab.currentTagName.trim().toLowerCase()
+        if (!normalizedTag) return false
+        const topicTags = Array.isArray(topic.tags)
+          ? topic.tags
+              .map(tag => {
+                if (typeof tag === 'string') return tag
+                if (tag && typeof tag === 'object') {
+                  return String(tag.name || tag.text || '')
+                }
+                return ''
+              })
+              .map(tag => tag.trim().toLowerCase())
+              .filter(Boolean)
+          : []
+
+        return topicTags.includes(normalizedTag)
+      }
+
+      return true
+    }
+
+    if (tab.viewType === 'category' && tab.currentCategoryId) {
+      const payloadCategoryId = Number(data.category_id)
+      if (
+        Number.isFinite(payloadCategoryId) &&
+        payloadCategoryId > 0 &&
+        payloadCategoryId !== tab.currentCategoryId
+      ) {
+        return true
+      }
+    }
+
+    if (tab.viewType === 'tag' && tab.currentTagName) {
+      const payloadTag = typeof data.tag === 'string' ? data.tag.trim().toLowerCase() : ''
+      if (payloadTag && payloadTag !== tab.currentTagName.trim().toLowerCase()) {
+        return true
+      }
+    }
+
+    const topicCandidates = [
+      data.topic,
+      data.topic_data,
+      data.latest_topic,
+      data.new_topic,
+      data.unread_topic
+    ].filter(Boolean)
+
+    const normalizedTopics = topicCandidates
+      .filter(item => item && typeof item === 'object')
+      .map(item => item as DiscourseTopic)
+      .filter(item => typeof item.id === 'number')
+      .filter(topicBelongsToCurrentList)
+
+    const idCandidates = [
+      data.topic_id,
+      data.id,
+      ...(Array.isArray(data.topic_ids) ? data.topic_ids : []),
+      ...(Array.isArray(data.new_topic_ids) ? data.new_topic_ids : [])
+    ]
+
+    const topicIds = idCandidates.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0)
+
+    let changed = false
+
+    if (normalizedTopics.length > 0) {
+      mergePendingTopicsIntoTab(tab, normalizedTopics)
+      changed = true
+    }
+
+    if (topicIds.length > 0) {
+      changed = mergePendingTopicsByIds(tab, topicIds) || changed
+    }
+
+    if (options.applyToPending && changed) {
+      applyPendingTopics(tab)
+    }
+
+    return changed
+  }
+
+  function patchTopicListFromMessageBus(tab: BrowserTab, payload: unknown) {
+    return applyMessageBusListPatch(tab, payload)
+  }
+
+  function patchNotificationsFromMessageBus(tab: BrowserTab, payload: unknown) {
+    if (!tab) return false
+    return applyNotificationPatch(tab, payload)
   }
 
   // Open user messages
@@ -1149,6 +1534,11 @@ export function useDiscourseBrowser() {
     checkTopicListUpdates,
     applyPendingTopics,
     pollTopicUpdates,
+    patchTopicFromMessageBus,
+    patchTopicListFromMessageBus,
+    patchNotificationsFromMessageBus,
+    patchChatFromMessageBus,
+    markNotificationReadOptimistic,
     searchDiscourse,
     loadMoreSearchResults
   }

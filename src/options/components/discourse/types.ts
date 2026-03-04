@@ -484,6 +484,39 @@ export interface ChatChannelUpdatePayload {
   threading_enabled?: boolean
 }
 
+export interface MessageBusTopicPayload {
+  topic_id?: number
+  id?: number
+  post_number?: number
+  highest_post_number?: number
+  [key: string]: any
+}
+
+export interface MessageBusTopicListPayload {
+  topic_id?: number
+  topic_ids?: number[]
+  new_topic_ids?: number[]
+  category_id?: number
+  tag?: string
+  [key: string]: any
+}
+
+export interface MessageBusNotificationPayload {
+  unread_notifications?: number
+  unread_high_priority_notifications?: number
+  unread_private_messages?: number
+  notification_id?: number
+  [key: string]: any
+}
+
+export interface MessageBusChatPayload {
+  chat_channel_id?: number
+  channel_id?: number
+  message_id?: number
+  id?: number
+  [key: string]: any
+}
+
 export interface ChatState {
   channels: ChatChannel[]
   activeChannelId: number | null

@@ -73,7 +73,7 @@ async function fetchAvatarTemplateForUser(baseUrl: Ref<string>, username: string
   return ''
 }
 
-async function hydrateMissingAvatars(
+export async function hydrateMissingAvatars(
   notifications: DiscourseNotification[],
   baseUrl: Ref<string>
 ): Promise<void> {

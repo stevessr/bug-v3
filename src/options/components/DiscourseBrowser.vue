@@ -13,7 +13,11 @@ import type {
   DiscoursePost,
   DiscourseSearchFilters,
   TopicListType,
-  DiscourseUserPreferences
+  DiscourseUserPreferences,
+  MessageBusTopicPayload,
+  MessageBusTopicListPayload,
+  MessageBusNotificationPayload,
+  MessageBusChatPayload
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import Icon from './discourse/layout/Icon'
@@ -98,6 +102,11 @@ const {
   checkTopicListUpdates,
   applyPendingTopics,
   pollTopicUpdates,
+  patchTopicFromMessageBus,
+  patchTopicListFromMessageBus,
+  patchNotificationsFromMessageBus,
+  patchChatFromMessageBus,
+  markNotificationReadOptimistic,
   searchDiscourse,
   loadMoreSearchResults
 } = useDiscourseBrowser()
@@ -179,6 +188,65 @@ const currentCategoryOption = computed(() => {
 const unreadNotificationsCount = computed(
   () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
 )
+
+const messageBusCategory = (
+  channel: string
+): 'topic' | 'list' | 'notifications' | 'chat' | 'unknown' => {
+  if (!channel) return 'unknown'
+  if (channel.startsWith('/topic/')) return 'topic'
+  if (
+    channel === '/latest' ||
+    channel === '/new' ||
+    channel === '/unread' ||
+    channel.startsWith('/latest') ||
+    channel.startsWith('/new') ||
+    channel.startsWith('/unread')
+  ) {
+    return 'list'
+  }
+  if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {
+    return 'notifications'
+  }
+  if (channel.startsWith('/chat/')) {
+    return 'chat'
+  }
+  return 'unknown'
+}
+
+const extractTopicIdFromChannel = (channel: string): number | null => {
+  const match = channel.match(/^\/topic\/(\d+)/)
+  if (!match) return null
+  const topicId = Number(match[1])
+  return Number.isFinite(topicId) && topicId > 0 ? topicId : null
+}
+
+const extractChatChannelIdFromChannel = (channel: string): number | null => {
+  const directMatch = channel.match(/^\/chat\/(\d+)/)
+  if (directMatch) {
+    const channelId = Number(directMatch[1])
+    if (Number.isFinite(channelId) && channelId > 0) return channelId
+  }
+
+  const slashMatch = channel.match(/\/chat\/(\d+)(?:\/|$)/)
+  if (slashMatch) {
+    const channelId = Number(slashMatch[1])
+    if (Number.isFinite(channelId) && channelId > 0) return channelId
+  }
+
+  return null
+}
+
+const shouldSubscribeListChannel = (channel: '/latest' | '/new' | '/unread') => {
+  const tab = activeTab.value
+  if (!tab || tab.loading) return false
+  if (!['home', 'category', 'tag'].includes(tab.viewType)) return false
+
+  if (channel === '/latest') return true
+  if (channel === '/new') {
+    return tab.viewType === 'home' ? tab.topicListType === 'new' : true
+  }
+  return tab.viewType === 'home' ? tab.topicListType === 'unread' : true
+}
 const notificationsOpen = ref(false)
 
 type NotificationLevel = 0 | 1 | 2 | 3 | 4
@@ -361,6 +429,10 @@ const handleOpenTopicTag = (tagName: string) => {
 
 const handleOpenNotification = (path: string) => {
   if (!path) return
+  const tab = activeTab.value
+  if (tab) {
+    markNotificationReadOptimistic(tab, path)
+  }
   notificationsOpen.value = false
   navigateTo(path)
 }
@@ -1393,21 +1465,92 @@ const triggerNotificationsRefresh = createCoalescedMessageBusRefresh(
   'notifications'
 )
 
-const handleTopicChannelMessage: MessageBusCallback = () => {
-  triggerTopicRefresh()
-}
+const handleTopicChannelMessage: MessageBusCallback = dispatchMessageBusMessage
 
-const handleListChannelMessage: MessageBusCallback = () => {
-  triggerListRefresh()
-}
+const handleListChannelMessage: MessageBusCallback = dispatchMessageBusMessage
 
-const handleNotificationChannelMessage: MessageBusCallback = () => {
-  triggerNotificationsRefresh()
-}
+const handleNotificationChannelMessage: MessageBusCallback = dispatchMessageBusMessage
 
-const handleUnreadNotificationChannelMessage: MessageBusCallback = () => {
-  triggerListRefresh()
-  triggerNotificationsRefresh()
+const handleUnreadNotificationChannelMessage: MessageBusCallback = dispatchMessageBusMessage
+
+function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId: number | null) {
+  const tab = activeTab.value
+  if (!tab || tab.loading) return
+
+  const category = messageBusCategory(channel)
+
+  if (category === 'topic') {
+    const topicId = extractTopicIdFromChannel(channel)
+    const topicPayload = (payload || {}) as MessageBusTopicPayload
+    if (
+      tab.viewType === 'topic' &&
+      tab.currentTopic &&
+      topicId &&
+      tab.currentTopic.id === topicId
+    ) {
+      void runSerialMessageBusRefresh(async () => {
+        const patched = await patchTopicFromMessageBus(tab, topicId, topicPayload.post_number)
+        if (!patched) {
+          await pollTopicUpdates(tab)
+        }
+      }, 'topic patch')
+      return
+    }
+    triggerTopicRefresh()
+    return
+  }
+
+  if (category === 'list') {
+    const listPayload = (payload || {}) as MessageBusTopicListPayload
+    const patched = patchTopicListFromMessageBus(tab, listPayload)
+    if (!patched) {
+      triggerListRefresh()
+    }
+    return
+  }
+
+  if (category === 'notifications') {
+    const notificationPayload = (payload || {}) as MessageBusNotificationPayload
+    const patched = patchNotificationsFromMessageBus(tab, notificationPayload)
+    if (channel.startsWith('/unread/')) {
+      triggerListRefresh()
+    }
+    if (!patched) {
+      triggerNotificationsRefresh()
+    }
+    return
+  }
+
+  if (category === 'chat') {
+    const chatPayload = (payload || {}) as MessageBusChatPayload
+    const channelId = Number(
+      chatPayload.chat_channel_id ||
+        chatPayload.channel_id ||
+        extractChatChannelIdFromChannel(channel)
+    )
+
+    if (!Number.isFinite(channelId) || channelId <= 0) {
+      return
+    }
+
+    if (tab.viewType === 'chat' && tab.chatState) {
+      void runSerialMessageBusRefresh(async () => {
+        const patched = await patchChatFromMessageBus(tab, channelId, chatPayload)
+        if (!patched) {
+          await loadMoreChatMessagesForChannel(channelId)
+        }
+      }, 'chat patch')
+      return
+    }
+  }
+
+  if (channel.startsWith('/unread/')) {
+    triggerListRefresh()
+  }
+
+  if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {
+    triggerNotificationsRefresh()
+  }
 }
 
 const messageBusDesiredSubscriptions = computed(() => {
@@ -1421,23 +1564,25 @@ const messageBusDesiredSubscriptions = computed(() => {
     })
   }
 
-  if (tab && ['home', 'category', 'tag'].includes(tab.viewType)) {
+  if (shouldSubscribeListChannel('/latest')) {
     subscriptions.set('/latest', {
       channel: '/latest',
       callback: handleListChannelMessage
     })
-    if (tab.topicListType === 'new') {
-      subscriptions.set('/new', {
-        channel: '/new',
-        callback: handleListChannelMessage
-      })
-    }
-    if (tab.topicListType === 'unread') {
-      subscriptions.set('/unread', {
-        channel: '/unread',
-        callback: handleListChannelMessage
-      })
-    }
+  }
+
+  if (shouldSubscribeListChannel('/new')) {
+    subscriptions.set('/new', {
+      channel: '/new',
+      callback: handleListChannelMessage
+    })
+  }
+
+  if (shouldSubscribeListChannel('/unread')) {
+    subscriptions.set('/unread', {
+      channel: '/unread',
+      callback: handleListChannelMessage
+    })
   }
 
   if (messageBusUserId.value) {
@@ -1448,6 +1593,18 @@ const messageBusDesiredSubscriptions = computed(() => {
     subscriptions.set(`/unread/${messageBusUserId.value}`, {
       channel: `/unread/${messageBusUserId.value}`,
       callback: handleUnreadNotificationChannelMessage
+    })
+  }
+
+  if (tab?.viewType === 'chat' && tab.chatState?.activeChannelId) {
+    const channelId = tab.chatState.activeChannelId
+    subscriptions.set(`/chat/${channelId}`, {
+      channel: `/chat/${channelId}`,
+      callback: dispatchMessageBusMessage
+    })
+    subscriptions.set(`/chat/${channelId}/new-messages`, {
+      channel: `/chat/${channelId}/new-messages`,
+      callback: dispatchMessageBusMessage
     })
   }
 
@@ -1536,6 +1693,17 @@ watch(
     syncMessageBusSubscriptions()
   },
   { immediate: true }
+)
+
+watch(
+  () => [
+    activeTab.value?.id,
+    activeTab.value?.viewType,
+    activeTab.value?.chatState?.activeChannelId
+  ],
+  () => {
+    syncMessageBusSubscriptions()
+  }
 )
 
 watch(
