@@ -1540,8 +1540,8 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
           await loadMoreChatMessagesForChannel(channelId)
         }
       }, 'chat patch')
-      return
     }
+    return
   }
 
   if (channel.startsWith('/unread/')) {
