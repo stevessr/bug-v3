@@ -4,6 +4,7 @@ import { ref, computed, watch } from 'vue'
 
 import type {
   BrowserTab,
+  ChatMessage,
   DiscourseCategory,
   DiscourseTopic,
   DiscourseUser,
@@ -69,6 +70,12 @@ type MessageBusListPatchOptions = {
   applyToPending?: boolean
 }
 
+type NotificationUnreadState = {
+  unreadNotifications: number
+  unreadHighPriorityNotifications: number
+  unreadPrivateMessages: number
+}
+
 type ShortLivedCacheEntry = {
   expiresAt: number
   data: unknown
@@ -86,7 +93,11 @@ export function useDiscourseBrowser() {
   const tabScopedUpdatesInFlight = new Map<string, Promise<void>>()
   const notificationsSnapshotCache = new Map<
     string,
-    { expiresAt: number; notifications: DiscourseNotification[] }
+    {
+      expiresAt: number
+      notifications: DiscourseNotification[]
+      unreadState: NotificationUnreadState
+    }
   >()
   const notificationsInFlight = new Map<string, Promise<void>>()
 
@@ -98,6 +109,41 @@ export function useDiscourseBrowser() {
           ? ({ ...(item.data as Record<string, unknown>) } as Record<string, any>)
           : item.data
     }))
+
+  const computeUnreadNotificationState = (
+    notifications: DiscourseNotification[]
+  ): NotificationUnreadState => {
+    const unreadNotifications = notifications.filter(item => !item.read).length
+    return {
+      unreadNotifications,
+      unreadHighPriorityNotifications: unreadNotifications,
+      unreadPrivateMessages: notifications.filter(
+        item => !item.read && [6, 7, 16].includes(item.notification_type)
+      ).length
+    }
+  }
+
+  const applyUnreadNotificationState = (
+    tab: BrowserTab,
+    state: Partial<NotificationUnreadState>
+  ) => {
+    const currentUnread = Number(tab.unreadNotificationsCount || 0)
+    const nextUnread = Number(state.unreadNotifications)
+    if (Number.isFinite(nextUnread) && nextUnread >= 0) {
+      tab.unreadNotificationsCount = nextUnread
+      return
+    }
+
+    const nextHighPriority = Number(state.unreadHighPriorityNotifications)
+    const nextPrivateMessages = Number(state.unreadPrivateMessages)
+
+    if (Number.isFinite(nextHighPriority) && Number.isFinite(nextPrivateMessages)) {
+      tab.unreadNotificationsCount = Math.max(0, nextHighPriority + nextPrivateMessages)
+      return
+    }
+
+    tab.unreadNotificationsCount = Math.max(0, currentUnread)
+  }
 
   const compactUpdateCache = () => {
     const now = Date.now()
@@ -263,6 +309,7 @@ export function useDiscourseBrowser() {
       errorMessage: '',
       notifications: [],
       notificationsFilter: 'all',
+      unreadNotificationsCount: 0,
       loadedPostIds: new Set(),
       hasMorePosts: false,
       // Topics pagination
@@ -620,6 +667,7 @@ export function useDiscourseBrowser() {
     if (cached && cached.expiresAt > now) {
       tab.notifications = cloneNotifications(cached.notifications)
       tab.notificationsFilter = filter
+      applyUnreadNotificationState(tab, cached.unreadState)
       return
     }
 
@@ -630,15 +678,19 @@ export function useDiscourseBrowser() {
       if (refreshed) {
         tab.notifications = cloneNotifications(refreshed.notifications)
         tab.notificationsFilter = filter
+        applyUnreadNotificationState(tab, refreshed.unreadState)
       }
       return
     }
 
     const request = (async () => {
       await loadNotificationsRoute(tab, baseUrl, filter)
+      const unreadState = computeUnreadNotificationState(tab.notifications || [])
+      applyUnreadNotificationState(tab, unreadState)
       notificationsSnapshotCache.set(cacheKey, {
         expiresAt: Date.now() + NOTIFICATIONS_CACHE_TTL_MS,
-        notifications: cloneNotifications(tab.notifications || [])
+        notifications: cloneNotifications(tab.notifications || []),
+        unreadState
       })
     })()
 
@@ -667,7 +719,11 @@ export function useDiscourseBrowser() {
 
     const existing = tab.notifications.find(item => item.id === notificationId)
     if (existing) {
+      const wasRead = Boolean(existing.read)
       existing.read = false
+      if (wasRead) {
+        tab.unreadNotificationsCount = Math.max(0, Number(tab.unreadNotificationsCount || 0) + 1)
+      }
       return true
     }
 
@@ -677,6 +733,7 @@ export function useDiscourseBrowser() {
 
     candidate.read = false
     tab.notifications = [candidate, ...(tab.notifications || [])]
+    tab.unreadNotificationsCount = Math.max(0, Number(tab.unreadNotificationsCount || 0) + 1)
     return true
   }
 
@@ -685,57 +742,61 @@ export function useDiscourseBrowser() {
 
     const normalized = path.replace(/^https?:\/\/[^/]+/i, '')
 
-    if (normalized.startsWith('/t/')) {
-      const parts = normalized.split('/').filter(Boolean)
-      const topicId = Number(parts[2])
-      const postNumber = Number(parts[3])
-
-      tab.notifications = (tab.notifications || []).map(notification => {
-        const notificationTopicId = Number(notification.topic_id || notification.data?.topic_id)
-        const notificationPostNumber = Number(
-          notification.post_number || notification.data?.post_number
-        )
-
-        if (!Number.isFinite(topicId) || notificationTopicId !== topicId) return notification
-        if (
-          Number.isFinite(postNumber) &&
-          notificationPostNumber &&
-          notificationPostNumber !== postNumber
-        ) {
-          return notification
-        }
-
+    const markAndSyncUnread = (
+      matcher: (notification: DiscourseNotification) => boolean
+    ): DiscourseNotification[] => {
+      let changed = false
+      const updated = (tab.notifications || []).map(notification => {
+        if (!matcher(notification) || notification.read) return notification
+        changed = true
         return {
           ...notification,
           read: true
         }
       })
+
+      if (changed) {
+        const nextUnread = updated.filter(item => !item.read).length
+        tab.unreadNotificationsCount = Math.max(0, nextUnread)
+      }
+
+      return updated
+    }
+
+    if (normalized.startsWith('/t/')) {
+      const parts = normalized.split('/').filter(Boolean)
+      const topicId = Number(parts[2])
+      const postNumber = Number(parts[3])
+
+      tab.notifications = markAndSyncUnread(notification => {
+        const notificationTopicId = Number(notification.topic_id || notification.data?.topic_id)
+        const notificationPostNumber = Number(
+          notification.post_number || notification.data?.post_number
+        )
+
+        if (!Number.isFinite(topicId) || notificationTopicId !== topicId) return false
+        if (
+          Number.isFinite(postNumber) &&
+          notificationPostNumber &&
+          notificationPostNumber !== postNumber
+        ) {
+          return false
+        }
+
+        return true
+      })
       return
     }
 
     if (normalized.includes('/user-menu-private-messages')) {
-      tab.notifications = (tab.notifications || []).map(notification => {
-        if ([6, 7, 16].includes(notification.notification_type)) {
-          return {
-            ...notification,
-            read: true
-          }
-        }
-        return notification
-      })
+      tab.notifications = markAndSyncUnread(notification =>
+        [6, 7, 16].includes(notification.notification_type)
+      )
       return
     }
 
     if (normalized.includes('/user-menu-bookmarks')) {
-      tab.notifications = (tab.notifications || []).map(notification => {
-        if (notification.notification_type === 24) {
-          return {
-            ...notification,
-            read: true
-          }
-        }
-        return notification
-      })
+      tab.notifications = markAndSyncUnread(notification => notification.notification_type === 24)
     }
   }
 
@@ -983,6 +1044,7 @@ export function useDiscourseBrowser() {
       normalized.chat_channel_id || Number(data.chat_channel_id || data.channel_id || channelId)
 
     const existing = state.messagesByChannel[channelId] || []
+    const alreadyExists = existing.some(message => message?.id === normalized.id)
     const merged = dedupeMessagesById([...existing, normalized])
     state.messagesByChannel[channelId] = merged
 
@@ -992,7 +1054,7 @@ export function useDiscourseBrowser() {
     }
 
     const activeChannelId = state.activeChannelId
-    if (activeChannelId !== channelId) {
+    if (activeChannelId !== channelId && !alreadyExists) {
       const channel = state.channels.find(item => item.id === channelId)
       if (channel) {
         if (!channel.current_user_membership) {
@@ -1000,8 +1062,11 @@ export function useDiscourseBrowser() {
             chat_channel_id: channelId
           }
         }
-        const unread = Number(channel.current_user_membership.unread_count || 0)
-        channel.current_user_membership.unread_count = unread + 1
+        const currentUnread = Number(channel.current_user_membership.unread_count || 0)
+        const nextUnread = currentUnread + 1
+        if (Number.isFinite(nextUnread) && nextUnread > currentUnread) {
+          channel.current_user_membership.unread_count = nextUnread
+        }
       }
     }
 
@@ -1029,17 +1094,63 @@ export function useDiscourseBrowser() {
   async function patchChatFromMessageBus(tab: BrowserTab, channelId: number, payload: unknown) {
     if (!tab.chatState || !Number.isFinite(channelId) || channelId <= 0) return false
 
+    const extractMessageId = (value: unknown): number | null => {
+      if (!value || typeof value !== 'object') return null
+      const data = value as Record<string, any>
+      const candidates = [
+        data.message_id,
+        data.id,
+        data.chat_message?.id,
+        data.message?.id,
+        data.payload?.id
+      ]
+      for (const candidate of candidates) {
+        const parsed = Number(candidate)
+        if (Number.isFinite(parsed) && parsed > 0) return parsed
+      }
+      return null
+    }
+
     const patched = applyChatMessagePatch(tab, channelId, payload)
     if (patched) return true
 
-    if (tab.chatState.activeChannelId === channelId) {
-      await runTabScopedUpdate(tab.id, `chat-channel:${channelId}`, async () => {
-        await loadChatMessages(tab, baseUrl, users, channelId, false)
-      })
-      return true
-    }
+    const messageId = extractMessageId(payload)
 
-    return false
+    await runTabScopedUpdate(tab.id, `chat-channel:${channelId}`, async () => {
+      if (tab.chatState?.activeChannelId === channelId) {
+        await loadChatMessages(tab, baseUrl, users, channelId, false)
+        return
+      }
+
+      const channel = tab.chatState?.channels?.find(item => item.id === channelId)
+      if (!channel) return
+
+      if (messageId) {
+        const lastMessage = channel.last_message
+        const lastMessageId = Number(channel.last_message_id || lastMessage?.id || 0)
+        if (!Number.isFinite(lastMessageId) || messageId > lastMessageId) {
+          const fallbackMessage: ChatMessage = {
+            id: messageId,
+            created_at: new Date().toISOString(),
+            chat_channel_id: channelId
+          }
+          updateChannelLastMessage(tab.chatState.channels, channelId, fallbackMessage)
+        }
+      }
+
+      if (!channel.current_user_membership) {
+        channel.current_user_membership = {
+          chat_channel_id: channelId
+        }
+      }
+
+      const currentUnread = Number(channel.current_user_membership.unread_count || 0)
+      if (Number.isFinite(currentUnread)) {
+        channel.current_user_membership.unread_count = currentUnread + 1
+      }
+    })
+
+    return true
   }
 
   // Load user profile
@@ -1259,6 +1370,16 @@ export function useDiscourseBrowser() {
 
   function patchNotificationsFromMessageBus(tab: BrowserTab, payload: unknown) {
     if (!tab) return false
+
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    if (data) {
+      applyUnreadNotificationState(tab, {
+        unreadNotifications: Number(data.unread_notifications),
+        unreadHighPriorityNotifications: Number(data.unread_high_priority_notifications),
+        unreadPrivateMessages: Number(data.unread_private_messages)
+      })
+    }
+
     return applyNotificationPatch(tab, payload)
   }
 
@@ -1472,6 +1593,18 @@ export function useDiscourseBrowser() {
     }
   }
 
+  const unreadNotificationsCount = computed(() => {
+    const tab = activeTab.value
+    if (!tab) return 0
+
+    const tabCount = Number(tab.unreadNotificationsCount)
+    if (Number.isFinite(tabCount) && tabCount >= 0) {
+      return tabCount
+    }
+
+    return tab.notifications?.filter(item => !item.read).length || 0
+  })
+
   return {
     // State
     baseUrl,
@@ -1482,6 +1615,7 @@ export function useDiscourseBrowser() {
     users,
     isLoadingMore,
     currentUsername,
+    unreadNotificationsCount,
     ensureSessionUser,
 
     // Tab management

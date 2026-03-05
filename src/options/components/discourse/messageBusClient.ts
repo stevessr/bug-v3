@@ -146,6 +146,18 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
     return payload
   }
 
+  const parseMaybeJsonPayload = (value: unknown): unknown => {
+    if (typeof value !== 'string') return value
+    const trimmed = value.trim()
+    if (!trimmed) return value
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return value
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      return value
+    }
+  }
+
   const dispatchMessage = (message: MessageBusPayload) => {
     const channel = typeof message.channel === 'string' ? message.channel : ''
     if (!channel) return
@@ -160,9 +172,11 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
       subscription.lastId = Math.max(subscription.lastId, normalizedMessageId)
     }
 
+    const payload = parseMaybeJsonPayload(message.data)
+
     subscription.callbacks.forEach(callback => {
       try {
-        callback(message.data, channel, normalizedMessageId)
+        callback(payload, channel, normalizedMessageId)
       } catch (error) {
         console.warn('[DiscourseBrowser] message_bus callback failed:', error)
       }

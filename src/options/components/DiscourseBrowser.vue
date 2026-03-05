@@ -58,6 +58,7 @@ const {
   users,
   isLoadingMore,
   currentUsername,
+  unreadNotificationsCount,
   ensureSessionUser,
   createTab,
   closeTab,
@@ -185,30 +186,19 @@ const currentCategoryOption = computed(() => {
     parent_category_id: null
   }
 })
-const unreadNotificationsCount = computed(
-  () => activeTab.value?.notifications?.filter(item => !item.read).length || 0
-)
-
 const messageBusCategory = (
   channel: string
 ): 'topic' | 'list' | 'notifications' | 'chat' | 'unknown' => {
   if (!channel) return 'unknown'
   if (channel.startsWith('/topic/')) return 'topic'
-  if (
-    channel === '/latest' ||
-    channel === '/new' ||
-    channel === '/unread' ||
-    channel.startsWith('/latest') ||
-    channel.startsWith('/new') ||
-    channel.startsWith('/unread')
-  ) {
-    return 'list'
-  }
   if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {
     return 'notifications'
   }
   if (channel.startsWith('/chat/')) {
     return 'chat'
+  }
+  if (channel === '/latest' || channel === '/new' || channel === '/unread') {
+    return 'list'
   }
   return 'unknown'
 }
@@ -1542,10 +1532,6 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
       }, 'chat patch')
     }
     return
-  }
-
-  if (channel.startsWith('/unread/')) {
-    triggerListRefresh()
   }
 
   if (channel.startsWith('/notification/') || channel.startsWith('/unread/')) {

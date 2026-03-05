@@ -30,6 +30,7 @@ export interface BrowserTab {
   errorMessage: string
   notifications: DiscourseNotification[]
   notificationsFilter: DiscourseNotificationFilter
+  unreadNotificationsCount: number
   // Pagination state for posts
   loadedPostIds: Set<number>
   hasMorePosts: boolean
