@@ -151,7 +151,11 @@ export async function loadNotifications(
   tab: BrowserTab,
   baseUrl: Ref<string>,
   filter: DiscourseNotificationFilter = 'all'
-) {
+): Promise<{
+  unreadNotifications: number
+  unreadHighPriorityNotifications: number
+  unreadPrivateMessages: number
+}> {
   const params = new URLSearchParams()
   if (filter === 'unread') {
     params.set('filter', 'unread')
@@ -165,4 +169,33 @@ export async function loadNotifications(
 
   tab.notifications = notifications
   tab.notificationsFilter = filter
+
+  const unreadNotifications = Number(
+    data?.unread_notifications ??
+      data?.notification_list?.unread_notifications ??
+      notifications.filter(item => !item.read).length
+  )
+  const unreadHighPriorityNotifications = Number(
+    data?.unread_high_priority_notifications ??
+      data?.notification_list?.unread_high_priority_notifications ??
+      Math.max(0, unreadNotifications)
+  )
+  const unreadPrivateMessages = Number(
+    data?.unread_private_messages ??
+      data?.notification_list?.unread_private_messages ??
+      notifications.filter(item => !item.read && [6, 7, 16].includes(item.notification_type)).length
+  )
+
+  return {
+    unreadNotifications: Number.isFinite(unreadNotifications)
+      ? Math.max(0, unreadNotifications)
+      : notifications.filter(item => !item.read).length,
+    unreadHighPriorityNotifications: Number.isFinite(unreadHighPriorityNotifications)
+      ? Math.max(0, unreadHighPriorityNotifications)
+      : Math.max(0, unreadNotifications),
+    unreadPrivateMessages: Number.isFinite(unreadPrivateMessages)
+      ? Math.max(0, unreadPrivateMessages)
+      : notifications.filter(item => !item.read && [6, 7, 16].includes(item.notification_type))
+          .length
+  }
 }

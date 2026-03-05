@@ -684,8 +684,26 @@ export function useDiscourseBrowser() {
     }
 
     const request = (async () => {
-      await loadNotificationsRoute(tab, baseUrl, filter)
-      const unreadState = computeUnreadNotificationState(tab.notifications || [])
+      const unreadStateFromApi = await loadNotificationsRoute(tab, baseUrl, filter)
+      const fallbackUnreadState = computeUnreadNotificationState(tab.notifications || [])
+      const unreadState = {
+        unreadNotifications:
+          Number.isFinite(Number(unreadStateFromApi?.unreadNotifications)) &&
+          Number(unreadStateFromApi?.unreadNotifications) >= 0
+            ? Number(unreadStateFromApi?.unreadNotifications)
+            : fallbackUnreadState.unreadNotifications,
+        unreadHighPriorityNotifications:
+          Number.isFinite(Number(unreadStateFromApi?.unreadHighPriorityNotifications)) &&
+          Number(unreadStateFromApi?.unreadHighPriorityNotifications) >= 0
+            ? Number(unreadStateFromApi?.unreadHighPriorityNotifications)
+            : fallbackUnreadState.unreadHighPriorityNotifications,
+        unreadPrivateMessages:
+          Number.isFinite(Number(unreadStateFromApi?.unreadPrivateMessages)) &&
+          Number(unreadStateFromApi?.unreadPrivateMessages) >= 0
+            ? Number(unreadStateFromApi?.unreadPrivateMessages)
+            : fallbackUnreadState.unreadPrivateMessages
+      }
+
       applyUnreadNotificationState(tab, unreadState)
       notificationsSnapshotCache.set(cacheKey, {
         expiresAt: Date.now() + NOTIFICATIONS_CACHE_TTL_MS,
