@@ -759,10 +759,34 @@ export function useDiscourseBrowser() {
       return false
     }
 
+    const normalized = normalizeNotificationsFromResponse({ notifications: [data] })
+    const candidate = normalized[0]
+
     const existing = tab.notifications.find(item => item.id === notificationId)
     if (existing) {
       const wasRead = Boolean(existing.read)
+      const mergedData =
+        candidate?.data && typeof candidate.data === 'object'
+          ? {
+              ...(existing.data && typeof existing.data === 'object'
+                ? (existing.data as Record<string, any>)
+                : {}),
+              ...(candidate.data as Record<string, any>)
+            }
+          : existing.data
+
+      existing.notification_type = candidate?.notification_type || existing.notification_type
+      existing.created_at = candidate?.created_at || existing.created_at
+      existing.slug = candidate?.slug || existing.slug
+      existing.topic_id = candidate?.topic_id ?? existing.topic_id
+      existing.post_number = candidate?.post_number ?? existing.post_number
+      existing.fancy_title = candidate?.fancy_title || existing.fancy_title
+      existing.acting_user_avatar_template =
+        candidate?.acting_user_avatar_template || existing.acting_user_avatar_template
+      existing.acting_user_name = candidate?.acting_user_name || existing.acting_user_name
+      existing.data = mergedData
       existing.read = false
+
       if (wasRead) {
         tab.unreadNotificationsCount = Math.max(0, Number(tab.unreadNotificationsCount || 0) + 1)
       }
@@ -770,8 +794,6 @@ export function useDiscourseBrowser() {
       return true
     }
 
-    const normalized = normalizeNotificationsFromResponse({ notifications: [data] })
-    const candidate = normalized[0]
     if (!candidate) return false
 
     candidate.read = false
@@ -1167,7 +1189,10 @@ export function useDiscourseBrowser() {
         return
       }
 
-      const channel = tab.chatState?.channels?.find(item => item.id === channelId)
+      const chatState = tab.chatState
+      if (!chatState) return
+
+      const channel = chatState.channels.find(item => item.id === channelId)
       if (!channel) return
 
       if (messageId) {
@@ -1179,7 +1204,7 @@ export function useDiscourseBrowser() {
             created_at: new Date().toISOString(),
             chat_channel_id: channelId
           }
-          updateChannelLastMessage(tab.chatState.channels, channelId, fallbackMessage)
+          updateChannelLastMessage(chatState.channels, channelId, fallbackMessage)
         }
       }
 
