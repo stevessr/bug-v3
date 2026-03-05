@@ -110,6 +110,30 @@ export function useDiscourseBrowser() {
           : item.data
     }))
 
+  const upsertNotificationsSnapshotCache = (
+    notifications: DiscourseNotification[],
+    unreadState: NotificationUnreadState
+  ) => {
+    const now = Date.now()
+    for (const [key, entry] of notificationsSnapshotCache) {
+      const separatorIndex = key.indexOf('|')
+      const cacheBaseUrl = separatorIndex >= 0 ? key.slice(0, separatorIndex) : ''
+      if (cacheBaseUrl !== baseUrl.value) continue
+
+      notificationsSnapshotCache.set(key, {
+        expiresAt: Math.max(entry.expiresAt, now + NOTIFICATIONS_CACHE_TTL_MS),
+        notifications: cloneNotifications(notifications),
+        unreadState
+      })
+    }
+  }
+
+  const syncUnreadStateFromNotifications = (tab: BrowserTab) => {
+    const unreadState = computeUnreadNotificationState(tab.notifications || [])
+    applyUnreadNotificationState(tab, unreadState)
+    upsertNotificationsSnapshotCache(tab.notifications || [], unreadState)
+  }
+
   const computeUnreadNotificationState = (
     notifications: DiscourseNotification[]
   ): NotificationUnreadState => {
@@ -742,6 +766,7 @@ export function useDiscourseBrowser() {
       if (wasRead) {
         tab.unreadNotificationsCount = Math.max(0, Number(tab.unreadNotificationsCount || 0) + 1)
       }
+      syncUnreadStateFromNotifications(tab)
       return true
     }
 
@@ -752,6 +777,7 @@ export function useDiscourseBrowser() {
     candidate.read = false
     tab.notifications = [candidate, ...(tab.notifications || [])]
     tab.unreadNotificationsCount = Math.max(0, Number(tab.unreadNotificationsCount || 0) + 1)
+    syncUnreadStateFromNotifications(tab)
     return true
   }
 
@@ -776,6 +802,7 @@ export function useDiscourseBrowser() {
       if (changed) {
         const nextUnread = updated.filter(item => !item.read).length
         tab.unreadNotificationsCount = Math.max(0, nextUnread)
+        upsertNotificationsSnapshotCache(updated, computeUnreadNotificationState(updated))
       }
 
       return updated
@@ -1396,6 +1423,10 @@ export function useDiscourseBrowser() {
         unreadHighPriorityNotifications: Number(data.unread_high_priority_notifications),
         unreadPrivateMessages: Number(data.unread_private_messages)
       })
+      upsertNotificationsSnapshotCache(
+        tab.notifications || [],
+        computeUnreadNotificationState(tab.notifications || [])
+      )
     }
 
     return applyNotificationPatch(tab, payload)
