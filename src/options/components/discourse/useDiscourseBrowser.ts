@@ -1442,19 +1442,75 @@ export function useDiscourseBrowser() {
     if (!tab) return false
 
     const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
-    if (data) {
-      applyUnreadNotificationState(tab, {
-        unreadNotifications: Number(data.unread_notifications),
-        unreadHighPriorityNotifications: Number(data.unread_high_priority_notifications),
-        unreadPrivateMessages: Number(data.unread_private_messages)
+    if (!data) {
+      return applyNotificationPatch(tab, payload)
+    }
+
+    applyUnreadNotificationState(tab, {
+      unreadNotifications: Number(data.unread_notifications),
+      unreadHighPriorityNotifications: Number(data.unread_high_priority_notifications),
+      unreadPrivateMessages: Number(data.unread_private_messages)
+    })
+
+    const notificationId = Number(data.notification_id ?? data.id)
+    const shouldRemoveNotification =
+      Boolean(data.dismissed) ||
+      Boolean(data.deleted) ||
+      data.action === 'dismiss' ||
+      data.action === 'delete' ||
+      data.type === 'dismiss' ||
+      data.type === 'delete'
+
+    const shouldMarkRead =
+      Boolean(data.mark_read) ||
+      data.read === true ||
+      data.action === 'mark_read' ||
+      data.type === 'mark_read'
+
+    if (Number.isFinite(notificationId) && notificationId > 0 && shouldRemoveNotification) {
+      const previousLength = tab.notifications.length
+      tab.notifications = tab.notifications.filter(item => item.id !== notificationId)
+      if (tab.notifications.length !== previousLength) {
+        syncUnreadStateFromNotifications(tab)
+      } else {
+        upsertNotificationsSnapshotCache(
+          tab.notifications || [],
+          computeUnreadNotificationState(tab.notifications || [])
+        )
+      }
+      return true
+    }
+
+    if (Number.isFinite(notificationId) && notificationId > 0 && shouldMarkRead) {
+      let changed = false
+      tab.notifications = tab.notifications.map(item => {
+        if (item.id !== notificationId || item.read) return item
+        changed = true
+        return {
+          ...item,
+          read: true
+        }
       })
+      if (changed) {
+        syncUnreadStateFromNotifications(tab)
+      } else {
+        upsertNotificationsSnapshotCache(
+          tab.notifications || [],
+          computeUnreadNotificationState(tab.notifications || [])
+        )
+      }
+      return true
+    }
+
+    const patched = applyNotificationPatch(tab, payload)
+    if (!patched) {
       upsertNotificationsSnapshotCache(
         tab.notifications || [],
         computeUnreadNotificationState(tab.notifications || [])
       )
     }
 
-    return applyNotificationPatch(tab, payload)
+    return patched
   }
 
   // Open user messages

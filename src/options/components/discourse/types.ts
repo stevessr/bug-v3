@@ -507,6 +507,11 @@ export interface MessageBusNotificationPayload {
   unread_high_priority_notifications?: number
   unread_private_messages?: number
   notification_id?: number
+  id?: number
+  dismissed?: boolean
+  deleted?: boolean
+  mark_read?: boolean
+  read?: boolean
   [key: string]: any
 }
 
