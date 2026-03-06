@@ -1502,9 +1502,6 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
   if (category === 'notifications') {
     const notificationPayload = (payload || {}) as MessageBusNotificationPayload
     const patched = patchNotificationsFromMessageBus(tab, notificationPayload)
-    if (channel.startsWith('/unread/')) {
-      triggerListRefresh()
-    }
     if (!patched) {
       triggerNotificationsRefresh()
     }
@@ -1525,7 +1522,7 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
 
     if (tab.viewType === 'chat' && tab.chatState) {
       void runSerialMessageBusRefresh(async () => {
-        const patched = await patchChatFromMessageBus(tab, channelId, chatPayload)
+        const patched = await patchChatFromMessageBus(tab, channelId, chatPayload, channel)
         if (!patched) {
           await loadMoreChatMessagesForChannel(channelId)
         }

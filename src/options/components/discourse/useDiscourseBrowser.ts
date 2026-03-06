@@ -128,6 +128,49 @@ export function useDiscourseBrowser() {
     }
   }
 
+  const MESSAGE_BUS_PAYLOAD_MAX_DEPTH = 4
+
+  const isRecordObject = (value: unknown): value is Record<string, any> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+  const normalizeMessageBusPayloadObject = (value: unknown): Record<string, any> | null => {
+    const visited = new WeakSet<object>()
+
+    const normalize = (current: unknown, depth: number): Record<string, any> | null => {
+      if (!current || depth > MESSAGE_BUS_PAYLOAD_MAX_DEPTH) return null
+
+      if (typeof current === 'string') {
+        const trimmed = current.trim()
+        if (!trimmed) return null
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return null
+
+        try {
+          const parsed = JSON.parse(trimmed)
+          return normalize(parsed, depth + 1)
+        } catch {
+          return null
+        }
+      }
+
+      if (!isRecordObject(current)) return null
+      if (visited.has(current)) return current
+      visited.add(current)
+
+      const data = current
+      if (!('payload' in data)) return data
+
+      const nested = normalize(data.payload, depth + 1)
+      if (!nested) return data
+
+      return {
+        ...data,
+        ...nested
+      }
+    }
+
+    return normalize(value, 0)
+  }
+
   const syncUnreadStateFromNotifications = (tab: BrowserTab) => {
     const unreadState = computeUnreadNotificationState(tab.notifications || [])
     applyUnreadNotificationState(tab, unreadState)
@@ -751,7 +794,8 @@ export function useDiscourseBrowser() {
 
   function applyNotificationPatch(tab: BrowserTab, payload: unknown) {
     if (!tab) return false
-    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+
+    const data = normalizeMessageBusPayloadObject(payload)
     if (!data) return false
 
     const notificationId = Number(data.notification_id ?? data.id)
@@ -1098,7 +1142,7 @@ export function useDiscourseBrowser() {
     const state = tab.chatState
     if (!state || !Number.isFinite(channelId) || channelId <= 0) return false
 
-    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    const data = normalizeMessageBusPayloadObject(payload)
     if (!data) return false
 
     const rawMessage = data.chat_message || data.message || data
@@ -1158,18 +1202,134 @@ export function useDiscourseBrowser() {
     return true
   }
 
-  async function patchChatFromMessageBus(tab: BrowserTab, channelId: number, payload: unknown) {
+  function applyChatChannelPatch(
+    tab: BrowserTab,
+    channelId: number,
+    payload: unknown | Record<string, any> | null
+  ) {
+    const state = tab.chatState
+    if (!state || !Number.isFinite(channelId) || channelId <= 0) return false
+
+    const data = normalizeMessageBusPayloadObject(payload)
+    if (!data) return false
+
+    const channel = state.channels.find(item => item.id === channelId)
+    if (!channel) return false
+
+    const channelPayload = isRecordObject(data.chat_channel)
+      ? data.chat_channel
+      : isRecordObject(data.channel)
+        ? data.channel
+        : data
+
+    const hasChannelMeta =
+      typeof channelPayload.title === 'string' ||
+      typeof channelPayload.unicode_title === 'string' ||
+      typeof channelPayload.name === 'string' ||
+      typeof channelPayload.slug === 'string' ||
+      typeof channelPayload.description === 'string' ||
+      typeof channelPayload.status === 'string' ||
+      typeof channelPayload.unread_count === 'number' ||
+      isRecordObject(channelPayload.current_user_membership) ||
+      isRecordObject(channelPayload.chatable) ||
+      Array.isArray(channelPayload.direct_message_users)
+
+    if (!hasChannelMeta) return false
+
+    let changed = false
+
+    const nextTitle =
+      typeof channelPayload.title === 'string' && channelPayload.title.trim()
+        ? channelPayload.title.trim()
+        : typeof channelPayload.name === 'string' && channelPayload.name.trim()
+          ? channelPayload.name.trim()
+          : ''
+    if (nextTitle && channel.title !== nextTitle) {
+      channel.title = nextTitle
+      changed = true
+    }
+
+    if (typeof channelPayload.unicode_title === 'string' && channelPayload.unicode_title.trim()) {
+      const nextUnicodeTitle = channelPayload.unicode_title.trim()
+      if (channel.unicode_title !== nextUnicodeTitle) {
+        channel.unicode_title = nextUnicodeTitle
+        changed = true
+      }
+    }
+
+    if (typeof channelPayload.slug === 'string' && channelPayload.slug.trim()) {
+      const nextSlug = channelPayload.slug.trim()
+      if (channel.slug !== nextSlug) {
+        channel.slug = nextSlug
+        changed = true
+      }
+    }
+
+    if (typeof channelPayload.description === 'string') {
+      const nextDescription = channelPayload.description.trim()
+      if (channel.description !== nextDescription) {
+        channel.description = nextDescription
+        changed = true
+      }
+    }
+
+    if (typeof channelPayload.status === 'string' && channel.status !== channelPayload.status) {
+      channel.status = channelPayload.status
+      changed = true
+    }
+
+    if (isRecordObject(channelPayload.chatable)) {
+      channel.chatable = {
+        ...(channel.chatable || {}),
+        ...(channelPayload.chatable as Record<string, any>)
+      }
+      changed = true
+      if (!channel.direct_message_users && Array.isArray(channel.chatable?.users)) {
+        channel.direct_message_users = channel.chatable.users
+      }
+    }
+
+    if (Array.isArray(channelPayload.direct_message_users)) {
+      channel.direct_message_users = channelPayload.direct_message_users as DiscourseUser[]
+      changed = true
+    }
+
+    const unreadCount = Number(
+      channelPayload.current_user_membership?.unread_count ?? channelPayload.unread_count
+    )
+    if (Number.isFinite(unreadCount) && unreadCount >= 0) {
+      if (!channel.current_user_membership) {
+        channel.current_user_membership = {
+          chat_channel_id: channelId
+        }
+      }
+      if (channel.current_user_membership.unread_count !== unreadCount) {
+        channel.current_user_membership.unread_count = unreadCount
+        changed = true
+      }
+    }
+
+    return changed
+  }
+
+  async function patchChatFromMessageBus(
+    tab: BrowserTab,
+    channelId: number,
+    payload: unknown,
+    sourceChannel?: string
+  ) {
     if (!tab.chatState || !Number.isFinite(channelId) || channelId <= 0) return false
 
-    const extractMessageId = (value: unknown): number | null => {
-      if (!value || typeof value !== 'object') return null
-      const data = value as Record<string, any>
+    const extractMessageId = (data: Record<string, any> | null): number | null => {
+      if (!data) return null
       const candidates = [
         data.message_id,
-        data.id,
+        data.chat_message_id,
         data.chat_message?.id,
         data.message?.id,
-        data.payload?.id
+        data.last_message_id,
+        data.last_message?.id,
+        data.id
       ]
       for (const candidate of candidates) {
         const parsed = Number(candidate)
@@ -1178,10 +1338,37 @@ export function useDiscourseBrowser() {
       return null
     }
 
-    const patched = applyChatMessagePatch(tab, channelId, payload)
-    if (patched) return true
+    const hasUnreadCountInPayload = (data: Record<string, any> | null): boolean => {
+      if (!data) return false
+      const unreadCandidates = [
+        data.current_user_membership?.unread_count,
+        data.unread_count,
+        data.channel?.current_user_membership?.unread_count,
+        data.channel?.unread_count,
+        data.chat_channel?.current_user_membership?.unread_count,
+        data.chat_channel?.unread_count
+      ]
 
-    const messageId = extractMessageId(payload)
+      return unreadCandidates.some(candidate => {
+        const parsed = Number(candidate)
+        return Number.isFinite(parsed) && parsed >= 0
+      })
+    }
+
+    const messagePatched = applyChatMessagePatch(tab, channelId, payload)
+    if (messagePatched) return true
+
+    const payloadData = normalizeMessageBusPayloadObject(payload)
+    const channelPatched = applyChatChannelPatch(tab, channelId, payloadData)
+    const messageId = extractMessageId(payloadData)
+    const explicitUnreadCountInPayload = hasUnreadCountInPayload(payloadData)
+    const isMessageChannelEvent =
+      typeof sourceChannel === 'string' && sourceChannel.includes('/new-messages')
+    const shouldFallbackForMessage = isMessageChannelEvent || messageId !== null
+
+    if (!shouldFallbackForMessage) {
+      return channelPatched
+    }
 
     await runTabScopedUpdate(tab.id, `chat-channel:${channelId}`, async () => {
       if (tab.chatState?.activeChannelId === channelId) {
@@ -1195,10 +1382,14 @@ export function useDiscourseBrowser() {
       const channel = chatState.channels.find(item => item.id === channelId)
       if (!channel) return
 
+      let shouldIncrementUnread = false
       if (messageId) {
         const lastMessage = channel.last_message
         const lastMessageId = Number(channel.last_message_id || lastMessage?.id || 0)
-        if (!Number.isFinite(lastMessageId) || messageId > lastMessageId) {
+        const isNewerMessage = !Number.isFinite(lastMessageId) || messageId > lastMessageId
+        shouldIncrementUnread = isNewerMessage
+
+        if (isNewerMessage) {
           const fallbackMessage: ChatMessage = {
             id: messageId,
             created_at: new Date().toISOString(),
@@ -1214,9 +1405,11 @@ export function useDiscourseBrowser() {
         }
       }
 
-      const currentUnread = Number(channel.current_user_membership.unread_count || 0)
-      if (Number.isFinite(currentUnread)) {
-        channel.current_user_membership.unread_count = currentUnread + 1
+      if (shouldIncrementUnread && !explicitUnreadCountInPayload) {
+        const currentUnread = Number(channel.current_user_membership.unread_count || 0)
+        if (Number.isFinite(currentUnread)) {
+          channel.current_user_membership.unread_count = currentUnread + 1
+        }
       }
     })
 
@@ -1341,7 +1534,7 @@ export function useDiscourseBrowser() {
   ) {
     if (!tab || !['home', 'category', 'tag'].includes(tab.viewType)) return false
 
-    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    const data = normalizeMessageBusPayloadObject(payload)
     if (!data) return false
 
     const topicBelongsToCurrentList = (topic: DiscourseTopic) => {
@@ -1441,7 +1634,7 @@ export function useDiscourseBrowser() {
   function patchNotificationsFromMessageBus(tab: BrowserTab, payload: unknown) {
     if (!tab) return false
 
-    const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : null
+    const data = normalizeMessageBusPayloadObject(payload)
     if (!data) {
       return applyNotificationPatch(tab, payload)
     }
