@@ -1609,6 +1609,18 @@ function clearMessageBusSubscriptions() {
   messageBus.clearSubscriptions()
 }
 
+const handleDocumentVisibilityChange = () => {
+  if (typeof document === 'undefined') return
+
+  if (document.hidden) {
+    messageBus.pause()
+    return
+  }
+
+  messageBus.resume()
+  syncMessageBusSubscriptions()
+}
+
 async function ensureMessageBusUserId() {
   const username = currentUsername.value?.trim() || ''
   if (!username) {
@@ -1748,7 +1760,9 @@ onMounted(() => {
   window.addEventListener('touchend', stopPointer)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('load', handleGlobalImageLoad, true)
+  document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
   messageBus.start()
+  handleDocumentVisibilityChange()
   void ensureMessageBusUserId().finally(() => {
     syncMessageBusSubscriptions()
   })
@@ -1766,6 +1780,7 @@ onUnmounted(() => {
   window.removeEventListener('touchend', stopPointer)
   window.removeEventListener('error', handleGlobalImageError, true)
   window.removeEventListener('load', handleGlobalImageLoad, true)
+  document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
   proxiedBlobUrls.forEach(url => URL.revokeObjectURL(url))
   proxiedBlobUrls.clear()
 })

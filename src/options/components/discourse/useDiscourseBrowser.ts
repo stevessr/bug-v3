@@ -62,6 +62,7 @@ import {
   interactChatMessage,
   dedupeMessagesById,
   normalizeSingleMessage,
+  resetChatChannelUnreadCount,
   updateChannelLastMessage
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
@@ -1732,6 +1733,7 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     if (!tab?.chatState) return
     tab.chatState.activeChannelId = channelId
+    resetChatChannelUnreadCount(tab.chatState.channels, channelId)
     if (!tab.chatState.messagesByChannel[channelId]) {
       await loadChatMessages(tab, baseUrl, users, channelId, true)
     }

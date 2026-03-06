@@ -196,6 +196,24 @@ export const updateChannelLastMessage = (
   }
 }
 
+export const resetChatChannelUnreadCount = (channels: ChatChannel[], channelId: number) => {
+  const channel = channels.find(item => item.id === channelId)
+  if (!channel) return
+
+  if (!channel.current_user_membership) {
+    channel.current_user_membership = {
+      chat_channel_id: channelId
+    }
+  }
+
+  channel.current_user_membership.unread_count = 0
+
+  const lastMessageId = Number(channel.last_message_id || channel.last_message?.id || 0)
+  if (Number.isFinite(lastMessageId) && lastMessageId > 0) {
+    channel.current_user_membership.last_read_message_id = lastMessageId
+  }
+}
+
 const fetchChatChannels = async (baseUrl: string) => {
   let lastError: string | null = null
 
