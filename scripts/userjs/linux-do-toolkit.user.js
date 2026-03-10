@@ -787,10 +787,14 @@
     panelStartBottom: 0,
     reactionStatusCache: new Map(),
     topicCategoryCache: new Map(),
+    topicCategoryRequestCache: new Map(),
     postTopicCache: new Map(),
     topicPostContextMap: new Map(),
     postByNumberCache: new Map(),
+    postNumberLookupCache: new Map(),
+    postByNumberRequestCache: new Map(),
     topicStreamCache: new Map(),
+    topicStreamRequestCache: new Map(),
 
     getSelectedReaction() {
       const selector = document.getElementById('ld-reaction-select')
@@ -864,6 +868,88 @@
       return null
     },
 
+    buildTopicPostKey(topicId, postNumber) {
+      const topic = Number(topicId)
+      const postNum = Number(postNumber)
+      if (!Number.isFinite(topic) || topic <= 0 || !Number.isFinite(postNum) || postNum <= 0) {
+        return null
+      }
+      return `${topic}:${postNum}`
+    },
+
+    async ensureTopicStream(topicId, anchorPostNumber, tabId = 'all') {
+      const topic = Number(topicId)
+      const anchor = Number(anchorPostNumber)
+      if (!Number.isFinite(topic) || topic <= 0 || !Number.isFinite(anchor) || anchor <= 0) {
+        return null
+      }
+
+      const cachedContext = this.topicStreamCache.get(topic) || this.topicPostContextMap.get(topic)
+      if (cachedContext?.postIds instanceof Set && cachedContext.postIds.size > 0) {
+        return cachedContext
+      }
+
+      if (this.topicStreamRequestCache.has(topic)) {
+        return this.topicStreamRequestCache.get(topic)
+      }
+
+      const request = (async () => {
+        const streamUrl = `/t/${topic}/${anchor}.json?track_visit=true&forceLoad=true`
+        const streamRes = await fetch(streamUrl)
+        if (!streamRes.ok) {
+          this.log(`⚠️ track_visit 访问失败: ${topic}/${anchor} (${streamRes.status})`, tabId)
+          return null
+        }
+
+        const streamData = await streamRes.json()
+        const streamIds = Array.isArray(streamData?.post_stream?.stream)
+          ? streamData.post_stream.stream
+              .map(id => Number(id))
+              .filter(id => Number.isFinite(id) && id > 0)
+          : []
+        const streamPosts = Array.isArray(streamData?.post_stream?.posts)
+          ? streamData.post_stream.posts
+          : []
+
+        streamPosts.forEach(post => {
+          const normalized = this.normalizePostData(post)
+          const id = Number(normalized?.id)
+          const postNum = Number(normalized?.post_number)
+          if (!Number.isFinite(id) || id <= 0) return
+
+          this.postByNumberCache.set(id, normalized)
+          this.postTopicCache.set(id, topic)
+
+          const postKey = this.buildTopicPostKey(topic, postNum)
+          if (postKey) {
+            this.postNumberLookupCache.set(postKey, id)
+          }
+        })
+
+        const categoryId = Number(streamData?.category_id || 0)
+        if (Number.isFinite(categoryId) && categoryId > 0) {
+          this.topicCategoryCache.set(topic, categoryId)
+        }
+
+        const context = {
+          topicId: topic,
+          anchorPostNumber: anchor,
+          postIds: new Set(streamIds)
+        }
+
+        this.topicPostContextMap.set(topic, context)
+        this.topicStreamCache.set(topic, context)
+        return context
+      })()
+
+      this.topicStreamRequestCache.set(topic, request)
+      try {
+        return await request
+      } finally {
+        this.topicStreamRequestCache.delete(topic)
+      }
+    },
+
     async fetchPostByNumber(topicId, postNumber, tabId = 'user') {
       const topic = Number(topicId)
       const postNum = Number(postNumber)
@@ -871,65 +957,57 @@
         return null
       }
 
-      const byNumberUrl = `/posts/by_number/${topic}/${postNum}.json`
-      const byNumberRes = await fetch(byNumberUrl)
-      if (!byNumberRes.ok) {
-        this.log(`❌ 获取楼层失败: ${topic}/${postNum} (${byNumberRes.status})`, tabId)
-        return null
+      const postKey = this.buildTopicPostKey(topic, postNum)
+      const cachedPostId = postKey ? this.postNumberLookupCache.get(postKey) : null
+      if (Number.isFinite(cachedPostId) && cachedPostId > 0 && this.postByNumberCache.has(cachedPostId)) {
+        return this.postByNumberCache.get(cachedPostId)
       }
 
-      const byNumberData = await byNumberRes.json()
-      const postData = this.normalizePostData(byNumberData)
-      const postId = Number(postData?.id)
-      if (!Number.isFinite(postId) || postId <= 0) {
-        this.log(`❌ 楼层数据无效: ${topic}/${postNum}`, tabId)
-        return null
+      if (postKey && this.postByNumberRequestCache.has(postKey)) {
+        return this.postByNumberRequestCache.get(postKey)
       }
 
-      const postCategoryId = Number(postData?.category_id)
-      if (Number.isFinite(postCategoryId) && postCategoryId > 0) {
-        this.topicCategoryCache.set(topic, postCategoryId)
+      const request = (async () => {
+        const byNumberUrl = `/posts/by_number/${topic}/${postNum}.json`
+        const byNumberRes = await fetch(byNumberUrl)
+        if (!byNumberRes.ok) {
+          this.log(`❌ 获取楼层失败: ${topic}/${postNum} (${byNumberRes.status})`, tabId)
+          return null
+        }
+
+        const byNumberData = await byNumberRes.json()
+        const postData = this.normalizePostData(byNumberData)
+        const postId = Number(postData?.id)
+        if (!Number.isFinite(postId) || postId <= 0) {
+          this.log(`❌ 楼层数据无效: ${topic}/${postNum}`, tabId)
+          return null
+        }
+
+        const postCategoryId = Number(postData?.category_id)
+        if (Number.isFinite(postCategoryId) && postCategoryId > 0) {
+          this.topicCategoryCache.set(topic, postCategoryId)
+        }
+
+        this.postByNumberCache.set(postId, postData)
+        this.postTopicCache.set(postId, topic)
+        if (postKey) {
+          this.postNumberLookupCache.set(postKey, postId)
+        }
+
+        return postData
+      })()
+
+      if (postKey) {
+        this.postByNumberRequestCache.set(postKey, request)
       }
 
-      this.postByNumberCache.set(postId, postData)
-      this.postTopicCache.set(postId, topic)
-
-      const streamKey = `${topic}:${postNum}`
-      if (!this.topicStreamCache.has(streamKey)) {
-        const streamUrl = `/t/${topic}/${postNum}.json?track_visit=true&forceLoad=true`
-        const streamRes = await fetch(streamUrl)
-        if (streamRes.ok) {
-          const streamData = await streamRes.json()
-          const streamIds = Array.isArray(streamData?.post_stream?.stream)
-            ? streamData.post_stream.stream
-                .map(id => Number(id))
-                .filter(id => Number.isFinite(id) && id > 0)
-            : []
-          const streamPosts = Array.isArray(streamData?.post_stream?.posts)
-            ? streamData.post_stream.posts
-            : []
-
-          streamPosts.forEach(post => {
-            const normalized = this.normalizePostData(post)
-            const id = Number(normalized?.id)
-            if (Number.isFinite(id) && id > 0) {
-              this.postByNumberCache.set(id, normalized)
-              this.postTopicCache.set(id, topic)
-            }
-          })
-
-          this.topicPostContextMap.set(topic, {
-            topicId: topic,
-            anchorPostNumber: postNum,
-            postIds: new Set(streamIds)
-          })
-          this.topicStreamCache.set(streamKey, true)
-        } else {
-          this.log(`⚠️ track_visit 访问失败: ${topic}/${postNum} (${streamRes.status})`, tabId)
+      try {
+        return await request
+      } finally {
+        if (postKey) {
+          this.postByNumberRequestCache.delete(postKey)
         }
       }
-
-      return postData
     },
 
     async prepareActionPost(item, tabId = 'user') {
@@ -1034,21 +1112,35 @@
     },
 
     async getTopicCategoryId(topicId) {
-      if (this.topicCategoryCache.has(topicId)) return this.topicCategoryCache.get(topicId)
-      const url = `/t/topic/${topicId}.json`
-      try {
-        const res = await fetch(url)
-        if (!res.ok) {
-          this.topicCategoryCache.set(topicId, null)
+      const topic = Number(topicId)
+      if (!Number.isFinite(topic) || topic <= 0) return null
+      if (this.topicCategoryCache.has(topic)) return this.topicCategoryCache.get(topic)
+      if (this.topicCategoryRequestCache.has(topic)) return this.topicCategoryRequestCache.get(topic)
+
+      const request = (async () => {
+        const url = `/t/topic/${topic}.json`
+        try {
+          const res = await fetch(url)
+          if (!res.ok) {
+            this.topicCategoryCache.set(topic, null)
+            return null
+          }
+          const data = await res.json()
+          const categoryId = Number(data?.category_id || 0)
+          const finalCategoryId = Number.isFinite(categoryId) && categoryId > 0 ? categoryId : null
+          this.topicCategoryCache.set(topic, finalCategoryId)
+          return finalCategoryId
+        } catch (e) {
+          this.topicCategoryCache.set(topic, null)
           return null
         }
-        const data = await res.json()
-        const categoryId = data?.category_id || null
-        this.topicCategoryCache.set(topicId, categoryId)
-        return categoryId
-      } catch (e) {
-        this.topicCategoryCache.set(topicId, null)
-        return null
+      })()
+
+      this.topicCategoryRequestCache.set(topic, request)
+      try {
+        return await request
+      } finally {
+        this.topicCategoryRequestCache.delete(topic)
       }
     },
 
@@ -1272,11 +1364,7 @@
       const { topicId, postNumber } = context
 
       try {
-        const primaryRes = await fetch(`/posts/by_number/${topicId}/${postNumber}.json`)
-        if (!primaryRes.ok) throw new Error(`主接口请求失败 (${primaryRes.status})`)
-        const primaryData = await primaryRes.json()
-        const primaryPost = this.normalizePostData(primaryData)
-
+        const primaryPost = await this.fetchPostByNumber(topicId, postNumber, 'all')
         if (!primaryPost?.id) {
           throw new Error('主接口未返回有效楼层数据')
         }
@@ -1286,46 +1374,22 @@
           throw new Error('主接口返回的楼层 ID 无效')
         }
 
-        this.postByNumberCache.set(anchorId, primaryPost)
-
-        let categoryId = primaryPost.category_id || null
-        if (!categoryId) {
-          categoryId = await this.getTopicCategoryId(topicId)
-        }
-
-        const streamRes = await fetch(
-          `/t/${topicId}/${postNumber}.json?track_visit=true&forceLoad=true`
+        const streamContext = await this.ensureTopicStream(
+          topicId,
+          primaryPost.post_number || postNumber,
+          'all'
         )
-        if (!streamRes.ok) throw new Error(`楼层列表接口请求失败 (${streamRes.status})`)
-        const streamData = await streamRes.json()
-        const rawPostIds = Array.isArray(streamData?.post_stream?.stream)
-          ? streamData.post_stream.stream
-          : []
-        const postIds = rawPostIds
-          .map(id => Number(id))
-          .filter(id => Number.isFinite(id) && id > 0)
-
-        const streamPosts = Array.isArray(streamData?.post_stream?.posts)
-          ? streamData.post_stream.posts
-          : []
-        streamPosts.forEach(post => {
-          const normalized = this.normalizePostData(post)
-          const id = Number(normalized?.id)
-          if (Number.isFinite(id) && id > 0) {
-            this.postByNumberCache.set(id, normalized)
-          }
-        })
-
+        const postIds =
+          streamContext?.postIds instanceof Set ? Array.from(streamContext.postIds) : []
         if (postIds.length === 0) {
           this.log('未找到楼层数据', 'all')
           return null
         }
 
-        this.topicPostContextMap.set(topicId, {
-          topicId,
-          anchorPostNumber: primaryPost.post_number || postNumber,
-          postIds: new Set(postIds)
-        })
+        let categoryId = Number(primaryPost.category_id || this.topicCategoryCache.get(topicId) || 0)
+        if (!Number.isFinite(categoryId) || categoryId <= 0) {
+          categoryId = await this.getTopicCategoryId(topicId)
+        }
 
         return {
           postIds,
@@ -1475,13 +1539,20 @@
     },
 
     // ===== 用户表情功能 =====
-    async fetchUserActions(username, count) {
+    async fetchUserActions(username, count, skipRecent = 0) {
       let results = []
       let offset = 0
+      const targetCount = Math.max(0, Number(count) || 0)
+      const initialSkip = Math.max(0, Number(skipRecent) || 0)
+      let remainingSkip = initialSkip
+      const seenPostIds = new Set()
 
       this.log(`正在获取 ${username} 的数据...`, 'user')
+      if (initialSkip > 0) {
+        this.log(`将跳过最近 ${initialSkip} 条符合条件的帖子`, 'user')
+      }
 
-      while (results.length < count) {
+      while (results.length < targetCount) {
         const url = `/user_actions.json?offset=${offset}&username=${username}&filter=4,5`
 
         try {
@@ -1498,7 +1569,7 @@
           }
 
           for (let item of data.user_actions) {
-            if (results.length >= count) break
+            if (results.length >= targetCount) break
 
             const context = this.getTopicContextFromAction(item)
             if (!context) continue
@@ -1512,21 +1583,30 @@
               continue
             }
 
+            if (seenPostIds.has(preparedPostId)) {
+              continue
+            }
+
             const cachedPost = this.postByNumberCache.get(preparedPostId) || null
             const categoryId = Number(cachedPost?.category_id || item.category_id || item.categoryId || 0)
             if (!Number.isFinite(categoryId) || categoryId <= 0 || !this.isCategoryAllowed(categoryId)) {
               continue
             }
 
-            if (!results.find(r => r.id === preparedPostId)) {
-              results.push({
-                id: preparedPostId,
-                topicId: context.topicId,
-                postNumber: context.postNumber,
-                title: item.title,
-                excerpt: item.excerpt ? item.excerpt.substring(0, 30) + '...' : '(无预览)'
-              })
+            seenPostIds.add(preparedPostId)
+
+            if (remainingSkip > 0) {
+              remainingSkip--
+              continue
             }
+
+            results.push({
+              id: preparedPostId,
+              topicId: context.topicId,
+              postNumber: context.postNumber,
+              title: item.title,
+              excerpt: item.excerpt ? item.excerpt.substring(0, 30) + '...' : '(无预览)'
+            })
           }
           offset += 30
           await sleep(500)
@@ -1536,21 +1616,35 @@
         }
       }
 
+      if (initialSkip > 0) {
+        const skippedCount = initialSkip - remainingSkip
+        this.log(`已跳过最近 ${skippedCount} 条符合条件的帖子`, 'user')
+        if (remainingSkip > 0) {
+          this.log(`⚠️ 可用帖子不足，还差 ${remainingSkip} 条可跳过`, 'user')
+        }
+      }
+
       return results
     },
 
     async checkUserPosts() {
       const username = document.getElementById('ld-username').value.trim()
       const count = parseInt(document.getElementById('ld-count').value)
+      const skipRecent = parseInt(document.getElementById('ld-skip-recent').value) || 0
 
       if (!username) return alert('请输入用户名')
+      if (!Number.isFinite(count) || count <= 0) return alert('请输入有效的数量')
+      if (!Number.isFinite(skipRecent) || skipRecent < 0) return alert('请输入有效的跳过数量')
 
       this.clearLog('user')
-      this.targetPostIds = await this.fetchUserActions(username, count)
+      this.targetPostIds = await this.fetchUserActions(username, count, skipRecent)
 
       if (this.targetPostIds.length > 0) {
         this.log(`------------------`, 'user')
-        this.log(`检测完成！共找到 ${this.targetPostIds.length} 条记录。`, 'user')
+        this.log(
+          `检测完成！共找到 ${this.targetPostIds.length} 条记录。${skipRecent > 0 ? `（已跳过最近 ${skipRecent} 条）` : ''}`,
+          'user'
+        )
         this.log(
           `示例：[${this.targetPostIds[0].title}] - ${this.targetPostIds[0].excerpt}`,
           'user'
@@ -1837,6 +1931,10 @@
                     <div class="ld-field-group">
                         <label>数量 (Count)</label>
                         <input type="number" id="ld-count" value="10" min="1" max="100">
+                    </div>
+                    <div class="ld-field-group">
+                        <label>跳过最近 (Skip Recent)</label>
+                        <input type="number" id="ld-skip-recent" value="0" min="0" max="500">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
                         <button id="ld-user-check-btn" style="flex: 1; background: #3498db;">🔍 预检</button>
