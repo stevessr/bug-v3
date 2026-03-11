@@ -39,6 +39,27 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
    * 必须创建新的对象引用并替换整个数组
    */
 
+  const applyBatchGroupUpdates = (
+    groupUpdates: Map<number, EmojiGroup>,
+    options: {
+      invalidateSearchIndex?: boolean
+    } = {}
+  ): boolean => {
+    if (groupUpdates.size === 0) return false
+
+    groups.value = groups.value.map((group, index) => groupUpdates.get(index) || group)
+
+    if (options.invalidateSearchIndex) {
+      saveControl.invalidateSearchIndex?.()
+    }
+
+    for (const updatedGroup of groupUpdates.values()) {
+      saveControl.markGroupDirty?.(updatedGroup.id)
+    }
+
+    return true
+  }
+
   // --- Basic CRUD ---
 
   /**
@@ -183,14 +204,12 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
             ...group,
             emojis: newEmojis
           })
-          saveControl.markGroupDirty?.(group.id)
         }
       }
 
-      // 一次性应用所有 group 更新，触发 shallowRef 响应式更新
-      if (groupUpdates.size > 0) {
-        groups.value = groups.value.map((g, i) => groupUpdates.get(i) || g)
-      }
+      applyBatchGroupUpdates(groupUpdates, {
+        invalidateSearchIndex: true
+      })
     } finally {
       saveControl.endBatch()
     }
@@ -232,13 +251,10 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
             emojis: newEmojis
           })
           touchedGroupCount++
-          saveControl.markGroupDirty?.(group.id)
         }
       }
 
-      if (groupUpdates.size > 0) {
-        groups.value = groups.value.map((group, index) => groupUpdates.get(index) || group)
-      }
+      applyBatchGroupUpdates(groupUpdates)
 
       return {
         updatedEmojiCount,
