@@ -512,18 +512,36 @@ const clearAll = () => {
   emit('update:chatMultiReactorEmojis', [])
 }
 
-// 获取表情 URL
+const rewriteLinuxDoDisplayHost = (url: URL) => {
+  let discourseHost = ''
+  try {
+    discourseHost = new URL(discourseUrl.value).hostname
+  } catch {
+    discourseHost = ''
+  }
+
+  if (discourseHost === 'linux.do' && url.hostname === 'linux.do') {
+    url.hostname = 'cdn.linux.do'
+  }
+  return url
+}
+
+const resolveEmojiDisplayUrl = (rawUrl: string) => {
+  try {
+    const resolvedUrl = new URL(rawUrl, discourseUrl.value)
+    return rewriteLinuxDoDisplayHost(resolvedUrl).toString()
+  } catch {
+    return rawUrl
+  }
+}
+
+// 获取表情显示 URL
 const getEmojiUrl = (emojiName: string) => {
   const emoji = availableEmojis.value.find(e => e.name === emojiName)
   if (emoji?.url) {
-    // 如果是相对 URL，补全为绝对 URL
-    if (emoji.url.startsWith('/')) {
-      return `${discourseUrl.value}${emoji.url}`
-    }
-    return emoji.url
+    return resolveEmojiDisplayUrl(emoji.url)
   }
-  // 回退到 Discourse 默认路径
-  return `${discourseUrl.value}/images/emoji/twitter/${emojiName}.png`
+  return resolveEmojiDisplayUrl(`/images/emoji/twitter/${emojiName}.png`)
 }
 
 // 获取 emoji Unicode 字符（优先使用 Unicode，如果没有映射则返回 null）
@@ -1046,7 +1064,7 @@ watch(
               </span>
               <CachedImage
                 v-else
-                :src="emoji.url.startsWith('/') ? `${discourseUrl}${emoji.url}` : emoji.url"
+                :src="resolveEmojiDisplayUrl(emoji.url)"
                 :alt="emoji.name"
                 class="w-8 h-8 object-contain"
                 loading="lazy"
