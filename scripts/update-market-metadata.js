@@ -164,7 +164,7 @@ try {
   const groupIds = groups.map(g => `'${g.id}'`).join(', ')
 
   // Find and replace the MANIFEST_GROUPS constant
-  const regex = /const MANIFEST_GROUPS: string\[\] = \[[\s\S]*?\n\]/
+  const regex = /const MANIFEST_GROUPS = \[[\s\S]*?\n\]/
   const newManifestGroups = `const MANIFEST_GROUPS: string[] = [\n  ${groupIds}\n]`
 
   if (regex.test(marketRandomContent)) {
