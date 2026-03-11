@@ -8,6 +8,7 @@ import UISettings from '../components/UISettings.vue'
 import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
 import MenuBarSettings from '../components/MenuBarSettings.vue'
 import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
+import EmojiUrlRewriteSettings from '../components/EmojiUrlRewriteSettings.vue'
 import AISettings from '../components/AISettings.vue'
 import AIAgentSettings from '../components/AIAgentSettings.vue'
 import ImgbedSettings from '../components/ImgbedSettings.vue'
@@ -169,6 +170,12 @@ onMounted(async () => {
               :settings="emojiStore.settings"
               @update:customCssBlocks="updateCustomCssBlocks"
             />
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="url-rewrite" tab="URL 批改">
+          <div class="py-4">
+            <EmojiUrlRewriteSettings />
           </div>
         </a-tab-pane>
 

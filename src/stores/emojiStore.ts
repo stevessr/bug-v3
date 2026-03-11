@@ -1152,6 +1152,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     addEmojiWithoutSave: emojiCrudStore.addEmojiWithoutSave,
     updateEmoji: emojiCrudStore.updateEmoji,
     updateEmojiNames,
+    rewriteEmojiUrls: emojiCrudStore.rewriteEmojiUrls,
     deleteEmoji: emojiCrudStore.deleteEmoji,
     moveEmoji: emojiCrudStore.moveEmoji,
     removeEmojiFromGroup,

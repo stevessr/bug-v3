@@ -8,12 +8,19 @@ import type { Ref } from 'vue'
 import type { SaveControl, DuplicateGroup } from './core/types'
 
 import type { Emoji, EmojiGroup } from '@/types/type'
+import { rewriteEmojiUrlFields } from '@/utils/emojiUrlRewrite'
 import { normalizeImageUrl } from '@/utils/isImageUrl'
 
 export interface EmojiCrudStoreOptions {
   groups: Ref<EmojiGroup[]>
   favorites: Ref<Set<string>>
   saveControl: SaveControl
+}
+
+export interface EmojiUrlRewriteStats {
+  updatedEmojiCount: number
+  updatedFieldCount: number
+  touchedGroupCount: number
 }
 
 /**
@@ -183,6 +190,60 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       // 一次性应用所有 group 更新，触发 shallowRef 响应式更新
       if (groupUpdates.size > 0) {
         groups.value = groups.value.map((g, i) => groupUpdates.get(i) || g)
+      }
+    } finally {
+      saveControl.endBatch()
+    }
+  }
+
+  /**
+   * Batch rewrite emoji URLs with a regular expression.
+   */
+  const rewriteEmojiUrls = (regex: RegExp, replacement: string): EmojiUrlRewriteStats => {
+    saveControl.beginBatch()
+    try {
+      const groupUpdates = new Map<number, EmojiGroup>()
+      let updatedEmojiCount = 0
+      let updatedFieldCount = 0
+      let touchedGroupCount = 0
+
+      for (let i = 0; i < groups.value.length; i++) {
+        const group = groups.value[i]
+        const emojis = group.emojis || []
+        let groupModified = false
+        const newEmojis = [...emojis]
+
+        for (let j = 0; j < newEmojis.length; j++) {
+          const emoji = newEmojis[j]
+          if (!emoji) continue
+
+          const rewriteResult = rewriteEmojiUrlFields(emoji, regex, replacement)
+          if (!rewriteResult.changed) continue
+
+          newEmojis[j] = rewriteResult.emoji
+          updatedEmojiCount++
+          updatedFieldCount += rewriteResult.changedFields.length
+          groupModified = true
+        }
+
+        if (groupModified) {
+          groupUpdates.set(i, {
+            ...group,
+            emojis: newEmojis
+          })
+          touchedGroupCount++
+          saveControl.markGroupDirty?.(group.id)
+        }
+      }
+
+      if (groupUpdates.size > 0) {
+        groups.value = groups.value.map((group, index) => groupUpdates.get(index) || group)
+      }
+
+      return {
+        updatedEmojiCount,
+        updatedFieldCount,
+        touchedGroupCount
       }
     } finally {
       saveControl.endBatch()
@@ -694,6 +755,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
     addEmojiWithoutSave,
     updateEmoji,
     updateEmojiNames,
+    rewriteEmojiUrls,
     deleteEmoji,
     updateEmojiInGroup,
     removeEmojiFromGroup,
