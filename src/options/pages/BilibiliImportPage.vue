@@ -12,6 +12,9 @@ import { useEmojiStore } from '@/stores/emojiStore'
 import GroupSelector from '@/options/components/GroupSelector.vue'
 
 const { t } = useI18n()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false
+})
 
 const store = useEmojiStore()
 
@@ -248,10 +251,10 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="max-w-6xl mx-auto">
+  <div :class="props.embedded ? '' : 'p-6'">
+    <div :class="props.embedded ? '' : 'max-w-6xl mx-auto'">
       <!-- 页面标题 -->
-      <div class="mb-6">
+      <div v-if="!props.embedded" class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           {{ t('bilibiliImportTitle') }}
         </h1>

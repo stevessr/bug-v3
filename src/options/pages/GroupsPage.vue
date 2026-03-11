@@ -51,8 +51,9 @@ const handleTelegramUpdate = (group: any) => {
   if (!group || !group.id) return
   const input = getTelegramInputFromGroup(group)
   router.push({
-    path: '/telegram-import',
+    path: '/import',
     query: {
+      source: 'telegram',
       tgGroupId: String(group.id),
       tgInput: input || undefined,
       tgAuto: '1'

@@ -73,20 +73,32 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/bilibili-import',
-    name: 'bilibili-import',
-    component: () => import('../pages/BilibiliImportPage.vue'),
+    path: '/import',
+    name: 'import',
+    component: () => import('../pages/ImportPage.vue'),
     meta: {
-      title: 'Bilibili 导入'
+      title: '导入'
     }
   },
   {
+    path: '/bilibili-import',
+    redirect: to => ({
+      path: '/import',
+      query: {
+        ...to.query,
+        source: 'bilibili'
+      }
+    })
+  },
+  {
     path: '/telegram-import',
-    name: 'telegram-import',
-    component: () => import('../pages/TelegramImportPage.vue'),
-    meta: {
-      title: 'Telegram 导入'
-    }
+    redirect: to => ({
+      path: '/import',
+      query: {
+        ...to.query,
+        source: 'telegram'
+      }
+    })
   },
   {
     path: '/export',

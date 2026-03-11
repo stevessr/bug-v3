@@ -23,6 +23,9 @@ import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false
+})
 const safeSettings = computed(() => store.settings || defaultSettings)
 
 // --- 状态 ---
@@ -785,10 +788,10 @@ const doImport = async (): Promise<boolean> => {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="max-w-4xl mx-auto">
+  <div :class="props.embedded ? '' : 'p-6'">
+    <div :class="props.embedded ? '' : 'max-w-4xl mx-auto'">
       <!-- 页面标题 -->
-      <div class="mb-6">
+      <div v-if="!props.embedded" class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Telegram 贴纸导入</h1>
         <p class="text-gray-600 dark:text-gray-400">一键从 Telegram 贴纸包导入或更新表情分组</p>
       </div>

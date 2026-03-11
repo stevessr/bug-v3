@@ -32,6 +32,47 @@ const router = useRouter()
 const route = useRoute()
 const options = useOptions()
 const enableForumBrowser = __ENABLE_FORUM_BROWSER__
+const legacyMenuKeyMap: Record<string, string> = {
+  'bilibili-import': 'import',
+  'telegram-import': 'import'
+}
+const routeMap: Record<string, string> = {
+  settings: '/settings',
+  favorites: '/favorites',
+  groups: '/groups',
+  ungrouped: '/ungrouped',
+  archived: '/archived',
+  import: '/import',
+  export: '/export',
+  buffer: '/buffer',
+  market: '/market',
+  stats: '/stats',
+  'ai-rename': '/ai-rename',
+  workflows: '/workflows',
+  about: '/about'
+}
+
+if (enableForumBrowser) {
+  routeMap['discourse-browser'] = '/discourse-browser'
+}
+
+const normalizeMenuKey = (key?: string | null) => {
+  if (!key) return ''
+  return legacyMenuKeyMap[key] || key
+}
+
+const getRouteTargetForKey = (key: string) => {
+  if (key === 'bilibili-import') {
+    return { path: '/import', query: { source: 'bilibili' } }
+  }
+
+  if (key === 'telegram-import') {
+    return { path: '/import', query: { source: 'telegram' } }
+  }
+
+  const path = routeMap[key]
+  return path ? { path } : null
+}
 
 // 提供 options 给子组件使用
 provide('options', options)
@@ -126,8 +167,7 @@ const menuItems = computed(() => {
     { key: 'buffer', label: t('buffer'), route: '/buffer' },
     { key: 'market', label: t('cloudMarket'), route: '/market' },
     { key: 'export', label: t('export'), route: '/export' },
-    { key: 'bilibili-import', label: t('bilibiliImport'), route: '/bilibili-import' },
-    { key: 'telegram-import', label: t('telegramImport'), route: '/telegram-import' },
+    { key: 'import', label: t('import'), route: '/import' },
     { key: 'stats', label: t('statistics'), route: '/stats' },
     { key: 'ai-rename', label: t('aiRename'), route: '/ai-rename' },
     { key: 'workflows', label: '工作流', route: '/workflows' },
@@ -156,13 +196,14 @@ const menuSelectedKeys = computed(() => {
     (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
   const keys = menuItems.value.map(i => i.key)
   if (queryTabs) {
+    const normalizedQueryTabs = normalizeMenuKey(queryTabs)
     // 如果 tabs 对应于菜单键，直接使用；否则将视为分组名称，选中 groups 菜单
-    if (keys.includes(queryTabs)) return [queryTabs]
+    if (keys.includes(normalizedQueryTabs)) return [normalizedQueryTabs]
     return ['groups']
   }
 
-  const currentRouteName = route.name as string
-  return currentRouteName ? [currentRouteName] : ['groups']
+  const currentRouteName = normalizeMenuKey(route.name as string)
+  return currentRouteName && keys.includes(currentRouteName) ? [currentRouteName] : ['groups']
 })
 
 // 菜单选择处理
@@ -171,28 +212,7 @@ const handleMenuSelect = (info: any) => {
   if (!key) return
 
   // 根据菜单键导航到对应路由，但保持地址栏为 index.html?type=...&tabs=...（通过 history.replaceState）
-  const routeMap: Record<string, string> = {
-    settings: '/settings',
-    favorites: '/favorites',
-    groups: '/groups',
-    ungrouped: '/ungrouped',
-    archived: '/archived',
-    import: '/import',
-    export: '/export',
-    buffer: '/buffer',
-    market: '/market',
-    'bilibili-import': '/bilibili-import',
-    'telegram-import': '/telegram-import',
-    stats: '/stats',
-    'ai-rename': '/ai-rename',
-    workflows: '/workflows',
-    about: '/about'
-  }
-  if (enableForumBrowser) {
-    routeMap['discourse-browser'] = '/discourse-browser'
-  }
-
-  const targetRoute = routeMap[key]
+  const targetRoute = getRouteTargetForKey(key)
   const originalPath = window.location.pathname
   const newSearchParams = new URLSearchParams(window.location.search)
   newSearchParams.set('type', 'options')
@@ -202,7 +222,7 @@ const handleMenuSelect = (info: any) => {
   // First update visible URL to include the tabs param (so external links reflect selection)
   window.history.replaceState({}, '', originalPath + newSearch)
 
-  if (targetRoute && route.path !== targetRoute) {
+  if (targetRoute && route.path !== targetRoute.path) {
     // Navigate internally with router, then restore visible URL (router will change path)
     router
       .push(targetRoute)
@@ -255,35 +275,18 @@ onMounted(async () => {
   const originalPath = window.location.pathname
   const originalSearch = window.location.search
   if (queryTabs) {
-    if (keys.includes(queryTabs)) {
+    const normalizedQueryTabs = normalizeMenuKey(queryTabs)
+    const targetRoute = getRouteTargetForKey(queryTabs)
+
+    if (keys.includes(normalizedQueryTabs) && targetRoute) {
       // 如果是菜单键，导航内部路由然后恢复可见 URL
-      const routeMap: Record<string, string> = {
-        settings: '/settings',
-        favorites: '/favorites',
-        groups: '/groups',
-        ungrouped: '/ungrouped',
-        archived: '/archived',
-        import: '/import',
-        buffer: '/buffer',
-        market: '/market',
-        'bilibili-import': '/bilibili-import',
-        stats: '/stats',
-        'ai-rename': '/ai-rename',
-        about: '/about'
-      }
-      if (enableForumBrowser) {
-        routeMap['discourse-browser'] = '/discourse-browser'
-      }
-      const targetRoute = routeMap[queryTabs]
-      if (targetRoute) {
-        router
-          .replace(targetRoute)
-          .then(() => {
-            // restore visible URL to original (keep query)
-            window.history.replaceState({}, '', originalPath + (originalSearch || ''))
-          })
-          .catch(() => {})
-      }
+      router
+        .replace(targetRoute)
+        .then(() => {
+          // restore visible URL to original (keep query)
+          window.history.replaceState({}, '', originalPath + (originalSearch || ''))
+        })
+        .catch(() => {})
     } else {
       // 视为分组名称，尝试查找并选中该分组
       const g = emojiStore.groups.find((x: any) => x.name === queryTabs || x.id === queryTabs)

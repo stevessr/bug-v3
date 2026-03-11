@@ -29,6 +29,9 @@ importers:
       archiver:
         specifier: ^7.0.1
         version: 7.0.1
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
       dexie:
         specifier: ^4.3.0
         version: 4.3.0
@@ -214,7 +217,7 @@ importers:
         specifier: ^0.26.0
         version: 0.26.0(@babel/parser@7.29.0)(rollup@4.47.1)(vue@3.5.29(typescript@5.9.3))
       vite:
-        specifier: npm:rolldown-vite@^7.3.1
+        specifier: npm:rolldown-vite@latest
         version: rolldown-vite@7.3.1(@types/node@24.11.0)(esbuild@0.27.3)(jiti@1.21.7)(less@4.5.1)(terser@5.46.0)(yaml@2.8.1)
       vue-eslint-parser:
         specifier: ^10.4.0
@@ -2776,6 +2779,7 @@ packages:
   rolldown-vite@7.3.1:
     resolution: {integrity: sha512-LYzdNAjRHhF2yA4JUQm/QyARyi216N2rpJ0lJZb8E9FU2y5v6Vk+xq/U4XBOxMefpWixT5H3TslmAHm1rqIq2w==}
     engines: {node: ^20.19.0 || >=22.12.0}
+    deprecated: Use this package to migrate from Vite 7 to Vite 8. For the most recent updates, migrate to Vite 8 once you're ready.
     hasBin: true
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
