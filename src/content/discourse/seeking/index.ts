@@ -129,7 +129,7 @@ function sendNotification(action: any) {
   }
 
   let avatar =
-    'https://linuxdo-uploads.s3.linux.do/original/4X/0/4/6/0461ede0fd44342c749aa3097b60adcea7376e42.webp'
+    'https://cdn3.linux.do/original/4X/0/4/6/0461ede0fd44342c749aa3097b60adcea7376e42.webp'
   if (action.avatar_template) avatar = CONFIG.HOST + action.avatar_template.replace('{size}', '64')
   const excerpt = cleanHtml(action.excerpt)
   const link = `${CONFIG.HOST}/t/${action.topic_id}/${action.post_number}`
@@ -452,7 +452,7 @@ function renderFeed() {
   const fragment = document.createDocumentFragment()
   all.forEach(item => {
     let avatar =
-      'https://linuxdo-uploads.s3.linux.do/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
+      'https://cdn3.linux.do/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
     if (item.avatar_template) avatar = CONFIG.HOST + item.avatar_template.replace('{size}', '48')
 
     const date = new Date(item.created_at)

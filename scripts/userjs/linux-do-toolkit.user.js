@@ -9,7 +9,7 @@
 // @match        https://*.discourse.org/*
 // @match        https://idcflare.com/*
 // @exclude      https://linux.do/a/*
-// @icon         https://linuxdo-uploads.s3.linux.do/original/4X/f/2/2/f228b317d9c333833ccf3a81fee705024a548963.png
+// @icon         https://cdn3.linux.do/original/4X/f/2/2/f228b317d9c333833ccf3a81fee705024a548963.png
 // @grant        none
 // @license      MIT
 // @run-at       document-end
