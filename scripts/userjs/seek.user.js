@@ -7,7 +7,7 @@
 // @license      Fair License
 // @match        https://linux.do/*
 // @connect      linux.do
-// @icon         https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png
+// @icon         https://cdn.linux.do/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png
 // @grant        GM_xmlhttpRequest
 // @grant        GM_notification
 // @grant        GM_setValue
@@ -655,7 +655,7 @@
     if (pushedIds.size > 200) pushedIds.delete(pushedIds.values().next().value)
 
     let avatar =
-      'https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
+      'https://cdn.linux.do/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
     if (action.avatar_template)
       avatar = CONFIG.HOST + action.avatar_template.replace('{size}', '64')
     const excerpt = cleanHtml(action.excerpt)
@@ -1244,7 +1244,7 @@
     div.innerHTML = all
       .map(item => {
         let avatar =
-          'https://linux.do/uploads/default/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
+          'https://cdn.linux.do/original/3X/9/d/9dd4973138ccd78e8907865261d7b14d45a96d1c.png'
         if (item.avatar_template)
           avatar = CONFIG.HOST + item.avatar_template.replace('{size}', '48')
 
