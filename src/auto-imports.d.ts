@@ -31,6 +31,7 @@ declare global {
   const analyzeImageForNaming: typeof import('./utils/geminiService')['analyzeImageForNaming']
   const archiveGroup: typeof import('./utils/simpleStorage')['archiveGroup']
   const backupToSync: typeof import('./utils/simpleStorage')['backupToSync']
+  const buildEmojiUrlRewriteRegex: typeof import('./utils/emojiUrlRewrite')['buildEmojiUrlRewriteRegex']
   const cacheImage: typeof import('./utils/imageCache')['cacheImage']
   const cacheImages: typeof import('./utils/imageCache')['cacheImages']
   const checkStorageHealth: typeof import('./utils/simpleStorage')['checkStorageHealth']
@@ -40,6 +41,7 @@ declare global {
   const cloudflareSyncService: typeof import('./utils/cloudflareSync')['cloudflareSyncService']
   const collaborativeUpload: typeof import('./utils/collab/index')['collaborativeUpload']
   const commonMessages: typeof import('./utils/i18n')['commonMessages']
+  const computeSHA1Hex: typeof import('./utils/discourseUpload')['computeSHA1Hex']
   const computed: typeof import('vue')['computed']
   const convertWebmToAvifViaBackend: typeof import('./utils/webmToAvifBackend')['convertWebmToAvifViaBackend']
   const createApp: typeof import('vue')['createApp']
@@ -109,6 +111,7 @@ declare global {
   const isImageCached: typeof import('./utils/imageCache')['isImageCached']
   const isImageDomainBlocked: typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']
   const isImageUrl: typeof import('./utils/isImageUrl')['isImageUrl']
+  const isLinuxDoDiscourseBase: typeof import('./utils/discourseUpload')['isLinuxDoDiscourseBase']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
@@ -127,6 +130,7 @@ declare global {
   const markRaw: typeof import('vue')['markRaw']
   const message: typeof import('ant-design-vue')['message']
   const nextTick: typeof import('vue')['nextTick']
+  const normalizeDiscourseUploadUrl: typeof import('./utils/discourseUpload')['normalizeDiscourseUploadUrl']
   const normalizeImageUrl: typeof import('./utils/isImageUrl')['normalizeImageUrl']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
@@ -161,6 +165,8 @@ declare global {
   const resetToDefaults: typeof import('./utils/simpleStorage')['resetToDefaults']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolveImageCacheStrategy: typeof import('./utils/imageCachePolicy')['resolveImageCacheStrategy']
+  const rewriteEmojiUrlFields: typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlFields']
+  const rewriteEmojiUrlValue: typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlValue']
   const sanitizeEmojiGroup: typeof import('./utils/typeGuards')['sanitizeEmojiGroup']
   const sanitizeEmojiGroupArray: typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']
   const saveAllData: typeof import('./utils/simpleStorage')['saveAllData']
@@ -202,6 +208,7 @@ declare global {
   const unarchiveGroup: typeof import('./utils/simpleStorage')['unarchiveGroup']
   const unref: typeof import('vue')['unref']
   const uploadAndAddEmoji: typeof import('./utils/uploadServices')['uploadAndAddEmoji']
+  const uploadLinuxDoMultipart: typeof import('./utils/discourseUpload')['uploadLinuxDoMultipart']
   const uploadServices: typeof import('./utils/uploadServices')['uploadServices']
   const useAbortController: typeof import('./composables/useEventListener')['useAbortController']
   const useAttrs: typeof import('vue')['useAttrs']
@@ -291,6 +298,7 @@ declare module 'vue' {
     readonly analyzeImageForNaming: UnwrapRef<typeof import('./utils/geminiService')['analyzeImageForNaming']>
     readonly archiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['archiveGroup']>
     readonly backupToSync: UnwrapRef<typeof import('./utils/simpleStorage')['backupToSync']>
+    readonly buildEmojiUrlRewriteRegex: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['buildEmojiUrlRewriteRegex']>
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
     readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
@@ -300,6 +308,7 @@ declare module 'vue' {
     readonly cloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['cloudflareSyncService']>
     readonly collaborativeUpload: UnwrapRef<typeof import('./utils/collab/index')['collaborativeUpload']>
     readonly commonMessages: UnwrapRef<typeof import('./utils/i18n')['commonMessages']>
+    readonly computeSHA1Hex: UnwrapRef<typeof import('./utils/discourseUpload')['computeSHA1Hex']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly convertWebmToAvifViaBackend: UnwrapRef<typeof import('./utils/webmToAvifBackend')['convertWebmToAvifViaBackend']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -369,6 +378,7 @@ declare module 'vue' {
     readonly isImageCached: UnwrapRef<typeof import('./utils/imageCache')['isImageCached']>
     readonly isImageDomainBlocked: UnwrapRef<typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']>
     readonly isImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['isImageUrl']>
+    readonly isLinuxDoDiscourseBase: UnwrapRef<typeof import('./utils/discourseUpload')['isLinuxDoDiscourseBase']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
@@ -387,6 +397,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeDiscourseUploadUrl: UnwrapRef<typeof import('./utils/discourseUpload')['normalizeDiscourseUploadUrl']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -421,6 +432,8 @@ declare module 'vue' {
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveImageCacheStrategy: UnwrapRef<typeof import('./utils/imageCachePolicy')['resolveImageCacheStrategy']>
+    readonly rewriteEmojiUrlFields: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlFields']>
+    readonly rewriteEmojiUrlValue: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlValue']>
     readonly sanitizeEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroup']>
     readonly sanitizeEmojiGroupArray: UnwrapRef<typeof import('./utils/typeGuards')['sanitizeEmojiGroupArray']>
     readonly saveAllData: UnwrapRef<typeof import('./utils/simpleStorage')['saveAllData']>
@@ -462,6 +475,7 @@ declare module 'vue' {
     readonly unarchiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['unarchiveGroup']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
+    readonly uploadLinuxDoMultipart: UnwrapRef<typeof import('./utils/discourseUpload')['uploadLinuxDoMultipart']>
     readonly uploadServices: UnwrapRef<typeof import('./utils/uploadServices')['uploadServices']>
     readonly useAbortController: UnwrapRef<typeof import('./composables/useEventListener')['useAbortController']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
