@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-03-07T10:19:06.053Z",
+  "exportDate": "2026-03-11T11:53:30.082Z",
   "totalGroups": 263,
   "includeArchived": true,
   "groups": [
@@ -375,7 +375,7 @@
     {
       "id": "group-1763303057469",
       "name": "X 第七弹",
-      "icon": "https://linux.do/uploads/default/original/4X/d/c/5/dc525ddc6e161406e80b8ddfb3c5f026dec2475b.avif",
+      "icon": "https://cdn.linux.do/original/4X/d/c/5/dc525ddc6e161406e80b8ddfb3c5f026dec2475b.avif",
       "order": 46,
       "emojiCount": 320,
       "isArchived": true
@@ -455,7 +455,7 @@
     {
       "id": "group-1768393531015",
       "name": "X 第三十四弹",
-      "icon": "https://linux.do/uploads/default/original/4X/2/1/a/21a378190db75829c19eab4817e78aeead68be47.avif",
+      "icon": "https://cdn.linux.do/original/4X/2/1/a/21a378190db75829c19eab4817e78aeead68be47.avif",
       "order": 56,
       "emojiCount": 662,
       "isArchived": false
@@ -479,7 +479,7 @@
     {
       "id": "group-1764738272674",
       "name": "X 第九弹",
-      "icon": "https://linux.do/uploads/default/original/4X/9/4/b/94b6c1aff0ff7498d5d7f5ff1311b7ddabfc9ec1.avif",
+      "icon": "https://cdn.linux.do/original/4X/9/4/b/94b6c1aff0ff7498d5d7f5ff1311b7ddabfc9ec1.avif",
       "order": 59,
       "emojiCount": 732,
       "isArchived": true
@@ -535,7 +535,7 @@
     {
       "id": "group-1767006142804",
       "name": "X 第二十二弹",
-      "icon": "https://linux.do/uploads/default/original/4X/3/7/1/37120d64ee38b8c58c14c9ba3a6f3a2ed1a3302a.avif",
+      "icon": "https://cdn.linux.do/original/4X/3/7/1/37120d64ee38b8c58c14c9ba3a6f3a2ed1a3302a.avif",
       "order": 66,
       "emojiCount": 736,
       "isArchived": false
@@ -559,7 +559,7 @@
     {
       "id": "group-1767152000501",
       "name": "X 第二十六弹",
-      "icon": "https://linux.do/uploads/default/original/4X/a/7/6/a769ae414100e0782b7aa09b3a583bf652abb25c.avif",
+      "icon": "https://cdn.linux.do/original/4X/a/7/6/a769ae414100e0782b7aa09b3a583bf652abb25c.avif",
       "order": 69,
       "emojiCount": 455,
       "isArchived": false
@@ -679,7 +679,7 @@
     {
       "id": "group-1770996268047",
       "name": "X 第五十弹",
-      "icon": "https://linux.do/uploads/default/original/4X/a/3/c/a3c739efa2f7b62856cd8117978716afbfbb4ab8.avif?v=emoji-17",
+      "icon": "https://cdn.linux.do/original/4X/a/3/c/a3c739efa2f7b62856cd8117978716afbfbb4ab8.avif?v=emoji-17",
       "order": 84,
       "emojiCount": 250,
       "isArchived": false
@@ -695,7 +695,7 @@
     {
       "id": "group-1764340960340",
       "name": "X 第八弾",
-      "icon": "https://linux.do/uploads/default/original/4X/0/c/1/0c135dc54e0c5fcfe7717b4479983687a24621fc.jpeg",
+      "icon": "https://cdn.linux.do/original/4X/0/c/1/0c135dc54e0c5fcfe7717b4479983687a24621fc.jpeg",
       "order": 86,
       "emojiCount": 723,
       "isArchived": true
@@ -767,7 +767,7 @@
     {
       "id": "group-1765806805581",
       "name": "X 第十二弹",
-      "icon": "https://linux.do/uploads/default/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
+      "icon": "https://cdn.linux.do/original/4X/8/5/c/85c46c959d4a0b729575260af51ee62733ca736d.avif",
       "order": 95,
       "emojiCount": 1245,
       "isArchived": true
@@ -775,7 +775,7 @@
     {
       "id": "group-1766586968469",
       "name": "X 第十五弹",
-      "icon": "https://linux.do/uploads/default/original/4X/b/b/8/bb88f5fdfa6dd8e294f433ee1a44bd57a134a3c0.avif",
+      "icon": "https://cdn.linux.do/original/4X/b/b/8/bb88f5fdfa6dd8e294f433ee1a44bd57a134a3c0.avif",
       "order": 96,
       "emojiCount": 920,
       "isArchived": true
@@ -807,7 +807,7 @@
     {
       "id": "group-1765008889810",
       "name": "X 第十弹",
-      "icon": "https://linux.do/uploads/default/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
+      "icon": "https://cdn.linux.do/original/4X/5/9/1/591224a2ceb7e449a15ecbe19c26b4945550dbc4.jpeg",
       "order": 100,
       "emojiCount": 1016,
       "isArchived": true
@@ -879,7 +879,7 @@
     {
       "id": "group-1770993590742",
       "name": "X 第四十四弹",
-      "icon": "https://linux.do/uploads/default/original/4X/e/b/2/eb2f75f0674b001e6489488b9e9f1c2035b869d4.avif?v=emoji-17",
+      "icon": "https://cdn.linux.do/original/4X/e/b/2/eb2f75f0674b001e6489488b9e9f1c2035b869d4.avif?v=emoji-17",
       "order": 109,
       "emojiCount": 250,
       "isArchived": false
@@ -935,7 +935,7 @@
     {
       "id": "group-1765974153699",
       "name": "丸山彩表情包 | 素素祥祥子",
-      "icon": "https://linux.do/uploads/default/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
+      "icon": "https://cdn.linux.do/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
       "order": 116,
       "emojiCount": 25,
       "isArchived": false
@@ -991,7 +991,7 @@
     {
       "id": "group-1759064721561",
       "name": "令时焥夏 KiriAINa",
-      "icon": "https://linux.do/uploads/default/optimized/4X/e/b/6/eb61ad449326caa5ae203c6346fd40c71e71068f_2_500x500.jpeg",
+      "icon": "https://cdn.linux.do/optimized/4X/e/b/6/eb61ad449326caa5ae203c6346fd40c71e71068f_2_500x500.jpeg",
       "order": 123,
       "emojiCount": 8,
       "isArchived": true
@@ -1079,7 +1079,7 @@
     {
       "id": "group-1772069639178",
       "name": "动图 3",
-      "icon": "https://linux.do/uploads/default/original/4X/e/8/b/e8b1aba044f4207ce335aa9edca1e413dd23e1c5.avif?v=emoji-17",
+      "icon": "https://cdn.linux.do/original/4X/e/8/b/e8b1aba044f4207ce335aa9edca1e413dd23e1c5.avif?v=emoji-17",
       "order": 134,
       "emojiCount": 191,
       "isArchived": false
@@ -1087,7 +1087,7 @@
     {
       "id": "group-1772290583306",
       "name": "动图 4",
-      "icon": "https://linux.do/uploads/default/original/4X/9/4/0/9407d7070489c979c5f62af240f50b8b86bc03ae.avif?v=emoji-17",
+      "icon": "https://cdn.linux.do/original/4X/9/4/0/9407d7070489c979c5f62af240f50b8b86bc03ae.avif?v=emoji-17",
       "order": 135,
       "emojiCount": 72,
       "isArchived": false
@@ -1151,7 +1151,7 @@
     {
       "id": "group-1767644481428",
       "name": "和奏瑞依｜Wakana Rei",
-      "icon": "https://linux.do/uploads/default/original/4X/0/3/3/0334de3523784ca8af011aa86bbd77eb3f480797.avif",
+      "icon": "https://cdn.linux.do/original/4X/0/3/3/0334de3523784ca8af011aa86bbd77eb3f480797.avif",
       "order": 143,
       "emojiCount": 20,
       "isArchived": false
@@ -1263,7 +1263,7 @@
     {
       "id": "group-1756869887449",
       "name": "小 C",
-      "icon": "https://linux.do/uploads/default/original/4X/c/c/a/ccacd68f1d3883b372a7c53602d8a58d246a3e96.webp",
+      "icon": "https://cdn.linux.do/original/4X/c/c/a/ccacd68f1d3883b372a7c53602d8a58d246a3e96.webp",
       "order": 157,
       "emojiCount": 125,
       "isArchived": false
@@ -1423,7 +1423,7 @@
     {
       "id": "group-1762696295842",
       "name": "杂鱼喵喵喵",
-      "icon": "https://linux.do/uploads/default/original/4X/d/b/e/dbe3883d903d210eab0596e208118dfa0b3a351d.webp",
+      "icon": "https://cdn.linux.do/original/4X/d/b/e/dbe3883d903d210eab0596e208118dfa0b3a351d.webp",
       "order": 177,
       "emojiCount": 65,
       "isArchived": false
@@ -1455,7 +1455,7 @@
     {
       "id": "telegram_1768785476294_3u1yi30cl",
       "name": "樱夜廻其一 @zhaxia_cn",
-      "icon": "https://linux.do/uploads/default/original/4X/4/2/f/42fc9a803ff7dce85131847f1683b72d8b41e854.webp?v=telegram",
+      "icon": "https://cdn.linux.do/original/4X/4/2/f/42fc9a803ff7dce85131847f1683b72d8b41e854.webp?v=telegram",
       "order": 181,
       "emojiCount": 16,
       "isArchived": false
@@ -1479,7 +1479,7 @@
     {
       "id": "group-1766995179445",
       "name": "歌白 Shiro @zhaxia_cn",
-      "icon": "https://linux.do/uploads/default/original/4X/0/a/4/0a47c39d830ba30eb44862d2374acf444adf2493.webp?v=emoji-17",
+      "icon": "https://cdn.linux.do/original/4X/0/a/4/0a47c39d830ba30eb44862d2374acf444adf2493.webp?v=emoji-17",
       "order": 184,
       "emojiCount": 65,
       "isArchived": false
@@ -1519,7 +1519,7 @@
     {
       "id": "telegram_1768794247420_lvtfpx5zf",
       "name": "泠未胧 @zhaxia_cn",
-      "icon": "https://linux.do/uploads/default/original/4X/b/7/f/b7fa3772228ec2c981a5c11e9bea5364a667535c.webp?v=telegram",
+      "icon": "https://cdn.linux.do/original/4X/b/7/f/b7fa3772228ec2c981a5c11e9bea5364a667535c.webp?v=telegram",
       "order": 189,
       "emojiCount": 14,
       "isArchived": false
@@ -1551,7 +1551,7 @@
     {
       "id": "group-1756870039233",
       "name": "爱丽丝",
-      "icon": "https://linux.do/uploads/default/original/4X/9/6/6/966615f73c28f39828580b82c095acc6fb121568.webp",
+      "icon": "https://cdn.linux.do/original/4X/9/6/6/966615f73c28f39828580b82c095acc6fb121568.webp",
       "order": 193,
       "emojiCount": 89,
       "isArchived": false
@@ -1631,7 +1631,7 @@
     {
       "id": "group-1758292062046",
       "name": "疯传箱子",
-      "icon": "https://linux.do/uploads/default/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
+      "icon": "https://cdn.linux.do/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
       "order": 203,
       "emojiCount": 24,
       "isArchived": false
@@ -1735,7 +1735,7 @@
     {
       "id": "group-1756870014160",
       "name": "群友",
-      "icon": "https://linux.do/uploads/default/original/4X/e/b/2/eb2c2a4c2102264f69f4b794f26179aa7d0feb16.webp",
+      "icon": "https://cdn.linux.do/original/4X/e/b/2/eb2c2a4c2102264f69f4b794f26179aa7d0feb16.webp",
       "order": 216,
       "emojiCount": 64,
       "isArchived": false
@@ -1919,7 +1919,7 @@
     {
       "id": "group-1767645462518",
       "name": "重音 tetoSV｜Kasane TetoSV",
-      "icon": "https://linux.do/uploads/default/original/4X/9/c/e/9ce9259212f14b73289b6b98c082d8a76218ae83.avif",
+      "icon": "https://cdn.linux.do/original/4X/9/c/e/9ce9259212f14b73289b6b98c082d8a76218ae83.avif",
       "order": 239,
       "emojiCount": 20,
       "isArchived": false
@@ -2055,7 +2055,7 @@
     {
       "id": "group-1767645584240",
       "name": "鳰原令王那｜Nyubara Reona",
-      "icon": "https://linux.do/uploads/default/original/4X/9/0/a/90a9235602ae1647167436610b28c058c01c5b07.avif",
+      "icon": "https://cdn.linux.do/original/4X/9/0/a/90a9235602ae1647167436610b28c058c01c5b07.avif",
       "order": 256,
       "emojiCount": 20,
       "isArchived": false
