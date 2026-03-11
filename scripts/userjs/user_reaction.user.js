@@ -5,7 +5,7 @@
 // @description  输入用户名和数量，给指定用户的历史回复/帖子发送表情 (支持预检)
 // @author       You
 // @match        https://linux.do/*
-// @icon         https://linux.do/uploads/default/original/4X/f/2/2/f228b317d9c333833ccf3a81fee705024a548963.png
+// @icon         https://cdn.linux.do/original/4X/f/2/2/f228b317d9c333833ccf3a81fee705024a548963.png
 // @grant        none
 // ==/UserScript==
 
