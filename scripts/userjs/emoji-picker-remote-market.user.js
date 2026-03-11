@@ -6,7 +6,7 @@
 // @author       stevessr
 // @match        https://linux.do/*
 // @match        https://*.linux.do/*
-// @icon         https://cdn.linux.do/optimized/3X/9/d/9dd49731091ce8656e94433a26a3ef76f9c0f8d9_2_32x32.png
+// @icon         https://linuxdo-uploads.s3.linux.do/optimized/3X/9/d/9dd49731091ce8656e94433a26a3ef76f9c0f8d9_2_32x32.png
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue

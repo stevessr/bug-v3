@@ -177,7 +177,7 @@ curl https://your-project.pages.dev/api/random-image
 {
   "id": "emoji-1758073408523-ggg1vh",
   "name": "哭泣",
-  "url": "https://cdn.linux.do/original/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2.jpeg",
+  "url": "https://linuxdo-uploads.s3.linux.do/original/4X/5/d/9/5d932c05a642396335f632a370bd8d45463cf2e2.jpeg",
   "groupId": "group-1758073408523",
   "width": 1000,
   "height": 993,

@@ -131,8 +131,8 @@ node upload-folder.js ./my-emojis "我的表情" --no-stream > output.json
 {
   "id": "emoji-group-1234567890-0-abcde",
   "name": "emoji1",
-  "url": "https://cdn.linux.do/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
-  "displayUrl": "https://cdn.linux.do/optimized/1X/2/3/4/optimized.jpg",
+  "url": "https://linuxdo-uploads.s3.linux.do/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
+  "displayUrl": "https://linuxdo-uploads.s3.linux.do/optimized/1X/2/3/4/optimized.jpg",
   "width": 1000,
   "height": 1000,
   "thumbnail_width": 100,
@@ -157,8 +157,8 @@ node upload-folder.js ./my-emojis "我的表情" --no-stream > output.json
   {
     "id": "emoji-group-1234567890-0-abcde",
     "name": "emoji1",
-    "url": "https://cdn.linux.do/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
-    "displayUrl": "https://cdn.linux.do/optimized/1X/2/3/4/optimized.jpg",
+    "url": "https://linuxdo-uploads.s3.linux.do/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
+    "displayUrl": "https://linuxdo-uploads.s3.linux.do/optimized/1X/2/3/4/optimized.jpg",
     "width": 1000,
     "height": 1000,
     "thumbnail_width": 100,
@@ -175,8 +175,8 @@ node upload-folder.js ./my-emojis "我的表情" --no-stream > output.json
   {
     "id": "emoji-group-1234567890-1-fghij",
     "name": "emoji2",
-    "url": "https://cdn.linux.do/original/4X/f/g/h/fghij1234567890.png",
-    "displayUrl": "https://cdn.linux.do/optimized/1X/5/6/7/optimized.png",
+    "url": "https://linuxdo-uploads.s3.linux.do/original/4X/f/g/h/fghij1234567890.png",
+    "displayUrl": "https://linuxdo-uploads.s3.linux.do/optimized/1X/5/6/7/optimized.png",
     "width": 800,
     "height": 800,
     "thumbnail_width": 100,
