@@ -3,6 +3,12 @@ import { notify } from '../ui'
 
 import { insertIntoEditor } from './helpers'
 
+import {
+  isLinuxDoDiscourseBase,
+  normalizeDiscourseUploadUrl,
+  uploadLinuxDoMultipart
+} from '@/utils/discourseUpload'
+
 export interface UploadResponse {
   id: number
   url: string
@@ -184,6 +190,17 @@ export class ImageUploader {
   }
 
   private async performUpload(file: File): Promise<UploadResponse> {
+    const csrfToken = this.getCSRFToken()
+    if (isLinuxDoDiscourseBase(window.location.origin)) {
+      return (await uploadLinuxDoMultipart({
+        baseUrl: window.location.origin,
+        file,
+        fileName: file.name,
+        mimeType: file.type,
+        csrfToken
+      })) as UploadResponse
+    }
+
     // Calculate SHA1 checksum (simplified - using a placeholder)
     const sha1 = await this.calculateSHA1(file)
 
@@ -195,9 +212,6 @@ export class ImageUploader {
     formData.append('type', file.type)
     formData.append('sha1_checksum', sha1)
     formData.append('file', file, file.name)
-
-    // Get CSRF token from meta tag or cookie
-    const csrfToken = this.getCSRFToken()
 
     const headers: Record<string, string> = {
       'X-Csrf-Token': csrfToken
@@ -226,7 +240,11 @@ export class ImageUploader {
       throw errorData
     }
 
-    return (await response.json()) as UploadResponse
+    const data = (await response.json()) as UploadResponse
+    return {
+      ...data,
+      url: normalizeDiscourseUploadUrl(window.location.origin, data) || data.url
+    }
   }
 
   private getCSRFToken(): string {

@@ -1,4 +1,5 @@
 import { useEmojiStore } from '@/stores'
+import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
 
 export interface UploadService {
   name: string
@@ -121,9 +122,10 @@ class DiscourseUploadService implements UploadService {
 
       if (response.ok) {
         const data = await response.json()
-        if (data && data.url) {
+        const finalUrl = normalizeDiscourseUploadUrl(`https://${this.domain}`, data)
+        if (finalUrl) {
           if (onProgress) onProgress(100)
-          return data.url
+          return finalUrl
         }
         throw new Error(`Invalid response from ${this.domain}: missing URL`)
       } else {
@@ -236,9 +238,10 @@ class DiscourseUploadService implements UploadService {
     const proxyOk = (response as any)?.data?.ok ?? (response as any)?.ok
     const proxyStatus = (response as any)?.data?.status ?? (response as any)?.status
 
-    if (proxyOk && proxyPayload?.url) {
+    const proxyUrl = normalizeDiscourseUploadUrl(`https://${this.domain}`, proxyPayload)
+    if (proxyOk && proxyUrl) {
       onProgress?.(100)
-      return proxyPayload.url
+      return proxyUrl
     }
 
     const errorData = proxyPayload

@@ -2,6 +2,7 @@ import { getCsrfTokenFromPage } from '../utils/dom/csrf'
 
 import type { MessageHandler } from './types'
 
+import { isLinuxDoDiscourseBase, uploadLinuxDoMultipart } from '@/utils/discourseUpload'
 import type { MessageResponse } from '@/types/messages'
 
 export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse) => {
@@ -25,6 +26,43 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
     const buffer = new Uint8Array(opts.fileData)
     const blob = new Blob([buffer], { type: opts.mimeType || 'application/octet-stream' })
     const file = new File([blob], opts.fileName || 'image', { type: blob.type })
+    const headers: Record<string, string> = {}
+    const csrfToken = getCsrfTokenFromPage()
+    if (csrfToken) headers['X-Csrf-Token'] = csrfToken
+
+    if (isLinuxDoDiscourseBase(url)) {
+      uploadLinuxDoMultipart({
+        baseUrl: url,
+        file,
+        fileName: file.name,
+        mimeType: file.type,
+        csrfToken,
+        headers,
+        sha1: opts.sha1
+      })
+        .then(data => {
+          const response: MessageResponse = {
+            success: true,
+            data: { status: 200, ok: true, data }
+          }
+          sendResponse(response)
+        })
+        .catch((error: any) => {
+          const response: MessageResponse = {
+            success: true,
+            data: {
+              status: error?.status || 0,
+              ok: false,
+              data: error?.details || {
+                message: error?.message || 'Page upload failed'
+              }
+            }
+          }
+          sendResponse(response)
+        })
+
+      return true
+    }
 
     const form = new FormData()
     form.append('upload_type', 'composer')
@@ -33,10 +71,6 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
     form.append('type', file.type)
     if (opts.sha1) form.append('sha1_checksum', opts.sha1)
     form.append('file', file, file.name)
-
-    const headers: Record<string, string> = {}
-    const csrfToken = getCsrfTokenFromPage()
-    if (csrfToken) headers['X-Csrf-Token'] = csrfToken
 
     fetch(url, {
       method: 'POST',

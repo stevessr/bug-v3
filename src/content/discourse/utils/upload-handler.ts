@@ -1,5 +1,7 @@
 import { DQS } from '../../utils/dom/createEl'
 
+import { isLinuxDoDiscourseBase, uploadLinuxDoMultipart } from '@/utils/discourseUpload'
+
 /**
  * 处理上传 blob 到 Discourse 的功能
  */
@@ -18,14 +20,7 @@ export function setupDiscourseUploadHandler() {
           const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType })
           const file = new File([blob], filename, { type: mimeType })
 
-          // Build form and upload to current discourse host or provided discourseBase
           const base = message.discourseBase || window.location.origin
-          const form = new FormData()
-          form.append('upload_type', 'composer')
-          form.append('relativePath', 'null')
-          form.append('name', file.name)
-          form.append('type', file.type)
-          form.append('file', file, file.name)
 
           // CSRF token
           const meta = DQS('meta[name="csrf-token"]') as HTMLMetaElement | null
@@ -36,6 +31,33 @@ export function setupDiscourseUploadHandler() {
           const headers: Record<string, string> = {}
           if (csrf) headers['X-Csrf-Token'] = csrf
           if (document.cookie) headers['Cookie'] = document.cookie
+
+          if (isLinuxDoDiscourseBase(base)) {
+            const data = await uploadLinuxDoMultipart({
+              baseUrl: base,
+              file,
+              fileName: file.name,
+              mimeType: file.type,
+              csrfToken: csrf,
+              headers
+            })
+
+            ;(window as any).chrome.runtime.sendMessage({
+              type: 'UPLOAD_RESULT',
+              details: data,
+              data,
+              success: true,
+              requestId
+            })
+            return
+          }
+
+          const form = new FormData()
+          form.append('upload_type', 'composer')
+          form.append('relativePath', 'null')
+          form.append('name', file.name)
+          form.append('type', file.type)
+          form.append('file', file, file.name)
 
           const uploadUrl = `${base.replace(/\/$/, '')}/uploads.json?client_id=f06cb5577ba9410d94b9faf94e48c2d8`
           const resp = await fetch(uploadUrl, {
@@ -61,11 +83,12 @@ export function setupDiscourseUploadHandler() {
               requestId
             })
           }
-        } catch (e) {
+        } catch (e: any) {
           ;(window as any).chrome.runtime.sendMessage({
             type: 'UPLOAD_RESULT',
             success: false,
-            error: String(e),
+            error: e?.message || String(e),
+            details: e?.details,
             requestId: message?.requestId || null
           })
         }

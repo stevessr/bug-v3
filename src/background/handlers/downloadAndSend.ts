@@ -1,3 +1,9 @@
+import {
+  isLinuxDoDiscourseBase,
+  normalizeDiscourseUploadUrl,
+  uploadLinuxDoMultipart
+} from '@/utils/discourseUpload'
+
 /**
  * Download a remote image (with Referer) and upload it directly to a Discourse instance.
  * Returns parsed upload response or throws on error.
@@ -29,6 +35,17 @@ export async function downloadAndUploadDirect(
   const arrayBuffer = await resp.arrayBuffer()
   const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType || 'image/png' })
 
+  if (isLinuxDoDiscourseBase(discourseBase)) {
+    return await uploadLinuxDoMultipart({
+      baseUrl: discourseBase,
+      file: blob,
+      fileName: filename,
+      mimeType: blob.type,
+      csrfToken: csrf,
+      headers: cookie ? { Cookie: cookie } : undefined
+    })
+  }
+
   // prepare form
   const form = new FormData()
   form.append('upload_type', 'composer')
@@ -57,5 +74,8 @@ export async function downloadAndUploadDirect(
   }
 
   const data = await uploadResp.json()
-  return data
+  return {
+    ...data,
+    url: normalizeDiscourseUploadUrl(discourseBase, data) || data.url
+  }
 }

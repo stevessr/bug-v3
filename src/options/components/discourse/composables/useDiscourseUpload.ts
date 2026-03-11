@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 
+import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
+
 type UploadResponse = {
   url?: string
   short_url?: string
@@ -75,7 +77,15 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
         if (message.success) {
           resolve(message.data)
         } else {
-          reject(new Error(message.error || message.details?.error || '上传失败'))
+          reject(
+            new Error(
+              message.error ||
+                message.details?.error ||
+                message.details?.message ||
+                message.details?.errors?.join?.(', ') ||
+                '上传失败'
+            )
+          )
         }
       }
 
@@ -135,12 +145,7 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
       arrayBuffer,
       discourseBase: options.baseUrl
     })
-    const url =
-      response?.url && response.url.startsWith('http')
-        ? response.url
-        : response?.url
-          ? `${options.baseUrl?.replace(/\\$/, '')}${response.url}`
-          : response?.short_url || ''
+    const url = normalizeDiscourseUploadUrl(options.baseUrl, response)
     if (!url) {
       throw new Error('上传成功，但未返回 URL')
     }
