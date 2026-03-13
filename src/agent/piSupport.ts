@@ -161,6 +161,9 @@ export const buildPiModel = (
 
   try {
     const model = getModel(provider as any, modelId as any) as Model<any>
+    if (!model?.api || !model?.provider || !model?.id) {
+      throw new Error(`Unknown Pi model: ${provider}/${modelId}`)
+    }
     return {
       ...model,
       baseUrl: baseUrl || model.baseUrl

@@ -26,9 +26,48 @@ export interface McpToolsCache {
 const toolsCache = new Map<string, McpToolsCache>()
 const toolNameMap = new Map<string, { serverId: string; toolName: string }>()
 const initCache = new Map<string, number>()
+const legacySseSessions = new Map<string, LegacySseSession>()
+const legacyTransportServerIds = new Set<string>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 分钟缓存
 const INIT_TTL = 5 * 60 * 1000
 const REQUEST_TIMEOUT = 10000 // 10 秒超时
+
+type JsonRpcResponse = {
+  result?: unknown
+  error?: { code: number; message: string }
+}
+
+type SseEvent = {
+  event: string
+  data: string
+}
+
+type LegacySsePending = {
+  resolve: (value: JsonRpcResponse) => void
+  reject: (error: Error) => void
+  timeoutId: ReturnType<typeof setTimeout>
+}
+
+type LegacySseSession = {
+  serverId: string
+  endpointUrl: string
+  reader: ReadableStreamDefaultReader<Uint8Array>
+  decoder: TextDecoder
+  buffer: string
+  queuedEvents: SseEvent[]
+  pending: Map<string, LegacySsePending>
+  initialized: boolean
+  pump: Promise<void>
+}
+
+const MCP_INITIALIZE_PARAMS = {
+  protocolVersion: '2024-11-05',
+  capabilities: {},
+  clientInfo: {
+    name: 'bug-v3-agent',
+    version: '1.0.0'
+  }
+}
 
 const shouldInit = (serverId: string) => {
   const last = initCache.get(serverId)
@@ -46,35 +85,38 @@ async function sendJsonRpc(
   server: McpServerConfig,
   method: string,
   params?: Record<string, unknown>
-): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
+): Promise<JsonRpcResponse> {
+  if (server.transport === 'sse' || legacyTransportServerIds.has(server.id)) {
+    return sendLegacySseJsonRpc(server, method, params)
+  }
+
+  const fallbackPayload = {
+    jsonrpc: '2.0',
+    id: Date.now().toString(),
+    method,
+    params: params || {}
+  }
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Accept:
-        server.transport === 'sse' ? 'text/event-stream' : 'application/json, text/event-stream',
-      ...(server.headers || {})
-    }
-    if (server.transport === 'sse') {
-      headers['Cache-Control'] = headers['Cache-Control'] || 'no-cache'
-    }
-
-    const body = JSON.stringify({
-      jsonrpc: '2.0',
-      id: Date.now().toString(),
-      method,
-      params: params || {}
-    })
+    const body = JSON.stringify(fallbackPayload)
 
     const response = await fetch(server.url, {
       method: 'POST',
-      headers,
+      headers: buildJsonHeaders(server),
       body,
       credentials: 'omit',
       signal: controller.signal
     })
+
+    if (response.status === 405) {
+      const allowHeader = response.headers.get('allow') || ''
+      if (allowHeader.includes('GET')) {
+        legacyTransportServerIds.add(server.id)
+        return sendLegacySseJsonRpc(server, method, params, fallbackPayload.id)
+      }
+    }
 
     if (!response.ok) {
       throw new Error(`MCP request failed: HTTP ${response.status}`)
@@ -144,6 +186,281 @@ async function sendJsonRpc(
   }
 }
 
+const buildJsonHeaders = (server: McpServerConfig, accept?: string): Record<string, string> => ({
+  'Content-Type': 'application/json',
+  Accept: accept || 'application/json, text/event-stream',
+  ...(server.headers || {})
+})
+
+const parseSseEvents = (
+  buffer: string
+): {
+  events: SseEvent[]
+  rest: string
+} => {
+  const normalized = buffer.replace(/\r\n/g, '\n')
+  const parts = normalized.split('\n\n')
+  const rest = normalized.endsWith('\n\n') ? '' : parts.pop() || ''
+  const events = parts
+    .map(part => {
+      const lines = part.split('\n')
+      let event = 'message'
+      const data: string[] = []
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          event = line.slice(6).trim() || 'message'
+          continue
+        }
+        if (line.startsWith('data:')) {
+          data.push(line.slice(5).trimStart())
+        }
+      }
+      return {
+        event,
+        data: data.join('\n').trim()
+      }
+    })
+    .filter(item => item.data)
+
+  return { events, rest }
+}
+
+const closeLegacySseSession = async (serverId: string, error?: Error) => {
+  const session = legacySseSessions.get(serverId)
+  if (!session) return
+  legacySseSessions.delete(serverId)
+  for (const pending of session.pending.values()) {
+    clearTimeout(pending.timeoutId)
+    pending.reject(error || new Error('Legacy MCP SSE session closed'))
+  }
+  session.pending.clear()
+  try {
+    await session.reader.cancel()
+  } catch {
+    // ignore stream cancellation failures
+  }
+}
+
+const dispatchLegacySseEvents = (serverId: string, events: SseEvent[]) => {
+  const session = legacySseSessions.get(serverId)
+  if (!session) return
+
+  for (const event of events) {
+    if (event.event !== 'message') continue
+
+    let payload: JsonRpcResponse & { id?: string | number }
+    try {
+      payload = JSON.parse(event.data) as JsonRpcResponse & { id?: string | number }
+    } catch {
+      continue
+    }
+
+    const messageId = payload.id != null ? String(payload.id) : ''
+    if (!messageId) continue
+
+    const pending = session.pending.get(messageId)
+    if (!pending) continue
+
+    clearTimeout(pending.timeoutId)
+    session.pending.delete(messageId)
+    pending.resolve({
+      result: payload.result,
+      error: payload.error
+    })
+  }
+}
+
+const pumpLegacySseSession = async (serverId: string) => {
+  const session = legacySseSessions.get(serverId)
+  if (!session) return
+
+  try {
+    if (session.queuedEvents.length > 0) {
+      dispatchLegacySseEvents(serverId, session.queuedEvents)
+      session.queuedEvents = []
+    }
+
+    while (true) {
+      const { done, value } = await session.reader.read()
+      if (done) {
+        throw new Error('Legacy MCP SSE stream closed unexpectedly')
+      }
+
+      session.buffer += session.decoder.decode(value, { stream: true })
+      const { events, rest } = parseSseEvents(session.buffer)
+      session.buffer = rest
+      dispatchLegacySseEvents(serverId, events)
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error : new Error('Legacy MCP SSE stream failed')
+    await closeLegacySseSession(serverId, message)
+  }
+}
+
+const openLegacySseSession = async (server: McpServerConfig): Promise<LegacySseSession> => {
+  const existing = legacySseSessions.get(server.id)
+  if (existing) return existing
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+
+  try {
+    const response = await fetch(server.url, {
+      method: 'GET',
+      headers: {
+        Accept: 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        ...(server.headers || {})
+      },
+      credentials: 'omit',
+      signal: controller.signal
+    })
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Legacy MCP SSE request failed: HTTP ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        throw new Error('Legacy MCP SSE stream ended before endpoint announcement')
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      const { events, rest } = parseSseEvents(buffer)
+      buffer = rest
+      const endpointIndex = events.findIndex(event => event.event === 'endpoint')
+      if (endpointIndex < 0) continue
+
+      const endpointEvent = events[endpointIndex]
+      const endpointUrl = new URL(endpointEvent.data, server.url).toString()
+      const session: LegacySseSession = {
+        serverId: server.id,
+        endpointUrl,
+        reader,
+        decoder,
+        buffer,
+        queuedEvents: events.slice(endpointIndex + 1),
+        pending: new Map(),
+        initialized: false,
+        pump: Promise.resolve()
+      }
+      legacySseSessions.set(server.id, session)
+      session.pump = pumpLegacySseSession(server.id)
+      legacyTransportServerIds.add(server.id)
+      return session
+    }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+const dispatchLegacySseJsonRpc = (
+  session: LegacySseSession,
+  server: McpServerConfig,
+  method: string,
+  params?: Record<string, unknown>,
+  requestId?: string
+): Promise<JsonRpcResponse> => {
+  const id = requestId || Date.now().toString()
+  const body = JSON.stringify({
+    jsonrpc: '2.0',
+    id,
+    method,
+    params: params || {}
+  })
+
+  return new Promise<JsonRpcResponse>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      session.pending.delete(id)
+      reject(new Error(`Legacy MCP SSE request timed out: ${method}`))
+    }, REQUEST_TIMEOUT)
+
+    session.pending.set(id, {
+      resolve,
+      reject,
+      timeoutId
+    })
+
+    void (async () => {
+      try {
+        const response = await fetch(session.endpointUrl, {
+          method: 'POST',
+          headers: buildJsonHeaders(server),
+          body,
+          credentials: 'omit'
+        })
+
+        if (!response.ok && response.status !== 202) {
+          clearTimeout(timeoutId)
+          session.pending.delete(id)
+          reject(new Error(`Legacy MCP request failed: HTTP ${response.status}`))
+        }
+      } catch (error) {
+        clearTimeout(timeoutId)
+        session.pending.delete(id)
+        reject(error instanceof Error ? error : new Error('Legacy MCP request failed'))
+      }
+    })()
+  })
+}
+
+const sendLegacySseNotification = async (
+  session: LegacySseSession,
+  server: McpServerConfig,
+  method: string,
+  params?: Record<string, unknown>
+) => {
+  const response = await fetch(session.endpointUrl, {
+    method: 'POST',
+    headers: buildJsonHeaders(server),
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method,
+      params: params || {}
+    }),
+    credentials: 'omit'
+  })
+
+  if (!response.ok && response.status !== 202) {
+    throw new Error(`Legacy MCP notification failed: HTTP ${response.status}`)
+  }
+}
+
+const sendLegacySseJsonRpc = async (
+  server: McpServerConfig,
+  method: string,
+  params?: Record<string, unknown>,
+  requestId?: string
+): Promise<JsonRpcResponse> => {
+  const session = await openLegacySseSession(server)
+
+  if (method !== 'initialize' && !session.initialized) {
+    const initResponse = await dispatchLegacySseJsonRpc(
+      session,
+      server,
+      'initialize',
+      MCP_INITIALIZE_PARAMS
+    )
+    if (initResponse.error) {
+      return initResponse
+    }
+    await sendLegacySseNotification(session, server, 'notifications/initialized')
+    session.initialized = true
+  }
+
+  const response = await dispatchLegacySseJsonRpc(session, server, method, params, requestId)
+  if (method === 'initialize' && !response.error) {
+    await sendLegacySseNotification(session, server, 'notifications/initialized')
+    session.initialized = true
+  }
+  return response
+}
+
 /**
  * 初始化 MCP 服务连接
  */
@@ -151,14 +468,7 @@ export async function initializeMcpServer(
   server: McpServerConfig
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await sendJsonRpc(server, 'initialize', {
-      protocolVersion: '2024-11-05',
-      capabilities: {},
-      clientInfo: {
-        name: 'bug-v3-agent',
-        version: '1.0.0'
-      }
-    })
+    const response = await sendJsonRpc(server, 'initialize', MCP_INITIALIZE_PARAMS)
 
     if (response.error) {
       return { ok: false, error: response.error.message }
@@ -353,9 +663,15 @@ export function clearToolsCache(serverId?: string): void {
       if (value.serverId === serverId) toolNameMap.delete(key)
     }
     initCache.delete(serverId)
+    legacyTransportServerIds.delete(serverId)
+    void closeLegacySseSession(serverId)
   } else {
     toolsCache.clear()
     toolNameMap.clear()
     initCache.clear()
+    legacyTransportServerIds.clear()
+    for (const serverKey of legacySseSessions.keys()) {
+      void closeLegacySseSession(serverKey)
+    }
   }
 }

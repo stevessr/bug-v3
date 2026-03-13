@@ -206,7 +206,7 @@ export const BUILTIN_MCP_SERVERS: BuiltinMcpServer[] = [
     id: 'builtin-tavily-expert',
     name: 'Tavily Expert',
     url: 'https://tavily.api.tadata.com/mcp/tavily/$TAVILY_PATH',
-    transport: 'streamable-http',
+    transport: 'sse',
     description: 'Tavily Expert 搜索服务，支持更强大的搜索和内容提取功能',
     category: 'search',
     requiresApiKey: 'TAVILY_PATH',
