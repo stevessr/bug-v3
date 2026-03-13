@@ -76,9 +76,9 @@ const updateHeaders = (server: McpServerConfig) => {
 
 const addPresetSubagent = () => {
   addSubagent({
-    name: '新预配置子代理',
+    name: '新代理预设',
     description: '可作为任务模板复用。',
-    systemPrompt: '你是任务子代理，按照提示执行自动化步骤。',
+    systemPrompt: '你是任务代理，按照提示执行自动化步骤。',
     permissions: {
       click: true,
       scroll: true,
@@ -185,17 +185,25 @@ onMounted(() => {
     <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-base font-medium dark:text-white">Claude Agent 连接</h3>
+          <h3 class="text-base font-medium dark:text-white">Pi Agent 连接</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            支持自定义 baseUrl 与 apiKey，使用 Claude Agent SDK 调用。
+            使用 Pi Agent SDK / pi-ai 驱动。模型支持 `provider/model` 写法，也可按 baseUrl
+            或模型名前缀自动推断 provider。
           </p>
         </div>
         <a-button size="small" @click="restoreDefaults">重置为默认</a-button>
       </div>
 
       <div class="grid grid-cols-1 gap-4">
-        <a-input v-model:value="settings.baseUrl" placeholder="https://api.anthropic.com"></a-input>
-        <a-input v-model:value="settings.apiKey" placeholder="API Key" type="password"></a-input>
+        <a-input
+          v-model:value="settings.baseUrl"
+          placeholder="可选：覆盖默认 provider endpoint，例如 https://openrouter.ai/api/v1"
+        ></a-input>
+        <a-input
+          v-model:value="settings.apiKey"
+          placeholder="Provider API Key"
+          type="password"
+        ></a-input>
       </div>
 
       <template v-if="enableLocalMcpBridge">
@@ -232,23 +240,23 @@ onMounted(() => {
         当前构建（--no-browser）已在编译期移除本地 MCP 桥接支持。
       </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div>
-          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">API 风格</label>
-          <a-select v-model:value="settings.apiFlavor" class="w-full">
-            <a-select-option value="messages">Messages API</a-select-option>
-            <a-select-option value="responses">Responses API</a-select-option>
-          </a-select>
-        </div>
-        <a-input v-model:value="settings.taskModel" placeholder="任务模型"></a-input>
-        <a-input v-model:value="settings.reasoningModel" placeholder="思考模型"></a-input>
-        <a-input v-model:value="settings.imageModel" placeholder="图片转述模型"></a-input>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <a-input
+          v-model:value="settings.taskModel"
+          placeholder="任务模型，例如 anthropic/claude-sonnet-4-20250514"
+        ></a-input>
+        <a-input
+          v-model:value="settings.reasoningModel"
+          placeholder="思考模型（可留空沿用任务模型）"
+        ></a-input>
+        <a-input
+          v-model:value="settings.imageModel"
+          placeholder="图片转述模型（可留空沿用任务模型）"
+        ></a-input>
       </div>
       <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-        <template v-if="settings.apiFlavor === 'responses'">
-          Responses API 是 Anthropic 的新 API 格式，支持更好的流式响应。需要启用 Beta 功能。
-        </template>
-        <template v-else>Messages API 是标准的 Claude API 格式，兼容性最好。</template>
+        兼容提示：旧配置里的 `apiFlavor` 字段仍会保留，但 Pi 运行时只把它当作存量配置兼容字段，
+        不再按旧的 provider 专有请求分支切换。
       </p>
 
       <div class="grid grid-cols-1 gap-4">
@@ -265,7 +273,7 @@ onMounted(() => {
         <a-textarea
           v-model:value="settings.masterSystemPrompt"
           :rows="3"
-          placeholder="总代理提示词"
+          placeholder="主系统提示词"
         />
       </div>
 
@@ -353,25 +361,25 @@ onMounted(() => {
     <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-base font-medium dark:text-white">Subagent 配置</h3>
+          <h3 class="text-base font-medium dark:text-white">代理预设</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            为不同任务场景配置独立模型、提示词与权限。
+            为不同任务场景配置独立模型、提示词与权限。数据结构仍沿用“subagent”，但现在主要作为可切换预设使用。
           </p>
         </div>
         <div class="flex items-center gap-2">
           <a-button size="small" @click="addSubagent()">新增</a-button>
-          <a-button size="small" @click="addPresetSubagent">新增预配置</a-button>
+          <a-button size="small" @click="addPresetSubagent">新增预设</a-button>
         </div>
       </div>
 
       <div class="space-y-4">
         <div class="text-sm text-gray-600 dark:text-gray-300">
-          默认子代理：
+          默认预设：
           <a-select
             v-model:value="settings.defaultSubagentId"
             :options="subagentOptions"
             class="w-48 ml-2"
-            placeholder="选择默认子代理"
+            placeholder="选择默认预设"
           />
         </div>
         <div

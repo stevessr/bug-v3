@@ -1027,9 +1027,9 @@ const onBypassModeChange = (value: boolean | string | number) => {
     <div class="agent-header">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <div class="agent-avatar">C</div>
+          <div class="agent-avatar">P</div>
           <div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white">Claude Task Agent</div>
+            <div class="text-sm font-semibold text-gray-900 dark:text-white">Pi Task Agent</div>
             <div class="text-[11px] text-gray-400">
               {{ hasConnection ? '已连接' : '未连接' }} · {{ mcpSummary }}
             </div>
@@ -1058,7 +1058,7 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
     <div class="agent-body">
       <div v-if="messages.length === 0" class="agent-empty">
-        <div class="agent-empty-title">Claude 已准备好</div>
+        <div class="agent-empty-title">Pi Agent 已准备好</div>
         <div class="agent-empty-sub">
           描述你要自动化的任务，例如“打开当前页面的登录按钮并填写账号信息”。
         </div>
@@ -1086,7 +1086,7 @@ const onBypassModeChange = (value: boolean | string | number) => {
 
       <div v-for="message in messages" :key="message.id" class="agent-message">
         <div class="agent-message-role" :data-role="message.role">
-          {{ message.role === 'user' ? '你' : 'Claude' }}
+          {{ message.role === 'user' ? '你' : 'Pi' }}
           <a-button
             v-if="message.role === 'user'"
             size="small"

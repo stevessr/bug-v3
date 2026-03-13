@@ -197,7 +197,7 @@ const handleSearch = () => {
       <div class="sidebar-header">
         <div class="flex items-center justify-between px-3 py-2">
           <div class="flex flex-col">
-            <span class="sidebar-title">Claude 助手</span>
+            <span class="sidebar-title">Pi 助手</span>
             <span class="sidebar-subtitle">自动化任务与网页操作</span>
           </div>
           <div class="sidebar-toggle">

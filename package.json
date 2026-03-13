@@ -47,6 +47,8 @@
     "@bbob/core": "^4.3.1",
     "@bbob/html": "^4.3.1",
     "@bbob/parser": "^4.3.1",
+    "@mariozechner/pi-agent-core": "0.57.1",
+    "@mariozechner/pi-ai": "0.57.1",
     "ant-design-vue": "^4.2.6",
     "archiver": "^7.0.1",
     "dayjs": "^1.11.19",
@@ -129,7 +131,7 @@
       "core-js",
       "electron",
       "esbuild",
-      "less",
+      "protobufjs",
       "vue-demi"
     ]
   },
