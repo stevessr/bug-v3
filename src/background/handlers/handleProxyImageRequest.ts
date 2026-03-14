@@ -2,7 +2,7 @@
  * Proxy image requests through background service worker
  * to bypass CORP (Cross-Origin-Resource-Policy) restrictions
  *
- * For linux.do images, tries to fetch via an open linux.do tab first.
+ * For linux.do images, tries to fetch via an open tab of the same domain first.
  * If no tab is found, silently opens one in the background.
  */
 
@@ -155,7 +155,8 @@ export async function handleProxyImageRequest(
 
     // For linux.do images, try to fetch via content script first
     if (urlObj.hostname === 'linux.do' || urlObj.hostname.endsWith('.linux.do')) {
-      const contentResult = await fetchViaContentScript(opts.url, 'linux.do')
+      const contentDomain = urlObj.hostname
+      const contentResult = await fetchViaContentScript(opts.url, contentDomain)
       if (contentResult.success) {
         sendResponse(contentResult)
         return
