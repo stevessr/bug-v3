@@ -50,6 +50,15 @@ export interface AgentPermissions {
   navigate: boolean
   clickDom: boolean
   input: boolean
+  fileAccess: boolean
+}
+
+export interface AgentFolderRoot {
+  id: string
+  alias: string
+  handleName: string
+  enabled: boolean
+  readOnly: boolean
 }
 
 export interface SubAgentConfig {
@@ -78,6 +87,7 @@ export interface AgentSettings {
   enableThoughts: boolean
   enableMcp: boolean
   mcpServers: McpServerConfig[]
+  folderRoots: AgentFolderRoot[]
   subagents: SubAgentConfig[]
   defaultSubagentId?: string
 }
@@ -115,6 +125,9 @@ export type AgentActionType =
   | 'focus'
   | 'getDOM'
   | 'blur'
+  | 'list-files'
+  | 'read-file'
+  | 'write-file'
 
 export interface AgentActionBase {
   id: string
@@ -211,6 +224,32 @@ export interface DomTreeAction extends AgentActionBase {
   }
 }
 
+export interface FileActionBase extends AgentActionBase {
+  rootId?: string
+  rootAlias?: string
+  path?: string
+}
+
+export interface ListFilesAction extends FileActionBase {
+  type: 'list-files'
+  recursive?: boolean
+  maxEntries?: number
+}
+
+export interface ReadFileAction extends FileActionBase {
+  type: 'read-file'
+  path: string
+  maxBytes?: number
+}
+
+export interface WriteFileAction extends FileActionBase {
+  type: 'write-file'
+  path: string
+  content: string
+  overwrite?: boolean
+  createParents?: boolean
+}
+
 export type AgentAction =
   | ClickAction
   | ScrollAction
@@ -223,6 +262,9 @@ export type AgentAction =
   | DragAction
   | SelectAction
   | DomTreeAction
+  | ListFilesAction
+  | ReadFileAction
+  | WriteFileAction
 
 export interface AgentActionResult {
   id: string

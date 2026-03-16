@@ -64,7 +64,8 @@ const activePermissions = computed(() => {
     { key: 'screenshot', label: '截图' },
     { key: 'navigate', label: '切换 URL' },
     { key: 'clickDom', label: '点击 DOM' },
-    { key: 'input', label: '输入' }
+    { key: 'input', label: '输入' },
+    { key: 'fileAccess', label: '文件夹' }
   ]
   return labels.filter(item => agent.permissions[item.key])
 })
@@ -469,7 +470,7 @@ const runActions = async () => {
     pendingActions.value,
     activeSubagent.value.permissions,
     targetTabId.value,
-    { parallel: lastParallelActions.value }
+    { parallel: lastParallelActions.value, settings: settings.value }
   )
   for (const result of results) {
     actionResults.value[result.id] = result

@@ -1,4 +1,5 @@
-import type { AgentAction, AgentActionResult, AgentPermissions } from './types'
+import { executeFolderAction } from './folderAccess'
+import type { AgentAction, AgentActionResult, AgentPermissions, AgentSettings } from './types'
 
 type ActionStatus = AgentActionResult
 
@@ -19,7 +20,10 @@ const ACTION_TYPE_TO_PERMISSION: Record<string, keyof AgentPermissions> = {
   touch: 'touch',
   screenshot: 'screenshot',
   navigate: 'navigate',
-  input: 'input'
+  input: 'input',
+  'list-files': 'fileAccess',
+  'read-file': 'fileAccess',
+  'write-file': 'fileAccess'
 }
 
 const clampInteger = (value: unknown, fallback: number, min: number, max: number): number => {
@@ -90,7 +94,7 @@ export async function executeAgentActions(
   actions: AgentAction[],
   permissions: AgentPermissions,
   targetTabId?: number | null,
-  options?: { parallel?: boolean }
+  options?: { parallel?: boolean; settings?: AgentSettings }
 ): Promise<ActionStatus[]> {
   if (!isChromeAvailable()) {
     return actions.map(action => ({
@@ -132,6 +136,22 @@ export async function executeAgentActions(
         success: false,
         error: '权限未开启'
       }
+    }
+
+    if (
+      action.type === 'list-files' ||
+      action.type === 'read-file' ||
+      action.type === 'write-file'
+    ) {
+      if (!options?.settings) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: '缺少 Agent 设置，无法执行文件夹访问动作'
+        }
+      }
+      return executeFolderAction(action, options.settings)
     }
 
     if (action.type === 'navigate') {

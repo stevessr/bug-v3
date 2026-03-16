@@ -20,6 +20,7 @@ export function loadAgentSettings(): AgentSettings {
       ...defaultAgentSettings,
       ...parsed,
       mcpServers: parsed.mcpServers || [],
+      folderRoots: parsed.folderRoots || [],
       subagents: parsed.subagents || defaultAgentSettings.subagents,
       maxTokens: resolveMaxTokens(parsed.maxTokens, defaultAgentSettings.maxTokens),
       masterSystemPrompt: parsed.masterSystemPrompt || defaultAgentSettings.masterSystemPrompt,

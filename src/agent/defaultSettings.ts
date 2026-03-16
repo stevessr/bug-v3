@@ -7,7 +7,8 @@ const defaultPermissions: AgentPermissions = {
   screenshot: true,
   navigate: true,
   clickDom: true,
-  input: true
+  input: true,
+  fileAccess: false
 }
 
 const defaultSubagents: SubAgentConfig[] = [
@@ -180,6 +181,7 @@ export const defaultAgentSettings: AgentSettings = {
       enabled: true
     }
   ],
+  folderRoots: [],
   subagents: defaultSubagents,
   defaultSubagentId: defaultSubagents[0].id
 }

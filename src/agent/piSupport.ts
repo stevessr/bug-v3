@@ -238,7 +238,6 @@ export const buildSystemPrompt = (
     '你是浏览器扩展侧边栏里的自动化助手。',
     '优先使用一次 browser_actions 工具调用返回 message、steps、thoughts 与 actions，不要输出 JSON 文本。',
     '每一轮最多调用一次 browser_actions；把本轮需要的动作合并到同一次调用中。',
-    'action 只使用以下类型：click, double-click, right-click, hover, focus, blur, scroll, touch, screenshot, navigate, click-dom, input, key, type, drag, select, getDOM。',
     '优先通过直接 DOM 访问获取文字内容或结构信息，再决定截图或滚动。',
     '如果需要操作页面元素，请优先提供 selector；否则使用坐标 x/y。',
     'DOM 查询支持 includeMarkdown，可在获取结构时同时拿到页面文字摘要（markdown）。',
@@ -253,6 +252,33 @@ export const buildSystemPrompt = (
     'DOM 探索工作流：仅在 DOM 信息不足时才截图，且截图后仍需回到 DOM 证据。',
     'DOM 探索工作流：执行关键动作前后都应给出可验证依据（步骤描述与后置验证）。'
   ]
+
+  const enabledFolderRoots = settings.folderRoots.filter(root => root.enabled)
+  const allowFileAccess = subagent ? subagent.permissions.fileAccess : true
+  const actionTypes = [
+    'click',
+    'double-click',
+    'right-click',
+    'hover',
+    'focus',
+    'blur',
+    'scroll',
+    'touch',
+    'screenshot',
+    'navigate',
+    'click-dom',
+    'input',
+    'key',
+    'type',
+    'drag',
+    'select',
+    'getDOM'
+  ]
+
+  if (allowFileAccess && enabledFolderRoots.length > 0) {
+    actionTypes.push('list-files', 'read-file', 'write-file')
+  }
+  lines.splice(3, 0, `action 只使用以下类型：${actionTypes.join(', ')}。`)
 
   if (settings.enableThoughts) {
     lines.push('如果模型支持 reasoning，可将简短思考摘要放入 thoughts 数组。')
@@ -280,6 +306,24 @@ export const buildSystemPrompt = (
 
   if (subagent?.systemPrompt) {
     lines.push(subagent.systemPrompt)
+  }
+
+  if (allowFileAccess) {
+    if (enabledFolderRoots.length > 0) {
+      lines.push(
+        '已手动授权本地文件夹访问。只能访问以下 rootAlias，对应路径必须是相对路径，禁止使用绝对路径或 ..：',
+        ...enabledFolderRoots.map(
+          root => `- ${root.alias}: ${root.handleName}（${root.readOnly ? '只读' : '可写'}）`
+        ),
+        'list-files: 列出指定 rootAlias/path 下的文件和子目录，可选 recursive 和 maxEntries。',
+        'read-file: 读取文本文件，提供 rootAlias 与 path。',
+        'write-file: 写入文本文件，提供 rootAlias、path、content；仅对可写目录使用。'
+      )
+    } else {
+      lines.push('当前未配置任何可访问文件夹，不要尝试 list-files、read-file 或 write-file。')
+    }
+  } else {
+    lines.push('当前预设未启用文件访问权限，不要尝试 list-files、read-file 或 write-file。')
   }
 
   const memoryLine = memoryToPrompt()

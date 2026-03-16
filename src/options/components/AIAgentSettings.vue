@@ -1,11 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 
 import SkillsSettings from './SkillsSettings.vue'
 
+import {
+  getAgentFolderRootState,
+  pickAgentFolderRoot,
+  removeAgentFolderHandle,
+  requestAgentFolderPermission,
+  supportsAgentFolderAccess,
+  type FolderPermissionState
+} from '@/agent/folderAccess'
 import { useAgentSettings } from '@/agent/useAgentSettings'
-import type { AgentPermissions, McpServerConfig, SubAgentConfig } from '@/agent/types'
+import type {
+  AgentFolderRoot,
+  AgentPermissions,
+  McpServerConfig,
+  SubAgentConfig
+} from '@/agent/types'
 
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
 const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
@@ -17,7 +30,10 @@ const mcpTestStatus = ref('')
 const mcpTestLoading = ref(false)
 const mcpServerStatus = reactive<Record<string, string>>({})
 const mcpServerLoading = reactive<Record<string, boolean>>({})
+const folderRootStatus = reactive<Record<string, string>>({})
+const folderRootLoading = reactive<Record<string, boolean>>({})
 const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
+const folderAccessSupported = supportsAgentFolderAccess()
 
 const subagentOptions = computed(() =>
   settings.value.subagents.map(agent => ({
@@ -86,7 +102,8 @@ const addPresetSubagent = () => {
       screenshot: true,
       navigate: true,
       clickDom: true,
-      input: true
+      input: true,
+      fileAccess: false
     },
     enabled: true,
     isPreset: true
@@ -95,6 +112,208 @@ const addPresetSubagent = () => {
 
 const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, value: boolean) => {
   agent.permissions[key] = value
+}
+
+const normalizeFolderAliasValue = (value: string) =>
+  value
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'folder'
+
+const ensureUniqueFolderAlias = (value: string, excludeId?: string) => {
+  const base = normalizeFolderAliasValue(value)
+  const used = new Set(
+    settings.value.folderRoots
+      .filter(root => root.id !== excludeId)
+      .map(root => root.alias.toLowerCase())
+  )
+  if (!used.has(base.toLowerCase())) return base
+
+  let suffix = 2
+  let candidate = `${base}-${suffix}`
+  while (used.has(candidate.toLowerCase())) {
+    suffix += 1
+    candidate = `${base}-${suffix}`
+  }
+  return candidate
+}
+
+const describePermissionState = (
+  permission: FolderPermissionState,
+  readOnly: boolean,
+  handleName: string
+) => {
+  if (permission === 'granted') {
+    return `${handleName || '已选文件夹'} · ${readOnly ? '只读已授权' : '读写已授权'}`
+  }
+  if (permission === 'prompt') {
+    return `${handleName || '已选文件夹'} · 需要重新授权${readOnly ? '读取' : '读写'}权限`
+  }
+  if (permission === 'denied') {
+    return `${handleName || '已选文件夹'} · 权限被拒绝，请重新授权`
+  }
+  if (permission === 'missing') {
+    return `${handleName || '未选择文件夹'} · 句柄缺失，请重新选择`
+  }
+  return '当前环境不支持文件夹访问'
+}
+
+const refreshFolderRootState = async (root: AgentFolderRoot) => {
+  folderRootLoading[root.id] = true
+  try {
+    const state = await getAgentFolderRootState(root)
+    if (state.handleName && root.handleName !== state.handleName) {
+      root.handleName = state.handleName
+    }
+    folderRootStatus[root.id] = state.error
+      ? state.error
+      : describePermissionState(
+          state.permission,
+          root.readOnly,
+          state.handleName || root.handleName
+        )
+  } catch (error: any) {
+    folderRootStatus[root.id] = error?.message || '无法读取文件夹状态'
+  } finally {
+    folderRootLoading[root.id] = false
+  }
+}
+
+const refreshAllFolderRoots = async () => {
+  if (!folderAccessSupported) return
+  await Promise.all(settings.value.folderRoots.map(root => refreshFolderRootState(root)))
+}
+
+const ensureFolderAlias = (root: AgentFolderRoot) => {
+  root.alias = ensureUniqueFolderAlias(root.alias || root.handleName || 'folder', root.id)
+}
+
+const addFolderRoot = async () => {
+  if (!folderAccessSupported) return
+  const id = nanoid()
+  try {
+    folderRootLoading[id] = true
+    const selected = await pickAgentFolderRoot(id, 'read')
+    const root: AgentFolderRoot = {
+      id,
+      alias: ensureUniqueFolderAlias(selected.handleName || 'folder'),
+      handleName: selected.handleName,
+      enabled: true,
+      readOnly: true
+    }
+    settings.value = {
+      ...settings.value,
+      folderRoots: [...settings.value.folderRoots, root]
+    }
+    folderRootStatus[id] = describePermissionState(selected.permission, true, selected.handleName)
+    await refreshFolderRootState(root)
+  } catch (error: any) {
+    if (error?.name !== 'AbortError') {
+      folderRootStatus[id] = error?.message || '选择文件夹失败'
+    }
+  } finally {
+    folderRootLoading[id] = false
+  }
+}
+
+const reselectFolderRoot = async (root: AgentFolderRoot) => {
+  if (!folderAccessSupported) return
+  folderRootLoading[root.id] = true
+  try {
+    const selected = await pickAgentFolderRoot(root.id, root.readOnly ? 'read' : 'readwrite')
+    root.handleName = selected.handleName
+    ensureFolderAlias(root)
+    folderRootStatus[root.id] = describePermissionState(
+      selected.permission,
+      root.readOnly,
+      selected.handleName
+    )
+    await refreshFolderRootState(root)
+  } catch (error: any) {
+    if (error?.name !== 'AbortError') {
+      folderRootStatus[root.id] = error?.message || '重新选择文件夹失败'
+    }
+  } finally {
+    folderRootLoading[root.id] = false
+  }
+}
+
+const requestFolderRootPermission = async (root: AgentFolderRoot) => {
+  folderRootLoading[root.id] = true
+  try {
+    const result = await requestAgentFolderPermission(root.id, root.readOnly ? 'read' : 'readwrite')
+    if (result.handleName) {
+      root.handleName = result.handleName
+    }
+    folderRootStatus[root.id] = describePermissionState(
+      result.permission,
+      root.readOnly,
+      result.handleName || root.handleName
+    )
+    await refreshFolderRootState(root)
+  } catch (error: any) {
+    folderRootStatus[root.id] = error?.message || '授权失败'
+  } finally {
+    folderRootLoading[root.id] = false
+  }
+}
+
+const onFolderReadOnlyChange = async (root: AgentFolderRoot, value: boolean) => {
+  if (value) {
+    root.readOnly = true
+    await refreshFolderRootState(root)
+    return
+  }
+
+  folderRootLoading[root.id] = true
+  try {
+    const result = await requestAgentFolderPermission(root.id, 'readwrite')
+    if (result.permission !== 'granted') {
+      folderRootStatus[root.id] = describePermissionState(
+        result.permission,
+        true,
+        result.handleName || root.handleName
+      )
+      root.readOnly = true
+      return
+    }
+
+    root.readOnly = false
+    if (result.handleName) {
+      root.handleName = result.handleName
+    }
+    folderRootStatus[root.id] = describePermissionState(
+      result.permission,
+      false,
+      result.handleName || root.handleName
+    )
+    await refreshFolderRootState(root)
+  } catch (error: any) {
+    root.readOnly = true
+    folderRootStatus[root.id] = error?.message || '申请写入权限失败'
+  } finally {
+    folderRootLoading[root.id] = false
+  }
+}
+
+const removeFolderRoot = async (id: string) => {
+  settings.value = {
+    ...settings.value,
+    folderRoots: settings.value.folderRoots.filter(root => root.id !== id)
+  }
+  delete folderRootStatus[id]
+  delete folderRootLoading[id]
+  await removeAgentFolderHandle(id)
+}
+
+const restoreAgentDefaults = async () => {
+  const rootIds = settings.value.folderRoots.map(root => root.id)
+  restoreDefaults()
+  Object.keys(folderRootStatus).forEach(key => delete folderRootStatus[key])
+  Object.keys(folderRootLoading).forEach(key => delete folderRootLoading[key])
+  await Promise.all(rootIds.map(id => removeAgentFolderHandle(id)))
 }
 
 const loadMcpBridgeState = () => {
@@ -178,6 +397,17 @@ const testMcpServerConnection = async (server: McpServerConfig) => {
 onMounted(() => {
   loadMcpBridgeState()
 })
+
+onMounted(() => {
+  void refreshAllFolderRoots()
+})
+
+watch(
+  () => settings.value.folderRoots.map(root => root.id).join(','),
+  () => {
+    void refreshAllFolderRoots()
+  }
+)
 </script>
 
 <template>
@@ -191,7 +421,7 @@ onMounted(() => {
             或模型名前缀自动推断 provider。
           </p>
         </div>
-        <a-button size="small" @click="restoreDefaults">重置为默认</a-button>
+        <a-button size="small" @click="restoreAgentDefaults">重置为默认</a-button>
       </div>
 
       <div class="grid grid-cols-1 gap-4">
@@ -361,6 +591,87 @@ onMounted(() => {
     <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
+          <h3 class="text-base font-medium dark:text-white">文件夹访问</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Agent 只能访问你在这里手动选择并授权的目录。执行时使用 `rootAlias + path`，
+            路径必须是相对路径。
+          </p>
+        </div>
+        <a-button size="small" :disabled="!folderAccessSupported" @click="addFolderRoot">
+          添加文件夹
+        </a-button>
+      </div>
+
+      <div v-if="!folderAccessSupported" class="text-xs text-amber-600 dark:text-amber-400">
+        当前环境不支持 File System Access API，无法手动授权文件夹。
+      </div>
+
+      <template v-else>
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          默认建议先用只读模式验证工作流；关闭“只读”时会在当前点击里申请写入权限。
+        </div>
+
+        <div
+          v-for="root in settings.folderRoots"
+          :key="root.id"
+          class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <a-input v-model:value="root.alias" class="max-w-xs" @blur="ensureFolderAlias(root)" />
+            <div class="flex items-center gap-2">
+              <a-switch v-model:checked="root.enabled" size="small" />
+              <a-button size="small" danger @click="removeFolderRoot(root.id)">删除</a-button>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            目录：{{ root.handleName || '未选择' }}
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <a-switch
+              :checked="root.readOnly"
+              checked-children="只读"
+              un-checked-children="可写"
+              @change="value => onFolderReadOnlyChange(root, Boolean(value))"
+            />
+          </div>
+
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{ folderRootStatus[root.id] || '尚未校验权限状态。' }}
+            </div>
+            <div class="flex items-center gap-2">
+              <a-button
+                size="small"
+                :loading="folderRootLoading[root.id]"
+                @click="requestFolderRootPermission(root)"
+              >
+                重新授权
+              </a-button>
+              <a-button
+                size="small"
+                :loading="folderRootLoading[root.id]"
+                @click="reselectFolderRoot(root)"
+              >
+                重新选择
+              </a-button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="settings.folderRoots.length === 0"
+          class="rounded-md border border-dashed border-gray-300 dark:border-gray-700 px-4 py-5 text-xs text-gray-500 dark:text-gray-400"
+        >
+          还没有配置任何可访问目录。添加后，Agent 才能使用 `list-files`、`read-file`、`write-file`。
+        </div>
+      </template>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
           <h3 class="text-base font-medium dark:text-white">代理预设</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
             为不同任务场景配置独立模型、提示词与权限。数据结构仍沿用“subagent”，但现在主要作为可切换预设使用。
@@ -463,6 +774,12 @@ onMounted(() => {
               @change="value => updatePermission(agent, 'input', value as boolean)"
               checked-children="输入"
               un-checked-children="输入"
+            />
+            <a-switch
+              :checked="agent.permissions.fileAccess"
+              @change="value => updatePermission(agent, 'fileAccess', value as boolean)"
+              checked-children="文件夹"
+              un-checked-children="文件夹"
             />
           </div>
         </div>

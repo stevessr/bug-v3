@@ -23,7 +23,10 @@ const ACTION_TYPES = [
   'select',
   'focus',
   'blur',
-  'getDOM'
+  'getDOM',
+  'list-files',
+  'read-file',
+  'write-file'
 ] as const
 
 const ACTION_TYPE_SET = new Set<string>(ACTION_TYPES)
@@ -54,7 +57,16 @@ const actionSchema = z.object({
   toY: z.number().optional(),
   value: z.string().optional(),
   label: z.string().optional(),
-  options: z.record(z.string(), z.any()).optional()
+  options: z.record(z.string(), z.any()).optional(),
+  rootId: z.string().optional(),
+  rootAlias: z.string().optional(),
+  path: z.string().optional(),
+  recursive: z.boolean().optional(),
+  maxEntries: z.number().optional(),
+  maxBytes: z.number().optional(),
+  content: z.string().optional(),
+  overwrite: z.boolean().optional(),
+  createParents: z.boolean().optional()
 })
 
 const listFromString = z.preprocess(
@@ -468,7 +480,7 @@ export const parseToolInputs = (toolUses: { id?: string; input?: unknown }[]): P
 export const toolSchema = {
   name: 'browser_actions',
   description:
-    'Respond with a message and optional browser actions. Use parallelActions=true for independent actions.',
+    'Respond with a message and optional browser or local folder actions. Use parallelActions=true for independent actions.',
   input_schema: {
     type: 'object',
     properties: {
@@ -506,7 +518,16 @@ export const toolSchema = {
             toY: { type: 'number' },
             value: { type: 'string' },
             label: { type: 'string' },
-            options: { type: 'object' }
+            options: { type: 'object' },
+            rootId: { type: 'string' },
+            rootAlias: { type: 'string' },
+            path: { type: 'string' },
+            recursive: { type: 'boolean' },
+            maxEntries: { type: 'number' },
+            maxBytes: { type: 'number' },
+            content: { type: 'string' },
+            overwrite: { type: 'boolean' },
+            createParents: { type: 'boolean' }
           },
           required: ['type']
         }

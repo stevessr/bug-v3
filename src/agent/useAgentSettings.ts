@@ -49,7 +49,8 @@ export function useAgentSettings() {
         screenshot: true,
         navigate: true,
         clickDom: true,
-        input: true
+        input: true,
+        fileAccess: false
       },
       enabled: agent?.enabled ?? true,
       isPreset: agent?.isPreset

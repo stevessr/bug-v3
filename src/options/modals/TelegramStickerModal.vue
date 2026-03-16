@@ -279,6 +279,10 @@ const doImport = async () => {
         progress.value.processed = i + 1
       } catch (err) {
         console.error(`处理贴纸失败：`, err)
+        if ((err as any)?.shouldTerminateUploadFlow === true) {
+          message.error('检测到无等待信息的 429，已终止剩余上传以避免继续请求。')
+          break
+        }
         // message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
       }
     }
