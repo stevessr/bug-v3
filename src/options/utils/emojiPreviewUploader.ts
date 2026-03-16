@@ -29,6 +29,9 @@ interface EmojiUploadError {
     wait_seconds: number
     time_left: string
   }
+  status?: number
+  shouldTerminateUploadFlow?: boolean
+  message?: string
 }
 
 interface EmojiUploadQueueItem {
@@ -122,6 +125,14 @@ class EmojiPreviewUploader {
       } catch (_error: any) {
         item.error = _error
 
+        if (this.shouldTerminateUploadFlow(_error)) {
+          this.moveToQueue(item, 'failed')
+          item.reject(_error)
+          this.terminatePendingUploads(_error)
+          this.updateProgressDialog()
+          break
+        }
+
         if (this.shouldRetry(_error, item)) {
           item.retryCount++
 
@@ -142,6 +153,22 @@ class EmojiPreviewUploader {
     }
 
     this.isProcessing = false
+  }
+
+  private shouldTerminateUploadFlow(error: any): boolean {
+    return Boolean(
+      error?.shouldTerminateUploadFlow ||
+        (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
+    )
+  }
+
+  private terminatePendingUploads(error: any) {
+    const pendingItems = [...this.waitingQueue]
+    for (const pendingItem of pendingItems) {
+      pendingItem.error = error
+      this.moveToQueue(pendingItem, 'failed')
+      pendingItem.reject(error)
+    }
   }
 
   private shouldRetry(_error: any, item: EmojiUploadQueueItem): boolean {
@@ -453,7 +480,11 @@ class EmojiPreviewUploader {
       // Convert error to expected format
       throw {
         errors: [error.message || 'Upload failed'],
-        error_type: error.error_type || 'upload_failed'
+        error_type: error.error_type || 'upload_failed',
+        extras: error.extras,
+        status: error.status,
+        shouldTerminateUploadFlow: error.shouldTerminateUploadFlow === true,
+        message: error.message || 'Upload failed'
       }
     }
   }

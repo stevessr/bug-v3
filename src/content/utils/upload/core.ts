@@ -34,6 +34,9 @@ export interface UploadError {
     wait_seconds: number
     time_left: string
   }
+  status?: number
+  shouldTerminateUploadFlow?: boolean
+  message?: string
 }
 
 export interface UploadQueueItem {
@@ -129,6 +132,14 @@ export class ImageUploader {
       } catch (_error: any) {
         item.error = _error
 
+        if (this.shouldTerminateUploadFlow(_error)) {
+          this.moveToQueue(item, 'failed')
+          item.reject(_error)
+          this.terminatePendingUploads(_error)
+          notify('检测到无等待信息的 429，已终止后续上传以避免继续请求。', 'error')
+          break
+        }
+
         if (this.shouldRetry(_error, item)) {
           item.retryCount++
 
@@ -164,6 +175,22 @@ export class ImageUploader {
     }
 
     this.isProcessing = false
+  }
+
+  private shouldTerminateUploadFlow(error: any): boolean {
+    return Boolean(
+      error?.shouldTerminateUploadFlow ||
+      (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
+    )
+  }
+
+  private terminatePendingUploads(error: any) {
+    const pendingItems = [...this.waitingQueue]
+    for (const pendingItem of pendingItems) {
+      pendingItem.error = error
+      this.moveToQueue(pendingItem, 'failed')
+      pendingItem.reject(error)
+    }
   }
 
   private shouldRetry(_error: any, item: UploadQueueItem): boolean {
@@ -236,8 +263,39 @@ export class ImageUploader {
     )
 
     if (!response.ok) {
-      const errorData = (await response.json()) as UploadError
-      throw errorData
+      const rawErrorText = await response.text().catch(() => '')
+      let errorData: UploadError | { message?: string } | null = null
+      if (rawErrorText) {
+        try {
+          errorData = JSON.parse(rawErrorText) as UploadError
+        } catch {
+          errorData = { message: rawErrorText }
+        }
+      }
+
+      if (response.status === 429 && !(errorData as UploadError | null)?.extras?.wait_seconds) {
+        throw {
+          errors: ['Upload terminated after receiving a bare 429 response.'],
+          error_type: 'rate_limit',
+          status: 429,
+          shouldTerminateUploadFlow: true,
+          message: 'Upload terminated after receiving a bare 429 response.'
+        } satisfies UploadError
+      }
+
+      const normalizedError: UploadError = {
+        errors:
+          Array.isArray((errorData as UploadError | null)?.errors) &&
+          (errorData as UploadError).errors.length > 0
+            ? (errorData as UploadError).errors
+            : [((errorData as { message?: string } | null)?.message || 'Upload failed').trim()],
+        error_type: (errorData as UploadError | null)?.error_type || 'upload_failed',
+        extras: (errorData as UploadError | null)?.extras,
+        status: response.status,
+        shouldTerminateUploadFlow: false,
+        message: (errorData as { message?: string } | null)?.message
+      }
+      throw normalizedError
     }
 
     const data = (await response.json()) as UploadResponse

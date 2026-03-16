@@ -102,6 +102,20 @@ export function useUpload(options: UseUploadOptions) {
         return selectedFiles.value.findIndex(item => item.id === currentId)
       }
 
+      const shouldTerminateUploadFlow = (error: any) =>
+        Boolean(
+          error?.shouldTerminateUploadFlow ||
+          (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
+        )
+
+      const terminateRemainingUploads = (fromIndex: number, reason: string) => {
+        for (let idx = fromIndex; idx < uploadProgress.value.length; idx++) {
+          if (!uploadProgress.value[idx].error) {
+            uploadProgress.value[idx].error = reason
+          }
+        }
+      }
+
       let i = 0
       while (i < selectedFiles.value.length) {
         const currentItem = selectedFiles.value[i]
@@ -147,6 +161,13 @@ export function useUpload(options: UseUploadOptions) {
           const idx = findProgressIndex(currentId)
           if (idx !== -1) {
             uploadProgress.value[idx].error = error instanceof Error ? error.message : String(error)
+          }
+
+          if (shouldTerminateUploadFlow(error)) {
+            const reason = '检测到无等待信息的 429，已终止剩余上传以避免继续请求。'
+            terminateRemainingUploads(currentIndex + 1, reason)
+            message.error(reason)
+            break
           }
         }
 

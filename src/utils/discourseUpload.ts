@@ -33,6 +33,7 @@ export type DiscourseUploadFailure = Error &
     details?: DiscourseUploadErrorDetails | { message: string }
     isRateLimitError?: boolean
     waitTime?: number
+    shouldTerminateUploadFlow?: boolean
   }
 
 type UploadResponseBody = Record<string, unknown>
@@ -164,6 +165,8 @@ function createUploadError(
   if (status === 429 && error.extras?.wait_seconds) {
     error.isRateLimitError = true
     error.waitTime = error.extras.wait_seconds * 1000
+  } else if (status === 429) {
+    error.shouldTerminateUploadFlow = true
   }
 
   return error

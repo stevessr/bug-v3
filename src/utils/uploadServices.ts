@@ -1,6 +1,13 @@
 import { useEmojiStore } from '@/stores'
 import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
 
+type UploadFlowError = Error & {
+  status?: number
+  isRateLimitError?: boolean
+  waitTime?: number
+  shouldTerminateUploadFlow?: boolean
+}
+
 export interface UploadService {
   name: string
   uploadFile(
@@ -27,6 +34,15 @@ const DISCOURSE_UPLOAD_CONFIGS: Record<string, { domain: string; clientId: strin
     domain: 'idcflare.com',
     clientId: '1b4186493e084a11955dd3cab51b5062'
   }
+}
+
+function createTerminal429Error(message?: string): UploadFlowError {
+  const error = new Error(
+    message || 'Upload terminated after receiving a bare 429 response without retry metadata.'
+  ) as UploadFlowError
+  error.status = 429
+  error.shouldTerminateUploadFlow = true
+  return error
 }
 
 class DiscourseUploadService implements UploadService {
@@ -136,10 +152,15 @@ class DiscourseUploadService implements UploadService {
             `Upload failed: 429 Too Many Requests. Please wait ${
               errorData.extras.wait_seconds
             } seconds.`
-          ) as any
+          ) as UploadFlowError
           rateLimitError.isRateLimitError = true
           rateLimitError.waitTime = waitTime
           throw rateLimitError
+        }
+        if (response.status === 429) {
+          throw createTerminal429Error(
+            'Upload terminated: server returned 429 without usable retry metadata.'
+          )
         }
         throw new Error(
           `Upload failed: ${response.status} ${
@@ -249,10 +270,15 @@ class DiscourseUploadService implements UploadService {
       const waitTime = errorData.extras.wait_seconds * 1000
       const rateLimitError = new Error(
         `Upload failed: 429 Too Many Requests. Please wait ${errorData.extras.wait_seconds} seconds.`
-      ) as any
+      ) as UploadFlowError
       rateLimitError.isRateLimitError = true
       rateLimitError.waitTime = waitTime
       throw rateLimitError
+    }
+    if (proxyStatus === 429) {
+      throw createTerminal429Error(
+        'Upload terminated: page proxy returned 429 without usable retry metadata.'
+      )
     }
 
     throw new Error(
