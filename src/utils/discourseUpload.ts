@@ -103,9 +103,7 @@ function resolveCsrfToken(options: UploadLinuxDoMultipartOptions): string {
   }
 
   if (typeof document !== 'undefined') {
-    const metaToken = document.querySelector('meta[name="csrf-token"]') as
-      | HTMLMetaElement
-      | null
+    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
     if (metaToken?.content) return normalizeCsrfToken(metaToken.content)
 
     const tokenFromCookie = extractCsrfFromCookie(document.cookie || '')
@@ -193,20 +191,37 @@ function buildAjaxHeaders(
   headers?: Record<string, string>,
   contentType?: string
 ): Record<string, string> {
-  const result: Record<string, string> = {
-    accept: '*/*',
-    'x-requested-with': 'XMLHttpRequest',
-    'discourse-logged-in': 'true',
-    'discourse-present': 'true',
-    ...(headers || {})
+  const result: Record<string, string> = {}
+  const setHeader = (name: string, value: string | undefined) => {
+    if (!value) return
+
+    const lowerName = name.toLowerCase()
+    for (const existingName of Object.keys(result)) {
+      if (existingName.toLowerCase() === lowerName) {
+        delete result[existingName]
+      }
+    }
+
+    result[name] = value
   }
 
-  if (csrfToken) {
-    result['x-csrf-token'] = csrfToken
+  setHeader('accept', '*/*')
+  setHeader('x-requested-with', 'XMLHttpRequest')
+  setHeader('discourse-logged-in', 'true')
+  setHeader('discourse-present', 'true')
+
+  for (const [key, value] of Object.entries(headers || {})) {
+    const normalizedValue = key.toLowerCase() === 'x-csrf-token' ? normalizeCsrfToken(value) : value
+    setHeader(key, normalizedValue)
+  }
+
+  const normalizedCsrfToken = normalizeCsrfToken(csrfToken || '')
+  if (normalizedCsrfToken) {
+    setHeader('x-csrf-token', normalizedCsrfToken)
   }
 
   if (contentType) {
-    result['content-type'] = contentType
+    setHeader('content-type', contentType)
   }
 
   return result
