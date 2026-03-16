@@ -1,4 +1,4 @@
-import { DQS } from '../dom'
+import { getCsrfTokenFromPage } from '../dom'
 import { notify } from '../ui'
 
 import { insertIntoEditor } from './helpers'
@@ -248,26 +248,11 @@ export class ImageUploader {
   }
 
   private getCSRFToken(): string {
-    // Try to get CSRF token from meta tag
-    const metaToken = DQS('meta[name="csrf-token"]') as HTMLMetaElement
-    if (metaToken) {
-      return metaToken.content
+    const token = getCsrfTokenFromPage()
+    if (!token) {
+      console.warn('[Image Uploader] No CSRF token found')
     }
-
-    // Try to get from cookie
-    const match = document.cookie.match(/csrf_token=([^;]+)/)
-    if (match) {
-      return decodeURIComponent(match[1])
-    }
-
-    // Fallback - try to extract from any form
-    const hiddenInput = DQS('input[name="authenticity_token"]') as HTMLInputElement
-    if (hiddenInput) {
-      return hiddenInput.value
-    }
-
-    console.warn('[Image Uploader] No CSRF token found')
-    return ''
+    return token
   }
 
   private async calculateSHA1(file: File): Promise<string> {

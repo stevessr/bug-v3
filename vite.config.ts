@@ -215,6 +215,9 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    // Use relative asset URLs so content-script dynamic imports resolve against
+    // the extension bundle URL instead of the current page origin.
+    base: './',
     css: {
       postcss: './postcss.config.js',
       // 优化：启用 CSS 代码分割

@@ -24,7 +24,13 @@ import {
   resolveThinkingLevel,
   type AgentTabContextLike
 } from './piSupport'
-import { getEnabledBuiltinMcpConfigs } from './skills'
+import {
+  discoverAllSkills,
+  getEnabledBuiltinMcpConfigs,
+  getSuggestedSkills,
+  recommendSkills,
+  type Skill
+} from './skills'
 import { updateMemory } from './memory'
 import type { AgentStreamUpdate } from './agentStreaming'
 import type { AgentUsage } from './agentUsage'
@@ -256,6 +262,97 @@ const serializeToolResultContent = (
     }
   })
 
+const getScopedEnabledMcpServers = (settings: AgentSettings, subagent?: SubAgentConfig) => {
+  const builtinServers = getEnabledBuiltinMcpConfigs()
+  const allMcpServers = [...builtinServers, ...settings.mcpServers]
+
+  return allMcpServers.filter(server => {
+    if (!server.enabled) return false
+    const scope = subagent?.mcpServerIds
+    if (scope && scope.length > 0) return scope.includes(server.id)
+    return true
+  })
+}
+
+const dedupeSkills = (skills: Skill[]): Skill[] => {
+  const seen = new Set<string>()
+  return skills.filter(skill => {
+    if (seen.has(skill.id)) return false
+    seen.add(skill.id)
+    return true
+  })
+}
+
+const formatMcpToolName = (skill: Skill): string | null => {
+  if (!skill.mcpServerId || !skill.mcpToolName) return null
+  const safeToolName = skill.mcpToolName.replace(/[^a-zA-Z0-9_-]/g, '_')
+  return `mcp__${skill.mcpServerId}__${safeToolName}`
+}
+
+const buildRuntimeSkillPromptSection = (skills: Skill[]): string => {
+  if (!skills.length) return ''
+
+  const lines = [
+    '## 当前任务更适合优先考虑的 MCP tools',
+    '浏览器页面内操作仍优先使用 browser_actions；只有在需要搜索、文档查询、站外能力或外部自动化时，再直接调用下列 MCP tool。',
+    '如果能力匹配，请直接调用对应 tool，不要只在自然语言里描述“将要调用”。'
+  ]
+
+  for (const skill of skills) {
+    const toolName = formatMcpToolName(skill)
+    if (!toolName) continue
+    lines.push(`- ${skill.name}: ${skill.description}（tool=${toolName}）`)
+  }
+
+  lines.push('仅在当前任务明确相关时调用，并确保传入参数与用户目标一致。')
+  return lines.join('\n')
+}
+
+const buildRuntimeSystemPrompt = async (
+  input: string,
+  settings: AgentSettings,
+  subagent?: SubAgentConfig,
+  context?: { tab?: AgentTabContextLike }
+): Promise<string> => {
+  const basePrompt = buildSystemPrompt(settings, subagent, context)
+
+  if (!settings.enableMcp) return basePrompt
+
+  const enabledServers = getScopedEnabledMcpServers(settings, subagent)
+  if (!enabledServers.length) return basePrompt
+
+  try {
+    const allowedServerIds = new Set(enabledServers.map(server => server.id))
+    const allSkills = await discoverAllSkills(settings.mcpServers)
+    const callableSkills = allSkills.filter(
+      skill =>
+        skill.enabled &&
+        skill.mcpServerId &&
+        skill.mcpToolName &&
+        allowedServerIds.has(skill.mcpServerId)
+    )
+
+    if (!callableSkills.length) return basePrompt
+
+    const suggestedSkills = getSuggestedSkills(input, callableSkills, 4)
+    const recommendedSkills = recommendSkills(
+      {
+        currentUrl: context?.tab?.url,
+        pageContent: [context?.tab?.title, input].filter(Boolean).join('\n')
+      },
+      callableSkills
+    ).slice(0, 4)
+
+    const promptSkills = dedupeSkills([...suggestedSkills, ...recommendedSkills]).slice(0, 4)
+    const skillSection = buildRuntimeSkillPromptSection(promptSkills)
+
+    return skillSection ? `${basePrompt}\n\n${skillSection}` : basePrompt
+  } catch (error) {
+    console.warn('[Pi Runtime] Failed to build runtime skill prompt:', error)
+    return basePrompt
+  }
+}
+
 const createThreadRuntime = (
   threadId: string,
   settings: AgentSettings,
@@ -319,7 +416,7 @@ const syncRuntimeConfig = async (
   suspendResult: Deferred<AgentRunResult | null>
 ) => {
   runtime.agent.setSystemPrompt(
-    buildSystemPrompt(runtime.settings, runtime.subagent, runtime.context)
+    await buildRuntimeSystemPrompt(input, runtime.settings, runtime.subagent, runtime.context)
   )
   runtime.agent.setModel(
     buildPiModel(runtime.settings, runtime.subagent, {
@@ -403,14 +500,7 @@ const buildTools = async (
     return tools
   }
 
-  const builtinServers = getEnabledBuiltinMcpConfigs()
-  const allMcpServers = [...builtinServers, ...runtime.settings.mcpServers]
-  const enabledServers = allMcpServers.filter(server => {
-    if (!server.enabled) return false
-    const scope = runtime.subagent?.mcpServerIds
-    if (scope && scope.length > 0) return scope.includes(server.id)
-    return true
-  })
+  const enabledServers = getScopedEnabledMcpServers(runtime.settings, runtime.subagent)
 
   if (!enabledServers.length) return tools
 
@@ -730,14 +820,7 @@ export async function runPiAgentFollowup(
       )
     }
 
-    runtime.agent.setSystemPrompt(buildSystemPrompt(settings, subagent, context))
-    runtime.agent.setModel(
-      buildPiModel(settings, subagent, {
-        useReasoning: resolveThinkingLevel(settings, input) !== 'off'
-      })
-    )
-    runtime.agent.setThinkingLevel(resolveThinkingLevel(settings, input))
-    runtime.agent.setTools(await buildTools(runtime, suspendResult))
+    await syncRuntimeConfig(runtime, input, suspendResult)
 
     clearStoredPendingTool(threadId)
     runtime.pendingTool = undefined

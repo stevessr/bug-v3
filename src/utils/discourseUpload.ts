@@ -67,6 +67,59 @@ interface UploadLinuxDoMultipartOptions {
 
 const LINUX_DO_MULTIPART_CHUNK_SIZE = 15 * 1024 * 1024
 
+function extractCsrfFromCookie(cookie: string): string {
+  if (!cookie) return ''
+  const match = cookie.match(/(?:^|;\s*)(csrf_token|XSRF-TOKEN|_csrf)=([^;]+)/i)
+  if (!match) return ''
+  try {
+    return decodeURIComponent(match[2])
+  } catch {
+    return match[2]
+  }
+}
+
+function normalizeCsrfToken(token: string): string {
+  if (!token) return ''
+  const trimmed = token.trim()
+  if (!trimmed) return ''
+  return trimmed.split(',')[0]?.trim() || ''
+}
+
+function resolveCsrfToken(options: UploadLinuxDoMultipartOptions): string {
+  if (options.csrfToken) return normalizeCsrfToken(options.csrfToken)
+
+  const headers = options.headers || {}
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === 'x-csrf-token' && value) {
+      return normalizeCsrfToken(value)
+    }
+  }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === 'cookie' && value) {
+      const token = extractCsrfFromCookie(value)
+      if (token) return normalizeCsrfToken(token)
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    const metaToken = document.querySelector('meta[name="csrf-token"]') as
+      | HTMLMetaElement
+      | null
+    if (metaToken?.content) return normalizeCsrfToken(metaToken.content)
+
+    const tokenFromCookie = extractCsrfFromCookie(document.cookie || '')
+    if (tokenFromCookie) return normalizeCsrfToken(tokenFromCookie)
+
+    const hiddenInput = document.querySelector(
+      'input[name="authenticity_token"]'
+    ) as HTMLInputElement | null
+    if (hiddenInput?.value) return normalizeCsrfToken(hiddenInput.value)
+  }
+
+  return ''
+}
+
 function getUrlBase(): string {
   if (typeof globalThis.location?.href === 'string' && globalThis.location.href) {
     return globalThis.location.href
@@ -272,6 +325,7 @@ export async function uploadLinuxDoMultipart(
   const credentials = options.credentials || 'include'
   const baseUrl = resolveDiscourseBase(options.baseUrl)
   const sha1 = options.sha1 === undefined ? await computeSHA1Hex(options.file) : options.sha1
+  const resolvedCsrfToken = resolveCsrfToken(options)
 
   let externalUploadIdentifier = ''
   let completed = false
@@ -288,7 +342,7 @@ export async function uploadLinuxDoMultipart(
     const createResponse = await fetchImpl(`${baseUrl}/uploads/create-multipart.json`, {
       method: 'POST',
       headers: buildAjaxHeaders(
-        options.csrfToken,
+        resolvedCsrfToken,
         options.headers,
         'application/x-www-form-urlencoded; charset=UTF-8'
       ),
@@ -325,7 +379,7 @@ export async function uploadLinuxDoMultipart(
       {
         method: 'POST',
         headers: buildAjaxHeaders(
-          options.csrfToken,
+          resolvedCsrfToken,
           options.headers,
           'application/x-www-form-urlencoded; charset=UTF-8'
         ),
@@ -376,7 +430,7 @@ export async function uploadLinuxDoMultipart(
 
     const completeResponse = await fetchImpl(`${baseUrl}/uploads/complete-multipart.json`, {
       method: 'POST',
-      headers: buildAjaxHeaders(options.csrfToken, options.headers, 'application/json'),
+      headers: buildAjaxHeaders(resolvedCsrfToken, options.headers, 'application/json'),
       body: JSON.stringify({
         parts,
         unique_identifier: createData.unique_identifier,
@@ -416,7 +470,7 @@ export async function uploadLinuxDoMultipart(
         await abortLinuxDoMultipartUpload(
           baseUrl,
           externalUploadIdentifier,
-          options.csrfToken,
+          resolvedCsrfToken,
           options.headers,
           credentials,
           fetchImpl
