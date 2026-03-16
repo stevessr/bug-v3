@@ -27,6 +27,13 @@ const REDDIT_DOMAINS = ['reddit.com', 'redd.it']
 const X_DOMAINS = ['twitter.com', 'x.com', 'twimg.com']
 const XHS_DOMAINS = ['xiaohongshu', 'xhs']
 const TIEBA_DOMAINS = ['tieba.baidu.com']
+const DISCOURSE_GENERATOR_RE = /^discourse\b/i
+
+export function hasDiscourseGeneratorMeta(doc: Document = document): boolean {
+  const generatorMeta = doc.head?.querySelector('meta[name="generator"]') as HTMLMetaElement | null
+  const content = generatorMeta?.content?.trim() || ''
+  return DISCOURSE_GENERATOR_RE.test(content)
+}
 
 /**
  * 检测当前页面属于哪个平台
@@ -35,7 +42,7 @@ export function detectPlatform(): PlatformInfo {
   const hostname = window.location.hostname.toLowerCase()
 
   // Discourse detection
-  if (DISCOURSE_DOMAINS.some(domain => hostname == domain)) {
+  if (hasDiscourseGeneratorMeta()) {
     return {
       platform: 'discourse',
       hostname,
@@ -108,39 +115,7 @@ export function detectPlatform(): PlatformInfo {
  * 检查是否应该注入表情功能（用于 Discourse 等通用平台）
  */
 export function shouldInjectEmojiFeature(): boolean {
-  const hostname = window.location.hostname.toLowerCase()
-
-  // Check if it's a known Discourse domain
-  if (DISCOURSE_DOMAINS.some(domain => hostname == domain)) {
-    return true
-  }
-
-  // Check for discourse meta tags
-  const discourseMeta = document.querySelector(
-    'meta[name*="discourse"], meta[content*="discourse"], meta[property*="discourse"]'
-  )
-  if (discourseMeta) {
-    return true
-  }
-
-  // Check for common forum platforms via generator meta
-  const generatorMeta = document.querySelector('meta[name="generator"]')
-  if (generatorMeta) {
-    const content = generatorMeta.getAttribute('content')?.toLowerCase() || ''
-    if (content.includes('discourse') || content.includes('flarum') || content.includes('phpbb')) {
-      return true
-    }
-  }
-
-  // Check for editor elements that suggest a discussion platform
-  const editors = document.querySelectorAll(
-    'textarea.d-editor-input, .ProseMirror.d-editor-input, .composer-input, .reply-area textarea'
-  )
-  if (editors.length > 0) {
-    return true
-  }
-
-  return false
+  return hasDiscourseGeneratorMeta()
 }
 
 /**
