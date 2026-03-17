@@ -20,7 +20,7 @@
   min-width: 0;
   height: auto;
   content-visibility: auto;
-  contain: layout paint;
+  contain: layout;
   contain-intrinsic-size: 160px 200px;
 }
 

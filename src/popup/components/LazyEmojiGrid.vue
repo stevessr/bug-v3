@@ -233,7 +233,7 @@ const focusLastEmoji = () => {
   background-color: transparent;
   transition: background-color 0.2s;
   content-visibility: auto;
-  contain: layout paint;
+  contain: layout;
   contain-intrinsic-size: 96px 96px;
 }
 

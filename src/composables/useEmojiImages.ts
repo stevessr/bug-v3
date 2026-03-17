@@ -84,19 +84,28 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
   }
 
   const resolveSourceBatch = async (emojiList: Emoji[]): Promise<Map<string, string>> => {
+    const results = await Promise.all(
+      emojiList.map(async emoji => {
+        const src = await getImageSrc(emoji)
+        if (src.startsWith('blob:')) {
+          blobUrls.value.add(src)
+        }
+        return [emoji.id, src] as const
+      })
+    )
     const entries = new Map<string, string>()
-    for (const emoji of emojiList) {
-      const src = await getImageSrc(emoji)
-      if (src.startsWith('blob:')) {
-        blobUrls.value.add(src)
-      }
-      entries.set(emoji.id, src)
+    for (const [id, src] of results) {
+      entries.set(id, src)
     }
     return entries
   }
 
-  const waitForIdle = () =>
+  const waitForIdle = (skipIdle = false) =>
     new Promise<void>(resolve => {
+      if (skipIdle) {
+        resolve()
+        return
+      }
       if (typeof requestIdleCallback === 'function') {
         requestIdleCallback(() => resolve(), { timeout: 100 })
       } else {
@@ -117,7 +126,7 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
     const nextMap = new Map<string, string>()
     for (let i = 0; i < emojiList.length; i += sourceBatchSize) {
       const batch = emojiList.slice(i, i + sourceBatchSize)
-      await waitForIdle()
+      await waitForIdle(i === 0)
       const batchEntries = await resolveSourceBatch(batch)
       for (const [id, src] of batchEntries) {
         nextMap.set(id, src)
@@ -174,33 +183,35 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
       const nextMap = new Map<string, string>()
       for (let i = 0; i < emojiList.length; i += sourceBatchSize) {
         const batch = emojiList.slice(i, i + sourceBatchSize)
-        await waitForIdle()
+        await waitForIdle(i === 0)
 
-        for (const emoji of batch) {
-          const existing = imageSources.value.get(emoji.id)
-          // Reuse existing URL if it's not a blob URL
-          if (existing && !existing.startsWith('blob:')) {
-            // Cancel pending revocation if emoji reappears
-            const pending = pendingRevocations.get(existing)
-            if (pending) {
-              clearTimeout(pending)
-              pendingRevocations.delete(existing)
+        const resolved = await Promise.all(
+          batch.map(async emoji => {
+            const existing = imageSources.value.get(emoji.id)
+            if (existing && !existing.startsWith('blob:')) {
+              const pending = pendingRevocations.get(existing)
+              if (pending) {
+                clearTimeout(pending)
+                pendingRevocations.delete(existing)
+              }
+              return [emoji.id, existing] as const
             }
-            nextMap.set(emoji.id, existing)
-            continue
-          }
 
-          const src = await getImageSrc(emoji)
-          if (src.startsWith('blob:')) {
-            blobUrls.value.add(src)
-            // Cancel any pending revocation for this URL
-            const pending = pendingRevocations.get(src)
-            if (pending) {
-              clearTimeout(pending)
-              pendingRevocations.delete(src)
+            const src = await getImageSrc(emoji)
+            if (src.startsWith('blob:')) {
+              blobUrls.value.add(src)
+              const pending = pendingRevocations.get(src)
+              if (pending) {
+                clearTimeout(pending)
+                pendingRevocations.delete(src)
+              }
             }
-          }
-          nextMap.set(emoji.id, src)
+            return [emoji.id, src] as const
+          })
+        )
+
+        for (const [id, src] of resolved) {
+          nextMap.set(id, src)
         }
 
         if (sourceBatchDelay > 0) {
