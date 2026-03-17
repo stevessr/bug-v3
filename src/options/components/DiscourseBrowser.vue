@@ -361,9 +361,19 @@ const handleTopicSort = (key: 'replies' | 'views' | 'activity') => {
   topicSortOrder.value = 'desc'
 }
 
+let scrollRafId: number | null = null
+const handleScrollRaf = () => {
+  if (scrollRafId !== null) return
+  scrollRafId = requestAnimationFrame(() => {
+    scrollRafId = null
+    void handleScroll()
+  })
+}
+
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
   if (!activeTab.value || !contentAreaRef.value) return
+  if (activeTab.value.loading || isLoadingMore.value) return
 
   const el = contentAreaRef.value
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
@@ -1751,7 +1761,7 @@ onMounted(() => {
   createTab()
   nextTick(() => {
     if (contentAreaRef.value) {
-      contentAreaRef.value.addEventListener('scroll', handleScroll)
+      contentAreaRef.value.addEventListener('scroll', handleScrollRaf, { passive: true })
     }
   })
   window.addEventListener('mousemove', handlePointerMove)
@@ -1772,7 +1782,11 @@ onUnmounted(() => {
   clearMessageBusSubscriptions()
   messageBus.stop()
   if (contentAreaRef.value) {
-    contentAreaRef.value.removeEventListener('scroll', handleScroll)
+    contentAreaRef.value.removeEventListener('scroll', handleScrollRaf)
+  }
+  if (scrollRafId !== null) {
+    cancelAnimationFrame(scrollRafId)
+    scrollRafId = null
   }
   window.removeEventListener('mousemove', handlePointerMove)
   window.removeEventListener('mouseup', stopPointer)

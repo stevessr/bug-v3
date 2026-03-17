@@ -20,6 +20,10 @@ export interface UseEmojiImagesOptions {
   updateDebounce?: number
   /** Only preload when active (for tabs) */
   preloadWhenActive?: boolean
+  /** Batch size for resolving image sources (default: 40) */
+  sourceBatchSize?: number
+  /** Delay between source batches in ms (default: 0) */
+  sourceBatchDelay?: number
 }
 
 /**
@@ -48,7 +52,9 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
     preloadBatchSize = 3,
     preloadDelay = 50,
     updateDebounce = 100,
-    preloadWhenActive = false
+    preloadWhenActive = false,
+    sourceBatchSize = 40,
+    sourceBatchDelay = 0
   } = options
 
   const emojiStore = useEmojiStore()
@@ -77,6 +83,27 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
     return getEmojiImageUrlSync(emoji, { preferCache })
   }
 
+  const resolveSourceBatch = async (emojiList: Emoji[]): Promise<Map<string, string>> => {
+    const entries = new Map<string, string>()
+    for (const emoji of emojiList) {
+      const src = await getImageSrc(emoji)
+      if (src.startsWith('blob:')) {
+        blobUrls.value.add(src)
+      }
+      entries.set(emoji.id, src)
+    }
+    return entries
+  }
+
+  const waitForIdle = () =>
+    new Promise<void>(resolve => {
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(() => resolve(), { timeout: 100 })
+      } else {
+        setTimeout(resolve, 0)
+      }
+    })
+
   /**
    * Initialize image sources for all emojis
    */
@@ -87,17 +114,19 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
       return
     }
 
-    // Batch fetch all image sources
-    const entries = await Promise.all(
-      emojiList.map(async emoji => {
-        const src = await getImageSrc(emoji)
-        if (src.startsWith('blob:')) {
-          blobUrls.value.add(src)
-        }
-        return [emoji.id, src] as const
-      })
-    )
-    imageSources.value = new Map(entries)
+    const nextMap = new Map<string, string>()
+    for (let i = 0; i < emojiList.length; i += sourceBatchSize) {
+      const batch = emojiList.slice(i, i + sourceBatchSize)
+      await waitForIdle()
+      const batchEntries = await resolveSourceBatch(batch)
+      for (const [id, src] of batchEntries) {
+        nextMap.set(id, src)
+      }
+      if (sourceBatchDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, sourceBatchDelay))
+      }
+      imageSources.value = new Map(nextMap)
+    }
   }
 
   /**
@@ -142,9 +171,12 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
         }
       }
 
-      // Batch fetch new image sources, reusing existing non-blob URLs
-      const entries = await Promise.all(
-        emojiList.map(async emoji => {
+      const nextMap = new Map<string, string>()
+      for (let i = 0; i < emojiList.length; i += sourceBatchSize) {
+        const batch = emojiList.slice(i, i + sourceBatchSize)
+        await waitForIdle()
+
+        for (const emoji of batch) {
           const existing = imageSources.value.get(emoji.id)
           // Reuse existing URL if it's not a blob URL
           if (existing && !existing.startsWith('blob:')) {
@@ -154,8 +186,10 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
               clearTimeout(pending)
               pendingRevocations.delete(existing)
             }
-            return [emoji.id, existing] as const
+            nextMap.set(emoji.id, existing)
+            continue
           }
+
           const src = await getImageSrc(emoji)
           if (src.startsWith('blob:')) {
             blobUrls.value.add(src)
@@ -166,11 +200,14 @@ export function useEmojiImages(emojis: () => Emoji[], options: UseEmojiImagesOpt
               pendingRevocations.delete(src)
             }
           }
-          return [emoji.id, src] as const
-        })
-      )
+          nextMap.set(emoji.id, src)
+        }
 
-      imageSources.value = new Map(entries)
+        if (sourceBatchDelay > 0) {
+          await new Promise(resolve => setTimeout(resolve, sourceBatchDelay))
+        }
+        imageSources.value = new Map(nextMap)
+      }
     }, updateDebounce)
   }
 

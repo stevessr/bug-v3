@@ -181,6 +181,7 @@ const focusLastEmoji = () => {
   height: 100%;
   overflow-y: auto;
   background-color: var(--md3-surface);
+  contain: layout paint;
 }
 
 /* Loading state */
@@ -231,6 +232,9 @@ const focusLastEmoji = () => {
   border-radius: 0.5rem;
   background-color: transparent;
   transition: background-color 0.2s;
+  content-visibility: auto;
+  contain: layout paint;
+  contain-intrinsic-size: 96px 96px;
 }
 
 .emoji-item:hover {

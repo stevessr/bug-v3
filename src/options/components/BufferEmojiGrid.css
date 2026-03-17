@@ -1,6 +1,7 @@
 .buffer-emoji-grid {
   display: grid;
   gap: 16px;
+  contain: layout paint;
 }
 
 .buffer-emoji-grid .emoji-card {
@@ -8,6 +9,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  content-visibility: auto;
+  contain: layout paint;
+  contain-intrinsic-size: 160px 200px;
 }
 
 .buffer-emoji-grid .emoji-thumb {
