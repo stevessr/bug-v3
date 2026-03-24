@@ -2,7 +2,7 @@
   "page": 1,
   "pageSize": 50,
   "totalPages": 6,
-  "totalGroups": 266,
+  "totalGroups": 268,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -269,10 +269,18 @@
       "isArchived": false
     },
     {
+      "id": "group-1774365614468",
+      "name": "Neuro & Evil emojis by Haruya",
+      "icon": "https://cdn3.linux.do/original/4X/3/4/f/34f605d01004ca5a539e8e920ebe27f80a8e225a.avif?v=emoji-17",
+      "order": 33,
+      "emojiCount": 40,
+      "isArchived": false
+    },
+    {
       "id": "group-1756870069420",
       "name": "neuro sama",
       "icon": "https://cdn3.linux.do/original/4X/5/2/d/52d63b7361b0c4a13ea1aea236b5192925358c05.jpeg",
-      "order": 33,
+      "order": 34,
       "emojiCount": 53,
       "isArchived": false
     },
@@ -280,7 +288,7 @@
       "id": "group-1763270508379",
       "name": "Neuro sama",
       "icon": "https://cdn3.linux.do/original/4X/b/6/8/b6894e8c972abd7f84b9af70623bbf04110c9169.webp",
-      "order": 34,
+      "order": 35,
       "emojiCount": 119,
       "isArchived": false
     },
@@ -288,7 +296,7 @@
       "id": "group-1767644173882",
       "name": "RAISE A SUILEN 纪念收藏集",
       "icon": "https://cdn3.linux.do/original/4X/4/2/5/4252ee7a1eebd1744af075e24451545ecbc0c116.avif",
-      "order": 35,
+      "order": 36,
       "emojiCount": 25,
       "isArchived": false
     },
@@ -296,7 +304,7 @@
       "id": "telegram_1768051202527_nuh93wcz6",
       "name": "saba 和 gura 的奇奇怪怪",
       "icon": "https://cdn3.linux.do/original/4X/1/4/b/14b2322732c31a11987b70e80c0b0da0a0c0122e.webp?v=telegram",
-      "order": 36,
+      "order": 37,
       "emojiCount": 120,
       "isArchived": false
     },
@@ -304,7 +312,7 @@
       "id": "group-1769003966293",
       "name": "steve 的 OC",
       "icon": "S",
-      "order": 37,
+      "order": 38,
       "emojiCount": 49,
       "isArchived": false
     },
@@ -312,7 +320,7 @@
       "id": "group-1764592283419",
       "name": "steve 的 OC 表情包",
       "icon": "https://cdn3.linux.do/original/4X/7/a/e/7ae79c2cc6c90287f2ffcdfb26578b4ce95c1ec0.jpeg",
-      "order": 38,
+      "order": 39,
       "emojiCount": 54,
       "isArchived": false
     },
@@ -320,7 +328,7 @@
       "id": "group-1764386468076",
       "name": "steve 的 OC？",
       "icon": "😮",
-      "order": 39,
+      "order": 40,
       "emojiCount": 111,
       "isArchived": true
     },
@@ -328,7 +336,7 @@
       "id": "group-1761328497264",
       "name": "Stevessr 搞来的 orange",
       "icon": "🌿",
-      "order": 40,
+      "order": 41,
       "emojiCount": 69,
       "isArchived": false
     },
@@ -336,7 +344,7 @@
       "id": "group-1760717207846",
       "name": "taffy",
       "icon": "https://cdn3.linux.do/original/4X/5/2/c/52ce33243c77626ade1b60b2d12c201ebd964e43.webp",
-      "order": 41,
+      "order": 42,
       "emojiCount": 134,
       "isArchived": false
     },
@@ -344,7 +352,7 @@
       "id": "group-1758291025412",
       "name": "tatakura",
       "icon": "https://cdn3.linux.do/original/4X/8/f/4/8f436a831af266f55e0e56106dd3fb3e06485a8b.webp",
-      "order": 42,
+      "order": 43,
       "emojiCount": 119,
       "isArchived": false
     },
@@ -352,7 +360,7 @@
       "id": "group-1762778187463",
       "name": "There's No Freaking Way I'll be Your Lover! Unless...",
       "icon": "https://cdn3.linux.do/original/4X/0/f/7/0f7a924958ba14549697c5b3af7df0dae1ed6cb6.avif",
-      "order": 43,
+      "order": 44,
       "emojiCount": 120,
       "isArchived": false
     },
@@ -360,7 +368,7 @@
       "id": "group-1761327403281",
       "name": "Twitch",
       "icon": "T",
-      "order": 44,
+      "order": 45,
       "emojiCount": 100,
       "isArchived": true
     },
@@ -368,7 +376,7 @@
       "id": "group-1757396353003",
       "name": "X",
       "icon": "X",
-      "order": 45,
+      "order": 46,
       "emojiCount": 366,
       "isArchived": true
     },
@@ -376,7 +384,7 @@
       "id": "group-1763303057469",
       "name": "X 第七弹",
       "icon": "https://cdn3.linux.do/original/4X/d/c/5/dc525ddc6e161406e80b8ddfb3c5f026dec2475b.avif",
-      "order": 46,
+      "order": 47,
       "emojiCount": 320,
       "isArchived": true
     },
@@ -384,7 +392,7 @@
       "id": "group-1767453793359",
       "name": "X 第三十一弹",
       "icon": "https://cdn3.linux.do/original/4X/8/f/3/8f394750700bf1432507ef2b3535d15e86b42fb6.avif",
-      "order": 47,
+      "order": 48,
       "emojiCount": 367,
       "isArchived": false
     },
@@ -392,16 +400,8 @@
       "id": "group-1769217168177",
       "name": "X 第三十七弹",
       "icon": "https://cdn3.linux.do/original/4X/5/4/d/54db1f1794beaa095c632c252a8f285bc38b28b6.avif",
-      "order": 48,
-      "emojiCount": 479,
-      "isArchived": false
-    },
-    {
-      "id": "group-1769002748394",
-      "name": "X 第三十七弾",
-      "icon": "https://cdn3.linux.do/original/4X/f/a/f/faf9e2fc53a9e55b41523e78ac35adf27f24df13.avif#/",
       "order": 49,
-      "emojiCount": 312,
+      "emojiCount": 479,
       "isArchived": false
     }
   ]
