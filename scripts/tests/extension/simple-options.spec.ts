@@ -27,7 +27,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
     })
 
     // Navigate to options page from file system
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     // Wait for the page to load
@@ -68,7 +68,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
   })
 
   test('should display navigation tabs', async ({ page }) => {
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)
@@ -95,7 +95,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
   })
 
   test('should handle emoji management interface', async ({ page }) => {
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)
@@ -123,7 +123,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
   })
 
   test('should verify upload button functionality is removed', async ({ page }) => {
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)
@@ -154,7 +154,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
       }
     })
 
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)

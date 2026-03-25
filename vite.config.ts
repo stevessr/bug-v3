@@ -351,7 +351,8 @@ export default defineConfig(({ mode }) => {
                 toplevel: true
               }
             },
-      rolldownOptions: {
+      // Keep rollupOptions so Vite 8 preserves these settings if a build path falls back.
+      rollupOptions: {
         input: buildInputs,
         output: {
           entryFileNames: 'js/[name].js',

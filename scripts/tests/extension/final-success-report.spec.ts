@@ -26,7 +26,7 @@ test.describe('Final Success Report - 美国安全了！', () => {
     })
 
     // Load the options page
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(3000)
 
@@ -90,7 +90,7 @@ test.describe('Final Success Report - 美国安全了！', () => {
   test('should demonstrate the upload functionality is working', async ({ page }) => {
     console.log('🧪 Demonstrating upload functionality...')
 
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(2000)
 

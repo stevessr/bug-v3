@@ -28,7 +28,7 @@ test.describe('Upload Functionality Restored', () => {
     })
 
     // Load the options page
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(3000)
 

@@ -63,7 +63,7 @@ export const findFirst = (node: Node, predicate: (el: Element) => boolean): Elem
       return
     }
     if (isParent(current)) {
-      current.children.forEach(child => walk(child as Node))
+      current.children.forEach((child: Node) => walk(child))
     }
   }
   walk(node)
@@ -77,7 +77,7 @@ export const findAll = (node: Node, predicate: (el: Element) => boolean): Elemen
       results.push(current)
     }
     if (isParent(current)) {
-      current.children.forEach(child => walk(child as Node))
+      current.children.forEach((child: Node) => walk(child))
     }
   }
   walk(node)

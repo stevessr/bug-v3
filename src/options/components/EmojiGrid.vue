@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue'
 import { ref } from 'vue'
 
 import QuickTagEditor from './QuickTagEditor.vue'
@@ -51,8 +52,19 @@ const addEmojiTouchEvents = (_element: HTMLElement, _emoji: Emoji, _index: numbe
   // 由父组件通过 TouchDragHandler 处理
 }
 
-const handleEmojiRef = (el: Element | null, emoji: Emoji, index: number) => {
-  if (el instanceof HTMLElement) addEmojiTouchEvents(el, emoji, index)
+const resolveElement = (el: Element | ComponentPublicInstance | null): Element | null => {
+  if (!el) return null
+  if (el instanceof Element) return el
+  return el.$el instanceof Element ? el.$el : null
+}
+
+const handleEmojiRef = (
+  el: Element | ComponentPublicInstance | null,
+  emoji: Emoji,
+  index: number
+) => {
+  const element = resolveElement(el)
+  if (element instanceof HTMLElement) addEmojiTouchEvents(element, emoji, index)
 }
 
 const getEmojiImageSrc = (emoji: Emoji) => {

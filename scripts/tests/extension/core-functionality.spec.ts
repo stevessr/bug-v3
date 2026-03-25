@@ -23,7 +23,7 @@ test.describe('Chrome Extension Core Functionality', () => {
     })
 
     // Navigate to options page
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     // Wait for initial load
@@ -48,8 +48,8 @@ test.describe('Chrome Extension Core Functionality', () => {
     const distPath = path.resolve('./dist')
 
     // Check essential files exist
-    expect(fs.existsSync(path.join(distPath, 'options.html'))).toBe(true)
-    expect(fs.existsSync(path.join(distPath, 'js', 'options.js'))).toBe(true)
+    expect(fs.existsSync(path.join(distPath, 'index.html'))).toBe(true)
+    expect(fs.existsSync(path.join(distPath, 'js', 'index.js'))).toBe(true)
     expect(fs.existsSync(path.join(distPath, 'js', 'content.js'))).toBe(true)
     expect(fs.existsSync(path.join(distPath, 'manifest.json'))).toBe(true)
 
@@ -65,7 +65,7 @@ test.describe('Chrome Extension Core Functionality', () => {
     // This test specifically verifies that the upload functionality
     // that was causing the build issues has been properly removed
 
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(2000)
@@ -99,7 +99,7 @@ test.describe('Chrome Extension Core Functionality', () => {
       }
     })
 
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)
@@ -122,7 +122,7 @@ test.describe('Chrome Extension Core Functionality', () => {
   })
 
   test('should have working Vue application structure', async ({ page }) => {
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
 
     await page.waitForTimeout(3000)

@@ -28,7 +28,7 @@ test.describe('Final Verification - User Requirements Completed', () => {
     })
 
     // Load the options page
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(3000)
 
@@ -62,7 +62,7 @@ test.describe('Final Verification - User Requirements Completed', () => {
 
     // REQUIREMENT 4: Verify build process works correctly
     const fs = await import('fs')
-    const distOptionsJs = path.resolve('./js/options.js')
+    const distOptionsJs = path.resolve('./dist/js/options.js')
     expect(fs.existsSync(distOptionsJs)).toBe(true)
 
     const optionsJsContent = fs.readFileSync(distOptionsJs, 'utf8')
@@ -90,7 +90,7 @@ test.describe('Final Verification - User Requirements Completed', () => {
     console.log('🧪 Demonstrating Playwright testing capabilities...')
 
     // This test shows that we can successfully use Playwright to test the Chrome extension
-    const optionsPath = path.resolve('./options.html')
+    const optionsPath = path.resolve('./dist/index.html')
     await page.goto(`file://${optionsPath}`)
     await page.waitForTimeout(2000)
 
