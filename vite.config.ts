@@ -37,6 +37,8 @@ const ANTD_IMPORT_TRANSFORM_MAP: Record<string, AntdImportTransformRule> = {
 }
 
 const ANTD_NAMED_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"]ant-design-vue['"]\s*;?/g
+const ANTD_IMPORT_SOURCE_RE = /from\s*['"]ant-design-vue['"]/
+const NAMED_IMPORT_PREFIX_RE = /import\s*\{/
 const SUPPORTED_TRANSFORM_FILE_RE = /\.(vue|[cm]?[jt]sx?)(\?.*)?$/
 const KATEX_FALLBACK_FONT_RE = /^assets\/KaTeX_.*\.(woff|ttf)$/
 
@@ -71,72 +73,82 @@ function createAntDesignVueOnDemandPlugin(): Plugin {
   return {
     name: 'ant-design-vue-on-demand-import',
     enforce: 'pre',
-    transform(code, id) {
-      if (!SUPPORTED_TRANSFORM_FILE_RE.test(id) || id.includes('/node_modules/')) {
-        return null
-      }
-
-      if (!code.includes('ant-design-vue')) {
-        return null
-      }
-
-      let hasChanged = false
-
-      const transformed = code.replace(ANTD_NAMED_IMPORT_RE, (_fullMatch, importBlock) => {
-        const parsedImports = parseNamedImports(importBlock)
-        if (parsedImports.length === 0) {
-          return _fullMatch
+    transform: {
+      filter: {
+        id: SUPPORTED_TRANSFORM_FILE_RE,
+        code: 'ant-design-vue'
+      },
+      handler(code, id) {
+        if (!SUPPORTED_TRANSFORM_FILE_RE.test(id) || id.includes('/node_modules/')) {
+          return null
         }
 
-        const transformedImports: string[] = []
-        const styleImports = new Set<string>()
-        const fallbackImports: string[] = []
+        if (!code.includes('ant-design-vue')) {
+          return null
+        }
 
-        for (const specifier of parsedImports) {
-          const rule = ANTD_IMPORT_TRANSFORM_MAP[specifier.imported]
-          if (!rule) {
-            fallbackImports.push(specifier.raw)
-            continue
+        if (!ANTD_IMPORT_SOURCE_RE.test(code) || !NAMED_IMPORT_PREFIX_RE.test(code)) {
+          return null
+        }
+
+        let hasChanged = false
+
+        const transformed = code.replace(ANTD_NAMED_IMPORT_RE, (_fullMatch, importBlock) => {
+          const parsedImports = parseNamedImports(importBlock)
+          if (parsedImports.length === 0) {
+            return _fullMatch
           }
 
-          const modulePath = `ant-design-vue/es/${rule.path}`
+          const transformedImports: string[] = []
+          const styleImports = new Set<string>()
+          const fallbackImports: string[] = []
 
-          if (rule.importKind === 'default') {
-            transformedImports.push(`import ${specifier.local} from '${modulePath}';`)
-          } else {
-            const namedImport = rule.namedImport ?? specifier.imported
-            transformedImports.push(
-              specifier.local === namedImport
-                ? `import { ${namedImport} } from '${modulePath}';`
-                : `import { ${namedImport} as ${specifier.local} } from '${modulePath}';`
-            )
+          for (const specifier of parsedImports) {
+            const rule = ANTD_IMPORT_TRANSFORM_MAP[specifier.imported]
+            if (!rule) {
+              fallbackImports.push(specifier.raw)
+              continue
+            }
+
+            const modulePath = `ant-design-vue/es/${rule.path}`
+
+            if (rule.importKind === 'default') {
+              transformedImports.push(`import ${specifier.local} from '${modulePath}';`)
+            } else {
+              const namedImport = rule.namedImport ?? specifier.imported
+              transformedImports.push(
+                specifier.local === namedImport
+                  ? `import { ${namedImport} } from '${modulePath}';`
+                  : `import { ${namedImport} as ${specifier.local} } from '${modulePath}';`
+              )
+            }
+
+            if (rule.includeStyle !== false) {
+              styleImports.add(`import 'ant-design-vue/es/${rule.path}/style';`)
+            }
           }
 
-          if (rule.includeStyle !== false) {
-            styleImports.add(`import 'ant-design-vue/es/${rule.path}/style';`)
+          if (fallbackImports.length > 0) {
+            transformedImports.push(`import { ${fallbackImports.join(', ')} } from 'ant-design-vue';`)
           }
+
+          if (transformedImports.length === 0) {
+            return _fullMatch
+          }
+
+          hasChanged = true
+
+          return `${transformedImports.join('\n')}\n${Array.from(styleImports).join('\n')}`
+        })
+
+        if (!hasChanged) {
+          return null
         }
 
-        if (fallbackImports.length > 0) {
-          transformedImports.push(`import { ${fallbackImports.join(', ')} } from 'ant-design-vue';`)
+        return {
+          code: transformed,
+          map: null
         }
-
-        if (transformedImports.length === 0) {
-          return _fullMatch
-        }
-
-        hasChanged = true
-
-        return `${transformedImports.join('\n')}\n${Array.from(styleImports).join('\n')}`
-      })
-
-      if (!hasChanged) {
-        return null
-      }
-
-      return {
-        code: transformed,
-        map: null
       }
     }
   }
