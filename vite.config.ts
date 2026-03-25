@@ -351,14 +351,13 @@ export default defineConfig(({ mode }) => {
                 toplevel: true
               }
             },
-      rollupOptions: {
+      rolldownOptions: {
         input: buildInputs,
         output: {
           entryFileNames: 'js/[name].js',
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
           format: 'es', // Use ES module format for better code splitting support
-          inlineDynamicImports: false,
           manualChunks: isFastBuild
             ? undefined
             : id => {
