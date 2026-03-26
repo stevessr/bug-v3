@@ -173,7 +173,16 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   const isProd = mode === 'production'
   const isFastBuild = process.env.BUILD_FAST === 'true'
-  const minifier = process.env.BUILD_MINIFIER === 'terser' ? 'terser' : 'esbuild'
+  const shouldMinify = !isFastBuild && process.env.BUILD_MINIFIED !== 'false'
+  const minifier =
+    process.env.BUILD_MINIFIER === 'terser' || process.env.BUILD_MINIFIER === 'esbuild'
+      ? process.env.BUILD_MINIFIER
+      : false
+  const cssMinifier =
+    process.env.BUILD_CSS_MINIFIER === 'esbuild' ||
+    process.env.BUILD_CSS_MINIFIER === 'lightningcss'
+      ? process.env.BUILD_CSS_MINIFIER
+      : false
   const enableForumBrowser = process.env.ENABLE_FORUM_BROWSER !== 'false'
   const enableLocalMcpBridge = process.env.ENABLE_LOCAL_MCP_BRIDGE !== 'false'
   // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
@@ -310,17 +319,17 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: !isFastBuild && process.env.BUILD_SOURCEMAP === 'true',
       manifest: !isFastBuild && process.env.BUILD_MANIFEST === 'true',
-      minify: isFastBuild ? false : process.env.BUILD_MINIFIED === 'false' ? false : minifier,
+      minify: shouldMinify ? minifier : false,
       reportCompressedSize: false, // Skip gzip/brotli size calculation for faster builds
       chunkSizeWarningLimit: 1000, // Increase limit to 1000 kB since this is a feature-rich extension
       // 优化：目标现代浏览器
       target: 'esnext',
       // 优化：启用 CSS 代码分割
       cssCodeSplit: !isFastBuild,
-      cssMinify: isFastBuild ? false : 'esbuild',
+      cssMinify: shouldMinify ? cssMinifier : false,
       emptyOutDir: !isFastBuild || !enableForumBrowser,
       terserOptions:
-        process.env.BUILD_MINIFIED === 'false' || minifier !== 'terser'
+        !shouldMinify || minifier !== 'terser'
           ? undefined
           : {
               ecma: 2020,

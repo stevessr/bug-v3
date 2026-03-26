@@ -32,18 +32,21 @@ const configs = {
   build: {
     ENABLE_LOGGING: 'false', // 生产环境禁用日志
     NODE_ENV: 'production',
-    BUILD_MINIFIER: 'esbuild'
+    BUILD_MINIFIER: 'esbuild',
+    BUILD_CSS_MINIFIER: 'lightningcss'
   },
 
   'build:prod': {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIER: 'terser'
+    BUILD_MINIFIER: 'terser',
+    BUILD_CSS_MINIFIER: 'lightningcss'
   },
   'build:minimal': {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIER: 'terser'
+    BUILD_MINIFIER: 'terser',
+    BUILD_CSS_MINIFIER: 'lightningcss'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
