@@ -19,7 +19,7 @@ import {
   downloadFileAsBlob,
   type TelegramStickerSet
 } from '@/utils/telegramResolver'
-import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
+import { convertTelegramStickerBlob } from '@/utils/telegram/telegramStickerConversion'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -30,10 +30,12 @@ const emit = defineEmits(['update:modelValue', 'imported'])
 const store = useEmojiStore()
 const safeSettings = computed(() => store.settings || defaultSettings)
 
+const localAvifEnabled = computed(() => !!safeSettings.value.telegramLocalAvifEnabled)
+
 const allowVideoStickers = computed(() => {
   const enabled = !!safeSettings.value.telegramWebmToAvifEnabled
   const backend = safeSettings.value.telegramWebmToAvifBackend || ''
-  return enabled && backend.trim().length > 0
+  return enabled && (localAvifEnabled.value || backend.trim().length > 0)
 })
 
 const webmToAvifBackend = computed(() => safeSettings.value.telegramWebmToAvifBackend || '')
@@ -233,15 +235,28 @@ const doImport = async () => {
         const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
         let blob = await downloadFileAsBlob(proxyUrl)
 
-        if (extension === 'webm') {
+        if (extension === 'webm' || extension === 'tgs') {
           try {
-            progress.value.message = `转换 WebM ${i + 1}/${total}...`
-            blob = await convertWebmToAvifViaBackend(blob, {
-              backendUrl: webmToAvifBackend.value
-            })
-            extension = 'avif'
+            progress.value.message = `转换 ${extension.toUpperCase()} ${i + 1}/${total}...`
+            const converted = await convertTelegramStickerBlob(
+              blob,
+              extension,
+              {
+                localAvifEnabled: localAvifEnabled.value,
+                backendEnabled: !!safeSettings.value.telegramWebmToAvifEnabled,
+                backendUrl: webmToAvifBackend.value
+              },
+              event => {
+                progress.value.message = `${event.message} ${i + 1}/${total}...`
+              }
+            )
+            blob = converted.blob
+            extension = converted.extension
+            if (converted.warning) {
+              message.warning(converted.warning)
+            }
           } catch (convertError) {
-            console.warn('WebM 转换失败，已跳过该贴纸：', convertError)
+            console.warn(`${extension} 转换失败，已跳过该贴纸：`, convertError)
             continue
           }
         }
@@ -386,6 +401,15 @@ const doImport = async () => {
         </a-radio-group>
       </div>
 
+      <div
+        class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800"
+      >
+        <h4 class="font-medium mb-2 dark:text-amber-100">Telegram AVIF 转换</h4>
+        <p class="text-xs text-amber-700 dark:text-amber-300">
+          本地离线 AVIF 开关在设置页生效。启用后会优先尝试在扩展内转换 webm / tgs，失败时如果已配置后端则自动兜底。
+        </p>
+      </div>
+
       <!-- 贴纸包输入 -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -444,13 +468,13 @@ const doImport = async () => {
                   v-if="stickerSetInfo.is_animated"
                   class="ml-2 px-1.5 py-0.5 bg-green-200 dark:bg-green-800 rounded text-xs"
                 >
-                  动画
+                  动画/TGS
                 </span>
                 <span
                   v-if="stickerSetInfo.is_video"
                   class="ml-2 px-1.5 py-0.5 bg-green-200 dark:bg-green-800 rounded text-xs"
                 >
-                  视频
+                  视频/WebM
                 </span>
               </p>
             </div>
@@ -534,7 +558,7 @@ const doImport = async () => {
         <p class="font-medium mb-1">💡 提示：</p>
         <ul class="list-disc pl-4 space-y-1">
           <li>导入将会把贴纸直接上传到选定的图床服务。</li>
-          <li>支持静态图片贴纸。视频贴纸 (WebM) 需配置转 AVIF 后端，否则会被跳过。</li>
+          <li>支持静态图片贴纸。WebM / TGS 会优先尝试本地离线 AVIF，失败时再走已配置的后端兜底。</li>
           <li>如果遇到 "Too Many Requests" 错误，请稍后重试。</li>
         </ul>
       </div>

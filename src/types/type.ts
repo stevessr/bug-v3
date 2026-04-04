@@ -63,9 +63,10 @@ export interface AppSettings {
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
   discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000
-  // Telegram WebM -> AVIF conversion backend
+  // Telegram sticker local/backend AVIF conversion
   telegramWebmToAvifEnabled?: boolean
   telegramWebmToAvifBackend?: string
+  telegramLocalAvifEnabled?: boolean
   // LinuxDo Credit 积分显示
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器（试验性功能）

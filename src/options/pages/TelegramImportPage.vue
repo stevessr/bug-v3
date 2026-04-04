@@ -14,7 +14,7 @@ import {
   downloadFileAsBlob,
   type TelegramStickerSet
 } from '@/utils/telegramResolver'
-import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
+import { convertTelegramStickerBlob } from '@/utils/telegram/telegramStickerConversion'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -89,8 +89,13 @@ const webmToAvifBackend = computed({
   set: value => store.updateSettings({ telegramWebmToAvifBackend: value })
 })
 
+const localAvifEnabled = computed({
+  get: () => !!safeSettings.value.telegramLocalAvifEnabled,
+  set: value => store.updateSettings({ telegramLocalAvifEnabled: value })
+})
+
 const allowVideoStickers = computed(
-  () => webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0
+  () => webmToAvifEnabled.value && (localAvifEnabled.value || webmToAvifBackend.value.trim().length > 0)
 )
 
 // 导入选项
@@ -617,18 +622,31 @@ const doImport = async (): Promise<boolean> => {
         const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
         let blob = await downloadFileAsBlob(proxyUrl)
 
-        if (extension === 'webm') {
+        if (extension === 'webm' || extension === 'tgs') {
           try {
-            progress.value.message = `转换 WebM ${i + 1}/${total}...`
-            blob = await convertWebmToAvifViaBackend(blob, {
-              backendUrl: webmToAvifBackend.value,
-              signal: abortController?.signal
-            })
-            extension = 'avif'
+            progress.value.message = `转换 ${extension.toUpperCase()} ${i + 1}/${total}...`
+            const converted = await convertTelegramStickerBlob(
+              blob,
+              extension,
+              {
+                localAvifEnabled: localAvifEnabled.value,
+                backendEnabled: webmToAvifEnabled.value,
+                backendUrl: webmToAvifBackend.value,
+                signal: abortController?.signal ?? undefined
+              },
+              event => {
+                progress.value.message = `${event.message} ${i + 1}/${total}...`
+              }
+            )
+            blob = converted.blob
+            extension = converted.extension
             filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+            if (converted.warning) {
+              message.warning(converted.warning)
+            }
           } catch (convertError) {
             webmConvertFailures++
-            console.warn('WebM 转换失败，已跳过该贴纸：', convertError)
+            console.warn(`${extension} 转换失败，已跳过该贴纸：`, convertError)
             continue
           }
         }
@@ -851,20 +869,27 @@ const doImport = async (): Promise<boolean> => {
           class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
         >
           <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-3">
-            2️⃣-A WebM 转 AVIF 后端
+            2️⃣-A Telegram AVIF 转换
           </h4>
-          <div class="flex items-center gap-3">
-            <a-switch v-model:checked="webmToAvifEnabled" />
-            <a-input
-              v-model:value="webmToAvifBackend"
-              placeholder="https://example.com/api/webm-to-avif"
-              class="flex-1"
-              :disabled="!webmToAvifEnabled"
-            />
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <a-switch v-model:checked="localAvifEnabled" />
+              <span class="text-sm text-amber-900 dark:text-amber-100">
+                启用本地离线 AVIF（实验性，优先保留 webm/tgs 动画）
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <a-switch v-model:checked="webmToAvifEnabled" />
+              <a-input
+                v-model:value="webmToAvifBackend"
+                placeholder="https://example.com/api/webm-to-avif"
+                class="flex-1"
+                :disabled="!webmToAvifEnabled"
+              />
+            </div>
           </div>
           <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
-            启用后，视频贴纸（webm）会通过该后端转换为 AVIF 再上传；后端需支持 POST 原始 webm 并返回
-            image/avif。
+            本地模式会优先尝试在扩展内把 webm / tgs 转为 AVIF；若启用了后端地址，本地失败时会继续走后端兜底。
           </p>
         </div>
 
@@ -1042,8 +1067,8 @@ const doImport = async (): Promise<boolean> => {
             </h4>
             <p class="text-sm text-green-800 dark:text-green-200">
               {{ stickerSetInfo.stickers.length }} 个贴纸
-              <span v-if="stickerSetInfo.is_animated">(包含动画贴纸)</span>
-              <span v-if="stickerSetInfo.is_video">(包含视频贴纸)</span>
+              <span v-if="stickerSetInfo.is_animated">(包含动画贴纸/TGS)</span>
+              <span v-if="stickerSetInfo.is_video">(包含视频贴纸/WebM)</span>
             </p>
           </div>
 
