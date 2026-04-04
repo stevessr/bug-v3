@@ -95,7 +95,9 @@ const localAvifEnabled = computed({
 })
 
 const allowVideoStickers = computed(
-  () => webmToAvifEnabled.value && (localAvifEnabled.value || webmToAvifBackend.value.trim().length > 0)
+  () =>
+    localAvifEnabled.value ||
+    (webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0)
 )
 
 // 导入选项

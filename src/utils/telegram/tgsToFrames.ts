@@ -19,7 +19,12 @@ export async function gunzipTgsBlob(blob: Blob): Promise<ArrayBuffer> {
     return await new Response(stream).arrayBuffer()
   }
 
-  throw new Error('当前环境不支持 .tgs gzip 解压')
+  const { gunzipSync } = await import('fflate')
+  const compressed = new Uint8Array(await blob.arrayBuffer())
+  const decompressed = gunzipSync(compressed)
+  const copied = new Uint8Array(decompressed.byteLength)
+  copied.set(decompressed)
+  return copied.buffer
 }
 
 async function captureCanvasAsPng(canvas: HTMLCanvasElement): Promise<Blob> {

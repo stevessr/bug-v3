@@ -35,7 +35,7 @@ const localAvifEnabled = computed(() => !!safeSettings.value.telegramLocalAvifEn
 const allowVideoStickers = computed(() => {
   const enabled = !!safeSettings.value.telegramWebmToAvifEnabled
   const backend = safeSettings.value.telegramWebmToAvifBackend || ''
-  return enabled && (localAvifEnabled.value || backend.trim().length > 0)
+  return localAvifEnabled.value || (enabled && backend.trim().length > 0)
 })
 
 const webmToAvifBackend = computed(() => safeSettings.value.telegramWebmToAvifBackend || '')

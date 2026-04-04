@@ -137,6 +137,9 @@ const drawCanvasImageSource = (
   throw new Error('Unsupported image source for AVIF encoding')
 }
 
+const createJobId = () =>
+  `tg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+
 class LocalAvifService {
   private ffmpeg: FFmpeg | null = null
   private ffmpegLoadPromise: Promise<void> | null = null
@@ -187,8 +190,9 @@ class LocalAvifService {
     await this.ensureFfmpegLoaded()
 
     const ffmpeg = this.getFfmpeg()
-    const inputPath = 'telegram-input.webm'
-    const outputPath = 'telegram-output.avif'
+    const jobId = createJobId()
+    const inputPath = `${jobId}-input.webm`
+    const outputPath = `${jobId}-output.avif`
 
     options.onProgress?.({ message: '正在初始化本地 AVIF 编码器...' })
     await ffmpeg.writeFile(inputPath, await fetchFile(blob), { signal: options.signal })
@@ -250,13 +254,14 @@ class LocalAvifService {
 
     await this.ensureFfmpegLoaded()
     const ffmpeg = this.getFfmpeg()
-    const outputPath = 'telegram-tgs.avif'
+    const jobId = createJobId()
+    const outputPath = `${jobId}-tgs.avif`
     const inputNames: string[] = []
 
     try {
       options.onProgress?.({ message: '正在写入 TGS 帧到本地编码器...' })
       for (let i = 0; i < frames.length; i++) {
-        const frameName = `frame_${String(i).padStart(4, '0')}.png`
+        const frameName = `${jobId}-frame_${String(i).padStart(4, '0')}.png`
         inputNames.push(frameName)
         await ffmpeg.writeFile(frameName, await fetchFile(frames[i]), { signal: options.signal })
       }
@@ -267,7 +272,7 @@ class LocalAvifService {
           '-framerate',
           String(Math.max(1, fps)),
           '-i',
-          'frame_%04d.png',
+          `${jobId}-frame_%04d.png`,
           '-c:v',
           'libaom-av1',
           '-pix_fmt',
