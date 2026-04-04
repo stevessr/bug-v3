@@ -14,7 +14,13 @@ import {
   downloadFileAsBlob,
   type TelegramStickerSet
 } from '@/utils/telegramResolver'
-import { convertTelegramStickerBlob } from '@/utils/telegram/telegramStickerConversion'
+import {
+  convertTelegramStickerBlob,
+  describeTelegramStickerConversionResult,
+  getTelegramStickerErrorMessage,
+  TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS,
+  TELEGRAM_STAGE_HINTS
+} from '@/utils/telegram/telegramStickerConversion'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -592,7 +598,7 @@ const doImport = async (): Promise<boolean> => {
       progress.value = {
         processed: i,
         total,
-        message: `处理贴纸 ${i + 1}/${total}...`
+        message: `开始处理贴纸 ${i + 1}/${total}...`
       }
 
       try {
@@ -620,7 +626,7 @@ const doImport = async (): Promise<boolean> => {
         let filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
 
         // 下载贴纸
-        progress.value.message = `下载贴纸 ${i + 1}/${total}...`
+        progress.value.message = `${TELEGRAM_STAGE_HINTS.download} ${i + 1}/${total}...`
         const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
         let blob = await downloadFileAsBlob(proxyUrl)
 
@@ -634,7 +640,8 @@ const doImport = async (): Promise<boolean> => {
                 localAvifEnabled: localAvifEnabled.value,
                 backendEnabled: webmToAvifEnabled.value,
                 backendUrl: webmToAvifBackend.value,
-                signal: abortController?.signal ?? undefined
+                signal: abortController?.signal ?? undefined,
+                animatedTimeoutMs: TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS
               },
               event => {
                 progress.value.message = `${event.message} ${i + 1}/${total}...`
@@ -643,12 +650,15 @@ const doImport = async (): Promise<boolean> => {
             blob = converted.blob
             extension = converted.extension
             filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
+            progress.value.message = `转换完成：${describeTelegramStickerConversionResult(converted)} ${i + 1}/${total}...`
             if (converted.warning) {
               message.warning(converted.warning)
             }
           } catch (convertError) {
             webmConvertFailures++
+            const text = getTelegramStickerErrorMessage(convertError)
             console.warn(`${extension} 转换失败，已跳过该贴纸：`, convertError)
+            message.warning(`${extension.toUpperCase()} 转换失败，已跳过：${text}`)
             continue
           }
         }
@@ -676,7 +686,7 @@ const doImport = async (): Promise<boolean> => {
         const file = new File([blob], filename, { type: mimeType })
 
         // 上传到托管服务
-        progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
+        progress.value.message = `${TELEGRAM_STAGE_HINTS.upload} ${i + 1}/${total}...`
         const uploadUrl = await service.uploadFile(file, () => {
           // 上传进度回调（可用于更精细的进度显示）
         })
@@ -795,7 +805,7 @@ const doImport = async (): Promise<boolean> => {
     selectedGroupId.value = ''
     importMode.value = 'new'
     if (webmConvertFailures > 0) {
-      message.warning(`WebM 转换失败 ${webmConvertFailures} 个，已跳过`)
+      message.warning(`WebM/TGS 转换失败 ${webmConvertFailures} 个，已跳过或降级`)
     }
     return true
   } catch (error: any) {
@@ -866,7 +876,7 @@ const doImport = async (): Promise<boolean> => {
           </p>
         </div>
 
-        <!-- WebM 转 AVIF 后端 -->
+        <!-- WebM / TGS 转 AVIF -->
         <div
           class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
         >
@@ -1002,6 +1012,12 @@ const doImport = async (): Promise<boolean> => {
               {{ isCancelling ? '取消中...' : '取消导入' }}
             </a-button>
           </div>
+          <p
+            v-if="progress.message.includes('本地编码动画 AVIF')"
+            class="text-xs text-gray-500 dark:text-gray-400 mb-2"
+          >
+            当前主要在本地 CPU 上做编码，网络面板暂时不变化是正常现象；若超过 45 秒会自动降级。
+          </p>
           <div v-if="progress.total > 0" class="flex items-center gap-2">
             <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-full h-2">
               <div

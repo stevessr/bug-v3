@@ -19,7 +19,13 @@ import {
   downloadFileAsBlob,
   type TelegramStickerSet
 } from '@/utils/telegramResolver'
-import { convertTelegramStickerBlob } from '@/utils/telegram/telegramStickerConversion'
+import {
+  convertTelegramStickerBlob,
+  describeTelegramStickerConversionResult,
+  getTelegramStickerErrorMessage,
+  TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS,
+  TELEGRAM_STAGE_HINTS
+} from '@/utils/telegram/telegramStickerConversion'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -221,7 +227,7 @@ const doImport = async () => {
       progress.value = {
         processed: i,
         total,
-        message: `下载并上传贴纸 ${i + 1}/${total}...`
+        message: `开始处理贴纸 ${i + 1}/${total}...`
       }
 
       try {
@@ -232,6 +238,7 @@ const doImport = async () => {
         if (extension === 'webm' && !allowVideoStickers.value) continue
 
         // 下载贴纸
+        progress.value.message = `${TELEGRAM_STAGE_HINTS.download} ${i + 1}/${total}...`
         const proxyUrl = createProxyUrl(fileInfo.file_path, telegramBotToken.value)
         let blob = await downloadFileAsBlob(proxyUrl)
 
@@ -244,7 +251,8 @@ const doImport = async () => {
               {
                 localAvifEnabled: localAvifEnabled.value,
                 backendEnabled: !!safeSettings.value.telegramWebmToAvifEnabled,
-                backendUrl: webmToAvifBackend.value
+                backendUrl: webmToAvifBackend.value,
+                animatedTimeoutMs: TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS
               },
               event => {
                 progress.value.message = `${event.message} ${i + 1}/${total}...`
@@ -252,14 +260,19 @@ const doImport = async () => {
             )
             blob = converted.blob
             extension = converted.extension
+            progress.value.message = `转换完成：${describeTelegramStickerConversionResult(converted)} ${i + 1}/${total}...`
             if (converted.warning) {
               message.warning(converted.warning)
             }
           } catch (convertError) {
+            const errorMessage = getTelegramStickerErrorMessage(convertError)
             console.warn(`${extension} 转换失败，已跳过该贴纸：`, convertError)
+            message.warning(`${extension.toUpperCase()} 转换失败，已跳过：${errorMessage}`)
             continue
           }
         }
+
+        progress.value.message = `${TELEGRAM_STAGE_HINTS.upload} ${i + 1}/${total}...`
 
         // 确定 MIME 类型
         let mimeType = blob.type
@@ -442,6 +455,12 @@ const doImport = async () => {
             {{ progress.processed }}/{{ progress.total }}
           </span>
         </div>
+        <p
+          v-if="progress.message.includes('本地编码动画 AVIF')"
+          class="text-xs text-blue-600 dark:text-blue-300 mb-2"
+        >
+          当前主要在本地 CPU 上做编码，网络不变化是正常现象；若超过 45 秒会自动降级。
+        </p>
         <a-progress
           :percent="
             progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0
