@@ -32,6 +32,7 @@ declare global {
   const archiveGroup: typeof import('./utils/simpleStorage')['archiveGroup']
   const backupToSync: typeof import('./utils/simpleStorage')['backupToSync']
   const buildEmojiUrlRewriteRegex: typeof import('./utils/emojiUrlRewrite')['buildEmojiUrlRewriteRegex']
+  const buildMarkdownImage: typeof import('./utils/emojiMarkdown')['buildMarkdownImage']
   const cacheImage: typeof import('./utils/imageCache')['cacheImage']
   const cacheImages: typeof import('./utils/imageCache')['cacheImages']
   const checkStorageHealth: typeof import('./utils/simpleStorage')['checkStorageHealth']
@@ -90,6 +91,7 @@ declare global {
   const getFavorites: typeof import('./utils/simpleStorage')['getFavorites']
   const getFile: typeof import('./utils/telegramResolver')['getFile']
   const getMessage: typeof import('./utils/i18n')['getMessage']
+  const getPreferredEmojiMarkdownUrl: typeof import('./utils/emojiMarkdown')['getPreferredEmojiMarkdownUrl']
   const getSettings: typeof import('./utils/simpleStorage')['getSettings']
   const getStickerSet: typeof import('./utils/telegramResolver')['getStickerSet']
   const getTelegramBotToken: typeof import('./utils/telegramResolver')['getTelegramBotToken']
@@ -299,6 +301,7 @@ declare module 'vue' {
     readonly archiveGroup: UnwrapRef<typeof import('./utils/simpleStorage')['archiveGroup']>
     readonly backupToSync: UnwrapRef<typeof import('./utils/simpleStorage')['backupToSync']>
     readonly buildEmojiUrlRewriteRegex: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['buildEmojiUrlRewriteRegex']>
+    readonly buildMarkdownImage: UnwrapRef<typeof import('./utils/emojiMarkdown')['buildMarkdownImage']>
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
     readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
@@ -357,6 +360,7 @@ declare module 'vue' {
     readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
     readonly getMessage: UnwrapRef<typeof import('./utils/i18n')['getMessage']>
+    readonly getPreferredEmojiMarkdownUrl: UnwrapRef<typeof import('./utils/emojiMarkdown')['getPreferredEmojiMarkdownUrl']>
     readonly getSettings: UnwrapRef<typeof import('./utils/simpleStorage')['getSettings']>
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>

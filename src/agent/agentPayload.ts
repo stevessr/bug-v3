@@ -393,7 +393,13 @@ export interface AgentToolPayload {
 
 export const parseResponsePayload = (payload: unknown): AgentToolPayload | null => {
   try {
-    return responseSchema.parse(normalizeAgentPayload(payload)) as AgentToolPayload
+    const result = responseSchema.safeParse(normalizeAgentPayload(payload))
+    if (result.success) return result.data as AgentToolPayload
+    // For streaming, return partial data if it matches partially
+    if (payload && typeof payload === 'object') {
+      return payload as AgentToolPayload
+    }
+    return null
   } catch {
     return null
   }

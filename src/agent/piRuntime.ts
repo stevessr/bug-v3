@@ -1,4 +1,9 @@
-import { Agent, type AgentTool, type AgentToolResult } from '@mariozechner/pi-agent-core'
+import {
+  Agent,
+  type AgentTool,
+  type AgentToolResult,
+  type AgentMessage as PiAgentMessage
+} from '@mariozechner/pi-agent-core'
 import {
   Type,
   type AssistantMessage,
@@ -131,7 +136,8 @@ const createDeferred = <T>(): Deferred<T> => {
   }
 }
 
-const cloneMessages = (messages: Message[]): Message[] => JSON.parse(JSON.stringify(messages))
+const cloneMessages = (messages: PiAgentMessage[]): Message[] =>
+  JSON.parse(JSON.stringify(messages))
 
 const readStoredThreadState = (threadId: string): StoredThreadState | null => {
   if (typeof localStorage === 'undefined') return null
@@ -373,10 +379,10 @@ const createThreadRuntime = (
           useReasoning: resolveThinkingLevel(settings, input) !== 'off'
         }),
         thinkingLevel: resolveThinkingLevel(settings, input),
-        messages: stored?.messages || [],
+        messages: (stored?.messages || []) as any,
         tools: []
       },
-      getApiKey: async () => runtime.settings.apiKey.trim() || undefined
+      getApiKey: async _provider => runtime.settings.apiKey.trim() || undefined
     })
   }
 
@@ -415,16 +421,17 @@ const syncRuntimeConfig = async (
   input: string,
   suspendResult: Deferred<AgentRunResult | null>
 ) => {
-  runtime.agent.setSystemPrompt(
-    await buildRuntimeSystemPrompt(input, runtime.settings, runtime.subagent, runtime.context)
+  runtime.agent.state.systemPrompt = await buildRuntimeSystemPrompt(
+    input,
+    runtime.settings,
+    runtime.subagent,
+    runtime.context
   )
-  runtime.agent.setModel(
-    buildPiModel(runtime.settings, runtime.subagent, {
-      useReasoning: resolveThinkingLevel(runtime.settings, input) !== 'off'
-    })
-  )
-  runtime.agent.setThinkingLevel(resolveThinkingLevel(runtime.settings, input))
-  runtime.agent.setTools(await buildTools(runtime, suspendResult))
+  runtime.agent.state.model = buildPiModel(runtime.settings, runtime.subagent, {
+    useReasoning: resolveThinkingLevel(runtime.settings, input) !== 'off'
+  })
+  runtime.agent.state.thinkingLevel = resolveThinkingLevel(runtime.settings, input)
+  runtime.agent.state.tools = await buildTools(runtime, suspendResult)
 }
 
 const buildTools = async (
@@ -452,7 +459,7 @@ const buildTools = async (
       }
 
       writeStoredThreadState(runtime.id, {
-        messages: cloneMessages(runtime.agent.state.messages as Message[]),
+        messages: cloneMessages(runtime.agent.state.messages),
         pendingTool:
           toolUseIds.length > 0 && toolInputs.length > 0
             ? {
@@ -579,6 +586,25 @@ const subscribeToRun = (
           thoughts: state.lastReasoningText ? [state.lastReasoningText] : undefined
         })
       }
+      if (event.assistantMessageEvent.type === 'toolcall_delta') {
+        const toolCall =
+          state.lastAssistantMessage.content[event.assistantMessageEvent.contentIndex]
+        if (toolCall?.type === 'toolCall' && toolCall.name === toolSchema.name) {
+          const parsed = normalizeToolPayload(parseResponsePayload(toolCall.arguments))
+          if (parsed) {
+            emitUpdate(onUpdate, {
+              message: parsed.message || state.lastAssistantText || undefined,
+              thoughts:
+                parsed.thoughts?.length || state.lastReasoningText
+                  ? parsed.thoughts || [state.lastReasoningText]
+                  : undefined,
+              steps: parsed.steps,
+              actions: normalizeActions(parsed.actions),
+              parallelActions: parsed.parallelActions
+            })
+          }
+        }
+      }
       return
     }
 
@@ -611,7 +637,7 @@ const subscribeToRun = (
       }
 
       writeStoredThreadState(runtime.id, {
-        messages: cloneMessages(runtime.agent.state.messages as Message[]),
+        messages: cloneMessages(runtime.agent.state.messages),
         pendingTool:
           runtime.pendingTool?.toolUseIds.length && runtime.pendingTool.toolInputs.length
             ? {

@@ -164,8 +164,18 @@ export const buildPiModel = (
     if (!model?.api || !model?.provider || !model?.id) {
       throw new Error(`Unknown Pi model: ${provider}/${modelId}`)
     }
+
+    const effectiveApi =
+      settings.apiFlavor === 'responses' &&
+      (provider === 'openai' || provider === 'openrouter' || provider === 'groq')
+        ? provider === 'openai'
+          ? 'openai-responses'
+          : model.api
+        : model.api
+
     return {
       ...model,
+      api: effectiveApi,
       baseUrl: baseUrl || model.baseUrl
     }
   } catch {
