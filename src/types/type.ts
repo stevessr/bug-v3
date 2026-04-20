@@ -93,6 +93,7 @@ export interface Emoji {
   packet: number
   name: string
   url: string
+  short_url?: string // Discourse short URL (e.g. upload://...), preferred for markdown output when available
   originUrl?: string // 原始来源链接（例如 Pixiv 原图 URL）
   displayUrl?: string // Optional display URL, different from output URL
   width?: number

@@ -514,7 +514,8 @@ export class CollaborativeUploadClient {
           this.sessionResults.push({
             filename: data.filename,
             success: true,
-            url: data.resultUrl
+            url: data.resultUrl,
+            short_url: data.shortUrl
           })
           // 从待处理列表中移除
           this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
@@ -525,7 +526,7 @@ export class CollaborativeUploadClient {
           // 重置超时（有进展时）
           this.resetTaskTimeout()
           // 回调通知远程上传完成
-          this.config.onRemoteUploadComplete?.(data.filename, data.resultUrl)
+          this.config.onRemoteUploadComplete?.(data.filename, data.resultUrl, data.shortUrl)
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -683,17 +684,20 @@ export class CollaborativeUploadClient {
       }
 
       // 执行上传
-      const resultUrl = await uploadServices['linux.do'].uploadFile(
-        file,
-        undefined,
-        onRateLimitWait
-      )
+      const linuxDoService = uploadServices['linux.do']
+      const uploadResult = linuxDoService.uploadFileDetailed
+        ? await linuxDoService.uploadFileDetailed(file, undefined, onRateLimitWait)
+        : {
+            url: await linuxDoService.uploadFile(file, undefined, onRateLimitWait)
+          }
+      const resultUrl = uploadResult.url
 
       // 报告成功（包含 worker 信息）
       this.send({
         type: 'TASK_COMPLETED',
         taskId,
         resultUrl,
+        shortUrl: uploadResult.short_url,
         filename: meta.filename,
         workerId: this._status.workerId, // 工作者 ID
         workerUuid: this.uuid // 工作者 UUID
@@ -763,17 +767,21 @@ export class CollaborativeUploadClient {
       }
 
       // 执行上传
-      const resultUrl = await uploadServices['linux.do'].uploadFile(
-        file,
-        undefined,
-        onRateLimitWait
-      )
+      const linuxDoService = uploadServices['linux.do']
+      const uploadResult = linuxDoService.uploadFileDetailed
+        ? await linuxDoService.uploadFileDetailed(file, undefined, onRateLimitWait)
+        : {
+            url: await linuxDoService.uploadFile(file, undefined, onRateLimitWait)
+          }
+      const resultUrl = uploadResult.url
 
       // 报告成功
       this.send({
         type: 'TASK_COMPLETED',
         taskId: task.id,
-        resultUrl
+        resultUrl,
+        shortUrl: uploadResult.short_url,
+        filename: task.filename
       })
 
       // 更新本地统计

@@ -145,11 +145,17 @@ export function useUpload(options: UseUploadOptions) {
             uploadProgress.value[idx].waitStart = Date.now()
           }
 
-          const uploadUrl = await service.uploadFile(file, updateProgress, onRateLimitWait)
+          const uploadResult = service.uploadFileDetailed
+            ? await service.uploadFileDetailed(file, updateProgress, onRateLimitWait)
+            : {
+                url: await service.uploadFile(file, updateProgress, onRateLimitWait)
+              }
+          const uploadUrl = uploadResult.url
 
           newEmojis.push({
             name: file.name,
             url: uploadUrl,
+            ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
             displayUrl: uploadUrl,
             packet: 0,
             width,

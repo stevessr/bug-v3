@@ -71,6 +71,9 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
 
       const name = rawName || decodeURIComponent((url.split('/').pop() || '').split('?')[0])
       const emojiData: any = { name, url }
+      if (url.startsWith('upload://')) {
+        emojiData.short_url = url
+      }
       if (displayUrl) {
         emojiData.displayUrl = displayUrl
       }
@@ -184,6 +187,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
+          ...(emoji.short_url && { short_url: emoji.short_url }),
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
           ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),
@@ -228,6 +232,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
+          ...(emoji.short_url && { short_url: emoji.short_url }),
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
           ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),

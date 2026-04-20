@@ -20,6 +20,7 @@ import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
 import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
 
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 import { EmojiPicker, PluginEmojiPicker } from '@/components/editor/wysiwyg'
 import '@/components/editor/wysiwyg/styles/EmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/PluginEmojiPicker.css'
@@ -100,11 +101,11 @@ export default defineComponent({
     }
 
     const buildImageMarkup = computed(() => {
-      return (url: string, filename?: string) => {
-        const safeUrl = url
+      return (emoji: { url: string; short_url?: string }, filename?: string) => {
+        const safeUrl = emoji.url
         if (props.inputFormat === 'markdown') {
           const alt = filename || 'image'
-          return `![${alt}](${safeUrl})`
+          return buildMarkdownImage(alt, emoji)
         }
         return `[img]${safeUrl}[/img]`
       }
@@ -171,8 +172,8 @@ export default defineComponent({
       showEmojiPicker.value = false
     }
 
-    const handlePluginEmojiSelect = (emoji: { name: string; url: string }) => {
-      const markup = buildImageMarkup.value(emoji.url, emoji.name)
+    const handlePluginEmojiSelect = (emoji: { name: string; url: string; short_url?: string }) => {
+      const markup = buildImageMarkup.value(emoji, emoji.name)
       insertTextAtCursor(markup)
       showPluginEmojiPicker.value = false
     }

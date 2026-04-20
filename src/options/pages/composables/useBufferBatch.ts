@@ -4,6 +4,7 @@ import type { FileItem } from './useFilePersistence'
 
 import type { EmojiGroup } from '@/types/type'
 import type { useEmojiStore } from '@/stores/emojiStore'
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 /**
  * 缓冲区批量操作 Composable
@@ -153,7 +154,9 @@ export function useBufferBatch(options: UseBufferBatchOptions) {
     const lines = Array.from(selectedEmojis.value)
       .map(idx => {
         const e = bufferGroup.value?.emojis[idx]
-        return e && e.url ? `![${e.name}|${e.height}x${e.width}](${e.url})` : null
+        if (!e?.url && !e?.short_url) return null
+        const alt = e.width && e.height ? `${e.name}|${e.height}x${e.width}` : e.name || 'image'
+        return buildMarkdownImage(alt, e)
       })
       .filter((v): v is string => !!v)
 

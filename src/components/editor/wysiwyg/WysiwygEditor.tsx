@@ -449,7 +449,7 @@ export default defineComponent({
       showEmojiPicker.value = false
     }
 
-    const handlePluginEmojiSelect = (emoji: { name: string; url: string }) => {
+    const handlePluginEmojiSelect = (emoji: { name: string; url: string; short_url?: string }) => {
       const safeUrl = escapeAttr(emoji.url)
       const safeAlt = escapeAttr(emoji.name)
       insertHtml(`<img src="${safeUrl}" alt=":${safeAlt}:" /> `)

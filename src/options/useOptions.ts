@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useEmojiStore } from '../stores/emojiStore'
 import type { EmojiGroup, Emoji } from '../types/type'
 import { isImageUrl } from '../utils/isImageUrl'
+import { buildMarkdownImage } from '../utils/emojiMarkdown'
 
 import {
   importConfigurationToStore,
@@ -434,6 +435,7 @@ export default function useOptions() {
         const updatedProperties: Partial<Emoji> = {
           name: payload.emoji.name,
           url: payload.emoji.url,
+          short_url: payload.emoji.short_url,
           displayUrl: payload.emoji.displayUrl,
           customOutput: payload.emoji.customOutput,
           width: payload.emoji.width,
@@ -497,8 +499,12 @@ export default function useOptions() {
     }
 
     const lines = group.emojis
-      .filter((e: Emoji) => e && e.url)
-      .map((e: Emoji) => `![${e.name}|${e.height}x${e.width}](${e.url})`)
+      .filter((e: Emoji) => e && (e.url || e.short_url))
+      .map((e: Emoji) => {
+        const alt = e.width && e.height ? `${e.name}|${e.height}x${e.width}` : e.name || 'image'
+        return buildMarkdownImage(alt, e)
+      })
+      .filter((line): line is string => !!line)
 
     if (lines.length === 0) {
       showError('分组中没有有效的表情')

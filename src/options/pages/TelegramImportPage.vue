@@ -102,8 +102,7 @@ const localAvifEnabled = computed({
 
 const allowVideoStickers = computed(
   () =>
-    localAvifEnabled.value ||
-    (webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0)
+    localAvifEnabled.value || (webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0)
 )
 
 // 导入选项
@@ -687,9 +686,16 @@ const doImport = async (): Promise<boolean> => {
 
         // 上传到托管服务
         progress.value.message = `${TELEGRAM_STAGE_HINTS.upload} ${i + 1}/${total}...`
-        const uploadUrl = await service.uploadFile(file, () => {
-          // 上传进度回调（可用于更精细的进度显示）
-        })
+        const uploadResult = service.uploadFileDetailed
+          ? await service.uploadFileDetailed(file, () => {
+              // 上传进度回调（可用于更精细的进度显示）
+            })
+          : {
+              url: await service.uploadFile(file, () => {
+                // 上传进度回调（可用于更精细的进度显示）
+              })
+            }
+        const uploadUrl = uploadResult.url
 
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
         const newEmoji = {
@@ -697,6 +703,7 @@ const doImport = async (): Promise<boolean> => {
           packet: 0,
           name: filename,
           url: uploadUrl,
+          ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
           displayUrl: uploadUrl,
           width: sticker.width,
           height: sticker.height,
@@ -901,7 +908,8 @@ const doImport = async (): Promise<boolean> => {
             </div>
           </div>
           <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
-            本地模式会优先尝试在扩展内把 webm / tgs 转为 AVIF；若启用了后端地址，本地失败时会继续走后端兜底。
+            本地模式会优先尝试在扩展内把 webm / tgs 转为
+            AVIF；若启用了后端地址，本地失败时会继续走后端兜底。
           </p>
         </div>
 

@@ -3,6 +3,8 @@
 import { cachedState } from '../../data/state'
 import { DQS } from '../../utils/dom/createEl'
 
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
+
 export function insertEmojiIntoEditor(emoji: unknown) {
   // avoid noisy console in lint; keep only minimal info in debug environments
   // allow a local any here to bridge removed UI types; intentionally narrow in scope
@@ -168,7 +170,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
       emojiText = `<img src="${em.url}" title=":${em.name}:" class="emoji only-emoji" alt=":${em.name}:" loading="lazy" width="${pixelWidth}" height="${pixelHeight}" style="aspect-ratio: ${pixelWidth} / ${pixelHeight};"> `
     } else {
       // 默认 Markdown 格式输出
-      emojiText = `![${em.name}|${width}x${height},${scale}%](${em.url}) `
+      emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, em)} `
     }
 
     const startPos = textArea.selectionStart
@@ -227,7 +229,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
           contentEditable.insertAdjacentHTML('beforeend', imgTemplate)
         }
       } else {
-        const emojiText = `![${em.name}|${width}x${height},${scale}%](${em.url}) `
+        const emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, em)} `
         // Append text node
         const textNode = document.createTextNode(emojiText)
         const sel = window.getSelection()

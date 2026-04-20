@@ -231,6 +231,7 @@ const parseMarkdownImages = (text: string): ImageVariant[] => {
     const item = reactive({
       name: nameVal,
       url: urlRaw,
+      ...(urlRaw.startsWith('upload://') && { short_url: urlRaw }),
       variants: [{ label: '默认', url: urlRaw }],
       selectedVariant: urlRaw
     })
@@ -242,6 +243,7 @@ const parseMarkdownImages = (text: string): ImageVariant[] => {
 interface ImageVariant {
   name: string
   url: string
+  short_url?: string
   variants: Array<{ label: string; url: string }>
   selectedVariant: string
   displayUrl?: string
@@ -493,6 +495,7 @@ const add = async () => {
       packet: Date.now(),
       name: name.value.trim(),
       url: url.value.trim(),
+      ...(url.value.trim().startsWith('upload://') && { short_url: url.value.trim() }),
       ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() }),
       ...(customOutput.value.trim() && { customOutput: customOutput.value.trim() }),
       ...(tags.length > 0 && { tags }),
@@ -532,6 +535,10 @@ const importParsed = () => {
         packet: Date.now(),
         name: it.name,
         url: originalUrl
+      }
+      if (it.short_url) emojiData.short_url = it.short_url
+      else if (typeof originalUrl === 'string' && originalUrl.startsWith('upload://')) {
+        emojiData.short_url = originalUrl
       }
       if (displayForEmoji) emojiData.displayUrl = displayForEmoji
 

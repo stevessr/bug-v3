@@ -7,7 +7,7 @@ export interface CollaborativeUploadConfig {
   onStatusChange?: (status: ConnectionStatus) => void
   onProgress?: (progress: UploadProgress) => void
   onWorkerStats?: (stats: WorkerStats) => void
-  onRemoteUploadComplete?: (filename: string, url: string) => void // 远程上传完成回调（来自工作者）
+  onRemoteUploadComplete?: (filename: string, url: string, shortUrl?: string) => void // 远程上传完成回调（来自工作者）
   onDisconnect?: (pendingTasks: string[]) => void // 断线时回调，返回未完成的远程任务文件名
   onCurrentTask?: (task: { filename: string; status: string } | null) => void // Worker 当前任务回调
 }
@@ -71,6 +71,7 @@ export interface UploadResult {
   filename: string
   success: boolean
   url?: string
+  short_url?: string
   error?: string
 }
 

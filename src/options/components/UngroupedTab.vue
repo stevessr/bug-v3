@@ -7,6 +7,7 @@ import { useEmojiStore } from '../../stores/emojiStore'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
+import { buildMarkdownImage } from '../../utils/emojiMarkdown'
 import CachedImage from '../../components/CachedImage.vue'
 
 import GroupSelector from './GroupSelector.vue'
@@ -167,7 +168,11 @@ const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
       const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
       if (resp && resp.url) {
         // Update emoji url in store (ungrouped group)
-        emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+        emojiStore.updateEmojiInGroup('ungrouped', index, {
+          url: resp.url,
+          displayUrl: resp.url,
+          short_url: resp.short_url || undefined
+        })
       }
     } finally {
       // Show upload progress dialog (always)
@@ -210,7 +215,11 @@ const uploadSelectedEmojis = async () => {
         const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
         if (resp && resp.url) {
           // Find this emoji in ungrouped and update its url
-          emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+          emojiStore.updateEmojiInGroup('ungrouped', index, {
+            url: resp.url,
+            displayUrl: resp.url,
+            short_url: resp.short_url || undefined
+          })
         }
         return resp
       } catch (error) {
@@ -350,7 +359,8 @@ const copySelectedAsMarkdown = async () => {
   const lines = Array.from(selectedEmojis.value)
     .map(idx => {
       const e = ungroup.value!.emojis[idx]
-      return e && e.url ? `![](${e.url})` : null
+      if (!e?.url && !e?.short_url) return null
+      return buildMarkdownImage(e.name || 'image', e)
     })
     .filter((v): v is string => !!v)
 

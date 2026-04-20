@@ -291,15 +291,23 @@ const doImport = async () => {
 
         // 上传到托管服务
         progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
-        const uploadUrl = await service.uploadFile(file, () => {
-          // console.log(`Upload progress: ${percent}%`)
-        })
+        const uploadResult = service.uploadFileDetailed
+          ? await service.uploadFileDetailed(file, () => {
+              // console.log(`Upload progress: ${percent}%`)
+            })
+          : {
+              url: await service.uploadFile(file, () => {
+                // console.log(`Upload progress: ${percent}%`)
+              })
+            }
+        const uploadUrl = uploadResult.url
 
         const emojiId = `telegram_${sticker.file_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
         newEmojis.push({
           id: emojiId,
           name: filename,
           url: uploadUrl,
+          ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
           displayUrl: uploadUrl,
           groupId: targetGroup!.id
         })
@@ -419,7 +427,8 @@ const doImport = async () => {
       >
         <h4 class="font-medium mb-2 dark:text-amber-100">Telegram AVIF 转换</h4>
         <p class="text-xs text-amber-700 dark:text-amber-300">
-          本地离线 AVIF 开关在设置页生效。启用后会优先尝试在扩展内转换 webm / tgs，失败时如果已配置后端则自动兜底。
+          本地离线 AVIF 开关在设置页生效。启用后会优先尝试在扩展内转换 webm /
+          tgs，失败时如果已配置后端则自动兜底。
         </p>
       </div>
 
@@ -577,7 +586,9 @@ const doImport = async () => {
         <p class="font-medium mb-1">💡 提示：</p>
         <ul class="list-disc pl-4 space-y-1">
           <li>导入将会把贴纸直接上传到选定的图床服务。</li>
-          <li>支持静态图片贴纸。WebM / TGS 会优先尝试本地离线 AVIF，失败时再走已配置的后端兜底。</li>
+          <li>
+            支持静态图片贴纸。WebM / TGS 会优先尝试本地离线 AVIF，失败时再走已配置的后端兜底。
+          </li>
           <li>如果遇到 "Too Many Requests" 错误，请稍后重试。</li>
         </ul>
       </div>

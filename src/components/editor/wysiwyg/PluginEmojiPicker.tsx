@@ -3,7 +3,13 @@ import { defineComponent, ref, computed, onMounted, Teleport, Transition } from 
 
 import { useEmojiStore } from '@/stores/emojiStore'
 
-type PickerEmoji = { id: string; name: string; url: string }
+type PickerEmoji = {
+  id: string
+  name: string
+  url: string
+  short_url?: string
+  displayUrl?: string
+}
 
 type PickerGroup = { id: string; name: string; icon: string; emojis: PickerEmoji[] }
 
@@ -35,7 +41,9 @@ export default defineComponent({
           emojis: (group.emojis || []).map(e => ({
             id: e.id,
             name: e.name,
-            url: e.url
+            url: e.url,
+            short_url: e.short_url,
+            displayUrl: e.displayUrl
           }))
         }))
     })
@@ -140,7 +148,11 @@ export default defineComponent({
                           title={emoji.name}
                           onClick={() => selectEmoji(emoji)}
                         >
-                          <img src={emoji.url} alt={emoji.name} loading="lazy" />
+                          <img
+                            src={emoji.displayUrl || emoji.url}
+                            alt={emoji.name}
+                            loading="lazy"
+                          />
                         </button>
                       ))}
                     </div>

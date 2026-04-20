@@ -322,7 +322,7 @@ function scheduleNextTask() {
   )
 }
 
-function handleTaskComplete(workerId, taskId, resultUrl) {
+function handleTaskComplete(workerId, taskId, resultUrl, shortUrl) {
   const task = activeTasks.get(taskId)
   if (!task) {
     log(`Warning: Task ${taskId} not found in active tasks`)
@@ -346,6 +346,7 @@ function handleTaskComplete(workerId, taskId, resultUrl) {
 
   task.status = 'completed'
   task.resultUrl = resultUrl
+  task.shortUrl = shortUrl || null
   activeTasks.delete(taskId)
 
   log(`Task ${taskId} completed by worker ${workerId}: ${resultUrl}`)
@@ -359,6 +360,7 @@ function handleTaskComplete(workerId, taskId, resultUrl) {
       taskId: task.id,
       filename: task.filename,
       resultUrl: resultUrl,
+      shortUrl: shortUrl || null,
       progress: {
         completed: session.completedTasks,
         failed: session.failedTasks,
@@ -843,7 +845,7 @@ function handleMessage(ws, clientId, message) {
 
       // 工作者报告任务完成
       case 'TASK_COMPLETED': {
-        handleTaskComplete(clientId, data.taskId, data.resultUrl)
+        handleTaskComplete(clientId, data.taskId, data.resultUrl, data.shortUrl)
         break
       }
 

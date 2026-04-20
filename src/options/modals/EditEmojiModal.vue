@@ -30,6 +30,7 @@ const emojiStore = useEmojiStore()
 const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
+  short_url: '',
   displayUrl: '',
   customOutput: '',
   tags: []
@@ -133,9 +134,15 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
     try {
       const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
       if (resp && resp.url && emoji.id) {
-        emojiStore.updateEmoji(emoji.id, { url: resp.url })
+        emojiStore.updateEmoji(emoji.id, {
+          url: resp.url,
+          displayUrl: resp.url,
+          short_url: resp.short_url || undefined
+        })
         // 同步更新 UI 显示的 URL
         localEmoji.value.url = resp.url
+        localEmoji.value.displayUrl = resp.url
+        localEmoji.value.short_url = resp.short_url || undefined
       }
     } finally {
       // Show upload progress dialog regardless
@@ -269,6 +276,7 @@ const handleSubmit = () => {
       packet: props.emoji?.packet || Date.now(),
       name: localEmoji.value.name,
       url: localEmoji.value.url,
+      short_url: localEmoji.value.short_url || undefined,
       displayUrl: localEmoji.value.displayUrl || undefined,
       customOutput: localEmoji.value.customOutput || undefined,
       groupId: selectedGroupId.value,

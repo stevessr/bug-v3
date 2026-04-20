@@ -17,6 +17,7 @@ export function buildEmojiExportItem(emoji: any, groupId?: string): any {
     packet: emoji?.packet,
     name: emoji?.name,
     url,
+    short_url: emoji?.short_url,
     originUrl: emoji?.originUrl,
     displayUrl: emoji?.displayUrl,
     width: emoji?.width,

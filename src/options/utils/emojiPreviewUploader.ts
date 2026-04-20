@@ -158,7 +158,7 @@ class EmojiPreviewUploader {
   private shouldTerminateUploadFlow(error: any): boolean {
     return Boolean(
       error?.shouldTerminateUploadFlow ||
-        (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
+      (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
     )
   }
 
@@ -456,23 +456,26 @@ class EmojiPreviewUploader {
   private async performUpload(file: File): Promise<EmojiUploadResponse> {
     try {
       // Use the upload service for linux.do
-      const url = await uploadServices['linux.do'].uploadFile(file)
+      const linuxDoService = uploadServices['linux.do']
+      const result = linuxDoService.uploadFileDetailed
+        ? await linuxDoService.uploadFileDetailed(file)
+        : { url: await linuxDoService.uploadFile(file) }
 
       // Convert to expected response format
       return {
         id: Date.now(),
-        url: url,
-        original_filename: file.name,
-        filesize: file.size,
-        width: 0, // Not available from upload service
-        height: 0, // Not available from upload service
+        url: result.url,
+        original_filename: result.original_filename || file.name,
+        filesize: result.filesize || file.size,
+        width: result.width || 0,
+        height: result.height || 0,
         thumbnail_width: 0,
         thumbnail_height: 0,
-        extension: file.name.split('.').pop() || '',
-        short_url: url,
-        short_path: url,
+        extension: result.extension || file.name.split('.').pop() || '',
+        short_url: result.short_url || result.url,
+        short_path: result.short_path || result.url,
         retain_hours: null,
-        human_filesize: this.formatFileSize(file.size),
+        human_filesize: result.human_filesize || this.formatFileSize(file.size),
         dominant_color: '',
         thumbnail: null
       }

@@ -10,11 +10,28 @@ type UploadFlowError = Error & {
 
 export interface UploadService {
   name: string
+  uploadFileDetailed?(
+    file: File,
+    onProgress?: (percent: number) => void,
+    onRateLimitWait?: (waitTime: number) => Promise<void>
+  ): Promise<UploadServiceResult>
   uploadFile(
     file: File,
     onProgress?: (percent: number) => void,
     onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<string>
+}
+
+export interface UploadServiceResult {
+  url: string
+  short_url?: string
+  short_path?: string
+  width?: number
+  height?: number
+  original_filename?: string
+  filesize?: number
+  extension?: string
+  human_filesize?: string
 }
 
 export interface UploadOptions {
@@ -43,6 +60,28 @@ function createTerminal429Error(message?: string): UploadFlowError {
   error.status = 429
   error.shouldTerminateUploadFlow = true
   return error
+}
+
+function normalizeUploadResult(baseUrl: string, data: any): UploadServiceResult {
+  const payload = data && typeof data === 'object' ? data : {}
+  const finalUrl = normalizeDiscourseUploadUrl(baseUrl, payload)
+  if (!finalUrl) {
+    throw new Error(`Invalid response from ${baseUrl}: missing URL`)
+  }
+
+  return {
+    ...payload,
+    url: finalUrl,
+    short_url: typeof payload?.short_url === 'string' ? payload.short_url : undefined,
+    short_path: typeof payload?.short_path === 'string' ? payload.short_path : undefined,
+    width: typeof payload?.width === 'number' ? payload.width : undefined,
+    height: typeof payload?.height === 'number' ? payload.height : undefined,
+    original_filename:
+      typeof payload?.original_filename === 'string' ? payload.original_filename : undefined,
+    filesize: typeof payload?.filesize === 'number' ? payload.filesize : undefined,
+    extension: typeof payload?.extension === 'string' ? payload.extension : undefined,
+    human_filesize: typeof payload?.human_filesize === 'string' ? payload.human_filesize : undefined
+  }
 }
 
 class DiscourseUploadService implements UploadService {
@@ -74,13 +113,22 @@ class DiscourseUploadService implements UploadService {
     onProgress?: (percent: number) => void,
     onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<string> {
+    const result = await this.uploadFileDetailed(file, onProgress, onRateLimitWait)
+    return result.url
+  }
+
+  async uploadFileDetailed(
+    file: File,
+    onProgress?: (percent: number) => void,
+    onRateLimitWait?: (waitTime: number) => Promise<void>
+  ): Promise<UploadServiceResult> {
     const maxRetries = 3
     let attempt = 0
     let delay = 1000 // 1 second
 
     while (attempt < maxRetries) {
       try {
-        return await this.attemptUpload(file, onProgress)
+        return await this.attemptUploadDetailed(file, onProgress)
       } catch (error: any) {
         // If the error indicates a 429 status, wait and retry
         if (error.isRateLimitError && attempt < maxRetries - 1) {
@@ -103,10 +151,13 @@ class DiscourseUploadService implements UploadService {
     throw new Error('Upload failed after multiple retries.')
   }
 
-  private async attemptUpload(file: File, onProgress?: (percent: number) => void): Promise<string> {
+  private async attemptUploadDetailed(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<UploadServiceResult> {
     try {
       if (this.shouldUseLinuxDoPageProxy()) {
-        return await this.uploadViaLinuxDoProxy(file, onProgress)
+        return await this.uploadViaLinuxDoProxyDetailed(file, onProgress)
       }
 
       // Get cookies and CSRF token
@@ -138,12 +189,9 @@ class DiscourseUploadService implements UploadService {
 
       if (response.ok) {
         const data = await response.json()
-        const finalUrl = normalizeDiscourseUploadUrl(`https://${this.domain}`, data)
-        if (finalUrl) {
-          if (onProgress) onProgress(100)
-          return finalUrl
-        }
-        throw new Error(`Invalid response from ${this.domain}: missing URL`)
+        const result = normalizeUploadResult(`https://${this.domain}`, data)
+        if (onProgress) onProgress(100)
+        return result
       } else {
         const errorData = await response.json().catch(() => null)
         if (response.status === 429 && errorData?.extras?.wait_seconds) {
@@ -218,10 +266,10 @@ class DiscourseUploadService implements UploadService {
     }
   }
 
-  private async uploadViaLinuxDoProxy(
+  private async uploadViaLinuxDoProxyDetailed(
     file: File,
     onProgress?: (percent: number) => void
-  ): Promise<string> {
+  ): Promise<UploadServiceResult> {
     const chromeAPI = (globalThis as any).chrome
     if (!chromeAPI?.runtime?.sendMessage) {
       throw new Error('Page proxy unavailable: chrome.runtime is not accessible')
@@ -259,10 +307,10 @@ class DiscourseUploadService implements UploadService {
     const proxyOk = (response as any)?.data?.ok ?? (response as any)?.ok
     const proxyStatus = (response as any)?.data?.status ?? (response as any)?.status
 
-    const proxyUrl = normalizeDiscourseUploadUrl(`https://${this.domain}`, proxyPayload)
-    if (proxyOk && proxyUrl) {
+    if (proxyOk) {
+      const result = normalizeUploadResult(`https://${this.domain}`, proxyPayload)
       onProgress?.(100)
-      return proxyUrl
+      return result
     }
 
     const errorData = proxyPayload
@@ -295,6 +343,11 @@ class ImgbedUploadService implements UploadService {
   }
 
   async uploadFile(file: File, onProgress?: (percent: number) => void): Promise<string> {
+    const result = await this.uploadFileDetailed(file, onProgress)
+    return result.url
+  }
+
+  async uploadFileDetailed(file: File, onProgress?: (percent: number) => void) {
     const emojiStore = useEmojiStore()
     const token = emojiStore.settings.imgbedToken
     const apiUrl = emojiStore.settings.imgbedApiUrl
@@ -322,7 +375,7 @@ class ImgbedUploadService implements UploadService {
         onProgress?.(100)
         // src does not contain domain, so we need to prepend it
         const url = new URL(apiUrl)
-        return `${url.origin}${data[0].src}`
+        return { url: `${url.origin}${data[0].src}` }
       }
       throw new Error('Invalid response from imgbed')
     } else {
@@ -357,12 +410,16 @@ export async function uploadAndAddEmoji(
 
     // Try to upload to linux.do first
     let finalUrl: string | null = null
+    let shortUrl: string | undefined
     try {
-      finalUrl = await uploadServices['linux.do'].uploadFile(
-        file,
-        options.onProgress,
-        options.onRateLimitWait
-      )
+      const linuxDoService = uploadServices['linux.do']
+      const result = linuxDoService.uploadFileDetailed
+        ? await linuxDoService.uploadFileDetailed(file, options.onProgress, options.onRateLimitWait)
+        : {
+            url: await linuxDoService.uploadFile(file, options.onProgress, options.onRateLimitWait)
+          }
+      finalUrl = result.url
+      shortUrl = result.short_url
     } catch (e) {
       console.warn('Upload to linux.do failed, will fallback to data/object URL', e)
     }
@@ -408,6 +465,7 @@ export async function uploadAndAddEmoji(
       packet: Date.now(),
       name: name || filename || 'image',
       url: finalUrl,
+      ...(shortUrl && { short_url: shortUrl }),
       displayUrl: finalUrl,
       originUrl: originUrl || undefined,
       addedAt: Date.now()

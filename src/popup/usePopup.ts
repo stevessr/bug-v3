@@ -2,6 +2,7 @@ import { ref, onMounted, watch } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
 import type { Emoji } from '@/types/type'
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 export function usePopup(options?: { manageUrl?: boolean }) {
   const emojiStore = useEmojiStore()
@@ -130,7 +131,7 @@ export function usePopup(options?: { manageUrl?: boolean }) {
       height = emoji.height.toString()
     }
 
-    const emojiMarkdown = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `
+    const emojiMarkdown = `${buildMarkdownImage(`${emoji.name}|${width}x${height},${scale}%`, emoji)} `
 
     navigator.clipboard
       .writeText(emojiMarkdown)

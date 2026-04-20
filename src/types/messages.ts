@@ -260,6 +260,7 @@ export interface AddEmojiFromWebTypedMessage extends BaseMessage {
       width?: number
       height?: number
       displayUrl?: string
+      short_url?: string
       customOutput?: string
       sourceDomain?: string
       targetGroupId?: string
@@ -313,6 +314,7 @@ export interface AddEmojiFromWebMessage {
     width?: number
     height?: number
     displayUrl?: string
+    short_url?: string
     customOutput?: string
     sourceDomain?: string
     targetGroupId?: string

@@ -1,10 +1,13 @@
 import { ref } from 'vue'
 
 import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
+import { buildMarkdownImage, getPreferredEmojiMarkdownUrl } from '@/utils/emojiMarkdown'
 
 type UploadResponse = {
   url?: string
   short_url?: string
+  width?: number
+  height?: number
 }
 
 type UseDiscourseUploadOptions = {
@@ -20,21 +23,19 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
   const escapeAttr = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-  const buildImageMarkup = (url: string, filename?: string) => {
-    const safeUrl = url
+  const buildImageMarkup = (upload: { url: string; short_url?: string }, alt: string) => {
+    const safeUrl = upload.url
     if (options.inputFormat() === 'html') {
-      const alt = escapeAttr(filename || 'image')
-      return `<img src="${escapeAttr(safeUrl)}" alt="${alt}" />`
+      return `<img src="${escapeAttr(safeUrl)}" alt="${escapeAttr(alt || 'image')}" />`
     }
     if (options.inputFormat() === 'markdown') {
-      const alt = filename || 'image'
-      return `![${alt}](${safeUrl})`
+      return buildMarkdownImage(alt || 'image', upload)
     }
     return `[img]${safeUrl}[/img]`
   }
 
-  const buildFileMarkup = (url: string, filename?: string) => {
-    const safeUrl = url
+  const buildFileMarkup = (upload: { url: string; short_url?: string }, filename?: string) => {
+    const safeUrl = upload.url
     const label = filename || safeUrl
     if (options.inputFormat() === 'html') {
       const safeLabel = escapeAttr(label)
@@ -43,7 +44,7 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
       )}" target="_blank" rel="nofollow noopener">${safeLabel}</a>`
     }
     if (options.inputFormat() === 'markdown') {
-      return `[${label}](${safeUrl})`
+      return `[${label}](${getPreferredEmojiMarkdownUrl(upload) || safeUrl})`
     }
     return `[url=${safeUrl}]${label}[/url]`
   }
@@ -145,12 +146,20 @@ export function useDiscourseUpload(options: UseDiscourseUploadOptions) {
       arrayBuffer,
       discourseBase: options.baseUrl
     })
-    const url = normalizeDiscourseUploadUrl(options.baseUrl, response)
-    if (!url) {
+    const normalizedUrl = normalizeDiscourseUploadUrl(options.baseUrl, response)
+    if (!normalizedUrl) {
       throw new Error('上传成功，但未返回 URL')
     }
+    const upload = {
+      url: normalizedUrl,
+      short_url: response.short_url
+    }
     const isImage = file.type.startsWith('image/')
-    const markup = isImage ? buildImageMarkup(url, file.name) : buildFileMarkup(url, file.name)
+    const alt =
+      isImage && response.width && response.height
+        ? `${file.name}|${response.width}x${response.height}`
+        : file.name || 'image'
+    const markup = isImage ? buildImageMarkup(upload, alt) : buildFileMarkup(upload, file.name)
     options.onInsertText(markup)
   }
 
