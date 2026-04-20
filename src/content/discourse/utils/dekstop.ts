@@ -3,15 +3,33 @@ import { animateExit } from '../../utils/dom/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import {
+  createPickerImageObserver,
+  getEmojiPickerImageUrl,
+  getEmojiPickerPreviewUrl,
+  loadPickerImage,
+  PICKER_EAGER_IMAGE_COUNT,
+  preparePickerImage,
+  rafThrottle
+} from './pickerPerformance'
 
 import { isImageUrl } from '@/utils/isImageUrl'
+import type { Emoji } from '@/types/type'
 
 export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
   const groupsToUse = cachedState.emojiGroups
 
   // 用于事件委托的 emoji 数据映射
-  const emojiDataMap = new Map<string, any>()
+  const emojiDataMap = new Map<string, Emoji>()
+  const allEmojiImages: HTMLImageElement[] = []
+  const sectionStates: Array<{
+    navButton: HTMLButtonElement
+    section: HTMLDivElement
+    titleContainer: HTMLDivElement
+    images: HTMLImageElement[]
+  }> = []
+  let eagerImageCount = 0
 
   const picker = createE('div', {
     class: 'fk-d-menu -animated -expanded',
@@ -51,8 +69,9 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   })
   const scrollableContent = createE('div', {
     class: 'emoji-picker__scrollable-content',
-    style: 'max-height: 400px; overflow-y: auto; overflow-x: hidden;'
+    style: 'max-height: 400px; overflow-y: auto; overflow-x: hidden; contain: content;'
   })
+  const imageObserver = createPickerImageObserver(scrollableContent as HTMLDivElement)
   const sections = createE('div', {
     class: 'emoji-picker__sections'
   })
@@ -73,7 +92,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const iconVal = group.icon || '📁'
     if (isImageUrl(iconVal)) {
       const img = createE('img', {
-        src: iconVal,
+        src: getEmojiPickerImageUrl({ url: iconVal }, 48),
         alt: group.name || '',
         class: 'emoji-group-icon',
         style: `
@@ -103,7 +122,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
         'data-section': group.id,
         role: 'region',
         'aria-label': group.name
-      }
+      },
+      style: 'content-visibility: auto; contain-intrinsic-size: 1px 160px;'
     })
 
     const titleContainer = createE('div', {
@@ -116,16 +136,20 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     titleContainer.appendChild(title)
 
     const sectionEmojis = createE('div', {
-      class: 'emoji-picker__section-emojis'
+      class: 'emoji-picker__section-emojis',
+      style: 'contain: layout paint;'
     })
+    const sectionImages: HTMLImageElement[] = []
 
     let added = 0
-    group.emojis.forEach((emoji: any) => {
+    group.emojis.forEach((emoji: Emoji) => {
       if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
-      const originalUrl = emoji.displayUrl || emoji.url
+      const thumbUrl = getEmojiPickerImageUrl(emoji)
+      if (!thumbUrl) return
+      const emojiKey = emoji.id || `${group.id}-${emoji.name}-${added}`
 
       // 存储 emoji 数据到 Map，用于事件委托
-      emojiDataMap.set(emoji.name, emoji)
+      emojiDataMap.set(emojiKey, emoji)
 
       const img = createE('img', {
         style: `
@@ -134,31 +158,20 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
          height: 32px;
           object-fit: contain;`,
         class: 'emoji',
-        src: originalUrl,
         alt: emoji.name,
         ti: `:${emoji.name}:`,
         attrs: {
           tabindex: '0',
           'data-emoji': emoji.name,
+          'data-emoji-id': emojiKey,
           loading: 'lazy'
-        },
-        on: {
-          click: () => {
-            insertEmojiIntoEditor(emoji)
-            removePreview()
-            animateExit(picker as HTMLElement, 'picker')
-          }
         }
       }) as HTMLImageElement
-
-      img.addEventListener('keydown', (e: any) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          insertEmojiIntoEditor(emoji)
-          removePreview()
-          animateExit(picker as HTMLElement, 'picker')
-        }
-      })
+      preparePickerImage(img, thumbUrl, { eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT })
+      eagerImageCount++
+      imageObserver.observe(img)
+      allEmojiImages.push(img)
+      sectionImages.push(img)
       // hover preview 使用事件委托，不再在每个 img 上绑定
       sectionEmojis.appendChild(img)
       added++
@@ -177,21 +190,74 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     section.appendChild(titleContainer)
     section.appendChild(sectionEmojis)
     sections.appendChild(section)
+    sectionStates.push({
+      navButton,
+      section: section as HTMLDivElement,
+      titleContainer: titleContainer as HTMLDivElement,
+      images: sectionImages
+    })
   })
 
-  searchInput.addEventListener('input', (e: any) => {
-    const q = (e.target.value || '').toLowerCase()
-    const allImages = sections.querySelectorAll('img')
-    allImages.forEach((img: any) => {
-      const emojiName = img.getAttribute('data-emoji')?.toLowerCase() || ''
-      ;(img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
+  const cleanupPickerResources = () => {
+    imageObserver.disconnect()
+    removePreview()
+  }
+
+  const getEmojiFromTarget = (target: EventTarget | null): Emoji | null => {
+    const img = (target as HTMLElement | null)?.closest?.(
+      'img.emoji[data-emoji-id]'
+    ) as HTMLImageElement | null
+    if (!img) return null
+
+    const emojiId = img.dataset.emojiId || ''
+    return emojiDataMap.get(emojiId) || null
+  }
+
+  sections.addEventListener('click', event => {
+    const emoji = getEmojiFromTarget(event.target)
+    if (!emoji) return
+
+    insertEmojiIntoEditor(emoji)
+    cleanupPickerResources()
+    animateExit(picker as HTMLElement, 'picker')
+  })
+
+  sections.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+
+    const emoji = getEmojiFromTarget(event.target)
+    if (!emoji) return
+
+    event.preventDefault()
+    insertEmojiIntoEditor(emoji)
+    cleanupPickerResources()
+    animateExit(picker as HTMLElement, 'picker')
+  })
+
+  const applySearch = rafThrottle((query: string) => {
+    const q = query.trim().toLowerCase()
+
+    allEmojiImages.forEach(img => {
+      const emojiName = (img.dataset.emoji || '').toLowerCase()
+      const visible = q === '' || emojiName.includes(q)
+
+      if (visible && q) loadPickerImage(img)
+      img.style.display = visible ? '' : 'none'
     })
-    sections.querySelectorAll('.emoji-picker__section').forEach(section => {
-      const visibleEmojis = section.querySelectorAll('img:not([style*="none"])')
-      const titleContainer = section.querySelector('.emoji-picker__section-title-container')
-      if (titleContainer)
-        (titleContainer as HTMLElement).style.display = visibleEmojis.length > 0 ? '' : 'none'
+
+    sectionStates.forEach(({ navButton, section, titleContainer, images }) => {
+      const hasVisible =
+        q === ''
+          ? images.length === 0 || images.some(img => img.style.display !== 'none')
+          : images.some(img => img.style.display !== 'none')
+      section.style.display = hasVisible ? '' : 'none'
+      titleContainer.style.display = hasVisible ? '' : 'none'
+      navButton.style.display = q === '' || hasVisible ? '' : 'none'
     })
+  })
+
+  searchInput.addEventListener('input', (e: Event) => {
+    applySearch((e.target as HTMLInputElement).value || '')
   })
 
   scrollableContent.appendChild(sections)
@@ -267,7 +333,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const el = ensurePreview()
     const img = el.querySelector('img') as HTMLImageElement
     const label = el.querySelector('.emoji-desktop-hover-preview-label') as HTMLDivElement
-    const originalUrl = emoji.displayUrl || emoji.url || ''
+    const originalUrl = getEmojiPickerPreviewUrl(emoji)
     if (img) {
       img.src = originalUrl
     }
@@ -413,7 +479,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
 
   // 将 cleanup 方法附加到 picker 元素上，供外部在关闭时调用
   ;(picker as any).__cleanup = () => {
-    removePreview()
+    cleanupPickerResources()
   }
 
   return picker

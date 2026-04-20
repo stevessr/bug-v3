@@ -69,6 +69,10 @@ export class PickerManager {
     const pickerToClose = this.currentPicker
     this.currentPicker = null
 
+    if (typeof (pickerToClose as any).__cleanup === 'function') {
+      ;(pickerToClose as any).__cleanup()
+    }
+
     const modalContainer = DQS('.modal-container')
     if (modalContainer) {
       const backdrop = modalContainer.querySelector('.d-modal__backdrop') as HTMLElement | null

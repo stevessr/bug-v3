@@ -3,8 +3,17 @@ import { animateExit, ANIMATION_DURATION, injectAnimationStyles } from '../../ut
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import {
+  createPickerImageObserver,
+  getEmojiPickerImageUrl,
+  loadPickerImage,
+  PICKER_EAGER_IMAGE_COUNT,
+  preparePickerImage,
+  rafThrottle
+} from './pickerPerformance'
 
 import { isImageUrl } from '@/utils/isImageUrl'
+import type { Emoji } from '@/types/type'
 
 export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   // Ensure animation styles are injected first
@@ -66,7 +75,12 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   filterInputContainer.appendChild(searchInput)
 
   // Helper to close modal and also remove sibling backdrop with animation
+  const cleanupPickerResources = () => {
+    imageObserver.disconnect()
+  }
+
   const closeModal = () => {
+    cleanupPickerResources()
     const parent = modal.parentElement
     if (parent) {
       const backdrop = parent.querySelector('.d-modal__backdrop') as HTMLElement | null
@@ -100,13 +114,24 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   })
 
   const scrollableContent = createE('div', {
-    class: 'emoji-picker__scrollable-content'
+    class: 'emoji-picker__scrollable-content',
+    style: 'contain: content;'
   })
+  const imageObserver = createPickerImageObserver(scrollableContent as HTMLDivElement)
 
   const sections = createE('div', {
     class: 'emoji-picker__sections',
     attrs: { role: 'button' }
   })
+  const emojiDataMap = new Map<string, Emoji>()
+  const allEmojiImages: HTMLImageElement[] = []
+  const sectionStates: Array<{
+    navButton: HTMLButtonElement
+    section: HTMLDivElement
+    titleContainer: HTMLDivElement
+    images: HTMLImageElement[]
+  }> = []
+  let eagerImageCount = 0
 
   groupsToUse.forEach((group: any, index: number) => {
     if (!group?.emojis?.length) return
@@ -134,13 +159,13 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     const iconVal = group.icon || '📁'
     if (isImageUrl(iconVal)) {
       const img = createE('img', {
-        src: iconVal,
+        src: getEmojiPickerImageUrl({ url: iconVal }, 48),
         alt: group.name || '',
         class: 'emoji',
         style: `
-          width: 18px,
-          height: 18px,
-          objectFit: contain
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
         `
       }) as HTMLImageElement
       navButton.appendChild(img)
@@ -155,7 +180,8 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
       attrs: {
         'data-section': group.id,
         'aria-label': group.name
-      }
+      },
+      style: 'content-visibility: auto; contain-intrinsic-size: 1px 160px;'
     })
 
     const titleContainer = createE('div', {
@@ -168,39 +194,35 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     titleContainer.appendChild(title)
 
     const sectionEmojis = createE('div', {
-      class: 'emoji-picker__section-emojis'
+      class: 'emoji-picker__section-emojis',
+      style: 'contain: layout paint;'
     })
+    const sectionImages: HTMLImageElement[] = []
 
-    group.emojis.forEach((emoji: any) => {
+    group.emojis.forEach((emoji: Emoji) => {
       if (!emoji || typeof emoji !== 'object' || !emoji.url || !emoji.name) return
-      const originalUrl = emoji.displayUrl || emoji.url
+      const thumbUrl = getEmojiPickerImageUrl(emoji)
+      if (!thumbUrl) return
+      const emojiKey = emoji.id || `${group.id}-${emoji.name}-${sectionImages.length}`
+      emojiDataMap.set(emojiKey, emoji)
       const img = createE('img', {
-        src: originalUrl,
         alt: emoji.name,
         class: 'emoji',
         style: `
-          width: 32px,
-          height: 32px,
+          width: 32px;
+          height: 32px;
           object-fit: contain;
         `,
         tabIndex: 0,
-        dataset: { emoji: emoji.name },
+        dataset: { emoji: emoji.name, emojiId: emojiKey },
         ti: `:${emoji.name}:`,
-        ld: 'lazy',
-        on: {
-          click: () => {
-            insertEmojiIntoEditor(emoji)
-            closeModal()
-          },
-          keydown: (e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              insertEmojiIntoEditor(emoji)
-              closeModal()
-            }
-          }
-        }
+        ld: 'lazy'
       }) as HTMLImageElement
+      preparePickerImage(img, thumbUrl, { eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT })
+      eagerImageCount++
+      imageObserver.observe(img)
+      allEmojiImages.push(img)
+      sectionImages.push(img)
 
       sectionEmojis.appendChild(img)
     })
@@ -208,18 +230,67 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     section.appendChild(titleContainer)
     section.appendChild(sectionEmojis)
     sections.appendChild(section)
+    sectionStates.push({
+      navButton,
+      section: section as HTMLDivElement,
+      titleContainer: titleContainer as HTMLDivElement,
+      images: sectionImages
+    })
   })
 
-  searchInput.addEventListener('input', (e: any) => {
-    const q = (e.target.value || '').toLowerCase()
-    sections.querySelectorAll('img').forEach(img => {
+  const getEmojiFromTarget = (target: EventTarget | null): Emoji | null => {
+    const img = (target as HTMLElement | null)?.closest?.(
+      'img.emoji[data-emoji-id]'
+    ) as HTMLImageElement | null
+    if (!img) return null
+
+    const emojiId = img.dataset.emojiId || ''
+    return emojiDataMap.get(emojiId) || null
+  }
+
+  sections.addEventListener('click', event => {
+    const emoji = getEmojiFromTarget(event.target)
+    if (!emoji) return
+
+    insertEmojiIntoEditor(emoji)
+    closeModal()
+  })
+
+  sections.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+
+    const emoji = getEmojiFromTarget(event.target)
+    if (!emoji) return
+
+    event.preventDefault()
+    insertEmojiIntoEditor(emoji)
+    closeModal()
+  })
+
+  const applySearch = rafThrottle((query: string) => {
+    const q = query.trim().toLowerCase()
+
+    allEmojiImages.forEach(img => {
       const emojiName = (img.dataset.emoji || '').toLowerCase()
-      ;(img as HTMLElement).style.display = q === '' || emojiName.includes(q) ? '' : 'none'
+      const visible = q === '' || emojiName.includes(q)
+
+      if (visible && q) loadPickerImage(img)
+      img.style.display = visible ? '' : 'none'
     })
-    sections.querySelectorAll('.emoji-picker__section').forEach(section => {
-      const visibleEmojis = section.querySelectorAll('img:not([style*="display: none"])')
-      ;(section as HTMLElement).style.display = visibleEmojis.length > 0 ? '' : 'none'
+
+    sectionStates.forEach(({ navButton, section, titleContainer, images }) => {
+      const hasVisible =
+        q === ''
+          ? images.length === 0 || images.some(img => img.style.display !== 'none')
+          : images.some(img => img.style.display !== 'none')
+      section.style.display = hasVisible ? '' : 'none'
+      titleContainer.style.display = hasVisible ? '' : 'none'
+      navButton.style.display = q === '' || hasVisible ? '' : 'none'
     })
+  })
+
+  searchInput.addEventListener('input', (e: Event) => {
+    applySearch((e.target as HTMLInputElement).value || '')
   })
 
   scrollableContent.appendChild(sections)
@@ -230,6 +301,9 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   modalBody.appendChild(emojiPickerDiv)
   modalContainerDiv.appendChild(modalBody)
   modal.appendChild(modalContainerDiv)
+  ;(modal as any).__cleanup = () => {
+    cleanupPickerResources()
+  }
 
   return modal
 }
