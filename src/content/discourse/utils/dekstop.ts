@@ -426,17 +426,13 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       sections.addEventListener(
         'mouseenter',
         (ev: Event) => {
-          const target = ev.target as HTMLElement
-          if (target.tagName === 'IMG' && target.classList.contains('emoji')) {
-            const emojiName = target.getAttribute('data-emoji')
-            if (emojiName && emojiDataMap.has(emojiName)) {
-              const emoji = emojiDataMap.get(emojiName)
-              try {
-                ensurePreview()
-                showPreviewAtEvent(ev as MouseEvent, emoji)
-              } catch (err) {
-                void err
-              }
+          const emoji = getEmojiFromTarget(ev.target)
+          if (emoji) {
+            try {
+              ensurePreview()
+              showPreviewAtEvent(ev as MouseEvent, emoji)
+            } catch (err) {
+              void err
             }
           }
         },
