@@ -6,8 +6,11 @@ import { insertEmojiIntoEditor } from './editor'
 import {
   createPickerImageObserver,
   getEmojiPickerImageUrl,
+  isMotionHeavyEmoji,
   loadPickerImage,
   PICKER_EAGER_IMAGE_COUNT,
+  PICKER_EMOJI_SIZE,
+  PICKER_MOTION_HEAVY_EMOJI_SIZE,
   preparePickerImage,
   rafThrottle
 } from './pickerPerformance'
@@ -204,13 +207,16 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
       const thumbUrl = getEmojiPickerImageUrl(emoji)
       if (!thumbUrl) return
       const emojiKey = emoji.id || `${group.id}-${emoji.name}-${sectionImages.length}`
+      const emojiSize = isMotionHeavyEmoji(emoji)
+        ? PICKER_MOTION_HEAVY_EMOJI_SIZE
+        : PICKER_EMOJI_SIZE
       emojiDataMap.set(emojiKey, emoji)
       const img = createE('img', {
         alt: emoji.name,
         class: 'emoji',
         style: `
-          width: 32px;
-          height: 32px;
+          width: ${emojiSize}px;
+          height: ${emojiSize}px;
           object-fit: contain;
         `,
         tabIndex: 0,
@@ -218,7 +224,11 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
         ti: `:${emoji.name}:`,
         ld: 'lazy'
       }) as HTMLImageElement
-      preparePickerImage(img, thumbUrl, { eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT })
+      preparePickerImage(img, thumbUrl, {
+        eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT,
+        width: emojiSize,
+        height: emojiSize
+      })
       eagerImageCount++
       imageObserver.observe(img)
       allEmojiImages.push(img)

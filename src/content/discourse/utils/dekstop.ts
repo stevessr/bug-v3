@@ -7,8 +7,11 @@ import {
   createPickerImageObserver,
   getEmojiPickerImageUrl,
   getEmojiPickerPreviewUrl,
+  isMotionHeavyEmoji,
   loadPickerImage,
   PICKER_EAGER_IMAGE_COUNT,
+  PICKER_EMOJI_SIZE,
+  PICKER_MOTION_HEAVY_EMOJI_SIZE,
   preparePickerImage,
   rafThrottle
 } from './pickerPerformance'
@@ -147,6 +150,9 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       const thumbUrl = getEmojiPickerImageUrl(emoji)
       if (!thumbUrl) return
       const emojiKey = emoji.id || `${group.id}-${emoji.name}-${added}`
+      const emojiSize = isMotionHeavyEmoji(emoji)
+        ? PICKER_MOTION_HEAVY_EMOJI_SIZE
+        : PICKER_EMOJI_SIZE
 
       // 存储 emoji 数据到 Map，用于事件委托
       emojiDataMap.set(emojiKey, emoji)
@@ -154,8 +160,8 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       const img = createE('img', {
         style: `
         cursor: pointer;
-         width: 32px;
-         height: 32px;
+         width: ${emojiSize}px;
+         height: ${emojiSize}px;
           object-fit: contain;`,
         class: 'emoji',
         alt: emoji.name,
@@ -167,7 +173,11 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
           loading: 'lazy'
         }
       }) as HTMLImageElement
-      preparePickerImage(img, thumbUrl, { eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT })
+      preparePickerImage(img, thumbUrl, {
+        eager: eagerImageCount < PICKER_EAGER_IMAGE_COUNT,
+        width: emojiSize,
+        height: emojiSize
+      })
       eagerImageCount++
       imageObserver.observe(img)
       allEmojiImages.push(img)

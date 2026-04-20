@@ -3,6 +3,10 @@ import type { Emoji } from '@/types/type'
 const HTTP_URL_RE = /^https?:\/\//i
 const GRID_THUMBNAIL_SIZE = 96
 const PREVIEW_THUMBNAIL_SIZE = 512
+const MOTION_HEAVY_EXT_RE = /\.(gif|avif)(?:$|[?#])/i
+
+export const PICKER_EMOJI_SIZE = 32
+export const PICKER_MOTION_HEAVY_EMOJI_SIZE = 64
 
 export const PICKER_EAGER_IMAGE_COUNT = 24
 
@@ -37,6 +41,19 @@ export function getEmojiPickerImageUrl(
 
 export function getEmojiPickerPreviewUrl(emoji: PickerEmojiSource): string {
   return getEmojiPickerImageUrl(emoji, PREVIEW_THUMBNAIL_SIZE)
+}
+
+export function isMotionHeavyEmoji(emoji: PickerEmojiSource): boolean {
+  const candidates = [emoji.displayUrl, emoji.url].filter(Boolean) as string[]
+
+  return candidates.some(candidate => {
+    try {
+      const parsed = new URL(candidate)
+      return MOTION_HEAVY_EXT_RE.test(parsed.pathname)
+    } catch {
+      return MOTION_HEAVY_EXT_RE.test(candidate)
+    }
+  })
 }
 
 export function loadPickerImage(img: HTMLImageElement) {
