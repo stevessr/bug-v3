@@ -11,13 +11,13 @@ export const REACTIONS = [
     id: 'tieba_087',
     name: '🎭 Tieba 087',
     emoji:
-      'https://cdn3.linux.do/original/3X/2/e/2e09f3a3c7b27eacbabe9e9614b06b88d5b06343.png?v=15'
+      'https://cdn3.ldstatic.com/original/3X/2/e/2e09f3a3c7b27eacbabe9e9614b06b88d5b06343.png?v=15'
   },
   {
     id: 'bili_057',
     name: '📺 Bili 057',
     emoji:
-      'https://cdn3.linux.do/original/3X/1/a/1a9f6c30e88a7901b721fffc1aaeec040f54bdf3.png?v=15'
+      'https://cdn3.ldstatic.com/original/3X/1/a/1a9f6c30e88a7901b721fffc1aaeec040f54bdf3.png?v=15'
   }
 ]
 

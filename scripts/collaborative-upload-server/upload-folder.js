@@ -15,7 +15,7 @@
  * 兼容 linux.do 上传接口返回格式：
  * {
  *   "id": 1537930,
- *   "url": "https://cdn3.linux.do/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
+ *   "url": "https://cdn3.ldstatic.com/original/4X/e/b/b/ebbe4ff7f5a301b4696fd541ed2509aca5a5a71f.jpeg",
  *   "original_filename": "image.jpg",
  *   "filesize": 35367,
  *   "width": 300,
