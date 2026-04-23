@@ -232,6 +232,18 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         let groupModified = false
         const newEmojis = [...emojis]
 
+        // 1. Rewrite group icon if it matches
+        let newGroupIcon = group.icon
+        if (group.icon && regex.test(group.icon)) {
+          const rewrittenIcon = group.icon.replace(regex, replacement)
+          if (rewrittenIcon !== group.icon) {
+            newGroupIcon = rewrittenIcon
+            groupModified = true
+            updatedFieldCount++
+          }
+        }
+
+        // 2. Rewrite emojis
         for (let j = 0; j < newEmojis.length; j++) {
           const emoji = newEmojis[j]
           if (!emoji) continue
@@ -248,6 +260,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
         if (groupModified) {
           groupUpdates.set(i, {
             ...group,
+            icon: newGroupIcon,
             emojis: newEmojis
           })
           touchedGroupCount++

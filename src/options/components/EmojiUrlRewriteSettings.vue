@@ -9,10 +9,13 @@ import {
   rewriteEmojiUrlValue,
   type EmojiUrlRewriteField
 } from '@/utils/emojiUrlRewrite'
+import CachedImage from '@/components/CachedImage.vue'
+import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 
 type PreviewExample = {
   emojiId: string
   emojiName: string
+  emojiUrl: string
   groupName: string
   before: string
   after: string
@@ -22,6 +25,9 @@ type PreviewExample = {
 type PreviewGroupSummary = {
   groupId: string
   groupName: string
+  groupIcon: string
+  groupIconAfter?: string
+  groupIconChanged: boolean
   updatedEmojiCount: number
   updatedFieldCount: number
 }
@@ -181,7 +187,7 @@ const canApply = computed(
   () =>
     !!regexState.value.regex &&
     previewState.value.status === 'ready' &&
-    previewState.value.updatedEmojiCount > 0 &&
+    previewState.value.updatedFieldCount > 0 &&
     !isApplying.value
 )
 
@@ -213,6 +219,7 @@ function buildPreviewExample(
   return {
     emojiId: emoji.id,
     emojiName: emoji.name,
+    emojiUrl: emoji.displayUrl || emoji.url || '',
     groupName,
     before: String(emoji[primaryField] || ''),
     after: String(rewrittenEmoji[primaryField] || ''),
@@ -246,6 +253,19 @@ async function runPreview() {
       const group = emojiStore.groups[index]
       let groupUpdatedEmojiCount = 0
       let groupUpdatedFieldCount = 0
+      let groupIconChanged = false
+      let groupIconAfter = group.icon
+
+      // Check group icon
+      if (group.icon && regex.test(group.icon)) {
+        const rewrittenIcon = group.icon.replace(regex, replacement.value)
+        if (rewrittenIcon !== group.icon) {
+          groupUpdatedFieldCount++
+          updatedFieldCount++ // Add global count
+          groupIconChanged = true
+          groupIconAfter = rewrittenIcon
+        }
+      }
 
       for (const emoji of group.emojis || []) {
         if (!emoji) continue
@@ -259,10 +279,13 @@ async function runPreview() {
         groupUpdatedFieldCount += rewriteResult.changedFields.length
       }
 
-      if (groupUpdatedEmojiCount > 0) {
+      if (groupUpdatedEmojiCount > 0 || groupIconChanged) {
         groupSummaries.push({
           groupId: group.id,
           groupName: group.name,
+          groupIcon: group.icon || '',
+          groupIconAfter: groupIconAfter,
+          groupIconChanged: groupIconChanged,
           updatedEmojiCount: groupUpdatedEmojiCount,
           updatedFieldCount: groupUpdatedFieldCount
         })
@@ -403,8 +426,8 @@ const applyRewrite = () => {
     return
   }
 
-  if (previewState.value.updatedEmojiCount === 0) {
-    message.info('没有匹配到需要更新的表情 URL')
+  if (previewState.value.updatedFieldCount === 0) {
+    message.info('没有匹配到需要更新的表情 URL 或分组图标')
     return
   }
 
@@ -683,7 +706,7 @@ onBeforeUnmount(() => {
           v-else-if="previewState.groupSummaries.length === 0"
           class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500 dark:text-gray-400"
         >
-          当前没有匹配到需要更新的表情 URL。
+          当前没有匹配到需要更新的表情 URL 或分组图标。
         </div>
 
         <div v-else class="space-y-3">
@@ -693,11 +716,23 @@ onBeforeUnmount(() => {
             class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
           >
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div class="font-medium dark:text-white">{{ summary.groupName }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  命中 {{ summary.updatedEmojiCount }} 个表情，涉及
-                  {{ summary.updatedFieldCount }} 个字段
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0"
+                >
+                  <CachedImage
+                    v-if="isImageUrl(normalizeImageUrl(summary.groupIcon))"
+                    :src="normalizeImageUrl(summary.groupIcon)"
+                    class="w-full h-full object-contain"
+                  />
+                  <span v-else class="text-xl">{{ summary.groupIcon }}</span>
+                </div>
+                <div>
+                  <div class="font-medium dark:text-white">{{ summary.groupName }}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    命中 {{ summary.updatedEmojiCount }} 个表情，涉及
+                    {{ summary.updatedFieldCount }} 个字段
+                  </div>
                 </div>
               </div>
               <div class="flex flex-wrap items-center gap-2">
@@ -714,8 +749,67 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-if="isGroupExpanded(summary.groupId)" class="space-y-3">
+              <!-- Group Icon Change Preview -->
               <div
-                v-if="(groupExamples[summary.groupId] || []).length === 0"
+                v-if="summary.groupIconChanged"
+                class="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-3"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-amber-600 dark:text-amber-400 font-medium">分组图标更新</span>
+                    <a-tag color="orange">icon</a-tag>
+                  </div>
+                </div>
+                <div class="grid gap-3 md:grid-cols-2">
+                  <div class="rounded-md bg-white dark:bg-gray-800 p-3 border dark:border-gray-700">
+                    <div
+                      class="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"
+                    >
+                      修改前
+                      <div
+                        class="w-6 h-6 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded overflow-hidden"
+                      >
+                        <CachedImage
+                          v-if="isImageUrl(normalizeImageUrl(summary.groupIcon))"
+                          :src="normalizeImageUrl(summary.groupIcon)"
+                          class="w-full h-full object-contain"
+                        />
+                        <span v-else class="text-xs">{{ summary.groupIcon }}</span>
+                      </div>
+                    </div>
+                    <div class="break-all font-mono text-xs dark:text-gray-200">
+                      {{ summary.groupIcon }}
+                    </div>
+                  </div>
+                  <div
+                    class="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3"
+                  >
+                    <div
+                      class="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"
+                    >
+                      修改后
+                      <div
+                        class="w-6 h-6 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded overflow-hidden"
+                      >
+                        <CachedImage
+                          v-if="isImageUrl(normalizeImageUrl(summary.groupIconAfter))"
+                          :src="normalizeImageUrl(summary.groupIconAfter)"
+                          class="w-full h-full object-contain"
+                        />
+                        <span v-else class="text-xs">{{ summary.groupIconAfter }}</span>
+                      </div>
+                    </div>
+                    <div class="break-all font-mono text-xs dark:text-gray-200">
+                      {{ summary.groupIconAfter }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="
+                  (groupExamples[summary.groupId] || []).length === 0 && !summary.groupIconChanged
+                "
                 class="rounded-md bg-gray-50 dark:bg-gray-900 p-3 text-xs text-gray-500 dark:text-gray-400"
               >
                 当前分组没有可展示的示例，或示例仍在加载中。
@@ -726,15 +820,29 @@ onBeforeUnmount(() => {
                 :key="item.emojiId"
                 class="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-3"
               >
-                <div class="flex flex-wrap items-center gap-2">
-                  <div class="font-medium dark:text-white">{{ item.emojiName }}</div>
-                  <a-tag
-                    v-for="field in formatFields(item.changedFields)"
-                    :key="field"
-                    color="blue"
-                  >
-                    {{ field }}
-                  </a-tag>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-8 h-8 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0"
+                    >
+                      <CachedImage
+                        v-if="isImageUrl(normalizeImageUrl(item.emojiUrl))"
+                        :src="normalizeImageUrl(item.emojiUrl)"
+                        class="w-full h-full object-contain"
+                      />
+                      <span v-else class="text-xs">?</span>
+                    </div>
+                    <div class="font-medium dark:text-white">{{ item.emojiName }}</div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <a-tag
+                      v-for="field in formatFields(item.changedFields)"
+                      :key="field"
+                      color="blue"
+                    >
+                      {{ field }}
+                    </a-tag>
+                  </div>
                 </div>
                 <div class="grid gap-3 md:grid-cols-2">
                   <div class="rounded-md bg-gray-50 dark:bg-gray-900 p-3">
