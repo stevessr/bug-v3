@@ -214,6 +214,14 @@ Features:
 - **MCP Bridge:** Model Context Protocol integration
 - **Collaborative Uploads:** Server-based upload sharing
 
+### Discourse Integration Notes
+
+- Prefer `customOutput` first, then `short_url`, then plain `url` when generating Markdown or copied insert text.
+- Keep `short_url` flowing through upload, import, export, and edit paths; Discourse uploads may return both `url` and `short_url`.
+- Picker performance changes should usually go through `src/content/discourse/utils/pickerPerformance.ts`, because desktop and mobile pickers share the same helper path.
+- In the injected picker, keep animated emojis static in the grid but preserve animation in hover preview.
+- If you change picker indexing, lazy loading, or event delegation, re-check that hover preview still renders correctly and that motion-heavy formats still get larger tiles.
+
 ## Testing Guidelines
 
 ### Testing Framework
