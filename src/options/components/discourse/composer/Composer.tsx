@@ -482,14 +482,16 @@ export default defineComponent({
           title.value = ''
           selectedTags.value = []
         } else if (props.mode === 'reply') {
+          const topicId = props.topicId as number
           result = await replyToTopic(props.baseUrl, {
-            topicId: props.topicId!,
+            topicId,
             raw: raw.value.trim(),
             replyToPostNumber: props.replyToPostNumber
           })
         } else {
+          const postId = props.postId as number
           result = await editPost(props.baseUrl, {
-            postId: props.postId!,
+            postId,
             raw: raw.value.trim(),
             editReason: editReason.value || undefined,
             topicId: props.topicId,

@@ -25,6 +25,7 @@ import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 import { defaultSettings } from '@/types/defaultSettings'
 import { createLogger } from '@/utils/logger'
 import { resolveImageCacheStrategy } from '@/utils/imageCachePolicy'
+import { getChromeAPI } from '@/utils/chrome'
 
 const log = createLogger('EmojiStore')
 
@@ -818,10 +819,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     // 设置新的防抖定时器
     syncSettingsTimer = setTimeout(() => {
       try {
-        const chromeAPI =
-          typeof chrome !== 'undefined'
-            ? chrome
-            : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
+        const chromeAPI = getChromeAPI()
         if (chromeAPI?.runtime?.sendMessage) {
           const payload: any = { type: 'SYNC_SETTINGS', settings: settings.value }
           if (newSettings) {

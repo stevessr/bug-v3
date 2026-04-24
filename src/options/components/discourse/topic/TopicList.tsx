@@ -69,7 +69,20 @@ export default defineComponent({
     ) => {
       const categoryId = (topic as DiscourseTopic).category_id
       if (!categoryId || !categories) return null
-      return categories.find(c => c.id === categoryId)
+      return categories.find(c => c.id === categoryId) ?? null
+    }
+
+    const renderCategory = (topic: DiscourseTopic | SuggestedTopic) => {
+      const cat = getCategory(topic, props.categories)
+      if (!cat) return null
+      return (
+        <span
+          class="topic-category"
+          style={{ backgroundColor: cat.color + '20', color: cat.text_color }}
+        >
+          {cat.name}
+        </span>
+      )
     }
 
     const getUserById = (userId: number, users?: DiscourseUser[]) => {
@@ -176,17 +189,7 @@ export default defineComponent({
                 )}
               </div>
               <div class="topic-meta">
-                {getCategory(topic, props.categories) && (
-                  <span
-                    class="topic-category"
-                    style={{
-                      backgroundColor: getCategory(topic, props.categories)!.color + '20',
-                      color: getCategory(topic, props.categories)!.text_color
-                    }}
-                  >
-                    {getCategory(topic, props.categories)!.name}
-                  </span>
-                )}
+                {renderCategory(topic)}
                 {((topic as DiscourseTopic).tags || []).map(tag => (
                   <span
                     key={getTagKey(tag)}

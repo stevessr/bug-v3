@@ -959,7 +959,11 @@
 
       const postKey = this.buildTopicPostKey(topic, postNum)
       const cachedPostId = postKey ? this.postNumberLookupCache.get(postKey) : null
-      if (Number.isFinite(cachedPostId) && cachedPostId > 0 && this.postByNumberCache.has(cachedPostId)) {
+      if (
+        Number.isFinite(cachedPostId) &&
+        cachedPostId > 0 &&
+        this.postByNumberCache.has(cachedPostId)
+      ) {
         return this.postByNumberCache.get(cachedPostId)
       }
 
@@ -1115,7 +1119,8 @@
       const topic = Number(topicId)
       if (!Number.isFinite(topic) || topic <= 0) return null
       if (this.topicCategoryCache.has(topic)) return this.topicCategoryCache.get(topic)
-      if (this.topicCategoryRequestCache.has(topic)) return this.topicCategoryRequestCache.get(topic)
+      if (this.topicCategoryRequestCache.has(topic))
+        return this.topicCategoryRequestCache.get(topic)
 
       const request = (async () => {
         const url = `/t/topic/${topic}.json`
@@ -1386,7 +1391,9 @@
           return null
         }
 
-        let categoryId = Number(primaryPost.category_id || this.topicCategoryCache.get(topicId) || 0)
+        let categoryId = Number(
+          primaryPost.category_id || this.topicCategoryCache.get(topicId) || 0
+        )
         if (!Number.isFinite(categoryId) || categoryId <= 0) {
           categoryId = await this.getTopicCategoryId(topicId)
         }
@@ -1588,8 +1595,14 @@
             }
 
             const cachedPost = this.postByNumberCache.get(preparedPostId) || null
-            const categoryId = Number(cachedPost?.category_id || item.category_id || item.categoryId || 0)
-            if (!Number.isFinite(categoryId) || categoryId <= 0 || !this.isCategoryAllowed(categoryId)) {
+            const categoryId = Number(
+              cachedPost?.category_id || item.category_id || item.categoryId || 0
+            )
+            if (
+              !Number.isFinite(categoryId) ||
+              categoryId <= 0 ||
+              !this.isCategoryAllowed(categoryId)
+            ) {
               continue
             }
 

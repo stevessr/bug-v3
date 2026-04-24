@@ -29,7 +29,8 @@
   width: 272px;
   background: var(--d-surface, var(--theme-surface));
   border-right: 1px solid var(--d-border, var(--theme-outline-variant));
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--d-border, #000) 35%, transparent),
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--d-border, #000) 35%, transparent),
     0 12px 28px color-mix(in oklab, var(--d-text, #000) 20%, transparent);
   transform: translateX(-100%);
   transition: transform 0.2s ease;

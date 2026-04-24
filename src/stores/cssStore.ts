@@ -9,6 +9,7 @@ import { computed } from 'vue'
 import type { SaveControl } from './core/types'
 
 import type { AppSettings, CustomCssBlock } from '@/types/type'
+import { createLogger } from '@/utils/logger'
 
 export interface CssStoreOptions {
   settings: Ref<AppSettings>
@@ -17,6 +18,7 @@ export interface CssStoreOptions {
 
 export function useCssStore(options: CssStoreOptions) {
   const { settings, saveControl } = options
+  const log = createLogger('CssStore')
 
   // --- CSS Block Operations ---
 
@@ -46,7 +48,7 @@ export function useCssStore(options: CssStoreOptions) {
     }
 
     settings.value = { ...settings.value, customCssBlocks: [...blocks] }
-    console.log('[CssStore] saveCustomCssBlock', { blockId: block.id, name: block.name })
+    log.info('saveCustomCssBlock', { blockId: block.id, name: block.name })
     saveControl.maybeSave()
   }
 
@@ -59,7 +61,7 @@ export function useCssStore(options: CssStoreOptions) {
 
     if (filteredBlocks.length !== blocks.length) {
       settings.value = { ...settings.value, customCssBlocks: filteredBlocks }
-      console.log('[CssStore] deleteCustomCssBlock', { blockId })
+      log.info('deleteCustomCssBlock', { blockId })
       saveControl.maybeSave()
     }
   }
@@ -75,7 +77,7 @@ export function useCssStore(options: CssStoreOptions) {
       block.enabled = !block.enabled
       block.updatedAt = Date.now()
       settings.value = { ...settings.value, customCssBlocks: [...blocks] }
-      console.log('[CssStore] toggleCustomCssBlock', { blockId, enabled: block.enabled })
+      log.info('toggleCustomCssBlock', { blockId, enabled: block.enabled })
       saveControl.maybeSave()
     }
   }
@@ -129,7 +131,7 @@ export function useCssStore(options: CssStoreOptions) {
       block.content = content
       block.updatedAt = Date.now()
       settings.value = { ...settings.value, customCssBlocks: [...blocks] }
-      console.log('[CssStore] updateCssBlockContent', { blockId })
+      log.info('updateCssBlockContent', { blockId })
       saveControl.maybeSave()
     }
   }

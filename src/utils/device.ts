@@ -7,6 +7,8 @@ import { nanoid } from 'nanoid'
 
 import { storageGet, storageSet } from '@/utils/simpleStorage'
 
+const log = createLogger('Device')
+
 const DEVICE_ID_KEY = 'emoji_extension_device_id'
 const DEVICE_INFO_KEY = 'emoji_extension_device_info'
 
@@ -27,7 +29,7 @@ export async function getDeviceId(): Promise<string> {
 
     return newId
   } catch (error) {
-    console.error('[Device] Failed to get/generate device ID:', error)
+    log.error('Failed to get/generate device ID:', error)
     // 降级方案：使用时间戳和随机数
     return `device_fallback_${Date.now()}_${Math.random().toString(36).slice(2)}`
   }
@@ -83,7 +85,7 @@ export async function saveDeviceInfo(info: any): Promise<void> {
   try {
     await storageSet(DEVICE_INFO_KEY, info)
   } catch (error) {
-    console.error('[Device] Failed to save device info:', error)
+    log.error('Failed to save device info:', error)
   }
 }
 
@@ -94,7 +96,7 @@ export async function loadDeviceInfo(): Promise<any> {
   try {
     return (await storageGet(DEVICE_INFO_KEY)) || null
   } catch (error) {
-    console.error('[Device] Failed to load device info:', error)
+    log.error('Failed to load device info:', error)
     return null
   }
 }

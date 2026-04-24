@@ -284,19 +284,25 @@ export default defineComponent({
 
     const execCommand = (command: string, value?: string) => {
       editorRef.value?.focus()
-      document.execCommand(command, false, value)
+      if (document.queryCommandSupported(command)) {
+        document.execCommand(command, false, value)
+      }
       handleInput()
     }
 
     const insertHtml = (html: string) => {
       editorRef.value?.focus()
-      document.execCommand('insertHTML', false, html)
+      if (document.queryCommandSupported('insertHTML')) {
+        document.execCommand('insertHTML', false, html)
+      }
       handleInput()
     }
 
     const insertText = (text: string) => {
       editorRef.value?.focus()
-      document.execCommand('insertText', false, text)
+      if (document.queryCommandSupported('insertText')) {
+        document.execCommand('insertText', false, text)
+      }
       handleInput()
     }
 

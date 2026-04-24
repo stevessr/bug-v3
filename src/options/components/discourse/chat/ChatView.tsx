@@ -90,11 +90,13 @@ export default defineComponent({
       if (!channel) return
 
       const currentName = channel.title || channel.unicode_title || channel.chatable?.name || ''
+      // eslint-disable-next-line no-alert
       const nameInput = window.prompt('频道名称', currentName)
       if (nameInput === null) return
       const name = nameInput.trim()
       if (!name) return
 
+      // eslint-disable-next-line no-alert
       const descriptionInput = window.prompt('频道描述（可留空）', channel.description || '')
       if (descriptionInput === null) return
 

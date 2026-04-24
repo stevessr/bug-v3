@@ -122,7 +122,11 @@ const TOOLS = [
       type: 'object',
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
-        strategy: { type: 'string', enum: ['latest', 'new', 'unread', 'top'], description: '浏览策略' },
+        strategy: {
+          type: 'string',
+          enum: ['latest', 'new', 'unread', 'top'],
+          description: '浏览策略'
+        },
         page: { type: 'number', description: '页码', default: 0 }
       }
     }
@@ -496,7 +500,7 @@ async function handleRequest(req, res) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+      Connection: 'keep-alive'
     })
 
     sseClients.add(res)
@@ -512,7 +516,9 @@ async function handleRequest(req, res) {
   // MCP JSON-RPC endpoint
   if (url.pathname === '/mcp' && req.method === 'POST') {
     let body = ''
-    req.on('data', chunk => { body += chunk })
+    req.on('data', chunk => {
+      body += chunk
+    })
     req.on('end', async () => {
       try {
         const request = JSON.parse(body)
@@ -529,11 +535,13 @@ async function handleRequest(req, res) {
         }
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({
-          jsonrpc: '2.0',
-          id: null,
-          error: { code: -32700, message: 'Parse error' }
-        }))
+        res.end(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: null,
+            error: { code: -32700, message: 'Parse error' }
+          })
+        )
       }
     })
     return
@@ -542,30 +550,34 @@ async function handleRequest(req, res) {
   // Health check
   if (url.pathname === '/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({
-      ok: true,
-      extensionConnected: extensionWs?.readyState === WebSocket.OPEN,
-      tools: TOOLS.length
-    }))
+    res.end(
+      JSON.stringify({
+        ok: true,
+        extensionConnected: extensionWs?.readyState === WebSocket.OPEN,
+        tools: TOOLS.length
+      })
+    )
     return
   }
 
   // Server info
   if (url.pathname === '/' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({
-      name: 'bugv3-mcp-server',
-      version: '1.0.0',
-      description: 'MCP Server for Browser Extension',
-      mcp: {
-        endpoint: '/mcp',
-        transport: 'streamable-http'
-      },
-      ws: {
-        endpoint: '/ws',
-        description: 'WebSocket for browser extension'
-      }
-    }))
+    res.end(
+      JSON.stringify({
+        name: 'bugv3-mcp-server',
+        version: '1.0.0',
+        description: 'MCP Server for Browser Extension',
+        mcp: {
+          endpoint: '/mcp',
+          transport: 'streamable-http'
+        },
+        ws: {
+          endpoint: '/ws',
+          description: 'WebSocket for browser extension'
+        }
+      })
+    )
     return
   }
 
@@ -580,7 +592,7 @@ const server = http.createServer(handleRequest)
 // Create WebSocket server for extension
 const wss = new WebSocketServer({ server, path: '/ws' })
 
-wss.on('connection', (ws) => {
+wss.on('connection', ws => {
   log('Extension WebSocket connected')
   extensionWs = ws
 
@@ -593,16 +605,18 @@ wss.on('connection', (ws) => {
     })
   }
 
-  ws.on('message', (data) => {
+  ws.on('message', data => {
     try {
       const message = JSON.parse(data.toString())
 
       // Handle ping from extension (heartbeat)
       if (message.type === 'MCP_PING') {
-        ws.send(JSON.stringify({
-          type: 'MCP_PONG',
-          timestamp: message.timestamp
-        }))
+        ws.send(
+          JSON.stringify({
+            type: 'MCP_PONG',
+            timestamp: message.timestamp
+          })
+        )
         return
       }
 
@@ -641,7 +655,7 @@ wss.on('connection', (ws) => {
     }
   })
 
-  ws.on('error', (err) => {
+  ws.on('error', err => {
     log('WebSocket error:', err.message)
   })
 })

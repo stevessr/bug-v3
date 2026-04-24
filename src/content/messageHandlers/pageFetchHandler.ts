@@ -148,7 +148,11 @@ export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse)
           mimeType
         }
       } else {
-        data = await res.json().catch(() => null)
+        try {
+          data = await res.json()
+        } catch {
+          data = null
+        }
       }
       const response: MessageResponse = {
         success: true,

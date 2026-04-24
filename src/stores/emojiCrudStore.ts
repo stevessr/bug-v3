@@ -10,6 +10,7 @@ import type { SaveControl, DuplicateGroup } from './core/types'
 import type { Emoji, EmojiGroup } from '@/types/type'
 import { rewriteEmojiUrlFields } from '@/utils/emojiUrlRewrite'
 import { normalizeImageUrl } from '@/utils/isImageUrl'
+import { createLogger } from '@/utils/logger'
 
 export interface EmojiCrudStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -32,6 +33,7 @@ function generateEmojiId(): string {
 
 export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
   const { groups, favorites, saveControl } = options
+  const log = createLogger('EmojiCrudStore')
 
   /**
    * 触发 groups 的响应式更新（用于 shallowRef）
@@ -565,7 +567,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       }
       return removed
     } catch (err) {
-      console.error('[EmojiCrudStore] dedupeGroup error', err)
+      log.error('dedupeGroup error', err)
       return 0
     }
   }
@@ -623,7 +625,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
       }
       return removed
     } catch (err) {
-      console.error('[EmojiCrudStore] dedupeGroupByName error', err)
+      log.error('dedupeGroupByName error', err)
       return 0
     }
   }
@@ -750,7 +752,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
 
       return totalRemoved
     } catch (err) {
-      console.error('[EmojiCrudStore] removeDuplicatesAcrossGroups error', err)
+      log.error('removeDuplicatesAcrossGroups error', err)
       return 0
     }
   }

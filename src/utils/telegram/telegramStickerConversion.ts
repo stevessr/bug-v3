@@ -49,7 +49,11 @@ const normalizeMimeType = (extension: string, blob: Blob): string => {
 const getAnimatedTimeoutMs = (timeoutMs?: number) =>
   timeoutMs && timeoutMs > 0 ? timeoutMs : TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS
 
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> => {
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> => {
   let timer: ReturnType<typeof setTimeout> | null = null
   try {
     return await Promise.race([
@@ -69,7 +73,8 @@ export const getTelegramStickerConversionModeLabel = (
 
 export const describeTelegramStickerConversionResult = (
   result: TelegramStickerConversionResult
-): string => `${getTelegramStickerConversionModeLabel(result.mode)} · ${result.extension.toUpperCase()} · ${(result.blob.size / 1024).toFixed(1)} KB`
+): string =>
+  `${getTelegramStickerConversionModeLabel(result.mode)} · ${result.extension.toUpperCase()} · ${(result.blob.size / 1024).toFixed(1)} KB`
 
 export const getTelegramStickerErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error)

@@ -482,8 +482,8 @@ const buildTools = async (
 
       const partialResult = buildResultMessage(
         mergedPayload,
-        runtime.agent.state.streamMessage && 'content' in runtime.agent.state.streamMessage
-          ? extractAssistantText(runtime.agent.state.streamMessage as AssistantMessage)
+        runtime.agent.state.streamingMessage && 'content' in runtime.agent.state.streamingMessage
+          ? extractAssistantText(runtime.agent.state.streamingMessage as AssistantMessage)
           : '',
         null
       )
@@ -851,8 +851,9 @@ export async function runPiAgentFollowup(
     clearStoredPendingTool(threadId)
     runtime.pendingTool = undefined
 
-    for (const item of serializeToolResultContent(effectiveToolUses, toolResult)) {
-      runtime.agent.appendMessage(item)
+    const toolContent = serializeToolResultContent(effectiveToolUses, toolResult)
+    for (const item of toolContent) {
+      ;(runtime.agent as any).appendMessage?.(item)
     }
 
     writeStoredThreadState(threadId, {

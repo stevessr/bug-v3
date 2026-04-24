@@ -15,6 +15,8 @@ import { sanitizeEmojiGroup, isSettings } from './typeGuards'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
+const log = createLogger('Storage')
+
 // Chrome API helper
 declare const chrome: typeof globalThis.chrome | undefined
 
@@ -43,7 +45,7 @@ let warnedNoChromeStorage = false
 const warnNoChromeStorage = () => {
   if (!warnedNoChromeStorage) {
     warnedNoChromeStorage = true
-    console.warn('[Storage] chrome.storage.local not available, falling back to localStorage')
+    log.warn('chrome.storage.local not available, falling back to localStorage')
   }
 }
 
@@ -58,7 +60,7 @@ const localStorageGet = <T = unknown>(key: string): T | null => {
     }
     return parsed as T | null
   } catch (error) {
-    console.error('[Storage] localStorage get failed:', key, error)
+    log.error('localStorage get failed:', key, error)
     return null
   }
 }
@@ -72,7 +74,7 @@ const localStorageSet = (key: string, value: unknown) => {
     }
     localStorage.setItem(key, JSON.stringify(wrappedValue))
   } catch (error) {
-    console.error('[Storage] localStorage set failed:', key, error)
+    log.error('localStorage set failed:', key, error)
   }
 }
 
@@ -81,7 +83,7 @@ const localStorageRemove = (key: string) => {
   try {
     localStorage.removeItem(key)
   } catch (error) {
-    console.error('[Storage] localStorage remove failed:', key, error)
+    log.error('localStorage remove failed:', key, error)
   }
 }
 
@@ -102,7 +104,7 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
   return new Promise(resolve => {
     api.storage.local.get({ [key]: null }, result => {
       if (api.runtime.lastError) {
-        console.error('[Storage] Get failed:', key, api.runtime.lastError)
+        log.error('Get failed:', key, api.runtime.lastError)
         resolve(null)
       } else {
         const value = result[key] as { data?: T; timestamp?: number } | T | null
@@ -116,7 +118,7 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
           key === STORAGE_KEYS.SETTINGS ||
           key.startsWith('emojiGroup_')
         ) {
-          console.log(`[Storage] Get ${key}:`, {
+          log.info(`Get ${key}:`, {
             hasData: !!data,
             dataType: typeof data,
             isArray: Array.isArray(data),
@@ -155,7 +157,7 @@ export async function storageSet(key: string, value: unknown): Promise<void> {
   return new Promise((resolve, reject) => {
     api.storage.local.set({ [key]: wrappedValue }, () => {
       if (api.runtime.lastError) {
-        console.error('[Storage] Set failed:', key, api.runtime.lastError)
+        log.error('Set failed:', key, api.runtime.lastError)
         reject(api.runtime.lastError)
       } else {
         resolve()
@@ -190,7 +192,7 @@ export async function storageBatchSet(items: Record<string, unknown>): Promise<v
   return new Promise((resolve, reject) => {
     api.storage.local.set(wrappedItems, () => {
       if (api.runtime.lastError) {
-        console.error('[Storage] Batch set failed:', api.runtime.lastError)
+        log.error('Batch set failed:', api.runtime.lastError)
         reject(api.runtime.lastError)
       } else {
         resolve()
@@ -281,7 +283,7 @@ const SAFE_TYPES = new Set(['string', 'number', 'boolean', 'undefined'])
  */
 function ensureSerializable<T>(data: T, depth = 0): T {
   if (depth > 10) {
-    console.warn('[Storage] Max depth reached, returning null to prevent unsafe references')
+    log.warn('Max depth reached, returning null to prevent unsafe references')
     return null as T
   }
 
@@ -336,7 +338,7 @@ function ensureSerializable<T>(data: T, depth = 0): T {
 
     return raw
   } catch (error) {
-    console.error('[Storage] Serialization failed, returning null:', error)
+    log.error('Serialization failed, returning null:', error)
     return null as T
   }
 }
@@ -421,7 +423,7 @@ export async function checkStorageHealth(): Promise<{
     )
     const hasFavorites = Array.isArray(favorites)
 
-    console.log('[Storage] Health check:', {
+    log.info('Health check:', {
       groupIndex,
       settings,
       favorites,
@@ -438,7 +440,7 @@ export async function checkStorageHealth(): Promise<{
       details: { groupIndex, settings, favorites }
     }
   } catch (error) {
-    console.error('[Storage] Health check failed:', error)
+    log.error('Health check failed:', error)
     return {
       hasGroups: false,
       hasSettings: false,
@@ -453,37 +455,37 @@ export async function checkStorageHealth(): Promise<{
  * 修复空的存储数据
  */
 export async function repairEmptyStorage(): Promise<void> {
-  console.log('[Storage] Starting storage repair')
+  log.info('Starting storage repair')
 
   const health = await checkStorageHealth()
 
   if (!health.hasGroups) {
-    console.log('[Storage] No groups found, creating defaults')
+    log.info('No groups found, creating defaults')
     try {
       const { loadPackagedDefaults } = await import('@/types/defaultEmojiGroups.loader')
       const defaults = await loadPackagedDefaults()
       if (defaults?.groups?.length > 0) {
         await setAllEmojiGroups(defaults.groups)
-        console.log('[Storage] Created default groups:', defaults.groups.length)
+        log.info('Created default groups:', defaults.groups.length)
       }
     } catch (error) {
-      console.error('[Storage] Failed to create default groups:', error)
+      log.error('Failed to create default groups:', error)
     }
   }
 
   if (!health.hasSettings) {
-    console.log('[Storage] No settings found, creating defaults')
+    log.info('No settings found, creating defaults')
     try {
       const { defaultSettings } = await import('@/types/defaultSettings')
       await setSettings(defaultSettings)
-      console.log('[Storage] Created default settings')
+      log.info('Created default settings')
     } catch (error) {
-      console.error('[Storage] Failed to create default settings:', error)
+      log.error('Failed to create default settings:', error)
     }
   }
 
   if (!health.hasFavorites) {
-    console.log('[Storage] No favorites found, creating empty array')
+    log.info('No favorites found, creating empty array')
     await setFavorites([])
   }
 }
@@ -498,7 +500,7 @@ export async function getEmojiGroup(groupId: string): Promise<EmojiGroup | null>
   // 运行时类型验证和清理
   const sanitized = sanitizeEmojiGroup(data)
   if (!sanitized) {
-    console.warn(`[Storage] Invalid EmojiGroup data for ${groupId}, skipping`)
+    log.warn(`Invalid EmojiGroup data for ${groupId}, skipping`)
     return null
   }
 
@@ -536,7 +538,7 @@ export async function getSettings(): Promise<AppSettings | null> {
 
   // 运行时类型验证
   if (!isSettings(data)) {
-    console.warn('[Storage] Invalid Settings data, returning null')
+    log.warn('Invalid Settings data, returning null')
     return null
   }
 
@@ -1003,7 +1005,7 @@ export type StorageChangeListener = (changes: {
 export function onStorageChanged(callback: StorageChangeListener): () => void {
   const api = getChromeAPI()
   if (!api?.storage?.onChanged) {
-    console.warn('[Storage] chrome.storage.onChanged not available')
+    log.warn('chrome.storage.onChanged not available')
     return () => {}
   }
 

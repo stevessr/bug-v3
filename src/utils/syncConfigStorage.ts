@@ -2,6 +2,8 @@ import { storageGet, storageSet, storageRemove } from './simpleStorage'
 
 import type { SyncTargetConfig } from '@/utils/syncTargets'
 
+const log = createLogger('SyncConfig')
+
 // Key for storing sync configuration
 const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
 
@@ -10,22 +12,22 @@ const SYNC_CONFIG_KEY = 'emoji_extension_sync_config'
  */
 export async function saveSyncConfig(config: SyncTargetConfig): Promise<void> {
   const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-  console.log('[SyncConfig] Saving config, chromeAPI available:', !!chromeAPI?.storage?.local)
-  console.log('[SyncConfig] Config to save:', config)
+  log.info('Saving config, chromeAPI available:', !!chromeAPI?.storage?.local)
+  log.info('Config to save:', config)
 
   if (chromeAPI?.storage?.local) {
     // Use Chrome storage in extension context
     await new Promise(resolve => {
       chromeAPI.storage.local.set({ [SYNC_CONFIG_KEY]: config }, () => {
-        console.log('[SyncConfig] Config saved to Chrome storage')
+        log.info('Config saved to Chrome storage')
         resolve(undefined)
       })
     })
   } else {
     // Fallback to localStorage in development/standalone mode
-    console.log('[SyncConfig] Using simpleStorage (dev/standalone)')
+    log.info('Using simpleStorage (dev/standalone)')
     await storageSet(SYNC_CONFIG_KEY, config)
-    console.log('[SyncConfig] Config saved to storage')
+    log.info('Config saved to storage')
   }
 }
 
@@ -35,32 +37,32 @@ export async function saveSyncConfig(config: SyncTargetConfig): Promise<void> {
 export async function loadSyncConfig(): Promise<SyncTargetConfig | null> {
   try {
     const chromeAPI = typeof chrome !== 'undefined' ? chrome : (globalThis as any).chrome
-    console.log('[SyncConfig] Loading config, chromeAPI available:', !!chromeAPI?.storage?.local)
+    log.info('Loading config, chromeAPI available:', !!chromeAPI?.storage?.local)
 
     if (chromeAPI?.storage?.local) {
       // Use Chrome storage in extension context
       const config = await new Promise<any>(resolve => {
         chromeAPI.storage.local.get([SYNC_CONFIG_KEY], (result: any) => {
-          console.log('[SyncConfig] Chrome storage result:', result)
+          log.info('Chrome storage result:', result)
           resolve(result[SYNC_CONFIG_KEY] || null)
         })
       })
 
-      console.log('[SyncConfig] Loaded config from Chrome storage:', config)
+      log.info('Loaded config from Chrome storage:', config)
       if (config && typeof config === 'object' && config.type) {
         return config
       }
     } else {
       // Fallback to localStorage in development/standalone mode
-      console.log('[SyncConfig] Using simpleStorage (dev/standalone)')
+      log.info('Using simpleStorage (dev/standalone)')
       const config = await storageGet<SyncTargetConfig | null>(SYNC_CONFIG_KEY)
       if (config && typeof config === 'object' && config.type) {
-        console.log('[SyncConfig] Loaded config from storage:', config)
+        log.info('Loaded config from storage:', config)
         return config
       }
     }
   } catch (error) {
-    console.error('[SyncConfig] Failed to load config:', error)
+    log.error('Failed to load config:', error)
   }
   return null
 }

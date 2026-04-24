@@ -5,6 +5,8 @@ import * as storage from '@/utils/simpleStorage'
 import type { EmojiGroup, AppSettings, Emoji } from '@/types/type'
 import { normalizeImageUrl } from '@/utils/isImageUrl'
 import { defaultSettings } from '@/types/defaultSettings'
+import { getChromeAPI } from '@/utils/chrome'
+import { createLogger } from '@/utils/logger'
 
 interface StorageSyncOptions {
   groups: ShallowRef<EmojiGroup[]>
@@ -33,6 +35,8 @@ export function useStorageSync({
   onTagsAdded,
   onTagsRemoved
 }: StorageSyncOptions) {
+  const log = createLogger('EmojiStore')
+
   // Listen for changes from other extension contexts (e.g., options page)
   let isUpdatingFromStorage = false
   // Track most recent external change timestamp to ignore stale events
@@ -69,7 +73,7 @@ export function useStorageSync({
     // 分组被删除
     if (newGroup == null) {
       groups.value = groups.value.filter(g => g.id !== groupId)
-      console.log('[EmojiStore] Removed group from store due to external change', groupId)
+      log.info('Removed group from store due to external change', groupId)
       return null
     }
 
@@ -95,10 +99,10 @@ export function useStorageSync({
       if (idx !== -1) {
         const merged = { ...groups.value[idx], ...newGroup }
         groups.value = [...groups.value.slice(0, idx), merged, ...groups.value.slice(idx + 1)]
-        console.log('[EmojiStore] Updated group in-place from external change', targetId)
+        log.info('Updated group in-place from external change', targetId)
       } else {
         groups.value = [...groups.value, newGroup]
-        console.log('[EmojiStore] Inserted new group from external change', targetId)
+        log.info('Inserted new group from external change', targetId)
       }
     }
 
@@ -112,7 +116,7 @@ export function useStorageSync({
     const data = change?.newValue ? (change.newValue as { data?: AppSettings }).data : null
     if (data && typeof data === 'object') {
       settings.value = { ...defaultSettings, ...data }
-      console.log('[EmojiStore] Updated settings from external storage')
+      log.info('Updated settings from external storage')
     }
   }
 
@@ -123,7 +127,7 @@ export function useStorageSync({
     const data = change?.newValue ? (change.newValue as { data?: string[] }).data : null
     if (Array.isArray(data)) {
       favorites.value = new Set(data)
-      console.log('[EmojiStore] Updated favorites from external storage')
+      log.info('Updated favorites from external storage')
     }
   }
 
@@ -133,7 +137,7 @@ export function useStorageSync({
   const handleGroupIndexChange = async (): Promise<void> => {
     try {
       const index = await storage.getEmojiGroupIndex()
-      console.log('[EmojiStore] Processing GROUP_INDEX change:', index)
+      log.info('Processing GROUP_INDEX change:', index)
 
       if (!Array.isArray(index) || !index.length) return
 
@@ -143,8 +147,8 @@ export function useStorageSync({
 
       // 加载新分组
       if (newGroupIds.length > 0) {
-        console.log(
-          '[EmojiStore] Loading new groups from index:',
+        log.info(
+          'Loading new groups from index:',
           newGroupIds.map(e => e.id)
         )
         for (const entry of newGroupIds) {
@@ -152,15 +156,10 @@ export function useStorageSync({
             const newGroup = await storage.getEmojiGroup(entry.id)
             if (newGroup) {
               groups.value.push({ ...newGroup, order: entry.order })
-              console.log(
-                '[EmojiStore] Loaded new group:',
-                entry.id,
-                'emojis:',
-                newGroup.emojis?.length ?? 0
-              )
+              log.info('Loaded new group:', entry.id, 'emojis:', newGroup.emojis?.length ?? 0)
             }
           } catch {
-            console.warn('[EmojiStore] Failed to load new group:', entry.id)
+            log.warn('Failed to load new group:', entry.id)
           }
         }
       }
@@ -173,7 +172,7 @@ export function useStorageSync({
         return oa - ob
       })
       groups.value = reordered.map((g, idx) => ({ ...g, order: idx }))
-      console.log('[EmojiStore] Reordered groups from external group index')
+      log.info('Reordered groups from external group index')
     } catch {
       // 忽略错误
     }
@@ -190,8 +189,8 @@ export function useStorageSync({
   const applyGroupDiff = (before?: EmojiGroup | null, after?: EmojiGroup | null) => {
     if (!hasIndexCallbacks) return
 
-    const beforeEmojis = Array.isArray(before?.emojis) ? before!.emojis : []
-    const afterEmojis = Array.isArray(after?.emojis) ? after!.emojis : []
+    const beforeEmojis = before?.emojis ?? []
+    const afterEmojis = after?.emojis ?? []
 
     const beforeMap = new Map<string, Emoji>()
     for (const emoji of beforeEmojis) {
@@ -275,7 +274,7 @@ export function useStorageSync({
           await handleGroupIndexChange()
         }
       } catch (err) {
-        console.error('[EmojiStore] Error processing external key', key, err)
+        log.error('Error processing external key', key, err)
       }
     }
   }
@@ -285,10 +284,10 @@ export function useStorageSync({
     // We'll add a conservative listener for backward compatibility but only react
     // to relevant keys and to newer changes. This avoids frequent full reloads
     // when unrelated keys or older events are received.
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    if (getChromeAPI()?.storage?.onChanged) {
       chrome.storage.onChanged.addListener(
         (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
-          console.log('[EmojiStore] Storage change detected:', {
+          log.info('Storage change detected:', {
             areaName,
             keys: Object.keys(changes || {}),
             isSaving: isSaving.value,
@@ -303,8 +302,8 @@ export function useStorageSync({
             isUpdatingFromStorage ||
             isProcessingRuntimeMessage
           ) {
-            console.log(
-              '[EmojiStore] Ignoring storage change - save:',
+            log.info(
+              'Ignoring storage change - save:',
               isSaving.value,
               'load:',
               isLoading.value,
@@ -332,7 +331,7 @@ export function useStorageSync({
           )
 
           if (!isRelevant) {
-            console.log('[EmojiStore] Ignored storage change - irrelevant keys:', changedKeys)
+            log.info('Ignored storage change - irrelevant keys:', changedKeys)
             return
           }
 
@@ -353,7 +352,7 @@ export function useStorageSync({
 
           // If incoming changes are older or equal to the last processed one, skip
           if (maxIncomingTs && maxIncomingTs <= lastExternalChangeTs) {
-            console.log('[EmojiStore] Ignored storage change - older timestamp', {
+            log.info('Ignored storage change - older timestamp', {
               maxIncomingTs,
               lastExternalChangeTs
             })
@@ -372,17 +371,14 @@ export function useStorageSync({
             externalChangeTimer = null
             isUpdatingFromStorage = true
             try {
-              console.log(
-                '[EmojiStore] Applying external storage update - processing relevant keys',
-                capturedKeys
-              )
+              log.info('Applying external storage update - processing relevant keys', capturedKeys)
               await processStorageChanges(capturedChanges, capturedKeys)
             } catch (error) {
-              console.error('[EmojiStore] Failed to process storage change', error)
+              log.error('Failed to process storage change', error)
             } finally {
               setTimeout(() => {
                 isUpdatingFromStorage = false
-                console.log('[EmojiStore] External storage processing completed')
+                log.info('External storage processing completed')
               }, 200)
             }
           }, EXTERNAL_CHANGE_DEBOUNCE_MS)
@@ -393,10 +389,7 @@ export function useStorageSync({
     // Register runtime message listener only once globally to prevent duplicate handlers
     if (!runtimeMessageListenerRegistered) {
       try {
-        const chromeAPI =
-          typeof chrome !== 'undefined'
-            ? chrome
-            : ((globalThis as Record<string, unknown>).chrome as typeof chrome | undefined)
+        const chromeAPI = getChromeAPI()
         if (chromeAPI?.runtime?.onMessage) {
           chromeAPI.runtime.onMessage.addListener(
             (message: {
@@ -414,7 +407,7 @@ export function useStorageSync({
                 // Set flag to suppress storage change events during message processing
                 isProcessingRuntimeMessage = true
                 try {
-                  console.log('[EmojiStore] Processing EMOJI_EXTENSION_UNGROUPED_ADDED message')
+                  log.info('Processing EMOJI_EXTENSION_UNGROUPED_ADDED message')
                   if (message.payload) {
                     applyUngroupedAddition(message.payload)
                     // 显示通知：外部添加了表情
@@ -441,7 +434,7 @@ export function useStorageSync({
               if (message.type === 'FAVORITES_UPDATED') {
                 isProcessingRuntimeMessage = true
                 try {
-                  console.log('[EmojiStore] Processing FAVORITES_UPDATED message')
+                  log.info('Processing FAVORITES_UPDATED message')
                   if (message.payload && message.payload.favoritesGroup) {
                     // 更新本地收藏夹分组
                     const favoritesGroupIndex = groups.value.findIndex(g => g.id === 'favorites')
@@ -450,7 +443,7 @@ export function useStorageSync({
                       const updatedGroups = [...groups.value]
                       updatedGroups[favoritesGroupIndex] = message.payload.favoritesGroup
                       groups.value = updatedGroups
-                      console.log('[EmojiStore] Updated favorites group from runtime message')
+                      log.info('Updated favorites group from runtime message')
                       // 显示通知：收藏夹已更新
                       import('@/content/utils/ui/notify')
                         .then(({ notify }) => {
@@ -470,13 +463,13 @@ export function useStorageSync({
             }
           )
           runtimeMessageListenerRegistered = true
-          console.log('[EmojiStore] Runtime message listener registered')
+          log.info('Runtime message listener registered')
         }
       } catch (runtimeListenerError) {
-        console.warn('[EmojiStore] Failed to register runtime listener', runtimeListenerError)
+        log.warn('Failed to register runtime listener', runtimeListenerError)
       }
     } else {
-      console.log('[EmojiStore] Runtime message listener already registered, skipping')
+      log.info('Runtime message listener already registered, skipping')
     }
   }
 

@@ -97,12 +97,19 @@ class WASMColorService {
     }
   }
 
+  private getExports(): ColorWasmExports {
+    if (!this.exports) {
+      throw new Error('WASM not initialized')
+    }
+    return this.exports
+  }
+
   private getHeapU8(): Uint8Array {
-    return new Uint8Array(this.exports!.memory.buffer)
+    return new Uint8Array(this.getExports().memory.buffer)
   }
 
   private getHeapU32(): Uint32Array {
-    return new Uint32Array(this.exports!.memory.buffer)
+    return new Uint32Array(this.getExports().memory.buffer)
   }
 
   private parseColorResult(resultPtr: number): WasmColorResult {
@@ -110,7 +117,7 @@ class WASMColorService {
       return { colors: [], error: true, errorMessage: 'Null result pointer' }
     }
 
-    const heap32 = new Int32Array(this.exports!.memory.buffer)
+    const heap32 = new Int32Array(this.getExports().memory.buffer)
     const heapU32 = this.getHeapU32()
 
     // ColorResult layout: colors_ptr (i32), num_colors (i32), error (i32), error_message (i32)
@@ -128,7 +135,7 @@ class WASMColorService {
         while (heap[end] !== 0) end++
         errorMessage = new TextDecoder().decode(heap.slice(errorMsgPtr, end))
       }
-      this.exports!.free_color_result(resultPtr)
+      this.getExports().free_color_result(resultPtr)
       return { colors: [], error: true, errorMessage }
     }
 
@@ -146,7 +153,7 @@ class WASMColorService {
       }
     }
 
-    this.exports!.free_color_result(resultPtr)
+    this.getExports().free_color_result(resultPtr)
     return { colors, error: false }
   }
 

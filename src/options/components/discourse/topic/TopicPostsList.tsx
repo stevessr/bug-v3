@@ -94,8 +94,8 @@ export default defineComponent({
                   <div class="text-xs text-gray-500">上文加载中...</div>
                 ) : props.getParentPost(post) && props.getParsedParent(post) ? (
                   <PostParentPreview
-                    post={props.getParentPost(post)!}
-                    parsed={props.getParsedPostByItem(props.getParentPost(post)!)}
+                    post={props.getParentPost(post) as DiscoursePost}
+                    parsed={props.getParsedPostByItem(props.getParentPost(post) as DiscoursePost)}
                     baseUrl={props.baseUrl}
                     getParentPost={props.getParentPost}
                     getParentParsed={props.getParsedParent}

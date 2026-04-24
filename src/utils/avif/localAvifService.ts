@@ -137,8 +137,7 @@ const drawCanvasImageSource = (
   throw new Error('Unsupported image source for AVIF encoding')
 }
 
-const createJobId = () =>
-  `tg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+const createJobId = () => `tg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 
 class LocalAvifService {
   private ffmpeg: FFmpeg | null = null

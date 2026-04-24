@@ -6,6 +6,8 @@
 import type { Emoji, EmojiGroup, AppSettings } from '@/types/type'
 import type { DeltaRecord } from '@/types/sync'
 
+const log = createLogger('TypeGuard')
+
 /**
  * Check if a value is a valid Emoji object
  */
@@ -101,7 +103,7 @@ export function validateAndSanitize<T>(
     return data
   }
 
-  console.warn('[TypeGuard] Validation failed for data:', data)
+  log.warn('Validation failed for data:', data)
   return fallback
 }
 

@@ -75,6 +75,7 @@ declare global {
   const getArchivedGroupIds: typeof import('./utils/simpleStorage')['getArchivedGroupIds']
   const getCacheStats: typeof import('./utils/imageCache')['getCacheStats']
   const getCachedImage: typeof import('./utils/imageCache')['getCachedImage']
+  const getChromeAPI: typeof import('./utils/chrome')['getChromeAPI']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentLanguage: typeof import('./utils/i18n')['getCurrentLanguage']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
@@ -344,6 +345,7 @@ declare module 'vue' {
     readonly getArchivedGroupIds: UnwrapRef<typeof import('./utils/simpleStorage')['getArchivedGroupIds']>
     readonly getCacheStats: UnwrapRef<typeof import('./utils/imageCache')['getCacheStats']>
     readonly getCachedImage: UnwrapRef<typeof import('./utils/imageCache')['getCachedImage']>
+    readonly getChromeAPI: UnwrapRef<typeof import('./utils/chrome')['getChromeAPI']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentLanguage: UnwrapRef<typeof import('./utils/i18n')['getCurrentLanguage']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>

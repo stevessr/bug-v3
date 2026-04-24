@@ -9,6 +9,7 @@ import type { SaveControl } from './core/types'
 
 import type { Emoji, EmojiGroup } from '@/types/type'
 import * as storage from '@/utils/simpleStorage'
+import { createLogger } from '@/utils/logger'
 
 export interface FavoritesStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -46,6 +47,7 @@ function ensureFavoritesGroup(groups: Ref<EmojiGroup[]>): EmojiGroup {
 
 export function useFavoritesStore(options: FavoritesStoreOptions) {
   const { groups, favorites, isLoading, hasLoadedOnce, isReadOnlyMode, saveControl } = options
+  const log = createLogger('FavoritesStore')
 
   // --- Save Operations ---
 
@@ -54,12 +56,12 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
    */
   const saveFavoritesOnly = async (): Promise<void> => {
     if (!hasLoadedOnce.value) {
-      console.warn('[FavoritesStore] saveFavoritesOnly blocked - data not loaded yet')
+      log.warn('saveFavoritesOnly blocked - data not loaded yet')
       return
     }
 
     if (isLoading.value) {
-      console.warn('[FavoritesStore] saveFavoritesOnly blocked - still loading')
+      log.warn('saveFavoritesOnly blocked - still loading')
       return
     }
 
@@ -87,7 +89,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       }, [] as string[])
       await storage.setFavorites(favoriteIds)
     } catch (error) {
-      console.error('[FavoritesStore] Failed to save favorites:', error)
+      log.error('Failed to save favorites:', error)
     }
   }
 
@@ -98,7 +100,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
    */
   const addToFavorites = async (emoji: Emoji): Promise<void> => {
     if (!hasLoadedOnce.value || isLoading.value) {
-      console.warn('[FavoritesStore] addToFavorites blocked - data not ready')
+      log.warn('addToFavorites blocked - data not ready')
       return
     }
 
@@ -189,7 +191,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
   const clearAllFavorites = (): void => {
     const favoritesGroup = groups.value.find(g => g.id === 'favorites')
     if (!favoritesGroup) {
-      console.warn('[FavoritesStore] Favorites group not found')
+      log.warn('Favorites group not found')
       return
     }
 

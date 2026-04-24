@@ -976,12 +976,13 @@ export function updateMemory(update: MemoryUpdate): void {
   }
 
   if (update.remove) {
+    const { remove } = update
     const runtime = loadRuntimeContext()
-    const filteredRuntime = runtime.filter(e => !update.remove!.includes(e.key))
+    const filteredRuntime = runtime.filter(e => !remove.includes(e.key))
     saveRuntimeContext(filteredRuntime)
 
     const memory = loadMemoryLayer()
-    const filteredMemory = memory.filter(e => !update.remove!.includes(e.key))
+    const filteredMemory = memory.filter(e => !remove.includes(e.key))
     saveMemoryLayer(filteredMemory)
   }
 

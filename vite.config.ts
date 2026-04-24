@@ -129,7 +129,9 @@ function createAntDesignVueOnDemandPlugin(): Plugin {
           }
 
           if (fallbackImports.length > 0) {
-            transformedImports.push(`import { ${fallbackImports.join(', ')} } from 'ant-design-vue';`)
+            transformedImports.push(
+              `import { ${fallbackImports.join(', ')} } from 'ant-design-vue';`
+            )
           }
 
           if (transformedImports.length === 0) {

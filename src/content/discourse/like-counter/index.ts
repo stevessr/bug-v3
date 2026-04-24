@@ -447,7 +447,7 @@ async function syncRemote() {
     ])
     const postMap = new Map<number, number>()
     ;[...likes, ...reactions].forEach(item => {
-      if (!postMap.has(item.post_id) || postMap.get(item.post_id)! < item.timestamp)
+      if (!postMap.has(item.post_id) || (postMap.get(item.post_id) ?? 0) < item.timestamp)
         postMap.set(item.post_id, item.timestamp)
     })
     const dedupedTimestamps = Array.from(postMap.values())

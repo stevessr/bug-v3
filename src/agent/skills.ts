@@ -2026,12 +2026,13 @@ export function recommendSkills(
     }
 
     // 基于 URL 匹配
-    if (context.currentUrl) {
-      if (skill.tags?.some(t => context.currentUrl!.includes(t))) {
+    const { currentUrl } = context
+    if (currentUrl) {
+      if (skill.tags?.some(t => currentUrl.includes(t))) {
         score += 30
       }
       // GitHub 页面推荐 GitHub 相关 skills
-      if (context.currentUrl.includes('github.com') && skill.category === 'knowledge') {
+      if (currentUrl.includes('github.com') && skill.category === 'knowledge') {
         score += 25
       }
     }
@@ -2045,11 +2046,12 @@ export function recommendSkills(
     }
 
     // 基于用户偏好
-    if (context.userPreferences) {
-      if (skill.tags?.some(t => context.userPreferences!.includes(t))) {
+    const { userPreferences } = context
+    if (userPreferences) {
+      if (skill.tags?.some(t => userPreferences.includes(t))) {
         score += 40
       }
-      if (context.userPreferences.includes(skill.category)) {
+      if (userPreferences.includes(skill.category)) {
         score += 20
       }
     }

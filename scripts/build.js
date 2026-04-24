@@ -45,8 +45,7 @@ const configs = {
   'build:minimal': {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIER: 'terser',
-    BUILD_CSS_MINIFIER: 'lightningcss'
+    BUILD_FAST: 'true'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {

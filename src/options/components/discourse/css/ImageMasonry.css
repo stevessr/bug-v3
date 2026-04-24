@@ -19,7 +19,9 @@
   overflow: hidden;
   background: rgba(148, 163, 184, 0.2);
   border: 1px solid rgba(148, 163, 184, 0.3);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .post-masonry-link-tsx:hover .post-masonry-frame-tsx {

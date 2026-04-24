@@ -2,12 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
 
 import type { EmojiGroup } from '@/types/type'
+import { createLogger } from '@/utils/logger'
 
 /**
  * 标签计数 Store
  * 负责管理标签统计和过滤功能
  */
 export const useTagCountStore = defineStore('tagCount', () => {
+  const log = createLogger('TagCountStore')
+
   // --- State ---
   const tagCountMap = ref<Map<string, number>>(new Map())
   const tagCacheValid = ref(false)
@@ -26,7 +29,7 @@ export const useTagCountStore = defineStore('tagCount', () => {
       // 延迟到下一个微任务执行重建，避免在 computed 中修改状态
       queueMicrotask(() => {
         if (!tagCacheValid.value) {
-          console.warn('[TagCountStore] Tag cache invalid, please rebuild')
+          log.warn('Tag cache invalid, please rebuild')
         }
       })
       return []
@@ -74,7 +77,7 @@ export const useTagCountStore = defineStore('tagCount', () => {
 
     // 如果缓存无效，需要完全重建（由调用者处理）
     if (!tagCacheValid.value) {
-      console.warn('[TagCountStore] Cache invalid, increment skipped')
+      log.warn('Cache invalid, increment skipped')
       return
     }
 
@@ -93,7 +96,7 @@ export const useTagCountStore = defineStore('tagCount', () => {
 
     // 如果缓存无效，需要完全重建（由调用者处理）
     if (!tagCacheValid.value) {
-      console.warn('[TagCountStore] Cache invalid, decrement skipped')
+      log.warn('Cache invalid, decrement skipped')
       return
     }
 

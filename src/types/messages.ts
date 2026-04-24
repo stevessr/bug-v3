@@ -295,48 +295,6 @@ export interface FavoritesUpdatedMessage extends BaseMessage {
 }
 
 /**
- * ADD_TO_FAVORITES legacy 操作消息（兼容）
- */
-export interface AddToFavoritesMessage {
-  action: 'addToFavorites'
-  emoji: Emoji
-}
-
-/**
- * ADD_EMOJI_FROM_WEB legacy 操作消息（兼容）
- */
-export interface AddEmojiFromWebMessage {
-  action: 'addEmojiFromWeb'
-  emojiData: {
-    url: string
-    name?: string
-    groupId?: string
-    width?: number
-    height?: number
-    displayUrl?: string
-    short_url?: string
-    customOutput?: string
-    sourceDomain?: string
-    targetGroupId?: string
-    targetGroupName?: string
-  }
-}
-
-/**
- * UPLOAD_AND_ADD_EMOJI legacy 操作消息（兼容）
- */
-export interface UploadAndAddEmojiMessage {
-  action: 'uploadAndAddEmoji'
-  payload: {
-    arrayData: number[]
-    filename: string
-    mimeType: string
-    name: string
-    originUrl?: string
-  }
-}
-
-/**
  * 所有基于 type 的消息联合类型
  */
 export type TypedMessage =
@@ -373,17 +331,9 @@ export type TypedMessage =
   | FavoritesUpdatedMessage
 
 /**
- * 所有基于 action 的消息联合类型
- */
-export type ActionMessage =
-  | AddToFavoritesMessage
-  | AddEmojiFromWebMessage
-  | UploadAndAddEmojiMessage
-
-/**
  * 所有消息的联合类型
  */
-export type BackgroundMessage = TypedMessage | ActionMessage
+export type BackgroundMessage = TypedMessage
 
 /**
  * Content Script 接收的消息联合类型
@@ -433,10 +383,6 @@ export function isTypedMessage(message: any): message is TypedMessage {
   return typeof message === 'object' && message !== null && 'type' in message
 }
 
-export function isActionMessage(message: any): message is ActionMessage {
-  return typeof message === 'object' && message !== null && 'action' in message
-}
-
 /**
  * 具体消息类型守卫
  */
@@ -461,18 +407,6 @@ export function isDownloadImageMessage(message: any): message is DownloadImageMe
     isTypedMessage(message) &&
     (message.type === 'DOWNLOAD_IMAGE' || message.type === 'downloadImage')
   )
-}
-
-export function isAddToFavoritesMessage(message: any): message is AddToFavoritesMessage {
-  return isActionMessage(message) && message.action === 'addToFavorites'
-}
-
-export function isAddEmojiFromWebMessage(message: any): message is AddEmojiFromWebMessage {
-  return isActionMessage(message) && message.action === 'addEmojiFromWeb'
-}
-
-export function isUploadAndAddEmojiMessage(message: any): message is UploadAndAddEmojiMessage {
-  return isActionMessage(message) && message.action === 'uploadAndAddEmoji'
 }
 
 export function isAddToFavoritesTypedMessage(message: any): message is AddToFavoritesTypedMessage {

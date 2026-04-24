@@ -44,7 +44,15 @@ const DEFAULT_THUMBNAIL_SIZE = 100
 const DEFAULT_MAX_RETRIES = 8
 const DEFAULT_RETRY_DELAY = 1000
 const IMAGE_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.avif'
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
+  '.bmp',
+  '.tiff',
+  '.tif',
+  '.avif'
 ])
 
 // ==================== 工具函数 ====================
@@ -248,12 +256,12 @@ class UploadClient {
         ws.send(JSON.stringify({ type: 'CREATE_SESSION', uuid: randomUUID() }))
       })
 
-      ws.on('message', (data) => {
+      ws.on('message', data => {
         this.handleMessage(data)
         if (this.sessionId) resolve()
       })
 
-      ws.on('error', (err) => {
+      ws.on('error', err => {
         console.error('WebSocket error:', err)
         reject(err)
       })
@@ -289,7 +297,9 @@ class UploadClient {
       return !existingEmojiMap.has(nameWithoutExt)
     })
 
-    console.error(`Resuming: ${existingEmojiMap.size} files already uploaded, ${filesToUpload.length} files to upload`)
+    console.error(
+      `Resuming: ${existingEmojiMap.size} files already uploaded, ${filesToUpload.length} files to upload`
+    )
 
     // 读取所有文件并创建任务
     const tasks = []
@@ -334,7 +344,7 @@ class UploadClient {
     for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
       const batch = tasks.slice(i, i + BATCH_SIZE)
       await this.uploadBatch(batch)
-      
+
       // 如果触发了速率限制，等待
       if (Date.now() < this.rateLimitUntil) {
         const waitTime = this.rateLimitUntil - Date.now()
@@ -380,7 +390,7 @@ class UploadClient {
     // 等待该批次完成
     return new Promise((resolve, reject) => {
       const batchTaskIds = new Set(tasks.map(t => t.taskId))
-      
+
       const checkComplete = () => {
         let allDone = true
         for (const taskId of batchTaskIds) {
@@ -394,9 +404,12 @@ class UploadClient {
         }
       }
 
-      const timeout = setTimeout(() => {
-        reject(new Error('Batch upload timeout'))
-      }, 30 * 60 * 1000)
+      const timeout = setTimeout(
+        () => {
+          reject(new Error('Batch upload timeout'))
+        },
+        30 * 60 * 1000
+      )
 
       // 覆盖原有的 onUploadComplete，使用批次特定的处理
       const originalOnUploadComplete = this.onUploadComplete
@@ -453,7 +466,8 @@ class UploadClient {
       if (result.thumbnail) {
         displayUrl = result.thumbnail
       } else if (result.thumbnail_width && result.thumbnail_height) {
-        displayUrl = result.short_url || result.short_path || getThumbnailUrl(url, this.thumbnailSize)
+        displayUrl =
+          result.short_url || result.short_path || getThumbnailUrl(url, this.thumbnailSize)
       } else {
         displayUrl = getThumbnailUrl(url, this.thumbnailSize)
       }
@@ -505,11 +519,15 @@ class UploadClient {
         if (isRateLimit) {
           // 429 错误，设置速率限制
           const waitSeconds = this.extractWaitSeconds(error)
-          const waitTime = waitSeconds ? waitSeconds * 1000 : this.retryDelay * Math.pow(2, task.retryCount)
+          const waitTime = waitSeconds
+            ? waitSeconds * 1000
+            : this.retryDelay * Math.pow(2, task.retryCount)
           this.rateLimitUntil = Date.now() + waitTime
-          
-          console.error(`[TASK_FAILED] ${task.fileName}: ${error} (Rate limit, waiting ${Math.ceil(waitTime / 1000)}s, retry ${task.retryCount}/${this.maxRetries})`)
-          
+
+          console.error(
+            `[TASK_FAILED] ${task.fileName}: ${error} (Rate limit, waiting ${Math.ceil(waitTime / 1000)}s, retry ${task.retryCount}/${this.maxRetries})`
+          )
+
           // 暂时移除任务，等待后重新提交
           this.pendingFiles.delete(taskId)
           setTimeout(() => {
@@ -520,8 +538,10 @@ class UploadClient {
         } else {
           // 其他错误，使用指数退避
           const waitTime = this.retryDelay * Math.pow(2, task.retryCount)
-          console.error(`[TASK_FAILED] ${task.fileName}: ${error} (Retry ${task.retryCount}/${this.maxRetries} in ${waitTime}ms)`)
-          
+          console.error(
+            `[TASK_FAILED] ${task.fileName}: ${error} (Retry ${task.retryCount}/${this.maxRetries} in ${waitTime}ms)`
+          )
+
           this.pendingFiles.delete(taskId)
           setTimeout(() => {
             task.status = 'pending'
@@ -532,7 +552,7 @@ class UploadClient {
       } else {
         // 超过最大重试次数，标记为失败
         console.error(`[TASK_FAILED] ${task.fileName}: ${error} (Max retries exceeded)`)
-        
+
         this.failedFiles.push({
           fileName: task.fileName,
           filePath: task.filePath,
@@ -553,7 +573,7 @@ class UploadClient {
     if (data.type === 'TASK_WAITING') {
       const taskId = data.taskId
       const task = this.pendingFiles.get(taskId)
-      
+
       if (task) {
         const waitTime = data.waitTime * 1000
         this.rateLimitUntil = Date.now() + waitTime
@@ -562,7 +582,9 @@ class UploadClient {
     }
 
     if (data.type === 'SESSION_COMPLETED') {
-      console.error(`Session completed: ${data.stats.completed} succeeded, ${data.stats.failed} failed`)
+      console.error(
+        `Session completed: ${data.stats.completed} succeeded, ${data.stats.failed} failed`
+      )
     }
   }
 
@@ -667,7 +689,9 @@ async function main() {
     const failedCount = result.failed.length
     const skippedCount = result.skipped
 
-    console.error(`\nUpload completed: ${uploadedCount} total, ${uploadedCount - skippedCount} new, ${skippedCount} skipped, ${failedCount} failed`)
+    console.error(
+      `\nUpload completed: ${uploadedCount} total, ${uploadedCount - skippedCount} new, ${skippedCount} skipped, ${failedCount} failed`
+    )
 
     // 保存表情数据到文件
     saveEmojiData(args.outputFile, result.uploaded)
@@ -685,11 +709,13 @@ async function main() {
         '',
         ...result.failed.map(f => {
           const fileIndex = imageFiles.indexOf(f.filePath) + 1
-          return `[${fileIndex}/${imageFiles.length}] ${f.fileName}`
-            + `\n  Path: ${f.filePath}`
-            + `\n  Error: ${f.error}`
-            + `\n  Retries: ${f.retryCount}`
-            + `\n  Time: ${f.timestamp}`
+          return (
+            `[${fileIndex}/${imageFiles.length}] ${f.fileName}` +
+            `\n  Path: ${f.filePath}` +
+            `\n  Error: ${f.error}` +
+            `\n  Retries: ${f.retryCount}` +
+            `\n  Time: ${f.timestamp}`
+          )
         })
       ].join('\n')
 

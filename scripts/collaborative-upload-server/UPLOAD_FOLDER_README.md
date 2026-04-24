@@ -98,6 +98,7 @@ node upload-folder.js ./my-emojis "我的表情" --resume
 ```
 
 断点续传功能会：
+
 - 读取已存在的 JSON 文件
 - 跳过已上传的表情
 - 只上传新的表情
@@ -195,24 +196,24 @@ node upload-folder.js ./my-emojis "我的表情" --no-stream > output.json
 
 ## 输出字段说明
 
-| 字段 | 说明 |
-|------|------|
-| `id` | 表情唯一标识符 |
-| `name` | 表情名称（文件名，不包含扩展名） |
-| `url` | 原始图片 URL |
-| `displayUrl` | 缩图 URL（优先使用服务器返回的 thumbnail 字段，否则使用 URL 添加 thumbnail 参数） |
-| `width` | 图片宽度（像素） |
-| `height` | 图片高度（像素） |
-| `thumbnail_width` | 缩图宽度（像素） |
-| `thumbnail_height` | 缩图高度（像素） |
-| `filesize` | 文件大小（字节） |
-| `human_filesize` | 人类可读的文件大小（如 "34.5 KB"） |
-| `extension` | 文件扩展名（如 "jpeg"、"png"） |
-| `short_url` | 短 URL（如 "upload://xDtWLTsDH4kCD1xK4f5sempvO47.jpeg"） |
-| `short_path` | 短路径（如 "/uploads/short-url/xDtWLTsDH4kCD1xK4f5sempvO47.jpeg"） |
-| `dominant_color` | 主色调（十六进制颜色值，如 "C5C5C5"） |
-| `groupId` | 分组唯一标识符 |
-| `packet` | 表情在分组中的序号 |
+| 字段               | 说明                                                                              |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `id`               | 表情唯一标识符                                                                    |
+| `name`             | 表情名称（文件名，不包含扩展名）                                                  |
+| `url`              | 原始图片 URL                                                                      |
+| `displayUrl`       | 缩图 URL（优先使用服务器返回的 thumbnail 字段，否则使用 URL 添加 thumbnail 参数） |
+| `width`            | 图片宽度（像素）                                                                  |
+| `height`           | 图片高度（像素）                                                                  |
+| `thumbnail_width`  | 缩图宽度（像素）                                                                  |
+| `thumbnail_height` | 缩图高度（像素）                                                                  |
+| `filesize`         | 文件大小（字节）                                                                  |
+| `human_filesize`   | 人类可读的文件大小（如 "34.5 KB"）                                                |
+| `extension`        | 文件扩展名（如 "jpeg"、"png"）                                                    |
+| `short_url`        | 短 URL（如 "upload://xDtWLTsDH4kCD1xK4f5sempvO47.jpeg"）                          |
+| `short_path`       | 短路径（如 "/uploads/short-url/xDtWLTsDH4kCD1xK4f5sempvO47.jpeg"）                |
+| `dominant_color`   | 主色调（十六进制颜色值，如 "C5C5C5"）                                             |
+| `groupId`          | 分组唯一标识符                                                                    |
+| `packet`           | 表情在分组中的序号                                                                |
 
 ## 前置要求
 
@@ -272,6 +273,7 @@ node server.js
 ### 图片尺寸无法识别
 
 如果图片尺寸返回为 null，可能是：
+
 1. 图片文件损坏
 2. 图片格式不受支持（目前支持：PNG, JPEG, GIF, WebP, BMP, AVIF）
 3. 文件太小或不是有效的图片文件

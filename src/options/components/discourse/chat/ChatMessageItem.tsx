@@ -64,6 +64,7 @@ export default defineComponent({
     }
 
     const handleAddReaction = () => {
+      // eslint-disable-next-line no-alert
       const input = window.prompt('输入表情短码（如 heart、+1）', 'heart')
       if (input === null) return
       const emoji = input.trim().replace(/^:/, '').replace(/:$/, '')

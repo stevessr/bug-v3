@@ -178,6 +178,14 @@ export default [
     }
   },
 
+  // Agent.vue - v-html is safe because renderMarkdown() uses DOMPurify
+  {
+    files: ['src/sidebar/Agent.vue'],
+    rules: {
+      'vue/no-v-html': 'off'
+    }
+  },
+
   // JavaScript 文件配置
   {
     files: ['**/*.js', '**/*.mjs'],

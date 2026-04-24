@@ -9,6 +9,7 @@ import type { Ref } from 'vue'
 import type { SaveControl } from './core/types'
 
 import type { EmojiGroup } from '@/types/type'
+import { createLogger } from '@/utils/logger'
 
 export interface GroupStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -18,6 +19,7 @@ export interface GroupStoreOptions {
 
 export function useGroupStore(options: GroupStoreOptions) {
   const { groups, activeGroupId, saveControl } = options
+  const log = createLogger('GroupStore')
 
   // --- Computed ---
   const activeGroup = computed(
@@ -46,7 +48,7 @@ export function useGroupStore(options: GroupStoreOptions) {
     }
     // 使用数组替换以触发 shallowRef 响应式更新
     groups.value = [...groups.value, newGroup]
-    console.log('[GroupStore] createGroup', { id: newGroup.id, name: newGroup.name })
+    log.info('createGroup', { id: newGroup.id, name: newGroup.name })
     // Mark the new group as dirty for incremental save
     saveControl.markGroupDirty?.(newGroup.id)
     saveControl.maybeSave()
@@ -69,7 +71,7 @@ export function useGroupStore(options: GroupStoreOptions) {
     }
     // 使用数组替换以触发 shallowRef 响应式更新
     groups.value = [...groups.value, newGroup]
-    console.log('[GroupStore] createGroupWithoutSave', { id: newGroup.id, name: newGroup.name })
+    log.info('createGroupWithoutSave', { id: newGroup.id, name: newGroup.name })
     // Mark the new group as dirty for incremental save (will be saved when batch ends)
     saveControl.markGroupDirty?.(newGroup.id)
     return newGroup
@@ -85,7 +87,7 @@ export function useGroupStore(options: GroupStoreOptions) {
       const updatedGroups = [...groups.value]
       updatedGroups[index] = { ...updatedGroups[index], ...updates }
       groups.value = updatedGroups
-      console.log('[GroupStore] updateGroup', { id: groupId, updates })
+      log.info('updateGroup', { id: groupId, updates })
       // Mark the group as dirty for incremental save
       saveControl.markGroupDirty?.(groupId)
       saveControl.maybeSave()
@@ -97,7 +99,7 @@ export function useGroupStore(options: GroupStoreOptions) {
    */
   const deleteGroup = (groupId: string): void => {
     if (groupId === 'favorites') {
-      console.warn('[GroupStore] Cannot delete system groups')
+      log.warn('Cannot delete system groups')
       return
     }
 
@@ -105,7 +107,7 @@ export function useGroupStore(options: GroupStoreOptions) {
     saveControl.markGroupDeleted?.(groupId)
 
     groups.value = groups.value.filter(g => g.id !== groupId)
-    console.log('[GroupStore] deleteGroup', { id: groupId })
+    log.info('deleteGroup', { id: groupId })
 
     if (activeGroupId.value === groupId) {
       activeGroupId.value = groups.value[0]?.id || 'nachoneko'
@@ -120,7 +122,7 @@ export function useGroupStore(options: GroupStoreOptions) {
   const reorderGroups = async (sourceGroupId: string, targetGroupId: string): Promise<void> => {
     // Prevent reordering if either source or target is favorites
     if (sourceGroupId === 'favorites' || targetGroupId === 'favorites') {
-      console.warn('[GroupStore] Cannot reorder favorites group')
+      log.warn('Cannot reorder favorites group')
       return
     }
 
@@ -136,7 +138,7 @@ export function useGroupStore(options: GroupStoreOptions) {
         group.order = index
       })
       groups.value = reorderedGroups
-      console.log('[GroupStore] reorderGroups', { from: sourceGroupId, to: targetGroupId })
+      log.info('reorderGroups', { from: sourceGroupId, to: targetGroupId })
 
       // 优化：只保存索引，不需要全量保存所有分组
       const { setEmojiGroupIndex } = await import('@/utils/simpleStorage')

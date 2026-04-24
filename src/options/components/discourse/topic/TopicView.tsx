@@ -318,6 +318,7 @@ export default defineComponent({
 
     const handleTopicAssign = async () => {
       if (!firstPost.value) return
+      // eslint-disable-next-line no-alert
       const input = window.prompt('请输入要指定的用户名')
       if (!input) return
       const username = input.trim()
