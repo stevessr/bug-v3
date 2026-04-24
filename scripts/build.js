@@ -30,17 +30,14 @@ const configs = {
   },
 
   build: {
-    ENABLE_LOGGING: 'false', // 生产环境禁用日志
-    NODE_ENV: 'production',
-    BUILD_MINIFIER: 'esbuild',
-    BUILD_CSS_MINIFIER: 'lightningcss'
+    ENABLE_LOGGING: 'false',
+    NODE_ENV: 'production'
   },
 
   'build:prod': {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production',
-    BUILD_MINIFIER: 'terser',
-    BUILD_CSS_MINIFIER: 'lightningcss'
+    BUILD_MINIFIER: 'terser'
   },
   'build:minimal': {
     ENABLE_LOGGING: 'false',

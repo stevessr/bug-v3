@@ -176,15 +176,14 @@ export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
   const isFastBuild = process.env.BUILD_FAST === 'true'
   const shouldMinify = !isFastBuild && process.env.BUILD_MINIFIED !== 'false'
-  const minifier =
-    process.env.BUILD_MINIFIER === 'terser' || process.env.BUILD_MINIFIER === 'esbuild'
-      ? process.env.BUILD_MINIFIER
-      : false
-  const cssMinifier =
-    process.env.BUILD_CSS_MINIFIER === 'esbuild' ||
-    process.env.BUILD_CSS_MINIFIER === 'lightningcss'
-      ? process.env.BUILD_CSS_MINIFIER
-      : false
+  const minifier = shouldMinify
+    ? process.env.BUILD_MINIFIER === 'terser'
+      ? 'terser'
+      : true  // Vite 8 default: Oxc
+    : false
+  const cssMinifier = shouldMinify
+    ? true  // Vite 8 default: lightningcss
+    : false
   const enableForumBrowser = process.env.ENABLE_FORUM_BROWSER !== 'false'
   const enableLocalMcpBridge = process.env.ENABLE_LOCAL_MCP_BRIDGE !== 'false'
   // 生产环境强制禁用日志，开发环境默认启用（除非明确禁用）
@@ -374,50 +373,48 @@ export default defineConfig(({ mode }) => {
                 toplevel: true
               }
             },
-      // Keep rollupOptions so Vite 8 preserves these settings if a build path falls back.
-      rollupOptions: {
+      rolldownOptions: {
         input: buildInputs,
         output: {
           entryFileNames: 'js/[name].js',
           chunkFileNames: 'js/[name].js',
           assetFileNames: 'assets/[name].[ext]',
-          format: 'es', // Use ES module format for better code splitting support
-          manualChunks: isFastBuild
-            ? undefined
-            : id => {
-                if (id.includes('node_modules')) {
-                  // UI 库单独打包，避免 content script 加载不需要的 UI 代码
-                  if (id.includes('ant-design-vue') || id.includes('@ant-design')) {
-                    return 'vendor-ui'
-                  }
-                  // 核心框架单独打包
-                  if (
-                    id.includes('vue') ||
-                    id.includes('pinia') ||
-                    id.includes('vue-router') ||
-                    id.includes('@vueuse')
-                  ) {
-                    return 'vendor-core'
-                  }
-                  // 避免内容脚本引入重工具依赖
-                  if (id.includes('katex') || id.includes('dayjs') || id.includes('lodash')) {
-                    return 'vendor-utils'
-                  }
-                  // 其他第三方依赖
-                  return 'vendor-libs'
+          format: 'es',
+          ...(isFastBuild
+            ? {}
+            : {
+                codeSplitting: {
+                  groups: [
+                    {
+                      name: 'vendor-ui',
+                      test: /[\\/]node_modules[\\/](?:ant-design-vue|@ant-design)[\\/]/,
+                      priority: 30
+                    },
+                    {
+                      name: 'vendor-core',
+                      test: /[\\/]node_modules[\\/](?:vue|pinia|vue-router|@vueuse)[\\/]/,
+                      priority: 20
+                    },
+                    {
+                      name: 'vendor-utils',
+                      test: /[\\/]node_modules[\\/](?:katex|dayjs|lodash)[\\/]/,
+                      priority: 10
+                    },
+                    {
+                      name: 'vendor-libs',
+                      test: /[\\/]node_modules[\\/]/,
+                      priority: 0
+                    }
+                  ]
                 }
-              }
+              })
         },
-        // 优化：tree-shaking 优化
         treeshake: isFastBuild
           ? false
           : {
               moduleSideEffects: 'no-external',
               propertyReadSideEffects: false
-            },
-        external: id => {
-          return false // Don't externalize anything
-        }
+            }
       }
     }
   }

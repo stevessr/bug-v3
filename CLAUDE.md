@@ -9,7 +9,7 @@ Browser extension for managing custom emojis across websites.
 Core stack:
 - Vue 3 + TypeScript + Pinia
 - Ant Design Vue + Tailwind CSS
-- Vite (via `rolldown-vite`) with custom Node build scripts
+- Vite 8 (Rolldown) with custom Node build scripts
 - Playwright for E2E tests (regular + extension-specific)
 
 The codebase runs in multiple extension contexts: background service worker, content scripts, popup/options/sidebar UIs, plus a standalone Discourse entry.

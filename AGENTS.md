@@ -155,7 +155,7 @@ This project supports multiple build configurations optimized for different use 
 - **State Management:** Pinia stores
 - **UI Library:** Ant Design Vue
 - **Styling:** Tailwind CSS + Less
-- **Build Tool:** Vite (rolldown-vite)
+- **Build Tool:** Vite 8 (Rolldown)
 - **Package Manager:** pnpm with workspace support
 
 ### Code Style
@@ -341,8 +341,8 @@ pnpm release:all          # Complete release with all packaging
 ### Development Dependencies
 
 - `typescript@^5.9.3` - TypeScript compiler
-- `vite` (rolldown-vite@^7.3.1) - Build tool
-- `@vitejs/plugin-vue@^6.0.3` - Vue plugin
+- `vite` (^8.0.10) - Build tool (Rolldown)
+- `@vitejs/plugin-vue@^6.0.6` - Vue plugin
 - `playwright@^1.57.0` - Testing framework
 - `eslint@^9.39.2` - Linting
 - `prettier@^3.7.4` - Formatting

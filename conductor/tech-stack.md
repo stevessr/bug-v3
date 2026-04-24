@@ -4,7 +4,7 @@
 
 - **TypeScript:** 项目的主要编程语言，确保代码的类型安全和可维护性。
 - **Vue 3 (Composition API):** 前端框架，利用组合式 API 构建响应式和模块化的 UI 组件。
-- **Vite:** 极速的前端构建工具，项目中通过 `rolldown-vite` 进行了定制。
+- **Vite 8 (Rolldown):** 极速的前端构建工具，使用 Rolldown（Rust 打包器）进行高性能构建。
 
 ## UI 与样式
 
