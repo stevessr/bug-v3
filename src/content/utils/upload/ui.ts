@@ -340,71 +340,81 @@ function createDragDropUploadPanel(): DragDropElements {
   // Pending files awaiting user confirmation
   let pendingFiles: File[] = []
   let onUpload: ((files: File[]) => Promise<void>) | null = null
+  const fileItemMap = new Map<File, HTMLElement>()
 
-  const updatePreviewGrid = () => {
-    if (pendingFiles.length === 0) {
-      previewGrid.style.display = 'none'
-      return
-    }
-    previewGrid.style.display = 'block'
-    previewCount.textContent = `已选择 ${pendingFiles.length} 个文件`
-    uploadSelectedBtn.textContent = `上传选中 (${pendingFiles.length})`
-    previewGridInner.innerHTML = ''
-    pendingFiles.forEach((file, idx) => {
-      const item = createE('div', {
-        style: `
-          position: relative;
-          aspect-ratio: 1;
-          border-radius: 6px;
-          overflow: hidden;
-          border: 1px solid #e5e7eb;
-          background: #f9fafb;
-          cursor: default;
-        `
-      })
-      const img = createE('img', {
-        style: `
-          width: 100%; height: 100%; object-fit: cover;
-          display: block;
-        `
-      }) as HTMLImageElement
-      img.src = URL.createObjectURL(file)
-      img.onload = () => URL.revokeObjectURL(img.src)
-
-      const removeBtn = createE('button', {
-        text: '✕',
-        style: `
-          position: absolute; top: 2px; right: 2px;
-          width: 18px; height: 18px;
-          font-size: 10px; line-height: 1;
-          background: rgba(0,0,0,0.5); color: white;
-          border: none; border-radius: 50%;
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          opacity: 0; transition: opacity 0.2s;
-        `
-      }) as HTMLButtonElement
-      item.addEventListener('mouseenter', () => {
-        removeBtn.style.opacity = '1'
-      })
-      item.addEventListener('mouseleave', () => {
-        removeBtn.style.opacity = '0'
-      })
-      removeBtn.addEventListener('click', e => {
-        e.stopPropagation()
-        pendingFiles.splice(idx, 1)
-        updatePreviewGrid()
-      })
-
-      item.appendChild(img)
-      item.appendChild(removeBtn)
-      previewGridInner.appendChild(item)
+  const createPreviewItem = (file: File): HTMLElement => {
+    const item = createE('div', {
+      style: `
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        cursor: default;
+      `
     })
+    const img = createE('img', {
+      style: `
+        width: 100%; height: 100%; object-fit: cover;
+        display: block;
+      `
+    }) as HTMLImageElement
+    img.src = URL.createObjectURL(file)
+    img.onload = () => URL.revokeObjectURL(img.src)
+
+    const removeBtn = createE('button', {
+      text: '✕',
+      style: `
+        position: absolute; top: 2px; right: 2px;
+        width: 18px; height: 18px;
+        font-size: 10px; line-height: 1;
+        background: rgba(0,0,0,0.5); color: white;
+        border: none; border-radius: 50%;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.2s;
+      `
+    }) as HTMLButtonElement
+    item.addEventListener('mouseenter', () => {
+      removeBtn.style.opacity = '1'
+    })
+    item.addEventListener('mouseleave', () => {
+      removeBtn.style.opacity = '0'
+    })
+    removeBtn.addEventListener('click', e => {
+      e.stopPropagation()
+      pendingFiles = pendingFiles.filter(f => f !== file)
+      const el = fileItemMap.get(file)
+      if (el) {
+        el.remove()
+        fileItemMap.delete(file)
+      }
+      refreshPreviewState()
+    })
+
+    item.appendChild(img)
+    item.appendChild(removeBtn)
+    fileItemMap.set(file, item)
+    return item
+  }
+
+  const refreshPreviewState = () => {
+    const count = pendingFiles.length
+    if (count === 0) {
+      previewGrid.style.display = 'none'
+    } else {
+      previewGrid.style.display = 'block'
+    }
+    previewCount.textContent = `已选择 ${count} 个文件`
+    uploadSelectedBtn.textContent = `上传选中 (${count})`
   }
 
   const clearPreview = () => {
     pendingFiles.length = 0
-    updatePreviewGrid()
+    previewGridInner.innerHTML = ''
+    fileItemMap.clear()
+    refreshPreviewState()
   }
   uploadSelectedBtn.addEventListener('click', async () => {
     if (!onUpload) return
@@ -425,8 +435,11 @@ function createDragDropUploadPanel(): DragDropElements {
   const addFilesToPreview = (files: File[]) => {
     const imageFiles = files.filter(f => f.type.startsWith('image/'))
     if (imageFiles.length === 0) return
-    pendingFiles.push(...imageFiles)
-    updatePreviewGrid()
+    for (const file of imageFiles) {
+      pendingFiles.push(file)
+      previewGridInner.appendChild(createPreviewItem(file))
+    }
+    refreshPreviewState()
     notify(`已添加 ${imageFiles.length} 个图片到预览列表`, 'info')
   }
 
