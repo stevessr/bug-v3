@@ -846,7 +846,7 @@ export async function showImageUploadDialog(): Promise<void> {
         string,
         { row: HTMLElement; iconSpan: HTMLElement; nameSpan: HTMLElement }
       >()
-      let currentProgressPanel = progressPanel
+      const currentProgressPanel = progressPanel
 
       const updateProgress = (
         done: number,
