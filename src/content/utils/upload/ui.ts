@@ -29,6 +29,12 @@ interface DragDropElements {
   regularPanel: HTMLElement
   dropIcon: HTMLElement
   dropText: HTMLElement
+  previewGrid: HTMLElement
+  uploadSelectedBtn: HTMLButtonElement
+  clearBtn: HTMLButtonElement
+  previewGridInner: HTMLElement
+  addFilesToPreview: (files: File[]) => void
+  pendingFiles: () => File[]
 }
 
 function createDragDropUploadPanel(): DragDropElements {
@@ -211,7 +217,7 @@ function createDragDropUploadPanel(): DragDropElements {
   DAEL('mousemove', drag)
   DAEL('mouseup', dragEnd)
 
-  // Regular upload panel
+  // Regular upload panel — WYSIWYG mode
   const regularPanel = createE('div', {
     class: 'regular-upload-panel',
     style: `
@@ -255,6 +261,150 @@ function createDragDropUploadPanel(): DragDropElements {
   dropZone.appendChild(dropIcon)
   dropZone.appendChild(dropText)
 
+  // WYSIWYG preview grid — shows thumbnails before upload
+  const previewGrid = createE('div', {
+    style: `
+      display: none;
+      margin-top: 12px;
+    `
+  })
+
+  const previewGridInner = createE('div', {
+    style: `
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 4px;
+    `
+  })
+
+  const previewActions = createE('div', {
+    style: `
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 8px;
+      align-items: center;
+    `
+  })
+
+  const previewCount = createE('span', {
+    text: '已选择 0 个文件',
+    style: `font-size: 13px; color: #6b7280; flex: 1;`
+  })
+
+  const clearBtn = createE('button', {
+    text: '清空',
+    style: `
+      padding: 6px 14px;
+      background: transparent;
+      color: #6b7280;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    `
+  }) as HTMLButtonElement
+  clearBtn.addEventListener('mouseenter', () => { clearBtn.style.background = '#f3f4f6' })
+  clearBtn.addEventListener('mouseleave', () => { clearBtn.style.background = 'transparent' })
+
+  const uploadSelectedBtn = createE('button', {
+    text: '上传选中 (0)',
+    style: `
+      padding: 6px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    `
+  }) as HTMLButtonElement
+  uploadSelectedBtn.addEventListener('mouseenter', () => { uploadSelectedBtn.style.background = '#2563eb' })
+  uploadSelectedBtn.addEventListener('mouseleave', () => { uploadSelectedBtn.style.background = '#3b82f6' })
+
+  previewActions.appendChild(previewCount)
+  previewActions.appendChild(clearBtn)
+  previewActions.appendChild(uploadSelectedBtn)
+  previewGrid.appendChild(previewGridInner)
+  previewGrid.appendChild(previewActions)
+
+  // Pending files awaiting user confirmation
+  let pendingFiles: File[] = []
+
+  const updatePreviewGrid = () => {
+    if (pendingFiles.length === 0) {
+      previewGrid.style.display = 'none'
+      dropZone.style.display = 'block'
+      return
+    }
+    previewGrid.style.display = 'block'
+    dropZone.style.display = 'none'
+    previewCount.textContent = `已选择 ${pendingFiles.length} 个文件`
+    uploadSelectedBtn.textContent = `上传选中 (${pendingFiles.length})`
+    previewGridInner.innerHTML = ''
+    pendingFiles.forEach((file, idx) => {
+      const item = createE('div', {
+        style: `
+          position: relative;
+          aspect-ratio: 1;
+          border-radius: 6px;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
+          background: #f9fafb;
+          cursor: default;
+        `
+      })
+      const img = createE('img', {
+        style: `
+          width: 100%; height: 100%; object-fit: cover;
+          display: block;
+        `
+      }) as HTMLImageElement
+      img.src = URL.createObjectURL(file)
+      img.onload = () => URL.revokeObjectURL(img.src)
+
+      const removeBtn = createE('button', {
+        text: '✕',
+        style: `
+          position: absolute; top: 2px; right: 2px;
+          width: 18px; height: 18px;
+          font-size: 10px; line-height: 1;
+          background: rgba(0,0,0,0.5); color: white;
+          border: none; border-radius: 50%;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          opacity: 0; transition: opacity 0.2s;
+        `
+      }) as HTMLButtonElement
+      item.addEventListener('mouseenter', () => { removeBtn.style.opacity = '1' })
+      item.addEventListener('mouseleave', () => { removeBtn.style.opacity = '0' })
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        pendingFiles.splice(idx, 1)
+        updatePreviewGrid()
+      })
+
+      item.appendChild(img)
+      item.appendChild(removeBtn)
+      previewGridInner.appendChild(item)
+    })
+  }
+
+  const addFilesToPreview = (files: File[]) => {
+    // Filter images only
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) return
+    pendingFiles.push(...imageFiles)
+    updatePreviewGrid()
+    notify(`已添加 ${imageFiles.length} 个图片到预览列表`, 'info')
+  }
+
   const fileInput = createE('input', {
     type: 'file',
     accept: 'image/*',
@@ -265,6 +415,7 @@ function createDragDropUploadPanel(): DragDropElements {
   })
 
   regularPanel.appendChild(dropZone)
+  regularPanel.appendChild(previewGrid)
   regularPanel.appendChild(fileInput)
 
   // Folder upload panel
@@ -449,7 +600,7 @@ function createDragDropUploadPanel(): DragDropElements {
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       padding: 8px;
-      background: white;
+      background: var(--d-chat-input-bg-color);
     `
   })
 
@@ -533,7 +684,19 @@ function createDragDropUploadPanel(): DragDropElements {
     regularTab,
     regularPanel,
     dropIcon,
-    dropText
+    dropText,
+    previewGrid,
+    uploadSelectedBtn,
+    clearBtn,
+    previewGridInner,
+    addFilesToPreview: (files: File[]) => {
+      const imageFiles = files.filter(f => f.type.startsWith('image/'))
+      if (imageFiles.length === 0) return
+      pendingFiles.push(...imageFiles)
+      updatePreviewGrid()
+      notify(`已添加 ${imageFiles.length} 个图片到预览列表`, 'info')
+    },
+    pendingFiles: () => [...pendingFiles]
   }
 }
 
@@ -555,7 +718,13 @@ export async function showImageUploadDialog(): Promise<void> {
       statusBar,
       switchToTab,
       dropIcon,
-      dropText
+      dropText,
+      previewGrid,
+      uploadSelectedBtn,
+      clearBtn,
+      previewGridInner,
+      addFilesToPreview,
+      pendingFiles
     } = createDragDropUploadPanel()
 
     let isDragOver = false
@@ -808,35 +977,17 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     }
 
-    // Regular upload handlers
+    // Regular upload handlers — WYSIWYG mode
     fileInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files) {
-        await handleFiles(files)
+        addFilesToPreview(Array.from(files))
       }
     })
 
     dropZone.addEventListener('click', async () => {
-      // Use custom file picker with integrated upload
-      await showCustomImagePicker(true, async (files, updateStatus) => {
-        // Upload each file with status updates
-        for (const file of files) {
-          try {
-            updateStatus(file, { status: 'uploading', progress: 0 })
-
-            // Upload using the uploader's method
-            const result = await uploader.uploadImage(file)
-
-            updateStatus(file, { status: 'success', url: result.url })
-          } catch (error: any) {
-            console.error(`Failed to upload ${file.name}:`, error)
-            updateStatus(file, {
-              status: 'failed',
-              error: error.message || '上传失败'
-            })
-          }
-        }
-      })
+      // Open native file picker — files go to preview grid, not directly uploaded
+      fileInput.click()
     })
 
     dropZone.addEventListener('dragover', (e: DragEvent) => {
@@ -865,8 +1016,36 @@ export async function showImageUploadDialog(): Promise<void> {
 
       const files = e.dataTransfer?.files
       if (files) {
-        await handleFiles(files)
+        addFilesToPreview(Array.from(files))
       }
+    })
+
+    // Upload selected button — uploads all pending files
+    uploadSelectedBtn.addEventListener('click', async () => {
+      const files = pendingFiles()
+      if (files.length === 0) return
+
+      uploadSelectedBtn.disabled = true
+      uploadSelectedBtn.textContent = '上传中...'
+      uploadSelectedBtn.style.background = '#6b7280'
+
+      const fileList = {
+        length: files.length,
+        item: (index: number) => files[index],
+        [Symbol.iterator]: function* () {
+          for (const f of files) yield f
+        }
+      }
+      // Clear preview before upload (successful ones won't come back)
+      pendingFiles.length = 0
+      updatePreviewGrid()
+      await uploadAndInsert(fileList as any)
+      // Remaining failures were re-added to pendingFiles via handleFiles
+    })
+
+    clearBtn.addEventListener('click', () => {
+      pendingFiles.length = 0
+      updatePreviewGrid()
     })
 
     // Diff upload handlers
