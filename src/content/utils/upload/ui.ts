@@ -2,10 +2,11 @@ import { createE, DAEL, DOA } from '../dom/createEl'
 import { customAlert, customConfirm } from '../ui/dialog'
 import { showCustomImagePicker, showCustomFolderPicker } from '../picker'
 import { notify } from '../ui/notify'
-import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 import { uploader } from './core'
 import { parseImageFilenamesFromMarkdown } from './helpers'
+
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 interface DragDropElements {
   panel: HTMLElement
@@ -439,7 +440,6 @@ function createDragDropUploadPanel(): DragDropElements {
   })
 
   regularPanel.appendChild(dropZone)
-  regularPanel.appendChild(previewGrid)
   regularPanel.appendChild(fileInput)
 
   // Folder upload panel
@@ -649,6 +649,7 @@ function createDragDropUploadPanel(): DragDropElements {
   })
 
   content.appendChild(tabContainer)
+  content.appendChild(previewGrid)
   content.appendChild(regularPanel)
   content.appendChild(folderPanel)
   content.appendChild(diffPanel)
@@ -943,7 +944,9 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     }
 
-    const showRetryBar = (failedItems: { file: File; error: any }[]) => {
+    const showRetryBar = (failedItems: { file: File; error: any }[], closePanel?: () => void) => {
+      // Close any lingering progress panel before retrying
+      if (closePanel) closePanel()
       statusBar.style.display = 'flex'
       statusBar.innerHTML = `
         <span>${failedItems.length} 个文件上传失败</span>
@@ -957,7 +960,8 @@ export async function showImageUploadDialog(): Promise<void> {
           cursor: pointer;
         ">重试全部</button>
       `
-      const retryAllBtn = statusBar.querySelector('button')!
+      const retryAllBtn = statusBar.querySelector('button')
+      if (!retryAllBtn) return
       switchToTab('regular')
       retryAllBtn.addEventListener('click', async () => {
         statusBar.style.display = 'none'
@@ -1336,7 +1340,7 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     }
 
-    DAEL('paste', handlePanelPaste)
+    urlTextarea.addEventListener('paste', handlePanelPaste)
 
     // URL import handler
     urlImportBtn.addEventListener('click', async () => {
@@ -1466,7 +1470,7 @@ export async function showImageUploadDialog(): Promise<void> {
     // Close handlers — consolidated into enhancedCleanup
     const originalCleanup = cleanup
     const enhancedCleanup = () => {
-      document.removeEventListener('paste', handlePanelPaste)
+      urlTextarea.removeEventListener('paste', handlePanelPaste)
       ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         document.removeEventListener(eventName, preventDefaults, false)
       })
