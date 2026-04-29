@@ -28,10 +28,7 @@ export function getPreferredEmojiMarkdownUrl(
  * Discourse instance) must use the direct URL instead — otherwise the target
  * forum's /uploads/lookup-urls endpoint will return [] and the image won't show.
  */
-export function shouldUseShortUrl(
-  emoji: EmojiMarkdownSource,
-  currentHostname: string
-): boolean {
+export function shouldUseShortUrl(emoji: EmojiMarkdownSource, currentHostname: string): boolean {
   if (!emoji.short_url) return false
   const url = emoji.url
   if (!url) return false

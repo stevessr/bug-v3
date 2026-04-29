@@ -6,7 +6,7 @@
 export const CDN_DOMAIN_MAP: Record<string, string> = {
   'cdn.ldstatic.com': 'linux.do',
   'cdn2.ldstatic.com': 'linux.do',
-  'cdn3.ldstatic.com': 'linux.do',
+  'cdn3.ldstatic.com': 'linux.do'
 }
 
 /**
@@ -35,7 +35,11 @@ export function getForumFromUrl(url: string): string | undefined {
 export function isLinuxDoUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname
-    return hostname === 'linux.do' || hostname.endsWith('.linux.do') || CDN_DOMAIN_MAP[hostname] === 'linux.do'
+    return (
+      hostname === 'linux.do' ||
+      hostname.endsWith('.linux.do') ||
+      CDN_DOMAIN_MAP[hostname] === 'linux.do'
+    )
   } catch {
     return false
   }

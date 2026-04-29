@@ -4,7 +4,6 @@ import { notify } from '../../ui/notify'
 
 import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
-
 export async function uploadAndInsert(
   files: FileList | File[],
   addFilesToPreview: (files: File[]) => void,
@@ -161,9 +160,7 @@ export async function uploadAndInsert(
 
       // Insert into editor immediately on success
       const alt =
-        result.width && result.height
-          ? `${file.name}|${result.width}x${result.height}`
-          : file.name
+        result.width && result.height ? `${file.name}|${result.width}x${result.height}` : file.name
       const { insertIntoEditor } = await import('../helpers')
       insertIntoEditor(buildMarkdownImage(alt, result))
     } catch (error: any) {
@@ -181,10 +178,7 @@ export async function uploadAndInsert(
   }
   setTimeout(closePanel, 1500)
 
-  notify(
-    `上传完成：${successCount} 成功，${failCount} 失败`,
-    failCount === 0 ? 'success' : 'info'
-  )
+  notify(`上传完成：${successCount} 成功，${failCount} 失败`, failCount === 0 ? 'success' : 'info')
 
   if (failedItems.length > 0) {
     addFilesToPreview(failedItems.map(f => f.file))

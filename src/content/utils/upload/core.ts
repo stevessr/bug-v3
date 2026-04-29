@@ -226,10 +226,7 @@ export class ImageUploader {
   }
 
   // Upload a File created from a remote download (via fetch)
-  async uploadDownloadedFile(
-    blob: Blob,
-    filename: string
-  ): Promise<UploadResponse> {
+  async uploadDownloadedFile(blob: Blob, filename: string): Promise<UploadResponse> {
     const file = new File([blob], filename, { type: blob.type })
     return this.uploadImage(file)
   }
