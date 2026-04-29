@@ -415,7 +415,8 @@ function createDragDropUploadPanel(): DragDropElements {
     clearPreview()
     await onUpload(files)
     uploadSelectedBtn.disabled = false
-    uploadSelectedBtn.textContent = pendingFiles.length > 0 ? `上传选中 (${pendingFiles.length})` : `上传选中 (0)`
+    uploadSelectedBtn.textContent =
+      pendingFiles.length > 0 ? `上传选中 (${pendingFiles.length})` : `上传选中 (0)`
     uploadSelectedBtn.style.background = '#3b82f6'
   })
   clearBtn.addEventListener('click', clearPreview)
@@ -764,7 +765,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
       const filesArray = Array.from(files)
 
-      // Create floating progress panel — no backdrop/overlay
+      // Create floating progress panel — draggable, no backdrop
       const progressPanel = createE('div', {
         style: `
           position: fixed; top: 50%; left: 50%;
@@ -778,8 +779,36 @@ export async function showImageUploadDialog(): Promise<void> {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `
       })
+      // Drag logic
+      let pDrag = false,
+        pX = 0,
+        pY = 0,
+        pIX = 0,
+        pIY = 0
+      progressPanel.addEventListener('mousedown', (e: MouseEvent) => {
+        if ((e.target as HTMLElement).closest('button,input,textarea,.progress-list')) return
+        pDrag = true
+        pIX = e.clientX - pX
+        pIY = e.clientY - pY
+        progressPanel.style.cursor = 'grabbing'
+      })
+      DAEL('mousemove', (e: MouseEvent) => {
+        if (!pDrag) return
+        e.preventDefault()
+        pX = e.clientX - pIX
+        pY = e.clientY - pIY
+        progressPanel.style.transform = `translate(calc(-50% + ${pX}px), calc(-50% + ${pY}px))`
+      })
+      DAEL('mouseup', () => {
+        pDrag = false
+        progressPanel.style.cursor = ''
+      })
+
       const progressTitle = createE('div', {
-        style: `font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 12px;`
+        style: `
+          font-size: 15px; font-weight: 600; color: var(--primary);
+          margin-bottom: 12px; cursor: move; user-select: none;
+        `
       })
       const svgNS = 'http://www.w3.org/2000/svg'
       const progressBarOuter = createE('div', {
@@ -800,6 +829,7 @@ export async function showImageUploadDialog(): Promise<void> {
       const progressList = createE('div', {
         style: `max-height: 260px; overflow-y: auto; font-size: 13px;`
       })
+      progressList.classList.add('progress-list')
       progressPanel.appendChild(progressTitle)
       progressPanel.appendChild(progressBarOuter)
       progressPanel.appendChild(progressList)
@@ -809,49 +839,67 @@ export async function showImageUploadDialog(): Promise<void> {
       const failIcon = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
       const spinnerSvg = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tertiary)" stroke-width="2" style="animation:fa-spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>`
 
-      const updateProgress = (done: number, total: number, file: File, status: 'uploading' | 'success' | 'failed', errMsg?: string) => {
-        progressTitle.innerHTML = `<span>上传中</span> <span style="color:var(--primary-medium);font-weight:400;font-size:14px">${done} / ${total}</span>`
-        progressBarInner.style.width = `${(done / total) * 100}%`
-        const row = createE('div', {
-          style: `
-            display: flex; align-items: center; gap: 10px;
-            padding: 6px 4px; border-bottom: 1px solid var(--primary-low);
-          `
-        })
-        // Thumbnail
-        const thumb = createE('img', {
-          style: `
-            width: 36px; height: 36px; border-radius: 4px;
-            object-fit: cover; flex-shrink: 0;
-            background: var(--primary-low);
-          `
-        }) as HTMLImageElement
-        thumb.src = URL.createObjectURL(file)
-        thumb.onload = () => URL.revokeObjectURL(thumb.src)
-        // Status icon
-        const iconSpan = createE('div', { style: `flex-shrink:0;width:16px;height:16px;display:flex;align-items:center;` })
-        iconSpan.innerHTML = status === 'success' ? successIcon : status === 'failed' ? failIcon : spinnerSvg
-        // Name
-        const nameSpan = createE('span', {
-          text: file.name,
-          style: `
-            flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-            color: ${status === 'failed' ? 'var(--danger)' : 'var(--primary)'};
-          `
-        })
-        if (errMsg) {
-          nameSpan.textContent = `${file.name} — ${errMsg}`
-        }
-        row.appendChild(thumb)
-        row.appendChild(iconSpan)
-        row.appendChild(nameSpan)
-        progressList.appendChild(row)
-        progressList.scrollTop = progressList.scrollHeight
-      }
-
       let successCount = 0
       let failCount = 0
       const failedItems: { file: File; error: any }[] = []
+      const rowMap = new Map<
+        string,
+        { row: HTMLElement; iconSpan: HTMLElement; nameSpan: HTMLElement }
+      >()
+      let currentProgressPanel = progressPanel
+
+      const updateProgress = (
+        done: number,
+        total: number,
+        file: File,
+        status: 'uploading' | 'success' | 'failed',
+        errMsg?: string
+      ) => {
+        progressTitle.innerHTML = `
+          <span>上传中 ${total - done > 0 ? total - done : '—'}</span>
+          <span style="color:var(--success);margin-left:12px">成功 ${successCount}</span>
+          <span style="color:var(--danger);margin-left:8px">失败 ${failCount}</span>
+        `
+        progressBarInner.style.width = `${(done / total) * 100}%`
+
+        let entry = rowMap.get(file.name)
+        if (!entry) {
+          const row = createE('div', {
+            style: `
+              display: flex; align-items: center; gap: 10px;
+              padding: 6px 4px; border-bottom: 1px solid var(--primary-low);
+            `
+          })
+          const thumb = createE('img', {
+            style: `
+              width: 36px; height: 36px; border-radius: 4px;
+              object-fit: cover; flex-shrink: 0;
+              background: var(--primary-low);
+            `
+          }) as HTMLImageElement
+          thumb.src = URL.createObjectURL(file)
+          thumb.onload = () => URL.revokeObjectURL(thumb.src)
+          const iconSpan = createE('div', {
+            style: `flex-shrink:0;width:16px;height:16px;display:flex;align-items:center;`
+          })
+          const nameSpan = createE('span', {
+            style: `
+              flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            `
+          })
+          row.appendChild(thumb)
+          row.appendChild(iconSpan)
+          row.appendChild(nameSpan)
+          progressList.appendChild(row)
+          entry = { row, iconSpan, nameSpan }
+          rowMap.set(file.name, entry)
+        }
+        entry.iconSpan.innerHTML =
+          status === 'success' ? successIcon : status === 'failed' ? failIcon : spinnerSvg
+        entry.nameSpan.textContent = errMsg ? `${file.name} — ${errMsg}` : file.name
+        entry.nameSpan.style.color = status === 'failed' ? 'var(--danger)' : 'var(--primary)'
+        progressList.scrollTop = progressList.scrollHeight
+      }
 
       for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i]
@@ -863,9 +911,10 @@ export async function showImageUploadDialog(): Promise<void> {
           updateProgress(i + 1, filesArray.length, file, 'success')
 
           // Insert into editor immediately on success
-          const alt = result.width && result.height
-            ? `${file.name}|${result.width}x${result.height}`
-            : file.name
+          const alt =
+            result.width && result.height
+              ? `${file.name}|${result.width}x${result.height}`
+              : file.name
           const { insertIntoEditor } = await import('./helpers')
           insertIntoEditor(buildMarkdownImage(alt, result))
         } catch (error: any) {
@@ -875,10 +924,13 @@ export async function showImageUploadDialog(): Promise<void> {
         }
       }
 
-      // Close progress panel after 1.5s
-      setTimeout(() => {
-        if (progressPanel.parentElement) progressPanel.parentElement.removeChild(progressPanel)
-      }, 1500)
+      // Close progress panel after 1.5s, but keep reference for retry handling
+      const closePanel = () => {
+        if (currentProgressPanel && currentProgressPanel.parentElement) {
+          currentProgressPanel.parentElement.removeChild(currentProgressPanel)
+        }
+      }
+      setTimeout(closePanel, 1500)
 
       notify(
         `上传完成：${successCount} 成功，${failCount} 失败`,
@@ -887,7 +939,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
       if (failedItems.length > 0) {
         addFilesToPreview(failedItems.map(f => f.file))
-        showRetryBar(failedItems)
+        showRetryBar(failedItems, closePanel)
       }
     }
 
