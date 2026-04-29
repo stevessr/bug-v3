@@ -25,16 +25,10 @@ interface DragDropElements {
   urlProgressList: HTMLElement
   statusBar: HTMLElement
   switchToTab: (tab: 'regular' | 'diff' | 'folder' | 'url') => void
-  regularTab: HTMLElement
-  regularPanel: HTMLElement
-  dropIcon: HTMLElement
-  dropText: HTMLElement
-  previewGrid: HTMLElement
-  uploadSelectedBtn: HTMLButtonElement
-  clearBtn: HTMLButtonElement
-  previewGridInner: HTMLElement
   addFilesToPreview: (files: File[]) => void
-  pendingFiles: () => File[]
+  clearPreview: () => void
+  getPendingFiles: () => File[]
+  setUploadHandler: (fn: (files: File[]) => Promise<void>) => void
 }
 
 function createDragDropUploadPanel(): DragDropElements {
@@ -344,6 +338,7 @@ function createDragDropUploadPanel(): DragDropElements {
 
   // Pending files awaiting user confirmation
   let pendingFiles: File[] = []
+  let onUpload: ((files: File[]) => Promise<void>) | null = null
 
   const updatePreviewGrid = () => {
     if (pendingFiles.length === 0) {
@@ -408,8 +403,23 @@ function createDragDropUploadPanel(): DragDropElements {
     })
   }
 
+  const clearPreview = () => {
+    pendingFiles.length = 0
+    updatePreviewGrid()
+  }
+  uploadSelectedBtn.addEventListener('click', async () => {
+    if (!onUpload) return
+    const files = [...pendingFiles]
+    if (files.length === 0) return
+    uploadSelectedBtn.disabled = true
+    uploadSelectedBtn.textContent = '上传中...'
+    uploadSelectedBtn.style.background = '#6b7280'
+    clearPreview()
+    await onUpload(files)
+  })
+  clearBtn.addEventListener('click', clearPreview)
+
   const addFilesToPreview = (files: File[]) => {
-    // Filter images only
     const imageFiles = files.filter(f => f.type.startsWith('image/'))
     if (imageFiles.length === 0) return
     pendingFiles.push(...imageFiles)
@@ -693,22 +703,12 @@ function createDragDropUploadPanel(): DragDropElements {
       const [t, p] = map[tab] || map.regular
       switchTab(t, p)
     },
-    regularTab,
-    regularPanel,
-    dropIcon,
-    dropText,
-    previewGrid,
-    uploadSelectedBtn,
-    clearBtn,
-    previewGridInner,
-    addFilesToPreview: (files: File[]) => {
-      const imageFiles = files.filter(f => f.type.startsWith('image/'))
-      if (imageFiles.length === 0) return
-      pendingFiles.push(...imageFiles)
-      updatePreviewGrid()
-      notify(`已添加 ${imageFiles.length} 个图片到预览列表`, 'info')
-    },
-    pendingFiles: () => [...pendingFiles]
+    clearPreview,
+    addFilesToPreview,
+    getPendingFiles: () => [...pendingFiles],
+    setUploadHandler: (fn: (files: File[]) => Promise<void>) => {
+      onUpload = fn
+    }
   }
 }
 
@@ -729,19 +729,27 @@ export async function showImageUploadDialog(): Promise<void> {
       urlProgressList,
       statusBar,
       switchToTab,
-      dropIcon,
-      dropText,
-      previewGrid,
-      uploadSelectedBtn,
-      clearBtn,
-      previewGridInner,
       addFilesToPreview,
-      pendingFiles
+      clearPreview,
+      getPendingFiles,
+      setUploadHandler
     } = createDragDropUploadPanel()
 
     let isDragOver = false
     let isDiffDragOver = false
     let isFolderDragOver = false
+
+    // Wire the panel's upload button to our uploadAndInsert
+    setUploadHandler(async (files: File[]) => {
+      const fileList = {
+        length: files.length,
+        item: (index: number) => files[index],
+        [Symbol.iterator]: function* () {
+          for (const f of files) yield f
+        }
+      }
+      await uploadAndInsert(fileList as any)
+    })
 
     const cleanup = () => {
       if (panel.parentElement) {
@@ -801,6 +809,9 @@ export async function showImageUploadDialog(): Promise<void> {
       )
 
       if (failedItems.length > 0) {
+        // Re-add failed files to preview grid for retry
+        const failedFiles = failedItems.map(f => f.file)
+        addFilesToPreview(failedFiles)
         showRetryBar(failedItems)
       }
     }
@@ -821,88 +832,20 @@ export async function showImageUploadDialog(): Promise<void> {
       `
       const retryAllBtn = statusBar.querySelector('button')!
       switchToTab('regular')
-      rebuildDropZoneForRetry(failedItems)
       retryAllBtn.addEventListener('click', async () => {
         statusBar.style.display = 'none'
-        rebuildDropZoneToDefault()
+        const files = getPendingFiles()
+        if (files.length === 0) return
+        clearPreview()
         const fileList = {
-          length: failedItems.length,
-          item: (index: number) => failedItems[index].file,
+          length: files.length,
+          item: (index: number) => files[index],
           [Symbol.iterator]: function* () {
-            for (const f of failedItems) yield f.file
+            for (const f of files) yield f
           }
         }
-        await handleFiles(fileList as any)
+        await uploadAndInsert(fileList as any)
       })
-    }
-
-    const rebuildDropZoneForRetry = (failedItems: { file: File; error: any }[]) => {
-      dropZone.style.cursor = 'default'
-      dropZone.style.borderStyle = 'solid'
-      dropZone.innerHTML = ''
-      const list = createE('div', {
-        style: `
-          max-height: 180px; overflow-y: auto; text-align: left;
-          padding: 4px;
-        `
-      })
-      for (const { file, error } of failedItems) {
-        const item = createE('div', {
-          style: `
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 8px; font-size: 13px;
-            border-bottom: 1px solid #f3f4f6;
-          `
-        })
-        const nameSpan = createE('span', {
-          text: file.name,
-          style: `flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dc2626;`
-        })
-        const retryBtn = createE('button', {
-          text: '重试',
-          style: `
-            background: #ef4444; color: white; border: none;
-            border-radius: 4px; padding: 2px 10px; font-size: 12px;
-            cursor: pointer;
-          `
-        }) as HTMLButtonElement
-        retryBtn.addEventListener('click', async e => {
-          e.stopPropagation()
-          retryBtn.disabled = true
-          retryBtn.textContent = '...'
-          try {
-            const result = await uploader.uploadImage(file)
-            const alt =
-              result.width && result.height
-                ? `${file.name}|${result.width}x${result.height}`
-                : file.name
-            const { insertIntoEditor } = await import('./helpers')
-            insertIntoEditor(buildMarkdownImage(alt, result))
-            item.style.display = 'none'
-            const idx = failedItems.indexOf({ file, error })
-            if (idx !== -1) failedItems.splice(idx, 1)
-            if (failedItems.length === 0) {
-              statusBar.style.display = 'none'
-              rebuildDropZoneToDefault()
-            }
-          } catch {
-            retryBtn.disabled = false
-            retryBtn.textContent = '重试'
-          }
-        })
-        item.appendChild(nameSpan)
-        item.appendChild(retryBtn)
-        list.appendChild(item)
-      }
-      dropZone.appendChild(list)
-    }
-
-    const rebuildDropZoneToDefault = () => {
-      dropZone.style.cursor = 'pointer'
-      dropZone.style.borderStyle = 'dashed'
-      dropZone.innerHTML = ''
-      dropZone.appendChild(dropIcon.cloneNode(true))
-      dropZone.appendChild(dropText.cloneNode(true))
     }
 
     const handleDiffFiles = async (files: FileList) => {
@@ -1036,33 +979,8 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     })
 
-    // Upload selected button — uploads all pending files
-    uploadSelectedBtn.addEventListener('click', async () => {
-      const files = pendingFiles()
-      if (files.length === 0) return
-
-      uploadSelectedBtn.disabled = true
-      uploadSelectedBtn.textContent = '上传中...'
-      uploadSelectedBtn.style.background = '#6b7280'
-
-      const fileList = {
-        length: files.length,
-        item: (index: number) => files[index],
-        [Symbol.iterator]: function* () {
-          for (const f of files) yield f
-        }
-      }
-      // Clear preview before upload (successful ones won't come back)
-      pendingFiles.length = 0
-      updatePreviewGrid()
-      await uploadAndInsert(fileList as any)
-      // Remaining failures were re-added to pendingFiles via handleFiles
-    })
-
-    clearBtn.addEventListener('click', () => {
-      pendingFiles.length = 0
-      updatePreviewGrid()
-    })
+    // Upload selected button wired inside panel via setUploadHandler
+    // Clear btn wired inside panel
 
     // Diff upload handlers
     diffFileInput.addEventListener('change', async (event: Event) => {
@@ -1168,7 +1086,7 @@ export async function showImageUploadDialog(): Promise<void> {
     folderInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files) {
-        await handleFiles(files)
+        await uploadAndInsert(files)
       }
     })
 
@@ -1237,7 +1155,7 @@ export async function showImageUploadDialog(): Promise<void> {
               }
             }
           }
-          await handleFiles(fileList as any)
+          await uploadAndInsert(fileList as any)
         }
       }
     })
