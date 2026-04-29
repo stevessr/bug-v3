@@ -308,8 +308,12 @@ function createDragDropUploadPanel(): DragDropElements {
       transition: all 0.2s;
     `
   }) as HTMLButtonElement
-  clearBtn.addEventListener('mouseenter', () => { clearBtn.style.background = '#f3f4f6' })
-  clearBtn.addEventListener('mouseleave', () => { clearBtn.style.background = 'transparent' })
+  clearBtn.addEventListener('mouseenter', () => {
+    clearBtn.style.background = '#f3f4f6'
+  })
+  clearBtn.addEventListener('mouseleave', () => {
+    clearBtn.style.background = 'transparent'
+  })
 
   const uploadSelectedBtn = createE('button', {
     text: '上传选中 (0)',
@@ -325,8 +329,12 @@ function createDragDropUploadPanel(): DragDropElements {
       transition: background 0.2s;
     `
   }) as HTMLButtonElement
-  uploadSelectedBtn.addEventListener('mouseenter', () => { uploadSelectedBtn.style.background = '#2563eb' })
-  uploadSelectedBtn.addEventListener('mouseleave', () => { uploadSelectedBtn.style.background = '#3b82f6' })
+  uploadSelectedBtn.addEventListener('mouseenter', () => {
+    uploadSelectedBtn.style.background = '#2563eb'
+  })
+  uploadSelectedBtn.addEventListener('mouseleave', () => {
+    uploadSelectedBtn.style.background = '#3b82f6'
+  })
 
   previewActions.appendChild(previewCount)
   previewActions.appendChild(clearBtn)
@@ -382,9 +390,13 @@ function createDragDropUploadPanel(): DragDropElements {
           opacity: 0; transition: opacity 0.2s;
         `
       }) as HTMLButtonElement
-      item.addEventListener('mouseenter', () => { removeBtn.style.opacity = '1' })
-      item.addEventListener('mouseleave', () => { removeBtn.style.opacity = '0' })
-      removeBtn.addEventListener('click', (e) => {
+      item.addEventListener('mouseenter', () => {
+        removeBtn.style.opacity = '1'
+      })
+      item.addEventListener('mouseleave', () => {
+        removeBtn.style.opacity = '0'
+      })
+      removeBtn.addEventListener('click', e => {
         e.stopPropagation()
         pendingFiles.splice(idx, 1)
         updatePreviewGrid()
@@ -738,7 +750,7 @@ export async function showImageUploadDialog(): Promise<void> {
       resolve()
     }
 
-    const handleFiles = async (files: FileList): Promise<void> => {
+    const uploadAndInsert = async (files: FileList): Promise<void> => {
       if (!files || files.length === 0) return
 
       const filesArray = Array.from(files)
@@ -766,10 +778,13 @@ export async function showImageUploadDialog(): Promise<void> {
       for (const r of results) {
         if (r.status === 'fulfilled') {
           if (r.value.success) {
-            const alt = r.value.result.width && r.value.result.height
-              ? `${r.value.file.name}|${r.value.result.width}x${r.value.result.height}`
-              : r.value.file.name
-            import('./helpers').then(m => m.insertIntoEditor(buildMarkdownImage(alt, r.value.result)))
+            const alt =
+              r.value.result.width && r.value.result.height
+                ? `${r.value.file.name}|${r.value.result.width}x${r.value.result.height}`
+                : r.value.file.name
+            import('./helpers').then(m =>
+              m.insertIntoEditor(buildMarkdownImage(alt, r.value.result))
+            )
           } else {
             failedItems.push({ file: r.value.file, error: r.value.error })
           }
@@ -851,15 +866,16 @@ export async function showImageUploadDialog(): Promise<void> {
             cursor: pointer;
           `
         }) as HTMLButtonElement
-        retryBtn.addEventListener('click', async (e) => {
+        retryBtn.addEventListener('click', async e => {
           e.stopPropagation()
           retryBtn.disabled = true
           retryBtn.textContent = '...'
           try {
             const result = await uploader.uploadImage(file)
-            const alt = result.width && result.height
-              ? `${file.name}|${result.width}x${result.height}`
-              : file.name
+            const alt =
+              result.width && result.height
+                ? `${file.name}|${result.width}x${result.height}`
+                : file.name
             const { insertIntoEditor } = await import('./helpers')
             insertIntoEditor(buildMarkdownImage(alt, result))
             item.style.display = 'none'
@@ -1271,15 +1287,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
       if (imageFiles.length > 0) {
         e.preventDefault()
-        notify(`从剪贴板添加 ${imageFiles.length} 个图片`, 'info')
-        const fileList = {
-          length: imageFiles.length,
-          item: (index: number) => imageFiles[index],
-          [Symbol.iterator]: function* () {
-            for (const f of imageFiles) yield f
-          }
-        }
-        handleFiles(fileList as any)
+        addFilesToPreview(imageFiles)
       }
     }
 
@@ -1364,7 +1372,9 @@ export async function showImageUploadDialog(): Promise<void> {
             const u = new URL(url)
             const name = u.pathname.split('/').pop()
             if (name && name.includes('.')) filename = name
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
           if (!filename) {
             const ext = blob.type.split('/')[1] || 'png'
             filename = `downloaded-${Date.now()}-${i}.${ext}`
@@ -1402,7 +1412,10 @@ export async function showImageUploadDialog(): Promise<void> {
       summary.textContent = `完成：${successCount} 成功，${failCount} 失败`
       urlProgressList.appendChild(summary)
 
-      notify(`URL 导入完成：${successCount} 成功，${failCount} 失败`, failCount === 0 ? 'success' : 'info')
+      notify(
+        `URL 导入完成：${successCount} 成功，${failCount} 失败`,
+        failCount === 0 ? 'success' : 'info'
+      )
     })
 
     // Close handlers — consolidated into enhancedCleanup
