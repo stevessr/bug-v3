@@ -3,7 +3,15 @@
 import { cachedState } from '../../data/state'
 import { DQS } from '../../utils/dom/createEl'
 
-import { buildMarkdownImage } from '@/utils/emojiMarkdown'
+import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
+
+function getSafeEmojiSource(emoji: { url?: string; short_url?: string | null }) {
+  const hostname = window.location.hostname
+  return {
+    url: emoji.url,
+    short_url: shouldUseShortUrl(emoji, hostname) ? emoji.short_url : null
+  }
+}]
 
 export function insertEmojiIntoEditor(emoji: unknown) {
   // avoid noisy console in lint; keep only minimal info in debug environments
@@ -170,7 +178,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
       emojiText = `<img src="${em.url}" title=":${em.name}:" class="emoji only-emoji" alt=":${em.name}:" loading="lazy" width="${pixelWidth}" height="${pixelHeight}" style="aspect-ratio: ${pixelWidth} / ${pixelHeight};"> `
     } else {
       // 默认 Markdown 格式输出
-      emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, em)} `
+      emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, getSafeEmojiSource(em))} `
     }
 
     const startPos = textArea.selectionStart
@@ -229,7 +237,7 @@ export function insertEmojiIntoEditor(emoji: unknown) {
           contentEditable.insertAdjacentHTML('beforeend', imgTemplate)
         }
       } else {
-        const emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, em)} `
+        const emojiText = `${buildMarkdownImage(`${em.name}|${width}x${height},${scale}%`, getSafeEmojiSource(em))} `
         // Append text node
         const textNode = document.createTextNode(emojiText)
         const sel = window.getSelection()

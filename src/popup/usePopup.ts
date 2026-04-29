@@ -131,7 +131,7 @@ export function usePopup(options?: { manageUrl?: boolean }) {
       height = emoji.height.toString()
     }
 
-    const emojiMarkdown = `${buildMarkdownImage(`${emoji.name}|${width}x${height},${scale}%`, emoji)} `
+    const emojiMarkdown = `${buildMarkdownImage(`${emoji.name}|${width}x${height},${scale}%`, { url: emoji.url, short_url: null })} `
 
     navigator.clipboard
       .writeText(emojiMarkdown)

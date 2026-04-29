@@ -20,7 +20,7 @@ import { ensureEmojiShortcodesLoaded } from './linux.do/emojis'
 import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
 
-import { buildMarkdownImage } from '@/utils/emojiMarkdown'
+import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
 import { EmojiPicker, PluginEmojiPicker } from '@/components/editor/wysiwyg'
 import '@/components/editor/wysiwyg/styles/EmojiPicker.css'
 import '@/components/editor/wysiwyg/styles/PluginEmojiPicker.css'
@@ -102,12 +102,16 @@ export default defineComponent({
 
     const buildImageMarkup = computed(() => {
       return (emoji: { url: string; short_url?: string }, filename?: string) => {
-        const safeUrl = emoji.url
         if (props.inputFormat === 'markdown') {
           const alt = filename || 'image'
-          return buildMarkdownImage(alt, emoji)
+          const currentHost = new URL(props.baseUrl || 'https://localhost').hostname
+          const safeSource = {
+            url: emoji.url,
+            short_url: shouldUseShortUrl(emoji, currentHost) ? emoji.short_url : null
+          }
+          return buildMarkdownImage(alt, safeSource)
         }
-        return `[img]${safeUrl}[/img]`
+        return `[img]${emoji.url}[/img]`
       }
     })
 
