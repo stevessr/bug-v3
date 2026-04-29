@@ -1,14 +1,11 @@
 import { getCsrfTokenFromPage } from '../dom'
 import { notify } from '../ui'
 
-import { insertIntoEditor } from './helpers'
-
 import {
   isLinuxDoDiscourseBase,
   normalizeDiscourseUploadUrl,
   uploadLinuxDoMultipart
 } from '@/utils/discourseUpload'
-import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 export interface UploadResponse {
   id: number
@@ -126,14 +123,6 @@ export class ImageUploader {
         item.result = result
         this.moveToQueue(item, 'success')
         item.resolve(result)
-
-        // Insert into editor using the original client filename to avoid issues with server-renamed files
-        const alt =
-          result.width && result.height
-            ? `${item.originalFilename}|${result.width}x${result.height}`
-            : item.originalFilename
-        const markdown = buildMarkdownImage(alt, result)
-        insertIntoEditor(markdown)
       } catch (_error: any) {
         item.error = _error
 

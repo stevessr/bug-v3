@@ -52,5 +52,5 @@ export function buildMarkdownImage(
 ): string {
   const url = getPreferredEmojiMarkdownUrl(source)
   if (!url) return ''
-  return `[${alt}](${url})`
+  return `![${alt}](${url})`
 }
