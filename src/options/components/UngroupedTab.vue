@@ -533,7 +533,7 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
           <div
             v-for="(emoji, idx) in ungroup.emojis"
             :key="`ung-${emoji.id || idx}`"
-            class="emoji-item relative"
+            class="emoji-item"
           >
             <div
               class="aspect-square bg-gray-50 rounded-lg overflow-hidden dark:bg-gray-700 relative"
@@ -554,25 +554,24 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
               >
                 <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               </div>
+
+              <!-- 多选模式下的选择框 -->
+              <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
+                <a-checkbox
+                  :checked="selectedEmojis.has(idx)"
+                  @change="toggleEmojiSelection(idx)"
+                  class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
+                  :title="'选择表情 ' + emoji.name"
+                />
+              </div>
             </div>
 
-            <!-- 多选模式下的选择框 -->
-            <div v-if="isMultiSelectMode" class="absolute bottom-1 right-1">
-              <a-checkbox
-                :checked="selectedEmojis.has(idx)"
-                @change="toggleEmojiSelection(idx)"
-                class="w-4 h-4 text-blue-600 bg-white dark:bg-black dark:text-white border-2 rounded focus:ring-blue-500"
-                :title="'选择表情 ' + emoji.name"
-              />
-            </div>
-
-            <!-- 非多选模式下的编辑/删除/上传按钮 -->
-            <div v-if="!isMultiSelectMode" class="absolute top-1 right-1 flex gap-1">
-              <!-- Upload button when not on linux.do -->
+            <!-- 非多选模式下的编辑/删除按钮 -->
+            <div v-if="!isMultiSelectMode" class="flex justify-center gap-2 mt-1.5">
               <a-button
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
-                class="text-xs px-1 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                class="text-xs px-1.5 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
               >
                 编辑
               </a-button>
@@ -582,7 +581,7 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
                 </template>
                 <a-button
                   title="移除"
-                  class="text-xs px-1 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
+                  class="text-xs px-1.5 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
                 >
                   移除
                 </a-button>
