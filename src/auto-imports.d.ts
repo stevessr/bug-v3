@@ -7,6 +7,7 @@ export {}
 declare global {
   const BUTTON_GRADIENTS: typeof import('./utils/constants')['BUTTON_GRADIENTS']
   const BUTTON_TEXT: typeof import('./utils/constants')['BUTTON_TEXT']
+  const CDN_DOMAIN_MAP: typeof import('./utils/cdnMapping')['CDN_DOMAIN_MAP']
   const CloudflareSyncService: typeof import('./utils/cloudflareSync')['CloudflareSyncService']
   const CloudflareSyncTarget: typeof import('./utils/syncTargets')['CloudflareSyncTarget']
   const CollaborativeUploadClient: typeof import('./utils/collab/CollaborativeUploadClient')['CollaborativeUploadClient']
@@ -91,6 +92,8 @@ declare global {
   const getEmojiImageUrls: typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']
   const getFavorites: typeof import('./utils/simpleStorage')['getFavorites']
   const getFile: typeof import('./utils/telegramResolver')['getFile']
+  const getForumForCdnDomain: typeof import('./utils/cdnMapping')['getForumForCdnDomain']
+  const getForumFromUrl: typeof import('./utils/cdnMapping')['getForumFromUrl']
   const getMessage: typeof import('./utils/i18n')['getMessage']
   const getPreferredEmojiMarkdownUrl: typeof import('./utils/emojiMarkdown')['getPreferredEmojiMarkdownUrl']
   const getSettings: typeof import('./utils/simpleStorage')['getSettings']
@@ -115,6 +118,7 @@ declare global {
   const isImageDomainBlocked: typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']
   const isImageUrl: typeof import('./utils/isImageUrl')['isImageUrl']
   const isLinuxDoDiscourseBase: typeof import('./utils/discourseUpload')['isLinuxDoDiscourseBase']
+  const isLinuxDoUrl: typeof import('./utils/cdnMapping')['isLinuxDoUrl']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
@@ -193,6 +197,7 @@ declare global {
   const shortcodeToEmoji: typeof import('./utils/emojiShortcode')['shortcodeToEmoji']
   const shouldPreferCache: typeof import('./utils/imageCachePolicy')['shouldPreferCache']
   const shouldUseImageCache: typeof import('./utils/imageCachePolicy')['shouldUseImageCache']
+  const shouldUseShortUrl: typeof import('./utils/emojiMarkdown')['shouldUseShortUrl']
   const startWorkerMode: typeof import('./utils/collab/index')['startWorkerMode']
   const stopWorkerMode: typeof import('./utils/collab/index')['stopWorkerMode']
   const storageBatchGet: typeof import('./utils/simpleStorage')['storageBatchGet']
@@ -277,6 +282,7 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     readonly BUTTON_GRADIENTS: UnwrapRef<typeof import('./utils/constants')['BUTTON_GRADIENTS']>
     readonly BUTTON_TEXT: UnwrapRef<typeof import('./utils/constants')['BUTTON_TEXT']>
+    readonly CDN_DOMAIN_MAP: UnwrapRef<typeof import('./utils/cdnMapping')['CDN_DOMAIN_MAP']>
     readonly CloudflareSyncService: UnwrapRef<typeof import('./utils/cloudflareSync')['CloudflareSyncService']>
     readonly CloudflareSyncTarget: UnwrapRef<typeof import('./utils/syncTargets')['CloudflareSyncTarget']>
     readonly CollaborativeUploadClient: UnwrapRef<typeof import('./utils/collab/CollaborativeUploadClient')['CollaborativeUploadClient']>
@@ -361,6 +367,8 @@ declare module 'vue' {
     readonly getEmojiImageUrls: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']>
     readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
+    readonly getForumForCdnDomain: UnwrapRef<typeof import('./utils/cdnMapping')['getForumForCdnDomain']>
+    readonly getForumFromUrl: UnwrapRef<typeof import('./utils/cdnMapping')['getForumFromUrl']>
     readonly getMessage: UnwrapRef<typeof import('./utils/i18n')['getMessage']>
     readonly getPreferredEmojiMarkdownUrl: UnwrapRef<typeof import('./utils/emojiMarkdown')['getPreferredEmojiMarkdownUrl']>
     readonly getSettings: UnwrapRef<typeof import('./utils/simpleStorage')['getSettings']>
@@ -385,6 +393,7 @@ declare module 'vue' {
     readonly isImageDomainBlocked: UnwrapRef<typeof import('./utils/imageCachePolicy')['isImageDomainBlocked']>
     readonly isImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['isImageUrl']>
     readonly isLinuxDoDiscourseBase: UnwrapRef<typeof import('./utils/discourseUpload')['isLinuxDoDiscourseBase']>
+    readonly isLinuxDoUrl: UnwrapRef<typeof import('./utils/cdnMapping')['isLinuxDoUrl']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
@@ -463,6 +472,7 @@ declare module 'vue' {
     readonly shortcodeToEmoji: UnwrapRef<typeof import('./utils/emojiShortcode')['shortcodeToEmoji']>
     readonly shouldPreferCache: UnwrapRef<typeof import('./utils/imageCachePolicy')['shouldPreferCache']>
     readonly shouldUseImageCache: UnwrapRef<typeof import('./utils/imageCachePolicy')['shouldUseImageCache']>
+    readonly shouldUseShortUrl: UnwrapRef<typeof import('./utils/emojiMarkdown')['shouldUseShortUrl']>
     readonly startWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['startWorkerMode']>
     readonly stopWorkerMode: UnwrapRef<typeof import('./utils/collab/index')['stopWorkerMode']>
     readonly storageBatchGet: UnwrapRef<typeof import('./utils/simpleStorage')['storageBatchGet']>
