@@ -25,7 +25,7 @@ export const defaultSettings: AppSettings = {
   enableHoverPreview: true, // 默认启用悬浮预览
   enableXcomExtraSelectors: false, // 默认不启用 X.com 额外选择器
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
-  enableBatchParseImages: true, // 默认启用一键解析图片按钮
+  enableBatchParseImages: false, // 默认启用一键解析图片按钮
   enableExperimentalFeatures: false, // 默认关闭试验性特性
   enableChatMultiReactor: false, // 默认禁用聊天多表情反应功能
   chatMultiReactorEmojis: [], // 默认空数组，使用模块内置的默认表情列表
@@ -36,13 +36,13 @@ export const defaultSettings: AppSettings = {
   // Default: keep legacy conservative behavior for backward compatibility
   // (set to true if you prefer selected variant to always override displayUrl)
   syncVariantToDisplayUrl: true,
-  imageCacheStrategy: 'auto', // 图片缓存策略：auto/force-indexeddb/force-source/adaptive
+  imageCacheStrategy: 'force-source', // 图片缓存策略：auto/force-indexeddb/force-source/adaptive
   uploadMenuItems: DEFAULT_UPLOAD_MENU_ITEMS,
   cloudMarketDomain: 's.pwsh.us.kg', // 云端市场默认域名
   enableLinuxDoSeeking: false, // 默认禁用 LinuxDo 追觅功能
   linuxDoSeekingUsers: [], // 默认空监控列表
-  enableLinuxDoSeekingDanmaku: true, // 默认启用弹幕通知
-  enableLinuxDoSeekingSysNotify: true, // 默认启用系统通知
+  enableLinuxDoSeekingDanmaku: false, // 默认启用弹幕通知
+  enableLinuxDoSeekingSysNotify: false, // 默认启用系统通知
   enableLinuxDoSeekingNtfy: false, // 默认禁用 ntfy 推送
   linuxDoSeekingNtfyTopic: '', // 默认空主题
   linuxDoSeekingNtfyServer: 'https://ntfy.sh', // 默认 ntfy 公共服务

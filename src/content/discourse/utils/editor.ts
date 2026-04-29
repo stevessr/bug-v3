@@ -11,7 +11,7 @@ function getSafeEmojiSource(emoji: { url?: string; short_url?: string | null }) 
     url: emoji.url,
     short_url: shouldUseShortUrl(emoji, hostname) ? emoji.short_url : null
   }
-}]
+}
 
 export function insertEmojiIntoEditor(emoji: unknown) {
   // avoid noisy console in lint; keep only minimal info in debug environments
