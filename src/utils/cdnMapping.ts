@@ -28,3 +28,15 @@ export function getForumFromUrl(url: string): string | undefined {
     return undefined
   }
 }
+
+/**
+ * Check if a URL belongs to linux.do (direct domain, subdomain, or CDN).
+ */
+export function isLinuxDoUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname
+    return hostname === 'linux.do' || hostname.endsWith('.linux.do') || CDN_DOMAIN_MAP[hostname] === 'linux.do'
+  } catch {
+    return false
+  }
+}

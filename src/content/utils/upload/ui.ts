@@ -2,6 +2,7 @@ import { createE, DAEL, DOA } from '../dom/createEl'
 import { customAlert, customConfirm } from '../ui/dialog'
 import { showCustomImagePicker, showCustomFolderPicker } from '../picker'
 import { notify } from '../ui/notify'
+import { buildMarkdownImage } from '@/utils/emojiMarkdown'
 
 import { uploader } from './core'
 import { parseImageFilenamesFromMarkdown } from './helpers'
@@ -17,6 +18,17 @@ interface DragDropElements {
   markdownTextarea: HTMLTextAreaElement
   folderDropZone: HTMLElement
   folderInput: HTMLInputElement
+  urlTab: HTMLElement
+  urlPanel: HTMLElement
+  urlTextarea: HTMLTextAreaElement
+  urlImportBtn: HTMLButtonElement
+  urlProgressList: HTMLElement
+  statusBar: HTMLElement
+  switchToTab: (tab: 'regular' | 'diff' | 'folder' | 'url') => void
+  regularTab: HTMLElement
+  regularPanel: HTMLElement
+  dropIcon: HTMLElement
+  dropText: HTMLElement
 }
 
 function createDragDropUploadPanel(): DragDropElements {
@@ -144,9 +156,25 @@ function createDragDropUploadPanel(): DragDropElements {
   `
   })
 
+  const urlTab = createE('button', {
+    text: 'URL 导入',
+    style: `
+      flex: 1;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  `
+  })
+
   tabContainer.appendChild(regularTab)
   tabContainer.appendChild(diffTab)
   tabContainer.appendChild(folderTab)
+  tabContainer.appendChild(urlTab)
 
   // Add dragging functionality
   let isDragging = false
@@ -366,54 +394,118 @@ function createDragDropUploadPanel(): DragDropElements {
   diffPanel.appendChild(diffDropZone)
   diffPanel.appendChild(diffFileInput)
 
+  // URL import panel
+  const urlPanel = createE('div', {
+    class: 'url-import-panel',
+    style: `
+    display: none;
+  `
+  }) as HTMLElement
+
+  const urlTextarea = createE('textarea', {
+    ph: '每行输入一个图片 URL...',
+    style: `
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    `
+  })
+
+  const urlImportBtn = createE('button', {
+    text: '导入并上传',
+    style: `
+      width: 100%;
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 12px;
+    `
+  }) as HTMLButtonElement
+
+  urlImportBtn.addEventListener('mouseenter', () => {
+    urlImportBtn.style.background = '#2563eb'
+  })
+  urlImportBtn.addEventListener('mouseleave', () => {
+    urlImportBtn.style.background = '#3b82f6'
+  })
+
+  const urlProgressList = createE('div', {
+    style: `
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px;
+      background: white;
+    `
+  })
+
+  urlPanel.appendChild(urlTextarea)
+  urlPanel.appendChild(urlImportBtn)
+  urlPanel.appendChild(urlProgressList)
+
+  // Status bar at the bottom of content
+  const statusBar = createE('div', {
+    style: `
+      display: none;
+      padding: 8px 12px;
+      margin-top: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      align-items: center;
+      justify-content: space-between;
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    `
+  })
+
   content.appendChild(tabContainer)
   content.appendChild(regularPanel)
   content.appendChild(folderPanel)
   content.appendChild(diffPanel)
+  content.appendChild(urlPanel)
+  content.appendChild(statusBar)
 
   panel.appendChild(header)
   panel.appendChild(content)
 
   // Tab switching logic
-  regularTab.addEventListener('click', () => {
-    regularTab.style.borderBottomColor = '#3b82f6'
-    regularTab.style.color = '#3b82f6'
-    diffTab.style.borderBottomColor = 'transparent'
-    diffTab.style.color = '#6b7280'
-    folderTab.style.borderBottomColor = 'transparent'
-    folderTab.style.color = '#6b7280'
-    regularPanel.style.display = 'block'
-    diffPanel.style.display = 'none'
-    folderPanel.style.display = 'none'
-  })
-
-  diffTab.addEventListener('click', () => {
-    diffTab.style.borderBottomColor = '#3b82f6'
-    diffTab.style.color = '#3b82f6'
-    regularTab.style.borderBottomColor = 'transparent'
-    regularTab.style.color = '#6b7280'
-    folderTab.style.borderBottomColor = 'transparent'
-    folderTab.style.color = '#6b7280'
-    diffPanel.style.display = 'block'
-    regularPanel.style.display = 'none'
-    folderPanel.style.display = 'none'
-  })
-
-  folderTab.addEventListener('click', () => {
-    folderTab.style.borderBottomColor = '#3b82f6'
-    folderTab.style.color = '#3b82f6'
-    regularTab.style.borderBottomColor = 'transparent'
-    regularTab.style.color = '#6b7280'
-    diffTab.style.borderBottomColor = 'transparent'
-    diffTab.style.color = '#6b7280'
-    folderPanel.style.display = 'block'
+  const switchTab = (activeTab: HTMLElement, activePanel: HTMLElement) => {
+    ;[regularTab, diffTab, folderTab, urlTab].forEach(t => {
+      t.style.borderBottomColor = 'transparent'
+      t.style.color = '#6b7280'
+    })
+    activeTab.style.borderBottomColor = '#3b82f6'
+    activeTab.style.color = '#3b82f6'
     regularPanel.style.display = 'none'
     diffPanel.style.display = 'none'
-  })
+    folderPanel.style.display = 'none'
+    urlPanel.style.display = 'none'
+    activePanel.style.display = 'block'
+  }
+
+  regularTab.addEventListener('click', () => switchTab(regularTab, regularPanel))
+  diffTab.addEventListener('click', () => switchTab(diffTab, diffPanel))
+  folderTab.addEventListener('click', () => switchTab(folderTab, folderPanel))
+  urlTab.addEventListener('click', () => switchTab(urlTab, urlPanel))
 
   return {
     panel,
-    overlay: null as any, // No overlay for draggable window
+    overlay: null as any,
     dropZone,
     fileInput,
     closeButton,
@@ -421,7 +513,27 @@ function createDragDropUploadPanel(): DragDropElements {
     diffFileInput,
     markdownTextarea,
     folderDropZone,
-    folderInput
+    folderInput,
+    urlTab,
+    urlPanel,
+    urlTextarea,
+    urlImportBtn,
+    urlProgressList,
+    statusBar,
+    switchToTab: (tab: 'regular' | 'diff' | 'folder' | 'url') => {
+      const map: Record<string, [HTMLElement, HTMLElement]> = {
+        regular: [regularTab, regularPanel],
+        diff: [diffTab, diffPanel],
+        folder: [folderTab, folderPanel],
+        url: [urlTab, urlPanel]
+      }
+      const [t, p] = map[tab] || map.regular
+      switchTab(t, p)
+    },
+    regularTab,
+    regularPanel,
+    dropIcon,
+    dropText
   }
 }
 
@@ -436,7 +548,14 @@ export async function showImageUploadDialog(): Promise<void> {
       diffFileInput,
       markdownTextarea,
       folderDropZone,
-      folderInput
+      folderInput,
+      urlTextarea,
+      urlImportBtn,
+      urlProgressList,
+      statusBar,
+      switchToTab,
+      dropIcon,
+      dropText
     } = createDragDropUploadPanel()
 
     let isDragOver = false
@@ -450,45 +569,155 @@ export async function showImageUploadDialog(): Promise<void> {
       resolve()
     }
 
-    const handleFiles = async (files: FileList) => {
+    const handleFiles = async (files: FileList): Promise<void> => {
       if (!files || files.length === 0) return
 
-      // Don't cleanup - keep the window open
-      // cleanup()
-
-      // Upload each file and provide simple progress feedback
       const filesArray = Array.from(files)
       notify(`开始上传 ${filesArray.length} 个文件...`, 'info')
 
-      // Track upload results for progress
       let successCount = 0
       let failCount = 0
 
-      const uploadPromises = filesArray.map(async file => {
-        try {
-          const result = await uploader.uploadImage(file)
-          successCount++
-          const progressMsg = `已上传：${successCount} 成功，${failCount} 失败`
-          notify(progressMsg, 'info')
-          return result
-        } catch (error: any) {
-          failCount++
-          console.error(`[Image Uploader] Failed to upload ${file.name}:`, error)
-          const progressMsg = `已上传：${successCount} 成功，${failCount} 失败`
-          notify(progressMsg, 'error')
-          throw error
-        }
-      })
+      const results = await Promise.allSettled(
+        filesArray.map(async file => {
+          try {
+            const result = await uploader.uploadImage(file)
+            successCount++
+            return { file, result, success: true as const }
+          } catch (error: any) {
+            failCount++
+            console.error(`[Image Uploader] Failed to upload ${file.name}:`, error)
+            return { file, error, success: false as const }
+          }
+        })
+      )
 
-      try {
-        await Promise.allSettled(uploadPromises)
-        notify(
-          `上传完成：${successCount} 成功，${failCount} 失败`,
-          successCount > 0 ? 'success' : 'info'
-        )
-      } catch (error) {
-        console.error('[Image Uploader] Drag-and-drop upload failed:', error)
+      // Insert successful ones into editor, collect failures
+      const failedItems: { file: File; error: any }[] = []
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          if (r.value.success) {
+            const alt = r.value.result.width && r.value.result.height
+              ? `${r.value.file.name}|${r.value.result.width}x${r.value.result.height}`
+              : r.value.file.name
+            import('./helpers').then(m => m.insertIntoEditor(buildMarkdownImage(alt, r.value.result)))
+          } else {
+            failedItems.push({ file: r.value.file, error: r.value.error })
+          }
+        } else {
+          // Should not happen, but handle rejection
+          const file = filesArray[results.indexOf(r)]
+          failedItems.push({ file, error: r.reason })
+        }
       }
+
+      notify(
+        `上传完成：${successCount} 成功，${failCount} 失败`,
+        failCount === 0 ? 'success' : 'info'
+      )
+
+      if (failedItems.length > 0) {
+        showRetryBar(failedItems)
+      }
+    }
+
+    const showRetryBar = (failedItems: { file: File; error: any }[]) => {
+      statusBar.style.display = 'flex'
+      statusBar.innerHTML = `
+        <span>${failedItems.length} 个文件上传失败</span>
+        <button style="
+          background: #dc2626;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 4px 12px;
+          font-size: 12px;
+          cursor: pointer;
+        ">重试全部</button>
+      `
+      const retryAllBtn = statusBar.querySelector('button')!
+      switchToTab('regular')
+      rebuildDropZoneForRetry(failedItems)
+      retryAllBtn.addEventListener('click', async () => {
+        statusBar.style.display = 'none'
+        rebuildDropZoneToDefault()
+        const fileList = {
+          length: failedItems.length,
+          item: (index: number) => failedItems[index].file,
+          [Symbol.iterator]: function* () {
+            for (const f of failedItems) yield f.file
+          }
+        }
+        await handleFiles(fileList as any)
+      })
+    }
+
+    const rebuildDropZoneForRetry = (failedItems: { file: File; error: any }[]) => {
+      dropZone.style.cursor = 'default'
+      dropZone.style.borderStyle = 'solid'
+      dropZone.innerHTML = ''
+      const list = createE('div', {
+        style: `
+          max-height: 180px; overflow-y: auto; text-align: left;
+          padding: 4px;
+        `
+      })
+      for (const { file, error } of failedItems) {
+        const item = createE('div', {
+          style: `
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 8px; font-size: 13px;
+            border-bottom: 1px solid #f3f4f6;
+          `
+        })
+        const nameSpan = createE('span', {
+          text: file.name,
+          style: `flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dc2626;`
+        })
+        const retryBtn = createE('button', {
+          text: '重试',
+          style: `
+            background: #ef4444; color: white; border: none;
+            border-radius: 4px; padding: 2px 10px; font-size: 12px;
+            cursor: pointer;
+          `
+        }) as HTMLButtonElement
+        retryBtn.addEventListener('click', async (e) => {
+          e.stopPropagation()
+          retryBtn.disabled = true
+          retryBtn.textContent = '...'
+          try {
+            const result = await uploader.uploadImage(file)
+            const alt = result.width && result.height
+              ? `${file.name}|${result.width}x${result.height}`
+              : file.name
+            const { insertIntoEditor } = await import('./helpers')
+            insertIntoEditor(buildMarkdownImage(alt, result))
+            item.style.display = 'none'
+            const idx = failedItems.indexOf({ file, error })
+            if (idx !== -1) failedItems.splice(idx, 1)
+            if (failedItems.length === 0) {
+              statusBar.style.display = 'none'
+              rebuildDropZoneToDefault()
+            }
+          } catch {
+            retryBtn.disabled = false
+            retryBtn.textContent = '重试'
+          }
+        })
+        item.appendChild(nameSpan)
+        item.appendChild(retryBtn)
+        list.appendChild(item)
+      }
+      dropZone.appendChild(list)
+    }
+
+    const rebuildDropZoneToDefault = () => {
+      dropZone.style.cursor = 'pointer'
+      dropZone.style.borderStyle = 'dashed'
+      dropZone.innerHTML = ''
+      dropZone.appendChild(dropIcon.cloneNode(true))
+      dropZone.appendChild(dropText.cloneNode(true))
     }
 
     const handleDiffFiles = async (files: FileList) => {
@@ -839,9 +1068,173 @@ export async function showImageUploadDialog(): Promise<void> {
       }
     }
 
-    // Close handlers
-    closeButton.addEventListener('click', cleanup)
-    // No overlay to click
+    // No polling — status bar is shown reactively via showRetryBar()
+    // Clipboard paste support
+    const handlePanelPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      const imageFiles: File[] = []
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+            const extension = file.type.split('/')[1] || 'png'
+            const renamedFile = new File([file], `pasted-image-${timestamp}.${extension}`, {
+              type: file.type
+            })
+            imageFiles.push(renamedFile)
+          }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        e.preventDefault()
+        notify(`从剪贴板添加 ${imageFiles.length} 个图片`, 'info')
+        const fileList = {
+          length: imageFiles.length,
+          item: (index: number) => imageFiles[index],
+          [Symbol.iterator]: function* () {
+            for (const f of imageFiles) yield f
+          }
+        }
+        handleFiles(fileList as any)
+      }
+    }
+
+    DAEL('paste', handlePanelPaste)
+
+    // URL import handler
+    urlImportBtn.addEventListener('click', async () => {
+      const text = urlTextarea.value.trim()
+      if (!text) {
+        await customAlert('请先输入图片 URL')
+        return
+      }
+
+      const urls = text
+        .split('\n')
+        .map(u => u.trim())
+        .filter(u => u.length > 0)
+
+      if (urls.length === 0) {
+        await customAlert('未找到有效的 URL')
+        return
+      }
+
+      urlImportBtn.disabled = true
+      urlImportBtn.textContent = '导入中...'
+      urlImportBtn.style.background = '#6b7280'
+      urlImportBtn.style.cursor = 'not-allowed'
+
+      urlProgressList.innerHTML = ''
+      let successCount = 0
+      let failCount = 0
+
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i]
+        const row = createE('div', {
+          style: `
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            font-size: 12px;
+            border-bottom: 1px solid #f3f4f6;
+          `
+        })
+
+        const statusIcon = createE('span', { text: '⏳' })
+        const label = createE('span', {
+          text: url.length > 50 ? url.slice(0, 50) + '...' : url,
+          style: `
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #6b7280;
+          `
+        })
+        row.appendChild(statusIcon)
+        row.appendChild(label)
+        urlProgressList.appendChild(row)
+
+        try {
+          // Download image via fetch
+          statusIcon.textContent = '⬇️'
+          const resp = await fetch(url, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'image/*,*/*' }
+          })
+
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`)
+          }
+
+          const blob = await resp.blob()
+          if (!blob.type.startsWith('image/')) {
+            throw new Error('不是有效的图片')
+          }
+
+          // Extract filename from URL
+          let filename = ''
+          try {
+            const u = new URL(url)
+            const name = u.pathname.split('/').pop()
+            if (name && name.includes('.')) filename = name
+          } catch { /* ignore */ }
+          if (!filename) {
+            const ext = blob.type.split('/')[1] || 'png'
+            filename = `downloaded-${Date.now()}-${i}.${ext}`
+          }
+
+          // Upload to Discourse
+          statusIcon.textContent = '📤'
+          await uploader.uploadDownloadedFile(blob, filename)
+          successCount++
+          statusIcon.textContent = '✅'
+          label.style.color = '#16a34a'
+          label.textContent = filename
+        } catch (error: any) {
+          failCount++
+          statusIcon.textContent = '❌'
+          label.style.color = '#dc2626'
+          label.textContent = `${label.textContent} — ${error.message || '失败'}`
+        }
+      }
+
+      urlImportBtn.disabled = false
+      urlImportBtn.textContent = '导入并上传'
+      urlImportBtn.style.background = '#3b82f6'
+      urlImportBtn.style.cursor = 'pointer'
+
+      const summary = createE('div', {
+        style: `
+          padding: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          text-align: center;
+          color: ${failCount === 0 ? '#16a34a' : successCount > 0 ? '#d97706' : '#dc2626'};
+        `
+      })
+      summary.textContent = `完成：${successCount} 成功，${failCount} 失败`
+      urlProgressList.appendChild(summary)
+
+      notify(`URL 导入完成：${successCount} 成功，${failCount} 失败`, failCount === 0 ? 'success' : 'info')
+    })
+
+    // Close handlers — consolidated into enhancedCleanup
+    const originalCleanup = cleanup
+    const enhancedCleanup = () => {
+      document.removeEventListener('paste', handlePanelPaste)
+      ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        document.removeEventListener(eventName, preventDefaults, false)
+      })
+      originalCleanup()
+    }
 
     // Prevent default drag behaviors on document
     const preventDefaults = (e: Event) => {
@@ -853,19 +1246,7 @@ export async function showImageUploadDialog(): Promise<void> {
       DAEL(eventName, preventDefaults, false)
     })
 
-    // Cleanup event listeners when panel is closed
-    const originalCleanup = cleanup
-    const enhancedCleanup = () => {
-      ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        document.removeEventListener(eventName, preventDefaults, false)
-      })
-      originalCleanup()
-    }
-
-    closeButton.removeEventListener('click', cleanup)
-    // No overlay to remove listeners from
     closeButton.addEventListener('click', enhancedCleanup)
-    // No overlay to add listeners to
 
     // No overlay to append
     DOA(panel)

@@ -8,6 +8,7 @@ import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlWithLoading, getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 import { shouldPreferCache, shouldUseImageCache } from '../../utils/imageCachePolicy'
 import { buildMarkdownImage } from '../../utils/emojiMarkdown'
+import { isLinuxDoUrl } from '../../utils/cdnMapping'
 import CachedImage from '../../components/CachedImage.vue'
 
 import GroupSelector from './GroupSelector.vue'
@@ -142,15 +143,15 @@ const availableGroups = computed(
   () => emojiStore.groups.filter((g: EmojiGroup) => g.id !== 'ungrouped') || []
 )
 
-// Check if we should show upload buttons (not on linux.do)
+// Check if we should show upload buttons (not on linux.do or its CDNs)
 const shouldShowUploadButton = computed(() => {
-  return !window.location.href.includes('linux.do')
+  return !isLinuxDoUrl(window.location.href)
 })
 
 // Upload single emoji to linux.do
 const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
   // Skip if no url, already uploading, or already hosted on linux.do
-  if (!emoji.url || uploadingEmojiIds.value.has(index) || emoji.url.includes('linux.do')) return
+  if (!emoji.url || uploadingEmojiIds.value.has(index) || isLinuxDoUrl(emoji.url)) return
 
   uploadingEmojiIds.value.add(index)
 
@@ -194,7 +195,7 @@ const uploadSelectedEmojis = async () => {
 
   const emojisToUpload = Array.from(selectedEmojis.value)
     .map(index => ({ emoji: ungroup.value!.emojis[index], index }))
-    .filter(({ emoji }) => emoji && emoji.url && !emoji.url.includes('linux.do'))
+    .filter(({ emoji }) => emoji && emoji.url && !isLinuxDoUrl(emoji.url))
 
   if (emojisToUpload.length === 0) return
 
@@ -241,7 +242,7 @@ const uploadAllEmojis = async () => {
 
   const emojisToUpload = ungroup.value.emojis
     .map((emoji, index) => ({ emoji, index }))
-    .filter(({ emoji }) => emoji && emoji.url && !emoji.url.includes('linux.do'))
+    .filter(({ emoji }) => emoji && emoji.url && !isLinuxDoUrl(emoji.url))
 
   if (emojisToUpload.length === 0) return
 

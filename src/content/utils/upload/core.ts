@@ -217,6 +217,34 @@ export class ImageUploader {
     }
   }
 
+  // Get snapshot of failed items
+  getFailedItems(): UploadQueueItem[] {
+    return [...this.failedQueue]
+  }
+
+  // Retry all failed items
+  retryAllFailed() {
+    const items = [...this.failedQueue]
+    for (const item of items) {
+      if (item.retryCount < this.maxRetries) {
+        item.retryCount++
+        this.moveToQueue(item, 'waiting')
+      }
+    }
+    if (items.length > 0) {
+      this.processQueue()
+    }
+  }
+
+  // Upload a File created from a remote download (via fetch)
+  async uploadDownloadedFile(
+    blob: Blob,
+    filename: string
+  ): Promise<UploadResponse> {
+    const file = new File([blob], filename, { type: blob.type })
+    return this.uploadImage(file)
+  }
+
   private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
   }

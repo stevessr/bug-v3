@@ -13,6 +13,7 @@ import type { Emoji } from '../../types/type'
 import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 import CachedImage from '../../components/CachedImage.vue'
+import { isLinuxDoUrl } from '../../utils/cdnMapping'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -112,9 +113,9 @@ const handleGeminiNameSelected = (selectedName: string) => {
 // Upload functionality
 const uploadingEmojiIds = ref(new Set<string>())
 
-// Check if current URL contains linux.do
+// Check if current URL belongs to linux.do or its CDNs
 const shouldShowUploadButton = computed(() => {
-  return !localEmoji.value.url?.includes('linux.do')
+  return !isLinuxDoUrl(localEmoji.value.url || '')
 })
 
 // Upload single emoji to linux.do
