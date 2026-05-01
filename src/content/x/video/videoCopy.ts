@@ -178,7 +178,7 @@ function createCopyBtn(url: string) {
   const btn = createE('button', {
     class: 'x-video-copy-btn',
     type: 'button',
-    ti: url.startsWith('blob:') ? '下载视频' : '复制视频地址',
+    ti: '复制视频地址',
     text: '📋',
     style:
       'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
@@ -188,6 +188,7 @@ function createCopyBtn(url: string) {
 }
 
 function createDownloadBtn(url: string) {
+  if (url.startsWith('blob:')) return undefined as unknown as HTMLElement // don't show download button for blob URLs since downloading doesn't make sense
   const btn = createE('button', {
     class: 'x-video-download-btn',
     type: 'button',
@@ -201,6 +202,7 @@ function createDownloadBtn(url: string) {
 }
 
 function createInlineBtn(url: string) {
+  if (url.startsWith('blob:')) return undefined as unknown as HTMLElement // don't show inline button for blob URLs since copying doesn't make sense
   const btn = createE('button', {
     class: 'x-video-copy-inline-btn',
     type: 'button',
