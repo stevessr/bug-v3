@@ -381,12 +381,55 @@ export function createDragDropUploadPanel(): DragDropElements {
     uploadSelectedBtn.textContent = `上传选中 (${count})`
   }
 
+  let clearConfirmTimer: ReturnType<typeof setTimeout> | null = null
+  let clearCountdownInterval: ReturnType<typeof setInterval> | null = null
+  let clearCountdown = 3
+
   const clearPreview = () => {
     pendingFiles.length = 0
     previewGridInner.innerHTML = ''
     fileItemMap.clear()
     refreshPreviewState()
+    resetClearButton()
   }
+
+  const resetClearButton = () => {
+    if (clearConfirmTimer) {
+      clearTimeout(clearConfirmTimer)
+      clearConfirmTimer = null
+    }
+    if (clearCountdownInterval) {
+      clearInterval(clearCountdownInterval)
+      clearCountdownInterval = null
+    }
+    clearBtn.textContent = '清空'
+    clearBtn.style.color = '#6b7280'
+    clearBtn.style.borderColor = '#d1d5db'
+    clearBtn.style.background = 'transparent'
+  }
+
+  clearBtn.addEventListener('click', () => {
+    if (pendingFiles.length === 0) return
+    if (clearConfirmTimer) {
+      clearPreview()
+    } else {
+      clearCountdown = 3
+      clearBtn.textContent = `确认清空？ (${clearCountdown}s)`
+      clearBtn.style.color = '#ef4444'
+      clearBtn.style.borderColor = '#ef4444'
+      clearBtn.style.background = '#fef2f2'
+      clearCountdownInterval = setInterval(() => {
+        clearCountdown--
+        if (clearCountdown <= 0) {
+          resetClearButton()
+        } else {
+          clearBtn.textContent = `确认清空？ (${clearCountdown}s)`
+        }
+      }, 1000)
+      clearConfirmTimer = setTimeout(resetClearButton, 3000)
+    }
+  })
+
   uploadSelectedBtn.addEventListener('click', async () => {
     if (!onUpload) return
     const files = [...pendingFiles]
@@ -401,8 +444,6 @@ export function createDragDropUploadPanel(): DragDropElements {
       pendingFiles.length > 0 ? `上传选中 (${pendingFiles.length})` : `上传选中 (0)`
     uploadSelectedBtn.style.background = '#3b82f6'
   })
-  clearBtn.addEventListener('click', clearPreview)
-
   const addFilesToPreview = (files: File[]) => {
     const imageFiles = files.filter(f => f.type.startsWith('image/'))
     if (imageFiles.length === 0) return
