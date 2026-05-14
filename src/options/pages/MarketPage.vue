@@ -11,6 +11,26 @@ const { t } = useI18n()
 
 const emojiStore = useEmojiStore()
 
+type MarketTopicId = 'all' | 'bilibili' | 'telegram' | 'x' | 'other'
+
+type MarketGroupSummary = {
+  id: string
+  name: string
+  icon: string
+  detail?: string
+  topic?: MarketTopicId
+  order: number
+  emojiCount: number
+  isArchived: boolean
+}
+
+type MarketTopicSummary = {
+  id: MarketTopicId
+  label: string
+  totalGroups: number
+  totalPages: number
+}
+
 // 获取云端市场基础 URL
 const getMarketBaseUrl = () => {
   const domain = emojiStore.settings.cloudMarketDomain || 's.pwsh.us.kg'
@@ -20,17 +40,7 @@ const getMarketBaseUrl = () => {
 // 市场数据
 const loading = ref(false)
 // 优化：使用 shallowRef 减少大数组的响应式代理开销
-const marketGroups = shallowRef<
-  Array<{
-    id: string
-    name: string
-    icon: string
-    detail?: string
-    order: number
-    emojiCount: number
-    isArchived: boolean
-  }>
->([])
+const marketGroups = shallowRef<MarketGroupSummary[]>([])
 
 const marketMetadata = ref<{
   version: string
@@ -44,6 +54,18 @@ const indexPageSize = ref(50)
 const totalMarketGroups = ref(0)
 const usePagedIndex = ref(false)
 const isSearchMode = ref(false)
+const hasLoadedFullMarketMetadata = ref(false)
+const selectedTopic = ref<MarketTopicId>('all')
+
+const defaultMarketTopics: MarketTopicSummary[] = [
+  { id: 'all', label: '全部', totalGroups: 0, totalPages: 1 },
+  { id: 'bilibili', label: 'bilibili', totalGroups: 0, totalPages: 1 },
+  { id: 'telegram', label: 'telegram', totalGroups: 0, totalPages: 1 },
+  { id: 'x', label: 'X', totalGroups: 0, totalPages: 1 },
+  { id: 'other', label: '其他', totalGroups: 0, totalPages: 1 }
+]
+
+const marketTopics = shallowRef<MarketTopicSummary[]>(defaultMarketTopics)
 
 // 优化：使用 shallowRef 减少缓存 Map 的响应式代理开销
 const groupDetailsCache = shallowRef<Map<string, EmojiGroup>>(new Map())
@@ -59,13 +81,30 @@ const installedGroupIds = computed(() => {
 // 搜索关键词
 const searchKeyword = ref('')
 
+const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
+  const detail = group.detail?.toLowerCase() || ''
+  const name = group.name.trim().toLowerCase()
+
+  if (detail.includes('t.me')) return 'telegram'
+  if (detail.includes('bili')) return 'bilibili'
+  if (name.startsWith('x')) return 'x'
+  return 'other'
+}
+
+const topicCounts = computed(() => {
+  return new Map<MarketTopicId, number>(
+    marketTopics.value.map(topic => [topic.id, topic.totalGroups] as const)
+  )
+})
+
 // 过滤后的市场分组
 const filteredMarketGroups = computed(() => {
+  const groups = marketGroups.value
   if (!searchKeyword.value.trim()) {
-    return marketGroups.value
+    return groups
   }
   const keyword = searchKeyword.value.toLowerCase()
-  return marketGroups.value.filter(
+  return groups.filter(
     g =>
       g.name.toLowerCase().includes(keyword) ||
       (g.detail && g.detail.toLowerCase().includes(keyword))
@@ -78,7 +117,9 @@ const pagedMarketGroups = computed(() => {
 })
 
 const displayMarketGroups = computed(() => {
-  if (usePagedIndex.value && !isSearchMode.value) return marketGroups.value
+  if (usePagedIndex.value && !isSearchMode.value) {
+    return marketGroups.value
+  }
   return pagedMarketGroups.value
 })
 
@@ -99,15 +140,20 @@ const loadMarketIndex = async () => {
   return data
 }
 
-const loadMarketPage = async (page: number) => {
+const getMarketTopicPageFileName = (topic: MarketTopicId, page: number) => {
+  return topic === 'all' ? `page-${page}.json` : `${topic}-page-${page}.json`
+}
+
+const loadMarketPage = async (page: number, topic: MarketTopicId = selectedTopic.value) => {
   const baseUrl = getMarketBaseUrl()
-  const pageUrl = `${baseUrl}/assets/market/index/page-${page}.json`
+  const pageUrl = `${baseUrl}/assets/market/index/${getMarketTopicPageFileName(topic, page)}`
   const response = await fetch(pageUrl)
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
   const data = await response.json()
   marketGroups.value = data.groups || []
+  totalMarketGroups.value = data.totalGroups || marketGroups.value.length
 }
 
 const loadMarketMetadata = async () => {
@@ -125,6 +171,7 @@ const loadMarketMetadata = async () => {
   }
   marketGroups.value = data.groups || []
   totalMarketGroups.value = data.totalGroups || marketGroups.value.length
+  hasLoadedFullMarketMetadata.value = true
 }
 
 const loadMarketData = async () => {
@@ -141,13 +188,16 @@ const loadMarketData = async () => {
       indexPageSize.value = indexData.pageSize || indexPageSize.value
       pageSize.value = indexPageSize.value
       totalMarketGroups.value = indexData.totalGroups || 0
+      marketTopics.value = Array.isArray(indexData.topics) ? indexData.topics : defaultMarketTopics
       marketMetadata.value = {
         version: indexData.version || '1.0',
         exportDate: indexData.exportDate || new Date().toISOString(),
         totalGroups: indexData.totalGroups || 0
       }
       currentPage.value = 1
-      await loadMarketPage(1)
+      selectedTopic.value = 'all'
+      await loadMarketPage(1, 'all')
+      hasLoadedFullMarketMetadata.value = false
     } catch (error) {
       // 回退到完整 metadata.json
       usePagedIndex.value = false
@@ -290,35 +340,35 @@ const installGroup = async (groupId: string) => {
   }
 }
 
-watch(
-  () => searchKeyword.value,
-  async keyword => {
-    currentPage.value = 1
-    if (usePagedIndex.value) {
-      if (keyword && keyword.trim()) {
-        isSearchMode.value = true
+watch([() => searchKeyword.value, () => selectedTopic.value], async ([keyword, topic]) => {
+  currentPage.value = 1
+  if (usePagedIndex.value) {
+    const needsFullMetadata = Boolean(keyword && keyword.trim()) || topic !== 'all'
+    if (needsFullMetadata) {
+      isSearchMode.value = true
+      if (!hasLoadedFullMarketMetadata.value) {
         try {
           await loadMarketMetadata()
         } catch (error) {
           console.error('加载市场数据失败：', error)
         }
-      } else if (isSearchMode.value) {
-        isSearchMode.value = false
-        pageSize.value = indexPageSize.value
-        try {
-          await loadMarketPage(1)
-        } catch (error) {
-          console.error('加载市场数据失败：', error)
-        }
+      }
+    } else if (isSearchMode.value) {
+      isSearchMode.value = false
+      pageSize.value = indexPageSize.value
+      try {
+        await loadMarketPage(1)
+      } catch (error) {
+        console.error('加载市场数据失败：', error)
       }
     }
   }
-)
+})
 
 watch(
   () => filteredMarketGroups.value.length,
   total => {
-    if (usePagedIndex.value && !isSearchMode.value) return
+    if (usePagedIndex.value && !isSearchMode.value && selectedTopic.value === 'all') return
     const maxPage = Math.max(1, Math.ceil(total / pageSize.value))
     if (currentPage.value > maxPage) currentPage.value = maxPage
   }
@@ -364,7 +414,19 @@ onMounted(() => {
     </div>
 
     <!-- 搜索栏 -->
-    <div class="mb-4">
+    <div class="mb-4 space-y-3">
+      <a-segmented
+        v-model:value="selectedTopic"
+        :options="
+          marketTopics.map(topic => ({
+            value: topic.id,
+            label:
+              topic.id === 'all' || hasLoadedFullMarketMetadata
+                ? `${topic.label} (${topicCounts.get(topic.id) || 0})`
+                : topic.label
+          }))
+        "
+      />
       <a-input-search
         v-model:value="searchKeyword"
         :placeholder="t('searchPackagesPlaceholder')"

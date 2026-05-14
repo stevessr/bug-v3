@@ -8,7 +8,26 @@ const __dirname = path.dirname(__filename)
 const MARKET_DIR = path.join(__dirname, 'cfworker/public/assets/market')
 const METADATA_FILE = path.join(MARKET_DIR, 'metadata.json')
 const MARKET_INDEX_DIR = path.join(__dirname, 'cfworker/public/assets/market/index')
-const PAGE_SIZE = Number(process.env.MARKET_PAGE_SIZE || 50)
+const PAGE_SIZE = Number(process.env.MARKET_PAGE_SIZE || 48)
+const MARKET_TOPICS = [
+  { id: 'all', label: '全部' },
+  { id: 'bilibili', label: 'bilibili' },
+  { id: 'telegram', label: 'telegram' },
+  { id: 'x', label: 'X' },
+  { id: 'other', label: '其他' }
+]
+
+function resolveMarketTopic(group) {
+  const detail = String(group.detail || '').toLowerCase()
+  const name = String(group.name || '')
+    .trim()
+    .toLowerCase()
+
+  if (detail.includes('t.me')) return 'telegram'
+  if (detail.includes('bili')) return 'bilibili'
+  if (name.startsWith('x')) return 'x'
+  return 'other'
+}
 
 // Get all JSON files in the directory except metadata.json
 const files = fs
@@ -27,6 +46,8 @@ files.forEach(file => {
       id: data.id,
       name: data.name,
       icon: data.icon,
+      detail: data.detail,
+      topic: resolveMarketTopic(data),
       order: data.order || 0,
       emojiCount: data.emojis ? data.emojis.length : 0,
       isArchived: !!data.isArchived // Use isArchived from file if exists, default false
@@ -106,50 +127,70 @@ console.log(`Generated metadata.json with ${groups.length} groups.`)
 try {
   fs.mkdirSync(MARKET_INDEX_DIR, { recursive: true })
 
-  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE))
-  const pages = []
+  const topicIndexes = MARKET_TOPICS.map(topic => {
+    const topicGroups =
+      topic.id === 'all' ? groups : groups.filter(group => group.topic === topic.id)
+    const totalPages = Math.max(1, Math.ceil(topicGroups.length / PAGE_SIZE))
+    const pages = []
 
-  for (let page = 1; page <= totalPages; page++) {
-    const start = (page - 1) * PAGE_SIZE
-    const end = Math.min(start + PAGE_SIZE, groups.length)
-    const pageGroups = groups.slice(start, end)
-    const fileName = `page-${page}.json`
-    const filePath = path.join(MARKET_INDEX_DIR, fileName)
+    for (let page = 1; page <= totalPages; page++) {
+      const start = (page - 1) * PAGE_SIZE
+      const end = Math.min(start + PAGE_SIZE, topicGroups.length)
+      const pageGroups = topicGroups.slice(start, end)
+      const fileName = topic.id === 'all' ? `page-${page}.json` : `${topic.id}-page-${page}.json`
+      const filePath = path.join(MARKET_INDEX_DIR, fileName)
 
-    fs.writeFileSync(
-      filePath,
-      JSON.stringify(
-        {
-          page,
-          pageSize: PAGE_SIZE,
-          totalPages,
-          totalGroups: groups.length,
-          groups: pageGroups
-        },
-        null,
-        2
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify(
+          {
+            topic: topic.id,
+            page,
+            pageSize: PAGE_SIZE,
+            totalPages,
+            totalGroups: topicGroups.length,
+            groups: pageGroups
+          },
+          null,
+          2
+        )
       )
-    )
 
-    pages.push({
-      name: fileName,
-      start: start + 1,
-      end,
-      count: pageGroups.length
-    })
-  }
+      pages.push({
+        name: fileName,
+        start: start + 1,
+        end,
+        count: pageGroups.length
+      })
+    }
 
+    return {
+      id: topic.id,
+      label: topic.label,
+      totalGroups: topicGroups.length,
+      totalPages,
+      pages
+    }
+  })
+
+  const allTopicIndex = topicIndexes.find(topic => topic.id === 'all')
   const indexData = {
     version: '1.0',
     exportDate: metadata.exportDate,
     totalGroups: groups.length,
     pageSize: PAGE_SIZE,
-    totalPages,
-    pages
+    totalPages: allTopicIndex.totalPages,
+    pages: allTopicIndex.pages,
+    topics: topicIndexes
   }
 
   fs.writeFileSync(path.join(MARKET_INDEX_DIR, 'index.json'), JSON.stringify(indexData, null, 2))
-  console.log(`Generated market index with ${totalPages} pages (page size ${PAGE_SIZE}).`)
+  console.log(
+    `Generated market index with ${allTopicIndex.totalPages} pages (page size ${PAGE_SIZE}).`
+  )
+  console.log(
+    `Generated topic indexes: ${topicIndexes.map(t => `${t.id}=${t.totalGroups}`).join(', ')}.`
+  )
 } catch (err) {
   console.error('Error generating market index files:', err)
 }
