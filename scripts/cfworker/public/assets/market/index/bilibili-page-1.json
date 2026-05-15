@@ -1,0 +1,59 @@
+{
+  "topic": "bilibili",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 5,
+  "groups": [
+    {
+      "id": "group-1769047707353",
+      "name": "新年主题包",
+      "icon": "https://cdn3.ldstatic.com/original/4X/5/b/4/5b450cf02f4c8566a026259697678928b8bf1846.gif",
+      "detail": "https://www.bilibili.com/opus/1160389241619873793",
+      "topic": "bilibili",
+      "order": 186,
+      "emojiCount": 12,
+      "isArchived": false
+    },
+    {
+      "id": "group-1769047520075",
+      "name": "桑多涅",
+      "icon": "https://cdn3.ldstatic.com/original/4X/0/c/d/0cd7ade17a3c8cf19fb179bd42fa42aad59b7ff0.gif#/",
+      "detail": "https://www.bilibili.com/opus/1159756296541437991",
+      "topic": "bilibili",
+      "order": 201,
+      "emojiCount": 18,
+      "isArchived": false
+    },
+    {
+      "id": "group-1769348522883",
+      "name": "海铃",
+      "icon": "https://cdn3.ldstatic.com/original/4X/5/9/6/596f03accbb9201b54e1def85fb35e933a4e0ed3.gif",
+      "detail": "https://www.bilibili.com/opus/1161796002306326534",
+      "topic": "bilibili",
+      "order": 212,
+      "emojiCount": 24,
+      "isArchived": false
+    },
+    {
+      "id": "group-1768743503137",
+      "name": "蓝毒",
+      "icon": "https://cdn3.ldstatic.com/original/4X/0/7/d/07d6c68a105bbdf75687ca4501ccca9cf05f20fd.avif",
+      "detail": "https://www.bilibili.com/opus/1159075097569394708",
+      "topic": "bilibili",
+      "order": 246,
+      "emojiCount": 28,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767312211071",
+      "name": "远野汉娜",
+      "icon": "https://cdn3.ldstatic.com/original/4X/0/f/0/0f090b3427332d5047b2cade3f0d7f3aac0b1676.gif",
+      "detail": "https://www.bilibili.com/opus/1152497342283251731",
+      "topic": "bilibili",
+      "order": 256,
+      "emojiCount": 20,
+      "isArchived": false
+    }
+  ]
+}

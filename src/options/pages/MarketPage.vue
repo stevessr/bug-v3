@@ -41,6 +41,7 @@ const getMarketBaseUrl = () => {
 const loading = ref(false)
 // 优化：使用 shallowRef 减少大数组的响应式代理开销
 const marketGroups = shallowRef<MarketGroupSummary[]>([])
+const fullMarketGroups = shallowRef<MarketGroupSummary[]>([])
 
 const marketMetadata = ref<{
   version: string
@@ -49,12 +50,13 @@ const marketMetadata = ref<{
 } | null>(null)
 
 const currentPage = ref(1)
-const pageSize = ref(18)
-const indexPageSize = ref(50)
+const pageSize = ref(48)
+const indexPageSize = ref(48)
 const totalMarketGroups = ref(0)
 const usePagedIndex = ref(false)
 const isSearchMode = ref(false)
 const hasLoadedFullMarketMetadata = ref(false)
+const hasTopicIndex = ref(false)
 const selectedTopic = ref<MarketTopicId>('all')
 
 const defaultMarketTopics: MarketTopicSummary[] = [
@@ -91,15 +93,34 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
   return 'other'
 }
 
+const buildMarketTopicSummaries = (groups: MarketGroupSummary[]): MarketTopicSummary[] => {
+  return defaultMarketTopics.map(topic => ({
+    ...topic,
+    totalGroups:
+      topic.id === 'all'
+        ? groups.length
+        : groups.filter(group => (group.topic || resolveMarketTopic(group)) === topic.id).length
+  }))
+}
+
 const topicCounts = computed(() => {
   return new Map<MarketTopicId, number>(
     marketTopics.value.map(topic => [topic.id, topic.totalGroups] as const)
   )
 })
 
+const topicVisibleMarketGroups = computed(() => {
+  if (usePagedIndex.value && hasTopicIndex.value && !isSearchMode.value) return marketGroups.value
+  if (selectedTopic.value === 'all') return marketGroups.value
+
+  return marketGroups.value.filter(group => {
+    return (group.topic || resolveMarketTopic(group)) === selectedTopic.value
+  })
+})
+
 // 过滤后的市场分组
 const filteredMarketGroups = computed(() => {
-  const groups = marketGroups.value
+  const groups = topicVisibleMarketGroups.value
   if (!searchKeyword.value.trim()) {
     return groups
   }
@@ -117,10 +138,15 @@ const pagedMarketGroups = computed(() => {
 })
 
 const displayMarketGroups = computed(() => {
-  if (usePagedIndex.value && !isSearchMode.value) {
+  if (usePagedIndex.value && hasTopicIndex.value && !isSearchMode.value) {
     return marketGroups.value
   }
   return pagedMarketGroups.value
+})
+
+const currentTopicTotal = computed(() => {
+  if (isSearchMode.value || !usePagedIndex.value) return filteredMarketGroups.value.length
+  return topicCounts.value.get(selectedTopic.value) ?? totalMarketGroups.value
 })
 
 // 详情模态框
@@ -169,8 +195,12 @@ const loadMarketMetadata = async () => {
     exportDate: data.exportDate,
     totalGroups: data.totalGroups
   }
-  marketGroups.value = data.groups || []
+  fullMarketGroups.value = data.groups || []
+  marketGroups.value = fullMarketGroups.value
   totalMarketGroups.value = data.totalGroups || marketGroups.value.length
+  marketTopics.value = Array.isArray(data.topics)
+    ? data.topics
+    : buildMarketTopicSummaries(fullMarketGroups.value)
   hasLoadedFullMarketMetadata.value = true
 }
 
@@ -188,7 +218,8 @@ const loadMarketData = async () => {
       indexPageSize.value = indexData.pageSize || indexPageSize.value
       pageSize.value = indexPageSize.value
       totalMarketGroups.value = indexData.totalGroups || 0
-      marketTopics.value = Array.isArray(indexData.topics) ? indexData.topics : defaultMarketTopics
+      hasTopicIndex.value = Array.isArray(indexData.topics)
+      marketTopics.value = hasTopicIndex.value ? indexData.topics : defaultMarketTopics
       marketMetadata.value = {
         version: indexData.version || '1.0',
         exportDate: indexData.exportDate || new Date().toISOString(),
@@ -196,12 +227,18 @@ const loadMarketData = async () => {
       }
       currentPage.value = 1
       selectedTopic.value = 'all'
-      await loadMarketPage(1, 'all')
-      hasLoadedFullMarketMetadata.value = false
+      fullMarketGroups.value = []
+      if (hasTopicIndex.value) {
+        await loadMarketPage(1, 'all')
+        hasLoadedFullMarketMetadata.value = false
+      } else {
+        await loadMarketMetadata()
+      }
     } catch (error) {
       // 回退到完整 metadata.json
       usePagedIndex.value = false
       isSearchMode.value = false
+      hasTopicIndex.value = false
       await loadMarketMetadata()
     }
     currentPage.value = 1
@@ -341,34 +378,47 @@ const installGroup = async (groupId: string) => {
 }
 
 watch([() => searchKeyword.value, () => selectedTopic.value], async ([keyword, topic]) => {
-  currentPage.value = 1
-  if (usePagedIndex.value) {
-    const needsFullMetadata = Boolean(keyword && keyword.trim()) || topic !== 'all'
-    if (needsFullMetadata) {
-      isSearchMode.value = true
-      if (!hasLoadedFullMarketMetadata.value) {
-        try {
-          await loadMarketMetadata()
-        } catch (error) {
-          console.error('加载市场数据失败：', error)
-        }
-      }
-    } else if (isSearchMode.value) {
-      isSearchMode.value = false
-      pageSize.value = indexPageSize.value
+  if (!usePagedIndex.value || !hasTopicIndex.value) {
+    marketGroups.value = fullMarketGroups.value
+    totalMarketGroups.value = fullMarketGroups.value.length
+    currentPage.value = 1
+    return
+  }
+
+  const needsFullMetadata = Boolean(keyword && keyword.trim())
+  if (needsFullMetadata) {
+    currentPage.value = 1
+    isSearchMode.value = true
+    if (!hasLoadedFullMarketMetadata.value) {
       try {
-        await loadMarketPage(1)
+        await loadMarketMetadata()
       } catch (error) {
         console.error('加载市场数据失败：', error)
       }
+    } else {
+      marketGroups.value = fullMarketGroups.value
+      totalMarketGroups.value = fullMarketGroups.value.length
     }
+    return
+  }
+
+  isSearchMode.value = false
+  pageSize.value = indexPageSize.value
+  try {
+    if (currentPage.value === 1) {
+      await loadMarketPage(1, topic)
+    } else {
+      currentPage.value = 1
+    }
+  } catch (error) {
+    console.error('加载市场数据失败：', error)
   }
 })
 
 watch(
   () => filteredMarketGroups.value.length,
   total => {
-    if (usePagedIndex.value && !isSearchMode.value && selectedTopic.value === 'all') return
+    if (usePagedIndex.value && hasTopicIndex.value && !isSearchMode.value) return
     const maxPage = Math.max(1, Math.ceil(total / pageSize.value))
     if (currentPage.value > maxPage) currentPage.value = maxPage
   }
@@ -377,10 +427,10 @@ watch(
 watch(
   () => currentPage.value,
   async page => {
-    if (!usePagedIndex.value || isSearchMode.value) return
+    if (!usePagedIndex.value || !hasTopicIndex.value || isSearchMode.value) return
     try {
       loading.value = true
-      await loadMarketPage(page)
+      await loadMarketPage(page, selectedTopic.value)
     } catch (error) {
       console.error('加载市场分页失败：', error)
       message.error(t('loadMarketDataFailed'))
@@ -420,10 +470,7 @@ onMounted(() => {
         :options="
           marketTopics.map(topic => ({
             value: topic.id,
-            label:
-              topic.id === 'all' || hasLoadedFullMarketMetadata
-                ? `${topic.label} (${topicCounts.get(topic.id) || 0})`
-                : topic.label
+            label: `${topic.label} (${topicCounts.get(topic.id) || 0})`
           }))
         "
       />
@@ -500,7 +547,7 @@ onMounted(() => {
 
       <div
         v-if="
-          (usePagedIndex && !isSearchMode && totalMarketGroups > pageSize) ||
+          (usePagedIndex && hasTopicIndex && !isSearchMode && currentTopicTotal > pageSize) ||
           (!usePagedIndex && filteredMarketGroups.length > pageSize) ||
           (usePagedIndex && isSearchMode && filteredMarketGroups.length > pageSize)
         "
@@ -509,9 +556,9 @@ onMounted(() => {
         <a-pagination
           v-model:current="currentPage"
           v-model:pageSize="pageSize"
-          :total="usePagedIndex && !isSearchMode ? totalMarketGroups : filteredMarketGroups.length"
+          :total="usePagedIndex && hasTopicIndex && !isSearchMode ? currentTopicTotal : filteredMarketGroups.length"
           :show-size-changer="!usePagedIndex || isSearchMode"
-          :page-size-options="['12', '18', '24', '36']"
+          :page-size-options="['12', '24', '48', '96']"
           show-less-items
         />
       </div>

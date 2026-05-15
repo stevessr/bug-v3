@@ -1,9 +1,9 @@
 {
-  "topic": "all",
+  "topic": "other",
   "page": 1,
   "pageSize": 48,
-  "totalPages": 6,
-  "totalGroups": 284,
+  "totalPages": 4,
+  "totalGroups": 148,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -48,16 +48,6 @@
       "topic": "other",
       "order": 4,
       "emojiCount": 42,
-      "isArchived": false
-    },
-    {
-      "id": "telegram_1769227166276_pe3zr005t",
-      "name": "ATRI New",
-      "icon": "https://cdn3.ldstatic.com/original/4X/e/f/9/ef9d71586ad02952f2c4a141eda751c50b6a92ef.avif?v=telegram#/",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/stickers_atri",
-      "topic": "telegram",
-      "order": 5,
-      "emojiCount": 46,
       "isArchived": false
     },
     {
@@ -115,16 +105,6 @@
       "isArchived": false
     },
     {
-      "id": "telegram_1769615581494_gqc9xpehp",
-      "name": "Fred's random Touhou pack",
-      "icon": "https://cdn3.ldstatic.com/original/4X/0/2/3/023a5b1d168e47e78b7570a0e0163f386af77d5e.webp",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/Fred_2hu",
-      "topic": "telegram",
-      "order": 12,
-      "emojiCount": 114,
-      "isArchived": false
-    },
-    {
       "id": "group-1758720673759",
       "name": "fu 师傅🍜",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/2/1/321359362aaa44d55185e02dc56f3381c7137b34.jpeg",
@@ -170,16 +150,6 @@
       "isArchived": false
     },
     {
-      "id": "telegram_1769511474384_envex0bjj",
-      "name": "i 狐 E 鸡 @zhaxia_cn",
-      "icon": "https://cdn3.ldstatic.com/original/4X/e/0/a/e0aa24b15309eb7fc6e14b1f3422efc89ff16cf2.webp?v=telegram",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/in_BIHFEC_by_NaiDrawBot",
-      "topic": "telegram",
-      "order": 18,
-      "emojiCount": 16,
-      "isArchived": false
-    },
-    {
       "id": "group-1759674514752",
       "name": "kipfel",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/f/c/1fcc9843d4ff80c4a94eca2747646db1dafa2a64.gif",
@@ -216,16 +186,6 @@
       "isArchived": true
     },
     {
-      "id": "telegram_1768740682292_ectw51493",
-      "name": "mafuyu_twitch_1",
-      "icon": "https://cdn3.ldstatic.com/original/4X/4/b/6/4b60af8f243728bde919e4821c4a815128e0c2f3.webp?v=telegram",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/mafuyu_twitch_01_LVfE",
-      "topic": "telegram",
-      "order": 23,
-      "emojiCount": 52,
-      "isArchived": false
-    },
-    {
       "id": "group-1767629262989",
       "name": "Maru_sec",
       "icon": "https://linux.do/user_avatar/linux.do/maru_sec/96/1162460_2.gif",
@@ -233,16 +193,6 @@
       "topic": "other",
       "order": 24,
       "emojiCount": 24,
-      "isArchived": false
-    },
-    {
-      "id": "telegram_1769219920577_b6mx8tuo8",
-      "name": "MC Fox @MrDearFox",
-      "icon": "https://cdn3.ldstatic.com/original/4X/c/5/e/c5e0402656c899703fc4fcbc6ce49ab46959edd4.avif?v=telegram",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/mc_fox",
-      "topic": "telegram",
-      "order": 25,
-      "emojiCount": 13,
       "isArchived": false
     },
     {
@@ -309,16 +259,6 @@
       "isArchived": false
     },
     {
-      "id": "telegram_1769615017556_kmruozok9",
-      "name": "nekomimi chan and marshmallow san • @punipuni_stickers",
-      "icon": "https://cdn3.ldstatic.com/original/4X/b/d/c/bdc070f8b4d0691eb37050a36cac91a6ddd891f6.webp",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/punipuni_nekomimi_chan_and_marshmallow_san",
-      "topic": "telegram",
-      "order": 33,
-      "emojiCount": 40,
-      "isArchived": false
-    },
-    {
       "id": "group-1774365614468",
       "name": "Neuro & Evil emojis by Haruya",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/4/f/34f605d01004ca5a539e8e920ebe27f80a8e225a.avif?v=emoji-17",
@@ -352,16 +292,6 @@
       "topic": "other",
       "order": 37,
       "emojiCount": 25,
-      "isArchived": false
-    },
-    {
-      "id": "telegram_1768051202527_nuh93wcz6",
-      "name": "saba 和 gura 的奇奇怪怪",
-      "icon": "https://cdn3.ldstatic.com/original/4X/1/4/b/14b2322732c31a11987b70e80c0b0da0a0c0122e.webp?v=telegram",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/sabagura",
-      "topic": "telegram",
-      "order": 38,
-      "emojiCount": 120,
       "isArchived": false
     },
     {
@@ -437,12 +367,76 @@
       "isArchived": true
     },
     {
-      "id": "group-1757396353003",
-      "name": "X",
-      "icon": "X",
-      "topic": "x",
-      "order": 47,
-      "emojiCount": 366,
+      "id": "group-1759672893426",
+      "name": "yauyau",
+      "icon": "https://cdn3.ldstatic.com/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
+      "topic": "other",
+      "order": 130,
+      "emojiCount": 77,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761442802743",
+      "name": "あきゅー",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
+      "topic": "other",
+      "order": 131,
+      "emojiCount": 11,
+      "isArchived": true
+    },
+    {
+      "id": "group-1759062077224",
+      "name": "アマカノ 3",
+      "icon": "https://cdn3.ldstatic.com/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
+      "topic": "other",
+      "order": 132,
+      "emojiCount": 4,
+      "isArchived": true
+    },
+    {
+      "id": "group-1758290078442",
+      "name": "东方大头",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
+      "topic": "other",
+      "order": 134,
+      "emojiCount": 30,
+      "isArchived": false
+    },
+    {
+      "id": "group-1765974153699",
+      "name": "丸山彩表情包 | 素素祥祥子",
+      "icon": "https://cdn3.ldstatic.com/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
+      "topic": "other",
+      "order": 135,
+      "emojiCount": 25,
+      "isArchived": false
+    },
+    {
+      "id": "group-1762354829964",
+      "name": "二阶堂希罗",
+      "icon": "https://cdn3.ldstatic.com/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
+      "topic": "other",
+      "order": 137,
+      "emojiCount": 45,
+      "isArchived": true
+    },
+    {
+      "id": "group-1768045118897",
+      "name": "二阶堂希罗 专题",
+      "icon": "⚔️",
+      "detail": "",
+      "topic": "other",
+      "order": 138,
+      "emojiCount": 47,
+      "isArchived": false
+    },
+    {
+      "id": "group-1765462664131",
+      "name": "亚托莉花嫁",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/6/6/16644686465bfa67925239a4626d0cf7de505ffe.gif",
+      "topic": "other",
+      "order": 139,
+      "emojiCount": 25,
       "isArchived": true
     }
   ]

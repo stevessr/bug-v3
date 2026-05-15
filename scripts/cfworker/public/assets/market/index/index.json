@@ -1,45 +1,171 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-14T15:21:21.313Z",
+  "exportDate": "2026-05-14T15:59:23.124Z",
   "totalGroups": 284,
-  "pageSize": 50,
+  "pageSize": 48,
   "totalPages": 6,
   "pages": [
     {
       "name": "page-1.json",
       "start": 1,
-      "end": 50,
-      "count": 50
+      "end": 48,
+      "count": 48
     },
     {
       "name": "page-2.json",
-      "start": 51,
-      "end": 100,
-      "count": 50
+      "start": 49,
+      "end": 96,
+      "count": 48
     },
     {
       "name": "page-3.json",
-      "start": 101,
-      "end": 150,
-      "count": 50
+      "start": 97,
+      "end": 144,
+      "count": 48
     },
     {
       "name": "page-4.json",
-      "start": 151,
-      "end": 200,
-      "count": 50
+      "start": 145,
+      "end": 192,
+      "count": 48
     },
     {
       "name": "page-5.json",
-      "start": 201,
-      "end": 250,
-      "count": 50
+      "start": 193,
+      "end": 240,
+      "count": 48
     },
     {
       "name": "page-6.json",
-      "start": 251,
+      "start": 241,
       "end": 284,
-      "count": 34
+      "count": 44
+    }
+  ],
+  "topics": [
+    {
+      "id": "all",
+      "label": "全部",
+      "totalGroups": 284,
+      "totalPages": 6,
+      "pages": [
+        {
+          "name": "page-1.json",
+          "start": 1,
+          "end": 48,
+          "count": 48
+        },
+        {
+          "name": "page-2.json",
+          "start": 49,
+          "end": 96,
+          "count": 48
+        },
+        {
+          "name": "page-3.json",
+          "start": 97,
+          "end": 144,
+          "count": 48
+        },
+        {
+          "name": "page-4.json",
+          "start": 145,
+          "end": 192,
+          "count": 48
+        },
+        {
+          "name": "page-5.json",
+          "start": 193,
+          "end": 240,
+          "count": 48
+        },
+        {
+          "name": "page-6.json",
+          "start": 241,
+          "end": 284,
+          "count": 44
+        }
+      ]
+    },
+    {
+      "id": "bilibili",
+      "label": "bilibili",
+      "totalGroups": 5,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "bilibili-page-1.json",
+          "start": 1,
+          "end": 5,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "telegram",
+      "label": "telegram",
+      "totalGroups": 48,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "telegram-page-1.json",
+          "start": 1,
+          "end": 48,
+          "count": 48
+        }
+      ]
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "totalGroups": 83,
+      "totalPages": 2,
+      "pages": [
+        {
+          "name": "x-page-1.json",
+          "start": 1,
+          "end": 48,
+          "count": 48
+        },
+        {
+          "name": "x-page-2.json",
+          "start": 49,
+          "end": 83,
+          "count": 35
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": "其他",
+      "totalGroups": 148,
+      "totalPages": 4,
+      "pages": [
+        {
+          "name": "other-page-1.json",
+          "start": 1,
+          "end": 48,
+          "count": 48
+        },
+        {
+          "name": "other-page-2.json",
+          "start": 49,
+          "end": 96,
+          "count": 48
+        },
+        {
+          "name": "other-page-3.json",
+          "start": 97,
+          "end": 144,
+          "count": 48
+        },
+        {
+          "name": "other-page-4.json",
+          "start": 145,
+          "end": 148,
+          "count": 4
+        }
+      ]
     }
   ]
 }
