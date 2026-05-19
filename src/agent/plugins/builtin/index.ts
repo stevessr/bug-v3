@@ -7,6 +7,7 @@ import { clipboardPlugin } from './clipboard'
 import { quickEmojiAddPlugin } from './quickEmojiAdd'
 import { deepResearchPlugin } from './deepResearch'
 import { codeExplainerPlugin } from './codeExplainer'
+import { browserAiPlugin } from './browserAi'
 
 /**
  * 内置插件清单。新增插件时在此 append 即可。
@@ -15,6 +16,7 @@ import { codeExplainerPlugin } from './codeExplainer'
  */
 export const BUILTIN_PLUGINS: readonly AgentPlugin[] = [
   pageInfoPlugin,
+  browserAiPlugin,
   clipboardPlugin,
   quickEmojiAddPlugin,
   deepResearchPlugin,
