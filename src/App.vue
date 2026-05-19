@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 
-// 使用静态导入，扩展不需要代码分割
-import Popup from './popup/Popup.vue'
-import Options from './options/Options.vue'
-import Sidebar from './sidebar/Sidebar.vue'
+// 三个模式互斥，按需异步加载，避免 popup 启动时也付出
+// Options + Sidebar（含 agent / @anthropic-ai/sdk）的解析与下载成本。
+const Popup = defineAsyncComponent(() => import('./popup/Popup.vue'))
+const Options = defineAsyncComponent(() => import('./options/Options.vue'))
+const Sidebar = defineAsyncComponent(() => import('./sidebar/Sidebar.vue'))
 
 import router from '@/options/router'
 

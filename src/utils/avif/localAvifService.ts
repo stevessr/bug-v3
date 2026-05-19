@@ -4,9 +4,11 @@ import { encode as encodeAvif } from '@jsquash/avif'
 import classWorkerURL from '@ffmpeg/ffmpeg/worker?url'
 import coreURL from '@ffmpeg/core?url'
 import wasmURL from '@ffmpeg/core/wasm?url'
-import coreMtURL from '@ffmpeg/core-mt?url'
-import wasmMtURL from '@ffmpeg/core-mt/wasm?url'
-import workerMtURL from '@ffmpeg/core-mt/worker?url'
+// 多线程 FFmpeg 核心需要 cross-origin isolation（manifest 未启用
+// cross_origin_embedder_policy），扩展上下文中永远不会满足。静态引用
+// @ffmpeg/core-mt 会把 32MB 多线程 WASM 强制拷贝进 dist，因此移除对应
+// import。如果未来 manifest 开启 COI，可恢复 coreMtURL/wasmMtURL/workerMtURL
+// 并启用 canUseMultiThreadCore 分支。
 
 export interface LocalAvifProgress {
   message: string
@@ -143,10 +145,6 @@ class LocalAvifService {
   private ffmpeg: FFmpeg | null = null
   private ffmpegLoadPromise: Promise<void> | null = null
 
-  private canUseMultiThreadCore(): boolean {
-    return typeof SharedArrayBuffer !== 'undefined' && globalThis.crossOriginIsolated === true
-  }
-
   private getFfmpeg(): FFmpeg {
     if (!this.ffmpeg) {
       this.ffmpeg = new FFmpeg()
@@ -162,14 +160,7 @@ class LocalAvifService {
     const ffmpeg = this.getFfmpeg()
     this.ffmpegLoadPromise = (async () => {
       if (ffmpeg.loaded) return
-
-      const useMultiThreadCore = this.canUseMultiThreadCore()
-      await ffmpeg.load({
-        classWorkerURL,
-        coreURL: useMultiThreadCore ? coreMtURL : coreURL,
-        wasmURL: useMultiThreadCore ? wasmMtURL : wasmURL,
-        workerURL: useMultiThreadCore ? workerMtURL : undefined
-      })
+      await ffmpeg.load({ classWorkerURL, coreURL, wasmURL })
     })().catch(error => {
       this.ffmpegLoadPromise = null
       throw error

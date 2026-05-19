@@ -170,6 +170,48 @@ function createPruneKatexFallbackFontsPlugin(): Plugin {
   }
 }
 
+// 拦截 @jsquash/avif 的多线程编码器入口（avif_enc_mt.js 及其 worker），
+// 替换为一个最小 stub 模块。原始文件包含 `new Worker(new URL('./avif_enc_mt.worker.mjs', import.meta.url))`
+// 与 `new URL('avif_enc_mt.wasm', import.meta.url)`，Vite 一旦扫描这两条
+// 引用就会强制把 3.4MB 多线程 WASM、对应 worker 以及 hash 副本拷贝进 dist。
+// 扩展 manifest 未启用 cross-origin isolation，threads() 在运行时必定 false，
+// 因此整个 MT 分支是死代码。
+//
+// 这里走 resolveId hook 而不是 resolve.alias，是因为 vite:worker-import-meta-url
+// 插件需要在原始 importer 的目录里查找 worker 路径，alias 改成绝对路径反而
+// 让相对路径解析失败。返回一个虚拟模块 id 让后续 load 钩子提供 stub 代码。
+function createAvifMtStubPlugin(): Plugin {
+  const VIRTUAL_ID = '\0virtual:avif-enc-mt-stub'
+  // 既要匹配 jsquash 内部的相对 import `./codec/enc/avif_enc_mt.js`，
+  // 也要匹配 Vite 已解析过的绝对/规范化路径。简单匹配文件基名即可，
+  // 因为 avif_enc_mt 是 jsquash 独有的命名。
+  const AVIF_MT_BASENAME_RE = /(?:^|[\\/])avif_enc_mt(?:\.worker)?\.m?js(?:\?.*)?$/
+  return {
+    name: 'avif-enc-mt-stub',
+    enforce: 'pre',
+    resolveId(source) {
+      // 廉价前置过滤：源字符串不含 `avif_enc_mt` 时立刻返回。
+      // resolveId 会对每个模块触发，避免对几千个无关 id 跑正则。
+      if (!source.includes('avif_enc_mt')) return null
+      if (AVIF_MT_BASENAME_RE.test(source)) {
+        return VIRTUAL_ID
+      }
+      return null
+    },
+    load(id) {
+      if (id === VIRTUAL_ID) {
+        return [
+          '// jsquash AVIF multi-thread encoder is stubbed: extension is not COI.',
+          'export default function avifEncMtStub() {',
+          '  return Promise.reject(new Error("AVIF multi-thread encoder disabled (no COI)."))',
+          '}'
+        ].join('\n')
+      }
+      return null
+    }
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // 根据构建模式设置编译期标志
   const isDev = mode === 'development'
@@ -258,6 +300,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       createAntDesignVueOnDemandPlugin(),
       createPruneKatexFallbackFontsPlugin(),
+      createAvifMtStubPlugin(),
       vue({
         // 优化：启用 Vue 的响应式转换优化
         script: {
@@ -393,11 +436,26 @@ export default defineConfig(({ mode }) => {
                     {
                       name: 'vendor-core',
                       test: /[\\/]node_modules[\\/](?:vue|pinia|vue-router|@vueuse)[\\/]/,
-                      priority: 20
+                      priority: 25
+                    },
+                    {
+                      name: 'vendor-ai',
+                      test: /[\\/]node_modules[\\/](?:@anthropic-ai|@mariozechner)[\\/]/,
+                      priority: 22
+                    },
+                    {
+                      name: 'vendor-editor',
+                      test: /[\\/]node_modules[\\/](?:prosemirror-[^\\/]+|@bbob|marked|rehype|rehype-parse|rehype-stringify|unified|unist-util-visit|dompurify|highlight\.js)[\\/]/,
+                      priority: 18
+                    },
+                    {
+                      name: 'vendor-image',
+                      test: /[\\/]node_modules[\\/](?:@jsquash|libheif-js|@ffmpeg|fflate)[\\/]/,
+                      priority: 15
                     },
                     {
                       name: 'vendor-utils',
-                      test: /[\\/]node_modules[\\/](?:katex|dayjs|lodash)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:katex|dayjs|lodash|dexie|zod|nanoid|typeit)[\\/]/,
                       priority: 10
                     },
                     {

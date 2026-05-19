@@ -10,6 +10,9 @@ import {
 } from './utils/core/platformDetector'
 import { loadPlatformModule } from './utils/core/platformLoader'
 import { dispatchMessage } from './messageHandlers'
+import { initializeEmojiFeature } from './utils/init'
+import { postTimings } from './discourse/utils/timingsBinder'
+import { autoReadAllv2 } from './discourse/utils/autoReadReplies'
 
 import { createLogger } from '@/utils/logger'
 
@@ -33,11 +36,6 @@ async function initialize(): Promise<void> {
   if (shouldInjectEmojiFeature()) {
     log.info('Initializing emoji feature for Discourse/forum platform')
     try {
-      const [{ initializeEmojiFeature }, { postTimings }, { autoReadAllv2 }] = await Promise.all([
-        import('./utils/init'),
-        import('./discourse/utils/timingsBinder'),
-        import('./discourse/utils/autoReadReplies')
-      ])
       initializeEmojiFeature()
 
       // Expose helpers to page context for testing and manual triggers.

@@ -1,6 +1,15 @@
-import { localAvifService, type LocalAvifProgress } from '@/utils/avif/localAvifService'
-import { renderTgsToPngFrames } from '@/utils/telegram/tgsToFrames'
+import type { LocalAvifProgress } from '@/utils/avif/localAvifService'
 import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
+
+export type { LocalAvifProgress }
+
+// FFmpeg + jsquash/avif 体积巨大（>30MB WASM），只在用户真正触发本地
+// AVIF 转码时才加载。tgsToFrames 内部也动态导入 lottie-web。
+const loadLocalAvifService = () =>
+  import('@/utils/avif/localAvifService').then(m => m.localAvifService)
+
+const loadTgsRenderer = () =>
+  import('@/utils/telegram/tgsToFrames').then(m => m.renderTgsToPngFrames)
 
 export interface TelegramStickerConversionSettings {
   localAvifEnabled: boolean
@@ -98,6 +107,7 @@ export async function convertTelegramStickerBlob(
     if (settings.localAvifEnabled) {
       try {
         onProgress?.({ message: TELEGRAM_STAGE_HINTS.localAnimated })
+        const localAvifService = await loadLocalAvifService()
         const animated = await withTimeout(
           localAvifService.convertWebmToAnimatedAvif(blob, {
             signal: settings.signal,
@@ -115,6 +125,7 @@ export async function convertTelegramStickerBlob(
       } catch (localAnimatedError) {
         try {
           onProgress?.({ message: TELEGRAM_STAGE_HINTS.localStatic })
+          const localAvifService = await loadLocalAvifService()
           const staticAvif = await localAvifService.encodeStaticAvifFromVideoFirstFrame(blob, {
             signal: settings.signal
           })
@@ -153,12 +164,14 @@ export async function convertTelegramStickerBlob(
       throw new Error('TGS 贴纸需要启用本地 AVIF 转换')
     }
 
+    const renderTgsToPngFrames = await loadTgsRenderer()
     const rendered = await renderTgsToPngFrames(blob, {
       signal: settings.signal
     })
 
     try {
       onProgress?.({ message: TELEGRAM_STAGE_HINTS.localAnimated })
+      const localAvifService = await loadLocalAvifService()
       const animated = await withTimeout(
         localAvifService.convertPngFramesToAnimatedAvif(rendered.frames, rendered.fps, {
           signal: settings.signal,
@@ -179,6 +192,7 @@ export async function convertTelegramStickerBlob(
         throw animatedError
       }
       onProgress?.({ message: TELEGRAM_STAGE_HINTS.localStatic })
+      const localAvifService = await loadLocalAvifService()
       const staticAvif = await localAvifService.encodeStaticAvifFromBlob(firstFrame, {
         signal: settings.signal
       })
