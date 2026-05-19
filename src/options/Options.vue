@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, provide, watchEffect } from 'vue'
+import {
+  defineAsyncComponent,
+  onMounted,
+  onBeforeUnmount,
+  ref,
+  computed,
+  provide,
+  watch,
+  watchEffect
+} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
-import ImportConfigModal from './modals/ImportConfigModal.vue'
-import ImportEmojisModal from './modals/ImportEmojisModal.vue'
-import CreateGroupModal from './components/CreateGroupModal.vue'
-import AddEmojiModal from './modals/AddEmojiModal.vue'
-import ConfirmGenericModal from './modals/ConfirmGenericModal.vue'
-import NotificationToasts from './components/NotificationToasts.vue'
-import EditEmojiModal from './modals/EditEmojiModal.vue'
-import EditGroupModal from './components/EditGroupModal.vue'
+// 模态框 / 通知组件按需异步加载，配合 v-if "首次显示" 标志位，
+// 避免初次进入 Options 页就下载所有 modal 代码
+const ImportConfigModal = defineAsyncComponent(() => import('./modals/ImportConfigModal.vue'))
+const ImportEmojisModal = defineAsyncComponent(() => import('./modals/ImportEmojisModal.vue'))
+const CreateGroupModal = defineAsyncComponent(() => import('./components/CreateGroupModal.vue'))
+const AddEmojiModal = defineAsyncComponent(() => import('./modals/AddEmojiModal.vue'))
+const ConfirmGenericModal = defineAsyncComponent(() => import('./modals/ConfirmGenericModal.vue'))
+const NotificationToasts = defineAsyncComponent(() => import('./components/NotificationToasts.vue'))
+const EditEmojiModal = defineAsyncComponent(() => import('./modals/EditEmojiModal.vue'))
+const EditGroupModal = defineAsyncComponent(() => import('./components/EditGroupModal.vue'))
+const ExportProgressModal = defineAsyncComponent(
+  () => import('./components/ExportProgressModal.vue')
+)
+const opensource = defineAsyncComponent(() => import('@/options/modals/opensource.vue'))
+
 // composable
 import useOptions from './useOptions'
-import ExportProgressModal from './components/ExportProgressModal.vue'
 
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { setConfirmHandler, clearConfirmHandler } from '@/options/utils/confirmService'
-import opensource from '@/options/modals/opensource.vue'
 
 const { t, initI18n, isReady } = useI18n()
 
@@ -107,6 +121,17 @@ const _modalComponents = {
   AddEmojiModal
 } as const
 void Object.keys(_modalComponents)
+
+// Modal latching: 只在首次需要显示时才挂载（触发 async chunk 加载），之后保持挂载
+// NotificationToasts 始终挂载以便随时弹出提示
+const createGroupModalLoaded = ref(false)
+const addEmojiModalLoaded = ref(false)
+const editGroupModalLoaded = ref(false)
+const importConfigModalLoaded = ref(false)
+const importEmojisModalLoaded = ref(false)
+const editEmojiModalLoaded = ref(false)
+const confirmGenericModalLoaded = ref(false)
+const exportProgressModalLoaded = ref(false)
 
 // re-export bindings for template access
 const {
@@ -253,6 +278,40 @@ const onExportModalCancel = () => {
   }
 }
 
+// Latching watchers: 一旦某个 modal 第一次显示，就保持挂载，避免重复触发 import
+watch(
+  () => showCreateGroupModal.value,
+  v => v && (createGroupModalLoaded.value = true)
+)
+watch(
+  () => showAddEmojiModal.value,
+  v => v && (addEmojiModalLoaded.value = true)
+)
+watch(
+  () => showEditGroupModal.value,
+  v => v && (editGroupModalLoaded.value = true)
+)
+watch(
+  () => showImportModal.value,
+  v => v && (importConfigModalLoaded.value = true)
+)
+watch(
+  () => showImportEmojiModal.value,
+  v => v && (importEmojisModalLoaded.value = true)
+)
+watch(
+  () => showEditEmojiModal.value,
+  v => v && (editEmojiModalLoaded.value = true)
+)
+watch(
+  () => showConfirmGenericModal.value,
+  v => v && (confirmGenericModalLoaded.value = true)
+)
+watch(
+  () => showExportModal.value,
+  v => v && (exportProgressModalLoaded.value = true)
+)
+
 onMounted(async () => {
   // 初始化 i18n
   await initI18n()
@@ -266,9 +325,7 @@ onMounted(async () => {
       confirmGenericMessage.value = message || ''
       showConfirmGenericModal.value = true
     })
-  })
-
-  // 处理通过 query tabs 指定的初始页面或分组
+  }) // 处理通过 query tabs 指定的初始页面或分组
   const queryTabs =
     (route.query.tabs as string) || new URLSearchParams(window.location.search).get('tabs')
   const keys = menuItems.value.map(i => i.key)
@@ -402,9 +459,14 @@ const handleSaveGroup = (
       </main>
 
       <!-- Create Group and Add Emoji modals extracted into components -->
-      <CreateGroupModal v-model:visible="showCreateGroupModal" @create="onGroupCreated" />
+      <CreateGroupModal
+        v-if="createGroupModalLoaded"
+        v-model:visible="showCreateGroupModal"
+        @create="onGroupCreated"
+      />
 
       <AddEmojiModal
+        v-if="addEmojiModalLoaded"
         v-model:show="showAddEmojiModal"
         :groups="emojiStore.groups"
         :defaultGroupId="selectedGroupForAdd"
@@ -412,6 +474,7 @@ const handleSaveGroup = (
       />
 
       <EditGroupModal
+        v-if="editGroupModalLoaded"
         v-model:visible="showEditGroupModal"
         :group-id="editingGroupId"
         :initial-name="editGroupName"
@@ -421,11 +484,20 @@ const handleSaveGroup = (
       />
 
       <!-- Import modals (components) -->
-      <ImportConfigModal v-model="showImportModal" @imported="handleConfigImported" />
+      <ImportConfigModal
+        v-if="importConfigModalLoaded"
+        v-model="showImportModal"
+        @imported="handleConfigImported"
+      />
 
-      <ImportEmojisModal v-model="showImportEmojiModal" @imported="handleEmojisImported" />
+      <ImportEmojisModal
+        v-if="importEmojisModalLoaded"
+        v-model="showImportEmojiModal"
+        @imported="handleEmojisImported"
+      />
 
       <EditEmojiModal
+        v-if="editEmojiModalLoaded"
         v-model:show="showEditEmojiModal"
         :emoji="editingEmoji || undefined"
         :groupId="editingEmojiGroupId"
@@ -442,6 +514,7 @@ const handleSaveGroup = (
       />
 
       <ConfirmGenericModal
+        v-if="confirmGenericModalLoaded"
         v-model:show="showConfirmGenericModal"
         :title="confirmGenericTitle"
         :message="confirmGenericMessage"
@@ -451,6 +524,7 @@ const handleSaveGroup = (
 
       <!-- Export progress modal (shows detailed per-emoji preview + progress) -->
       <ExportProgressModal
+        v-if="exportProgressModalLoaded"
         v-model:show="showExportModal"
         :percent="exportModalPercent"
         :currentName="exportModalCurrentName || undefined"

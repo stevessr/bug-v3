@@ -19,5 +19,5 @@ export {
   setupPeriodicCleanup,
   invalidateCache
 } from './handlersImpl'
-export { setupScheduledLikes, cleanupScheduledLikes } from './scheduledLikes'
-export { setupScheduledBrowse, cleanupScheduledBrowse } from './scheduledBrowse'
+// scheduledLikes / scheduledBrowse 已改为按需 import，
+// background entry 通过动态 import 直接加载这两个模块

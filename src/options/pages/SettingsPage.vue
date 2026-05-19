@@ -1,25 +1,44 @@
 <script setup lang="ts">
-import { inject, ref, computed, onMounted } from 'vue'
+import { defineAsyncComponent, inject, ref, computed, onMounted } from 'vue'
 
 import type { OptionsInject } from '../types'
 import GridColumnsSelector from '../components/GridColumnsSelector.vue'
-import ThemeSettings from '../components/ThemeSettings.vue'
-import UISettings from '../components/UISettings.vue'
-import FeatureSwitchSettings from '../components/FeatureSwitchSettings.vue'
-import MenuBarSettings from '../components/MenuBarSettings.vue'
-import CustomCSSBlockSettings from '../components/CustomCSSBlockSettings.vue'
-import EmojiUrlRewriteSettings from '../components/EmojiUrlRewriteSettings.vue'
-import AISettings from '../components/AISettings.vue'
-import AIAgentSettings from '../components/AIAgentSettings.vue'
-import ImgbedSettings from '../components/ImgbedSettings.vue'
-import SyncSettings from '../components/SyncSettings.vue'
-import CloudDataPreview from '../components/CloudDataPreview.vue'
-import CollaborativeUploadSettings from '../components/CollaborativeUploadSettings.vue'
-import ChatMultiReactorSettings from '../components/ChatMultiReactorSettings.vue'
-import LinuxDoSeekingSettings from '../components/LinuxDoSeekingSettings.vue'
-import ScheduledLikesSettings from '../components/ScheduledLikesSettings.vue'
-import ScheduledBrowseSettings from '../components/ScheduledBrowseSettings.vue'
-import McpSettings from '../components/McpSettings.vue'
+
+// 将每个 tab 内的设置面板拆分为独立 chunk，按需异步加载
+// SettingsPage 初始体积从 ~458KB 降低，仅加载当前激活 tab 对应模块
+const ThemeSettings = defineAsyncComponent(() => import('../components/ThemeSettings.vue'))
+const UISettings = defineAsyncComponent(() => import('../components/UISettings.vue'))
+const FeatureSwitchSettings = defineAsyncComponent(
+  () => import('../components/FeatureSwitchSettings.vue')
+)
+const MenuBarSettings = defineAsyncComponent(() => import('../components/MenuBarSettings.vue'))
+const CustomCSSBlockSettings = defineAsyncComponent(
+  () => import('../components/CustomCSSBlockSettings.vue')
+)
+const EmojiUrlRewriteSettings = defineAsyncComponent(
+  () => import('../components/EmojiUrlRewriteSettings.vue')
+)
+const AISettings = defineAsyncComponent(() => import('../components/AISettings.vue'))
+const AIAgentSettings = defineAsyncComponent(() => import('../components/AIAgentSettings.vue'))
+const ImgbedSettings = defineAsyncComponent(() => import('../components/ImgbedSettings.vue'))
+const SyncSettings = defineAsyncComponent(() => import('../components/SyncSettings.vue'))
+const CloudDataPreview = defineAsyncComponent(() => import('../components/CloudDataPreview.vue'))
+const CollaborativeUploadSettings = defineAsyncComponent(
+  () => import('../components/CollaborativeUploadSettings.vue')
+)
+const ChatMultiReactorSettings = defineAsyncComponent(
+  () => import('../components/ChatMultiReactorSettings.vue')
+)
+const LinuxDoSeekingSettings = defineAsyncComponent(
+  () => import('../components/LinuxDoSeekingSettings.vue')
+)
+const ScheduledLikesSettings = defineAsyncComponent(
+  () => import('../components/ScheduledLikesSettings.vue')
+)
+const ScheduledBrowseSettings = defineAsyncComponent(
+  () => import('../components/ScheduledBrowseSettings.vue')
+)
+const McpSettings = defineAsyncComponent(() => import('../components/McpSettings.vue'))
 
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
@@ -83,9 +102,9 @@ const isConfigured = computed(() => {
   return configSaved.value || emojiStore.isSyncConfigured()
 })
 
-// Refs for sync components
-const syncSettingsRef = ref<InstanceType<typeof SyncSettings>>()
-const cloudDataPreviewRef = ref<InstanceType<typeof CloudDataPreview>>()
+// Refs for sync components (async-wrapped, instance type erased)
+const syncSettingsRef = ref<any>()
+const cloudDataPreviewRef = ref<any>()
 
 // Load existing sync config on component mount
 onMounted(async () => {

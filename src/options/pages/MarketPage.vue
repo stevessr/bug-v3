@@ -556,7 +556,11 @@ onMounted(() => {
         <a-pagination
           v-model:current="currentPage"
           v-model:pageSize="pageSize"
-          :total="usePagedIndex && hasTopicIndex && !isSearchMode ? currentTopicTotal : filteredMarketGroups.length"
+          :total="
+            usePagedIndex && hasTopicIndex && !isSearchMode
+              ? currentTopicTotal
+              : filteredMarketGroups.length
+          "
           :show-size-changer="!usePagedIndex || isSearchMode"
           :page-size-options="['12', '24', '48', '96']"
           show-less-items

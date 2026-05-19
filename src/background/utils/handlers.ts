@@ -17,33 +17,28 @@ import {
   handleGetEmojiSetting,
   handleGetEmojiSettingsBatch,
   handleProxyFetchRequest,
-  handleProxyImageRequest,
-  setupScheduledLikes,
-  setupScheduledBrowse
+  handleProxyImageRequest
 } from '../handlers/main.ts'
-import {
-  setMcpBridgeDisabled,
-  setupMcpBridge,
-  testMcpBridge,
-  testMcpServer,
-  reconnectMcpBridge,
-  getMcpConnectionStatus,
-  loadMcpBridgeSettings,
-  saveMcpBridgeSettings
-} from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
 
 import type { BackgroundMessage, TypedMessage, MessageResponse } from '@/types/messages'
 
-// Re-export setup functions so background entry can import them from ./handlers
-export {
-  setupStorageChangeListener,
-  setupContextMenu,
-  setupPeriodicCleanup,
-  setupMcpBridge,
-  setupScheduledLikes,
-  setupScheduledBrowse
+// Re-export 给 background 入口使用的同步 setup
+export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
+
+// mcpBridge 模块体积较大且仅在 MCP 启用时使用，使用懒加载并缓存
+let mcpBridgeModulePromise: Promise<typeof import('../handlers/mcpBridge.ts')> | null = null
+function loadMcpBridge() {
+  if (!mcpBridgeModulePromise) {
+    mcpBridgeModulePromise = import('../handlers/mcpBridge.ts')
+  }
+  return mcpBridgeModulePromise
+}
+
+export async function setupMcpBridge() {
+  const mod = await loadMcpBridge()
+  return mod.setupMcpBridge()
 }
 
 export function setupMessageListener() {
@@ -163,43 +158,61 @@ export function setupMessageListener() {
               return false
             }
           case 'MCP_BRIDGE_SET_DISABLED':
-            setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
-            sendResponse({ success: true })
+            void loadMcpBridge().then(mod => {
+              mod.setMcpBridgeDisabled(Boolean((typedMsg as any).disabled))
+              sendResponse({ success: true })
+            })
             return true
           case 'MCP_BRIDGE_TEST':
-            testMcpBridge()
-              .then(result => sendResponse({ success: true, data: result }))
-              .catch((error: any) =>
-                sendResponse({ success: false, error: error?.message || 'MCP 测试失败' })
-              )
+            void loadMcpBridge().then(mod =>
+              mod
+                .testMcpBridge()
+                .then(result => sendResponse({ success: true, data: result }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || 'MCP 测试失败' })
+                )
+            )
             return true
           case 'MCP_SERVER_TEST':
-            testMcpServer((typedMsg as any).options || {})
-              .then(result => sendResponse({ success: true, data: result }))
-              .catch((error: any) =>
-                sendResponse({ success: false, error: error?.message || 'MCP 服务测试失败' })
-              )
+            void loadMcpBridge().then(mod =>
+              mod
+                .testMcpServer((typedMsg as any).options || {})
+                .then(result => sendResponse({ success: true, data: result }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || 'MCP 服务测试失败' })
+                )
+            )
             return true
           case 'MCP_BRIDGE_RECONNECT':
-            reconnectMcpBridge()
-            sendResponse({ success: true })
+            void loadMcpBridge().then(mod => {
+              mod.reconnectMcpBridge()
+              sendResponse({ success: true })
+            })
             return true
           case 'MCP_GET_STATUS':
-            sendResponse({ success: true, data: { status: getMcpConnectionStatus() } })
+            void loadMcpBridge().then(mod =>
+              sendResponse({ success: true, data: { status: mod.getMcpConnectionStatus() } })
+            )
             return true
           case 'MCP_GET_BRIDGE_SETTINGS':
-            loadMcpBridgeSettings()
-              .then(settings => sendResponse({ success: true, data: settings }))
-              .catch((error: any) =>
-                sendResponse({ success: false, error: error?.message || '获取设置失败' })
-              )
+            void loadMcpBridge().then(mod =>
+              mod
+                .loadMcpBridgeSettings()
+                .then(settings => sendResponse({ success: true, data: settings }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || '获取设置失败' })
+                )
+            )
             return true
           case 'MCP_SET_BRIDGE_SETTINGS':
-            saveMcpBridgeSettings((typedMsg as any).data || {})
-              .then(() => sendResponse({ success: true }))
-              .catch((error: any) =>
-                sendResponse({ success: false, error: error?.message || '保存设置失败' })
-              )
+            void loadMcpBridge().then(mod =>
+              mod
+                .saveMcpBridgeSettings((typedMsg as any).data || {})
+                .then(() => sendResponse({ success: true }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || '保存设置失败' })
+                )
+            )
             return true
 
           case 'ADD_TO_FAVORITES':

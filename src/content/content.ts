@@ -38,7 +38,7 @@ async function initialize(): Promise<void> {
     try {
       initializeEmojiFeature()
 
-      // Expose helpers to page context for testing and manual triggers.
+      // 仅在确认是 Discourse 域名时才暴露测试辅助工具
       try {
         const domains = getDiscourseDomains()
         if (domains.some(domain => window.location.hostname.includes(domain))) {

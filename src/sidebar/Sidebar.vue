@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 
 import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 import { useEmojiImages } from '../composables/useEmojiImages'
 
-import Agent from './Agent.vue'
+// Agent 面板异步加载：包含 @anthropic-ai/sdk / katex / marked / dompurify
+// 等大型依赖，仅在用户切到 agent 视图时再下载
+const Agent = defineAsyncComponent(() => import('./Agent.vue'))
 
 import CachedImage from '@/components/CachedImage.vue'
 import { shouldUseImageCache } from '@/utils/imageCachePolicy'
