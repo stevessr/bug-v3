@@ -13,6 +13,12 @@ import {
   type FolderPermissionState
 } from '@/agent/folderAccess'
 import { useAgentSettings } from '@/agent/useAgentSettings'
+import {
+  BUILTIN_AGENT_PLUGINS,
+  defaultEnabledPluginIds,
+  isPluginEnabled,
+  type AgentPlugin
+} from '@/agent/plugins'
 import type {
   AgentFolderRoot,
   AgentPermissions,
@@ -22,6 +28,39 @@ import type {
 
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
 const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
+
+// === 插件开关 ===
+const pluginList: AgentPlugin[] = [...BUILTIN_AGENT_PLUGINS]
+const pluginEnabledMap = computed<Record<string, boolean>>(() => {
+  const map: Record<string, boolean> = {}
+  for (const plugin of pluginList) {
+    map[plugin.id] = isPluginEnabled(settings.value, plugin)
+  }
+  return map
+})
+const togglePlugin = (pluginId: string, enabled: boolean) => {
+  const current = Array.isArray(settings.value.enabledPluginIds)
+    ? [...settings.value.enabledPluginIds]
+    : defaultEnabledPluginIds()
+  const next = enabled
+    ? current.includes(pluginId)
+      ? current
+      : [...current, pluginId]
+    : current.filter(id => id !== pluginId)
+  settings.value = { ...settings.value, enabledPluginIds: next }
+}
+const resetPluginsToDefault = () => {
+  settings.value = { ...settings.value, enabledPluginIds: defaultEnabledPluginIds() }
+}
+const enableAllPlugins = () => {
+  settings.value = {
+    ...settings.value,
+    enabledPluginIds: pluginList.map(plugin => plugin.id)
+  }
+}
+const disableAllPlugins = () => {
+  settings.value = { ...settings.value, enabledPluginIds: [] }
+}
 
 const headerDrafts = reactive<Record<string, string>>({})
 const headerErrors = reactive<Record<string, string>>({})
@@ -585,6 +624,45 @@ watch(
         </div>
 
         <a-button type="dashed" block @click="addMcpServer">添加 MCP 服务</a-button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-medium dark:text-white">可选插件</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            扩展 Pi Agent 的能力。可单独启用或关闭；插件在 piRuntime 中按需加载 tools 或追加 system
+            prompt。
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a-button size="small" @click="enableAllPlugins">全部启用</a-button>
+          <a-button size="small" @click="disableAllPlugins">全部关闭</a-button>
+          <a-button size="small" @click="resetPluginsToDefault">恢复默认</a-button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div
+          v-for="plugin in pluginList"
+          :key="plugin.id"
+          class="flex items-start justify-between gap-3 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+        >
+          <div class="space-y-1 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium dark:text-white">{{ plugin.name }}</span>
+              <a-tag color="default" class="text-xs">{{ plugin.id }}</a-tag>
+              <a-tag v-if="plugin.defaultEnabled" color="blue" class="text-xs">默认开启</a-tag>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ plugin.description }}</p>
+          </div>
+          <a-switch
+            :checked="pluginEnabledMap[plugin.id]"
+            size="small"
+            @change="(v: unknown) => togglePlugin(plugin.id, Boolean(v))"
+          />
+        </div>
       </div>
     </div>
 

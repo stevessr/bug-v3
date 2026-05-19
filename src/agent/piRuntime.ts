@@ -37,6 +37,11 @@ import {
   type Skill
 } from './skills'
 import { updateMemory } from './memory'
+import {
+  buildPluginSystemPromptSection,
+  collectPluginTools,
+  type PluginRuntimeContext
+} from './plugins'
 import type { AgentStreamUpdate } from './agentStreaming'
 import type { AgentUsage } from './agentUsage'
 import type {
@@ -322,10 +327,21 @@ const buildRuntimeSystemPrompt = async (
 ): Promise<string> => {
   const basePrompt = buildSystemPrompt(settings, subagent, context)
 
-  if (!settings.enableMcp) return basePrompt
+  // 插件 prompt 片段：与 MCP 推荐分开拼接，保证插件能力即便禁用 MCP 也生效
+  const pluginCtx: PluginRuntimeContext = {
+    settings,
+    subagent,
+    tab: context?.tab
+  }
+  const pluginSection = buildPluginSystemPromptSection(pluginCtx)
+
+  const mergeWithPlugin = (mainPrompt: string) =>
+    pluginSection ? `${mainPrompt}\n\n${pluginSection}` : mainPrompt
+
+  if (!settings.enableMcp) return mergeWithPlugin(basePrompt)
 
   const enabledServers = getScopedEnabledMcpServers(settings, subagent)
-  if (!enabledServers.length) return basePrompt
+  if (!enabledServers.length) return mergeWithPlugin(basePrompt)
 
   try {
     const allowedServerIds = new Set(enabledServers.map(server => server.id))
@@ -338,7 +354,7 @@ const buildRuntimeSystemPrompt = async (
         allowedServerIds.has(skill.mcpServerId)
     )
 
-    if (!callableSkills.length) return basePrompt
+    if (!callableSkills.length) return mergeWithPlugin(basePrompt)
 
     const suggestedSkills = getSuggestedSkills(input, callableSkills, 4)
     const recommendedSkills = recommendSkills(
@@ -352,10 +368,11 @@ const buildRuntimeSystemPrompt = async (
     const promptSkills = dedupeSkills([...suggestedSkills, ...recommendedSkills]).slice(0, 4)
     const skillSection = buildRuntimeSkillPromptSection(promptSkills)
 
-    return skillSection ? `${basePrompt}\n\n${skillSection}` : basePrompt
+    const merged = skillSection ? `${basePrompt}\n\n${skillSection}` : basePrompt
+    return mergeWithPlugin(merged)
   } catch (error) {
     console.warn('[Pi Runtime] Failed to build runtime skill prompt:', error)
-    return basePrompt
+    return mergeWithPlugin(basePrompt)
   }
 }
 
@@ -445,8 +462,8 @@ const buildTools = async (
     parameters: Type.Unsafe<Record<string, unknown>>(
       toolSchema.input_schema as Record<string, unknown>
     ),
-    execute: async (toolCallId: string, params: Record<string, unknown>) => {
-      const parsed = normalizeToolPayload(parseResponsePayload(params))
+    execute: async (toolCallId: string, params: unknown) => {
+      const parsed = normalizeToolPayload(parseResponsePayload(params as Record<string, unknown>))
       const mergedPayload = parsed || runtime.pendingTool?.toolInputs[0] || null
       const toolUseIds =
         runtime.pendingTool?.toolUseIds.length && runtime.pendingTool.toolUseIds[0]
@@ -503,6 +520,15 @@ const buildTools = async (
 
   const tools: AgentTool<any, any>[] = [browserActionsTool]
 
+  // 用户启用的插件 tools：早于 MCP 注入，独立于 enableMcp 开关
+  const pluginCtx: PluginRuntimeContext = {
+    settings: runtime.settings,
+    subagent: runtime.subagent,
+    tab: runtime.context?.tab
+  }
+  const pluginTools = await collectPluginTools(pluginCtx)
+  tools.push(...pluginTools)
+
   if (!runtime.settings.enableMcp) {
     return tools
   }
@@ -528,8 +554,12 @@ const buildTools = async (
       parameters: Type.Unsafe<Record<string, unknown>>(
         proxyTool.input_schema as Record<string, unknown>
       ),
-      execute: async (_toolCallId: string, params: Record<string, unknown>) => {
-        const result = await callMcpTool(server, discovered.tool.name, params)
+      execute: async (_toolCallId: string, params: unknown) => {
+        const result = await callMcpTool(
+          server,
+          discovered.tool.name,
+          params as Record<string, unknown>
+        )
         if (result.error) {
           throw new Error(result.error)
         }

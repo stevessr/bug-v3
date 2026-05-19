@@ -1,4 +1,5 @@
 import type { AgentPermissions, AgentSettings, SubAgentConfig } from './types'
+import { defaultEnabledPluginIds } from './plugins'
 
 const defaultPermissions: AgentPermissions = {
   click: true,
@@ -183,5 +184,6 @@ export const defaultAgentSettings: AgentSettings = {
   ],
   folderRoots: [],
   subagents: defaultSubagents,
-  defaultSubagentId: defaultSubagents[0].id
+  defaultSubagentId: defaultSubagents[0].id,
+  enabledPluginIds: defaultEnabledPluginIds()
 }

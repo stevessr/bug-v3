@@ -90,6 +90,11 @@ export interface AgentSettings {
   folderRoots: AgentFolderRoot[]
   subagents: SubAgentConfig[]
   defaultSubagentId?: string
+  /**
+   * 已启用的内置插件 id 列表。`undefined` 表示沿用各插件的 defaultEnabled，
+   * 一旦用户在 UI 调整过任意插件，便会落盘成具体数组。
+   */
+  enabledPluginIds?: string[]
 }
 
 export type AgentRole = 'user' | 'assistant' | 'system' | 'tool'
