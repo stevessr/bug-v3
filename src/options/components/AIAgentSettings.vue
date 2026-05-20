@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
+import { getProviders } from '@mariozechner/pi-ai'
 
 import SkillsSettings from './SkillsSettings.vue'
 
@@ -17,7 +18,8 @@ import {
   BUILTIN_AGENT_PLUGINS,
   defaultEnabledPluginIds,
   isPluginEnabled,
-  type AgentPlugin
+  type AgentPlugin,
+  type PluginAvailabilityResult
 } from '@/agent/plugins'
 import type {
   AgentFolderRoot,
@@ -29,7 +31,141 @@ import type {
 const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
 const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
 
-// === 插件开关 ===
+// === 提供商切换 UI ===
+// pi-ai 的 KnownProvider 列表（运行时获取，避免硬编码漂移）
+const availableProviders = computed<string[]>(() => {
+  try {
+    return [...getProviders()].sort((a, b) => a.localeCompare(b))
+  } catch {
+    return []
+  }
+})
+
+// 解析当前 taskModel 中的 provider 前缀
+const detectedProvider = computed<string | undefined>(() => {
+  const raw = (settings.value.taskModel || '').trim()
+  const slash = raw.indexOf('/')
+  if (slash <= 0) return undefined
+  const candidate = raw.slice(0, slash)
+  return availableProviders.value.includes(candidate) ? candidate : undefined
+})
+
+// 由用户选择的 provider，独立于 taskModel 中的前缀，便于先选后填模型 ID
+const selectedProvider = ref<string | undefined>(detectedProvider.value)
+
+watch(detectedProvider, value => {
+  if (value && value !== selectedProvider.value) {
+    selectedProvider.value = value
+  }
+})
+
+const providerOptions = computed(() =>
+  availableProviders.value.map(provider => ({ label: provider, value: provider }))
+)
+
+// 推荐的 provider 默认 endpoint（仅作为说明文案，留空表示 pi-ai 内置默认即可）
+const PROVIDER_HINTS: Record<string, string> = {
+  anthropic: 'https://api.anthropic.com',
+  openai: 'https://api.openai.com/v1',
+  google: 'https://generativelanguage.googleapis.com',
+  openrouter: 'https://openrouter.ai/api/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  cerebras: 'https://api.cerebras.ai/v1',
+  mistral: 'https://api.mistral.ai/v1',
+  xai: 'https://api.x.ai/v1',
+  zai: 'https://api.z.ai/v1',
+  deepseek: 'https://api.deepseek.com',
+  'moonshotai-cn': 'https://api.moonshot.cn/v1',
+  moonshotai: 'https://api.moonshot.ai/v1'
+}
+
+const providerHint = computed(() => {
+  const p = selectedProvider.value
+  if (!p) return ''
+  const hint = PROVIDER_HINTS[p]
+  return hint
+    ? `${p} 默认 endpoint：${hint}（baseUrl 留空即用默认）`
+    : `${p}（自定义 baseUrl 可选）`
+})
+
+const stripProviderPrefix = (raw: string, provider: string): string => {
+  const trimmed = (raw || '').trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith(`${provider}/`)) return trimmed.slice(provider.length + 1)
+  // 已有其他 provider 前缀时也剥掉，避免重复嵌套
+  const slash = trimmed.indexOf('/')
+  if (slash > 0 && availableProviders.value.includes(trimmed.slice(0, slash))) {
+    return trimmed.slice(slash + 1)
+  }
+  return trimmed
+}
+
+const applyProviderPrefix = () => {
+  const provider = selectedProvider.value
+  if (!provider) return
+  const next = { ...settings.value }
+  for (const key of ['taskModel', 'reasoningModel', 'imageModel'] as const) {
+    const current = (next[key] || '').trim()
+    if (!current) continue
+    const tail = stripProviderPrefix(current, provider)
+    next[key] = tail ? `${provider}/${tail}` : ''
+  }
+  settings.value = next
+}
+
+const clearProviderPrefix = () => {
+  const next = { ...settings.value }
+  for (const key of ['taskModel', 'reasoningModel', 'imageModel'] as const) {
+    const current = (next[key] || '').trim()
+    if (!current) continue
+    const slash = current.indexOf('/')
+    if (slash > 0 && availableProviders.value.includes(current.slice(0, slash))) {
+      next[key] = current.slice(slash + 1)
+    }
+  }
+  settings.value = next
+}
+
+// 连接有效性显示
+type ConnectionState = 'ok' | 'partial' | 'missing'
+const connectionStatus = computed<{ state: ConnectionState; label: string; hint: string }>(() => {
+  const hasKey = Boolean(settings.value.apiKey?.trim())
+  const hasModel = Boolean(settings.value.taskModel?.trim())
+  if (!hasKey && !hasModel) {
+    return { state: 'missing', label: '未配置', hint: '请填写 API Key 与任务模型。' }
+  }
+  if (!hasKey) {
+    return { state: 'partial', label: '缺少 API Key', hint: '已填写模型，但 API Key 为空。' }
+  }
+  if (!hasModel) {
+    return { state: 'partial', label: '缺少任务模型', hint: '已填写 API Key，但任务模型为空。' }
+  }
+  if (!detectedProvider.value) {
+    return {
+      state: 'partial',
+      label: '未识别 provider',
+      hint: '当前 taskModel 不含 provider 前缀，将按 baseUrl/模型名自动推断。'
+    }
+  }
+  return {
+    state: 'ok',
+    label: `已配置 · ${detectedProvider.value}`,
+    hint: '模型与 API Key 均已填写。'
+  }
+})
+
+const connectionBadgeColor = computed(() => {
+  switch (connectionStatus.value.state) {
+    case 'ok':
+      return 'green'
+    case 'partial':
+      return 'orange'
+    default:
+      return 'red'
+  }
+})
+
+// === 插件能力探测 ===
 const pluginList: AgentPlugin[] = [...BUILTIN_AGENT_PLUGINS]
 const pluginEnabledMap = computed<Record<string, boolean>>(() => {
   const map: Record<string, boolean> = {}
@@ -60,6 +196,64 @@ const enableAllPlugins = () => {
 }
 const disableAllPlugins = () => {
   settings.value = { ...settings.value, enabledPluginIds: [] }
+}
+
+const pluginAvailability = reactive<Record<string, PluginAvailabilityResult>>({})
+const pluginAvailabilityLoading = reactive<Record<string, boolean>>({})
+
+const refreshPluginAvailability = async (plugin: AgentPlugin) => {
+  if (!plugin.checkAvailability) return
+  pluginAvailabilityLoading[plugin.id] = true
+  try {
+    const result = await plugin.checkAvailability()
+    pluginAvailability[plugin.id] = result
+  } catch (err: any) {
+    pluginAvailability[plugin.id] = {
+      level: 'unknown',
+      summary: err?.message || '探测失败',
+      details: []
+    }
+  } finally {
+    pluginAvailabilityLoading[plugin.id] = false
+  }
+}
+
+const refreshAllPluginAvailability = async () => {
+  await Promise.all(
+    pluginList
+      .filter(plugin => plugin.checkAvailability)
+      .map(plugin => refreshPluginAvailability(plugin))
+  )
+}
+
+const PLUGIN_LEVEL_COLOR: Record<PluginAvailabilityResult['level'], string> = {
+  available: 'green',
+  partial: 'orange',
+  unavailable: 'red',
+  unknown: 'default'
+}
+
+const PLUGIN_LEVEL_LABEL: Record<PluginAvailabilityResult['level'], string> = {
+  available: '可用',
+  partial: '部分可用',
+  unavailable: '不可用',
+  unknown: '未知'
+}
+
+const CAPABILITY_STATE_COLOR: Record<string, string> = {
+  available: 'green',
+  downloadable: 'gold',
+  downloading: 'blue',
+  unavailable: 'red',
+  unknown: 'default'
+}
+
+const CAPABILITY_STATE_LABEL: Record<string, string> = {
+  available: '就绪',
+  downloadable: '待下载',
+  downloading: '下载中',
+  unavailable: '不可用',
+  unknown: '未知'
 }
 
 const headerDrafts = reactive<Record<string, string>>({})
@@ -441,6 +635,10 @@ onMounted(() => {
   void refreshAllFolderRoots()
 })
 
+onMounted(() => {
+  void refreshAllPluginAvailability()
+})
+
 watch(
   () => settings.value.folderRoots.map(root => root.id).join(','),
   () => {
@@ -460,20 +658,41 @@ watch(
             或模型名前缀自动推断 provider。
           </p>
         </div>
-        <a-button size="small" @click="restoreAgentDefaults">重置为默认</a-button>
+        <div class="flex items-center gap-2">
+          <a-tag :color="connectionBadgeColor">
+            <a-tooltip :title="connectionStatus.hint">
+              {{ connectionStatus.label }}
+            </a-tooltip>
+          </a-tag>
+          <a-button size="small" @click="restoreAgentDefaults">重置为默认</a-button>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-[180px_1fr_auto_auto]">
+        <a-select
+          v-model:value="selectedProvider"
+          :options="providerOptions"
+          show-search
+          allow-clear
+          placeholder="选择提供商"
+        />
         <a-input
           v-model:value="settings.baseUrl"
-          placeholder="可选：覆盖默认 provider endpoint，例如 https://openrouter.ai/api/v1"
-        ></a-input>
-        <a-input
-          v-model:value="settings.apiKey"
-          placeholder="Provider API Key"
-          type="password"
-        ></a-input>
+          placeholder="可选：覆盖默认 endpoint，例如 https://openrouter.ai/api/v1"
+        />
+        <a-button :disabled="!selectedProvider" @click="applyProviderPrefix">
+          应用到模型字段
+        </a-button>
+        <a-button @click="clearProviderPrefix">清除前缀</a-button>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+        {{
+          providerHint ||
+          '选择提供商后点击“应用到模型字段”，会把 provider 前缀写入下方三个模型输入。'
+        }}
+      </p>
+
+      <a-input v-model:value="settings.apiKey" placeholder="Provider API Key" type="password" />
 
       <template v-if="enableLocalMcpBridge">
         <div class="flex items-center justify-between">
@@ -633,10 +852,11 @@ watch(
           <h3 class="text-base font-medium dark:text-white">可选插件</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
             扩展 Pi Agent 的能力。可单独启用或关闭；插件在 piRuntime 中按需加载 tools 或追加 system
-            prompt。
+            prompt。徽章显示该插件在当前浏览器中的能力探测结果。
           </p>
         </div>
         <div class="flex items-center gap-2">
+          <a-button size="small" @click="refreshAllPluginAvailability">重新探测</a-button>
           <a-button size="small" @click="enableAllPlugins">全部启用</a-button>
           <a-button size="small" @click="disableAllPlugins">全部关闭</a-button>
           <a-button size="small" @click="resetPluginsToDefault">恢复默认</a-button>
@@ -650,10 +870,75 @@ watch(
           class="flex items-start justify-between gap-3 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
         >
           <div class="space-y-1 flex-1">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="text-sm font-medium dark:text-white">{{ plugin.name }}</span>
               <a-tag color="default" class="text-xs">{{ plugin.id }}</a-tag>
               <a-tag v-if="plugin.defaultEnabled" color="blue" class="text-xs">默认开启</a-tag>
+              <template v-if="plugin.checkAvailability">
+                <a-popover v-if="pluginAvailability[plugin.id]" trigger="click" placement="bottom">
+                  <template #title>
+                    <span class="text-xs">
+                      能力状态 ·
+                      {{ PLUGIN_LEVEL_LABEL[pluginAvailability[plugin.id].level] }}
+                    </span>
+                  </template>
+                  <template #content>
+                    <div class="space-y-2 max-w-xs">
+                      <div class="text-xs text-gray-600 dark:text-gray-300">
+                        {{ pluginAvailability[plugin.id].summary }}
+                      </div>
+                      <div v-if="pluginAvailability[plugin.id].details?.length" class="space-y-1">
+                        <div
+                          v-for="detail in pluginAvailability[plugin.id].details"
+                          :key="detail.label"
+                          class="flex items-center justify-between gap-2 text-xs"
+                        >
+                          <span class="text-gray-700 dark:text-gray-200">
+                            {{ detail.label }}
+                          </span>
+                          <a-tag
+                            :color="CAPABILITY_STATE_COLOR[detail.state] || 'default'"
+                            class="m-0"
+                          >
+                            {{ CAPABILITY_STATE_LABEL[detail.state] || detail.state }}
+                          </a-tag>
+                        </div>
+                        <div
+                          v-for="detail in pluginAvailability[plugin.id].details?.filter(
+                            d => d.hint
+                          )"
+                          :key="`hint-${detail.label}`"
+                          class="text-[11px] text-gray-500 dark:text-gray-400 pl-1"
+                        >
+                          · {{ detail.label }}：{{ detail.hint }}
+                        </div>
+                      </div>
+                      <a-button
+                        size="small"
+                        :loading="pluginAvailabilityLoading[plugin.id]"
+                        @click="refreshPluginAvailability(plugin)"
+                      >
+                        重新探测
+                      </a-button>
+                    </div>
+                  </template>
+                  <a-tag
+                    :color="PLUGIN_LEVEL_COLOR[pluginAvailability[plugin.id].level]"
+                    class="cursor-pointer text-xs"
+                  >
+                    {{ PLUGIN_LEVEL_LABEL[pluginAvailability[plugin.id].level] }} ·
+                    {{ pluginAvailability[plugin.id].summary }}
+                  </a-tag>
+                </a-popover>
+                <a-tag
+                  v-else
+                  color="default"
+                  class="cursor-pointer text-xs"
+                  @click="refreshPluginAvailability(plugin)"
+                >
+                  {{ pluginAvailabilityLoading[plugin.id] ? '探测中…' : '点击探测' }}
+                </a-tag>
+              </template>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">{{ plugin.description }}</p>
           </div>

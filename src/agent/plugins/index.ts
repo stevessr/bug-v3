@@ -22,6 +22,45 @@ export interface PluginRuntimeContext {
   }
 }
 
+/**
+ * 单项能力 / 子 API 的运行时状态。
+ * - available：已就绪可直接调用
+ * - downloadable / downloading：浏览器内置模型需要先下载
+ * - unavailable：当前环境无法使用（缺少 API / 标志位未开启 / 权限被拒）
+ * - unknown：尚未探测或探测失败
+ */
+export type PluginCapabilityState =
+  | 'available'
+  | 'downloadable'
+  | 'downloading'
+  | 'unavailable'
+  | 'unknown'
+
+export interface PluginCapabilityDetail {
+  /** 给用户看的能力名 */
+  label: string
+  state: PluginCapabilityState
+  /** 状态不为 available 时的简短解释 */
+  hint?: string
+}
+
+/**
+ * 插件整体可用性汇总。UI 用这个判断徽章颜色与提示文案。
+ * - available：所有子能力均可用
+ * - partial：部分子能力可用
+ * - unavailable：完全不可用
+ * - unknown：未提供 checkAvailability 或探测失败
+ */
+export type PluginAvailabilityLevel = 'available' | 'partial' | 'unavailable' | 'unknown'
+
+export interface PluginAvailabilityResult {
+  level: PluginAvailabilityLevel
+  /** 一句话总结，例如 "Chrome 内核 · 5/5 就绪" */
+  summary: string
+  /** 可选：拆分到子 API / 子能力的明细，用于 Popover 展开 */
+  details?: PluginCapabilityDetail[]
+}
+
 export interface AgentPlugin {
   /** 全局唯一 id，用于持久化用户启用列表 */
   id: string
@@ -42,6 +81,11 @@ export interface AgentPlugin {
    * 异步以便插件按需从 chrome.* / network 拉资源。
    */
   buildTools?: (ctx: PluginRuntimeContext) => Promise<AgentTool<any, any>[]> | AgentTool<any, any>[]
+  /**
+   * 可选的运行时可用性探测。仅在设置页主动调用，用于在 UI 上展示
+   * 插件能力是否真的可用（特别是依赖浏览器原生 API 的插件，例如内置 AI）。
+   */
+  checkAvailability?: () => Promise<PluginAvailabilityResult> | PluginAvailabilityResult
 }
 
 /** 内置插件总表（导出供 UI 使用） */

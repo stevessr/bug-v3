@@ -1,14 +1,16 @@
 import { Type } from '@mariozechner/pi-ai'
 
-import type { AgentPlugin } from '../index'
+import type { AgentPlugin, PluginAvailabilityResult, PluginCapabilityState } from '../index'
 
 import {
+  detectBrowserAiVendor,
   getBrowserAiSnapshot,
   runLanguageModelPrompt,
   runRewriter,
   runSummarizer,
   runTranslator,
   runWriter,
+  type AvailabilityState,
   type RewriterFormat,
   type RewriterLength,
   type RewriterTone,
@@ -64,6 +66,78 @@ type RewriteParams = {
   context?: string
 }
 
+const VENDOR_LABELS: Record<ReturnType<typeof detectBrowserAiVendor>, string> = {
+  edge: 'Edge / Phi-4-mini',
+  chrome: 'Chrome / Gemini Nano',
+  unknown: '未知 Chromium'
+}
+
+const mapAvailability = (state: AvailabilityState): PluginCapabilityState => state
+
+const hintFor = (
+  api: 'LanguageModel' | 'Summarizer' | 'Translator' | 'Writer' | 'Rewriter',
+  state: AvailabilityState,
+  vendor: ReturnType<typeof detectBrowserAiVendor>
+): string | undefined => {
+  if (state === 'available') return undefined
+  if (state === 'downloadable') return '需手动触发模型下载'
+  if (state === 'downloading') return '模型正在下载中'
+  if (api === 'Translator' && vendor === 'edge') return 'Edge 暂未提供 Translator API'
+  if ((api === 'Writer' || api === 'Rewriter') && vendor === 'chrome') {
+    return 'Chrome 默认未开启，需在 chrome://flags 启用'
+  }
+  if (vendor === 'edge') return '需在 edge://flags 启用对应 "API for Phi mini" 开关'
+  if (vendor === 'chrome') return '需在 chrome://flags 启用 Built-in AI 并触发模型下载'
+  return '当前浏览器不支持该 API'
+}
+
+async function checkBrowserAiAvailability(): Promise<PluginAvailabilityResult> {
+  try {
+    const snapshot = await getBrowserAiSnapshot()
+    const apiStates: Array<{
+      key: 'languageModel' | 'summarizer' | 'translator' | 'writer' | 'rewriter'
+      label: string
+      api: 'LanguageModel' | 'Summarizer' | 'Translator' | 'Writer' | 'Rewriter'
+    }> = [
+      { key: 'languageModel', label: 'LanguageModel', api: 'LanguageModel' },
+      { key: 'summarizer', label: 'Summarizer', api: 'Summarizer' },
+      { key: 'translator', label: 'Translator', api: 'Translator' },
+      { key: 'writer', label: 'Writer', api: 'Writer' },
+      { key: 'rewriter', label: 'Rewriter', api: 'Rewriter' }
+    ]
+
+    const details = apiStates.map(({ key, label, api }) => {
+      const raw = snapshot[key]
+      return {
+        label,
+        state: mapAvailability(raw),
+        hint: hintFor(api, raw, snapshot.vendor)
+      }
+    })
+
+    const availableCount = details.filter(d => d.state === 'available').length
+    const total = details.length
+    const vendorLabel = VENDOR_LABELS[snapshot.vendor]
+
+    let level: PluginAvailabilityResult['level']
+    if (availableCount === total) level = 'available'
+    else if (availableCount === 0) level = 'unavailable'
+    else level = 'partial'
+
+    return {
+      level,
+      summary: `${vendorLabel} · ${availableCount}/${total} 就绪`,
+      details
+    }
+  } catch (err) {
+    return {
+      level: 'unknown',
+      summary: `探测失败：${(err as Error)?.message || String(err)}`,
+      details: []
+    }
+  }
+}
+
 /**
  * browser-ai 插件
  *
@@ -82,6 +156,7 @@ export const browserAiPlugin: AgentPlugin = {
   description:
     '调用浏览器本地的 on-device AI：Chrome 用 Gemini Nano；Edge 用 Phi-4-mini，并额外提供 Writer/Rewriter。',
   defaultEnabled: false,
+  checkAvailability: checkBrowserAiAvailability,
   systemPrompt: () =>
     [
       '插件 browser-ai 提供本地推理 tool，跨 Chrome 与 Edge 内核：',

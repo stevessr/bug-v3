@@ -19,6 +19,26 @@ export const clipboardPlugin: AgentPlugin = {
   name: '剪贴板访问',
   description: '允许代理读取与写入系统剪贴板。仅在你启用时生效。',
   defaultEnabled: false,
+  checkAvailability: () => {
+    const hasClipboard = typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.writeText)
+    return hasClipboard
+      ? {
+          level: 'available',
+          summary: 'navigator.clipboard 可用',
+          details: [{ label: 'navigator.clipboard', state: 'available' }]
+        }
+      : {
+          level: 'unavailable',
+          summary: '当前上下文无 navigator.clipboard',
+          details: [
+            {
+              label: 'navigator.clipboard',
+              state: 'unavailable',
+              hint: '非安全上下文或被浏览器策略禁用'
+            }
+          ]
+        }
+  },
   systemPrompt: () =>
     [
       '插件 clipboard 提供 `plugin_clipboard` tool。',
