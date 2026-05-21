@@ -139,6 +139,18 @@ const defaultSubagents: SubAgentConfig[] = [
 ]
 
 export const defaultAgentSettings: AgentSettings = {
+  activeProvider: 'anthropic',
+  providerProfiles: [
+    {
+      provider: 'anthropic',
+      label: 'Anthropic',
+      apiKey: '',
+      baseUrl: '',
+      taskModel: 'claude-sonnet-4-20250514',
+      reasoningModel: 'claude-sonnet-4-20250514',
+      imageModel: 'claude-sonnet-4-20250514'
+    }
+  ],
   baseUrl: '',
   apiKey: '',
   apiFlavor: 'messages',

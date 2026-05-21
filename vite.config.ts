@@ -221,10 +221,10 @@ export default defineConfig(({ mode }) => {
   const minifier = shouldMinify
     ? process.env.BUILD_MINIFIER === 'terser'
       ? 'terser'
-      : true  // Vite 8 default: Oxc
+      : true // Vite 8 default: Oxc
     : false
   const cssMinifier = shouldMinify
-    ? true  // Vite 8 default: lightningcss
+    ? true // Vite 8 default: lightningcss
     : false
   const enableForumBrowser = process.env.ENABLE_FORUM_BROWSER !== 'false'
   const enableLocalMcpBridge = process.env.ENABLE_LOCAL_MCP_BRIDGE !== 'false'

@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Browser extension for managing custom emojis across websites.
 
 Core stack:
+
 - Vue 3 + TypeScript + Pinia
 - Ant Design Vue + Tailwind CSS
 - Vite 8 (Rolldown) with custom Node build scripts
@@ -49,6 +50,7 @@ pnpm test:extension:debug
 ```
 
 Notes:
+
 - Extension tests load the built extension from `dist/`, so run `pnpm build` first when needed.
 - Packaging/release scripts live in `package.json` (`pack:crx`/`pack:xpi`/`pack:zip`, `release`, `update:*`).
 - `pnpm dev` and any build can take `--no-browser` (or env `npm_config_no_browser=true`) to disable the forum browser entry — see Build Flags below.
@@ -70,10 +72,13 @@ Passing `--no-browser` to `scripts/build.js` sets both `ENABLE_FORUM_BROWSER=fal
 ## High-Level Architecture
 
 ### Path alias
+
 - `@` → `src/` (configured in `vite.config.ts`). Always prefer `@/...` over relative `../../...`.
 
 ### Auto-imports (silent globals)
+
 `unplugin-auto-import` and `unplugin-vue-components` are configured in `vite.config.ts`. The following are usable **without explicit imports** in source files:
+
 - Vue Composition API: `ref`, `computed`, `watch`, `onMounted`, etc.
 - Vue Router: `useRoute`, `useRouter`.
 - Pinia helpers.
@@ -87,6 +92,7 @@ Type definitions land in `src/auto-imports.d.ts` and `src/components.d.ts` — t
 A custom vite plugin in `vite.config.ts` (`ANTD_IMPORT_TRANSFORM_MAP`) also rewrites named imports from `ant-design-vue` into per-component `ant-design-vue/es/<path>` imports for tree-shaking.
 
 ### Runtime Entrypoints
+
 - `index.html` → `src/main.ts`: main extension UI bootstrap (Pinia + router + App mount). Used by popup / options / sidebar.
 - `src/App.vue`: selects which mode component to render based on URL params:
   - `?tabs=<route>` (without `type=sidebar`) **forces options mode** and navigates the router to the given path; this overrides any `type=popup`.
@@ -97,30 +103,36 @@ A custom vite plugin in `vite.config.ts` (`ANTD_IMPORT_TRANSFORM_MAP`) also rewr
 - `src/content/content.ts`: content-script entry. Detects platform via `utils/core/platformDetector`, statically initializes Discourse features when applicable, dynamically `import()`s other platform modules via `utils/core/platformLoader`.
 
 ### State + Storage
+
 - Pinia stores live under `src/stores/`. **`src/stores/index.ts` is the canonical re-export hub** — prefer importing from `@/stores` over individual files. Sub-stores: `groupStore`, `emojiCrudStore`, `favoritesStore`, `tagStore`, `syncStore`, `cssStore`, `searchIndexStore`, `tagCountStore`. The legacy umbrella store `emojiStore.ts` is still the primary entry point for many components.
 - Cross-context (popup ↔ options ↔ content ↔ background) sync logic: `src/stores/core/useStorageSync.ts`.
 - Storage I/O and keys are centralized in `src/utils/simpleStorage.ts`. Higher-level sync targets (WebDAV, S3) are in `src/utils/syncTargets.ts` and `src/utils/cloudflareSync.ts`.
 
 ### Messaging Between Contexts
+
 - Canonical message/type definitions: `src/types/messages.ts`.
 - Background handler registration: `src/background/utils/handlers.ts` (calls into one-handler-per-file modules under `src/background/handlers/`, e.g. `handleProxyImageRequest.ts`, `handleAddToFavorites.ts`).
 - Content-side dispatcher: `src/content/messageHandlers/index.ts`.
 - When adding a message type: update `src/types/messages.ts`, add/extend the handler under `src/background/handlers/`, register it in `utils/handlers.ts`, and update the content dispatcher if relevant.
 
 ### Content Script — Multi-Platform
+
 Content script supports several platforms; only Discourse is statically loaded. Each platform has its own folder under `src/content/`:
+
 - `discourse/` — emoji injection, post timings binder, auto-read replies, like counter, seeking, credit, etc.
 - `bilibili/`, `pixiv/`, `reddit/`, `tieba/`, `x/` (Twitter), `xhs/` (Xiaohongshu).
 - Shared utilities: `src/content/utils/{core,picker,dom,upload,injector,ui,...}`.
 - The detector decides whether to load the emoji feature (Discourse-style forums) and/or a platform-specific module.
 
 ### Discourse Feature Area (in-app browser)
+
 - UI modules: `src/options/components/discourse/`.
 - Route loaders (home/categories/tags/bookmarks/etc.): `src/options/components/discourse/routes/root.ts`.
 - API action exports are centralized in `src/options/components/discourse/actions/index.ts`.
 - The whole feature is gated by `ENABLE_FORUM_BROWSER`.
 
 ### Agent / MCP Bridge
+
 - Agent module: `src/agent/`. Contains its own runtime, types, memory, skills, MCP client/UI, retry, streaming, thread management, etc. Entry types: `src/agent/types.ts`; module index: `src/agent/index.ts`.
 - MCP background bridge (websocket): `src/background/handlers/mcpBridge.ts`. Handles WS/WSS auto-upgrade, heartbeat, reconnect, tool dispatch. Replaced at build time by `mcpBridge.disabled.ts` when the local MCP bridge is disabled.
 - MCP app sandbox UI renderer: `src/options/components/McpAppViewer.vue`.

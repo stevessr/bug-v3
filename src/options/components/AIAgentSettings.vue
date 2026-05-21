@@ -15,6 +15,13 @@ import {
 } from '@/agent/folderAccess'
 import { useAgentSettings } from '@/agent/useAgentSettings'
 import {
+  discoverMcpOAuth,
+  dynamicallyRegisterClient,
+  getOAuthRedirectUri,
+  runMcpOAuthFlow
+} from '@/agent/mcpOAuth'
+import { setMcpOAuthTokensUpdatedHandler } from '@/agent/mcpClient'
+import {
   BUILTIN_AGENT_PLUGINS,
   defaultEnabledPluginIds,
   isPluginEnabled,
@@ -24,11 +31,23 @@ import {
 import type {
   AgentFolderRoot,
   AgentPermissions,
+  McpOAuthConfig,
+  McpOAuthTokens,
   McpServerConfig,
   SubAgentConfig
 } from '@/agent/types'
 
-const { settings, addSubagent, removeSubagent, restoreDefaults } = useAgentSettings()
+const {
+  settings,
+  addSubagent,
+  removeSubagent,
+  restoreDefaults,
+  activeProviderProfile,
+  setActiveProvider,
+  addProviderProfile,
+  removeProviderProfile,
+  updateActiveProfile
+} = useAgentSettings()
 const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
 
 // === 提供商切换 UI ===
@@ -41,27 +60,60 @@ const availableProviders = computed<string[]>(() => {
   }
 })
 
-// 解析当前 taskModel 中的 provider 前缀
-const detectedProvider = computed<string | undefined>(() => {
-  const raw = (settings.value.taskModel || '').trim()
-  const slash = raw.indexOf('/')
-  if (slash <= 0) return undefined
-  const candidate = raw.slice(0, slash)
-  return availableProviders.value.includes(candidate) ? candidate : undefined
-})
-
-// 由用户选择的 provider，独立于 taskModel 中的前缀，便于先选后填模型 ID
-const selectedProvider = ref<string | undefined>(detectedProvider.value)
-
-watch(detectedProvider, value => {
-  if (value && value !== selectedProvider.value) {
-    selectedProvider.value = value
+// 当前 active profile 在下拉中的选项（由 settings 驱动；写入交给 setActiveProvider）
+const activeProviderId = computed({
+  get: () => settings.value.activeProvider || activeProviderProfile.value?.provider || '',
+  set: (value: string) => {
+    if (value) setActiveProvider(value)
   }
 })
 
-const providerOptions = computed(() =>
-  availableProviders.value.map(provider => ({ label: provider, value: provider }))
+// 新增 provider 的对话框状态
+const addProviderModalOpen = ref(false)
+const newProviderId = ref<string | undefined>(undefined)
+const newProviderLabel = ref('')
+const newProviderError = ref('')
+
+const existingProviderIds = computed(
+  () => new Set((settings.value.providerProfiles || []).map(p => p.provider))
 )
+
+const newProviderOptions = computed(() =>
+  availableProviders.value
+    .filter(provider => !existingProviderIds.value.has(provider))
+    .map(provider => ({ label: provider, value: provider }))
+)
+
+const openAddProviderModal = () => {
+  newProviderId.value = newProviderOptions.value[0]?.value
+  newProviderLabel.value = ''
+  newProviderError.value = ''
+  addProviderModalOpen.value = true
+}
+
+const submitAddProvider = () => {
+  const providerId = (newProviderId.value || '').trim()
+  if (!providerId) {
+    newProviderError.value = '请选择 provider'
+    return
+  }
+  if (existingProviderIds.value.has(providerId)) {
+    newProviderError.value = '该 provider 已存在'
+    return
+  }
+  addProviderProfile({
+    provider: providerId,
+    label: newProviderLabel.value.trim() || providerId
+  })
+  addProviderModalOpen.value = false
+}
+
+const removeCurrentProvider = () => {
+  const provider = settings.value.activeProvider
+  if (!provider) return
+  if ((settings.value.providerProfiles || []).length <= 1) return
+  removeProviderProfile(provider)
+}
 
 // 推荐的 provider 默认 endpoint（仅作为说明文案，留空表示 pi-ai 内置默认即可）
 const PROVIDER_HINTS: Record<string, string> = {
@@ -80,7 +132,7 @@ const PROVIDER_HINTS: Record<string, string> = {
 }
 
 const providerHint = computed(() => {
-  const p = selectedProvider.value
+  const p = activeProviderProfile.value?.provider
   if (!p) return ''
   const hint = PROVIDER_HINTS[p]
   return hint
@@ -88,69 +140,40 @@ const providerHint = computed(() => {
     : `${p}（自定义 baseUrl 可选）`
 })
 
-const stripProviderPrefix = (raw: string, provider: string): string => {
-  const trimmed = (raw || '').trim()
-  if (!trimmed) return ''
-  if (trimmed.startsWith(`${provider}/`)) return trimmed.slice(provider.length + 1)
-  // 已有其他 provider 前缀时也剥掉，避免重复嵌套
-  const slash = trimmed.indexOf('/')
-  if (slash > 0 && availableProviders.value.includes(trimmed.slice(0, slash))) {
-    return trimmed.slice(slash + 1)
-  }
-  return trimmed
-}
-
-const applyProviderPrefix = () => {
-  const provider = selectedProvider.value
-  if (!provider) return
-  const next = { ...settings.value }
-  for (const key of ['taskModel', 'reasoningModel', 'imageModel'] as const) {
-    const current = (next[key] || '').trim()
-    if (!current) continue
-    const tail = stripProviderPrefix(current, provider)
-    next[key] = tail ? `${provider}/${tail}` : ''
-  }
-  settings.value = next
-}
-
-const clearProviderPrefix = () => {
-  const next = { ...settings.value }
-  for (const key of ['taskModel', 'reasoningModel', 'imageModel'] as const) {
-    const current = (next[key] || '').trim()
-    if (!current) continue
-    const slash = current.indexOf('/')
-    if (slash > 0 && availableProviders.value.includes(current.slice(0, slash))) {
-      next[key] = current.slice(slash + 1)
-    }
-  }
-  settings.value = next
-}
-
-// 连接有效性显示
+// 连接有效性显示：基于 active profile 的填写情况
 type ConnectionState = 'ok' | 'partial' | 'missing'
 const connectionStatus = computed<{ state: ConnectionState; label: string; hint: string }>(() => {
-  const hasKey = Boolean(settings.value.apiKey?.trim())
-  const hasModel = Boolean(settings.value.taskModel?.trim())
+  const profile = activeProviderProfile.value
+  if (!profile) {
+    return { state: 'missing', label: '未配置 provider', hint: '请先添加并选择一个 provider。' }
+  }
+  const hasKey = Boolean(profile.apiKey?.trim())
+  const hasModel = Boolean(profile.taskModel?.trim())
   if (!hasKey && !hasModel) {
-    return { state: 'missing', label: '未配置', hint: '请填写 API Key 与任务模型。' }
+    return {
+      state: 'missing',
+      label: '未配置',
+      hint: `${profile.provider}：请填写 API Key 与任务模型。`
+    }
   }
   if (!hasKey) {
-    return { state: 'partial', label: '缺少 API Key', hint: '已填写模型，但 API Key 为空。' }
-  }
-  if (!hasModel) {
-    return { state: 'partial', label: '缺少任务模型', hint: '已填写 API Key，但任务模型为空。' }
-  }
-  if (!detectedProvider.value) {
     return {
       state: 'partial',
-      label: '未识别 provider',
-      hint: '当前 taskModel 不含 provider 前缀，将按 baseUrl/模型名自动推断。'
+      label: '缺少 API Key',
+      hint: `${profile.provider}：已填写模型，但 API Key 为空。`
+    }
+  }
+  if (!hasModel) {
+    return {
+      state: 'partial',
+      label: '缺少任务模型',
+      hint: `${profile.provider}：已填写 API Key，但任务模型为空。`
     }
   }
   return {
     state: 'ok',
-    label: `已配置 · ${detectedProvider.value}`,
-    hint: '模型与 API Key 均已填写。'
+    label: `已配置 · ${profile.provider}`,
+    hint: `${profile.provider}：模型与 API Key 均已填写。`
   }
 })
 
@@ -627,6 +650,125 @@ const testMcpServerConnection = async (server: McpServerConfig) => {
   }
 }
 
+// === MCP OAuth ===
+const oauthRedirectUri = computed(() => getOAuthRedirectUri())
+const oauthStatus = reactive<Record<string, string>>({})
+const oauthLoading = reactive<Record<string, boolean>>({})
+const oauthAdvancedOpen = reactive<Record<string, boolean>>({})
+
+/** 把当前 MCP server 写回 settings，触发 useAgentSettings 自动保存。 */
+const persistMcpServer = (server: McpServerConfig) => {
+  const idx = settings.value.mcpServers.findIndex(s => s.id === server.id)
+  if (idx === -1) return
+  const next = [...settings.value.mcpServers]
+  next[idx] = { ...server }
+  settings.value = { ...settings.value, mcpServers: next }
+}
+
+const ensureOauthConfig = (server: McpServerConfig): McpOAuthConfig => {
+  if (!server.oauth) server.oauth = {}
+  return server.oauth
+}
+
+const updateOauthConfig = <K extends keyof McpOAuthConfig>(
+  server: McpServerConfig,
+  key: K,
+  value: McpOAuthConfig[K]
+) => {
+  ensureOauthConfig(server)[key] = value
+  persistMcpServer(server)
+}
+
+const discoverServerOAuth = async (server: McpServerConfig) => {
+  oauthLoading[server.id] = true
+  oauthStatus[server.id] = '探测中…'
+  try {
+    const discovered = await discoverMcpOAuth(server.url, server.oauth)
+    server.oauth = discovered
+    persistMcpServer(server)
+    if (discovered.authorizationEndpoint && discovered.tokenEndpoint) {
+      oauthStatus[server.id] = '已完成 OAuth metadata 发现'
+    } else {
+      oauthStatus[server.id] = '探测完成，但端点不完整，请手动补全'
+      oauthAdvancedOpen[server.id] = true
+    }
+  } catch (err: any) {
+    oauthStatus[server.id] = err?.message || '探测失败'
+    oauthAdvancedOpen[server.id] = true
+  } finally {
+    oauthLoading[server.id] = false
+  }
+}
+
+const authorizeServer = async (server: McpServerConfig) => {
+  oauthLoading[server.id] = true
+  oauthStatus[server.id] = '准备授权…'
+  try {
+    let oauth = server.oauth || {}
+    if (!oauth.authorizationEndpoint || !oauth.tokenEndpoint) {
+      oauth = await discoverMcpOAuth(server.url, oauth)
+      server.oauth = oauth
+    }
+    if (!oauth.authorizationEndpoint || !oauth.tokenEndpoint) {
+      throw new Error('OAuth 端点不完整，请先完成 metadata 发现或手动填写。')
+    }
+    if (!oauth.clientId) {
+      if (oauth.registrationEndpoint) {
+        oauthStatus[server.id] = '正在执行 DCR 客户端注册…'
+        const reg = await dynamicallyRegisterClient(oauth, oauthRedirectUri.value)
+        oauth.clientId = reg.clientId
+        if (reg.clientSecret) oauth.clientSecret = reg.clientSecret
+        server.oauth = oauth
+      } else {
+        throw new Error('缺少 client_id，且 authorization server 未提供 registration_endpoint')
+      }
+    }
+    oauthStatus[server.id] = '打开授权窗口…'
+    const tokens = await runMcpOAuthFlow(oauth, { redirectUri: oauthRedirectUri.value })
+    server.oauthTokens = tokens
+    persistMcpServer(server)
+    oauthStatus[server.id] = '授权成功'
+  } catch (err: any) {
+    oauthStatus[server.id] = err?.message || '授权失败'
+  } finally {
+    oauthLoading[server.id] = false
+  }
+}
+
+const logoutServer = (server: McpServerConfig) => {
+  server.oauthTokens = undefined
+  persistMcpServer(server)
+  oauthStatus[server.id] = '已清除当前 OAuth tokens'
+}
+
+const oauthBadge = (server: McpServerConfig) => {
+  const tokens = server.oauthTokens
+  if (!tokens?.accessToken) return { color: 'default', text: '未授权' }
+  if (tokens.expiresAt && Date.now() > tokens.expiresAt) {
+    return { color: 'orange', text: '已过期' }
+  }
+  return { color: 'green', text: '已授权' }
+}
+
+const oauthExpiryText = (tokens: McpOAuthTokens | undefined): string => {
+  if (!tokens?.expiresAt) return tokens?.accessToken ? '无过期信息' : ''
+  const diffMs = tokens.expiresAt - Date.now()
+  if (diffMs <= 0) return '已过期'
+  const minutes = Math.round(diffMs / 60000)
+  return `约 ${minutes} 分钟后过期`
+}
+
+onMounted(() => {
+  // 注册全局回调：mcpClient 刷新 token 后写回 settings，实现持久化
+  setMcpOAuthTokensUpdatedHandler(async (serverId, tokens) => {
+    const idx = settings.value.mcpServers.findIndex(s => s.id === serverId)
+    if (idx === -1) return
+    const next = [...settings.value.mcpServers]
+    next[idx] = { ...next[idx], oauthTokens: tokens }
+    settings.value = { ...settings.value, mcpServers: next }
+  })
+})
+
 onMounted(() => {
   loadMcpBridgeState()
 })
@@ -668,31 +810,50 @@ watch(
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-[180px_1fr_auto_auto]">
-        <a-select
-          v-model:value="selectedProvider"
-          :options="providerOptions"
-          show-search
-          allow-clear
-          placeholder="选择提供商"
-        />
-        <a-input
-          v-model:value="settings.baseUrl"
-          placeholder="可选：覆盖默认 endpoint，例如 https://openrouter.ai/api/v1"
-        />
-        <a-button :disabled="!selectedProvider" @click="applyProviderPrefix">
-          应用到模型字段
-        </a-button>
-        <a-button @click="clearProviderPrefix">清除前缀</a-button>
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+          <a-select
+            v-model:value="activeProviderId"
+            :options="
+              (settings.providerProfiles || []).map(p => ({
+                label: p.label || p.provider,
+                value: p.provider
+              }))
+            "
+            placeholder="选择当前 provider"
+            show-search
+          />
+          <a-button @click="openAddProviderModal">添加 provider</a-button>
+          <a-button
+            danger
+            :disabled="(settings.providerProfiles || []).length <= 1"
+            @click="removeCurrentProvider"
+          >
+            删除当前
+          </a-button>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          每个 provider 独立保存 API Key / endpoint / 默认模型，切换不会丢配置。{{ providerHint }}
+        </p>
       </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-        {{
-          providerHint ||
-          '选择提供商后点击“应用到模型字段”，会把 provider 前缀写入下方三个模型输入。'
-        }}
-      </p>
 
-      <a-input v-model:value="settings.apiKey" placeholder="Provider API Key" type="password" />
+      <template v-if="activeProviderProfile">
+        <a-input
+          :value="activeProviderProfile.apiKey"
+          placeholder="该 provider 的 API Key"
+          type="password"
+          @update:value="(v: string) => updateActiveProfile('apiKey', v)"
+        />
+
+        <a-input
+          :value="activeProviderProfile.baseUrl || ''"
+          placeholder="可选：覆盖默认 endpoint，例如 https://openrouter.ai/api/v1"
+          @update:value="(v: string) => updateActiveProfile('baseUrl', v)"
+        />
+      </template>
+      <div v-else class="text-xs text-amber-600 dark:text-amber-400">
+        当前没有 provider profile。点击「添加 provider」开始配置。
+      </div>
 
       <template v-if="enableLocalMcpBridge">
         <div class="flex items-center justify-between">
@@ -728,24 +889,32 @@ watch(
         当前构建（--no-browser）已在编译期移除本地 MCP 桥接支持。
       </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <a-input
-          v-model:value="settings.taskModel"
-          placeholder="任务模型，例如 anthropic/claude-sonnet-4-20250514"
-        ></a-input>
-        <a-input
-          v-model:value="settings.reasoningModel"
-          placeholder="思考模型（可留空沿用任务模型）"
-        ></a-input>
-        <a-input
-          v-model:value="settings.imageModel"
-          placeholder="图片转述模型（可留空沿用任务模型）"
-        ></a-input>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-        兼容提示：旧配置里的 `apiFlavor` 字段仍会保留，但 Pi 运行时只把它当作存量配置兼容字段，
-        不再按旧的 provider 专有请求分支切换。
-      </p>
+      <template v-if="activeProviderProfile">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <a-input
+            :value="activeProviderProfile.taskModel || ''"
+            :placeholder="`任务模型 id（不含 ${activeProviderProfile.provider}/ 前缀）`"
+            @update:value="(v: string) => updateActiveProfile('taskModel', v)"
+          />
+          <a-input
+            :value="activeProviderProfile.reasoningModel || ''"
+            placeholder="思考模型（可留空沿用任务模型）"
+            @update:value="(v: string) => updateActiveProfile('reasoningModel', v)"
+          />
+          <a-input
+            :value="activeProviderProfile.imageModel || ''"
+            placeholder="图片转述模型（可留空沿用任务模型）"
+            @update:value="(v: string) => updateActiveProfile('imageModel', v)"
+          />
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+          以上模型 id 会自动加上
+          <code>{{ activeProviderProfile.provider }}/</code>
+          前缀传给 Pi runtime；subagent 仍可用完整
+          <code>provider/model</code>
+          字符串覆盖。
+        </p>
+      </template>
 
       <div class="grid grid-cols-1 gap-4">
         <a-input-number
@@ -839,6 +1008,109 @@ watch(
             >
               测试该服务
             </a-button>
+          </div>
+
+          <div class="border-t border-dashed border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-medium dark:text-white">OAuth 2.1</span>
+                <a-tag :color="oauthBadge(server).color" class="text-xs">
+                  {{ oauthBadge(server).text }}
+                </a-tag>
+                <span
+                  v-if="server.oauthTokens?.accessToken"
+                  class="text-[11px] text-gray-500 dark:text-gray-400"
+                >
+                  {{ oauthExpiryText(server.oauthTokens) }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <a-button
+                  size="small"
+                  :loading="oauthLoading[server.id]"
+                  @click="discoverServerOAuth(server)"
+                >
+                  发现 metadata
+                </a-button>
+                <a-button
+                  size="small"
+                  type="primary"
+                  :loading="oauthLoading[server.id]"
+                  @click="authorizeServer(server)"
+                >
+                  授权
+                </a-button>
+                <a-button
+                  size="small"
+                  danger
+                  :disabled="!server.oauthTokens?.accessToken"
+                  @click="logoutServer(server)"
+                >
+                  登出
+                </a-button>
+              </div>
+            </div>
+            <div v-if="oauthStatus[server.id]" class="text-xs text-gray-500 dark:text-gray-400">
+              {{ oauthStatus[server.id] }}
+            </div>
+            <a-collapse
+              :active-key="oauthAdvancedOpen[server.id] ? ['adv'] : []"
+              @change="keys => (oauthAdvancedOpen[server.id] = (keys as string[]).includes('adv'))"
+              ghost
+            >
+              <a-collapse-panel key="adv" header="高级 OAuth 设置">
+                <div class="space-y-2">
+                  <div class="text-[11px] text-gray-500 dark:text-gray-400">
+                    redirect_uri（由 Chrome 自动管理）：
+                    <code class="break-all">{{ oauthRedirectUri }}</code>
+                    <br />
+                    把这个 URL 加入你 OAuth 应用的允许列表。
+                  </div>
+                  <a-input
+                    :value="server.oauth?.authorizationEndpoint || ''"
+                    placeholder="authorization_endpoint"
+                    @update:value="
+                      (v: string) => updateOauthConfig(server, 'authorizationEndpoint', v)
+                    "
+                  />
+                  <a-input
+                    :value="server.oauth?.tokenEndpoint || ''"
+                    placeholder="token_endpoint"
+                    @update:value="(v: string) => updateOauthConfig(server, 'tokenEndpoint', v)"
+                  />
+                  <a-input
+                    :value="server.oauth?.registrationEndpoint || ''"
+                    placeholder="registration_endpoint（可选，用于 DCR）"
+                    @update:value="
+                      (v: string) => updateOauthConfig(server, 'registrationEndpoint', v)
+                    "
+                  />
+                  <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <a-input
+                      :value="server.oauth?.clientId || ''"
+                      placeholder="client_id"
+                      @update:value="(v: string) => updateOauthConfig(server, 'clientId', v)"
+                    />
+                    <a-input
+                      :value="server.oauth?.clientSecret || ''"
+                      placeholder="client_secret（PKCE 通常不需要）"
+                      type="password"
+                      @update:value="(v: string) => updateOauthConfig(server, 'clientSecret', v)"
+                    />
+                  </div>
+                  <a-input
+                    :value="server.oauth?.scopes || ''"
+                    placeholder="scopes（空格分隔）"
+                    @update:value="(v: string) => updateOauthConfig(server, 'scopes', v)"
+                  />
+                  <a-input
+                    :value="server.oauth?.resource || ''"
+                    placeholder="resource（OAuth 2.1 资源标识符，可选）"
+                    @update:value="(v: string) => updateOauthConfig(server, 'resource', v)"
+                  />
+                </div>
+              </a-collapse-panel>
+            </a-collapse>
           </div>
         </div>
 
@@ -1151,5 +1423,36 @@ watch(
 
     <!-- Skills 配置 -->
     <SkillsSettings />
+
+    <a-modal
+      v-model:open="addProviderModalOpen"
+      title="添加 provider"
+      ok-text="添加"
+      cancel-text="取消"
+      @ok="submitAddProvider"
+    >
+      <div class="space-y-3">
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Provider</div>
+          <a-select
+            v-model:value="newProviderId"
+            :options="newProviderOptions"
+            placeholder="选择 pi-ai 支持的 provider"
+            show-search
+            class="w-full"
+          />
+          <div v-if="newProviderOptions.length === 0" class="text-xs text-amber-600 mt-1">
+            当前可用 provider 已全部添加，可先删除不用的再添加。
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">显示名（可选）</div>
+          <a-input v-model:value="newProviderLabel" placeholder="留空则使用 provider id" />
+        </div>
+        <div v-if="newProviderError" class="text-xs text-red-500">
+          {{ newProviderError }}
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>

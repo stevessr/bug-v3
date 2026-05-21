@@ -17,7 +17,8 @@
     "downloads.shelf",
     "downloads.ui",
     "notifications",
-    "nativeMessaging"
+    "nativeMessaging",
+    "identity"
   ],
   "optional_permissions": ["cookies"],
   "host_permissions": ["<all_urls>"],

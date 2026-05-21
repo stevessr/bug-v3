@@ -64,5 +64,10 @@ export const defaultSettings: AppSettings = {
   scheduledLikeTasks: [], // 默认空任务列表
   // 计划任务：自动浏览功能（试验性功能）
   enableScheduledBrowse: false, // 默认禁用自动浏览
-  scheduledBrowseTasks: [] // 默认空任务列表
+  scheduledBrowseTasks: [], // 默认空任务列表
+  // Tenor 贴纸搜索默认禁用，开启后还需填写 API Key
+  enableTenorSearch: false,
+  tenorApiKey: '',
+  tenorLocale: 'zh_CN',
+  tenorContentFilter: 'high'
 }

@@ -3,7 +3,8 @@
  * 通过 MCP 协议自动发现可用工具，并以结构化方式调用
  */
 
-import type { McpServerConfig } from './types'
+import type { McpOAuthTokens, McpServerConfig } from './types'
+import { ensureValidMcpToken } from './mcpOAuth'
 
 export interface McpTool {
   name: string
@@ -58,6 +59,8 @@ type LegacySseSession = {
   pending: Map<string, LegacySsePending>
   initialized: boolean
   pump: Promise<void>
+  /** OAuth Authorization header（建立 SSE 连接时解析后缓存）。 */
+  authHeader?: Record<string, string>
 }
 
 const MCP_INITIALIZE_PARAMS = {
@@ -67,6 +70,40 @@ const MCP_INITIALIZE_PARAMS = {
     name: 'bug-v3-agent',
     version: '1.0.0'
   }
+}
+
+/**
+ * OAuth tokens 刷新回调注册点。
+ *
+ * mcpClient 自身不直接持久化 settings，因此由调用方（如 useAgentSettings）
+ * 在启动时注册一个 handler，把刷新后的 tokens 写回到对应 server。
+ */
+type OAuthTokensUpdatedHandler = (serverId: string, tokens: McpOAuthTokens) => void | Promise<void>
+
+let oauthTokensUpdatedHandler: OAuthTokensUpdatedHandler | null = null
+
+export function setMcpOAuthTokensUpdatedHandler(handler: OAuthTokensUpdatedHandler | null): void {
+  oauthTokensUpdatedHandler = handler
+}
+
+const resolveAuthHeader = async (server: McpServerConfig): Promise<Record<string, string>> => {
+  if (!server.oauth || !server.oauthTokens?.accessToken) return {}
+  const access = await ensureValidMcpToken(server, {
+    onTokensUpdated: async tokens => {
+      // 就地更新内存中的 server.oauthTokens，方便同一轮请求复用
+      server.oauthTokens = tokens
+      if (oauthTokensUpdatedHandler) {
+        try {
+          await oauthTokensUpdatedHandler(server.id, tokens)
+        } catch (err) {
+          console.warn('[MCP] OAuth tokens persistence handler failed:', err)
+        }
+      }
+    }
+  })
+  if (!access) return {}
+  const tokenType = server.oauthTokens.tokenType || 'Bearer'
+  return { Authorization: `${tokenType} ${access}` }
 }
 
 const shouldInit = (serverId: string) => {
@@ -101,10 +138,11 @@ async function sendJsonRpc(
 
   try {
     const body = JSON.stringify(fallbackPayload)
+    const authHeader = await resolveAuthHeader(server)
 
     const response = await fetch(server.url, {
       method: 'POST',
-      headers: buildJsonHeaders(server),
+      headers: buildJsonHeaders(server, undefined, authHeader),
       body,
       credentials: 'omit',
       signal: controller.signal
@@ -116,6 +154,13 @@ async function sendJsonRpc(
         legacyTransportServerIds.add(server.id)
         return sendLegacySseJsonRpc(server, method, params, fallbackPayload.id)
       }
+    }
+
+    if (response.status === 401) {
+      const wwwAuth = response.headers.get('www-authenticate') || ''
+      throw new Error(
+        `MCP 服务返回 401，需要 OAuth 授权。WWW-Authenticate: ${wwwAuth || '<missing>'}`
+      )
     }
 
     if (!response.ok) {
@@ -186,10 +231,15 @@ async function sendJsonRpc(
   }
 }
 
-const buildJsonHeaders = (server: McpServerConfig, accept?: string): Record<string, string> => ({
+const buildJsonHeaders = (
+  server: McpServerConfig,
+  accept?: string,
+  extra?: Record<string, string>
+): Record<string, string> => ({
   'Content-Type': 'application/json',
   Accept: accept || 'application/json, text/event-stream',
-  ...(server.headers || {})
+  ...(server.headers || {}),
+  ...(extra || {})
 })
 
 const parseSseEvents = (
@@ -305,17 +355,25 @@ const openLegacySseSession = async (server: McpServerConfig): Promise<LegacySseS
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
   try {
+    const authHeader = await resolveAuthHeader(server)
     const response = await fetch(server.url, {
       method: 'GET',
       headers: {
         Accept: 'text/event-stream',
         'Cache-Control': 'no-cache',
-        ...(server.headers || {})
+        ...(server.headers || {}),
+        ...authHeader
       },
       credentials: 'omit',
       signal: controller.signal
     })
 
+    if (response.status === 401) {
+      const wwwAuth = response.headers.get('www-authenticate') || ''
+      throw new Error(
+        `MCP SSE 返回 401，需要 OAuth 授权。WWW-Authenticate: ${wwwAuth || '<missing>'}`
+      )
+    }
     if (!response.ok || !response.body) {
       throw new Error(`Legacy MCP SSE request failed: HTTP ${response.status}`)
     }
@@ -347,7 +405,8 @@ const openLegacySseSession = async (server: McpServerConfig): Promise<LegacySseS
         queuedEvents: events.slice(endpointIndex + 1),
         pending: new Map(),
         initialized: false,
-        pump: Promise.resolve()
+        pump: Promise.resolve(),
+        authHeader
       }
       legacySseSessions.set(server.id, session)
       session.pump = pumpLegacySseSession(server.id)
@@ -390,7 +449,7 @@ const dispatchLegacySseJsonRpc = (
       try {
         const response = await fetch(session.endpointUrl, {
           method: 'POST',
-          headers: buildJsonHeaders(server),
+          headers: buildJsonHeaders(server, undefined, session.authHeader),
           body,
           credentials: 'omit'
         })
@@ -417,7 +476,7 @@ const sendLegacySseNotification = async (
 ) => {
   const response = await fetch(session.endpointUrl, {
     method: 'POST',
-    headers: buildJsonHeaders(server),
+    headers: buildJsonHeaders(server, undefined, session.authHeader),
     body: JSON.stringify({
       jsonrpc: '2.0',
       method,

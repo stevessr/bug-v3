@@ -26,6 +26,7 @@ import {
   extractAssistantText,
   extractAssistantThinking,
   normalizePiUsage,
+  resolveActiveApiKey,
   resolveThinkingLevel,
   type AgentTabContextLike
 } from './piSupport'
@@ -399,7 +400,7 @@ const createThreadRuntime = (
         messages: (stored?.messages || []) as any,
         tools: []
       },
-      getApiKey: async _provider => runtime.settings.apiKey.trim() || undefined
+      getApiKey: async _provider => resolveActiveApiKey(runtime.settings) || undefined
     })
   }
 
@@ -731,7 +732,7 @@ export async function runPiAgentMessage(
   options?: RunOptions
 ): Promise<AgentRunResult> {
   const threadId = options?.sessionId || nanoid()
-  if (!settings.apiKey?.trim()) {
+  if (!resolveActiveApiKey(settings)) {
     return withThreadId(threadId, {
       error: '请先在设置中填写可供 Pi Agent SDK 使用的 API Key。'
     })

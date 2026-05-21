@@ -14,6 +14,7 @@ import {
   preparePickerImage,
   rafThrottle
 } from './pickerPerformance'
+import { createTenorSection, isTenorEnabled } from './tenorPicker'
 
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
@@ -78,8 +79,10 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
   filterInputContainer.appendChild(searchInput)
 
   // Helper to close modal and also remove sibling backdrop with animation
+  let tenorHandle: ReturnType<typeof createTenorSection> | null = null
   const cleanupPickerResources = () => {
     imageObserver.disconnect()
+    tenorHandle?.destroy()
   }
 
   const closeModal = () => {
@@ -277,11 +280,35 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     closeModal()
   })
 
+  const emojiNameLower = new WeakMap<HTMLImageElement, string>()
+  allEmojiImages.forEach(img => {
+    emojiNameLower.set(img, (img.dataset.emoji || '').toLowerCase())
+  })
+
+  // 追加 Tenor section（按需）
+  if (isTenorEnabled()) {
+    try {
+      tenorHandle = createTenorSection({
+        scrollableContent,
+        onAfterInsert: () => {
+          closeModal()
+        }
+      })
+      sectionsNav.appendChild(tenorHandle.navButton)
+      sections.appendChild(tenorHandle.section)
+    } catch (e) {
+      console.warn('[Tenor] mobile section init failed', e)
+    }
+  }
+
+  let lastSearchQuery = ' '
   const applySearch = rafThrottle((query: string) => {
     const q = query.trim().toLowerCase()
+    if (q === lastSearchQuery) return
+    lastSearchQuery = q
 
     allEmojiImages.forEach(img => {
-      const emojiName = (img.dataset.emoji || '').toLowerCase()
+      const emojiName = emojiNameLower.get(img) || ''
       const visible = q === '' || emojiName.includes(q)
 
       if (visible && q) loadPickerImage(img)
@@ -297,10 +324,21 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
       titleContainer.style.display = hasVisible ? '' : 'none'
       navButton.style.display = q === '' || hasVisible ? '' : 'none'
     })
+
+    if (tenorHandle) {
+      tenorHandle.section.style.display = ''
+      tenorHandle.navButton.style.display = ''
+    }
   })
 
+  let searchDebounceTimer: number | null = null
   searchInput.addEventListener('input', (e: Event) => {
-    applySearch((e.target as HTMLInputElement).value || '')
+    const value = (e.target as HTMLInputElement).value || ''
+    if (searchDebounceTimer !== null) window.clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = window.setTimeout(() => {
+      searchDebounceTimer = null
+      applySearch(value)
+    }, 80) as unknown as number
   })
 
   scrollableContent.appendChild(sections)

@@ -10,7 +10,7 @@ import {
 
 import { memoryToPrompt } from './memory'
 import { getEnabledBuiltinMcpConfigs } from './skills'
-import type { AgentSettings, SubAgentConfig } from './types'
+import type { AgentSettings, ProviderProfile, SubAgentConfig } from './types'
 import type { AgentUsage } from './agentUsage'
 
 export type AgentTabContextLike = {
@@ -61,6 +61,24 @@ export const resolveMaxTokens = (value: unknown, fallback = 1024): number => {
   return Math.floor(parsed)
 }
 
+/**
+ * 查询当前激活的 provider profile。优先取 activeProvider，
+ * 找不到时退化为 providerProfiles[0]，再不行返回 undefined。
+ */
+export const getActiveProviderProfile = (settings: AgentSettings): ProviderProfile | undefined => {
+  const profiles = settings.providerProfiles
+  if (!Array.isArray(profiles) || profiles.length === 0) return undefined
+  if (settings.activeProvider) {
+    const found = profiles.find(p => p.provider === settings.activeProvider)
+    if (found) return found
+  }
+  return profiles[0]
+}
+
+/**
+ * 解析模型字符串：优先尊重显式 `provider/model` 前缀，
+ * 否则回退到调用方提供的 fallbackProvider（通常是 active profile.provider）。
+ */
 const parseModelReference = (
   rawValue: string,
   fallbackProvider: SupportedProvider
@@ -82,6 +100,10 @@ const parseModelReference = (
   }
 }
 
+/**
+ * 旧版本无 providerProfiles 时使用：按 modelId / baseUrl 猜 provider。
+ * 仅作为最后一道 fallback，runtime 路径上会先尝试 active profile。
+ */
 const inferProvider = (modelId: string, baseUrl: string): SupportedProvider => {
   const model = modelId.trim().toLowerCase()
   const url = baseUrl.trim().toLowerCase()
@@ -147,17 +169,32 @@ export const buildPiModel = (
 ): Model<any> => {
   const useReasoning = options?.useReasoning === true
   const purpose = options?.purpose || 'task'
+  const profile = getActiveProviderProfile(settings)
+
+  // subagent 优先级最高（可以指定与全局不同的模型），其次 active profile，最后 legacy
+  const pickByPurpose = (
+    subagentValue: string | undefined,
+    profileValue: string | undefined,
+    legacyValue: string | undefined
+  ) => subagentValue?.trim() || profileValue?.trim() || legacyValue?.trim() || ''
 
   const rawModel =
     purpose === 'image'
-      ? subagent?.imageModel || settings.imageModel || settings.taskModel
+      ? pickByPurpose(subagent?.imageModel, profile?.imageModel, settings.imageModel) ||
+        pickByPurpose(subagent?.taskModel, profile?.taskModel, settings.taskModel)
       : useReasoning
-        ? subagent?.reasoningModel || settings.reasoningModel || settings.taskModel
-        : subagent?.taskModel || settings.taskModel
+        ? pickByPurpose(
+            subagent?.reasoningModel,
+            profile?.reasoningModel,
+            settings.reasoningModel
+          ) || pickByPurpose(subagent?.taskModel, profile?.taskModel, settings.taskModel)
+        : pickByPurpose(subagent?.taskModel, profile?.taskModel, settings.taskModel)
 
-  const fallbackProvider = inferProvider(rawModel, settings.baseUrl)
+  // active profile 是 provider 推断的"权威"来源，否则退回 legacy 推断
+  const fallbackProvider =
+    (profile?.provider as SupportedProvider) || inferProvider(rawModel, settings.baseUrl)
   const { provider, modelId } = parseModelReference(rawModel, fallbackProvider)
-  const baseUrl = settings.baseUrl.trim()
+  const baseUrl = (profile?.baseUrl || settings.baseUrl || '').trim()
 
   try {
     const model = getModel(provider as any, modelId as any) as Model<any>
@@ -191,8 +228,14 @@ export const shouldUseReasoning = (input: string, settings: AgentSettings) => {
 export const resolveThinkingLevel = (settings: AgentSettings, input: string) =>
   shouldUseReasoning(input, settings) ? 'high' : 'off'
 
+/** 选择当前调用应该使用的 API Key：active profile 优先，legacy 作为兜底。 */
+export const resolveActiveApiKey = (settings: AgentSettings): string => {
+  const profile = getActiveProviderProfile(settings)
+  return profile?.apiKey?.trim() || settings.apiKey?.trim() || ''
+}
+
 export const buildPiCallOptions = (settings: AgentSettings, input: string) => ({
-  apiKey: settings.apiKey.trim() || undefined,
+  apiKey: resolveActiveApiKey(settings) || undefined,
   maxTokens: resolveMaxTokens(settings.maxTokens),
   reasoning: shouldUseReasoning(input, settings) ? ('high' as const) : undefined
 })

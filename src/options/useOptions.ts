@@ -350,6 +350,24 @@ export default function useOptions() {
     emojiStore.updateSettings({ cloudMarketDomain: domain })
   }
 
+  const updateEnableTenorSearch = (value: boolean) => {
+    emojiStore.updateSettings({ enableTenorSearch: value })
+  }
+
+  const updateTenorApiKey = (value: string) => {
+    emojiStore.updateSettings({ tenorApiKey: value })
+  }
+
+  const updateTenorLocale = (value: string) => {
+    emojiStore.updateSettings({ tenorLocale: value })
+  }
+
+  const updateTenorContentFilter = (value: string) => {
+    const safe =
+      value === 'off' || value === 'low' || value === 'medium' || value === 'high' ? value : 'high'
+    emojiStore.updateSettings({ tenorContentFilter: safe })
+  }
+
   const updateEnableLinuxDoSeeking = (value: boolean) => {
     emojiStore.updateSettings({ enableLinuxDoSeeking: value })
   }
@@ -839,6 +857,10 @@ export default function useOptions() {
     updateImdbedToken,
     updateImdbedApiUrl,
     updateCloudMarketDomain,
+    updateEnableTenorSearch,
+    updateTenorApiKey,
+    updateTenorLocale,
+    updateTenorContentFilter,
     updateEnableLinuxDoSeeking,
     updateLinuxDoSeekingUsers,
     updateEnableLinuxDoSeekingDanmaku,

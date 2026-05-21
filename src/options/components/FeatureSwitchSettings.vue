@@ -19,7 +19,11 @@ const emit = defineEmits([
   'update:cloudMarketDomain',
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
-  'update:enableLinuxDoLikeCounter'
+  'update:enableLinuxDoLikeCounter',
+  'update:enableTenorSearch',
+  'update:tenorApiKey',
+  'update:tenorLocale',
+  'update:tenorContentFilter'
 ])
 
 const getSetting = (key: keyof AppSettings, defaultValue: any = false) => {
@@ -151,6 +155,49 @@ const saveRouterRefreshInterval = async () => {
   } finally {
     isRouterRefreshIntervalSaving.value = false
   }
+}
+
+// Tenor 贴纸搜索（本地输入缓冲，避免每次按键都触发 storage 写入）
+const enableTenorSearch = computed(() => getSetting('enableTenorSearch', false))
+const localTenorApiKey = ref<string>(getSetting('tenorApiKey', '') as string)
+const localTenorLocale = ref<string>(getSetting('tenorLocale', 'zh_CN') as string)
+const localTenorContentFilter = ref<string>(getSetting('tenorContentFilter', 'high') as string)
+const isTenorSaving = ref(false)
+
+watch(
+  () => getSetting('tenorApiKey', ''),
+  val => {
+    localTenorApiKey.value = (val as string) || ''
+  }
+)
+watch(
+  () => getSetting('tenorLocale', 'zh_CN'),
+  val => {
+    localTenorLocale.value = (val as string) || 'zh_CN'
+  }
+)
+watch(
+  () => getSetting('tenorContentFilter', 'high'),
+  val => {
+    localTenorContentFilter.value = (val as string) || 'high'
+  }
+)
+
+const saveTenorSettings = async () => {
+  isTenorSaving.value = true
+  try {
+    emit('update:tenorApiKey', localTenorApiKey.value.trim())
+    emit('update:tenorLocale', localTenorLocale.value.trim() || 'zh_CN')
+    emit('update:tenorContentFilter', localTenorContentFilter.value || 'high')
+    await new Promise(resolve => setTimeout(resolve, 200))
+  } finally {
+    isTenorSaving.value = false
+  }
+}
+
+const handleTenorFilterSelect = (info: { key: string | number }) => {
+  localTenorContentFilter.value = String(info.key)
+  emit('update:tenorContentFilter', String(info.key))
 }
 </script>
 
@@ -321,6 +368,92 @@ const saveRouterRefreshInterval = async () => {
               @click="saveCloudMarketDomain"
             >
               保存
+            </a-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tenor 贴纸搜索 -->
+      <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <SettingSwitch
+          :model-value="enableTenorSearch"
+          label="启用 Tenor 贴纸搜索"
+          description="在 Discourse 表情选择器中追加 Tenor 贴纸搜索面板，选中后自动下载并上传到论坛"
+          @update:model-value="handleSettingUpdate('enableTenorSearch', $event)"
+        />
+
+        <div
+          v-if="enableTenorSearch"
+          class="ml-6 mt-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-3"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <label class="text-sm font-medium dark:text-white">Tenor API Key</label>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                在
+                <a
+                  href="https://developers.google.com/tenor/guides/quickstart"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-blue-500 hover:underline"
+                >
+                  Google Tenor 控制台
+                </a>
+                免费申请；不会上传到任何第三方。
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="localTenorApiKey"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 flex-1 dark:bg-gray-700 dark:text-white"
+              placeholder="AIzaSy..."
+              title="Tenor API Key"
+            />
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label class="text-sm dark:text-white w-20 flex-shrink-0">语言</label>
+            <input
+              v-model="localTenorLocale"
+              class="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 flex-1 dark:bg-gray-700 dark:text-white"
+              placeholder="zh_CN"
+              title="Tenor locale"
+            />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <label class="text-sm dark:text-white">内容过滤等级</label>
+            <a-dropdown>
+              <template #overlay>
+                <a-menu @click="handleTenorFilterSelect">
+                  <a-menu-item key="off">关闭</a-menu-item>
+                  <a-menu-item key="low">低</a-menu-item>
+                  <a-menu-item key="medium">中</a-menu-item>
+                  <a-menu-item key="high">高（推荐）</a-menu-item>
+                </a-menu>
+              </template>
+              <a-button title="选择内容过滤等级">
+                {{
+                  localTenorContentFilter === 'off'
+                    ? '关闭'
+                    : localTenorContentFilter === 'low'
+                      ? '低'
+                      : localTenorContentFilter === 'medium'
+                        ? '中'
+                        : '高（推荐）'
+                }}
+                <DownOutlined />
+              </a-button>
+            </a-dropdown>
+          </div>
+
+          <div class="flex justify-end">
+            <a-button type="primary" :loading="isTenorSaving" @click="saveTenorSettings">
+              保存 Tenor 设置
             </a-button>
           </div>
         </div>

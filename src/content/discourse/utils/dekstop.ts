@@ -15,6 +15,7 @@ import {
   preparePickerImage,
   rafThrottle
 } from './pickerPerformance'
+import { createTenorSection, isTenorEnabled } from './tenorPicker'
 
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
@@ -211,6 +212,25 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
   const cleanupPickerResources = () => {
     imageObserver.disconnect()
     removePreview()
+    tenorHandle?.destroy()
+  }
+
+  // 在所有普通分组之后追加 Tenor 搜索 section（按需）
+  let tenorHandle: ReturnType<typeof createTenorSection> | null = null
+  if (isTenorEnabled()) {
+    try {
+      tenorHandle = createTenorSection({
+        scrollableContent,
+        onAfterInsert: () => {
+          cleanupPickerResources()
+          animateExit(picker as HTMLElement, 'picker')
+        }
+      })
+      sectionsNav.appendChild(tenorHandle.navButton)
+      sections.appendChild(tenorHandle.section)
+    } catch (e) {
+      console.warn('[Tenor] section init failed', e)
+    }
   }
 
   const getEmojiFromTarget = (target: EventTarget | null): Emoji | null => {
@@ -244,11 +264,19 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     animateExit(picker as HTMLElement, 'picker')
   })
 
+  const emojiNameLower = new WeakMap<HTMLImageElement, string>()
+  allEmojiImages.forEach(img => {
+    emojiNameLower.set(img, (img.dataset.emoji || '').toLowerCase())
+  })
+
+  let lastSearchQuery = ' '
   const applySearch = rafThrottle((query: string) => {
     const q = query.trim().toLowerCase()
+    if (q === lastSearchQuery) return
+    lastSearchQuery = q
 
     allEmojiImages.forEach(img => {
-      const emojiName = (img.dataset.emoji || '').toLowerCase()
+      const emojiName = emojiNameLower.get(img) || ''
       const visible = q === '' || emojiName.includes(q)
 
       if (visible && q) loadPickerImage(img)
@@ -264,10 +292,22 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
       titleContainer.style.display = hasVisible ? '' : 'none'
       navButton.style.display = q === '' || hasVisible ? '' : 'none'
     })
+
+    // Tenor section 不参与名称过滤，始终保持可见
+    if (tenorHandle) {
+      tenorHandle.section.style.display = ''
+      tenorHandle.navButton.style.display = ''
+    }
   })
 
+  let searchDebounceTimer: number | null = null
   searchInput.addEventListener('input', (e: Event) => {
-    applySearch((e.target as HTMLInputElement).value || '')
+    const value = (e.target as HTMLInputElement).value || ''
+    if (searchDebounceTimer !== null) window.clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = window.setTimeout(() => {
+      searchDebounceTimer = null
+      applySearch(value)
+    }, 80) as unknown as number
   })
 
   scrollableContent.appendChild(sections)

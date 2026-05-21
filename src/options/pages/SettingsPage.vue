@@ -91,7 +91,11 @@ const {
   updateCustomOpenAIModel,
   updateImdbedToken,
   updateImdbedApiUrl,
-  updateCloudMarketDomain
+  updateCloudMarketDomain,
+  updateEnableTenorSearch,
+  updateTenorApiKey,
+  updateTenorLocale,
+  updateTenorContentFilter
 } = options
 
 const activeTab = ref('theme')
@@ -170,6 +174,10 @@ onMounted(async () => {
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
               @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"
+              @update:enableTenorSearch="updateEnableTenorSearch"
+              @update:tenorApiKey="updateTenorApiKey"
+              @update:tenorLocale="updateTenorLocale"
+              @update:tenorContentFilter="updateTenorContentFilter"
             />
           </div>
         </a-tab-pane>

@@ -77,6 +77,11 @@ export interface AppSettings {
   // 计划任务：自动浏览功能（试验性功能）
   enableScheduledBrowse?: boolean // 启用自动浏览功能
   scheduledBrowseTasks?: ScheduledBrowseTask[] // 自动浏览任务列表
+  // Tenor 贴纸搜索（在 Discourse 表情选择器中显示 Tenor GIF 搜索面板）
+  enableTenorSearch?: boolean
+  tenorApiKey?: string
+  tenorLocale?: string
+  tenorContentFilter?: 'off' | 'low' | 'medium' | 'high'
 }
 
 export interface EmojiGroup {
