@@ -63,7 +63,7 @@ const globalUploadWaitItem = computed(() =>
 
 const categorizedUploadItems = computed(() => {
   if (uploadProgress.value.length === 0)
-    return { completed: [], uploading: [], pending: [], error: [] }
+    return { completed: [], uploading: [], waiting: [], pending: [], error: [] }
 
   // 构建 ID -> fileInfo 映射，避免因 uploadProgress 移除已完成项导致索引不匹配
   const fileInfoMap = new Map(selectedFiles.value.map(f => [f.id, f]))
@@ -96,7 +96,10 @@ const categorizedUploadItems = computed(() => {
 
   return {
     completed: items.filter(item => item.status === 'completed'),
-    uploading: items.filter(item => item.status === 'uploading' || item.status === 'waiting'),
+    // 只显示正在上传的卡片，全局等待的不逐个显示
+    uploading: items.filter(item => item.status === 'uploading'),
+    // 全局等待中的项，不渲染卡片，只在统计中计数
+    waiting: items.filter(item => item.status === 'waiting'),
     // pending 状态（未进入协程队列）不显示任何东西
     pending: items.filter(item => item.status === 'pending'),
     error: items.filter(item => item.status === 'error')
@@ -1229,7 +1232,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- 正在上传/等待卡片 - 中间 -->
+        <!-- 正在上传卡片（全局等待的不逐个显示） -->
         <div
           v-for="item in categorizedUploadItems.uploading"
           :key="item.id"
@@ -1245,9 +1248,7 @@ onBeforeUnmount(() => {
               class="w-full h-full object-cover"
             />
           </div>
-          <!-- 上传进度；全局 429 等待时只在顶部显示一条等待进度，卡片不再逐个显示 -->
-          <div v-if="item.status === 'waiting'" />
-          <div v-else class="space-y-1">
+          <div class="space-y-1">
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
               <div
                 class="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
@@ -1315,7 +1316,13 @@ onBeforeUnmount(() => {
           v-if="categorizedUploadItems.uploading.length > 0"
           class="text-blue-600 dark:text-blue-400"
         >
-          ↑ {{ categorizedUploadItems.uploading.length }} 上传中/等待
+          ↑ {{ categorizedUploadItems.uploading.length }} 上传中
+        </span>
+        <span
+          v-if="categorizedUploadItems.waiting.length > 0"
+          class="text-orange-600 dark:text-orange-400"
+        >
+          ⏳ {{ categorizedUploadItems.waiting.length }} 等待中
         </span>
         <span v-if="categorizedUploadItems.pending.length > 0">
           ○ {{ categorizedUploadItems.pending.length }} 排队中
