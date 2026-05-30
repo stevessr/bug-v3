@@ -29,11 +29,12 @@ interface UseCollaborativeUploadOptions {
 
 export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
   const { bufferGroup, emojiStore, selectedFiles, isUploading, clearPersistedFiles } = options
+  const DEFAULT_COLLABORATIVE_SERVER_URL = 'ws://localhost:9527'
 
   // --- 状态 ---
   const enableCollaborativeUpload = ref(false)
   const collaborativeServerUrl = ref(
-    localStorage.getItem('collaborative-upload-server') || 'ws://localhost:8080'
+    localStorage.getItem('collaborative-upload-server') || DEFAULT_COLLABORATIVE_SERVER_URL
   )
   const collaborativeClient = ref<CollaborativeUploadClient | null>(null)
   const isCollaborativeConnected = ref(false)

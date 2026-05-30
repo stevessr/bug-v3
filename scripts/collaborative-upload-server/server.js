@@ -361,6 +361,7 @@ function handleTaskComplete(workerId, taskId, resultUrl, shortUrl) {
       filename: task.filename,
       resultUrl: resultUrl,
       shortUrl: shortUrl || null,
+      workerId,
       progress: {
         completed: session.completedTasks,
         failed: session.failedTasks,
@@ -453,6 +454,7 @@ function handleTaskFailed(workerId, taskId, error) {
         filename: task.filename,
         error: error,
         attempts: task.retryCount,
+        workerId,
         progress: {
           completed: session.completedTasks,
           failed: session.failedTasks,
