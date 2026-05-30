@@ -9,6 +9,7 @@ import {
   handleLinuxDoUserRequest,
   handlePageFetchRequest,
   handleLinuxDoUploadRequest,
+  handleLinuxDoChallengeRequest,
   handleDownloadImage,
   handleCaptureScreenshot,
   setupStorageChangeListener,
@@ -119,6 +120,10 @@ export function setupMessageListener() {
               sendResponse({ success: false, error: 'Missing options for LINUX_DO_UPLOAD' })
               return false
             }
+
+          case 'LINUX_DO_RECOVER_CHALLENGE':
+            handleLinuxDoChallengeRequest((typedMsg as any).options, sendResponse as any)
+            return true
 
           case 'downloadImage':
           case 'DOWNLOAD_IMAGE':

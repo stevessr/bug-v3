@@ -4,8 +4,10 @@ import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
 type UploadFlowError = Error & {
   status?: number
   isRateLimitError?: boolean
+  isLinuxDoChallengeError?: boolean
   waitTime?: number
   shouldTerminateUploadFlow?: boolean
+  details?: unknown
 }
 
 export interface UploadService {
@@ -60,6 +62,94 @@ function createTerminal429Error(message?: string): UploadFlowError {
   error.status = 429
   error.shouldTerminateUploadFlow = true
   return error
+}
+
+function stringifyUploadErrorPayload(payload: unknown): string {
+  if (typeof payload === 'string') return payload
+  if (!payload || typeof payload !== 'object') return ''
+
+  const fields = [
+    (payload as any).message,
+    (payload as any).error,
+    Array.isArray((payload as any).errors) ? (payload as any).errors.join('\n') : ''
+  ]
+
+  try {
+    fields.push(JSON.stringify(payload))
+  } catch {
+    // ignore stringify errors
+  }
+
+  return fields.filter(Boolean).join('\n')
+}
+
+function isLinuxDoJustAMomentResponse(status: number | undefined, payload: unknown) {
+  if (status !== 403) return false
+  return stringifyUploadErrorPayload(payload).includes('Just a moment')
+}
+
+function createLinuxDoChallengeError(payload: unknown): UploadFlowError {
+  const error = new Error(
+    'linux.do returned 403 Just a moment. Waiting for challenge page before retrying upload.'
+  ) as UploadFlowError
+  error.status = 403
+  error.isLinuxDoChallengeError = true
+  error.details = payload
+  return error
+}
+
+let linuxDoChallengeRecoveryPromise: Promise<void> | null = null
+
+async function requestLinuxDoChallengeRecovery() {
+  if (linuxDoChallengeRecoveryPromise) {
+    return linuxDoChallengeRecoveryPromise
+  }
+
+  linuxDoChallengeRecoveryPromise = (async () => {
+    const chromeAPI = (globalThis as any).chrome
+    if (!chromeAPI?.runtime?.sendMessage) {
+      throw new Error('Cannot recover linux.do challenge: chrome.runtime is not accessible')
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      chromeAPI.runtime.sendMessage(
+        {
+          type: 'LINUX_DO_RECOVER_CHALLENGE',
+          options: {
+            url: 'https://linux.do/challenge',
+            expectedText: '糟糕！该页面不存在或者是一个不公开页面。'
+          }
+        },
+        (resp: any) => {
+          const lastError = chromeAPI.runtime.lastError
+          if (lastError?.message) {
+            reject(new Error(lastError.message))
+            return
+          }
+          if (resp?.success) {
+            resolve()
+            return
+          }
+          reject(new Error(resp?.error || 'linux.do challenge recovery failed'))
+        }
+      )
+    })
+  })().finally(() => {
+    linuxDoChallengeRecoveryPromise = null
+  })
+
+  return linuxDoChallengeRecoveryPromise
+}
+
+async function readResponseErrorPayload(response: Response) {
+  const text = await response.text().catch(() => '')
+  if (!text) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { message: text }
+  }
 }
 
 function normalizeUploadResult(baseUrl: string, data: any): UploadServiceResult {
@@ -123,13 +213,28 @@ class DiscourseUploadService implements UploadService {
     onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<UploadServiceResult> {
     const maxRetries = 3
+    const maxChallengeRecoveries = 2
     let attempt = 0
+    let challengeRecoveries = 0
     let delay = 1000 // 1 second
 
     while (attempt < maxRetries) {
       try {
         return await this.attemptUploadDetailed(file, onProgress)
       } catch (error: any) {
+        if (
+          this.domain === 'linux.do' &&
+          error?.isLinuxDoChallengeError &&
+          challengeRecoveries < maxChallengeRecoveries
+        ) {
+          challengeRecoveries++
+          console.warn(
+            `linux.do challenge detected for ${file.name}. Visiting /challenge before retry ${challengeRecoveries}/${maxChallengeRecoveries}...`
+          )
+          await requestLinuxDoChallengeRecovery()
+          continue
+        }
+
         // If the error indicates a 429 status, wait and retry
         if (error.isRateLimitError && attempt < maxRetries - 1) {
           const waitTime = error.waitTime || delay
@@ -193,7 +298,13 @@ class DiscourseUploadService implements UploadService {
         if (onProgress) onProgress(100)
         return result
       } else {
-        const errorData = await response.json().catch(() => null)
+        const errorData = await readResponseErrorPayload(response)
+        if (
+          this.domain === 'linux.do' &&
+          isLinuxDoJustAMomentResponse(response.status, errorData)
+        ) {
+          throw createLinuxDoChallengeError(errorData)
+        }
         if (response.status === 429 && errorData?.extras?.wait_seconds) {
           const waitTime = errorData.extras.wait_seconds * 1000
           const rateLimitError = new Error(
@@ -314,6 +425,9 @@ class DiscourseUploadService implements UploadService {
     }
 
     const errorData = proxyPayload
+    if (isLinuxDoJustAMomentResponse(proxyStatus, errorData)) {
+      throw createLinuxDoChallengeError(errorData)
+    }
     if (proxyStatus === 429 && errorData?.extras?.wait_seconds) {
       const waitTime = errorData.extras.wait_seconds * 1000
       const rateLimitError = new Error(

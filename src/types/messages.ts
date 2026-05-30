@@ -103,6 +103,19 @@ export interface LinuxDoUploadMessage extends BaseMessage {
 }
 
 /**
+ * LINUX_DO_RECOVER_CHALLENGE 消息
+ */
+export interface LinuxDoRecoverChallengeMessage extends BaseMessage {
+  type: 'LINUX_DO_RECOVER_CHALLENGE'
+  options?: {
+    url?: string
+    timeoutMs?: number
+    pollIntervalMs?: number
+    expectedText?: string
+  }
+}
+
+/**
  * PROXY_FETCH 消息
  */
 export interface ProxyFetchMessage extends BaseMessage {
@@ -307,6 +320,7 @@ export type TypedMessage =
   | GetLinuxDoUserMessage
   | LinuxDoPageFetchMessage
   | LinuxDoUploadMessage
+  | LinuxDoRecoverChallengeMessage
   | ProxyFetchMessage
   | ProxyImageMessage
   | DownloadImageMessage
