@@ -1181,7 +1181,15 @@ onBeforeUnmount(() => {
         v-if="globalUploadWaitItem"
         class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300"
       >
-        <span>⏳ 检测到 429 限流，普通上传已进入全局等待，暂停启动新任务。</span>
+        <div class="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <span>⏳ 检测到 429 限流，普通上传已进入全局等待，暂停启动新任务。</span>
+          <a-progress
+            class="min-w-36 max-w-xs flex-1"
+            :percent="getWaitProgress(globalUploadWaitItem).percent"
+            :show-info="false"
+            :stroke-color="'#f97316'"
+          />
+        </div>
         <span class="font-medium">剩余 {{ getWaitProgress(globalUploadWaitItem).remaining }}s</span>
       </div>
 
@@ -1233,19 +1241,13 @@ onBeforeUnmount(() => {
               class="w-full h-full object-cover"
             />
           </div>
-          <!-- 进度条或 429 等待环 -->
+          <!-- 上传进度；全局 429 等待时只在顶部显示一条等待进度 -->
           <div v-if="item.status === 'waiting'" class="flex flex-col items-center">
-            <a-progress
-              type="circle"
-              :width="32"
-              :percent="getWaitProgress(item).percent"
-              :stroke-color="'#f97316'"
+            <span
+              class="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-600 dark:bg-orange-900/40 dark:text-orange-300"
             >
-              <template #format>
-                <span class="text-xs">{{ getWaitProgress(item).remaining }}s</span>
-              </template>
-            </a-progress>
-            <span class="text-xs text-orange-500 mt-1">限流等待</span>
+              全局等待
+            </span>
           </div>
           <div v-else class="space-y-1">
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
