@@ -19,6 +19,7 @@ import {
   handleProxyFetchRequest,
   handleProxyImageRequest
 } from '../handlers/main.ts'
+import * as mcpBridgeModule from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -27,13 +28,8 @@ import type { BackgroundMessage, TypedMessage, MessageResponse } from '@/types/m
 // Re-export 给 background 入口使用的同步 setup
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
 
-// mcpBridge 模块体积较大且仅在 MCP 启用时使用，使用懒加载并缓存
-let mcpBridgeModulePromise: Promise<typeof import('../handlers/mcpBridge.ts')> | null = null
 function loadMcpBridge() {
-  if (!mcpBridgeModulePromise) {
-    mcpBridgeModulePromise = import('../handlers/mcpBridge.ts')
-  }
-  return mcpBridgeModulePromise
+  return Promise.resolve(mcpBridgeModule)
 }
 
 export async function setupMcpBridge() {

@@ -2,11 +2,14 @@ import './utils/main.ts'
 
 import { setupOnInstalledListener } from './init'
 import {
+  setupMcpBridge,
   setupMessageListener,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup
 } from './utils/handlers'
+import { setupScheduledLikes } from './handlers/scheduledLikes'
+import { setupScheduledBrowse } from './handlers/scheduledBrowse'
 
 console.log('Emoji Extension Background script loaded.')
 
@@ -17,20 +20,14 @@ setupStorageChangeListener()
 setupContextMenu()
 setupPeriodicCleanup()
 
-// 大体积 / 延迟可接受的功能：异步动态加载，
-// 让 Service Worker 冷启动阶段不必解析 mcpBridge、scheduledLikes/Browse 等模块
-void (async () => {
+// Service Worker 里不能使用 Vite 的 DOM-based dynamic-import preload helper。
+// 模块静态打包，初始化仍放到微任务里，避免阻塞核心监听注册。
+void Promise.resolve().then(() => {
   try {
-    const [{ setupMcpBridge }, { setupScheduledLikes }, { setupScheduledBrowse }] =
-      await Promise.all([
-        import('./handlers/mcpBridge'),
-        import('./handlers/scheduledLikes'),
-        import('./handlers/scheduledBrowse')
-      ])
     void setupMcpBridge()
     setupScheduledLikes()
     setupScheduledBrowse()
   } catch (err) {
-    console.error('[Background] Failed to lazy-load background modules:', err)
+    console.error('[Background] Failed to initialize background modules:', err)
   }
-})()
+})
