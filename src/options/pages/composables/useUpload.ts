@@ -163,27 +163,24 @@ export function useUpload(options: UseUploadOptions) {
       const enterGlobalRateLimitWait = async (waitTime: number) => {
         const now = Date.now()
         rateLimitUntil = Math.max(rateLimitUntil, now + waitTime)
-        const waitingFor = Math.max(1, Math.ceil((rateLimitUntil - now) / 1000))
 
+        // ① 第一时间将已上传成功的文件写入缓冲区
+        await flushCompletedUploadsToPendingList()
+
+        // ② 从 uploadProgress 中移除已写入缓冲区的项
+        if (flushedUploadIds.size > 0) {
+          uploadProgress.value = uploadProgress.value.filter(p => !flushedUploadIds.has(p.id))
+        }
+
+        // ③ 对剩余未完成项设置等待状态，统一触发一次 re-render
+        const waitingFor = Math.max(1, Math.ceil((rateLimitUntil - now) / 1000))
         for (const progress of uploadProgress.value) {
           if (!progress.error && progress.percent < 100) {
             progress.waitingFor = waitingFor
             progress.waitStart = now
           }
         }
-
         uploadProgress.value = [...uploadProgress.value]
-
-        // 全局等待可能持续较久：先把已上传成功的文件写入缓冲区，
-        // 再从“待上传文件”列表移除，避免等待期间列表继续显示已完成项。
-        await flushCompletedUploadsToPendingList()
-
-        // 同时从 uploadProgress 中移除已完成的项，避免等待期间进度卡片继续显示已完成项
-        if (flushedUploadIds.size > 0) {
-          uploadProgress.value = uploadProgress.value.filter(
-            p => !flushedUploadIds.has(p.id)
-          )
-        }
       }
 
       const waitForGlobalRateLimit = async () => {
@@ -270,9 +267,7 @@ export function useUpload(options: UseUploadOptions) {
             await flushCompletedUploadsToPendingList()
             // 清理已完成项的进度卡片
             if (flushedUploadIds.size > 0) {
-              uploadProgress.value = uploadProgress.value.filter(
-                p => !flushedUploadIds.has(p.id)
-              )
+              uploadProgress.value = uploadProgress.value.filter(p => !flushedUploadIds.has(p.id))
             }
           }
         } catch (error) {
