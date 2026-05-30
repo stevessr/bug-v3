@@ -215,7 +215,8 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
           title: 'Cloudflare Challenge',
           className: 'cf-challenge-modal',
           style:
-            'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;height:300px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;background:white;'
+            'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;height:300px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;background:white;',
+          autoClick: true
         }
       )
     },
@@ -392,6 +393,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
         () => {
           const existing = DQS(`.${className}`) as HTMLElement | null
           if (existing) return
+          const shouldAutoClick = typeof url === 'string' && url.includes('linux.do/challenge')
           createAndShowIframeModal(
             url,
             href => {
@@ -406,7 +408,8 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
               title: text,
               className: className,
               style:
-                'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move'
+                'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:900px;height:80%;max-height:700px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:100000;cursor:move',
+              autoClick: shouldAutoClick
             }
           )
         },

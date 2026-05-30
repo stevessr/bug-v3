@@ -16,6 +16,7 @@ export function createAndShowIframeModal(
     className?: string
     style?: string
     iframeSandbox?: string
+    autoClick?: boolean
   }
 ) {
   const titleText = opts?.title || 'iframe'
@@ -84,6 +85,121 @@ export function createAndShowIframeModal(
     }
   }) as HTMLIFrameElement
 
+  const autoClickEnabled = opts?.autoClick === true
+  const AUTO_CLICK_INTERVAL_MS = 900
+  const AUTO_CLICK_MAX_ATTEMPTS = 12
+  const AUTO_CLICK_TEXT_KEYWORDS = [
+    'verify',
+    'verification',
+    'continue',
+    'allow',
+    'challenge',
+    'human',
+    'not a robot',
+    "i'm human",
+    'i am human',
+    '验证',
+    '继续',
+    '确认',
+    '人机',
+    '过盾'
+  ]
+  const AUTO_CLICK_SELECTORS = [
+    'input[type="checkbox"]',
+    '[role="checkbox"]',
+    'button[type="submit"]',
+    'button',
+    'div[role="button"]',
+    'label'
+  ]
+  let autoClickTimer: number | null = null
+  let autoClickAttempts = 0
+
+  const stopAutoClick = () => {
+    if (autoClickTimer !== null) {
+      clearTimeout(autoClickTimer)
+      autoClickTimer = null
+    }
+  }
+
+  const isElementVisible = (el: Element) => {
+    if (!(el instanceof HTMLElement)) return false
+    const style = window.getComputedStyle(el)
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false
+    }
+    const rect = el.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  }
+
+  const getElementLabel = (el: Element) => {
+    const aria = el.getAttribute('aria-label') || ''
+    const title = el.getAttribute('title') || ''
+    const text = el.textContent || ''
+    return `${aria} ${title} ${text}`.trim().toLowerCase()
+  }
+
+  const tryAutoClickInDocument = (doc: Document) => {
+    const selector = AUTO_CLICK_SELECTORS.join(',')
+    const candidates = Array.from(doc.querySelectorAll(selector))
+    for (const el of candidates) {
+      if (!isElementVisible(el)) continue
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        if (!el.checked) {
+          el.click()
+          return true
+        }
+        continue
+      }
+      const label = getElementLabel(el)
+      if (!label) continue
+      if (AUTO_CLICK_TEXT_KEYWORDS.some(keyword => label.includes(keyword))) {
+        ;(el as HTMLElement).click()
+        return true
+      }
+    }
+    return false
+  }
+
+  const tryAutoClick = () => {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document
+      if (!doc) return false
+      if (tryAutoClickInDocument(doc)) return true
+      const childFrames = Array.from(doc.querySelectorAll('iframe'))
+      for (const frame of childFrames) {
+        try {
+          const childDoc = frame.contentDocument || frame.contentWindow?.document
+          if (childDoc && tryAutoClickInDocument(childDoc)) {
+            return true
+          }
+        } catch {
+          // Cross-origin iframe, skip
+        }
+      }
+    } catch {
+      // ignore cross-origin access errors
+    }
+    return false
+  }
+
+  const startAutoClick = () => {
+    if (!autoClickEnabled) return
+    stopAutoClick()
+    autoClickAttempts = 0
+    const tick = () => {
+      if (!autoClickEnabled) return
+      autoClickAttempts += 1
+      const clicked = tryAutoClick()
+      if (clicked || autoClickAttempts >= AUTO_CLICK_MAX_ATTEMPTS) {
+        stopAutoClick()
+        return
+      }
+      autoClickTimer = window.setTimeout(tick, AUTO_CLICK_INTERVAL_MS)
+    }
+    autoClickTimer = window.setTimeout(tick, 120)
+  }
+
   // Close helper
   const closeModal = () => {
     try {
@@ -91,6 +207,7 @@ export function createAndShowIframeModal(
     } catch {
       // ignore
     }
+    stopAutoClick()
     // cleanup listeners
     document.removeEventListener('mousemove', drag)
     document.removeEventListener('mouseup', dragEnd)
@@ -134,6 +251,9 @@ export function createAndShowIframeModal(
       } catch {
         // ignore errors from user-provided predicate
       }
+    }
+    if (autoClickEnabled) {
+      startAutoClick()
     }
   })
 
