@@ -55,6 +55,12 @@ interface UploadCardItem {
 // Upload progress state (must be defined before categorizedUploadItems)
 const uploadProgress = ref<UploadProgressItem[]>([])
 
+const globalUploadWaitItem = computed(() =>
+  uploadProgress.value.find(
+    progress => progress.waitingFor && !progress.error && progress.percent < 100
+  )
+)
+
 const categorizedUploadItems = computed(() => {
   if (uploadProgress.value.length === 0)
     return { completed: [], uploading: [], pending: [], error: [] }
@@ -74,9 +80,9 @@ const categorizedUploadItems = computed(() => {
     }
 
     return {
-      id: fileInfo?.id || `upload-${index}`,
+      id: progress.id || fileInfo?.id || `upload-${index}`,
       fileName: progress.fileName,
-      previewUrl: fileInfo?.previewUrl || '',
+      previewUrl: progress.previewUrl || fileInfo?.previewUrl || '',
       percent: progress.percent,
       status,
       error: progress.error,
@@ -185,7 +191,29 @@ onMounted(() => {
 })
 
 // State
+const UPLOAD_CONCURRENCY_STORAGE_KEY = 'buffer-upload-concurrency'
+const DEFAULT_UPLOAD_CONCURRENCY = 5
+const MAX_UPLOAD_CONCURRENCY = 20
+
+const normalizeUploadConcurrency = (value: unknown) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return DEFAULT_UPLOAD_CONCURRENCY
+  return Math.min(MAX_UPLOAD_CONCURRENCY, Math.max(1, Math.floor(numeric)))
+}
+
+const loadUploadConcurrency = () => {
+  try {
+    const persistedValue = localStorage.getItem(UPLOAD_CONCURRENCY_STORAGE_KEY)
+    if (persistedValue !== null) {
+      uploadConcurrency.value = normalizeUploadConcurrency(persistedValue)
+    }
+  } catch (error) {
+    console.warn('[BufferPage] Failed to load upload concurrency setting:', error)
+  }
+}
+
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
+const uploadConcurrency = ref<number | undefined>(DEFAULT_UPLOAD_CONCURRENCY)
 const selectedFiles = ref<
   Array<{
     id: string
@@ -203,6 +231,20 @@ const selectedFiles = ref<
 >([])
 const isUploading = ref(false)
 const uploadScrollContainer = ref<HTMLElement | null>(null)
+
+watch(uploadConcurrency, value => {
+  const normalizedValue = normalizeUploadConcurrency(value)
+  if (value !== normalizedValue) {
+    uploadConcurrency.value = normalizedValue
+    return
+  }
+
+  try {
+    localStorage.setItem(UPLOAD_CONCURRENCY_STORAGE_KEY, String(normalizedValue))
+  } catch (error) {
+    console.warn('[BufferPage] Failed to persist upload concurrency setting:', error)
+  }
+})
 
 // 自动滚动到当前上传项
 const scrollToUploading = () => {
@@ -300,6 +342,7 @@ const { uploadFiles } = useUpload({
   bufferGroup,
   emojiStore,
   uploadService,
+  uploadConcurrency,
   clearPersistedFiles
 })
 
@@ -687,6 +730,8 @@ const moveAllToUngrouped = async () => {
 // Initialize buffer group on mount
 let progressInterval: NodeJS.Timeout | null = null
 onMounted(() => {
+  loadUploadConcurrency()
+
   const existingBuffer = emojiStore.groups.find(g => g.id === 'buffer' || g.name === '缓冲区')
   console.log(
     '[BufferPage] Component mounted, buffer group found:',
@@ -774,6 +819,22 @@ onBeforeUnmount(() => {
           <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
           <a-radio-button value="imgbed">imgbed</a-radio-button>
         </a-radio-group>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">普通上传并发</span>
+        <a-input-number
+          v-model:value="uploadConcurrency"
+          :min="1"
+          :max="MAX_UPLOAD_CONCURRENCY"
+          :step="1"
+          :precision="0"
+          size="small"
+          :disabled="isUploading"
+          style="width: 96px"
+        />
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          默认 {{ DEFAULT_UPLOAD_CONCURRENCY }}；任一协程触发 429 等待时，所有协程暂停启动新任务。
+        </span>
       </div>
     </div>
 
@@ -1001,7 +1062,7 @@ onBeforeUnmount(() => {
           {{
             isUploading && !enableCollaborativeUpload
               ? '上传中...'
-              : `上传 ${selectedFiles.length} 个文件`
+              : `上传 ${selectedFiles.length} 个文件（并发 ${uploadConcurrency}）`
           }}
         </a-button>
       </div>
@@ -1115,6 +1176,14 @@ onBeforeUnmount(() => {
       class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
     >
       <h3 class="text-lg font-semibold dark:text-white mb-4">上传进度</h3>
+
+      <div
+        v-if="globalUploadWaitItem"
+        class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300"
+      >
+        <span>⏳ 检测到 429 限流，普通上传已进入全局等待，暂停启动新任务。</span>
+        <span class="font-medium">剩余 {{ getWaitProgress(globalUploadWaitItem).remaining }}s</span>
+      </div>
 
       <!-- 水平滚动卡片区域 -->
       <div
@@ -1268,7 +1337,7 @@ onBeforeUnmount(() => {
           v-if="categorizedUploadItems.uploading.length > 0"
           class="text-blue-600 dark:text-blue-400"
         >
-          ↑ {{ categorizedUploadItems.uploading.length }} 上传中
+          ↑ {{ categorizedUploadItems.uploading.length }} 上传中/等待
         </span>
         <span v-if="categorizedUploadItems.pending.length > 0">
           ○ {{ categorizedUploadItems.pending.length }} 等待中

@@ -7,6 +7,7 @@ import type { useEmojiStore } from '@/stores/emojiStore'
 export interface UploadProgressItem {
   id: string
   fileName: string
+  previewUrl?: string
   percent: number
   error?: string
   waitingFor?: number
@@ -20,8 +21,12 @@ interface UseUploadOptions {
   bufferGroup: ComputedRef<EmojiGroup | undefined>
   emojiStore: ReturnType<typeof useEmojiStore>
   uploadService: Ref<'linux.do' | 'idcflare.com' | 'imgbed'>
+  uploadConcurrency?: Ref<number | null | undefined>
   clearPersistedFiles: () => Promise<void>
 }
+
+const DEFAULT_UPLOAD_CONCURRENCY = 5
+const MAX_UPLOAD_CONCURRENCY = 20
 
 export function useUpload(options: UseUploadOptions) {
   const {
@@ -31,16 +36,25 @@ export function useUpload(options: UseUploadOptions) {
     bufferGroup,
     emojiStore,
     uploadService,
+    uploadConcurrency,
     clearPersistedFiles
   } = options
 
+  const getUploadConcurrency = () => {
+    const value = Number(uploadConcurrency?.value ?? DEFAULT_UPLOAD_CONCURRENCY)
+    if (!Number.isFinite(value)) return DEFAULT_UPLOAD_CONCURRENCY
+    return Math.min(MAX_UPLOAD_CONCURRENCY, Math.max(1, Math.floor(value)))
+  }
+
   const uploadFiles = async () => {
-    if (selectedFiles.value.length === 0) return
+    const filesSnapshot = selectedFiles.value.slice()
+    if (filesSnapshot.length === 0) return
 
     isUploading.value = true
-    uploadProgress.value = selectedFiles.value.map(item => ({
+    uploadProgress.value = filesSnapshot.map(item => ({
       id: item.id,
       fileName: item.file.name,
+      previewUrl: item.previewUrl,
       percent: 0
     }))
 
@@ -61,46 +75,30 @@ export function useUpload(options: UseUploadOptions) {
       return
     }
 
-    const newEmojis: any[] = []
+    const newEmojis: Array<{ index: number; emoji: any }> = []
     const groupId = group.id || 'buffer'
     const writeNewEmojis = async () => {
       if (newEmojis.length === 0) return
-      console.log(`Writing batch of ${newEmojis.length} emojis.`)
+      const batch = newEmojis.splice(0).sort((a, b) => a.index - b.index)
+      console.log(`Writing batch of ${batch.length} emojis.`)
       emojiStore.beginBatch()
       try {
-        for (const newEmoji of newEmojis) {
-          emojiStore.addEmojiWithoutSave(groupId, newEmoji)
+        for (const { emoji } of batch) {
+          emojiStore.addEmojiWithoutSave(groupId, emoji)
         }
       } finally {
         await emojiStore.endBatch()
-        newEmojis.length = 0 // Clear the array after writing
       }
     }
 
     try {
       const service = uploadServices[uploadService.value]
+      if (!service) {
+        throw new Error(`Unknown upload service: ${uploadService.value}`)
+      }
 
       const findProgressIndex = (id: string) =>
         uploadProgress.value.findIndex(progress => progress.id === id)
-
-      const pruneCompletedUploads = (currentId: string) => {
-        const keepIds = new Set(
-          uploadProgress.value
-            .filter(
-              progress => progress.id === currentId || progress.error || progress.percent < 100
-            )
-            .map(progress => progress.id)
-        )
-
-        selectedFiles.value = selectedFiles.value.filter(item => keepIds.has(item.id))
-
-        const progressMap = new Map(uploadProgress.value.map(item => [item.id, item]))
-        uploadProgress.value = selectedFiles.value
-          .map(item => progressMap.get(item.id))
-          .filter(Boolean) as UploadProgressItem[]
-
-        return selectedFiles.value.findIndex(item => item.id === currentId)
-      }
 
       const shouldTerminateUploadFlow = (error: any) =>
         Boolean(
@@ -108,41 +106,96 @@ export function useUpload(options: UseUploadOptions) {
           (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
         )
 
-      const terminateRemainingUploads = (fromIndex: number, reason: string) => {
-        for (let idx = fromIndex; idx < uploadProgress.value.length; idx++) {
-          if (!uploadProgress.value[idx].error) {
-            uploadProgress.value[idx].error = reason
+      let rateLimitUntil = 0
+      let terminalReason = ''
+      let nextUploadIndex = 0
+
+      const clearWaitingState = (progress: UploadProgressItem) => {
+        progress.waitingFor = undefined
+        progress.waitStart = undefined
+      }
+
+      const clearGlobalRateLimitWait = () => {
+        if (Date.now() < rateLimitUntil) return
+        for (const progress of uploadProgress.value) {
+          if (progress.waitingFor) {
+            clearWaitingState(progress)
           }
+        }
+        uploadProgress.value = [...uploadProgress.value]
+      }
+
+      const enterGlobalRateLimitWait = (waitTime: number) => {
+        const now = Date.now()
+        rateLimitUntil = Math.max(rateLimitUntil, now + waitTime)
+        const waitingFor = Math.max(1, Math.ceil((rateLimitUntil - now) / 1000))
+
+        for (const progress of uploadProgress.value) {
+          if (!progress.error && progress.percent < 100) {
+            progress.waitingFor = waitingFor
+            progress.waitStart = now
+          }
+        }
+
+        uploadProgress.value = [...uploadProgress.value]
+      }
+
+      const waitForGlobalRateLimit = async () => {
+        while (!terminalReason) {
+          const remaining = rateLimitUntil - Date.now()
+          if (remaining <= 0) {
+            clearGlobalRateLimitWait()
+            return
+          }
+          await new Promise(resolve => setTimeout(resolve, Math.min(remaining, 1000)))
         }
       }
 
-      let i = 0
-      while (i < selectedFiles.value.length) {
-        const currentItem = selectedFiles.value[i]
+      const markRemainingUploadsTerminated = (reason: string) => {
+        for (const progress of uploadProgress.value) {
+          if (!progress.error && progress.percent < 100) {
+            progress.error = reason
+            clearWaitingState(progress)
+          }
+        }
+        uploadProgress.value = [...uploadProgress.value]
+      }
+
+      const getNextUploadIndex = () => {
+        if (terminalReason) return null
+        if (nextUploadIndex >= filesSnapshot.length) return null
+        const index = nextUploadIndex
+        nextUploadIndex++
+        return index
+      }
+
+      const uploadOne = async (fileIndex: number) => {
+        const currentItem = filesSnapshot[fileIndex]
+        if (!currentItem) return
+
         const { file, width, height } = currentItem
         const currentId = currentItem.id
-        let currentIndex = i
 
         try {
           const updateProgress = (percent: number) => {
             const idx = findProgressIndex(currentId)
             if (idx === -1) return
             uploadProgress.value[idx].percent = percent
-            if (uploadProgress.value[idx].waitingFor) {
-              uploadProgress.value[idx].waitingFor = undefined
-              uploadProgress.value[idx].waitStart = undefined
+            if (
+              uploadProgress.value[idx].waitingFor &&
+              (percent >= 100 || Date.now() >= rateLimitUntil)
+            ) {
+              clearWaitingState(uploadProgress.value[idx])
             }
           }
 
           const onRateLimitWait = async (waitTime: number) => {
-            console.log('Rate limit hit. Writing existing batch before waiting.')
-            await writeNewEmojis()
-            const newIndex = pruneCompletedUploads(currentId)
-            if (newIndex !== -1) currentIndex = newIndex
-            const idx = findProgressIndex(currentId)
-            if (idx === -1) return
-            uploadProgress.value[idx].waitingFor = waitTime / 1000
-            uploadProgress.value[idx].waitStart = Date.now()
+            console.log(
+              `[BufferPage] Rate limit hit by ${file.name}. Pausing all upload coroutines for ${
+                waitTime / 1000
+              }s.`
+            )
+            enterGlobalRateLimitWait(waitTime)
           }
 
           const uploadResult = service.uploadFileDetailed
@@ -153,13 +206,16 @@ export function useUpload(options: UseUploadOptions) {
           const uploadUrl = uploadResult.url
 
           newEmojis.push({
-            name: file.name,
-            url: uploadUrl,
-            ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
-            displayUrl: uploadUrl,
-            packet: 0,
-            width,
-            height
+            index: fileIndex,
+            emoji: {
+              name: file.name,
+              url: uploadUrl,
+              ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
+              displayUrl: uploadUrl,
+              packet: 0,
+              width,
+              height
+            }
           })
           updateProgress(100)
         } catch (error) {
@@ -169,22 +225,39 @@ export function useUpload(options: UseUploadOptions) {
             uploadProgress.value[idx].error = error instanceof Error ? error.message : String(error)
           }
 
+          const exhaustedRateLimitWait = Number((error as any)?.waitTime)
+          if ((error as any)?.isRateLimitError && exhaustedRateLimitWait > 0) {
+            enterGlobalRateLimitWait(exhaustedRateLimitWait)
+          }
+
           if (shouldTerminateUploadFlow(error)) {
-            const reason = '检测到无等待信息的 429，已终止剩余上传以避免继续请求。'
-            terminateRemainingUploads(currentIndex + 1, reason)
-            message.error(reason)
-            break
+            terminalReason = '检测到无等待信息的 429，已终止剩余上传以避免继续请求。'
+            message.error(terminalReason)
           }
         }
+      }
 
-        i = currentIndex + 1
+      const workerCount = Math.min(getUploadConcurrency(), filesSnapshot.length)
+      const runUploadWorker = async () => {
+        while (true) {
+          await waitForGlobalRateLimit()
+          const uploadIndex = getNextUploadIndex()
+          if (uploadIndex === null) return
+          await uploadOne(uploadIndex)
+        }
+      }
+
+      await Promise.all(Array.from({ length: workerCount }, () => runUploadWorker()))
+
+      if (terminalReason) {
+        markRemainingUploadsTerminated(terminalReason)
       }
 
       // After the loop, write any remaining emojis.
       await writeNewEmojis()
 
       // Count successes and failures
-      const successCount = uploadProgress.value.filter(p => !p.error).length
+      const successCount = uploadProgress.value.filter(p => p.percent === 100 && !p.error).length
       const failCount = uploadProgress.value.filter(p => p.error).length
 
       // Show notification
@@ -197,7 +270,8 @@ export function useUpload(options: UseUploadOptions) {
       }
 
       // Keep failed files in the list for retry
-      selectedFiles.value = selectedFiles.value.filter((_, i) => uploadProgress.value[i].error)
+      const failedIds = new Set(uploadProgress.value.filter(p => p.error).map(p => p.id))
+      selectedFiles.value = selectedFiles.value.filter(item => failedIds.has(item.id))
 
       // 如果所有文件都上传成功，清除持久化数据
       if (selectedFiles.value.length === 0) {
