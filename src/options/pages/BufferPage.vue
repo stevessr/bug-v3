@@ -65,8 +65,11 @@ const categorizedUploadItems = computed(() => {
   if (uploadProgress.value.length === 0)
     return { completed: [], uploading: [], pending: [], error: [] }
 
-  const items: UploadCardItem[] = uploadProgress.value.map((progress, index) => {
-    const fileInfo = selectedFiles.value[index]
+  // 构建 ID -> fileInfo 映射，避免因 uploadProgress 移除已完成项导致索引不匹配
+  const fileInfoMap = new Map(selectedFiles.value.map(f => [f.id, f]))
+
+  const items: UploadCardItem[] = uploadProgress.value.map(progress => {
+    const fileInfo = fileInfoMap.get(progress.id)
     let status: UploadCardItem['status'] = 'pending'
 
     if (progress.error) {
@@ -80,7 +83,7 @@ const categorizedUploadItems = computed(() => {
     }
 
     return {
-      id: progress.id || fileInfo?.id || `upload-${index}`,
+      id: progress.id || fileInfo?.id || `upload-${progress.fileName}`,
       fileName: progress.fileName,
       previewUrl: progress.previewUrl || fileInfo?.previewUrl || '',
       percent: progress.percent,
@@ -94,6 +97,7 @@ const categorizedUploadItems = computed(() => {
   return {
     completed: items.filter(item => item.status === 'completed'),
     uploading: items.filter(item => item.status === 'uploading' || item.status === 'waiting'),
+    // pending 状态（未进入协程队列）不显示任何东西
     pending: items.filter(item => item.status === 'pending'),
     error: items.filter(item => item.status === 'error')
   }
@@ -1241,14 +1245,8 @@ onBeforeUnmount(() => {
               class="w-full h-full object-cover"
             />
           </div>
-          <!-- 上传进度；全局 429 等待时只在顶部显示一条等待进度 -->
-          <div v-if="item.status === 'waiting'" class="flex flex-col items-center">
-            <span
-              class="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-600 dark:bg-orange-900/40 dark:text-orange-300"
-            >
-              全局等待
-            </span>
-          </div>
+          <!-- 上传进度；全局 429 等待时只在顶部显示一条等待进度，卡片不再逐个显示 -->
+          <div v-if="item.status === 'waiting'" />
           <div v-else class="space-y-1">
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
               <div
@@ -1268,29 +1266,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- 待上传卡片 - 右侧 -->
-        <div
-          v-for="item in categorizedUploadItems.pending"
-          :key="item.id"
-          class="flex-shrink-0 w-24 bg-gray-50 dark:bg-gray-700 rounded-lg p-2 border border-gray-200 dark:border-gray-600 opacity-60 transition-all duration-300"
-        >
-          <div
-            class="relative aspect-square mb-2 rounded overflow-hidden bg-gray-100 dark:bg-gray-600"
-          >
-            <img
-              v-if="item.previewUrl"
-              :src="item.previewUrl"
-              :alt="item.fileName"
-              class="w-full h-full object-cover opacity-50"
-            />
-          </div>
-          <div
-            class="text-xs text-center text-gray-500 dark:text-gray-400 truncate"
-            :title="item.fileName"
-          >
-            {{ item.fileName }}
-          </div>
-        </div>
+        <!-- 待上传卡片 - 未进入协程队列的不显示任何东西 -->
 
         <!-- 错误卡片 -->
         <div
@@ -1342,7 +1318,7 @@ onBeforeUnmount(() => {
           ↑ {{ categorizedUploadItems.uploading.length }} 上传中/等待
         </span>
         <span v-if="categorizedUploadItems.pending.length > 0">
-          ○ {{ categorizedUploadItems.pending.length }} 等待中
+          ○ {{ categorizedUploadItems.pending.length }} 排队中
         </span>
         <span
           v-if="categorizedUploadItems.error?.length > 0"

@@ -177,6 +177,13 @@ export function useUpload(options: UseUploadOptions) {
         // 全局等待可能持续较久：先把已上传成功的文件写入缓冲区，
         // 再从“待上传文件”列表移除，避免等待期间列表继续显示已完成项。
         await flushCompletedUploadsToPendingList()
+
+        // 同时从 uploadProgress 中移除已完成的项，避免等待期间进度卡片继续显示已完成项
+        if (flushedUploadIds.size > 0) {
+          uploadProgress.value = uploadProgress.value.filter(
+            p => !flushedUploadIds.has(p.id)
+          )
+        }
       }
 
       const waitForGlobalRateLimit = async () => {
@@ -261,6 +268,12 @@ export function useUpload(options: UseUploadOptions) {
 
           if (Date.now() < rateLimitUntil) {
             await flushCompletedUploadsToPendingList()
+            // 清理已完成项的进度卡片
+            if (flushedUploadIds.size > 0) {
+              uploadProgress.value = uploadProgress.value.filter(
+                p => !flushedUploadIds.has(p.id)
+              )
+            }
           }
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error)
