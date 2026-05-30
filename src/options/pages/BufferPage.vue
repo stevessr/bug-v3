@@ -1188,7 +1188,7 @@ onBeforeUnmount(() => {
       <!-- 水平滚动卡片区域 -->
       <div
         ref="uploadScrollContainer"
-        class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+        class="flex items-start gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
       >
         <!-- 已完成卡片 - 左侧 -->
         <div
