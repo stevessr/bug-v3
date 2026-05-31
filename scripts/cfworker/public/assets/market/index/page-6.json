@@ -27,7 +27,7 @@
       "id": "group-1767645277428",
       "name": "芙兰朵露·斯卡蕾特｜Flandre Scarlet",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/8/b/08b48dc6a82f75b6803bb056a94542241e865e73.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 242,
       "emojiCount": 20,
       "isArchived": false
@@ -241,7 +241,7 @@
       "id": "group-1767645514114",
       "name": "铃仙｜Reisen",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/8/b/a8b92d92858b2f8020885c6d0cc68b50e481bf67.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 265,
       "emojiCount": 20,
       "isArchived": false
@@ -307,7 +307,7 @@
       "id": "group-1767645575781",
       "name": "雾雨魔理沙｜Kirisame Marisa",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/9/e/c9e433e439e8bbddf1978358a14aabd5d25e3ff2.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 272,
       "emojiCount": 54,
       "isArchived": false
@@ -325,7 +325,7 @@
       "id": "group-1762523521486",
       "name": "魔女",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/9/c/09cd510aa8834074c5d94d118f9f5683b8419bdf.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 274,
       "emojiCount": 92,
       "isArchived": false
@@ -334,7 +334,7 @@
       "id": "group-1755966299851",
       "name": "魔女的夜宴",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/f/7/cf7a66e61f5d8179e67d3c73781cb61b08b85ec1.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 275,
       "emojiCount": 38,
       "isArchived": false
@@ -343,7 +343,7 @@
       "id": "group-1759820121581",
       "name": "魔法少女ノ魔女裁判",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
-      "topic": "100",
+      "topic": "magic_girl",
       "order": 276,
       "emojiCount": 318,
       "isArchived": false
@@ -352,7 +352,7 @@
       "id": "group-1764980488364",
       "name": "魔法少女的魔女审判 by 绮纪",
       "icon": "https://cdn3.ldstatic.com/original/4X/b/5/0/b506a1d289f260374437e310870e0fa91e11dca8.jpeg",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 277,
       "emojiCount": 14,
       "isArchived": true
@@ -361,7 +361,7 @@
       "id": "group-1762524245454",
       "name": "魔裁补充包",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/e/9/9e95a3ed14fbdb06225a60eca85a66286e821bf3.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 278,
       "emojiCount": 45,
       "isArchived": false

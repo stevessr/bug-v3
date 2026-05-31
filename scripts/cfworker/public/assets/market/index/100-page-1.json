@@ -3,7 +3,7 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 21,
+  "totalGroups": 20,
   "groups": [
     {
       "id": "group-1766412592583",
@@ -174,15 +174,6 @@
       "topic": "100",
       "order": 271,
       "emojiCount": 120,
-      "isArchived": false
-    },
-    {
-      "id": "group-1759820121581",
-      "name": "魔法少女ノ魔女裁判",
-      "icon": "https://cdn3.ldstatic.com/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
-      "topic": "100",
-      "order": 276,
-      "emojiCount": 318,
       "isArchived": false
     },
     {

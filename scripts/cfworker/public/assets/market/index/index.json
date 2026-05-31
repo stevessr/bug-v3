@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:42:41.346Z",
+  "exportDate": "2026-05-31T03:56:13.715Z",
   "totalGroups": 287,
   "pageSize": 48,
   "totalPages": 6,
@@ -138,8 +138,8 @@
     {
       "id": "other",
       "label": "其他",
-      "totalGroups": 109,
-      "totalPages": 3,
+      "totalGroups": 91,
+      "totalPages": 2,
       "pages": [
         {
           "name": "other-page-1.json",
@@ -150,14 +150,8 @@
         {
           "name": "other-page-2.json",
           "start": 49,
-          "end": 96,
-          "count": 48
-        },
-        {
-          "name": "other-page-3.json",
-          "start": 97,
-          "end": 109,
-          "count": 13
+          "end": 91,
+          "count": 43
         }
       ]
     },
@@ -234,14 +228,14 @@
     {
       "id": "100",
       "label": "100+",
-      "totalGroups": 21,
+      "totalGroups": 20,
       "totalPages": 1,
       "pages": [
         {
           "name": "100-page-1.json",
           "start": 1,
-          "end": 21,
-          "count": 21
+          "end": 20,
+          "count": 20
         }
       ]
     },
@@ -256,6 +250,48 @@
           "start": 1,
           "end": 2,
           "count": 2
+        }
+      ]
+    },
+    {
+      "id": "touhou",
+      "label": "东方",
+      "totalGroups": 11,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "touhou-page-1.json",
+          "start": 1,
+          "end": 11,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "neko",
+      "label": "neko",
+      "totalGroups": 3,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "neko-page-1.json",
+          "start": 1,
+          "end": 3,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "magic_girl",
+      "label": "魔法少女",
+      "totalGroups": 5,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "magic_girl-page-1.json",
+          "start": 1,
+          "end": 5,
+          "count": 5
         }
       ]
     }

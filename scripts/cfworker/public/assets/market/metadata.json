@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:42:41.346Z",
+  "exportDate": "2026-05-31T03:56:13.715Z",
   "totalGroups": 287,
   "includeArchived": true,
   "groups": [
@@ -284,7 +284,7 @@
       "id": "group-1758073408523",
       "name": "Nachoneko 表情包",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/3/f/23fac94d8858a23cbd49879f2b037a2be020c87e.jpeg",
-      "topic": "other",
+      "topic": "neko",
       "order": 30,
       "emojiCount": 39,
       "isArchived": false
@@ -293,7 +293,7 @@
       "id": "group-1755913884262",
       "name": "neko",
       "icon": "https://cdn3.ldstatic.com/original/4X/f/4/7/f479dbd309305ab14c53fd377cd51e44ee6f455e.webp",
-      "topic": "other",
+      "topic": "neko",
       "order": 31,
       "emojiCount": 64,
       "isArchived": false
@@ -302,7 +302,7 @@
       "id": "group-1755913887877",
       "name": "neko2",
       "icon": "https://cdn3.ldstatic.com/original/4X/f/7/a/f7afaab5dd91159674a53cdc977a09402f66c278.webp",
-      "topic": "other",
+      "topic": "neko",
       "order": 32,
       "emojiCount": 40,
       "isArchived": false
@@ -1251,7 +1251,7 @@
       "id": "group-1758290078442",
       "name": "东方大头",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
-      "topic": "other",
+      "topic": "touhou",
       "order": 137,
       "emojiCount": 30,
       "isArchived": false
@@ -1472,7 +1472,7 @@
       "id": "group-1767644414780",
       "name": "博丽灵梦｜Hakurei Reimu",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/e/b/2ebf3636ee2062b61572f7b19422f11f1a5ce4c1.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 161,
       "emojiCount": 52,
       "isArchived": false
@@ -1481,7 +1481,7 @@
       "id": "group-1767644422683",
       "name": "古明地恋 (天光虚)｜Komeiji Koishi(Tian Guang Xv)",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/6/9/0693a474aee5041dad8757868fb8df8a503ccfa2.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 162,
       "emojiCount": 40,
       "isArchived": false
@@ -1499,7 +1499,7 @@
       "id": "group-1761446423721",
       "name": "可爱东方 1",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/a/3/1a3be398e1b0de1e3884f88a34b7252065aa3474.webp",
-      "topic": "other",
+      "topic": "touhou",
       "order": 164,
       "emojiCount": 63,
       "isArchived": false
@@ -1575,7 +1575,7 @@
       "id": "group-1767644605229",
       "name": "大妖精｜Daiyousei",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/a/7/da707b11f84e496e28d818600fe3e0b837215fab.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 172,
       "emojiCount": 60,
       "isArchived": false
@@ -1923,7 +1923,7 @@
       "id": "group-1767644906904",
       "name": "比那名居天子｜Hinanawi_Tenshi",
       "icon": "https://cdn3.ldstatic.com/original/4X/5/5/9/5593783784294d9ae906a0ba256c17ee8e00defe.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 209,
       "emojiCount": 40,
       "isArchived": false
@@ -2076,7 +2076,7 @@
       "id": "group-1767645029605",
       "name": "珠手知由｜Tamade Chiyu",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/e/3/ae3c4efbaed0d6ad247f0dde8c1f81493f88c602.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 225,
       "emojiCount": 20,
       "isArchived": false
@@ -2085,7 +2085,7 @@
       "id": "group-1767645142807",
       "name": "琪露诺｜Cirno",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/b/4/4b4eb8b4ddee8f31b42f342e9eacf2c05bf1bd12.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 226,
       "emojiCount": 73,
       "isArchived": false
@@ -2233,7 +2233,7 @@
       "id": "group-1767645277428",
       "name": "芙兰朵露·斯卡蕾特｜Flandre Scarlet",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/8/b/08b48dc6a82f75b6803bb056a94542241e865e73.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 242,
       "emojiCount": 20,
       "isArchived": false
@@ -2447,7 +2447,7 @@
       "id": "group-1767645514114",
       "name": "铃仙｜Reisen",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/8/b/a8b92d92858b2f8020885c6d0cc68b50e481bf67.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 265,
       "emojiCount": 20,
       "isArchived": false
@@ -2513,7 +2513,7 @@
       "id": "group-1767645575781",
       "name": "雾雨魔理沙｜Kirisame Marisa",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/9/e/c9e433e439e8bbddf1978358a14aabd5d25e3ff2.avif",
-      "topic": "other",
+      "topic": "touhou",
       "order": 272,
       "emojiCount": 54,
       "isArchived": false
@@ -2531,7 +2531,7 @@
       "id": "group-1762523521486",
       "name": "魔女",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/9/c/09cd510aa8834074c5d94d118f9f5683b8419bdf.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 274,
       "emojiCount": 92,
       "isArchived": false
@@ -2540,7 +2540,7 @@
       "id": "group-1755966299851",
       "name": "魔女的夜宴",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/f/7/cf7a66e61f5d8179e67d3c73781cb61b08b85ec1.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 275,
       "emojiCount": 38,
       "isArchived": false
@@ -2549,7 +2549,7 @@
       "id": "group-1759820121581",
       "name": "魔法少女ノ魔女裁判",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
-      "topic": "100",
+      "topic": "magic_girl",
       "order": 276,
       "emojiCount": 318,
       "isArchived": false
@@ -2558,7 +2558,7 @@
       "id": "group-1764980488364",
       "name": "魔法少女的魔女审判 by 绮纪",
       "icon": "https://cdn3.ldstatic.com/original/4X/b/5/0/b506a1d289f260374437e310870e0fa91e11dca8.jpeg",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 277,
       "emojiCount": 14,
       "isArchived": true
@@ -2567,7 +2567,7 @@
       "id": "group-1762524245454",
       "name": "魔裁补充包",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/e/9/9e95a3ed14fbdb06225a60eca85a66286e821bf3.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 278,
       "emojiCount": 45,
       "isArchived": false
