@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:31:36.573Z",
+  "exportDate": "2026-05-31T03:37:22.893Z",
   "totalGroups": 287,
   "includeArchived": true,
   "groups": [
@@ -1418,7 +1418,7 @@
       "name": "动图 2",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/6/2/3625a45375f43ce1e32c463e51b61991db3095c1.avif#/",
       "detail": "",
-      "topic": "other",
+      "topic": "animated",
       "order": 155,
       "emojiCount": 85,
       "isArchived": false
@@ -1427,7 +1427,7 @@
       "id": "group-1772069639178",
       "name": "动图 3",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/8/b/e8b1aba044f4207ce335aa9edca1e413dd23e1c5.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "animated",
       "order": 156,
       "emojiCount": 191,
       "isArchived": false
@@ -1436,7 +1436,7 @@
       "id": "group-1772290583306",
       "name": "动图 4",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/4/0/9407d7070489c979c5f62af240f50b8b86bc03ae.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "animated",
       "order": 157,
       "emojiCount": 72,
       "isArchived": false
@@ -1445,7 +1445,7 @@
       "id": "group-1772634907355",
       "name": "动图 5",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/7/e/d7e2ffae42553c39c492adaa692d2432ba06688f.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "animated",
       "order": 158,
       "emojiCount": 87,
       "isArchived": false
@@ -1454,7 +1454,7 @@
       "id": "group-1773674332168",
       "name": "动图 6",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/d/1/9d14d9f13def2aa039cdfa69f02abe533e3b25e9.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "animated",
       "order": 159,
       "emojiCount": 59,
       "isArchived": false
@@ -1705,7 +1705,7 @@
       "name": "我怎么可能成为你的恋人",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/0/4/2043ad13d670aa9c62b3632514a7a4861849ee86.gif#/",
       "detail": "https://tieba.baidu.com/f?kw=%E6%88%91%E6%80%8E%E4%B9%88%E5%8F%AF%E8%83%BD%E6%88%90%E4%B8%BA%E4%BD%A0%E7%9A%84%E6%81%8B%E4%BA%BA",
-      "topic": "other",
+      "topic": "tieba",
       "order": 186,
       "emojiCount": 281,
       "isArchived": false

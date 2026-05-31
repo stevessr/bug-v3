@@ -1,0 +1,19 @@
+{
+  "topic": "tieba",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 1,
+  "groups": [
+    {
+      "id": "group-1768985215189",
+      "name": "我怎么可能成为你的恋人",
+      "icon": "https://cdn3.ldstatic.com/original/4X/2/0/4/2043ad13d670aa9c62b3632514a7a4861849ee86.gif#/",
+      "detail": "https://tieba.baidu.com/f?kw=%E6%88%91%E6%80%8E%E4%B9%88%E5%8F%AF%E8%83%BD%E6%88%90%E4%B8%BA%E4%BD%A0%E7%9A%84%E6%81%8B%E4%BA%BA",
+      "topic": "tieba",
+      "order": 186,
+      "emojiCount": 281,
+      "isArchived": false
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:31:36.573Z",
+  "exportDate": "2026-05-31T03:37:22.893Z",
   "totalGroups": 287,
   "pageSize": 48,
   "totalPages": 6,
@@ -138,7 +138,7 @@
     {
       "id": "other",
       "label": "其他",
-      "totalGroups": 138,
+      "totalGroups": 132,
       "totalPages": 3,
       "pages": [
         {
@@ -156,8 +156,8 @@
         {
           "name": "other-page-3.json",
           "start": 97,
-          "end": 138,
-          "count": 42
+          "end": 132,
+          "count": 36
         }
       ]
     },
@@ -192,14 +192,14 @@
     {
       "id": "animated",
       "label": "动画表情",
-      "totalGroups": 2,
+      "totalGroups": 7,
       "totalPages": 1,
       "pages": [
         {
           "name": "animated-page-1.json",
           "start": 1,
-          "end": 2,
-          "count": 2
+          "end": 7,
+          "count": 7
         }
       ]
     },
@@ -214,6 +214,34 @@
           "start": 1,
           "end": 1,
           "count": 1
+        }
+      ]
+    },
+    {
+      "id": "tieba",
+      "label": "贴吧",
+      "totalGroups": 1,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "tieba-page-1.json",
+          "start": 1,
+          "end": 1,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": ">100",
+      "label": "100+",
+      "totalGroups": 0,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": ">100-page-1.json",
+          "start": 1,
+          "end": 0,
+          "count": 0
         }
       ]
     }

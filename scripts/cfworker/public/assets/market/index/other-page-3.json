@@ -3,62 +3,8 @@
   "page": 3,
   "pageSize": 48,
   "totalPages": 3,
-  "totalGroups": 138,
+  "totalGroups": 132,
   "groups": [
-    {
-      "id": "group-1761154861189",
-      "name": "真白花音",
-      "icon": "https://cdn3.ldstatic.com/original/4X/9/c/e/9cef029cf8659ad3e40a2e286e1da62df9f650d0.webp",
-      "topic": "other",
-      "order": 230,
-      "emojiCount": 96,
-      "isArchived": false
-    },
-    {
-      "id": "group-1767645208165",
-      "name": "礼服素世",
-      "icon": "https://cdn3.ldstatic.com/original/4X/4/c/0/4c0879dbdfa937e853c1b25da4688941bc2990bc.avif",
-      "topic": "other",
-      "order": 231,
-      "emojiCount": 60,
-      "isArchived": false
-    },
-    {
-      "id": "group-1759678713445",
-      "name": "神人表情包",
-      "icon": "👊",
-      "topic": "other",
-      "order": 232,
-      "emojiCount": 62,
-      "isArchived": false
-    },
-    {
-      "id": "group-1756869988533",
-      "name": "科研喵",
-      "icon": "https://cdn3.ldstatic.com/original/4X/4/0/5/405d8e2a4849c28afed8fc363348c3e9b3a24f33.webp",
-      "topic": "other",
-      "order": 233,
-      "emojiCount": 16,
-      "isArchived": false
-    },
-    {
-      "id": "group-1767645265317",
-      "name": "米塔｜MiSide",
-      "icon": "https://cdn3.ldstatic.com/original/4X/4/f/e/4fe7541f5b7772e0781572b2f0f3f4237802d226.avif",
-      "topic": "other",
-      "order": 234,
-      "emojiCount": 40,
-      "isArchived": false
-    },
-    {
-      "id": "group-1767645270562",
-      "name": "糖糖｜Ame",
-      "icon": "https://cdn3.ldstatic.com/original/4X/6/8/d/68da88abb3c708325fba02dad392514d12967f55.avif",
-      "topic": "other",
-      "order": 235,
-      "emojiCount": 20,
-      "isArchived": false
-    },
     {
       "id": "group-1765973308075",
       "name": "系敷敷",
