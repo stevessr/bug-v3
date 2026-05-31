@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:27:41.056Z",
+  "exportDate": "2026-05-31T03:31:36.573Z",
   "totalGroups": 287,
   "pageSize": 48,
   "totalPages": 6,
@@ -138,7 +138,7 @@
     {
       "id": "other",
       "label": "其他",
-      "totalGroups": 143,
+      "totalGroups": 138,
       "totalPages": 3,
       "pages": [
         {
@@ -156,8 +156,8 @@
         {
           "name": "other-page-3.json",
           "start": 97,
-          "end": 143,
-          "count": 47
+          "end": 138,
+          "count": 42
         }
       ]
     },
@@ -172,6 +172,48 @@
           "start": 1,
           "end": 5,
           "count": 5
+        }
+      ]
+    },
+    {
+      "id": "emoji",
+      "label": "emoji",
+      "totalGroups": 2,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "emoji-page-1.json",
+          "start": 1,
+          "end": 2,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "animated",
+      "label": "动画表情",
+      "totalGroups": 2,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "animated-page-1.json",
+          "start": 1,
+          "end": 2,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "linux.do",
+      "label": "linux.do",
+      "totalGroups": 1,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "linux.do-page-1.json",
+          "start": 1,
+          "end": 1,
+          "count": 1
         }
       ]
     }

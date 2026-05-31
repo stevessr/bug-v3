@@ -3,53 +3,8 @@
   "page": 3,
   "pageSize": 48,
   "totalPages": 3,
-  "totalGroups": 143,
+  "totalGroups": 138,
   "groups": [
-    {
-      "id": "group-1762519966926",
-      "name": "猪包 TV",
-      "icon": "https://cdn3.ldstatic.com/original/4X/2/4/6/246f64f7604c2d69301f0ac003661af7af71c47d.webp",
-      "topic": "other",
-      "order": 223,
-      "emojiCount": 61,
-      "isArchived": false
-    },
-    {
-      "id": "group-1759820228329",
-      "name": "玻璃灵梦",
-      "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
-      "topic": "other",
-      "order": 224,
-      "emojiCount": 29,
-      "isArchived": false
-    },
-    {
-      "id": "group-1767645029605",
-      "name": "珠手知由｜Tamade Chiyu",
-      "icon": "https://cdn3.ldstatic.com/original/4X/a/e/3/ae3c4efbaed0d6ad247f0dde8c1f81493f88c602.avif",
-      "topic": "other",
-      "order": 225,
-      "emojiCount": 20,
-      "isArchived": false
-    },
-    {
-      "id": "group-1767645142807",
-      "name": "琪露诺｜Cirno",
-      "icon": "https://cdn3.ldstatic.com/original/4X/4/b/4/4b4eb8b4ddee8f31b42f342e9eacf2c05bf1bd12.avif",
-      "topic": "other",
-      "order": 226,
-      "emojiCount": 73,
-      "isArchived": false
-    },
-    {
-      "id": "group-1758292062046",
-      "name": "疯传箱子",
-      "icon": "https://cdn3.ldstatic.com/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
-      "topic": "other",
-      "order": 227,
-      "emojiCount": 24,
-      "isArchived": false
-    },
     {
       "id": "group-1761154861189",
       "name": "真白花音",

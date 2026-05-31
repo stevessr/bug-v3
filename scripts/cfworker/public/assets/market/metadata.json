@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:27:41.056Z",
+  "exportDate": "2026-05-31T03:31:36.573Z",
   "totalGroups": 287,
   "includeArchived": true,
   "groups": [
@@ -17,7 +17,7 @@
       "id": "group-1767684284025",
       "name": "animated 1",
       "icon": "https://cdn3.ldstatic.com/original/4X/6/6/8/668801049e6ce06a3cb85382a5057b8a1f7b8340.avif",
-      "topic": "other",
+      "topic": "animated",
       "order": 1,
       "emojiCount": 129,
       "isArchived": false
@@ -26,7 +26,7 @@
       "id": "group-1778228922360",
       "name": "animated 2",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/3/b/93b1b6c8d039c8d8eac2daf58546c8c6fcd4a9b6.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "animated",
       "order": 2,
       "emojiCount": 478,
       "isArchived": false
@@ -229,7 +229,7 @@
       "name": "Maru_sec",
       "icon": "https://linux.do/user_avatar/linux.do/maru_sec/96/1162460_2.gif",
       "detail": "https://linux.do/t/topic/1408241",
-      "topic": "other",
+      "topic": "linux.do",
       "order": 24,
       "emojiCount": 24,
       "isArchived": false
@@ -266,7 +266,7 @@
       "id": "group-1768722447397",
       "name": "Moetwemoji",
       "icon": "https://cdn3.ldstatic.com/original/4X/6/0/8/608653c78bb1ed4b9557c7e47d7d54794b8b25dc.avif",
-      "topic": "other",
+      "topic": "emoji",
       "order": 28,
       "emojiCount": 411,
       "isArchived": false
@@ -321,7 +321,7 @@
       "id": "group-1774365614468",
       "name": "Neuro & Evil emojis by Haruya",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/4/f/34f605d01004ca5a539e8e920ebe27f80a8e225a.avif?v=emoji-17",
-      "topic": "other",
+      "topic": "emoji",
       "order": 34,
       "emojiCount": 40,
       "isArchived": false

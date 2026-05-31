@@ -1,0 +1,19 @@
+{
+  "topic": "linux.do",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 1,
+  "groups": [
+    {
+      "id": "group-1767629262989",
+      "name": "Maru_sec",
+      "icon": "https://linux.do/user_avatar/linux.do/maru_sec/96/1162460_2.gif",
+      "detail": "https://linux.do/t/topic/1408241",
+      "topic": "linux.do",
+      "order": 24,
+      "emojiCount": 24,
+      "isArchived": false
+    }
+  ]
+}

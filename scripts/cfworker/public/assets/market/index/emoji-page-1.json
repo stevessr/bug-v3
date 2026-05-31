@@ -1,0 +1,27 @@
+{
+  "topic": "emoji",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 2,
+  "groups": [
+    {
+      "id": "group-1768722447397",
+      "name": "Moetwemoji",
+      "icon": "https://cdn3.ldstatic.com/original/4X/6/0/8/608653c78bb1ed4b9557c7e47d7d54794b8b25dc.avif",
+      "topic": "emoji",
+      "order": 28,
+      "emojiCount": 411,
+      "isArchived": false
+    },
+    {
+      "id": "group-1774365614468",
+      "name": "Neuro & Evil emojis by Haruya",
+      "icon": "https://cdn3.ldstatic.com/original/4X/3/4/f/34f605d01004ca5a539e8e920ebe27f80a8e225a.avif?v=emoji-17",
+      "topic": "emoji",
+      "order": 34,
+      "emojiCount": 40,
+      "isArchived": false
+    }
+  ]
+}
