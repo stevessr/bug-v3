@@ -18,7 +18,9 @@ const MARKET_TOPICS = [
   { id: 'OC', label: 'OC' },
   { id: 'emoji', label: 'emoji' },
   { id: 'animated', label: '动画表情' },
-  { id: 'linux.do', label: 'linux.do' }
+  { id: 'linux.do', label: 'linux.do' },
+  { id: 'tieba', label: '贴吧' },
+  { id: '>100' , label: '100+' }
 ]
 
 function resolveMarketTopic(group) {
@@ -26,14 +28,17 @@ function resolveMarketTopic(group) {
   const name = String(group.name || '')
     .trim()
     .toLowerCase()
+  const len = group.emojiCount || 0
 
   if (detail.includes('t.me')) return 'telegram'
   if (detail.includes('bili')) return 'bilibili'
   if (name.startsWith('x')) return 'x'
   if (name.includes('oc') || detail.includes('oc') || name.includes('steve')) return 'OC'
   if (name.includes('emoji')) return 'emoji'
-  if (name.includes('animated')) return 'animated'
+  if (name.includes('animated')|| name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
+  if (name.includes('tieba') || detail.includes('tieba')) return 'tieba'
+  if (len > 100) return '>100'
   return 'other'
 }
 
