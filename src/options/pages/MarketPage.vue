@@ -23,6 +23,7 @@ type MarketTopicId =
   | 'linux.do'
   | 'tieba'
   | '100' // 预留一个特殊 topic，用于标记超过 100 个表情包的分组
+  | string // 允许自定义 topic ID
 
 type MarketGroupSummary = {
   id: string
