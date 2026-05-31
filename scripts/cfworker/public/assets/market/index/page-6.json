@@ -45,7 +45,7 @@
       "id": "group-1761572596776",
       "name": "茳枫",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/a/f/9afa812f39164e918cd6e432c041a9d4c8072200.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 244,
       "emojiCount": 112,
       "isArchived": false
@@ -83,7 +83,7 @@
       "id": "group-1758505345831",
       "name": "菲比 IDC",
       "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
-      "topic": "other",
+      "topic": "100",
       "order": 248,
       "emojiCount": 102,
       "isArchived": true
@@ -121,7 +121,7 @@
       "id": "group-1762696672054",
       "name": "让我想想",
       "icon": "🤔",
-      "topic": "other",
+      "topic": "100",
       "order": 252,
       "emojiCount": 118,
       "isArchived": false
@@ -232,7 +232,7 @@
       "id": "group-1762695828124",
       "name": "钞币企鹅",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/6/b/46b20c005b474313eabeab1b4d59f0614cfb49d8.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 264,
       "emojiCount": 117,
       "isArchived": true
@@ -269,7 +269,7 @@
       "id": "group-1755833820210",
       "name": "铸币大头",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/4/f/34fdc9cb2faf18e437081627ccf4277d893ccf97.jpeg",
-      "topic": "other",
+      "topic": "100",
       "order": 268,
       "emojiCount": 111,
       "isArchived": false
@@ -298,7 +298,7 @@
       "id": "group-1761569314695",
       "name": "雪风",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 271,
       "emojiCount": 120,
       "isArchived": false
@@ -343,7 +343,7 @@
       "id": "group-1759820121581",
       "name": "魔法少女ノ魔女裁判",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
-      "topic": "other",
+      "topic": "100",
       "order": 276,
       "emojiCount": 318,
       "isArchived": false
@@ -370,7 +370,7 @@
       "id": "group-1755968404073",
       "name": "鲨鱼 gura",
       "icon": "https://cdn3.ldstatic.com/original/4X/6/2/8/628ac7a00ffc1f489a146e89dd1baf92db60577d.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 279,
       "emojiCount": 175,
       "isArchived": false

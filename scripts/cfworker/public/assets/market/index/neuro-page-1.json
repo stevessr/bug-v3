@@ -1,0 +1,27 @@
+{
+  "topic": "neuro",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 2,
+  "groups": [
+    {
+      "id": "group-1756870069420",
+      "name": "neuro sama",
+      "icon": "https://cdn3.ldstatic.com/original/4X/5/2/d/52d63b7361b0c4a13ea1aea236b5192925358c05.jpeg",
+      "topic": "neuro",
+      "order": 35,
+      "emojiCount": 53,
+      "isArchived": false
+    },
+    {
+      "id": "group-1763270508379",
+      "name": "Neuro sama",
+      "icon": "https://cdn3.ldstatic.com/original/4X/b/6/8/b6894e8c972abd7f84b9af70623bbf04110c9169.webp",
+      "topic": "neuro",
+      "order": 36,
+      "emojiCount": 119,
+      "isArchived": false
+    }
+  ]
+}

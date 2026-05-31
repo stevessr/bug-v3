@@ -3,6 +3,196 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 0,
-  "groups": []
+  "totalGroups": 21,
+  "groups": [
+    {
+      "id": "group-1766412592583",
+      "name": "archlinuxmx",
+      "icon": "https://cdn3.ldstatic.com/original/4X/8/3/1/8316332bbcfb25c94042cf63080819f1433f85f6.webp",
+      "topic": "100",
+      "order": 3,
+      "emojiCount": 116,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761060574614",
+      "name": "doro",
+      "icon": "https://cdn3.ldstatic.com/original/4X/2/8/2/282837d25063aa92cb6abbcd17664a3cb7562393.webp",
+      "topic": "100",
+      "order": 11,
+      "emojiCount": 105,
+      "isArchived": false
+    },
+    {
+      "id": "group-1760528756665",
+      "name": "memes",
+      "icon": "😮",
+      "topic": "100",
+      "order": 26,
+      "emojiCount": 190,
+      "isArchived": false
+    },
+    {
+      "id": "group-1760717207846",
+      "name": "taffy",
+      "icon": "https://cdn3.ldstatic.com/original/4X/5/2/c/52ce33243c77626ade1b60b2d12c201ebd964e43.webp",
+      "topic": "100",
+      "order": 43,
+      "emojiCount": 134,
+      "isArchived": false
+    },
+    {
+      "id": "group-1758291025412",
+      "name": "tatakura",
+      "icon": "https://cdn3.ldstatic.com/original/4X/8/f/4/8f436a831af266f55e0e56106dd3fb3e06485a8b.webp",
+      "topic": "100",
+      "order": 44,
+      "emojiCount": 119,
+      "isArchived": false
+    },
+    {
+      "id": "group-1762778187463",
+      "name": "There's No Freaking Way I'll be Your Lover! Unless...",
+      "icon": "https://cdn3.ldstatic.com/original/4X/0/f/7/0f7a924958ba14549697c5b3af7df0dae1ed6cb6.avif",
+      "topic": "100",
+      "order": 45,
+      "emojiCount": 120,
+      "isArchived": false
+    },
+    {
+      "id": "group-1755970088527",
+      "name": "仙狐小姐",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/d/9/dd9a3f3779dfd325b0b0cd45bbb0cc1334eb1318.webp",
+      "topic": "100",
+      "order": 144,
+      "emojiCount": 271,
+      "isArchived": false
+    },
+    {
+      "id": "group-1765895444745",
+      "name": "妹红 · 上官绯樱",
+      "icon": "https://cdn3.ldstatic.com/original/4X/0/f/6/0f64b7be701d1cd06fe53641f93116d5482a9c5b.avif",
+      "topic": "100",
+      "order": 176,
+      "emojiCount": 1057,
+      "isArchived": true
+    },
+    {
+      "id": "group-1761155486316",
+      "name": "家有鲨猫",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/5/0/d50e4e34c192daf2c186d7f00e091645d62e1be9.webp",
+      "topic": "100",
+      "order": 180,
+      "emojiCount": 119,
+      "isArchived": false
+    },
+    {
+      "id": "group-1756869887449",
+      "name": "小 C",
+      "icon": "https://cdn3.ldstatic.com/original/4X/c/c/a/ccacd68f1d3883b372a7c53602d8a58d246a3e96.webp",
+      "topic": "100",
+      "order": 181,
+      "emojiCount": 125,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767644842489",
+      "name": "明日方舟联动",
+      "icon": "https://cdn3.ldstatic.com/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
+      "topic": "100",
+      "order": 192,
+      "emojiCount": 116,
+      "isArchived": false
+    },
+    {
+      "id": "group-1762692296711",
+      "name": "深夜防毒",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/7/e/17e746dea8739a935c1df81abb55567376993b3e.webp",
+      "topic": "100",
+      "order": 216,
+      "emojiCount": 115,
+      "isArchived": true
+    },
+    {
+      "id": "group-1759676376056",
+      "name": "狼狼",
+      "icon": "https://cdn3.ldstatic.com/original/4X/9/7/a/97a95be9dd233b8070b0a960e30baab9c30689cc.webp",
+      "topic": "100",
+      "order": 220,
+      "emojiCount": 101,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761572596776",
+      "name": "茳枫",
+      "icon": "https://cdn3.ldstatic.com/original/4X/9/a/f/9afa812f39164e918cd6e432c041a9d4c8072200.webp",
+      "topic": "100",
+      "order": 244,
+      "emojiCount": 112,
+      "isArchived": false
+    },
+    {
+      "id": "group-1758505345831",
+      "name": "菲比 IDC",
+      "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
+      "topic": "100",
+      "order": 248,
+      "emojiCount": 102,
+      "isArchived": true
+    },
+    {
+      "id": "group-1762696672054",
+      "name": "让我想想",
+      "icon": "🤔",
+      "topic": "100",
+      "order": 252,
+      "emojiCount": 118,
+      "isArchived": false
+    },
+    {
+      "id": "group-1762695828124",
+      "name": "钞币企鹅",
+      "icon": "https://cdn3.ldstatic.com/original/4X/4/6/b/46b20c005b474313eabeab1b4d59f0614cfb49d8.webp",
+      "topic": "100",
+      "order": 264,
+      "emojiCount": 117,
+      "isArchived": true
+    },
+    {
+      "id": "group-1755833820210",
+      "name": "铸币大头",
+      "icon": "https://cdn3.ldstatic.com/original/4X/3/4/f/34fdc9cb2faf18e437081627ccf4277d893ccf97.jpeg",
+      "topic": "100",
+      "order": 268,
+      "emojiCount": 111,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761569314695",
+      "name": "雪风",
+      "icon": "https://cdn3.ldstatic.com/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
+      "topic": "100",
+      "order": 271,
+      "emojiCount": 120,
+      "isArchived": false
+    },
+    {
+      "id": "group-1759820121581",
+      "name": "魔法少女ノ魔女裁判",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/f/6/df666def380f7d6434336e29635a6754085b51b0.jpeg",
+      "topic": "100",
+      "order": 276,
+      "emojiCount": 318,
+      "isArchived": false
+    },
+    {
+      "id": "group-1755968404073",
+      "name": "鲨鱼 gura",
+      "icon": "https://cdn3.ldstatic.com/original/4X/6/2/8/628ac7a00ffc1f489a146e89dd1baf92db60577d.webp",
+      "topic": "100",
+      "order": 279,
+      "emojiCount": 175,
+      "isArchived": false
+    }
+  ]
 }

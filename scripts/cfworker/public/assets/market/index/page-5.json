@@ -9,7 +9,7 @@
       "id": "group-1767644842489",
       "name": "明日方舟联动",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
-      "topic": "other",
+      "topic": "100",
       "order": 192,
       "emojiCount": 116,
       "isArchived": false
@@ -238,7 +238,7 @@
       "id": "group-1762692296711",
       "name": "深夜防毒",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/7/e/17e746dea8739a935c1df81abb55567376993b3e.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 216,
       "emojiCount": 115,
       "isArchived": true
@@ -276,7 +276,7 @@
       "id": "group-1759676376056",
       "name": "狼狼",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/7/a/97a95be9dd233b8070b0a960e30baab9c30689cc.webp",
-      "topic": "other",
+      "topic": "100",
       "order": 220,
       "emojiCount": 101,
       "isArchived": false
