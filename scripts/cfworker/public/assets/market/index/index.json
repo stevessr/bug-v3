@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-05-31T03:37:22.893Z",
+  "exportDate": "2026-05-31T03:37:51.864Z",
   "totalGroups": 287,
   "pageSize": 48,
   "totalPages": 6,
@@ -232,13 +232,13 @@
       ]
     },
     {
-      "id": ">100",
+      "id": "100",
       "label": "100+",
       "totalGroups": 0,
       "totalPages": 1,
       "pages": [
         {
-          "name": ">100-page-1.json",
+          "name": "100-page-1.json",
           "start": 1,
           "end": 0,
           "count": 0
