@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { TOUHOU_KEYWORDS, MAGIC_GIRL_KEYWORDS, keyword_match } from './lib/constants.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -21,7 +22,10 @@ const MARKET_TOPICS = [
   { id: 'linux.do', label: 'linux.do' },
   { id: 'tieba', label: '贴吧' },
   { id: '100', label: '100+' },
-  { id: 'neuro', label: 'neuro' }
+  { id: 'neuro', label: 'neuro' },
+  { id: 'touhou', label: '东方' },
+  { id: 'neko', label: 'neko' },
+  { id: 'magic_girl', label: '魔法少女' }
 ]
 
 function resolveMarketTopic(group) {
@@ -40,6 +44,12 @@ function resolveMarketTopic(group) {
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba')) return 'tieba'
   if (name.includes('neuro') || detail.includes('neuron')) return 'neuro'
+
+  if (keyword_match(TOUHOU_KEYWORDS, name) || keyword_match(TOUHOU_KEYWORDS, detail))
+    return 'touhou'
+  if (name.includes('neko')) return 'neko'
+  if (keyword_match(MAGIC_GIRL_KEYWORDS, name) || keyword_match(MAGIC_GIRL_KEYWORDS, detail))
+    return 'magic_girl'
   if (len > 100) return '100'
   return 'other'
 }

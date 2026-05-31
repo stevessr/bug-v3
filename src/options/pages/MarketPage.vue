@@ -82,7 +82,8 @@ const defaultMarketTopics: MarketTopicSummary[] = [
   { id: 'animated', label: '动画表情', totalGroups: 0, totalPages: 1 },
   { id: 'linux.do', label: 'linux.do', totalGroups: 0, totalPages: 1 },
   { id: 'tieba', label: '贴吧', totalGroups: 0, totalPages: 1 },
-  { id: '100', label: '100+', totalGroups: 0, totalPages: 1 }
+  { id: '100', label: '100+', totalGroups: 0, totalPages: 1 },
+  { id: 'neuro', label: 'neuro', totalGroups: 0, totalPages: 1 }
 ]
 
 const marketTopics = shallowRef<MarketTopicSummary[]>(defaultMarketTopics)
@@ -113,6 +114,7 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
   if (name.includes('animated') || name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba') || detail.includes('贴吧')) return 'tieba'
+  if (name.includes('neuro') || detail.includes('neuron')) return 'neuro'
   if (group.emojiCount > 100) return '100'
   return 'other'
 }
