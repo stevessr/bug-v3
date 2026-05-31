@@ -371,7 +371,7 @@
       "name": "yauyau",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/b/2/7b234af2b511005f4e5c1259b390b0f9b642034b.webp",
       "topic": "other",
-      "order": 130,
+      "order": 133,
       "emojiCount": 77,
       "isArchived": false
     },
@@ -380,7 +380,7 @@
       "name": "あきゅー",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/0/f/d0fdb67759733664dd9cfa55618908c1b8d3250d.jpeg",
       "topic": "other",
-      "order": 131,
+      "order": 134,
       "emojiCount": 11,
       "isArchived": true
     },
@@ -389,7 +389,7 @@
       "name": "アマカノ 3",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/2/5/225bc59a2d35425c04432861990ddf6d7d65b547.jpeg",
       "topic": "other",
-      "order": 132,
+      "order": 135,
       "emojiCount": 4,
       "isArchived": true
     },
@@ -398,7 +398,7 @@
       "name": "东方大头",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
       "topic": "other",
-      "order": 134,
+      "order": 137,
       "emojiCount": 30,
       "isArchived": false
     },
@@ -407,7 +407,7 @@
       "name": "丸山彩表情包 | 素素祥祥子",
       "icon": "https://cdn3.ldstatic.com/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
       "topic": "other",
-      "order": 135,
+      "order": 138,
       "emojiCount": 25,
       "isArchived": false
     },
@@ -416,7 +416,7 @@
       "name": "二阶堂希罗",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
       "topic": "other",
-      "order": 137,
+      "order": 140,
       "emojiCount": 45,
       "isArchived": true
     },
@@ -426,7 +426,7 @@
       "icon": "⚔️",
       "detail": "",
       "topic": "other",
-      "order": 138,
+      "order": 141,
       "emojiCount": 47,
       "isArchived": false
     },
@@ -435,7 +435,7 @@
       "name": "亚托莉花嫁",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/6/6/16644686465bfa67925239a4626d0cf7de505ffe.gif",
       "topic": "other",
-      "order": 139,
+      "order": 142,
       "emojiCount": 25,
       "isArchived": true
     }
