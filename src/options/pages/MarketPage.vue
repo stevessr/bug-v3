@@ -11,7 +11,7 @@ const { t } = useI18n()
 
 const emojiStore = useEmojiStore()
 
-type MarketTopicId = 'all' | 'bilibili' | 'telegram' | 'x' | 'other'
+type MarketTopicId = 'all' | 'bilibili' | 'telegram' | 'x' | 'other' | 'OC'
 
 type MarketGroupSummary = {
   id: string
@@ -64,7 +64,8 @@ const defaultMarketTopics: MarketTopicSummary[] = [
   { id: 'bilibili', label: 'bilibili', totalGroups: 0, totalPages: 1 },
   { id: 'telegram', label: 'telegram', totalGroups: 0, totalPages: 1 },
   { id: 'x', label: 'X', totalGroups: 0, totalPages: 1 },
-  { id: 'other', label: '其他', totalGroups: 0, totalPages: 1 }
+  { id: 'other', label: '其他', totalGroups: 0, totalPages: 1 },
+  { id: 'OC', label: 'OC', totalGroups: 0, totalPages: 1 }
 ]
 
 const marketTopics = shallowRef<MarketTopicSummary[]>(defaultMarketTopics)
@@ -90,6 +91,7 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
   if (detail.includes('t.me')) return 'telegram'
   if (detail.includes('bili')) return 'bilibili'
   if (name.startsWith('x')) return 'x'
+  if (name.includes('oc') || detail.includes('oc') || name.includes('steve')) return 'OC'
   return 'other'
 }
 

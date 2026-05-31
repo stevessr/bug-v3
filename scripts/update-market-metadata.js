@@ -14,7 +14,8 @@ const MARKET_TOPICS = [
   { id: 'bilibili', label: 'bilibili' },
   { id: 'telegram', label: 'telegram' },
   { id: 'x', label: 'X' },
-  { id: 'other', label: '其他' }
+  { id: 'other', label: '其他' },
+  { id: 'OC', label: 'OC' }
 ]
 
 function resolveMarketTopic(group) {
@@ -26,6 +27,7 @@ function resolveMarketTopic(group) {
   if (detail.includes('t.me')) return 'telegram'
   if (detail.includes('bili')) return 'bilibili'
   if (name.startsWith('x')) return 'x'
+  if (name.includes('oc') || detail.includes('oc') || name.includes('steve') ) return 'OC'
   return 'other'
 }
 
