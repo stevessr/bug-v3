@@ -22,7 +22,7 @@ type MarketTopicId =
   | 'animated'
   | 'linux.do'
   | 'tieba'
-  | '>100' // 预留一个特殊 topic，用于标记超过 100 个表情包的分组
+  | '100' // 预留一个特殊 topic，用于标记超过 100 个表情包的分组
 
 type MarketGroupSummary = {
   id: string
@@ -81,7 +81,7 @@ const defaultMarketTopics: MarketTopicSummary[] = [
   { id: 'animated', label: '动画表情', totalGroups: 0, totalPages: 1 },
   { id: 'linux.do', label: 'linux.do', totalGroups: 0, totalPages: 1 },
   { id: 'tieba', label: '贴吧', totalGroups: 0, totalPages: 1 },
-  { id: '>100', label: '100+', totalGroups: 0, totalPages: 1 }
+  { id: '100', label: '100+', totalGroups: 0, totalPages: 1 }
 ]
 
 const marketTopics = shallowRef<MarketTopicSummary[]>(defaultMarketTopics)
@@ -112,7 +112,7 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
   if (name.includes('animated') || name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba') || detail.includes('贴吧')) return 'tieba'
-  if (group.emojiCount > 100) return '>100'
+  if (group.emojiCount > 100) return '100'
   return 'other'
 }
 

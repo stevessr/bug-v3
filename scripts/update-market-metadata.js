@@ -20,7 +20,7 @@ const MARKET_TOPICS = [
   { id: 'animated', label: '动画表情' },
   { id: 'linux.do', label: 'linux.do' },
   { id: 'tieba', label: '贴吧' },
-  { id: '>100' , label: '100+' }
+  { id: '100' , label: '100+' }
 ]
 
 function resolveMarketTopic(group) {
@@ -38,7 +38,7 @@ function resolveMarketTopic(group) {
   if (name.includes('animated')|| name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba')) return 'tieba'
-  if (len > 100) return '>100'
+  if (len > 100) return '100'
   return 'other'
 }
 
