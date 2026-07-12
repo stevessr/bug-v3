@@ -1,3 +1,5 @@
+@reference '../../styles/main.css';
+
 /* Ensure modal content handles dark mode correctly */
 :deep(.ant-modal-content) {
   @apply dark:bg-gray-900 dark:text-white;

@@ -1,9 +1,9 @@
-/* Ant Design 组件样式覆盖 - must be before @tailwind */
+/* Ant Design 组件样式覆盖 - must be before Tailwind */
 @import './antdOverrides.css';
+@import 'tailwindcss';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS 4 no longer auto-detects JavaScript configuration files. */
+@config '../../tailwind.config.js';
 
 @layer base {
   :root {

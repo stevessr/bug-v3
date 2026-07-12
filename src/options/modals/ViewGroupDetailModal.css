@@ -1,3 +1,5 @@
+@reference '../../styles/main.css';
+
 /* Additional styling for markdown content */
 .markdown-content {
   @apply text-gray-900 dark:text-gray-100;

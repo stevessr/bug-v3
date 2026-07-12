@@ -1,5 +1,10 @@
+allowBuilds:
+  core-js: true
+  protobufjs: true
+  typeit: true
 onlyBuiltDependencies:
   - core-js
   - electron
   - esbuild
+  - protobufjs
   - vue-demi
