@@ -78,22 +78,10 @@ export interface CustomSkill extends Skill {
 }
 
 export type SkillCategory =
-  | 'search'
-  | 'knowledge'
-  | 'code'
-  | 'web'
-  | 'data'
-  | 'automation'
-  | 'other'
+  'search' | 'knowledge' | 'code' | 'web' | 'data' | 'automation' | 'other'
 
 export type SkillSource =
-  | 'builtin'
-  | 'mcp'
-  | 'custom'
-  | 'marketplace'
-  | 'skills.sh'
-  | 'github'
-  | 'cloud'
+  'builtin' | 'mcp' | 'custom' | 'marketplace' | 'skills.sh' | 'github' | 'cloud'
 
 export interface SkillExecutionResult {
   success: boolean

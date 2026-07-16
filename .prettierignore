@@ -1,0 +1,18 @@
+# Generated dependency/build output
+dist/
+node_modules/
+pnpm-lock.yaml
+src/auto-imports.d.ts
+src/components.d.ts
+
+# Generated or third-party static assets
+public/assets/discourse-icons.svg
+public/wasm/
+scripts/wasm/
+scripts/cfworker/public/assets/
+scripts/cfworker/functions/api/market-random.ts
+
+# Local tool state and test reports
+.limcode/
+playwright-report/
+test-results/

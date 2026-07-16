@@ -8,7 +8,7 @@ import promise from 'eslint-plugin-promise'
 import prettier from 'eslint-plugin-prettier'
 import prettierConfig from 'eslint-config-prettier'
 import globals from 'globals'
-import jsoncParser from 'jsonc-eslint-parser'
+import * as jsoncParser from 'jsonc-eslint-parser'
 
 export default [
   // 忽略的文件
@@ -16,6 +16,8 @@ export default [
     ignores: [
       'dist/**',
       'node_modules/**',
+      'src/auto-imports.d.ts',
+      'src/components.d.ts',
       '*.min.js',
       'referense/**',
       'public/**',

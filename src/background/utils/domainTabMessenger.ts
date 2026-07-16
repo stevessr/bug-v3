@@ -116,17 +116,24 @@ export async function sendMessageToDomainTab<T extends { success: boolean; error
 
   let targetOrigin: string
   let host: string
+  let hostname: string
   try {
     const parsed = new URL(targetUrl)
     targetOrigin = parsed.origin
     host = parsed.host
+    hostname = parsed.hostname
   } catch {
     return { success: false, error: 'Invalid url' } as T
   }
 
   try {
-    const pattern = `*://${host}/*`
-    let tabs = await chromeAPI.tabs.query({ url: pattern })
+    // Chrome match patterns do not accept a port. Query by hostname and then
+    // retain only the exact origin so localhost/custom-port Discourse sites
+    // still route to the correct tab.
+    const pattern = `*://${hostname}/*`
+    let tabs = (await chromeAPI.tabs.query({ url: pattern })).filter(
+      (tab: chrome.tabs.Tab) => getTabOrigin(tab.url) === targetOrigin
+    )
 
     if (!tabs.length) {
       const allTabs = await chromeAPI.tabs.query({})

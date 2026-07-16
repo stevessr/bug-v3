@@ -138,7 +138,6 @@ coverage/
 
 # Eslint/Prettier/Stylelint etc.
 .eslintcache
-.prettierignore
 .stylelintcache
 
 # Release artifacts

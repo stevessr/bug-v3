@@ -1,7 +1,7 @@
 import { defineComponent, computed, onMounted, onUnmounted, ref } from 'vue'
 
 import type { ChatMessage, ParsedContent } from '../types'
-import { parsePostContent } from '../utils'
+import { parsePostContent } from '../parser/parsePostContent'
 
 import ChatMessageItem from './ChatMessageItem'
 import '../css/chat/ChatMessageList.css'

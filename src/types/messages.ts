@@ -193,6 +193,16 @@ export interface PageFetchMessage extends BaseMessage {
 }
 
 /**
+ * GET_DISCOURSE_ICON_SPRITE 消息
+ *
+ * 从目标站点已加载的页面中读取该站点自己的 Discourse SVG symbols。
+ */
+export interface GetDiscourseIconSpriteMessage extends BaseMessage {
+  type: 'GET_DISCOURSE_ICON_SPRITE'
+  url: string
+}
+
+/**
  * PAGE_UPLOAD 消息
  */
 export interface PageUploadMessage extends BaseMessage {
@@ -329,6 +339,7 @@ export type TypedMessage =
   | DomQueryMessage
   | GetCsrfTokenMessage
   | PageFetchMessage
+  | GetDiscourseIconSpriteMessage
   | PageUploadMessage
   | FetchImageMessage
   | SettingsUpdatedMessage
@@ -358,6 +369,7 @@ export type ContentMessage =
   | GetCsrfTokenMessage
   | GetLinuxDoUserMessage
   | PageFetchMessage
+  | GetDiscourseIconSpriteMessage
   | PageUploadMessage
   | FetchImageMessage
   | SettingsUpdatedMessage

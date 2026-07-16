@@ -31,6 +31,6 @@ export const MAGIC_GIRL_KEYWORDS = [
   '魔法少女的魔女审判'
 ]
 
-export function keyword_match(group:string[], str:string): boolean {
+export function keyword_match(group: string[], str: string): boolean {
   return group.some(keyword => str.includes(keyword))
 }

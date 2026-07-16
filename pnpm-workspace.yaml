@@ -5,6 +5,7 @@ allowBuilds:
   core-js: true
   protobufjs: true
   typeit: true
+  vue-demi: true
 onlyBuiltDependencies:
   - core-js
   - electron

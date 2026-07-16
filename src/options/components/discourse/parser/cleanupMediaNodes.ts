@@ -33,7 +33,7 @@ export const cleanupMediaNodes = (root: Node) => {
   const walk = (node: Node, ancestors: Element[]) => {
     if (!isParent(node)) return
     const currentAncestors = isElement(node) ? [...ancestors, node] : ancestors
-    for (let i = 0; i < node.children.length; ) {
+    for (let i = 0; i < node.children.length;) {
       const child = node.children[i] as Node
       if (isElement(child) && hasClass(child, 'lightbox-wrapper')) {
         if (

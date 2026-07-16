@@ -1,14 +1,7 @@
 // Discourse Browser Types
 
 export type TopicListType =
-  | 'latest'
-  | 'new'
-  | 'unread'
-  | 'unseen'
-  | 'top'
-  | 'hot'
-  | 'posted'
-  | 'bookmarks'
+  'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'bookmarks'
 
 export interface BrowserTab {
   id: string

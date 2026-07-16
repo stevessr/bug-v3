@@ -4,7 +4,6 @@
  */
 
 import { detectPlatform, getDiscourseDomains } from './utils/core/platformDetector'
-
 import type { ContentMessage } from './messageHandlers/types'
 
 const logInfo = (...args: unknown[]) => {
@@ -19,6 +18,7 @@ const CONTENT_MESSAGE_TYPES = new Set<ContentMessage['type']>([
   'DOM_QUERY',
   'GET_CSRF_TOKEN',
   'GET_LINUX_DO_USER',
+  'GET_DISCOURSE_ICON_SPRITE',
   'PAGE_FETCH',
   'PAGE_UPLOAD',
   'FETCH_IMAGE',
@@ -52,7 +52,10 @@ async function initialize(): Promise<void> {
       try {
         const domains = getDiscourseDomains()
         if (domains.some(domain => window.location.hostname.includes(domain))) {
-          window.postTimings = async (topicId, timings) => {
+          window.postTimings = async (
+            topicId: number,
+            timings: Record<number, number> | number[]
+          ) => {
             const { postTimings } = await import('./discourse/utils/timingsBinder')
             return postTimings(topicId, timings)
           }

@@ -2,6 +2,8 @@ import { defineComponent, computed } from 'vue'
 
 import { getTagVisual, hexToRgba, stripHtml } from '../tagVisuals'
 
+import { getDiscourseIconHref } from './iconSprite'
+
 export default defineComponent({
   name: 'TagPill',
   props: {
@@ -44,7 +46,7 @@ export default defineComponent({
       >
         {visual.value && (
           <svg class="w-3.5 h-3.5 mr-1" viewBox="0 0 512 512" fill="currentColor">
-            <use href={`#${visual.value.icon}`} />
+            <use href={getDiscourseIconHref(visual.value.icon)} />
           </svg>
         )}
         <span class={props.truncate ? 'truncate' : ''}>{props.text || props.name}</span>

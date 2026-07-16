@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
@@ -21,26 +21,11 @@ import type {
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import Icon from './discourse/layout/Icon'
-import TopicView from './discourse/topic/TopicView'
-import UserView from './discourse/user/UserView'
-import UserExtrasView from './discourse/user/UserExtrasView'
-import UserGroupsView from './discourse/user/UserGroupsView'
-import UserSettingsView from './discourse/user/UserSettingsView'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
-import ActivityView from './discourse/user/ActivityView'
-import MessagesView from './discourse/user/MessagesView'
 import BrowserToolbar from './discourse/browser/BrowserToolbar'
 import BrowserTabs from './discourse/browser/BrowserTabs'
-import FloatingComposer from './discourse/browser/FloatingComposer.vue'
 import HomeView from './discourse/browser/views/HomeView.vue'
-import CategoriesView from './discourse/browser/views/CategoriesView.vue'
-import TagsView from './discourse/browser/views/TagsView.vue'
-import NotificationsPanel from './discourse/browser/views/NotificationsPanel.vue'
-import TagTopicsView from './discourse/browser/views/TagTopicsView.vue'
-import CategoryTopicsView from './discourse/browser/views/CategoryTopicsView.vue'
-import ChatView from './discourse/chat/ChatView'
-import SearchView from './discourse/search/SearchView'
 import { pageFetch, extractData } from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 import {
@@ -48,6 +33,34 @@ import {
   type MessageBusCallback,
   type MessageBusSubscriptionSpec
 } from './discourse/messageBusClient'
+
+// Route-only views stay out of the forum shell. This especially avoids parsing
+// the ProseMirror/Markdown stack until a topic, chat, or composer is opened.
+const TopicView = defineAsyncComponent(() => import('./discourse/topic/TopicView'))
+const UserView = defineAsyncComponent(() => import('./discourse/user/UserView'))
+const UserExtrasView = defineAsyncComponent(() => import('./discourse/user/UserExtrasView'))
+const UserGroupsView = defineAsyncComponent(() => import('./discourse/user/UserGroupsView'))
+const UserSettingsView = defineAsyncComponent(() => import('./discourse/user/UserSettingsView'))
+const ActivityView = defineAsyncComponent(() => import('./discourse/user/ActivityView'))
+const MessagesView = defineAsyncComponent(() => import('./discourse/user/MessagesView'))
+const FloatingComposer = defineAsyncComponent(
+  () => import('./discourse/browser/FloatingComposer.vue')
+)
+const CategoriesView = defineAsyncComponent(
+  () => import('./discourse/browser/views/CategoriesView.vue')
+)
+const TagsView = defineAsyncComponent(() => import('./discourse/browser/views/TagsView.vue'))
+const NotificationsPanel = defineAsyncComponent(
+  () => import('./discourse/browser/views/NotificationsPanel.vue')
+)
+const TagTopicsView = defineAsyncComponent(
+  () => import('./discourse/browser/views/TagTopicsView.vue')
+)
+const CategoryTopicsView = defineAsyncComponent(
+  () => import('./discourse/browser/views/CategoryTopicsView.vue')
+)
+const ChatView = defineAsyncComponent(() => import('./discourse/chat/ChatView'))
+const SearchView = defineAsyncComponent(() => import('./discourse/search/SearchView'))
 
 const {
   baseUrl,
@@ -116,11 +129,7 @@ const contentAreaRef = ref<HTMLElement | null>(null)
 const userExtrasTab = computed(
   () =>
     (activeTab.value?.viewType as
-      | 'badges'
-      | 'followFeed'
-      | 'following'
-      | 'followers'
-      | undefined) || 'badges'
+      'badges' | 'followFeed' | 'following' | 'followers' | undefined) || 'badges'
 )
 const isViewingSelf = computed(
   () =>
@@ -1801,7 +1810,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Icon />
+  <Icon :baseUrl="baseUrl" />
   <div class="discourse-browser flex flex-col h-full min-h-0 overflow-hidden">
     <!-- Toolbar -->
     <BrowserToolbar

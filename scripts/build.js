@@ -4,22 +4,18 @@ import { spawn, execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-// 检测可用的包管理器
-function detectPackageManager() {
+// This repository intentionally uses pnpm so lockfile and workspace policy are
+// identical locally and in CI.
+function requirePnpm() {
   try {
     execSync('pnpm --version', { stdio: 'ignore' })
     return 'pnpm'
   } catch {
-    try {
-      execSync('npm --version', { stdio: 'ignore' })
-      return 'npm'
-    } catch {
-      throw new Error('Neither pnpm nor npm found. Please install a package manager.')
-    }
+    throw new Error('pnpm is required. Enable it with Corepack before building.')
   }
 }
 
-const PKG_MANAGER = detectPackageManager()
+const PKG_MANAGER = requirePnpm()
 console.log(`📦 Using package manager: ${PKG_MANAGER}`)
 
 // 定义环境变量配置

@@ -1,7 +1,4 @@
-import {
-  applyExtensionSurfaceClass,
-  resolveExtensionSurface
-} from './utils/appMode'
+import { applyExtensionSurfaceClass, resolveExtensionSurface } from './utils/appMode'
 import './styles/main.css'
 
 const { surface } = resolveExtensionSurface(window.location.search, window.location.hash)

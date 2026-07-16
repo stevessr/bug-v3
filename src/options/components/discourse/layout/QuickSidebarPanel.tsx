@@ -2,6 +2,7 @@ import { defineComponent } from 'vue'
 import { Button } from 'ant-design-vue'
 import { ReloadOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
+import { getDiscourseIconHref } from './iconSprite'
 import '../css/QuickSidebarPanel.css'
 
 export type QuickSidebarItem = {
@@ -80,7 +81,7 @@ export default defineComponent({
                               height="1em"
                               aria-hidden="true"
                             >
-                              <use href={`#${item.icon}`} />
+                              <use href={getDiscourseIconHref(item.icon)} />
                             </svg>
                           </span>
                         ) : item.color ? (

@@ -600,8 +600,7 @@ export class CloudflareSyncService {
                   emojiGroups: groupList,
                   metadata: (() => {
                     const settings = data.settings as
-                      | (AppSettings & { favorites?: string[] })
-                      | null
+                      (AppSettings & { favorites?: string[] }) | null
                     return {
                       totalGroups: groupList.length,
                       totalEmojis: groupList.reduce(

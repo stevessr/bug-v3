@@ -12,11 +12,11 @@ import { applyCustomCssFromCache } from './injectCustomCss'
 let cachedSubmenuInjectorEnabled: boolean | null = null
 
 // 存储定时器 ID 以便清理
-let toolbarCheckIntervalId: ReturnType<typeof setInterval> | null = null
-let floatingButtonIntervalId: ReturnType<typeof setInterval> | null = null
-let injectionRetryTimeoutId: ReturnType<typeof setTimeout> | null = null
-let mutationCheckTimeoutId: ReturnType<typeof setTimeout> | null = null
-let storageDebounceTimeoutId: ReturnType<typeof setTimeout> | null = null
+let toolbarCheckIntervalId: number | null = null
+let floatingButtonIntervalId: number | null = null
+let injectionRetryTimeoutId: number | null = null
+let mutationCheckTimeoutId: number | null = null
+let storageDebounceTimeoutId: number | null = null
 let mutationObserver: MutationObserver | null = null
 let replyClickHandler: ((event: Event) => void) | null = null
 let domReadyHandler: (() => void) | null = null
@@ -25,10 +25,8 @@ let storageChangeHandler: ((changes: Record<string, unknown>, namespace: string)
 let visibilityChangeHandler: (() => void) | null = null
 let initialized = false
 
-const clearTimeoutHandle = (
-  handle: ReturnType<typeof setTimeout> | null
-): ReturnType<typeof setTimeout> | null => {
-  if (handle !== null) clearTimeout(handle)
+const clearTimeoutHandle = (handle: number | null): number | null => {
+  if (handle !== null) window.clearTimeout(handle)
   return null
 }
 
@@ -39,11 +37,11 @@ const clearTimeoutHandle = (
 export function cleanupEmojiFeature(): void {
   // 清理定时器
   if (toolbarCheckIntervalId) {
-    clearInterval(toolbarCheckIntervalId)
+    window.clearInterval(toolbarCheckIntervalId)
     toolbarCheckIntervalId = null
   }
   if (floatingButtonIntervalId) {
-    clearInterval(floatingButtonIntervalId)
+    window.clearInterval(floatingButtonIntervalId)
     floatingButtonIntervalId = null
   }
   injectionRetryTimeoutId = clearTimeoutHandle(injectionRetryTimeoutId)
@@ -199,7 +197,7 @@ function setupReplyButtonListeners() {
 
         mutationCheckTimeoutId = clearTimeoutHandle(mutationCheckTimeoutId)
 
-        mutationCheckTimeoutId = setTimeout(() => {
+        mutationCheckTimeoutId = window.setTimeout(() => {
           checkAndReinjectButtons()
           pendingCheck = false
           mutationCheckTimeoutId = null
@@ -301,7 +299,7 @@ export async function initializeEmojiFeature(
           retryDelay / 1000
         } s.`
       )
-      injectionRetryTimeoutId = setTimeout(() => {
+      injectionRetryTimeoutId = window.setTimeout(() => {
         injectionRetryTimeoutId = null
         attemptInjection()
       }, retryDelay)
@@ -362,9 +360,9 @@ export async function initializeEmojiFeature(
   // periodic checks - 使用模块级变量存储定时器 ID 以便清理
   // 清理之前可能存在的定时器（防止热更新时重复创建）
   if (toolbarCheckIntervalId) {
-    clearInterval(toolbarCheckIntervalId)
+    window.clearInterval(toolbarCheckIntervalId)
   }
-  toolbarCheckIntervalId = setInterval(() => {
+  toolbarCheckIntervalId = window.setInterval(() => {
     // 如果启用了子菜单注入，则跳过工具栏按钮注入
     if (cachedSubmenuInjectorEnabled === true || document.hidden) return
     checkAndReinjectButtons()
@@ -372,9 +370,9 @@ export async function initializeEmojiFeature(
 
   // Check if floating button should be shown periodically
   if (floatingButtonIntervalId) {
-    clearInterval(floatingButtonIntervalId)
+    window.clearInterval(floatingButtonIntervalId)
   }
-  floatingButtonIntervalId = setInterval(() => {
+  floatingButtonIntervalId = window.setInterval(() => {
     // 如果启用了子菜单注入，则不要显示浮动按钮
     if (cachedSubmenuInjectorEnabled === true || document.hidden) return
     checkAndShowFloatingButton()

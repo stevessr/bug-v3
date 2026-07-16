@@ -2,7 +2,8 @@ import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import hljs from 'highlight.js'
 import '../css/highlight.css'
 
-import type { extractData, pageFetch, parsePostContent } from '../utils'
+import type { parsePostContent } from '../parser/parsePostContent'
+import type { extractData, pageFetch } from '../utils'
 
 type Notify = {
   warning: (message: string) => void

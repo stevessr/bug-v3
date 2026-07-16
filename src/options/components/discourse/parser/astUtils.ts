@@ -32,7 +32,7 @@ export const getPropString = (node: Element, name: string): string | undefined =
 
 export const getClassList = (node: Element): string[] => {
   const props = getProperties(node)
-  const className = props.className
+  const className: unknown = props.className
   if (Array.isArray(className)) return className.filter(Boolean).map(String)
   if (typeof className === 'string') return className.split(/\s+/).filter(Boolean)
   return []

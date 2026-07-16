@@ -8,7 +8,8 @@ import type {
   SuggestedTopic,
   DiscourseUserProfile
 } from '../types'
-import { parsePostContent, pageFetch, extractData } from '../utils'
+import { parsePostContent } from '../parser/parsePostContent'
+import { pageFetch, extractData } from '../utils'
 import { assignPost, setTopicNotificationLevel } from '../actions'
 
 import TopicHeader from './TopicHeader'

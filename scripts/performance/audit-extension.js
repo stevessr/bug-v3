@@ -93,7 +93,10 @@ function findDuplicateAssets(files, minimumBytes) {
   const byHash = new Map()
   for (const file of files) {
     if (file.bytes < minimumBytes) continue
-    const digest = crypto.createHash('sha256').update(fs.readFileSync(file.absolutePath)).digest('hex')
+    const digest = crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(file.absolutePath))
+      .digest('hex')
     const duplicateGroup = byHash.get(digest) || []
     duplicateGroup.push({ path: file.path, bytes: file.bytes })
     byHash.set(digest, duplicateGroup)
@@ -104,9 +107,9 @@ function findDuplicateAssets(files, minimumBytes) {
 function scanSourceInvariants(rootDir) {
   const checks = []
   const contentEntry = fs.readFileSync(path.join(rootDir, 'src/content/content.ts'), 'utf8')
-  const staticImports = [...contentEntry.matchAll(/^import\s+(?!type\b)[^'"\n]*['"]([^'"]+)['"]/gm)].map(
-    match => match[1]
-  )
+  const staticImports = [
+    ...contentEntry.matchAll(/^import\s+(?!type\b)[^'"\n]*['"]([^'"]+)['"]/gm)
+  ].map(match => match[1])
   const forbiddenImports = staticImports.filter(specifier =>
     /(?:discourse|messageHandlers(?:\/index)?$|utils\/init|simpleStorage|stores|^(?:vue|pinia|ant-design-vue)$)/.test(
       specifier
@@ -133,6 +136,28 @@ function scanSourceInvariants(rootDir) {
       : 'Storage serialization is independent from the Vue UI runtime.'
   })
 
+  const uploadServices = fs.readFileSync(path.join(rootDir, 'src/utils/uploadServices.ts'), 'utf8')
+  const importsUiStore = /from\s+['"]@\/stores(?:\/|['"])/.test(uploadServices)
+  checks.push({
+    id: 'source.background-upload-without-ui-store',
+    passed: !importsUiStore,
+    actual: importsUiStore,
+    message: importsUiStore
+      ? 'Background upload persistence imports Pinia and makes the service worker parse UI code.'
+      : 'Background upload persistence is independent from Pinia and the UI runtime.'
+  })
+
+  const i18n = fs.readFileSync(path.join(rootDir, 'src/utils/i18n.ts'), 'utf8')
+  const i18nImportsVue = /from\s+['"]vue['"]/.test(i18n)
+  checks.push({
+    id: 'source.framework-neutral-i18n',
+    passed: !i18nImportsVue,
+    actual: i18nImportsVue,
+    message: i18nImportsVue
+      ? 'Framework-neutral i18n imports Vue and leaks the UI runtime into shared contexts.'
+      : 'Framework-neutral i18n stays usable without loading Vue.'
+  })
+
   const contentInit = fs.readFileSync(path.join(rootDir, 'src/content/utils/init.ts'), 'utf8')
   const initializationReferences = contentInit.match(/initializeEmojiFeature\s*\(/g)?.length || 0
   checks.push({
@@ -143,6 +168,45 @@ function scanSourceInvariants(rootDir) {
       initializationReferences === 1
         ? 'Content initialization does not recursively duplicate observers and timers.'
         : 'initializeEmojiFeature calls itself and can duplicate long-lived resources.'
+  })
+
+  const inlineIconSpritePath = path.join(
+    rootDir,
+    'src/options/components/discourse/layout/Icon.tsx'
+  )
+  const inlineIconSpriteBytes = fs.statSync(inlineIconSpritePath).size
+  checks.push({
+    id: 'source.discourse-inline-icon-sprite-size',
+    passed: inlineIconSpriteBytes <= 16 * 1024,
+    actual: inlineIconSpriteBytes,
+    budget: 16 * 1024,
+    message: `Inline Discourse icon sprite: ${formatBytes(inlineIconSpriteBytes)} / 16.0 KiB`
+  })
+
+  const bundledIconSpritePath = path.join(rootDir, 'public/assets/discourse-icons.svg')
+  checks.push({
+    id: 'source.discourse-no-bundled-site-icon-sprite',
+    passed: !fs.existsSync(bundledIconSpritePath),
+    actual: fs.existsSync(bundledIconSpritePath),
+    message: fs.existsSync(bundledIconSpritePath)
+      ? 'A forum-specific Discourse sprite is still packaged with the extension.'
+      : 'Discourse icons are supplied by the active site instead of a bundled forum snapshot.'
+  })
+
+  const siteIconLoader = fs.readFileSync(
+    path.join(rootDir, 'src/options/components/discourse/layout/iconSprite.ts'),
+    'utf8'
+  )
+  const usesSiteSprite = siteIconLoader.includes('GET_DISCOURSE_ICON_SPRITE')
+  const assignsUntrustedInnerHtml = /innerHTML\s*=/.test(siteIconLoader)
+  checks.push({
+    id: 'source.discourse-site-icon-sprite-sanitized',
+    passed: usesSiteSprite && !assignsUntrustedInnerHtml,
+    actual: { usesSiteSprite, assignsUntrustedInnerHtml },
+    message:
+      usesSiteSprite && !assignsUntrustedInnerHtml
+        ? 'Discourse site symbols are reconstructed through the SVG allowlist.'
+        : 'Discourse site icons must use the site bridge without assigning untrusted innerHTML.'
   })
 
   return checks

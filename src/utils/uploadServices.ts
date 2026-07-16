@@ -712,13 +712,13 @@ export async function uploadAndAddEmoji(
       targetGroupId,
       options.groupName,
       {
-      packet: Date.now(),
-      name: name || filename || 'image',
-      url: finalUrl,
-      ...(shortUrl && { short_url: shortUrl }),
-      displayUrl: finalUrl,
-      originUrl: originUrl || undefined,
-      addedAt: Date.now()
+        packet: Date.now(),
+        name: name || filename || 'image',
+        url: finalUrl,
+        ...(shortUrl && { short_url: shortUrl }),
+        displayUrl: finalUrl,
+        originUrl: originUrl || undefined,
+        addedAt: Date.now()
       }
     )
 

@@ -2,10 +2,9 @@
  * i18n 国际化工具函数
  * 使用 Chrome Extension API 的 chrome.i18n
  */
-import { ref, onMounted, onUnmounted } from 'vue'
-
 // 本地翻译数据缓存
 const localTranslations: Record<string, Record<string, { message: string }>> = {}
+const pendingTranslationLoads = new Map<string, Promise<void>>()
 let currentLanguage = 'zh_CN'
 
 const getChromeI18n = () => {
@@ -20,28 +19,29 @@ const getNavigatorLanguage = () => {
   return ''
 }
 
-const isLocalStorageAvailable = () => {
-  try {
-    return typeof localStorage !== 'undefined'
-  } catch {
-    return false
-  }
-}
-
 /**
  * 加载指定语言的翻译文件
  * @param language 语言代码
  */
 async function loadTranslations(language: string): Promise<void> {
   if (localTranslations[language]) return
+  const pendingLoad = pendingTranslationLoads.get(language)
+  if (pendingLoad) return pendingLoad
 
-  try {
-    const response = await fetch(`/_locales/${language}/messages.json`)
-    const data = await response.json()
-    localTranslations[language] = data
-  } catch (error) {
-    console.warn(`Failed to load translations for ${language}:`, error)
-  }
+  const load = (async () => {
+    try {
+      const response = await fetch(`/_locales/${language}/messages.json`)
+      const data = await response.json()
+      localTranslations[language] = data
+    } catch (error) {
+      console.warn(`Failed to load translations for ${language}:`, error)
+    } finally {
+      pendingTranslationLoads.delete(language)
+    }
+  })()
+
+  pendingTranslationLoads.set(language, load)
+  return load
 }
 
 /**
@@ -130,69 +130,6 @@ export async function setLanguage(language: string): Promise<void> {
  */
 export function getCurrentLanguage(): string {
   return currentLanguage
-}
-
-// 响应式的 i18n 就绪状态
-const isReady = ref(false)
-
-/**
- * 初始化 i18n 系统
- */
-export async function initI18n(): Promise<void> {
-  // 从 localStorage 获取保存的语言设置
-  const savedLanguage = isLocalStorageAvailable()
-    ? localStorage.getItem('emoji-extension-language')
-    : null
-  if (savedLanguage) {
-    currentLanguage = savedLanguage
-  } else {
-    // 使用浏览器语言
-    const browserLocale = getUILanguage()
-    if (browserLocale.startsWith('zh') || browserLocale.startsWith('cn')) {
-      currentLanguage = 'zh_CN'
-    } else {
-      currentLanguage = 'en'
-    }
-  }
-
-  await loadTranslations(currentLanguage)
-  // 标记 i18n 已就绪
-  isReady.value = true
-}
-
-/**
- * Vue 组合式函数 - 使用 i18n
- * @returns i18n 相关函数
- */
-export function useI18n() {
-  // 创建响应式的语言状态
-  const language = ref(currentLanguage)
-
-  // 监听语言变化事件
-  const updateLanguage = (event: CustomEvent) => {
-    currentLanguage = event.detail
-    language.value = event.detail
-  }
-
-  // 在组件挂载时添加事件监听器
-  onMounted(() => {
-    window.addEventListener('languageChanged', updateLanguage as EventListener)
-  })
-
-  // 在组件卸载时移除事件监听器
-  onUnmounted(() => {
-    window.removeEventListener('languageChanged', updateLanguage as EventListener)
-  })
-
-  return {
-    t: getMessage,
-    locale: () => language.value,
-    isChinese: () => language.value.startsWith('zh'),
-    format: formatMessage,
-    setLanguage,
-    initI18n,
-    isReady
-  }
 }
 
 /**

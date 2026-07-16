@@ -4,7 +4,7 @@ import type { DiscoursePost, ParsedContent } from '../types'
 
 type PageFetch = typeof import('../utils').pageFetch
 type ExtractData = typeof import('../utils').extractData
-type ParsePost = typeof import('../utils').parsePostContent
+type ParsePost = typeof import('../parser/parsePostContent').parsePostContent
 
 export function usePostRelations(options: {
   baseUrl: string

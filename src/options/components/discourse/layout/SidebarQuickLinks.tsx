@@ -1,5 +1,7 @@
 import { defineComponent } from 'vue'
 
+import { getDiscourseIconHref } from './iconSprite'
+
 export default defineComponent({
   name: 'SidebarQuickLinks',
   props: {
@@ -21,7 +23,7 @@ export default defineComponent({
               onClick={() => emit('navigate', link.path)}
             >
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <use href={`#${link.icon}`} />
+                <use href={getDiscourseIconHref(link.icon)} />
               </svg>
               <span class="sidebar-item__label text-sm">{link.label}</span>
             </a>

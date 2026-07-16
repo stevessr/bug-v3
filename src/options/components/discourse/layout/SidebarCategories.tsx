@@ -2,6 +2,8 @@ import { defineComponent, computed } from 'vue'
 
 import type { DiscourseCategory } from '../types'
 
+import { getDiscourseIconHref } from './iconSprite'
+
 export default defineComponent({
   name: 'SidebarCategories',
   props: {
@@ -63,11 +65,6 @@ export default defineComponent({
       return url.startsWith('http') ? url : `${props.baseUrl}${url}`
     }
 
-    const getIconHref = (icon?: string | null) => {
-      if (!icon) return ''
-      return `#${icon}`
-    }
-
     return () => (
       <div class="sidebar-card">
         <h3 class="sidebar-title">分类</h3>
@@ -92,7 +89,7 @@ export default defineComponent({
                     <span class="sidebar-emoji">{cat.emoji}</span>
                   ) : cat.icon ? (
                     <svg class="sidebar-icon-svg" viewBox="0 0 24 24">
-                      <use href={getIconHref(cat.icon)} />
+                      <use href={getDiscourseIconHref(cat.icon)} />
                     </svg>
                   ) : (
                     <span class="sidebar-icon-dot" style={{ backgroundColor: `#${cat.color}` }} />
@@ -129,7 +126,7 @@ export default defineComponent({
                             <span class="sidebar-emoji">{child.emoji}</span>
                           ) : child.icon ? (
                             <svg class="sidebar-icon-svg" viewBox="0 0 24 24">
-                              <use href={getIconHref(child.icon)} />
+                              <use href={getDiscourseIconHref(child.icon)} />
                             </svg>
                           ) : (
                             <span

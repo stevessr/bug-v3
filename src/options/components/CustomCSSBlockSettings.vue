@@ -138,8 +138,7 @@ const formatDate = (timestamp: number) => {
         >
           <pre
             class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto"
-            >{{ getCombinedCss() }}</pre
-          >
+            >{{ getCombinedCss() }}</pre>
         </div>
       </div>
 

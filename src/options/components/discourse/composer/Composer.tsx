@@ -15,6 +15,7 @@ import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import TagPill from '../layout/TagPill'
+import { getDiscourseIconHref } from '../layout/iconSprite'
 import ProseMirrorEditor from '../ProseMirrorEditor'
 
 import { WysiwygEditor } from '@/components/editor/wysiwyg'
@@ -132,11 +133,6 @@ export default defineComponent({
     const getImageUrl = (url?: string | null) => {
       if (!url) return ''
       return url.startsWith('http') ? url : `${props.baseUrl}${url}`
-    }
-
-    const getIconHref = (icon?: string | null) => {
-      if (!icon) return ''
-      return `#${icon}`
     }
 
     const mergedCategories = computed(() => {
@@ -640,7 +636,7 @@ export default defineComponent({
                             <span class="category-option-emoji">{normalized?.emoji}</span>
                           ) : normalized?.icon ? (
                             <svg class="category-option-svg" viewBox="0 0 24 24">
-                              <use href={getIconHref(normalized?.icon)} />
+                              <use href={getDiscourseIconHref(normalized?.icon)} />
                             </svg>
                           ) : (
                             <span

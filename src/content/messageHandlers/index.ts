@@ -7,6 +7,7 @@ import { pageFetchHandler } from './pageFetchHandler'
 import { pageUploadHandler } from './pageUploadHandler'
 import { fetchImageHandler } from './fetchImageHandler'
 import { settingsHandler } from './settingsHandler'
+import { discourseIconSpriteHandler } from './discourseIconSpriteHandler'
 
 const handlers = [
   agentHandler,
@@ -16,6 +17,7 @@ const handlers = [
   pageFetchHandler,
   pageUploadHandler,
   fetchImageHandler,
+  discourseIconSpriteHandler,
   settingsHandler
 ]
 

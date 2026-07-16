@@ -4,14 +4,7 @@
  */
 
 export type Platform =
-  | 'discourse'
-  | 'pixiv'
-  | 'bilibili'
-  | 'reddit'
-  | 'x'
-  | 'xhs'
-  | 'tieba'
-  | 'unknown'
+  'discourse' | 'pixiv' | 'bilibili' | 'reddit' | 'x' | 'xhs' | 'tieba' | 'unknown'
 
 export interface PlatformInfo {
   platform: Platform

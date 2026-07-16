@@ -2,6 +2,8 @@ import { defineComponent, computed } from 'vue'
 
 import type { DiscourseCategory, DiscourseTopic } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+
+import { getDiscourseIconHref } from './iconSprite'
 import '../css/CategoryGrid.css'
 
 type CategoryTopic = NonNullable<DiscourseCategory['topics']>[number]
@@ -69,11 +71,6 @@ export default defineComponent({
       return url.startsWith('http') ? url : `${props.baseUrl}${url}`
     }
 
-    const getIconHref = (icon?: string | null) => {
-      if (!icon) return ''
-      return `#${icon}`
-    }
-
     const getTopicTitle = (topic: CategoryTopic) => {
       return topic.fancy_title || topic.title
     }
@@ -114,7 +111,7 @@ export default defineComponent({
                           <span class="category-emoji">{cat.emoji}</span>
                         ) : cat.icon ? (
                           <svg class="category-icon-svg" viewBox="0 0 24 24">
-                            <use href={getIconHref(cat.icon)} />
+                            <use href={getDiscourseIconHref(cat.icon)} />
                           </svg>
                         ) : (
                           <span
@@ -214,7 +211,7 @@ export default defineComponent({
                         <span class="category-emoji">{cat.emoji}</span>
                       ) : cat.icon ? (
                         <svg class="category-icon-svg" viewBox="0 0 24 24">
-                          <use href={getIconHref(cat.icon)} />
+                          <use href={getDiscourseIconHref(cat.icon)} />
                         </svg>
                       ) : (
                         <span
@@ -258,7 +255,7 @@ export default defineComponent({
                                   <span class="subcategory-emoji">{child.emoji}</span>
                                 ) : child.icon ? (
                                   <svg class="subcategory-icon-svg" viewBox="0 0 24 24">
-                                    <use href={getIconHref(child.icon)} />
+                                    <use href={getDiscourseIconHref(child.icon)} />
                                   </svg>
                                 ) : (
                                   <span

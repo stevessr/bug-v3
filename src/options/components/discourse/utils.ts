@@ -1,8 +1,5 @@
 // Discourse Browser Utilities
 
-import { parsePostContent } from './parser/parsePostContent'
-export { renderBBCode } from './bbcode'
-
 type BlobPayload = {
   arrayData: number[]
   mimeType?: string
@@ -179,7 +176,3 @@ export function formatTime(dateStr: string): string {
   if (days < 30) return `${days} 天前`
   return date.toLocaleDateString('zh-CN')
 }
-
-// Parse post content, extract images for preview
-// Skip images inside onebox, emoji, and other special containers
-export { parsePostContent }

@@ -295,9 +295,7 @@ function ensureSerializable<T>(data: T, depth = 0): T {
     // to serialize Pinia proxies. Vue proxies expose their raw target through
     // `__v_raw`; plain values simply fall back to themselves.
     const vueRaw =
-      typeof data === 'object' && data !== null
-        ? (data as { __v_raw?: T }).__v_raw
-        : undefined
+      typeof data === 'object' && data !== null ? (data as { __v_raw?: T }).__v_raw : undefined
     const raw = vueRaw ?? data
 
     // 优化：对于大对象，尝试使用 structuredClone (Chrome 98+)

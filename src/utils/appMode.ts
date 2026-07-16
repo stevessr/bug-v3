@@ -15,18 +15,11 @@ const isExtensionSurface = (value: string | null): value is ExtensionSurface =>
  * published manifest. Supporting both keeps old links working and lets the
  * bootstrap load exactly one surface bundle.
  */
-export function resolveExtensionSurface(
-  search: string,
-  hash = ''
-): ExtensionSurfaceResolution {
+export function resolveExtensionSurface(search: string, hash = ''): ExtensionSurfaceResolution {
   const params = new URLSearchParams(search)
   const type = params.get('type')
   const mode = params.get('mode')
-  const explicitSurface = isExtensionSurface(type)
-    ? type
-    : isExtensionSurface(mode)
-      ? mode
-      : null
+  const explicitSurface = isExtensionSurface(type) ? type : isExtensionSurface(mode) ? mode : null
   const requestedTab = params.get('tabs')?.trim() || null
   const hasOptionsHash = /^#\/.+/.test(hash)
 

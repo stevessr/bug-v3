@@ -225,8 +225,7 @@ type PostData = {
   current_user_reaction?: string | { id?: string }
   current_user_reactions?: Array<string | { id?: string }>
   reactions?:
-    | Record<string, { reacted?: boolean; id?: string }>
-    | Array<{ reacted?: boolean; id?: string }>
+    Record<string, { reacted?: boolean; id?: string }> | Array<{ reacted?: boolean; id?: string }>
 }
 
 const topicCategoryCache = new Map<number, number | null>()

@@ -29,12 +29,7 @@ const MAX_RUNTIME_CONTEXT = 50 // 运行时上下文
 // ============ 类型定义 ============
 
 export type ContextLayer =
-  | 'table-usage'
-  | 'annotations'
-  | 'codex'
-  | 'institutional'
-  | 'memory'
-  | 'runtime'
+  'table-usage' | 'annotations' | 'codex' | 'institutional' | 'memory' | 'runtime'
 
 export type MemoryCategory = 'preference' | 'fact' | 'task' | 'context' | 'skill'
 

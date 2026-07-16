@@ -30,11 +30,7 @@ export interface PluginRuntimeContext {
  * - unknown：尚未探测或探测失败
  */
 export type PluginCapabilityState =
-  | 'available'
-  | 'downloadable'
-  | 'downloading'
-  | 'unavailable'
-  | 'unknown'
+  'available' | 'downloadable' | 'downloading' | 'unavailable' | 'unknown'
 
 export interface PluginCapabilityDetail {
   /** 给用户看的能力名 */

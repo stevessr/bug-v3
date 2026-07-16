@@ -111,7 +111,6 @@ declare global {
   const hasEmojiMapping: typeof import('./utils/emojiShortcode').hasEmojiMapping
   const imageCache: typeof import('./utils/imageCache').imageCache
   const imageCacheService: typeof import('./utils/imageCacheService').imageCacheService
-  const initI18n: typeof import('./utils/i18n').initI18n
   const inject: typeof import('vue').inject
   const isChineseLocale: typeof import('./utils/i18n').isChineseLocale
   const isDeltaRecord: typeof import('./utils/typeGuards').isDeltaRecord
@@ -229,6 +228,7 @@ declare global {
   const uploadAndAddEmoji: typeof import('./utils/uploadServices').uploadAndAddEmoji
   const uploadLinuxDoMultipart: typeof import('./utils/discourseUpload').uploadLinuxDoMultipart
   const uploadServices: typeof import('./utils/uploadServices').uploadServices
+  const uploadViaDiscourseAppEvents: typeof import('./utils/uploadServices').uploadViaDiscourseAppEvents
   const useAbortController: typeof import('./composables/useEventListener').useAbortController
   const useAttrs: typeof import('vue').useAttrs
   const useCssModule: typeof import('vue').useCssModule
@@ -240,7 +240,7 @@ declare global {
   const useEventListener: typeof import('./composables/useEventListener').useEventListener
   const useFavoritesStore: typeof import('./stores/index').useFavoritesStore
   const useGroupStore: typeof import('./stores/index').useGroupStore
-  const useI18n: typeof import('./utils/i18n').useI18n
+  const useI18n: typeof import('./composables/useI18n').useI18n
   const useId: typeof import('vue').useId
   const useInterval: typeof import('./composables/useTimer').useInterval
   const useLink: typeof import('vue-router').useLink
@@ -439,7 +439,6 @@ declare module 'vue' {
     readonly hasEmojiMapping: UnwrapRef<typeof import('./utils/emojiShortcode')['hasEmojiMapping']>
     readonly imageCache: UnwrapRef<typeof import('./utils/imageCache')['imageCache']>
     readonly imageCacheService: UnwrapRef<typeof import('./utils/imageCacheService')['imageCacheService']>
-    readonly initI18n: UnwrapRef<typeof import('./utils/i18n')['initI18n']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly isChineseLocale: UnwrapRef<typeof import('./utils/i18n')['isChineseLocale']>
     readonly isDeltaRecord: UnwrapRef<typeof import('./utils/typeGuards')['isDeltaRecord']>
@@ -557,6 +556,7 @@ declare module 'vue' {
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
     readonly uploadLinuxDoMultipart: UnwrapRef<typeof import('./utils/discourseUpload')['uploadLinuxDoMultipart']>
     readonly uploadServices: UnwrapRef<typeof import('./utils/uploadServices')['uploadServices']>
+    readonly uploadViaDiscourseAppEvents: UnwrapRef<typeof import('./utils/uploadServices')['uploadViaDiscourseAppEvents']>
     readonly useAbortController: UnwrapRef<typeof import('./composables/useEventListener')['useAbortController']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
@@ -568,7 +568,7 @@ declare module 'vue' {
     readonly useEventListener: UnwrapRef<typeof import('./composables/useEventListener')['useEventListener']>
     readonly useFavoritesStore: UnwrapRef<typeof import('./stores/index')['useFavoritesStore']>
     readonly useGroupStore: UnwrapRef<typeof import('./stores/index')['useGroupStore']>
-    readonly useI18n: UnwrapRef<typeof import('./utils/i18n')['useI18n']>
+    readonly useI18n: UnwrapRef<typeof import('./composables/useI18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useInterval: UnwrapRef<typeof import('./composables/useTimer')['useInterval']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>

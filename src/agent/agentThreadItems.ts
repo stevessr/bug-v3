@@ -40,8 +40,4 @@ export type ErrorItem = {
 }
 
 export type AgentThreadItem =
-  | AgentMessageItem
-  | ReasoningItem
-  | TodoListItem
-  | BrowserActionsItem
-  | ErrorItem
+  AgentMessageItem | ReasoningItem | TodoListItem | BrowserActionsItem | ErrorItem

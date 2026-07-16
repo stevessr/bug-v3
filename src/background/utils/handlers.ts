@@ -8,6 +8,7 @@ import {
   handleLinuxDoAuthRequest,
   handleLinuxDoUserRequest,
   handlePageFetchRequest,
+  handleDiscourseIconSpriteRequest,
   handleLinuxDoUploadRequest,
   handleLinuxDoChallengeRequest,
   handleDownloadImage,
@@ -111,6 +112,14 @@ export function setupMessageListener() {
               sendResponse({ success: false, error: 'Missing options for PAGE_FETCH' })
               return false
             }
+
+          case 'GET_DISCOURSE_ICON_SPRITE':
+            if ('url' in typedMsg && typedMsg.url) {
+              void handleDiscourseIconSpriteRequest(typedMsg.url, sendResponse)
+              return true
+            }
+            sendResponse({ success: false, error: 'Missing url for GET_DISCOURSE_ICON_SPRITE' })
+            return false
 
           case 'LINUX_DO_UPLOAD':
             if ('options' in typedMsg) {

@@ -58,7 +58,7 @@ const createElement = (
 const createImageElement = (image: ReturnType<typeof buildLightbox>, className: string) => {
   if (!image) return null
   const properties: Properties = {
-    className,
+    className: [className],
     src: image.thumbSrc || image.href,
     alt: image.alt || '',
     loading: image.loading || 'lazy'
@@ -117,7 +117,7 @@ const buildImageGridElement = (node: Element, ctx: ParseContext) => {
   if (items.length === 0) return null
   const count = columnsCount || 2
   const grid = createElement('div', {
-    className: 'post-image-grid',
+    className: ['post-image-grid'],
     style: `--grid-columns: ${count};`
   })
 
@@ -125,7 +125,7 @@ const buildImageGridElement = (node: Element, ctx: ParseContext) => {
     .map(img => {
       const imageEl = createImageElement(img, 'post-image-grid-image')
       if (!imageEl) return null
-      return createElement('div', { className: 'post-image-grid-item' }, [imageEl])
+      return createElement('div', { className: ['post-image-grid-item'] }, [imageEl])
     })
     .filter(Boolean) as Element[]
 
@@ -147,21 +147,21 @@ const buildCarouselElement = (node: Element, ctx: ParseContext) => {
   }
   if (items.length === 0) return null
 
-  const track = createElement('div', { className: 'post-carousel-track' })
+  const track = createElement('div', { className: ['post-carousel-track'] })
   track.children = items
     .map(item => createImageElement(item, 'post-carousel-image'))
     .filter(Boolean) as Element[]
 
-  const thumbs = createElement('div', { className: 'post-carousel-thumbs' })
+  const thumbs = createElement('div', { className: ['post-carousel-thumbs'] })
   thumbs.children = items
     .map(item => createImageElement({ ...item, style: undefined }, 'post-carousel-thumb'))
     .filter(Boolean) as Element[]
 
-  return createElement('div', { className: 'post-carousel' }, [track, thumbs])
+  return createElement('div', { className: ['post-carousel'] }, [track, thumbs])
 }
 
 const transformMediaInContainer = (root: Parent, ctx: ParseContext, ancestors: Element[]) => {
-  for (let i = 0; i < root.children.length; ) {
+  for (let i = 0; i < root.children.length;) {
     const child = root.children[i] as Node
     if (isElement(child)) {
       if (isInsideOnebox(ancestors)) {
