@@ -7,6 +7,7 @@ import { requestSettingFromBackground } from './core'
 import { initOneClickAdd } from './oneClickAdd'
 import { showFloatingButton, checkAndShowFloatingButton, cleanupFloatingButton } from './ui'
 import { applyCustomCssFromCache } from './injectCustomCss'
+import { startEditorFocusTracking, stopEditorFocusTracking } from './upload/helpers'
 
 // 缓存子菜单注入设置状态
 let cachedSubmenuInjectorEnabled: boolean | null = null
@@ -72,6 +73,7 @@ export function cleanupEmojiFeature(): void {
   }
 
   stopReadTracker()
+  stopEditorFocusTracking()
 
   // 清理浮动按钮
   cleanupFloatingButton()
@@ -223,6 +225,9 @@ export async function initializeEmojiFeature(
   initialized = true
 
   console.log('[Emoji Extension] Initializing (module)...')
+  // Remember the actual Discourse composer/caret before injected upload UI
+  // takes focus. Non-editor controls never replace this remembered target.
+  startEditorFocusTracking()
   await loadDataFromStorage()
   try {
     applyCustomCssFromCache()

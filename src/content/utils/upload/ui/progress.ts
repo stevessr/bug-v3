@@ -1,5 +1,10 @@
 import { createE, DAEL, DOA } from '../../dom/createEl'
 import { uploader } from '../core'
+import {
+  captureEditorInsertionTarget,
+  insertIntoEditor,
+  type EditorInsertionTarget
+} from '../helpers'
 import { notify } from '../../ui/notify'
 
 import { buildMarkdownImage } from '@/utils/emojiMarkdown'
@@ -9,11 +14,23 @@ export async function uploadAndInsert(
   files: FileList | File[],
   addFilesToPreview: (files: File[]) => void,
   showRetryBar: (failedItems: { file: File; error: any }[], closePanel?: () => void) => void,
-  routeContext: DiscourseUploadRouteContext = 'auto'
+  routeContext: DiscourseUploadRouteContext = 'auto',
+  editorTarget?: EditorInsertionTarget | null
 ): Promise<void> {
   if (!files || files.length === 0) return
 
   const filesArray = Array.from(files)
+  const frozenEditorTarget =
+    editorTarget === undefined ? captureEditorInsertionTarget() : editorTarget
+
+  // Composer uploads promise automatic insertion. Without a frozen strict
+  // Discourse target, keep the files pending instead of uploading links that
+  // could only be written to an unrelated focused element.
+  if (!frozenEditorTarget && routeContext !== 'chat') {
+    addFilesToPreview(filesArray)
+    notify('未记录到 Discourse 编辑器光标。请先点击正文输入框，再重新打开上传面板。', 'error')
+    return
+  }
 
   // Create floating progress panel — draggable, no backdrop
   const progressPanel = createE('div', {
@@ -92,6 +109,7 @@ export async function uploadAndInsert(
   let successCount = 0
   let failCount = 0
   let delegatedCount = 0
+  let insertionFailureCount = 0
   const failedItems: { file: File; error: any }[] = []
   const rowMap = new Map<
     string,
@@ -160,23 +178,24 @@ export async function uploadAndInsert(
       const result = await uploader.uploadImage(file, routeContext)
       successCount++
       if (result.handledByDiscourseRoute) delegatedCount++
-      updateProgress(
-        i + 1,
-        filesArray.length,
-        file,
-        'success',
-        result.handledByDiscourseRoute ? '已交给 Discourse 原生上传队列' : undefined
-      )
+      let successMessage = result.handledByDiscourseRoute
+        ? '已交给 Discourse 原生上传队列'
+        : undefined
 
-      // Insert into editor immediately on success
+      // Insert into the exact editor/caret captured when the upload dialog
+      // opened. Never re-read document.activeElement after the async upload.
       if (!result.handledByDiscourseRoute) {
         const alt =
           result.width && result.height
             ? `${file.name}|${result.width}x${result.height}`
             : file.name
-        const { insertIntoEditor } = await import('../helpers')
-        insertIntoEditor(buildMarkdownImage(alt, result))
+        if (!insertIntoEditor(buildMarkdownImage(alt, result), frozenEditorTarget)) {
+          insertionFailureCount++
+          successMessage = '上传成功，但原编辑器已失效，未自动填入'
+        }
       }
+
+      updateProgress(i + 1, filesArray.length, file, 'success', successMessage)
     } catch (error: any) {
       failCount++
       updateProgress(i + 1, filesArray.length, file, 'failed', error.message || '上传失败')
@@ -193,9 +212,11 @@ export async function uploadAndInsert(
   setTimeout(closePanel, 1500)
 
   const delegatedSummary = delegatedCount > 0 ? `，${delegatedCount} 个由 Discourse 接管` : ''
+  const insertionSummary =
+    insertionFailureCount > 0 ? `，${insertionFailureCount} 个因原编辑器失效未填入` : ''
   notify(
-    `上传处理完成：${successCount} 成功${delegatedSummary}，${failCount} 失败`,
-    failCount === 0 ? 'success' : 'info'
+    `上传处理完成：${successCount} 成功${delegatedSummary}${insertionSummary}，${failCount} 失败`,
+    failCount === 0 && insertionFailureCount === 0 ? 'success' : 'info'
   )
 
   if (failedItems.length > 0) {

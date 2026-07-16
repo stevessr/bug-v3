@@ -5,6 +5,7 @@ import { uploadAndInsert } from './ui/progress'
 import { handleDiffFiles, showDiffImagePicker } from './ui/diff'
 import { showFolderPickerWithUpload, collectFiles } from './ui/folder'
 import { handleUrlImport } from './ui/url'
+import { captureEditorInsertionTarget } from './helpers'
 
 import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
 
@@ -12,6 +13,9 @@ export async function showImageUploadDialog(
   routeContext: DiscourseUploadRouteContext = 'auto'
 ): Promise<void> {
   return new Promise(resolve => {
+    // Freeze the composer and caret before any control in this dialog can take
+    // focus. Every regular/folder upload in this dialog shares this target.
+    const editorTarget = captureEditorInsertionTarget()
     const {
       panel,
       dropZone,
@@ -39,7 +43,7 @@ export async function showImageUploadDialog(
 
     // Wire the panel's upload button to our uploadAndInsert
     setUploadHandler(async (files: File[]) => {
-      await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
+      await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext, editorTarget)
     })
 
     const cleanup = () => {
@@ -73,7 +77,7 @@ export async function showImageUploadDialog(
         const files = getPendingFiles()
         if (files.length === 0) return
         clearPreview()
-        await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
+        await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext, editorTarget)
       })
     }
 
@@ -166,7 +170,13 @@ export async function showImageUploadDialog(
     folderInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files) {
-        await uploadAndInsert(Array.from(files), addFilesToPreview, showRetryBar, routeContext)
+        await uploadAndInsert(
+          Array.from(files),
+          addFilesToPreview,
+          showRetryBar,
+          routeContext,
+          editorTarget
+        )
       }
     })
 
@@ -212,7 +222,7 @@ export async function showImageUploadDialog(
           }
         }
         if (files.length > 0) {
-          await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
+          await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext, editorTarget)
         }
       }
     })
