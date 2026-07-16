@@ -1,20 +1,24 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+import {
+  applyExtensionSurfaceClass,
+  resolveExtensionSurface
+} from './utils/appMode'
+import './styles/main.css'
 
-import './styles/main.ts'
-import router from './options/router'
-import App from './App.vue'
-import { getMessage } from './utils/i18n'
+const { surface } = resolveExtensionSurface(window.location.search, window.location.hash)
+applyExtensionSurfaceClass(surface)
 
-const pinia = createPinia()
-const app = createApp(App)
-app.use(pinia)
-// Always register router. Root redirect was removed to avoid unwanted automatic navigation.
-app.use(router)
-
-// Set up global i18n property
-app.config.globalProperties.$t = getMessage
-
-app.mount('#app')
-
-// Store data will be loaded by the active component (Popup or Options) in their respective composables
+// Keep the shared HTML entry tiny. Loading Vue, Pinia, Vue Router, Ant Design,
+// stores, and the AI agent only happens after the requested browser surface is
+// known, so opening the popup no longer parses options/sidebar code.
+switch (surface) {
+  case 'options':
+    await import('./options/main')
+    break
+  case 'sidebar':
+    await import('./sidebar/main')
+    break
+  case 'popup':
+  default:
+    await import('./popup/main')
+    break
+}

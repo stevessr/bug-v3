@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
-import '../styles/main.ts'
+import '../styles/theme.ts'
 
 import router from './router'
 import Options from './Options.vue'
@@ -26,5 +26,22 @@ const app = createApp(Options)
 app.use(pinia)
 app.use(router)
 app.mount('#app')
+
+const requestedTab = new URLSearchParams(window.location.search).get('tabs')?.trim()
+if (requestedTab) {
+  const originalUrl = `${window.location.pathname}${window.location.search}`
+  const target = requestedTab.startsWith('/') ? requestedTab : `/${requestedTab}`
+
+  void router
+    .replace({ path: target })
+    .then(() => {
+      // Keep the query-based extension URL stable while retaining the resolved
+      // in-memory route used by the options application.
+      window.history.replaceState({}, '', originalUrl)
+    })
+    .catch(error => {
+      console.warn('[Options] Failed to navigate to requested tab:', error)
+    })
+}
 
 // Store data will be loaded in useOptions composable's onMounted hook

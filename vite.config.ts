@@ -361,6 +361,11 @@ export default defineConfig(({ mode }) => {
       include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue']
     },
     build: {
+      // Chrome/Edge already support modulepreload. Avoid installing Vite's
+      // document-wide polyfill (and its MutationObserver) in every surface.
+      modulePreload: {
+        polyfill: false
+      },
       sourcemap: !isFastBuild && process.env.BUILD_SOURCEMAP === 'true',
       manifest: !isFastBuild && process.env.BUILD_MANIFEST === 'true',
       minify: shouldMinify ? minifier : false,
@@ -428,6 +433,14 @@ export default defineConfig(({ mode }) => {
             : {
                 codeSplitting: {
                   groups: [
+                    {
+                      // Keep Vite's dynamic-import preload helper out of large
+                      // vendor chunks. Otherwise a tiny lazy import can make
+                      // the 1+ MB AI bundle eager on popup/content startup.
+                      name: 'vite-runtime',
+                      test: /vite\/(?:preload-helper|modulepreload-polyfill)/,
+                      priority: 100
+                    },
                     {
                       name: 'vendor-ui',
                       test: /[\\/]node_modules[\\/](?:ant-design-vue|@ant-design)[\\/]/,

@@ -3,26 +3,34 @@
  * 使用动态加载减少初始体积，按需加载平台特定模块
  */
 
-import {
-  detectPlatform,
-  shouldInjectEmojiFeature,
-  getDiscourseDomains
-} from './utils/core/platformDetector'
-import { loadPlatformModule } from './utils/core/platformLoader'
-import { dispatchMessage } from './messageHandlers'
-import { initializeEmojiFeature } from './utils/init'
-import { postTimings } from './discourse/utils/timingsBinder'
-import { autoReadAllv2 } from './discourse/utils/autoReadReplies'
+import { detectPlatform, getDiscourseDomains } from './utils/core/platformDetector'
 
-import { createLogger } from '@/utils/logger'
+import type { ContentMessage } from './messageHandlers/types'
 
-const log = createLogger('ContentScript')
+const logInfo = (...args: unknown[]) => {
+  if (__ENABLE_LOGGING__) console.info('[Emoji Extension]', ...args)
+}
+const logError = (...args: unknown[]) => console.error('[Emoji Extension]', ...args)
 
-log.info('Content script loaded (entry)')
+logInfo('Content script bootstrap loaded')
 
-// 获取 Discourse 域名列表（向后兼容）
-const DISCOURSE_DOMAINS = getDiscourseDomains()
-void DISCOURSE_DOMAINS
+const CONTENT_MESSAGE_TYPES = new Set<ContentMessage['type']>([
+  'AGENT_ACTION',
+  'DOM_QUERY',
+  'GET_CSRF_TOKEN',
+  'GET_LINUX_DO_USER',
+  'PAGE_FETCH',
+  'PAGE_UPLOAD',
+  'FETCH_IMAGE',
+  'SETTINGS_UPDATED'
+])
+
+let messageDispatcherPromise: Promise<typeof import('./messageHandlers')> | null = null
+
+const loadMessageDispatcher = () => {
+  messageDispatcherPromise ??= import('./messageHandlers')
+  return messageDispatcherPromise
+}
 
 /**
  * 初始化函数 - 使用动态加载优化
@@ -30,49 +38,82 @@ void DISCOURSE_DOMAINS
 async function initialize(): Promise<void> {
   // 1. 检测平台
   const platformInfo = detectPlatform()
-  log.info(`Platform detected: ${platformInfo.platform} (${platformInfo.hostname})`)
+  logInfo(`Platform detected: ${platformInfo.platform} (${platformInfo.hostname})`)
 
-  // 2. 处理 Discourse 平台（最常用，保留静态加载）
-  if (shouldInjectEmojiFeature()) {
-    log.info('Initializing emoji feature for Discourse/forum platform')
+  // 2. Discourse is feature-rich, so none of its picker/storage code is
+  // parsed on unrelated pages even though the manifest matches <all_urls>.
+  if (platformInfo.platform === 'discourse') {
+    logInfo('Initializing emoji feature for Discourse/forum platform')
     try {
-      initializeEmojiFeature()
+      const { initializeEmojiFeature } = await import('./utils/init')
+      await initializeEmojiFeature()
 
       // 仅在确认是 Discourse 域名时才暴露测试辅助工具
       try {
         const domains = getDiscourseDomains()
         if (domains.some(domain => window.location.hostname.includes(domain))) {
-          window.postTimings = postTimings
-          window.autoReadAllRepliesV2 = autoReadAllv2
+          window.postTimings = async (topicId, timings) => {
+            const { postTimings } = await import('./discourse/utils/timingsBinder')
+            return postTimings(topicId, timings)
+          }
+          window.autoReadAllRepliesV2 = async () => {
+            const { autoReadAllv2 } = await import('./discourse/utils/autoReadReplies')
+            return autoReadAllv2()
+          }
         }
       } catch (e) {
         console.warn('[Emoji Extension] failed to expose postTimings to window', e)
       }
     } catch (error) {
-      log.error('Failed to initialize Discourse emoji feature:', error)
+      logError('Failed to initialize Discourse emoji feature:', error)
     }
   }
 
   // 3. 动态加载其他平台模块
   if (platformInfo.shouldLoadModule && platformInfo.platform !== 'discourse') {
     try {
+      const { loadPlatformModule } = await import('./utils/core/platformLoader')
       await loadPlatformModule(platformInfo.platform)
-      log.info(`Platform module ${platformInfo.platform} loaded successfully`)
+      logInfo(`Platform module ${platformInfo.platform} loaded successfully`)
     } catch (error) {
-      log.error(`Failed to load platform module ${platformInfo.platform}:`, error)
+      logError(`Failed to load platform module ${platformInfo.platform}:`, error)
     }
   }
 }
 
 // 执行初始化
 initialize().catch(error => {
-  log.error('Initialization failed:', error)
+  logError('Initialization failed:', error)
 })
 
 // Add message listener
 if (chrome?.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    return dispatchMessage(message, sender, sendResponse)
+    if (
+      !message ||
+      typeof message !== 'object' ||
+      !CONTENT_MESSAGE_TYPES.has((message as ContentMessage).type)
+    ) {
+      return false
+    }
+
+    void loadMessageDispatcher()
+      .then(({ dispatchMessage }) => {
+        const handled = dispatchMessage(message as ContentMessage, sender, sendResponse)
+        if (!handled) {
+          sendResponse({ success: false, error: 'Unknown content message type' })
+        }
+      })
+      .catch(error => {
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      })
+
+    // The handler module is loaded on first use, so keep the response channel
+    // alive across the dynamic import.
+    return true
   })
 }
 

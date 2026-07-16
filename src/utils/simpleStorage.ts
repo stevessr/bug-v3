@@ -9,8 +9,6 @@
  * 5. 运行时类型验证提高数据可靠性
  */
 
-import { toRaw } from 'vue'
-
 import { sanitizeEmojiGroup, isSettings } from './typeGuards'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
@@ -293,7 +291,14 @@ function ensureSerializable<T>(data: T, depth = 0): T {
   if (SAFE_TYPES.has(type)) return data
 
   try {
-    const raw = toRaw(data)
+    // Avoid importing the Vue runtime into the background service worker just
+    // to serialize Pinia proxies. Vue proxies expose their raw target through
+    // `__v_raw`; plain values simply fall back to themselves.
+    const vueRaw =
+      typeof data === 'object' && data !== null
+        ? (data as { __v_raw?: T }).__v_raw
+        : undefined
+    const raw = vueRaw ?? data
 
     // 优化：对于大对象，尝试使用 structuredClone (Chrome 98+)
     // 这比手动递归快 2-5 倍

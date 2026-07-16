@@ -206,9 +206,6 @@ const openDiscourseBrowser = () => {
 </template>
 
 <style>
-/* Import TailwindCSS in popup */
-@import '../styles/main.css';
-
 /* Ensure page and app root fill the viewport so child 100% heights work */
 html,
 body,

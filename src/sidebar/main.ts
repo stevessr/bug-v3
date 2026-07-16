@@ -1,11 +1,10 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
-import Popup from './Popup.vue'
 import '../styles/theme.ts'
 
-const pinia = createPinia()
-const app = createApp(Popup)
+import Sidebar from './Sidebar.vue'
 
-app.use(pinia)
+const app = createApp(Sidebar)
+app.use(createPinia())
 app.mount('#app')

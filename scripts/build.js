@@ -50,6 +50,12 @@ const configs = {
     NODE_ENV: 'production',
     BUILD_MINIFIED: 'false',
     BUILD_FAST: 'true'
+  },
+  'build:perf': {
+    ENABLE_LOGGING: 'false',
+    NODE_ENV: 'production',
+    BUILD_MINIFIER: 'terser',
+    BUILD_MANIFEST: 'true'
   }
 }
 

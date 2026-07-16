@@ -399,8 +399,6 @@ ${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
 </template>
 
 <style>
-@import '../styles/main.css';
-
 html,
 body,
 #app {

@@ -5,6 +5,42 @@
 /* Tailwind CSS 4 no longer auto-detects JavaScript configuration files. */
 @config '../../tailwind.config.js';
 
+html,
+body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#app {
+  width: 100%;
+}
+
+body.options-mode,
+body.options-mode #app {
+  min-height: 100vh;
+}
+
+body.options-mode {
+  overflow-y: auto;
+}
+
+body.popup-mode {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.sidebar-mode,
+body.sidebar-mode #app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.sidebar-mode {
+  height: 100vh;
+  overflow-y: auto;
+}
+
 @layer base {
   :root {
     /* ============ 滚动条 ============ */

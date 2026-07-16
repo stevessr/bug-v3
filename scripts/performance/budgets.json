@@ -1,0 +1,21 @@
+{
+  "totalDistBytes": 47000000,
+  "maxJsChunkBytes": 2000000,
+  "maxDuplicateAssetBytes": 32768,
+  "entries": {
+    "bootstrap": 32768,
+    "content": 65536,
+    "background": 262144,
+    "popup": 1250000,
+    "sidebar": 1350000,
+    "options": 1500000,
+    "discourse": 2250000
+  },
+  "forbiddenInitialChunks": {
+    "bootstrap": ["vendor-", "simpleStorage", "stores", "ffmpeg"],
+    "content": ["vendor-ui", "vendor-ai", "vendor-editor", "simpleStorage", "stores", "ffmpeg"],
+    "background": ["vendor-ui", "vendor-ai", "vendor-editor", "ffmpeg"],
+    "popup": ["vendor-ai", "vendor-editor", "ffmpeg"],
+    "sidebar": ["vendor-ai", "vendor-editor", "ffmpeg"]
+  }
+}
