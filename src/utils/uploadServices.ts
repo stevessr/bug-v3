@@ -1,5 +1,12 @@
-import { useEmojiStore } from '@/stores'
+import type { Emoji, EmojiGroup } from '@/types/type'
 import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
+import {
+  getEmojiGroup,
+  getEmojiGroupIndex,
+  getSettings,
+  storageBatchSet,
+  STORAGE_KEYS
+} from '@/utils/simpleStorage'
 
 type UploadFlowError = Error & {
   status?: number
@@ -41,6 +48,61 @@ export interface UploadOptions {
   groupName?: string
   onProgress?: (percent: number) => void
   onRateLimitWait?: (waitTime: number) => Promise<void>
+}
+
+let emojiPersistenceQueue: Promise<void> = Promise.resolve()
+
+function enqueueEmojiPersistence<T>(task: () => Promise<T>): Promise<T> {
+  const result = emojiPersistenceQueue.then(task, task)
+  emojiPersistenceQueue = result.then(
+    () => undefined,
+    () => undefined
+  )
+  return result
+}
+
+async function persistUploadedEmoji(
+  targetGroupId: string,
+  groupName: string | undefined,
+  emoji: Omit<Emoji, 'id' | 'groupId'>
+): Promise<{ emoji: Emoji; group: EmojiGroup }> {
+  return enqueueEmojiPersistence(async () => {
+    const [storedGroup, storedIndex] = await Promise.all([
+      getEmojiGroup(targetGroupId),
+      getEmojiGroupIndex()
+    ])
+    const existingIndex = storedIndex.find(entry => entry.id === targetGroupId)
+    const order =
+      existingIndex?.order ??
+      storedGroup?.order ??
+      storedIndex.reduce((max, entry) => Math.max(max, entry.order), -1) + 1
+    const baseGroup: EmojiGroup = storedGroup ?? {
+      id: targetGroupId,
+      name: groupName || (targetGroupId === 'ungrouped' ? '未分组' : targetGroupId),
+      icon: '📦',
+      order,
+      emojis: []
+    }
+    const newEmoji: Emoji = {
+      ...emoji,
+      id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      groupId: targetGroupId
+    }
+    const group: EmojiGroup = {
+      ...baseGroup,
+      emojis: [...(Array.isArray(baseGroup.emojis) ? baseGroup.emojis : []), newEmoji]
+    }
+    const index = existingIndex
+      ? storedIndex
+      : [...storedIndex, { id: targetGroupId, order }].sort((a, b) => a.order - b.order)
+
+    await storageBatchSet({
+      [STORAGE_KEYS.GROUP_PREFIX + targetGroupId]: group,
+      [STORAGE_KEYS.GROUP_INDEX]: index
+    })
+
+    return { emoji: newEmoji, group }
+  })
 }
 
 // Hardcoded map for discourse forum domains and their client IDs
@@ -174,6 +236,80 @@ function normalizeUploadResult(baseUrl: string, data: any): UploadServiceResult 
   }
 }
 
+/**
+ * Upload a file using Discourse's built-in appEvents mechanism.
+ *
+ * This only works when running on a Discourse page where the Ember application
+ * is initialized (e.g. from a content script on a Discourse forum page).
+ * It triggers Discourse's own composer upload pipeline and provides progress
+ * via the standard onProgress callback.
+ *
+ * @returns A promise that resolves with the upload result from Discourse.
+ * @throws If Discourse runtime is not available in the current context.
+ */
+export function uploadViaDiscourseAppEvents(
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<UploadServiceResult> {
+  return new Promise((resolve, reject) => {
+    try {
+      const win = globalThis as any
+      const discourse = win.Discourse
+      if (!discourse?.__container__) {
+        reject(new Error('Discourse runtime not available in this context'))
+        return
+      }
+
+      const appEvents = discourse.__container__.lookup('service:app-events')
+      if (!appEvents) {
+        reject(new Error('Discourse appEvents service not found'))
+        return
+      }
+
+      let settled = false
+
+      const onSuccess = (_fileName: string, upload: any) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        onProgress?.(100)
+        const baseUrl = win.location?.origin || `https://${win.location?.host || ''}`
+        resolve(normalizeUploadResult(baseUrl, upload))
+      }
+
+      const onError = (error: any) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        const msg =
+          typeof error === 'string'
+            ? error
+            : error?.message || error?.toString() || 'Discourse upload failed'
+        reject(new Error(msg))
+      }
+
+      const onStarted = () => {
+        onProgress?.(10)
+      }
+
+      function cleanup() {
+        appEvents.off('composer:upload-success', onSuccess)
+        appEvents.off('composer:upload-error', onError)
+        appEvents.off('composer:upload-started', onStarted)
+      }
+
+      appEvents.on('composer:upload-success', onSuccess)
+      appEvents.on('composer:upload-error', onError)
+      appEvents.on('composer:upload-started', onStarted)
+
+      // Trigger Discourse's native upload pipeline
+      appEvents.trigger('composer:add-files', file)
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 class DiscourseUploadService implements UploadService {
   private domain: string
   private clientId: string
@@ -185,6 +321,15 @@ class DiscourseUploadService implements UploadService {
 
   get name() {
     return this.domain
+  }
+
+  /** Check whether we are running in a Discourse page with Ember initialized */
+  private isDiscoursePageContext(): boolean {
+    try {
+      return !!(globalThis as any).Discourse?.__container__
+    } catch {
+      return false
+    }
   }
 
   async computeSHA1OfArrayBuffer(buffer: ArrayBuffer): Promise<string | null> {
@@ -261,6 +406,11 @@ class DiscourseUploadService implements UploadService {
     onProgress?: (percent: number) => void
   ): Promise<UploadServiceResult> {
     try {
+      // When running on a Discourse page, use the native appEvents upload
+      if (this.isDiscoursePageContext()) {
+        return await uploadViaDiscourseAppEvents(file, onProgress)
+      }
+
       if (this.shouldUseLinuxDoPageProxy()) {
         return await this.uploadViaLinuxDoProxyDetailed(file, onProgress)
       }
@@ -462,9 +612,9 @@ class ImgbedUploadService implements UploadService {
   }
 
   async uploadFileDetailed(file: File, onProgress?: (percent: number) => void) {
-    const emojiStore = useEmojiStore()
-    const token = emojiStore.settings.imgbedToken
-    const apiUrl = emojiStore.settings.imgbedApiUrl
+    const settings = await getSettings()
+    const token = settings?.imgbedToken
+    const apiUrl = settings?.imgbedApiUrl
 
     if (!token) {
       throw new Error('Imgbed token is not set in settings')
@@ -554,28 +704,14 @@ export async function uploadAndAddEmoji(
       finalUrl = dataUrl || URL.createObjectURL(blob)
     }
 
-    // Import store dynamically to avoid circular dependencies
-    const emojiStore = useEmojiStore()
-
     // Determine target group
     const targetGroupId = options.groupId || 'ungrouped'
 
-    // Ensure group exists
-    let group = emojiStore.groups.find(g => g.id === targetGroupId)
-    if (!group && options.groupName) {
-      group = emojiStore.createGroupWithoutSave(options.groupName, '📦')
-      group.id = targetGroupId
-    } else if (!group) {
-      // Create ungrouped if it doesn't exist
-      group = emojiStore.groups.find(g => g.id === 'ungrouped')
-      if (!group) {
-        group = emojiStore.createGroupWithoutSave('未分组', '📦')
-        group.id = 'ungrouped'
-      }
-    }
-
     // Add emoji to group
-    const newEmoji = {
+    const { emoji: newEmoji, group } = await persistUploadedEmoji(
+      targetGroupId,
+      options.groupName,
+      {
       packet: Date.now(),
       name: name || filename || 'image',
       url: finalUrl,
@@ -583,10 +719,8 @@ export async function uploadAndAddEmoji(
       displayUrl: finalUrl,
       originUrl: originUrl || undefined,
       addedAt: Date.now()
-    }
-
-    emojiStore.addEmojiWithoutSave(targetGroupId, newEmoji)
-    emojiStore.maybeSave()
+      }
+    )
 
     // Broadcast addition if not in buffer group
     if (targetGroupId !== 'buffer' && typeof chrome !== 'undefined' && chrome.runtime) {

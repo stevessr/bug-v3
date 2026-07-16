@@ -36,7 +36,9 @@
     // 视图模式：'auto', 'desktop', 'mobile'
     viewMode: GM_getValue('viewMode', 'auto'),
     // 用户选择的分组 ID 列表
-    selectedGroupIds: GM_getValue('selectedGroupIds', [])
+    selectedGroupIds: GM_getValue('selectedGroupIds', []),
+    // 是否先上传到 Discourse 再插入（获取论坛本地 URL）
+    uploadToDiscourse: GM_getValue('uploadToDiscourse', false)
   }
 
   // ============== 移动端检测 ==============
@@ -97,6 +99,13 @@
     localStorage.removeItem('emoji_groups_cache')
     localStorage.removeItem('emoji_groups_cache_timestamp')
     alert('缓存已清除，请刷新页面')
+  })
+
+  GM_registerMenuCommand('切换上传模式（上传到论坛/直接插入）', () => {
+    const newMode = !CONFIG.uploadToDiscourse
+    GM_setValue('uploadToDiscourse', newMode)
+    CONFIG.uploadToDiscourse = newMode
+    alert('上传模式已切换为：' + (newMode ? '上传到论坛后插入' : '直接插入远程链接'))
   })
 
   GM_registerMenuCommand('切换视图模式', () => {
@@ -1314,8 +1323,78 @@
     }
   }
 
+  // ============== 通过 appEvents 上传到 Discourse ==============
+  async function fetchImageData(url) {
+    // 优先使用 fetch，回退到 GM_xmlhttpRequest（绕过 CORS 限制）
+    try {
+      const response = await fetch(url, { mode: 'cors' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      return { data: blob, type: blob.type }
+    } catch {
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: 'GET',
+          url,
+          responseType: 'blob',
+          onload: resp => {
+            const blob = resp.response
+            resolve({ data: blob, type: blob.type || 'image/png' })
+          },
+          onerror: reject
+        })
+      })
+    }
+  }
+
+  async function uploadEmojiToDiscourse(emoji) {
+    const discourse = window.Discourse
+    if (!discourse?.__container__) {
+      throw new Error('Discourse runtime not available')
+    }
+
+    const appEvents = discourse.__container__.lookup('service:app-events')
+    if (!appEvents) {
+      throw new Error('Discourse appEvents service not available')
+    }
+
+    // 获取图片数据
+    const imageData = await fetchImageData(emoji.displayUrl || emoji.url)
+    const ext = (imageData.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '')
+    const file = new File([imageData.data], `${emoji.name}.${ext}`, { type: imageData.type })
+
+    // 通过 appEvents 触发 Discourse 的内置上传流程，返回 Promise 结果
+    return new Promise((resolve, reject) => {
+      let settled = false
+
+      const onSuccess = (_fileName, upload) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        resolve(upload)
+      }
+
+      const onError = error => {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(error || new Error('Discourse upload failed'))
+      }
+
+      function cleanup() {
+        appEvents.off('composer:upload-success', onSuccess)
+        appEvents.off('composer:upload-error', onError)
+      }
+
+      appEvents.on('composer:upload-success', onSuccess)
+      appEvents.on('composer:upload-error', onError)
+
+      appEvents.trigger('composer:add-files', file)
+    })
+  }
+
   // ============== 插入表情 ==============
-  function insertEmoji(emoji) {
+  async function insertEmoji(emoji) {
     // 查找编辑器
     const selectors = [
       'textarea.d-editor-input',
@@ -1336,17 +1415,34 @@
     }
 
     // 构建插入文本
-    const width = emoji.width || 500
-    const height = emoji.height || 500
+    let imageUrl = emoji.url
+    let imageWidth = emoji.width || 500
+    let imageHeight = emoji.height || 500
     const scale = CONFIG.imageScale
+
+    // 如果开启了上传模式，先上传到 Discourse 获取论坛本地 URL
+    if (CONFIG.uploadToDiscourse) {
+      try {
+        const upload = await uploadEmojiToDiscourse(emoji)
+        if (upload?.url) {
+          imageUrl = upload.url
+          if (upload.width) imageWidth = upload.width
+          if (upload.height) imageHeight = upload.height
+          console.log('[Market Emoji] 已上传到 Discourse:', imageUrl)
+        }
+      } catch (e) {
+        console.warn('[Market Emoji] 上传到 Discourse 失败，使用远程链接:', e)
+        // 继续使用原始 URL
+      }
+    }
 
     let insertText = ''
     if (CONFIG.outputFormat === 'html') {
-      const scaledWidth = Math.max(1, Math.round(width * (scale / 100)))
-      const scaledHeight = Math.max(1, Math.round(height * (scale / 100)))
-      insertText = `<img src="${emoji.url}" title=":${emoji.name}:" class="emoji" alt=":${emoji.name}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}"> `
+      const scaledWidth = Math.max(1, Math.round(imageWidth * (scale / 100)))
+      const scaledHeight = Math.max(1, Math.round(imageHeight * (scale / 100)))
+      insertText = `<img src="${imageUrl}" title=":${emoji.name}:" class="emoji" alt=":${emoji.name}:" loading="lazy" width="${scaledWidth}" height="${scaledHeight}"> `
     } else {
-      insertText = `![${emoji.name}|${width}x${height},${scale}%](${emoji.url}) `
+      insertText = `![${emoji.name}|${imageWidth}x${imageHeight},${scale}%](${imageUrl}) `
     }
 
     // 插入到 textarea
@@ -1601,8 +1697,8 @@
         img.loading = 'lazy'
         img.dataset.name = emoji.name.toLowerCase()
 
-        img.onclick = () => {
-          insertEmoji(emoji)
+        img.onclick = async () => {
+          await insertEmoji(emoji)
           closePicker()
         }
 
@@ -1733,8 +1829,8 @@
 
         bindHoverPreview(img, emoji)
 
-        img.onclick = () => {
-          insertEmoji(emoji)
+        img.onclick = async () => {
+          await insertEmoji(emoji)
           closePicker()
         }
 
