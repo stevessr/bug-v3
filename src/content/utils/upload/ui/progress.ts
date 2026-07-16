@@ -3,11 +3,13 @@ import { uploader } from '../core'
 import { notify } from '../../ui/notify'
 
 import { buildMarkdownImage } from '@/utils/emojiMarkdown'
+import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
 
 export async function uploadAndInsert(
   files: FileList | File[],
   addFilesToPreview: (files: File[]) => void,
-  showRetryBar: (failedItems: { file: File; error: any }[], closePanel?: () => void) => void
+  showRetryBar: (failedItems: { file: File; error: any }[], closePanel?: () => void) => void,
+  routeContext: DiscourseUploadRouteContext = 'auto'
 ): Promise<void> {
   if (!files || files.length === 0) return
 
@@ -89,6 +91,7 @@ export async function uploadAndInsert(
 
   let successCount = 0
   let failCount = 0
+  let delegatedCount = 0
   const failedItems: { file: File; error: any }[] = []
   const rowMap = new Map<
     string,
@@ -154,15 +157,26 @@ export async function uploadAndInsert(
     updateProgress(i, filesArray.length, file, 'uploading')
 
     try {
-      const result = await uploader.uploadImage(file)
+      const result = await uploader.uploadImage(file, routeContext)
       successCount++
-      updateProgress(i + 1, filesArray.length, file, 'success')
+      if (result.handledByDiscourseRoute) delegatedCount++
+      updateProgress(
+        i + 1,
+        filesArray.length,
+        file,
+        'success',
+        result.handledByDiscourseRoute ? '已交给 Discourse 原生上传队列' : undefined
+      )
 
       // Insert into editor immediately on success
-      const alt =
-        result.width && result.height ? `${file.name}|${result.width}x${result.height}` : file.name
-      const { insertIntoEditor } = await import('../helpers')
-      insertIntoEditor(buildMarkdownImage(alt, result))
+      if (!result.handledByDiscourseRoute) {
+        const alt =
+          result.width && result.height
+            ? `${file.name}|${result.width}x${result.height}`
+            : file.name
+        const { insertIntoEditor } = await import('../helpers')
+        insertIntoEditor(buildMarkdownImage(alt, result))
+      }
     } catch (error: any) {
       failCount++
       updateProgress(i + 1, filesArray.length, file, 'failed', error.message || '上传失败')
@@ -178,7 +192,11 @@ export async function uploadAndInsert(
   }
   setTimeout(closePanel, 1500)
 
-  notify(`上传完成：${successCount} 成功，${failCount} 失败`, failCount === 0 ? 'success' : 'info')
+  const delegatedSummary = delegatedCount > 0 ? `，${delegatedCount} 个由 Discourse 接管` : ''
+  notify(
+    `上传处理完成：${successCount} 成功${delegatedSummary}，${failCount} 失败`,
+    failCount === 0 ? 'success' : 'info'
+  )
 
   if (failedItems.length > 0) {
     addFilesToPreview(failedItems.map(f => f.file))

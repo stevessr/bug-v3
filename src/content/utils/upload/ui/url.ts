@@ -3,10 +3,13 @@ import { customAlert } from '../../ui/dialog'
 import { notify } from '../../ui/notify'
 import { uploader } from '../core'
 
+import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
+
 export async function handleUrlImport(
   urlTextarea: HTMLTextAreaElement,
   urlImportBtn: HTMLButtonElement,
-  urlProgressList: HTMLElement
+  urlProgressList: HTMLElement,
+  routeContext: DiscourseUploadRouteContext = 'auto'
 ) {
   const text = urlTextarea.value.trim()
   if (!text) {
@@ -95,7 +98,7 @@ export async function handleUrlImport(
 
       // Upload to Discourse
       statusIcon.textContent = '📤'
-      await uploader.uploadDownloadedFile(blob, filename)
+      await uploader.uploadDownloadedFile(blob, filename, routeContext)
       successCount++
       statusIcon.textContent = '✅'
       label.style.color = '#16a34a'

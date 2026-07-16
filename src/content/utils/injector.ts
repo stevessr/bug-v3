@@ -398,7 +398,10 @@ export function createQuickInsertMenu(): HTMLElement {
   return menu
 }
 
-function createUploadMenu(isMobile: boolean = false): HTMLElement {
+function createUploadMenu(
+  isMobile: boolean = false,
+  routeContext: 'composer' | 'chat' = 'composer'
+): HTMLElement {
   // Build a popout-style menu matching referense/popout.html structure
   // If isMobile is true, return a modal-style container compatible with mobile popout
   const menu = createE('div', {
@@ -437,7 +440,7 @@ function createUploadMenu(isMobile: boolean = false): HTMLElement {
 
   const uploadLi = createListItem('上传本地图片', '📁', async () => {
     menu.remove()
-    await showImageUploadDialog()
+    await showImageUploadDialog(routeContext)
   })
   list.appendChild(uploadLi)
 
@@ -703,7 +706,7 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     // Show menu with upload options and mount it into #d-menu-portals or mobile modal container
     const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
     const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
-    const menu = createUploadMenu(isMobile)
+    const menu = createUploadMenu(isMobile, isChatComposer ? 'chat' : 'composer')
 
     if (isMobile) {
       // Try to find existing modal container on the page and reuse it

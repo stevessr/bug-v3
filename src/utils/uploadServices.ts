@@ -252,6 +252,8 @@ export function uploadViaDiscourseAppEvents(
   onProgress?: (percent: number) => void
 ): Promise<UploadServiceResult> {
   return new Promise((resolve, reject) => {
+    let cleanup = () => {}
+
     try {
       const win = globalThis as any
       const discourse = win.Discourse
@@ -265,22 +267,32 @@ export function uploadViaDiscourseAppEvents(
         reject(new Error('Discourse appEvents service not found'))
         return
       }
+      if (typeof appEvents.has === 'function' && !appEvents.has('composer:add-files')) {
+        reject(new Error('Discourse composer uploader is not ready'))
+        return
+      }
 
       let settled = false
 
-      const onSuccess = (_fileName: string, upload: any) => {
-        if (settled) return
+      const onSuccess = (fileName: string, upload: any) => {
+        if (settled || fileName !== file.name) return
         settled = true
         cleanup()
         onProgress?.(100)
         const baseUrl = win.location?.origin || `https://${win.location?.host || ''}`
-        resolve(normalizeUploadResult(baseUrl, upload))
+        try {
+          resolve(normalizeUploadResult(baseUrl, upload))
+        } catch (error) {
+          reject(error)
+        }
       }
 
-      const onError = (error: any) => {
-        if (settled) return
+      const onError = (uppyFile: any) => {
+        const failedFileName = uppyFile?.name || uppyFile?.data?.name
+        if (settled || failedFileName !== file.name) return
         settled = true
         cleanup()
+        const error = uppyFile?.meta?.error || uppyFile?.error || uppyFile
         const msg =
           typeof error === 'string'
             ? error
@@ -288,23 +300,46 @@ export function uploadViaDiscourseAppEvents(
         reject(new Error(msg))
       }
 
-      const onStarted = () => {
+      const onStarted = (fileName: string) => {
+        if (fileName !== file.name) return
         onProgress?.(10)
       }
 
-      function cleanup() {
+      const onAborted = () => {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(new Error(`Discourse rejected ${file.name} before upload`))
+      }
+
+      const timeout = setTimeout(
+        () => {
+          if (settled) return
+          settled = true
+          cleanup()
+          reject(new Error(`Timed out waiting for Discourse to upload ${file.name}`))
+        },
+        5 * 60 * 1000
+      )
+
+      cleanup = () => {
+        clearTimeout(timeout)
         appEvents.off('composer:upload-success', onSuccess)
         appEvents.off('composer:upload-error', onError)
         appEvents.off('composer:upload-started', onStarted)
+        appEvents.off('composer:uploads-aborted', onAborted)
       }
 
       appEvents.on('composer:upload-success', onSuccess)
       appEvents.on('composer:upload-error', onError)
       appEvents.on('composer:upload-started', onStarted)
+      appEvents.on('composer:uploads-aborted', onAborted)
 
-      // Trigger Discourse's native upload pipeline
-      appEvents.trigger('composer:add-files', file)
+      // Let Discourse validate/preprocess/transport the file, but keep insertion
+      // under the caller's control so the composer does not receive duplicates.
+      appEvents.trigger('composer:add-files', file, { skipPlaceholder: true })
     } catch (e) {
+      cleanup()
       reject(e)
     }
   })

@@ -6,7 +6,11 @@ import { handleDiffFiles, showDiffImagePicker } from './ui/diff'
 import { showFolderPickerWithUpload, collectFiles } from './ui/folder'
 import { handleUrlImport } from './ui/url'
 
-export async function showImageUploadDialog(): Promise<void> {
+import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
+
+export async function showImageUploadDialog(
+  routeContext: DiscourseUploadRouteContext = 'auto'
+): Promise<void> {
   return new Promise(resolve => {
     const {
       panel,
@@ -35,7 +39,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
     // Wire the panel's upload button to our uploadAndInsert
     setUploadHandler(async (files: File[]) => {
-      await uploadAndInsert(files, addFilesToPreview, showRetryBar)
+      await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
     })
 
     const cleanup = () => {
@@ -69,7 +73,7 @@ export async function showImageUploadDialog(): Promise<void> {
         const files = getPendingFiles()
         if (files.length === 0) return
         clearPreview()
-        await uploadAndInsert(files, addFilesToPreview, showRetryBar)
+        await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
       })
     }
 
@@ -120,12 +124,12 @@ export async function showImageUploadDialog(): Promise<void> {
     diffFileInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files) {
-        await handleDiffFiles(files, markdownTextarea)
+        await handleDiffFiles(files, markdownTextarea, routeContext)
       }
     })
 
     diffDropZone.addEventListener('click', async () => {
-      await showDiffImagePicker(markdownTextarea)
+      await showDiffImagePicker(markdownTextarea, routeContext)
     })
 
     diffDropZone.addEventListener('dragover', (e: DragEvent) => {
@@ -154,7 +158,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
       const files = e.dataTransfer?.files
       if (files) {
-        await handleDiffFiles(files, markdownTextarea)
+        await handleDiffFiles(files, markdownTextarea, routeContext)
       }
     })
 
@@ -162,12 +166,12 @@ export async function showImageUploadDialog(): Promise<void> {
     folderInput.addEventListener('change', async (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files) {
-        await uploadAndInsert(Array.from(files), addFilesToPreview, showRetryBar)
+        await uploadAndInsert(Array.from(files), addFilesToPreview, showRetryBar, routeContext)
       }
     })
 
     folderDropZone.addEventListener('click', async () => {
-      await showFolderPickerWithUpload()
+      await showFolderPickerWithUpload(routeContext)
     })
 
     folderDropZone.addEventListener('dragover', (e: DragEvent) => {
@@ -208,7 +212,7 @@ export async function showImageUploadDialog(): Promise<void> {
           }
         }
         if (files.length > 0) {
-          await uploadAndInsert(files, addFilesToPreview, showRetryBar)
+          await uploadAndInsert(files, addFilesToPreview, showRetryBar, routeContext)
         }
       }
     })
@@ -244,7 +248,7 @@ export async function showImageUploadDialog(): Promise<void> {
 
     // URL import handler
     urlImportBtn.addEventListener('click', async () => {
-      await handleUrlImport(urlTextarea, urlImportBtn, urlProgressList)
+      await handleUrlImport(urlTextarea, urlImportBtn, urlProgressList, routeContext)
     })
 
     // Close handlers — consolidated into enhancedCleanup

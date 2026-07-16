@@ -4,9 +4,12 @@ import { notify } from '../../ui/notify'
 import { uploader } from '../core'
 import { parseImageFilenamesFromMarkdown } from '../helpers'
 
+import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
+
 export async function handleDiffFiles(
   files: FileList | File[],
-  markdownTextarea: HTMLTextAreaElement
+  markdownTextarea: HTMLTextAreaElement,
+  routeContext: DiscourseUploadRouteContext = 'auto'
 ) {
   if (!files || (files instanceof FileList ? files.length === 0 : files.length === 0)) return
 
@@ -61,7 +64,7 @@ export async function handleDiffFiles(
 
   const uploadPromises = filesToUpload.map(async file => {
     try {
-      const result = await uploader.uploadImage(file)
+      const result = await uploader.uploadImage(file, routeContext)
       successCount++
       const progressMsg = `差分上传：${successCount}/${filesToUpload.length} (成功)`
       notify(progressMsg, 'info')
@@ -85,7 +88,10 @@ export async function handleDiffFiles(
   }
 }
 
-export async function showDiffImagePicker(markdownTextarea: HTMLTextAreaElement) {
+export async function showDiffImagePicker(
+  markdownTextarea: HTMLTextAreaElement,
+  routeContext: DiscourseUploadRouteContext = 'auto'
+) {
   // Get markdown text for diff check
   const markdownText = markdownTextarea.value.trim()
 
@@ -120,8 +126,8 @@ export async function showDiffImagePicker(markdownTextarea: HTMLTextAreaElement)
       for (const file of files) {
         try {
           updateStatus(file, { status: 'uploading', progress: 0 })
-          const result = await uploader.uploadImage(file)
-          updateStatus(file, { status: 'success', url: result.url })
+          const result = await uploader.uploadImage(file, routeContext)
+          updateStatus(file, { status: 'success', url: result.url || undefined })
           uploadCount++
         } catch (error: any) {
           console.error(`Failed to upload ${file.name}:`, error)

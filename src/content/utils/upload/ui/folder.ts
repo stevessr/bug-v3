@@ -1,15 +1,19 @@
 import { showCustomFolderPicker } from '../../picker'
 import { uploader } from '../core'
 
-export async function showFolderPickerWithUpload() {
+import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
+
+export async function showFolderPickerWithUpload(
+  routeContext: DiscourseUploadRouteContext = 'auto'
+) {
   // Use custom folder picker with integrated upload
   await showCustomFolderPicker(async (files, updateStatus) => {
     // Upload each file with status updates
     for (const file of files) {
       try {
         updateStatus(file, { status: 'uploading', progress: 0 })
-        const result = await uploader.uploadImage(file)
-        updateStatus(file, { status: 'success', url: result.url })
+        const result = await uploader.uploadImage(file, routeContext)
+        updateStatus(file, { status: 'success', url: result.url || undefined })
       } catch (error: any) {
         console.error(`Failed to upload ${file.name}:`, error)
         updateStatus(file, { status: 'failed', error: error.message || '上传失败' })

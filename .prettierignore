@@ -6,7 +6,6 @@ src/auto-imports.d.ts
 src/components.d.ts
 
 # Generated or third-party static assets
-public/assets/discourse-icons.svg
 public/wasm/
 scripts/wasm/
 scripts/cfworker/public/assets/

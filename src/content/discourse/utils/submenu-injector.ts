@@ -190,7 +190,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
     '上传本地图片',
     '📁',
     async () => {
-      await showImageUploadDialog()
+      await showImageUploadDialog(isChat ? 'chat' : 'composer')
     },
     isChat
   )

@@ -2,6 +2,10 @@ import { getCsrfTokenFromPage } from '../dom'
 import { notify } from '../ui'
 
 import {
+  uploadThroughDiscourseRoute,
+  type DiscourseUploadRouteContext
+} from '@/content/discourse/utils/nativeUpload'
+import {
   isLinuxDoDiscourseBase,
   normalizeDiscourseUploadUrl,
   uploadLinuxDoMultipart
@@ -23,6 +27,8 @@ export interface UploadResponse {
   human_filesize: string
   dominant_color: string
   thumbnail: null
+  /** Chat owns the attachment and insertion after the file is handed off. */
+  handledByDiscourseRoute?: boolean
 }
 
 export interface UploadError {
@@ -41,6 +47,7 @@ export interface UploadQueueItem {
   id: string
   file: File
   originalFilename: string // Store original filename separately
+  routeContext: DiscourseUploadRouteContext
 
   resolve: (value: UploadResponse) => void
 
@@ -60,12 +67,16 @@ export class ImageUploader {
   private isProcessing = false
   private maxRetries = 2 // Second failure stops retry
 
-  async uploadImage(file: File): Promise<UploadResponse> {
+  async uploadImage(
+    file: File,
+    routeContext: DiscourseUploadRouteContext = 'auto'
+  ): Promise<UploadResponse> {
     return new Promise((resolve, reject) => {
       const item: UploadQueueItem = {
         id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         file,
         originalFilename: file.name, // Store the original filename
+        routeContext,
         resolve,
         reject,
         retryCount: 0,
@@ -119,7 +130,7 @@ export class ImageUploader {
       this.moveToQueue(item, 'uploading')
 
       try {
-        const result = await this.performUpload(item.file)
+        const result = await this.performUpload(item.file, item.routeContext)
         item.result = result
         this.moveToQueue(item, 'success')
         item.resolve(result)
@@ -226,16 +237,31 @@ export class ImageUploader {
   }
 
   // Upload a File created from a remote download (via fetch)
-  async uploadDownloadedFile(blob: Blob, filename: string): Promise<UploadResponse> {
+  async uploadDownloadedFile(
+    blob: Blob,
+    filename: string,
+    routeContext: DiscourseUploadRouteContext = 'auto'
+  ): Promise<UploadResponse> {
     const file = new File([blob], filename, { type: blob.type })
-    return this.uploadImage(file)
+    return this.uploadImage(file, routeContext)
   }
 
   private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
 
-  private async performUpload(file: File): Promise<UploadResponse> {
+  private async performUpload(
+    file: File,
+    routeContext: DiscourseUploadRouteContext
+  ): Promise<UploadResponse> {
+    const nativeAttempt = await uploadThroughDiscourseRoute(file, routeContext)
+    if (nativeAttempt.status === 'uploaded') {
+      return this.normalizeNativeUpload(file, nativeAttempt.upload)
+    }
+    if (nativeAttempt.status === 'delegated') {
+      return this.createDelegatedChatResult(file)
+    }
+
     const csrfToken = this.getCSRFToken()
     if (isLinuxDoDiscourseBase(window.location.origin)) {
       return (await uploadLinuxDoMultipart({
@@ -321,6 +347,59 @@ export class ImageUploader {
     return {
       ...data,
       url: normalizeDiscourseUploadUrl(window.location.origin, data) || data.url
+    }
+  }
+
+  private normalizeNativeUpload(file: File, payload: Record<string, unknown>): UploadResponse {
+    const normalizedUrl = normalizeDiscourseUploadUrl(window.location.origin, payload)
+    if (!normalizedUrl) {
+      throw new Error('Discourse native uploader returned a result without a URL')
+    }
+
+    const numberValue = (value: unknown, fallback = 0) =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback
+    const stringValue = (value: unknown, fallback = '') =>
+      typeof value === 'string' ? value : fallback
+    const extensionFallback = file.name.includes('.') ? file.name.split('.').pop() || '' : ''
+
+    return {
+      id: numberValue(payload.id),
+      url: normalizedUrl,
+      original_filename: stringValue(payload.original_filename, file.name),
+      filesize: numberValue(payload.filesize, file.size),
+      width: numberValue(payload.width),
+      height: numberValue(payload.height),
+      thumbnail_width: numberValue(payload.thumbnail_width),
+      thumbnail_height: numberValue(payload.thumbnail_height),
+      extension: stringValue(payload.extension, extensionFallback),
+      short_url: stringValue(payload.short_url),
+      short_path: stringValue(payload.short_path),
+      retain_hours: null,
+      human_filesize: stringValue(payload.human_filesize),
+      dominant_color: stringValue(payload.dominant_color),
+      thumbnail: null
+    }
+  }
+
+  private createDelegatedChatResult(file: File): UploadResponse {
+    const extension = file.name.includes('.') ? file.name.split('.').pop() || '' : ''
+    return {
+      id: 0,
+      url: '',
+      original_filename: file.name,
+      filesize: file.size,
+      width: 0,
+      height: 0,
+      thumbnail_width: 0,
+      thumbnail_height: 0,
+      extension,
+      short_url: '',
+      short_path: '',
+      retain_hours: null,
+      human_filesize: '',
+      dominant_color: '',
+      thumbnail: null,
+      handledByDiscourseRoute: true
     }
   }
 
