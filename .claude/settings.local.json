@@ -20,7 +20,8 @@
       "Bash(chmod:*)",
       "Bash(node:*)",
       "Bash(rtk grep *)",
-      "Bash(rtk git *)"
+      "Bash(rtk git *)",
+      "Bash(rtk *)"
     ],
     "deny": [],
     "ask": []

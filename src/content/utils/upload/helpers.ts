@@ -109,7 +109,7 @@ function readEditorTarget(editor: DiscourseEditorElement): EditorInsertionTarget
         ? previousRange.cloneRange()
         : createRangeAtEditorEnd(editor)
 
-  const anchorTextOffset = getEditorTextOffset(editor, range.startContainer, range.startOffset)
+  const anchorTextOffset = getEditorContentOffset(editor, range.startContainer, range.startOffset)
   return {
     kind: 'prosemirror',
     element: editor,
@@ -417,7 +417,7 @@ function restoreProseMirrorRange(
     !target.hasInserted && isRangeInsideEditor(editor, target.range)
       ? target.range.cloneRange()
       : target.nextInsertionTextOffset !== null
-        ? createRangeAtEditorTextOffset(editor, target.nextInsertionTextOffset)
+        ? createRangeAtEditorContentOffset(editor, target.nextInsertionTextOffset)
         : isRangeInsideEditor(editor, target.insertionRange)
           ? target.insertionRange.cloneRange()
           : createRangeAtEditorEnd(editor)
@@ -434,7 +434,7 @@ function restoreProseMirrorAnchor(
   const editor = target.element
   const range =
     target.anchorTextOffset !== null
-      ? createRangeAtEditorTextOffset(editor, target.anchorTextOffset)
+      ? createRangeAtEditorContentOffset(editor, target.anchorTextOffset)
       : isRangeInsideEditor(editor, target.range)
         ? target.range.cloneRange()
         : createRangeAtEditorEnd(editor)
@@ -449,115 +449,171 @@ function restoreProseMirrorAnchor(
   selection?.addRange(range)
 }
 
+// The rich composer renders uploads and other embeds as atomic nodes that hold
+// no text — an image is a `contenteditable="false"` span. Measuring caret
+// positions purely by text length therefore collapses every image to zero
+// width, so a caret sitting after N images resolves back to text offset 0: the
+// very front of the composer. That is exactly the "光标后移" bug. Count each
+// image atom as one unit alongside text so a frozen anchor/tail keeps pointing
+// at the right place across a whole upload batch.
+const IMAGE_ATOM_SELECTOR = '.composer-image-node'
+// Discourse injects non-editable chrome (the grid layout switch and the remove
+// button) inside an image grid. That chrome is not part of the post markdown,
+// so it must never shift a measured offset — skip it entirely.
+const GRID_CHROME_SELECTOR =
+  '.composer-image-gallery__mode-buttons, .composer-image-grid__remove-btn'
+
+function isImageAtom(node: Node): node is HTMLElement {
+  return node instanceof HTMLElement && node.matches(IMAGE_ATOM_SELECTOR)
+}
+
+function isGridChrome(node: Node): boolean {
+  return node instanceof HTMLElement && node.matches(GRID_CHROME_SELECTOR)
+}
+
+type ContentUnit = { kind: 'text'; node: Text } | { kind: 'atom'; node: HTMLElement }
+
 /**
- * Convert a DOM range boundary to a UTF-16 offset in the editor's text. The
- * boundary itself is not enough to advance an upload target: inserting text
- * can split the old text node while a Discourse paste handler is free to move
- * the live Selection somewhere else.
+ * Visit the editor's content in document order as a flat sequence of units:
+ * one per text run (measured by its character length) and one per atomic embed.
+ * Image atoms are not descended into and grid chrome is skipped, so neither the
+ * atom's inner markup nor Discourse's UI can perturb a measured offset.
  */
-function getEditorTextOffset(editor: HTMLElement, container: Node, offset: number): number | null {
+function forEachContentUnit(editor: HTMLElement, visit: (unit: ContentUnit) => void): void {
+  const walk = (parent: Node): void => {
+    for (let child = parent.firstChild; child; child = child.nextSibling) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        visit({ kind: 'text', node: child as Text })
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        if (isGridChrome(child)) continue
+        if (isImageAtom(child)) {
+          visit({ kind: 'atom', node: child })
+          continue
+        }
+        walk(child)
+      }
+    }
+  }
+  walk(editor)
+}
+
+/**
+ * Convert a DOM range boundary to a content offset: text characters plus one
+ * unit per image atom that lies before the boundary. Unlike a pure text offset,
+ * this survives a composer whose content is entirely (or mostly) images.
+ */
+function getEditorContentOffset(
+  editor: HTMLElement,
+  container: Node,
+  offset: number
+): number | null {
   if (!isNodeInsideEditor(editor, container)) return null
 
+  const boundary = editor.ownerDocument.createRange()
+  boundary.setStart(editor, 0)
   try {
-    const range = editor.ownerDocument.createRange()
-    range.selectNodeContents(editor)
-    range.setEnd(container, offset)
-    return range.toString().length
+    boundary.setEnd(container, offset)
   } catch {
     return null
   }
+
+  let total = 0
+  let reachedBoundary = false
+  forEachContentUnit(editor, unit => {
+    if (reachedBoundary) return
+    if (unit.kind === 'text') {
+      if (unit.node === container) {
+        total += Math.max(0, Math.min(offset, unit.node.data.length))
+        reachedBoundary = true
+      } else if (boundary.comparePoint(unit.node, unit.node.data.length) <= 0) {
+        total += unit.node.data.length
+      } else {
+        reachedBoundary = true
+      }
+    } else {
+      const parent = unit.node.parentNode
+      if (!parent) return
+      const indexAfterAtom = Array.from(parent.childNodes).indexOf(unit.node) + 1
+      if (boundary.comparePoint(parent, indexAfterAtom) <= 0) {
+        total += 1
+      } else {
+        reachedBoundary = true
+      }
+    }
+  })
+
+  return total
+}
+
+/** Total content length of the editor, using the same units as the offsets. */
+function getEditorContentLength(editor: HTMLElement): number {
+  let total = 0
+  forEachContentUnit(editor, unit => {
+    total += unit.kind === 'text' ? unit.node.data.length : 1
+  })
+  return total
 }
 
 /**
- * Resolve a text offset back to a DOM range without consulting the live
- * selection. Discourse's WYSIWYG editor may append the live caret to the end
- * of the composer after handling our synthetic paste; the text offset remains
- * tied to the original insertion point.
+ * Resolve a content offset back to a DOM range without consulting the live
+ * selection. Discourse's WYSIWYG editor may append the live caret to the end of
+ * the composer after handling our synthetic paste; the content offset stays
+ * tied to the original insertion point, landing before/after image atoms.
  */
-function createRangeAtEditorTextOffset(editor: HTMLElement, offset: number): Range {
-  const range = editor.ownerDocument.createRange()
-  const walker = editor.ownerDocument.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+function createRangeAtEditorContentOffset(editor: HTMLElement, offset: number): Range {
+  const doc = editor.ownerDocument
   let remaining = Math.max(0, offset)
-  let node = walker.nextNode() as Text | null
+  let result: Range | null = null
+  let afterLastAtom: Range | null = null
 
-  while (node) {
-    const length = node.data.length
-    if (remaining <= length) {
-      range.setStart(node, remaining)
-      range.collapse(true)
-      return range
+  forEachContentUnit(editor, unit => {
+    if (result) return
+    if (unit.kind === 'text') {
+      const length = unit.node.data.length
+      if (remaining <= length) {
+        const range = doc.createRange()
+        range.setStart(unit.node, remaining)
+        range.collapse(true)
+        result = range
+      } else {
+        remaining -= length
+      }
+    } else {
+      const parent = unit.node.parentNode
+      if (!parent) return
+      const index = Array.from(parent.childNodes).indexOf(unit.node)
+      if (remaining <= 0) {
+        const range = doc.createRange()
+        range.setStart(parent, index)
+        range.collapse(true)
+        result = range
+      } else {
+        remaining -= 1
+        const range = doc.createRange()
+        range.setStart(parent, index + 1)
+        range.collapse(true)
+        afterLastAtom = range
+      }
     }
-    remaining -= length
-    node = walker.nextNode() as Text | null
-  }
+  })
 
-  return createRangeAtEditorEnd(editor)
-}
-
-function hasTextAtOffset(editor: HTMLElement, offset: number, text: string): boolean {
-  return (editor.textContent ?? '').slice(offset, offset + text.length) === text
+  return result ?? afterLastAtom ?? createRangeAtEditorEnd(editor)
 }
 
 /**
  * Advance only the private insertion tail so the next result lands immediately
- * after the text we just inserted. `target.range` remains the fixed user index
- * and is restored after every insertion.
+ * after what we just inserted. The tail is derived from the content-length
+ * delta, never from the live selection: Discourse's paste handler is free to
+ * move the live caret (e.g. to the composer end) without retargeting the batch.
+ * `target.range` remains the fixed user anchor and is restored separately.
  */
 function advanceProseMirrorTarget(
   target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>,
-  insertedText: string,
-  insertionTextOffset: number | null
+  tailOffset: number
 ): void {
   const editor = target.element
-
-  // Prefer the deterministic text position captured before dispatching paste.
-  // This also handles a paste that split the original text node into a prefix,
-  // the inserted text, and a suffix. Only use it when the inserted text is
-  // actually present at that position; otherwise a rich paste may have
-  // produced non-text DOM and needs the range/mutation fallback below.
-  if (insertionTextOffset !== null && hasTextAtOffset(editor, insertionTextOffset, insertedText)) {
-    target.nextInsertionTextOffset = insertionTextOffset + insertedText.length
-    target.insertionRange = createRangeAtEditorTextOffset(editor, target.nextInsertionTextOffset)
-    target.hasInserted = true
-    return
-  }
-
-  const live = editor.ownerDocument.defaultView?.getSelection()
-  const liveRange = live?.rangeCount ? live.getRangeAt(0) : null
-
-  // Prefer the caret that sits right after what we inserted: a contenteditable
-  // keeps a stable anchor at (node, offset). If the inserted text is still a
-  // single text run, just shift the offset by its length.
-  const current = isRangeInsideEditor(editor, target.insertionRange)
-    ? target.insertionRange
-    : liveRange && isRangeInsideEditor(editor, liveRange)
-      ? liveRange
-      : null
-
-  if (current) {
-    // Keep the remembered DOM boundary ahead of the live caret. A page paste
-    // handler can move Selection to the editor end, but it must not retarget
-    // the next upload image there.
-    target.insertionRange = current.cloneRange()
-    target.nextInsertionTextOffset = getEditorTextOffset(
-      editor,
-      current.startContainer,
-      current.startOffset
-    )
-    target.hasInserted = true
-    return
-  }
-
-  // Fallback: trust the live caret only when it is inside the editor.
-  target.insertionRange =
-    liveRange && isRangeInsideEditor(editor, liveRange)
-      ? liveRange.cloneRange()
-      : createRangeAtEditorEnd(editor)
-  target.nextInsertionTextOffset = getEditorTextOffset(
-    editor,
-    target.insertionRange.startContainer,
-    target.insertionRange.startOffset
-  )
+  target.nextInsertionTextOffset = tailOffset
+  target.insertionRange = createRangeAtEditorContentOffset(editor, tailOffset)
   target.hasInserted = true
 }
 
@@ -604,14 +660,19 @@ function insertIntoProseMirror(
   // without focusing it. Try that first so the common native Discourse path
   // never causes even a momentary jump away from the upload panel.
   const insertionRange = restoreProseMirrorRange(target)
-  const insertionTextOffset = getEditorTextOffset(
-    editor,
-    insertionRange.startContainer,
-    insertionRange.startOffset
-  )
+  // The end of the insertion point in content units. Content after it is left
+  // untouched by an insert/replace, so the new tail can be derived from the
+  // total length delta — see commitInsertion — without reading the live caret.
+  const insertionEndOffset =
+    getEditorContentOffset(editor, insertionRange.endContainer, insertionRange.endOffset) ??
+    target.nextInsertionTextOffset ??
+    getEditorContentLength(editor)
+  const lengthBefore = getEditorContentLength(editor)
 
-  if (tryProseMirrorPaste(editor, text)) {
-    advanceProseMirrorTarget(target, text, insertionTextOffset)
+  const commitInsertion = () => {
+    const lengthAfter = getEditorContentLength(editor)
+    const tail = Math.max(insertionEndOffset, lengthAfter - lengthBefore + insertionEndOffset)
+    advanceProseMirrorTarget(target, tail)
     restoreProseMirrorAnchor(target)
     lastFocusedEditor = cloneEditorTarget(target)
     stabilizeEditorAnchor(
@@ -623,6 +684,10 @@ function insertIntoProseMirror(
       previouslyFocused,
       interactionVersion
     )
+  }
+
+  if (tryProseMirrorPaste(editor, text)) {
+    commitInsertion()
     return
   }
 
@@ -651,18 +716,7 @@ function insertIntoProseMirror(
     editor.dispatchEvent(createInputEvent(text))
   }
 
-  advanceProseMirrorTarget(target, text, insertionTextOffset)
-  restoreProseMirrorAnchor(target)
-  lastFocusedEditor = cloneEditorTarget(target)
-  stabilizeEditorAnchor(
-    editor,
-    () => {
-      restoreProseMirrorAnchor(target)
-      lastFocusedEditor = cloneEditorTarget(target)
-    },
-    previouslyFocused,
-    interactionVersion
-  )
+  commitInsertion()
 }
 
 // Function to parse image filenames from markdown text
