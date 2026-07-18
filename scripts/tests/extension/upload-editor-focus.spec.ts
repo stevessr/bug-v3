@@ -16,6 +16,27 @@ async function loadEditorHelpers(page: Page, html: string): Promise<void> {
   })
 }
 
+// Simulate Discourse's composer hijacking the caret after each insert: it may
+// move the live caret (e.g. append to the end of the editor) after we insert.
+// The helper must NOT re-read that moved caret, or the insertion point would
+// drift by one image, then two, then three — exactly the "焦点乱飞" bug.
+function installCaretHijacker(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    const editor = document.querySelector<HTMLElement>('.d-editor-input')!
+    const moveToEnd = () => {
+      const sel = window.getSelection()
+      if (!sel) return
+      const range = editor.ownerDocument.createRange()
+      range.selectNodeContents(editor)
+      range.collapse(false)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+    editor.addEventListener('input', moveToEnd, { once: false })
+    ;(window as any).__stopCaretHijack = () => editor.removeEventListener('input', moveToEnd)
+  })
+}
+
 test.describe('uploaded image editor targeting', () => {
   test.describe.configure({ mode: 'serial' })
 
@@ -212,6 +233,136 @@ test.describe('uploaded image editor targeting', () => {
       editable: 'editable value',
       unwrapped: 'unwrapped value'
     })
+  })
+
+  test('does not drift when Discourse hijacks the caret after each insert', async ({ page }) => {
+    await loadEditorHelpers(page, `<textarea id="editor" class="d-editor-input">start</textarea>`)
+    await installCaretHijacker(page)
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLTextAreaElement>('#editor')!
+      editor.focus()
+      editor.setSelectionRange(0, 0)
+      editor.dispatchEvent(new Event('select', { bubbles: true }))
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+
+      // Three images auto-filled in sequence, as the upload loop does.
+      helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+      helpers.insertIntoEditor('![c](upload://c)', frozenTarget)
+      return {
+        value: editor.value,
+        targetEnd: (frozenTarget as any).end
+      }
+    })
+
+    const inserted = '![a](upload://a)![b](upload://b)![c](upload://c)start'
+    expect(result.value).toBe(inserted)
+    // The frozen target advanced deterministically to the end of the inserted
+    // images (before "start"), so the next insert would go there instead of at
+    // the editor end the hijacker forced.
+    expect(result.targetEnd).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
+  })
+
+  test('does not steal focus from the upload panel while auto-filling', async ({ page }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <textarea id="editor" class="d-editor-input">start</textarea>
+        <button id="panel-btn" type="button">上传</button>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLTextAreaElement>('#editor')!
+      const panelBtn = document.querySelector<HTMLButtonElement>('#panel-btn')!
+      editor.focus()
+      editor.setSelectionRange(0, 0)
+      editor.dispatchEvent(new Event('select', { bubbles: true }))
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+
+      // Focus stays on the panel (e.g. the progress dialog) during the upload.
+      panelBtn.focus()
+      helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+      return {
+        activeId: document.activeElement?.id ?? null,
+        value: editor.value
+      }
+    })
+
+    expect(result.value).toBe('![a](upload://a)![b](upload://b)start')
+    // The editor must not have grabbed focus on either insert.
+    expect(result.activeId).toBe('panel-btn')
+  })
+
+  test('ProseMirror: caret does not drift when Discourse appends to the end', async ({ page }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <div class="ProseMirror-container">
+          <div id="editor" contenteditable="true" translate="no" class="ProseMirror d-editor-input"><p>start</p></div>
+        </div>
+        <button id="panel-btn" type="button">上传中</button>
+      `
+    )
+
+    // Simulate the WYSIWYG paste pipeline: it inserts at the requested range,
+    // then another composer callback moves the live caret to the editor end.
+    await page.evaluate(() => {
+      const editor = document.querySelector<HTMLElement>('#editor')!
+      editor.addEventListener('paste', event => {
+        event.preventDefault()
+        const sel = window.getSelection()
+        if (!sel || !sel.rangeCount) return
+        const range = sel.getRangeAt(0)
+        range.deleteContents()
+        const textNode = editor.ownerDocument.createTextNode(
+          event.clipboardData?.getData('text/plain') ?? ''
+        )
+        range.insertNode(textNode)
+        range.setStartAfter(textNode)
+        range.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(range)
+
+        // This is the bug trigger: the live caret no longer describes the
+        // upload session's insertion point after the page handles the paste.
+        const endRange = editor.ownerDocument.createRange()
+        endRange.selectNodeContents(editor)
+        endRange.collapse(false)
+        sel.removeAllRanges()
+        sel.addRange(endRange)
+      })
+    })
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLElement>('#editor')!
+      const panelButton = document.querySelector<HTMLButtonElement>('#panel-btn')!
+      editor.focus()
+      const range = document.createRange()
+      range.selectNodeContents(editor.querySelector('p')!)
+      range.collapse(true)
+      const sel = window.getSelection()!
+      sel.removeAllRanges()
+      sel.addRange(range)
+      document.dispatchEvent(new Event('selectionchange'))
+
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+      panelButton.focus()
+      helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+      helpers.insertIntoEditor('![c](upload://c)', frozenTarget)
+      return { html: editor.innerHTML, activeId: document.activeElement?.id ?? null }
+    })
+
+    // All three images sit together at the front (before "start"), proving the
+    // caret advanced by one image each time instead of jumping to the end.
+    expect(result.html).toContain('![a](upload://a)![b](upload://b)![c](upload://c)start')
+    expect(result.activeId).toBe('panel-btn')
   })
 
   test('does not retarget when the captured editor is removed', async ({ page }) => {

@@ -207,11 +207,21 @@ function createInputEvent(text: string): Event {
   }
 }
 
-function focusWithoutScrolling(editor: HTMLElement): void {
+/**
+ * Place the caret inside the editor without yanking document focus away from
+ * the upload panel. Stealing focus on every auto-filled image is what makes
+ * the composer "jump" / "fly" while uploads stream in. We only set the
+ * selection range; the dispatched `input` event still notifies Discourse.
+ */
+function placeCaretInTextarea(
+  editor: HTMLTextAreaElement,
+  position: number,
+  direction: 'forward' | 'backward' | 'none'
+): void {
   try {
-    editor.focus({ preventScroll: true })
+    editor.setSelectionRange(position, position, direction)
   } catch {
-    editor.focus()
+    editor.setSelectionRange(position, position)
   }
 }
 
@@ -224,11 +234,15 @@ function insertIntoTextarea(
   const start = Math.max(0, Math.min(target.start, valueLength))
   const end = Math.max(start, Math.min(target.end, valueLength))
 
-  focusWithoutScrolling(editor)
+  // Do NOT focus() the editor here — that steals focus from the upload panel
+  // on every image and makes the caret appear to "drift". Setting the range
+  // and dispatching `input` is enough for Discourse to react.
   editor.setRangeText(text, start, end, 'end')
 
+  // Advance deterministically by the inserted length. We never re-read the
+  // live caret, so a page handler that repositions it cannot accumulate drift.
   const nextPosition = start + text.length
-  editor.setSelectionRange(nextPosition, nextPosition, target.direction)
+  placeCaretInTextarea(editor, nextPosition, target.direction)
   target.start = nextPosition
   target.end = nextPosition
   target.direction = 'none'
@@ -236,6 +250,11 @@ function insertIntoTextarea(
   lastFocusedEditor = cloneEditorTarget(target)
 }
 
+/**
+ * Move the caret to `target.range` without yanking document focus from the
+ * upload panel. The selection is set on the existing (already focused) editor
+ * so Discourse still receives the change.
+ */
 function restoreProseMirrorRange(
   target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
 ): Range {
@@ -245,10 +264,113 @@ function restoreProseMirrorRange(
     : createRangeAtEditorEnd(editor)
   const selection = editor.ownerDocument.defaultView?.getSelection()
 
-  focusWithoutScrolling(editor)
   selection?.removeAllRanges()
   selection?.addRange(range)
   return range
+}
+
+/**
+ * Convert a DOM range boundary to a UTF-16 offset in the editor's text. The
+ * boundary itself is not enough to advance an upload target: inserting text
+ * can split the old text node while a Discourse paste handler is free to move
+ * the live Selection somewhere else.
+ */
+function getEditorTextOffset(editor: HTMLElement, container: Node, offset: number): number | null {
+  if (!isNodeInsideEditor(editor, container)) return null
+
+  try {
+    const range = editor.ownerDocument.createRange()
+    range.selectNodeContents(editor)
+    range.setEnd(container, offset)
+    return range.toString().length
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve a text offset back to a DOM range without consulting the live
+ * selection. Discourse's WYSIWYG editor may append the live caret to the end
+ * of the composer after handling our synthetic paste; the text offset remains
+ * tied to the original insertion point.
+ */
+function createRangeAtEditorTextOffset(editor: HTMLElement, offset: number): Range {
+  const range = editor.ownerDocument.createRange()
+  const walker = editor.ownerDocument.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+  let remaining = Math.max(0, offset)
+  let node = walker.nextNode() as Text | null
+
+  while (node) {
+    const length = node.data.length
+    if (remaining <= length) {
+      range.setStart(node, remaining)
+      range.collapse(true)
+      return range
+    }
+    remaining -= length
+    node = walker.nextNode() as Text | null
+  }
+
+  return createRangeAtEditorEnd(editor)
+}
+
+function hasTextAtOffset(editor: HTMLElement, offset: number, text: string): boolean {
+  return (editor.textContent ?? '').slice(offset, offset + text.length) === text
+}
+
+/**
+ * Advance `target.range` so the next insert lands immediately after the text
+ * we just inserted, measured in characters within the same text node. We do
+ * this ourselves instead of trusting the live selection, because Discourse may
+ * reposition the caret (e.g. append to the end of the editor) after a paste.
+ * Re-reading the live caret every time is exactly what made the focus appear
+ * to "drift" by one image, then two, then three.
+ */
+function advanceProseMirrorTarget(
+  target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>,
+  insertedText: string,
+  insertionTextOffset: number | null
+): void {
+  const editor = target.element
+
+  // Prefer the deterministic text position captured before dispatching paste.
+  // This also handles a paste that split the original text node into a prefix,
+  // the inserted text, and a suffix. Only use it when the inserted text is
+  // actually present at that position; otherwise a rich paste may have
+  // produced non-text DOM and needs the range/mutation fallback below.
+  if (insertionTextOffset !== null && hasTextAtOffset(editor, insertionTextOffset, insertedText)) {
+    target.range = createRangeAtEditorTextOffset(editor, insertionTextOffset + insertedText.length)
+    lastFocusedEditor = cloneEditorTarget(target)
+    return
+  }
+
+  const live = editor.ownerDocument.defaultView?.getSelection()
+  const liveRange = live?.rangeCount ? live.getRangeAt(0) : null
+
+  // Prefer the caret that sits right after what we inserted: a contenteditable
+  // keeps a stable anchor at (node, offset). If the inserted text is still a
+  // single text run, just shift the offset by its length.
+  const current = isRangeInsideEditor(editor, target.range)
+    ? target.range
+    : liveRange && isRangeInsideEditor(editor, liveRange)
+      ? liveRange
+      : null
+
+  if (current) {
+    // Keep the remembered DOM boundary ahead of the live caret. A page paste
+    // handler can move Selection to the editor end, but it must not retarget
+    // the next upload image there.
+    target.range = current.cloneRange()
+    lastFocusedEditor = cloneEditorTarget(target)
+    return
+  }
+
+  // Fallback: trust the live caret only when it is inside the editor.
+  target.range =
+    liveRange && isRangeInsideEditor(editor, liveRange)
+      ? liveRange.cloneRange()
+      : createRangeAtEditorEnd(editor)
+  lastFocusedEditor = cloneEditorTarget(target)
 }
 
 function tryProseMirrorPaste(editor: HTMLElement, text: string): boolean {
@@ -271,32 +393,42 @@ function tryProseMirrorPaste(editor: HTMLElement, text: string): boolean {
   }
 }
 
-function updateProseMirrorTarget(
-  target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
-): void {
-  const selection = target.element.ownerDocument.defaultView?.getSelection()
-  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-  target.range =
-    range && isRangeInsideEditor(target.element, range)
-      ? range.cloneRange()
-      : createRangeAtEditorEnd(target.element)
-  lastFocusedEditor = cloneEditorTarget(target)
-}
-
 function insertIntoProseMirror(
   text: string,
   target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
 ): void {
   const editor = target.element
-  restoreProseMirrorRange(target)
+
+  // Remember which element held focus (the upload panel) so we can hand focus
+  // back instead of letting it jump to the composer on every image.
+  const previouslyFocused = editor.ownerDocument.activeElement as HTMLElement | null
+  const panelHadFocus = previouslyFocused !== null && previouslyFocused !== editor
+
+  const focusEditor = () => {
+    try {
+      editor.focus({ preventScroll: true })
+    } catch {
+      editor.focus()
+    }
+  }
+
+  focusEditor()
+  const insertionRange = restoreProseMirrorRange(target)
+  const insertionTextOffset = getEditorTextOffset(
+    editor,
+    insertionRange.startContainer,
+    insertionRange.startOffset
+  )
 
   if (tryProseMirrorPaste(editor, text)) {
-    updateProseMirrorTarget(target)
+    advanceProseMirrorTarget(target, text, insertionTextOffset)
+    if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
     return
   }
 
   // Synthetic paste has no browser default action. Restore the frozen range
   // before each fallback so a page handler cannot redirect insertion elsewhere.
+  focusEditor()
   restoreProseMirrorRange(target)
   const htmlBefore = editor.innerHTML
   try {
@@ -319,7 +451,8 @@ function insertIntoProseMirror(
     editor.dispatchEvent(createInputEvent(text))
   }
 
-  updateProseMirrorTarget(target)
+  advanceProseMirrorTarget(target, text, insertionTextOffset)
+  if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
 }
 
 // Function to parse image filenames from markdown text
