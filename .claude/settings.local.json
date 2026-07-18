@@ -18,7 +18,9 @@
       "Bash(npm run lint)",
       "Bash(pnpm type-check:*)",
       "Bash(chmod:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(rtk grep *)",
+      "Bash(rtk git *)"
     ],
     "deny": [],
     "ask": []

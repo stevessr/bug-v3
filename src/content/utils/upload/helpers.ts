@@ -27,6 +27,16 @@ export type EditorInsertionTarget =
 
 let lastFocusedEditor: EditorInsertionTarget | null = null
 let isTrackingEditorFocus = false
+let trustedInteractionVersion = 0
+
+type EditorRestorationState = {
+  revision: number
+  interactionVersion: number
+  previouslyFocused: HTMLElement | null
+  keepFocusOutsideEditor: boolean
+}
+
+const editorRestorationStates = new WeakMap<DiscourseEditorElement, EditorRestorationState>()
 
 function isStrictTextarea(element: Element | null): element is HTMLTextAreaElement {
   return element instanceof HTMLTextAreaElement && element.matches(TEXTAREA_EDITOR_SELECTOR)
@@ -136,6 +146,102 @@ function isEditorUsable(editor: DiscourseEditorElement): boolean {
   return style?.display !== 'none' && style?.visibility !== 'hidden'
 }
 
+function handleTrustedUserInteraction(event: Event): void {
+  // Programmatic focus/selection updates from Discourse must not cancel an
+  // anchor restore. Only an actual pointer/keyboard interaction means the user
+  // intentionally chose a new focus or caret while a render was settling.
+  if (event.isTrusted) trustedInteractionVersion++
+}
+
+function focusWithoutScroll(element: HTMLElement): void {
+  try {
+    element.focus({ preventScroll: true })
+  } catch {
+    element.focus()
+  }
+}
+
+/**
+ * Discourse updates both textarea and ProseMirror state asynchronously. Its
+ * input/paste handlers can therefore move focus and the live caret again after
+ * our synchronous restore. Keep the frozen session anchor stable through the
+ * current microtask, timer queue and two render frames, but stop immediately if
+ * the user performs a real pointer/keyboard action.
+ */
+function stabilizeEditorAnchor(
+  editor: DiscourseEditorElement,
+  restoreAnchor: () => void,
+  previouslyFocused: HTMLElement | null,
+  interactionVersion: number
+): void {
+  const previousState = editorRestorationStates.get(editor)
+  const revision = (previousState?.revision ?? 0) + 1
+  const focusWasOutsideEditor =
+    previouslyFocused !== null && resolveStrictEditor(previouslyFocused) !== editor
+  const canReusePreviousState = previousState?.interactionVersion === interactionVersion
+  const focusToRestore = focusWasOutsideEditor
+    ? previouslyFocused
+    : canReusePreviousState
+      ? previousState.previouslyFocused
+      : null
+
+  editorRestorationStates.set(editor, {
+    revision,
+    interactionVersion,
+    previouslyFocused: focusToRestore,
+    keepFocusOutsideEditor:
+      focusWasOutsideEditor ||
+      Boolean(canReusePreviousState && previousState?.keepFocusOutsideEditor)
+  })
+
+  const restoreIfCurrent = () => {
+    const state = editorRestorationStates.get(editor)
+    if (
+      !state ||
+      state.revision !== revision ||
+      state.interactionVersion !== trustedInteractionVersion ||
+      !isEditorUsable(editor)
+    ) {
+      return
+    }
+
+    restoreAnchor()
+
+    // Restore panel focus only when Discourse moved it into this editor. Never
+    // override focus that has moved to some other control in the meantime.
+    const activeElement = editor.ownerDocument.activeElement
+    const editorHasFocus = activeElement === editor || resolveStrictEditor(activeElement) === editor
+    if (state.keepFocusOutsideEditor && editorHasFocus) {
+      if (state.previouslyFocused?.isConnected) {
+        focusWithoutScroll(state.previouslyFocused)
+      }
+
+      // The regular upload button is disabled while the batch runs, so the
+      // browser often reports <body> as the previous active element. Neither a
+      // disabled button nor body is guaranteed to accept focus; explicitly
+      // blur the composer if focus restoration did not take effect.
+      const restoredActiveElement = editor.ownerDocument.activeElement
+      if (
+        restoredActiveElement === editor ||
+        resolveStrictEditor(restoredActiveElement) === editor
+      ) {
+        editor.blur()
+      }
+    }
+  }
+
+  // Run once now for synchronous handlers and again at every scheduling layer
+  // used by Ember/ProseMirror to commit controlled editor updates.
+  restoreIfCurrent()
+  queueMicrotask(restoreIfCurrent)
+  window.setTimeout(restoreIfCurrent, 0)
+  window.setTimeout(restoreIfCurrent, 50)
+  window.requestAnimationFrame(() => {
+    restoreIfCurrent()
+    window.requestAnimationFrame(restoreIfCurrent)
+  })
+}
+
 function rememberEditor(editor: DiscourseEditorElement): void {
   if (!isEditorUsable(editor)) return
   lastFocusedEditor = readEditorTarget(editor)
@@ -159,6 +265,7 @@ function handleSelectionChange(): void {
 }
 
 const TRACKED_EDITOR_EVENTS = ['focusin', 'pointerup', 'keyup', 'input', 'select'] as const
+const TRUSTED_INTERACTION_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const
 
 /**
  * Track only the two supported Discourse editor roots. Focus moving to upload
@@ -170,6 +277,9 @@ export function startEditorFocusTracking(): void {
 
   for (const eventName of TRACKED_EDITOR_EVENTS) {
     document.addEventListener(eventName, handleTrackedEditorEvent, true)
+  }
+  for (const eventName of TRUSTED_INTERACTION_EVENTS) {
+    document.addEventListener(eventName, handleTrustedUserInteraction, true)
   }
   document.addEventListener('selectionchange', handleSelectionChange)
   isTrackingEditorFocus = true
@@ -184,9 +294,13 @@ export function stopEditorFocusTracking(): void {
   for (const eventName of TRACKED_EDITOR_EVENTS) {
     document.removeEventListener(eventName, handleTrackedEditorEvent, true)
   }
+  for (const eventName of TRUSTED_INTERACTION_EVENTS) {
+    document.removeEventListener(eventName, handleTrustedUserInteraction, true)
+  }
   document.removeEventListener('selectionchange', handleSelectionChange)
   isTrackingEditorFocus = false
   lastFocusedEditor = null
+  trustedInteractionVersion++
 }
 
 /**
@@ -251,6 +365,8 @@ function insertIntoTextarea(
   target: Extract<EditorInsertionTarget, { kind: 'textarea' }>
 ) {
   const editor = target.element
+  const previouslyFocused = editor.ownerDocument.activeElement as HTMLElement | null
+  const interactionVersion = trustedInteractionVersion
   const valueLength = editor.value.length
   const insertionStart = target.hasInserted ? target.nextInsertionStart : target.start
   const insertionEnd = target.hasInserted ? insertionStart : target.end
@@ -278,6 +394,15 @@ function insertIntoTextarea(
   // the upload panel.
   placeCaretInTextarea(editor, anchorPosition, 'none')
   lastFocusedEditor = cloneEditorTarget(target)
+  stabilizeEditorAnchor(
+    editor,
+    () => {
+      placeCaretInTextarea(editor, anchorPosition, 'none')
+      lastFocusedEditor = cloneEditorTarget(target)
+    },
+    previouslyFocused,
+    interactionVersion
+  )
 }
 
 /**
@@ -465,7 +590,7 @@ function insertIntoProseMirror(
   // Remember which element held focus (the upload panel) so we can hand focus
   // back instead of letting it jump to the composer on every image.
   const previouslyFocused = editor.ownerDocument.activeElement as HTMLElement | null
-  const panelHadFocus = previouslyFocused !== null && previouslyFocused !== editor
+  const interactionVersion = trustedInteractionVersion
 
   const focusEditor = () => {
     try {
@@ -475,7 +600,9 @@ function insertIntoProseMirror(
     }
   }
 
-  focusEditor()
+  // A synthetic paste event can be dispatched to the strict editor root
+  // without focusing it. Try that first so the common native Discourse path
+  // never causes even a momentary jump away from the upload panel.
   const insertionRange = restoreProseMirrorRange(target)
   const insertionTextOffset = getEditorTextOffset(
     editor,
@@ -487,7 +614,15 @@ function insertIntoProseMirror(
     advanceProseMirrorTarget(target, text, insertionTextOffset)
     restoreProseMirrorAnchor(target)
     lastFocusedEditor = cloneEditorTarget(target)
-    if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
+    stabilizeEditorAnchor(
+      editor,
+      () => {
+        restoreProseMirrorAnchor(target)
+        lastFocusedEditor = cloneEditorTarget(target)
+      },
+      previouslyFocused,
+      interactionVersion
+    )
     return
   }
 
@@ -519,7 +654,15 @@ function insertIntoProseMirror(
   advanceProseMirrorTarget(target, text, insertionTextOffset)
   restoreProseMirrorAnchor(target)
   lastFocusedEditor = cloneEditorTarget(target)
-  if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
+  stabilizeEditorAnchor(
+    editor,
+    () => {
+      restoreProseMirrorAnchor(target)
+      lastFocusedEditor = cloneEditorTarget(target)
+    },
+    previouslyFocused,
+    interactionVersion
+  )
 }
 
 // Function to parse image filenames from markdown text
