@@ -21,7 +21,8 @@
       "Bash(node:*)",
       "Bash(rtk grep *)",
       "Bash(rtk git *)",
-      "Bash(rtk *)"
+      "Bash(rtk *)",
+      "Bash(pnpm test:extension -- scripts/tests/extension/upload-editor-focus.spec.ts)"
     ],
     "deny": [],
     "ask": []

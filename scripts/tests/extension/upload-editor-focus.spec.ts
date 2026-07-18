@@ -565,6 +565,98 @@ test.describe('uploaded image editor targeting', () => {
     expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
   })
 
+  test('ProseMirror: keeps the caret after existing image atoms, not at the composer front', async ({
+    page
+  }) => {
+    // Two images already sit in the composer; the caret is parked in the empty
+    // trailing paragraph after them, exactly like the reported bug report DOM.
+    await loadEditorHelpers(
+      page,
+      `
+        <div class="ProseMirror-container">
+          <div id="editor" contenteditable="true" translate="no" class="ProseMirror d-editor-input"><p><span class="composer-image-node" contenteditable="false" draggable="true"><img alt="A"></span><span class="composer-image-node" contenteditable="false" draggable="true"><img alt="B"></span></p><p id="caret-home"><br></p></div>
+        </div>
+        <button id="panel-btn" type="button">上传中</button>
+      `
+    )
+
+    // The rich composer converts pasted image markdown into an atomic
+    // composer-image-node (which holds no text), then moves the live caret to
+    // the composer end. A text-only offset would collapse the frozen anchor to
+    // 0 — the front of the editor, before the two existing images.
+    await page.evaluate(() => {
+      const editor = document.querySelector<HTMLElement>('#editor')!
+      editor.addEventListener('paste', event => {
+        event.preventDefault()
+        const selection = window.getSelection()
+        if (!selection || !selection.rangeCount) return
+        const markdown = event.clipboardData?.getData('text/plain') ?? ''
+        const range = selection.getRangeAt(0)
+        range.deleteContents()
+        const atom = document.createElement('span')
+        atom.className = 'composer-image-node'
+        atom.setAttribute('contenteditable', 'false')
+        atom.setAttribute('data-mark', markdown)
+        atom.appendChild(document.createElement('img'))
+        range.insertNode(atom)
+        range.setStartAfter(atom)
+        range.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(range)
+
+        // Bug trigger: the live caret no longer marks the insertion point.
+        const endRange = editor.ownerDocument.createRange()
+        endRange.selectNodeContents(editor)
+        endRange.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(endRange)
+      })
+    })
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLElement>('#editor')!
+      const panelButton = document.querySelector<HTMLButtonElement>('#panel-btn')!
+      const caretHome = document.querySelector<HTMLElement>('#caret-home')!
+
+      editor.focus()
+      const range = document.createRange()
+      range.setStart(caretHome, 0)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+      document.dispatchEvent(new Event('selectionchange'))
+
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+      panelButton.focus()
+      helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+
+      const caretRange = window.getSelection()!.getRangeAt(0)
+      const atoms = Array.from(editor.querySelectorAll('.composer-image-node'))
+      const atomsBeforeCaret = atoms.filter(atom => caretRange.comparePoint(atom, 0) < 0).length
+      const order = atoms.map(atom => atom.getAttribute('data-mark')).filter(Boolean)
+
+      return {
+        activeId: document.activeElement?.id ?? null,
+        anchorOffset: frozenTarget.anchorTextOffset,
+        insertionTail: frozenTarget.nextInsertionTextOffset,
+        atomsBeforeCaret,
+        order
+      }
+    })
+
+    // The two original images (A, B) still precede the caret: it stayed put in
+    // the trailing paragraph instead of flying to the front. The two uploads
+    // append in order after it, and focus never left the panel.
+    expect(result.atomsBeforeCaret).toBe(2)
+    expect(result.anchorOffset).toBe(2)
+    expect(result.insertionTail).toBe(4)
+    expect(result.order).toEqual(['![a](upload://a)', '![b](upload://b)'])
+    expect(result.activeId).toBe('panel-btn')
+  })
+
   test('ProseMirror: restores panel focus and fixed index after an asynchronous paste update', async ({
     page
   }) => {
