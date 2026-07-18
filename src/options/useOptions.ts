@@ -272,6 +272,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
 
+  const updateUseDiscourseNativeUpload = (value: boolean) => {
+    emojiStore.updateSettings({ useDiscourseNativeUpload: value })
+  }
+
   const updateEnableDiscourseRouterRefresh = (value: boolean) => {
     emojiStore.updateSettings({ enableDiscourseRouterRefresh: value })
   }
@@ -842,6 +846,7 @@ export default function useOptions() {
     updateSyncVariantToDisplayUrl,
     updateImageCacheStrategy,
     updateEnableSubmenuInjector,
+    updateUseDiscourseNativeUpload,
     updateEnableDiscourseRouterRefresh,
     updateDiscourseRouterRefreshInterval,
     updateEnableHoverPreview,

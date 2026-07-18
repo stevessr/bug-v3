@@ -168,4 +168,121 @@ test.describe('injected upload waiting queue', () => {
       )
     ).toBe(true)
   })
+
+  test('the backend preference can bypass the native composer uploader for the built-in API', async ({
+    page
+  }) => {
+    await loadUploadQueue(page)
+
+    const result = await page.evaluate(async () => {
+      const channel = 'emoji-extension:discourse-native-upload:v1'
+      let nativeLoaderCalls = 0
+      let nativeUploadRequests = 0
+      const fetchCalls: Array<{
+        url: string
+        method: string
+        uploadType: FormDataEntryValue | null
+        fileName: string | null
+      }> = []
+
+      Object.defineProperty(window, 'chrome', {
+        configurable: true,
+        value: {
+          runtime: {
+            getURL: () => {
+              nativeLoaderCalls++
+              return '/mock-discourse-native-upload.js'
+            }
+          }
+        }
+      })
+
+      const originalAppendChild = document.head.appendChild.bind(document.head)
+      document.head.appendChild = (<T extends Node>(node: T): T => {
+        if (node instanceof HTMLScriptElement && node.dataset.emojiExtensionBridge) {
+          queueMicrotask(() => node.dispatchEvent(new Event('load')))
+          return node
+        }
+        return originalAppendChild(node) as T
+      }) as typeof document.head.appendChild
+
+      // If the disabled native route is accidentally invoked, answer quickly so
+      // the regression fails on call counts instead of timing out.
+      window.addEventListener('message', event => {
+        const request = event.data
+        if (
+          event.source !== window ||
+          request?.channel !== channel ||
+          request?.direction !== 'request'
+        ) {
+          return
+        }
+        nativeUploadRequests++
+        window.postMessage(
+          {
+            channel,
+            direction: 'response',
+            id: request.id,
+            status: 'unavailable',
+            reason: 'mock native uploader disabled'
+          },
+          window.location.origin
+        )
+      })
+
+      window.fetch = (async (input, init) => {
+        const body = init?.body as FormData
+        const file = body.get('file')
+        fetchCalls.push({
+          url: String(input),
+          method: init?.method ?? 'GET',
+          uploadType: body.get('upload_type'),
+          fileName: file instanceof File ? file.name : null
+        })
+        return new Response(
+          JSON.stringify({
+            id: 41,
+            url: '/uploads/default/original/api.png',
+            short_url: 'upload://api-result',
+            original_filename: 'api.png',
+            width: 320,
+            height: 200
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      }) as typeof window.fetch
+
+      const uploader = new (window as any).UploadQueueTest.ImageUploader(() => false)
+      const upload = await uploader.uploadImage(
+        new File(['api-image'], 'api.png', { type: 'image/png' }),
+        'composer'
+      )
+
+      return {
+        nativeLoaderCalls,
+        nativeUploadRequests,
+        fetchCalls,
+        upload: {
+          id: upload.id,
+          url: upload.url,
+          shortUrl: upload.short_url
+        }
+      }
+    })
+
+    expect(result.nativeLoaderCalls).toBe(0)
+    expect(result.nativeUploadRequests).toBe(0)
+    expect(result.fetchCalls).toHaveLength(1)
+    expect(result.fetchCalls[0]).toMatchObject({
+      method: 'POST',
+      uploadType: 'composer',
+      fileName: 'api.png'
+    })
+    expect(result.fetchCalls[0].url).toContain('/uploads.json?client_id=')
+    expect(result.upload).toEqual({
+      id: 41,
+      url: `${new URL(page.url()).origin}/uploads/default/original/api.png`,
+      shortUrl: 'upload://api-result'
+    })
+  })
 })

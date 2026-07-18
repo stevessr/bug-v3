@@ -193,6 +193,7 @@ test('the bridge only reports unavailable before a native uploader accepts the f
 
 test('injected upload core tries the route uploader before direct multipart fallback', () => {
   const source = fs.readFileSync('src/content/utils/upload/core.ts', 'utf8')
+  const preferenceGuard = source.indexOf('this.shouldTryDiscourseNativeUpload(routeContext)')
   const nativeCall = source.indexOf('await uploadThroughDiscourseRoute(file, routeContext)')
   const linuxDoFallback = source.indexOf(
     'isLinuxDoDiscourseBase(window.location.origin)',
@@ -200,7 +201,18 @@ test('injected upload core tries the route uploader before direct multipart fall
   )
   const genericFallback = source.indexOf("formData.append('upload_type', 'composer')", nativeCall)
 
-  assert.ok(nativeCall >= 0)
+  assert.ok(preferenceGuard >= 0)
+  assert.ok(nativeCall > preferenceGuard)
   assert.ok(linuxDoFallback > nativeCall)
   assert.ok(genericFallback > nativeCall)
+})
+
+test('native composer upload preference is defaulted and broadcast as a Discourse setting', () => {
+  const defaults = fs.readFileSync('src/types/defaultSettings.ts', 'utf8')
+  const syncHandler = fs.readFileSync('src/background/handlers/handleSyncSettings.ts', 'utf8')
+  const settingsPanel = fs.readFileSync('src/options/components/FeatureSwitchSettings.vue', 'utf8')
+
+  assert.match(defaults, /useDiscourseNativeUpload:\s*true/)
+  assert.match(syncHandler, /'useDiscourseNativeUpload'/)
+  assert.match(settingsPanel, /getSetting\('useDiscourseNativeUpload', true\)/)
 })

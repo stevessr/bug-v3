@@ -5,6 +5,7 @@ import {
   uploadThroughDiscourseRoute,
   type DiscourseUploadRouteContext
 } from '@/content/discourse/utils/nativeUpload'
+import { cachedState } from '@/content/data/state'
 import {
   isLinuxDoDiscourseBase,
   normalizeDiscourseUploadUrl,
@@ -73,6 +74,7 @@ export interface UploadStatusUpdate {
 }
 
 export type UploadStatusListener = (update: UploadStatusUpdate) => void
+export type NativeUploadPreferenceReader = () => boolean
 
 const DEFAULT_RATE_LIMIT_WAIT_SECONDS = 5
 
@@ -85,6 +87,11 @@ export class ImageUploader {
   private maxRetries = 2 // Two automatic retries after the initial attempt
   private rateLimitUntil = 0
   private rateLimitTimer: ReturnType<typeof setTimeout> | null = null
+
+  constructor(
+    private readonly readNativeUploadPreference: NativeUploadPreferenceReader = () =>
+      cachedState.settings.useDiscourseNativeUpload !== false
+  ) {}
 
   async uploadImage(
     file: File,
@@ -369,12 +376,14 @@ export class ImageUploader {
     file: File,
     routeContext: DiscourseUploadRouteContext
   ): Promise<UploadResponse> {
-    const nativeAttempt = await uploadThroughDiscourseRoute(file, routeContext)
-    if (nativeAttempt.status === 'uploaded') {
-      return this.normalizeNativeUpload(file, nativeAttempt.upload)
-    }
-    if (nativeAttempt.status === 'delegated') {
-      return this.createDelegatedChatResult(file)
+    if (this.shouldTryDiscourseNativeUpload(routeContext)) {
+      const nativeAttempt = await uploadThroughDiscourseRoute(file, routeContext)
+      if (nativeAttempt.status === 'uploaded') {
+        return this.normalizeNativeUpload(file, nativeAttempt.upload)
+      }
+      if (nativeAttempt.status === 'delegated') {
+        return this.createDelegatedChatResult(file)
+      }
     }
 
     const csrfToken = this.getCSRFToken()
@@ -462,6 +471,23 @@ export class ImageUploader {
     return {
       ...data,
       url: normalizeDiscourseUploadUrl(window.location.origin, data) || data.url
+    }
+  }
+
+  private shouldTryDiscourseNativeUpload(routeContext: DiscourseUploadRouteContext): boolean {
+    // Chat needs its route-owned file input so Discourse can attach the upload
+    // to the correct channel/thread message. The preference controls injected
+    // topic-composer uploads, where the extension can safely insert API output.
+    if (routeContext === 'chat') return true
+
+    try {
+      return this.readNativeUploadPreference()
+    } catch (error) {
+      console.warn(
+        '[Image Uploader] Failed to read native upload preference; using native route',
+        error
+      )
+      return true
     }
   }
 

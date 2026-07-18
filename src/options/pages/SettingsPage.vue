@@ -63,6 +63,7 @@ const {
   updateSyncVariantToDisplayUrl,
   updateImageCacheStrategy,
   updateEnableSubmenuInjector,
+  updateUseDiscourseNativeUpload,
   updateEnableDiscourseRouterRefresh,
   updateDiscourseRouterRefreshInterval,
   updateEnableLinuxDoSeeking,
@@ -171,6 +172,7 @@ onMounted(async () => {
               @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
               @update:imageCacheStrategy="updateImageCacheStrategy"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
+              @update:useDiscourseNativeUpload="updateUseDiscourseNativeUpload"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
               @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"

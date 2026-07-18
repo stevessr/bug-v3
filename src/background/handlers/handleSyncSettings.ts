@@ -32,6 +32,7 @@ const DISCOURSE_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
   'linuxDoSeekingActionFilter',
   'enableDiscourseRouterRefresh',
   'discourseRouterRefreshInterval',
+  'useDiscourseNativeUpload',
   'enableLinuxDoCredit',
   'enableLinuxDoLikeCounter',
   'enableExperimentalFeatures'

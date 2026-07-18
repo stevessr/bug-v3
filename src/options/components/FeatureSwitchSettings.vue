@@ -17,6 +17,7 @@ const emit = defineEmits([
   'update:imageCacheStrategy',
   'update:enableSubmenuInjector',
   'update:cloudMarketDomain',
+  'update:useDiscourseNativeUpload',
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
   'update:enableLinuxDoLikeCounter',
@@ -295,6 +296,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
         @update:model-value="handleSettingUpdate('enableSubmenuInjector', $event)"
         label="启用子菜单注入 (试验性功能)"
         description="将功能按钮注入到 Discourse 工具栏的下拉菜单中，而不是传统的菜单栏，可降低 CPU 消耗"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('useDiscourseNativeUpload', true)"
+        @update:model-value="handleSettingUpdate('useDiscourseNativeUpload', $event)"
+        label="使用 Discourse 原生上传器"
+        description="用于注入的帖子批量上传。关闭后跳过 Discourse 原生上传函数，直接使用扩展内建 API；聊天附件仍保留原生流程"
       />
 
       <!-- LinuxDo 点赞计数器（仅在启用试验性特性时显示） -->
