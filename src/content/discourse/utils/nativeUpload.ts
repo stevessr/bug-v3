@@ -17,6 +17,7 @@ type NativeUploadBridgeResponse = {
     message?: string
     status?: number
     errorType?: string
+    waitSeconds?: number
   }
 }
 
@@ -73,11 +74,19 @@ function createNativeUploadError(response: NativeUploadBridgeResponse): Error {
     errors: string[]
     error_type: string
     status?: number
+    extras?: { wait_seconds: number }
   }
   error.name = 'NativeDiscourseUploadError'
   error.errors = [message]
   error.error_type = response.error?.errorType || 'upload_failed'
   error.status = response.error?.status
+  if (
+    typeof response.error?.waitSeconds === 'number' &&
+    Number.isFinite(response.error.waitSeconds) &&
+    response.error.waitSeconds > 0
+  ) {
+    error.extras = { wait_seconds: response.error.waitSeconds }
+  }
   return error
 }
 

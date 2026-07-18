@@ -8,17 +8,23 @@ export async function showFolderPickerWithUpload(
 ) {
   // Use custom folder picker with integrated upload
   await showCustomFolderPicker(async (files, updateStatus) => {
-    // Upload each file with status updates
-    for (const file of files) {
-      try {
-        updateStatus(file, { status: 'uploading', progress: 0 })
-        const result = await uploader.uploadImage(file, routeContext)
-        updateStatus(file, { status: 'success', url: result.url || undefined })
-      } catch (error: any) {
-        console.error(`Failed to upload ${file.name}:`, error)
-        updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
-      }
-    }
+    // Enqueue the whole selection up front. The uploader can now keep later
+    // files in a real waiting state when Discourse rate-limits the active one.
+    await Promise.all(
+      files.map(async file => {
+        try {
+          const result = await uploader.uploadImage(file, routeContext, update => {
+            if (update.status === 'waiting' || update.status === 'uploading') {
+              updateStatus(file, { status: update.status, progress: 0 })
+            }
+          })
+          updateStatus(file, { status: 'success', url: result.url || undefined })
+        } catch (error: any) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
+        }
+      })
+    )
   })
 }
 

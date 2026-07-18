@@ -193,7 +193,10 @@ test.describe('uploaded image editor targeting', () => {
         firstInserted,
         secondInserted,
         editorA: editorA.value,
-        editorB: editorB.value
+        editorB: editorB.value,
+        fixedIndex: frozenTarget.start,
+        insertionTail: frozenTarget.nextInsertionStart,
+        visibleCaret: editorA.selectionStart
       }
     })
 
@@ -201,7 +204,47 @@ test.describe('uploaded image editor targeting', () => {
       firstInserted: true,
       secondInserted: true,
       editorA: 'aXYbc',
-      editorB: 'xyz'
+      editorB: 'xyz',
+      fixedIndex: 1,
+      insertionTail: 3,
+      visibleCaret: 1
+    })
+  })
+
+  test('replaces the original selection once while keeping its top index fixed', async ({
+    page
+  }) => {
+    await loadEditorHelpers(
+      page,
+      `<textarea id="editor" class="d-editor-input">before SELECT after</textarea>`
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLTextAreaElement>('#editor')!
+      editor.focus()
+      editor.setSelectionRange(7, 13)
+      editor.dispatchEvent(new Event('select', { bubbles: true }))
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+
+      helpers.insertIntoEditor('A', frozenTarget)
+      helpers.insertIntoEditor('B', frozenTarget)
+
+      return {
+        value: editor.value,
+        fixedIndex: frozenTarget.start,
+        fixedOriginalEnd: frozenTarget.end,
+        insertionTail: frozenTarget.nextInsertionStart,
+        visibleCaret: editor.selectionStart
+      }
+    })
+
+    expect(result).toEqual({
+      value: 'before AB after',
+      fixedIndex: 7,
+      fixedOriginalEnd: 13,
+      insertionTail: 9,
+      visibleCaret: 7
     })
   })
 
@@ -253,16 +296,19 @@ test.describe('uploaded image editor targeting', () => {
       helpers.insertIntoEditor('![c](upload://c)', frozenTarget)
       return {
         value: editor.value,
-        targetEnd: (frozenTarget as any).end
+        fixedIndex: (frozenTarget as any).start,
+        insertionTail: (frozenTarget as any).nextInsertionStart,
+        visibleCaret: editor.selectionStart
       }
     })
 
     const inserted = '![a](upload://a)![b](upload://b)![c](upload://c)start'
     expect(result.value).toBe(inserted)
-    // The frozen target advanced deterministically to the end of the inserted
-    // images (before "start"), so the next insert would go there instead of at
-    // the editor end the hijacker forced.
-    expect(result.targetEnd).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
+    // The user's index/caret stays at the top of the inserted block. A separate
+    // private tail advances so the next result appends instead of reversing.
+    expect(result.fixedIndex).toBe(0)
+    expect(result.visibleCaret).toBe(0)
+    expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
   })
 
   test('does not steal focus from the upload panel while auto-filling', async ({ page }) => {
@@ -289,13 +335,19 @@ test.describe('uploaded image editor targeting', () => {
       helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
       return {
         activeId: document.activeElement?.id ?? null,
-        value: editor.value
+        value: editor.value,
+        visibleCaret: editor.selectionStart,
+        fixedIndex: frozenTarget.start,
+        insertionTail: frozenTarget.nextInsertionStart
       }
     })
 
     expect(result.value).toBe('![a](upload://a)![b](upload://b)start')
     // The editor must not have grabbed focus on either insert.
     expect(result.activeId).toBe('panel-btn')
+    expect(result.fixedIndex).toBe(0)
+    expect(result.visibleCaret).toBe(0)
+    expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)'.length)
   })
 
   test('ProseMirror: caret does not drift when Discourse appends to the end', async ({ page }) => {
@@ -356,13 +408,27 @@ test.describe('uploaded image editor targeting', () => {
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
       helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
       helpers.insertIntoEditor('![c](upload://c)', frozenTarget)
-      return { html: editor.innerHTML, activeId: document.activeElement?.id ?? null }
+      const currentSelection = window.getSelection()!
+      const caretRange = currentSelection.getRangeAt(0)
+      const beforeCaret = document.createRange()
+      beforeCaret.selectNodeContents(editor)
+      beforeCaret.setEnd(caretRange.startContainer, caretRange.startOffset)
+      return {
+        html: editor.innerHTML,
+        activeId: document.activeElement?.id ?? null,
+        visibleCaretOffset: beforeCaret.toString().length,
+        fixedIndex: frozenTarget.anchorTextOffset,
+        insertionTail: frozenTarget.nextInsertionTextOffset
+      }
     })
 
     // All three images sit together at the front (before "start"), proving the
     // caret advanced by one image each time instead of jumping to the end.
     expect(result.html).toContain('![a](upload://a)![b](upload://b)![c](upload://c)start')
     expect(result.activeId).toBe('panel-btn')
+    expect(result.fixedIndex).toBe(0)
+    expect(result.visibleCaretOffset).toBe(0)
+    expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
   })
 
   test('does not retarget when the captured editor is removed', async ({ page }) => {

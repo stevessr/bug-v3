@@ -75,11 +75,19 @@
       candidate?.statusCode ||
       candidate?.response?.status ||
       value?.response?.status
+    const waitSecondsCandidate =
+      candidate?.extras?.wait_seconds ||
+      candidate?.response?.body?.extras?.wait_seconds ||
+      value?.response?.body?.extras?.wait_seconds ||
+      candidate?.waitSeconds ||
+      candidate?.retryAfterSeconds
+    const waitSeconds = Number(waitSecondsCandidate)
 
     return {
       message: String(message || 'Discourse native upload failed'),
       status: typeof status === 'number' ? status : undefined,
-      errorType: status === 429 ? 'rate_limit' : 'upload_failed'
+      errorType: status === 429 ? 'rate_limit' : 'upload_failed',
+      waitSeconds: Number.isFinite(waitSeconds) && waitSeconds > 0 ? waitSeconds : undefined
     }
   }
 

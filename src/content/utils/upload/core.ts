@@ -1,5 +1,5 @@
 import { getCsrfTokenFromPage } from '../dom'
-import { notify } from '../ui'
+import { notify } from '../ui/notify'
 
 import {
   uploadThroughDiscourseRoute,
@@ -57,7 +57,24 @@ export interface UploadQueueItem {
   error?: any
   result?: UploadResponse
   timestamp: number
+  onStatusChange?: UploadStatusListener
 }
+
+export type UploadQueueStatus = UploadQueueItem['status']
+
+export interface UploadStatusUpdate {
+  id: string
+  file: File
+  status: UploadQueueStatus
+  retryCount: number
+  error?: any
+  waitSeconds?: number
+  waitUntil?: number
+}
+
+export type UploadStatusListener = (update: UploadStatusUpdate) => void
+
+const DEFAULT_RATE_LIMIT_WAIT_SECONDS = 5
 
 export class ImageUploader {
   private waitingQueue: UploadQueueItem[] = []
@@ -65,11 +82,14 @@ export class ImageUploader {
   private failedQueue: UploadQueueItem[] = []
   private successQueue: UploadQueueItem[] = []
   private isProcessing = false
-  private maxRetries = 2 // Second failure stops retry
+  private maxRetries = 2 // Two automatic retries after the initial attempt
+  private rateLimitUntil = 0
+  private rateLimitTimer: ReturnType<typeof setTimeout> | null = null
 
   async uploadImage(
     file: File,
-    routeContext: DiscourseUploadRouteContext = 'auto'
+    routeContext: DiscourseUploadRouteContext = 'auto',
+    onStatusChange?: UploadStatusListener
   ): Promise<UploadResponse> {
     return new Promise((resolve, reject) => {
       const item: UploadQueueItem = {
@@ -81,17 +101,20 @@ export class ImageUploader {
         reject,
         retryCount: 0,
         status: 'waiting',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        onStatusChange
       }
 
       this.waitingQueue.push(item)
+      this.emitStatus(item)
       this.processQueue()
     })
   }
 
   private moveToQueue(
     item: UploadQueueItem,
-    targetStatus: 'waiting' | 'uploading' | 'failed' | 'success'
+    targetStatus: UploadQueueStatus,
+    options: { front?: boolean; waitSeconds?: number; waitUntil?: number } = {}
   ) {
     // Remove from all queues
     this.waitingQueue = this.waitingQueue.filter(i => i.id !== item.id)
@@ -103,7 +126,11 @@ export class ImageUploader {
     item.status = targetStatus
     switch (targetStatus) {
       case 'waiting':
-        this.waitingQueue.push(item)
+        if (options.front) {
+          this.waitingQueue.unshift(item)
+        } else {
+          this.waitingQueue.push(item)
+        }
         break
       case 'uploading':
         this.uploadingQueue.push(item)
@@ -115,78 +142,164 @@ export class ImageUploader {
         this.successQueue.push(item)
         break
     }
+
+    this.emitStatus(item, options)
   }
 
-  private async processQueue() {
+  private emitStatus(
+    item: UploadQueueItem,
+    options: { waitSeconds?: number; waitUntil?: number } = {}
+  ): void {
+    try {
+      item.onStatusChange?.({
+        id: item.id,
+        file: item.file,
+        status: item.status,
+        retryCount: item.retryCount,
+        error: item.error,
+        waitSeconds: options.waitSeconds,
+        waitUntil: options.waitUntil
+      })
+    } catch (error) {
+      console.warn('[Image Uploader] Upload status listener failed', error)
+    }
+  }
+
+  private emitWaitingStatus(waitSeconds: number, waitUntil: number, excludedItemId?: string): void {
+    for (const item of this.waitingQueue) {
+      if (item.id === excludedItemId) continue
+      this.emitStatus(item, { waitSeconds, waitUntil })
+    }
+  }
+
+  private processQueue(): void {
     if (this.isProcessing || this.waitingQueue.length === 0) {
       return
     }
 
-    this.isProcessing = true
-
-    while (this.waitingQueue.length > 0) {
-      const item = this.waitingQueue.shift()
-      if (!item) continue
-      this.moveToQueue(item, 'uploading')
-
-      try {
-        const result = await this.performUpload(item.file, item.routeContext)
-        item.result = result
-        this.moveToQueue(item, 'success')
-        item.resolve(result)
-      } catch (_error: any) {
-        item.error = _error
-
-        if (this.shouldTerminateUploadFlow(_error)) {
-          this.moveToQueue(item, 'failed')
-          item.reject(_error)
-          this.terminatePendingUploads(_error)
-          notify('检测到无等待信息的 429，已终止后续上传以避免继续请求。', 'error')
-          break
-        }
-
-        if (this.shouldRetry(_error, item)) {
-          item.retryCount++
-
-          if (_error.error_type === 'rate_limit' && _error.extras?.wait_seconds) {
-            const waitSeconds = _error.extras.wait_seconds
-            notify(`遇到限流，将等待 ${waitSeconds} 秒后重试...`, 'error')
-
-            // Countdown notifications every second
-            let remainingSeconds = waitSeconds
-            const countdownInterval = setInterval(() => {
-              remainingSeconds--
-              if (remainingSeconds > 0) {
-                notify(`正在等待限流解除，剩余 ${remainingSeconds} 秒...`, 'info')
-              } else {
-                clearInterval(countdownInterval)
-                notify('限流等待结束，继续上传...', 'success')
-              }
-            }, 1000)
-
-            // Wait for rate limit before retry
-            await this.sleep(waitSeconds * 1000)
-            this.moveToQueue(item, 'waiting')
-          } else {
-            // Wait before retry
-            await this.sleep(Math.pow(2, item.retryCount) * 1000)
-            this.moveToQueue(item, 'waiting')
-          }
-        } else {
-          this.moveToQueue(item, 'failed')
-          item.reject(_error)
-        }
-      }
+    const remainingWait = this.rateLimitUntil - Date.now()
+    if (remainingWait > 0) {
+      this.scheduleRateLimitResume()
+      return
     }
 
-    this.isProcessing = false
+    this.clearRateLimitTimer()
+    this.rateLimitUntil = 0
+
+    const item = this.waitingQueue.shift()
+    if (!item) return
+
+    this.isProcessing = true
+    this.moveToQueue(item, 'uploading')
+    void this.uploadItem(item)
+  }
+
+  private async uploadItem(item: UploadQueueItem): Promise<void> {
+    try {
+      const result = await this.performUpload(item.file, item.routeContext)
+      item.result = result
+      item.error = undefined
+      this.moveToQueue(item, 'success')
+      item.resolve(result)
+    } catch (_error: any) {
+      item.error = _error
+
+      if (this.shouldTerminateUploadFlow(_error)) {
+        this.moveToQueue(item, 'failed')
+        item.reject(_error)
+        this.terminatePendingUploads(_error)
+        notify('上传队列已终止，后续文件保留为失败项。', 'error')
+        return
+      }
+
+      if (this.isRateLimitError(_error)) {
+        const willRetryCurrentItem = this.shouldRetry(_error, item)
+        if (willRetryCurrentItem) item.retryCount++
+
+        const waitSeconds = this.getRateLimitWaitSeconds(_error)
+        const waitUntil = Date.now() + waitSeconds * 1000
+        this.rateLimitUntil = Math.max(this.rateLimitUntil, waitUntil)
+
+        if (willRetryCurrentItem) {
+          // Put the failed item back at the head immediately. The whole batch
+          // is now visibly waiting; no later file is allowed to probe
+          // Discourse and fail one-by-one while the limit is active.
+          this.moveToQueue(item, 'waiting', { front: true, waitSeconds, waitUntil })
+        } else {
+          // Even after this item exhausts its retries, retain the same cooldown
+          // for the remaining queue instead of immediately probing the next
+          // file against a limit that is still known to be active.
+          this.moveToQueue(item, 'failed')
+          item.reject(_error)
+        }
+
+        this.emitWaitingStatus(waitSeconds, waitUntil, willRetryCurrentItem ? item.id : undefined)
+        this.scheduleRateLimitResume()
+        notify(
+          willRetryCurrentItem
+            ? `遇到限流，上传队列将等待 ${Math.ceil(waitSeconds)} 秒后继续...`
+            : `当前文件已达到重试上限，其余文件将继续等待 ${Math.ceil(waitSeconds)} 秒...`,
+          'info'
+        )
+        return
+      }
+
+      this.moveToQueue(item, 'failed')
+      item.reject(_error)
+    } finally {
+      this.isProcessing = false
+      this.processQueue()
+    }
+  }
+
+  private getRateLimitWaitSeconds(error: any): number {
+    const candidates = [
+      error?.extras?.wait_seconds,
+      error?.wait_seconds,
+      error?.waitSeconds,
+      error?.retryAfterSeconds
+    ]
+
+    for (const candidate of candidates) {
+      const seconds = Number(candidate)
+      if (Number.isFinite(seconds) && seconds > 0) return seconds
+    }
+
+    return DEFAULT_RATE_LIMIT_WAIT_SECONDS
+  }
+
+  private scheduleRateLimitResume(): void {
+    const remainingWait = this.rateLimitUntil - Date.now()
+    if (remainingWait <= 0) {
+      this.clearRateLimitTimer()
+      this.rateLimitUntil = 0
+      this.processQueue()
+      return
+    }
+
+    this.clearRateLimitTimer()
+    this.rateLimitTimer = setTimeout(() => {
+      this.rateLimitTimer = null
+      if (Date.now() < this.rateLimitUntil) {
+        this.scheduleRateLimitResume()
+        return
+      }
+
+      this.rateLimitUntil = 0
+      notify('限流等待结束，继续上传...', 'success')
+      this.processQueue()
+    }, remainingWait + 20)
+  }
+
+  private clearRateLimitTimer(): void {
+    if (this.rateLimitTimer !== null) {
+      clearTimeout(this.rateLimitTimer)
+      this.rateLimitTimer = null
+    }
   }
 
   private shouldTerminateUploadFlow(error: any): boolean {
-    return Boolean(
-      error?.shouldTerminateUploadFlow ||
-      (error?.status === 429 && !(error?.extras && error.extras.wait_seconds))
-    )
+    return Boolean(error?.shouldTerminateUploadFlow && !this.isRateLimitError(error))
   }
 
   private terminatePendingUploads(error: any) {
@@ -203,8 +316,14 @@ export class ImageUploader {
       return false
     }
 
-    // Only retry 429 (rate limit) errors automatically
-    return _error.error_type === 'rate_limit'
+    // Only retry 429 (rate limit) errors automatically. A missing Retry-After
+    // no longer causes every file in a batch to be attempted in sequence; the
+    // queue uses a conservative fallback wait instead.
+    return this.isRateLimitError(_error)
+  }
+
+  private isRateLimitError(error: any): boolean {
+    return error?.error_type === 'rate_limit' || error?.status === 429
   }
 
   // Method to manually retry failed items
@@ -244,10 +363,6 @@ export class ImageUploader {
   ): Promise<UploadResponse> {
     const file = new File([blob], filename, { type: blob.type })
     return this.uploadImage(file, routeContext)
-  }
-
-  private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   private async performUpload(
@@ -320,11 +435,11 @@ export class ImageUploader {
 
       if (response.status === 429 && !(errorData as UploadError | null)?.extras?.wait_seconds) {
         throw {
-          errors: ['Upload terminated after receiving a bare 429 response.'],
+          errors: ['Upload paused after receiving a bare 429 response.'],
           error_type: 'rate_limit',
           status: 429,
-          shouldTerminateUploadFlow: true,
-          message: 'Upload terminated after receiving a bare 429 response.'
+          shouldTerminateUploadFlow: false,
+          message: 'Upload paused after receiving a bare 429 response.'
         } satisfies UploadError
       }
 

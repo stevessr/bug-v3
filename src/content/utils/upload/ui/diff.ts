@@ -123,17 +123,22 @@ export async function showDiffImagePicker(
       // Upload filtered files
       let uploadCount = 0
 
-      for (const file of files) {
-        try {
-          updateStatus(file, { status: 'uploading', progress: 0 })
-          const result = await uploader.uploadImage(file, routeContext)
-          updateStatus(file, { status: 'success', url: result.url || undefined })
-          uploadCount++
-        } catch (error: any) {
-          console.error(`Failed to upload ${file.name}:`, error)
-          updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
-        }
-      }
+      await Promise.all(
+        files.map(async file => {
+          try {
+            const result = await uploader.uploadImage(file, routeContext, update => {
+              if (update.status === 'waiting' || update.status === 'uploading') {
+                updateStatus(file, { status: update.status, progress: 0 })
+              }
+            })
+            updateStatus(file, { status: 'success', url: result.url || undefined })
+            uploadCount++
+          } catch (error: any) {
+            console.error(`Failed to upload ${file.name}:`, error)
+            updateStatus(file, { status: 'failed', error: error.message || '上传失败' })
+          }
+        })
+      )
 
       // Show summary notification if any files were uploaded
       if (uploadCount > 0) {

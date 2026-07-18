@@ -142,7 +142,10 @@ test('composer requests use Discourse appEvents with duplicate insertion disable
 test('composer requests report native Uppy errors without asking for a direct retry', async () => {
   const appEvents = new FakeAppEvents()
   appEvents.on('composer:add-files', file => {
-    const error = Object.assign(new Error('rate limited by site uploader'), { status: 429 })
+    const error = Object.assign(new Error('rate limited by site uploader'), {
+      status: 429,
+      extras: { wait_seconds: 7 }
+    })
     appEvents.trigger('composer:upload-error', { name: file.name, meta: { error } })
   })
 
@@ -153,6 +156,7 @@ test('composer requests report native Uppy errors without asking for a direct re
   assert.equal(response.error.message, 'rate limited by site uploader')
   assert.equal(response.error.status, 429)
   assert.equal(response.error.errorType, 'rate_limit')
+  assert.equal(response.error.waitSeconds, 7)
 })
 
 test('chat requests are handed to the active route file input', async () => {

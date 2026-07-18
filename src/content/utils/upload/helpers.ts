@@ -12,11 +12,17 @@ export type EditorInsertionTarget =
       start: number
       end: number
       direction: 'forward' | 'backward' | 'none'
+      nextInsertionStart: number
+      hasInserted: boolean
     }
   | {
       kind: 'prosemirror'
       element: HTMLElement
       range: Range
+      insertionRange: Range
+      anchorTextOffset: number | null
+      nextInsertionTextOffset: number | null
+      hasInserted: boolean
     }
 
 let lastFocusedEditor: EditorInsertionTarget | null = null
@@ -73,7 +79,9 @@ function readEditorTarget(editor: DiscourseEditorElement): EditorInsertionTarget
       element: editor,
       start: editor.selectionStart ?? editor.value.length,
       end: editor.selectionEnd ?? editor.value.length,
-      direction: editor.selectionDirection ?? 'none'
+      direction: editor.selectionDirection ?? 'none',
+      nextInsertionStart: editor.selectionStart ?? editor.value.length,
+      hasInserted: false
     }
   }
 
@@ -91,7 +99,16 @@ function readEditorTarget(editor: DiscourseEditorElement): EditorInsertionTarget
         ? previousRange.cloneRange()
         : createRangeAtEditorEnd(editor)
 
-  return { kind: 'prosemirror', element: editor, range }
+  const anchorTextOffset = getEditorTextOffset(editor, range.startContainer, range.startOffset)
+  return {
+    kind: 'prosemirror',
+    element: editor,
+    range,
+    insertionRange: range.cloneRange(),
+    anchorTextOffset,
+    nextInsertionTextOffset: anchorTextOffset,
+    hasInserted: false
+  }
 }
 
 function cloneEditorTarget(target: EditorInsertionTarget): EditorInsertionTarget {
@@ -102,7 +119,11 @@ function cloneEditorTarget(target: EditorInsertionTarget): EditorInsertionTarget
   return {
     kind: 'prosemirror',
     element: target.element,
-    range: target.range.cloneRange()
+    range: target.range.cloneRange(),
+    insertionRange: target.insertionRange.cloneRange(),
+    anchorTextOffset: target.anchorTextOffset,
+    nextInsertionTextOffset: target.nextInsertionTextOffset,
+    hasInserted: target.hasInserted
   }
 }
 
@@ -231,42 +252,76 @@ function insertIntoTextarea(
 ) {
   const editor = target.element
   const valueLength = editor.value.length
-  const start = Math.max(0, Math.min(target.start, valueLength))
-  const end = Math.max(start, Math.min(target.end, valueLength))
+  const insertionStart = target.hasInserted ? target.nextInsertionStart : target.start
+  const insertionEnd = target.hasInserted ? insertionStart : target.end
+  const start = Math.max(0, Math.min(insertionStart, valueLength))
+  const end = Math.max(start, Math.min(insertionEnd, valueLength))
 
   // Do NOT focus() the editor here — that steals focus from the upload panel
   // on every image and makes the caret appear to "drift". Setting the range
   // and dispatching `input` is enough for Discourse to react.
   editor.setRangeText(text, start, end, 'end')
 
-  // Advance deterministically by the inserted length. We never re-read the
-  // live caret, so a page handler that repositions it cannot accumulate drift.
+  // Advance only the private insertion tail. The user's original index stays
+  // fixed, while every later upload is appended after the previous inserted
+  // markdown instead of being written in reverse order at the same index.
   const nextPosition = start + text.length
-  placeCaretInTextarea(editor, nextPosition, target.direction)
-  target.start = nextPosition
-  target.end = nextPosition
-  target.direction = 'none'
+  target.nextInsertionStart = nextPosition
+  target.hasInserted = true
+
+  const anchorPosition = Math.max(0, Math.min(target.start, editor.value.length))
+  placeCaretInTextarea(editor, anchorPosition, 'none')
   editor.dispatchEvent(createInputEvent(text))
+
+  // Discourse listeners may move the live caret while handling `input`.
+  // Restore the fixed user index after they finish without stealing focus from
+  // the upload panel.
+  placeCaretInTextarea(editor, anchorPosition, 'none')
   lastFocusedEditor = cloneEditorTarget(target)
 }
 
 /**
- * Move the caret to `target.range` without yanking document focus from the
- * upload panel. The selection is set on the existing (already focused) editor
- * so Discourse still receives the change.
+ * Restore the private insertion tail without consulting the live selection.
+ * The visible user caret is restored separately after the insert.
  */
 function restoreProseMirrorRange(
   target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
 ): Range {
   const editor = target.element
-  const range = isRangeInsideEditor(editor, target.range)
-    ? target.range.cloneRange()
-    : createRangeAtEditorEnd(editor)
+  const range =
+    !target.hasInserted && isRangeInsideEditor(editor, target.range)
+      ? target.range.cloneRange()
+      : target.nextInsertionTextOffset !== null
+        ? createRangeAtEditorTextOffset(editor, target.nextInsertionTextOffset)
+        : isRangeInsideEditor(editor, target.insertionRange)
+          ? target.insertionRange.cloneRange()
+          : createRangeAtEditorEnd(editor)
   const selection = editor.ownerDocument.defaultView?.getSelection()
 
   selection?.removeAllRanges()
   selection?.addRange(range)
   return range
+}
+
+function restoreProseMirrorAnchor(
+  target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
+): void {
+  const editor = target.element
+  const range =
+    target.anchorTextOffset !== null
+      ? createRangeAtEditorTextOffset(editor, target.anchorTextOffset)
+      : isRangeInsideEditor(editor, target.range)
+        ? target.range.cloneRange()
+        : createRangeAtEditorEnd(editor)
+
+  // The upload replaces an initial selection once, then keeps the visible
+  // caret collapsed at that selection's top/index for the entire batch.
+  range.collapse(true)
+  target.range = range.cloneRange()
+
+  const selection = editor.ownerDocument.defaultView?.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(range)
 }
 
 /**
@@ -319,12 +374,9 @@ function hasTextAtOffset(editor: HTMLElement, offset: number, text: string): boo
 }
 
 /**
- * Advance `target.range` so the next insert lands immediately after the text
- * we just inserted, measured in characters within the same text node. We do
- * this ourselves instead of trusting the live selection, because Discourse may
- * reposition the caret (e.g. append to the end of the editor) after a paste.
- * Re-reading the live caret every time is exactly what made the focus appear
- * to "drift" by one image, then two, then three.
+ * Advance only the private insertion tail so the next result lands immediately
+ * after the text we just inserted. `target.range` remains the fixed user index
+ * and is restored after every insertion.
  */
 function advanceProseMirrorTarget(
   target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>,
@@ -339,8 +391,9 @@ function advanceProseMirrorTarget(
   // actually present at that position; otherwise a rich paste may have
   // produced non-text DOM and needs the range/mutation fallback below.
   if (insertionTextOffset !== null && hasTextAtOffset(editor, insertionTextOffset, insertedText)) {
-    target.range = createRangeAtEditorTextOffset(editor, insertionTextOffset + insertedText.length)
-    lastFocusedEditor = cloneEditorTarget(target)
+    target.nextInsertionTextOffset = insertionTextOffset + insertedText.length
+    target.insertionRange = createRangeAtEditorTextOffset(editor, target.nextInsertionTextOffset)
+    target.hasInserted = true
     return
   }
 
@@ -350,8 +403,8 @@ function advanceProseMirrorTarget(
   // Prefer the caret that sits right after what we inserted: a contenteditable
   // keeps a stable anchor at (node, offset). If the inserted text is still a
   // single text run, just shift the offset by its length.
-  const current = isRangeInsideEditor(editor, target.range)
-    ? target.range
+  const current = isRangeInsideEditor(editor, target.insertionRange)
+    ? target.insertionRange
     : liveRange && isRangeInsideEditor(editor, liveRange)
       ? liveRange
       : null
@@ -360,17 +413,27 @@ function advanceProseMirrorTarget(
     // Keep the remembered DOM boundary ahead of the live caret. A page paste
     // handler can move Selection to the editor end, but it must not retarget
     // the next upload image there.
-    target.range = current.cloneRange()
-    lastFocusedEditor = cloneEditorTarget(target)
+    target.insertionRange = current.cloneRange()
+    target.nextInsertionTextOffset = getEditorTextOffset(
+      editor,
+      current.startContainer,
+      current.startOffset
+    )
+    target.hasInserted = true
     return
   }
 
   // Fallback: trust the live caret only when it is inside the editor.
-  target.range =
+  target.insertionRange =
     liveRange && isRangeInsideEditor(editor, liveRange)
       ? liveRange.cloneRange()
       : createRangeAtEditorEnd(editor)
-  lastFocusedEditor = cloneEditorTarget(target)
+  target.nextInsertionTextOffset = getEditorTextOffset(
+    editor,
+    target.insertionRange.startContainer,
+    target.insertionRange.startOffset
+  )
+  target.hasInserted = true
 }
 
 function tryProseMirrorPaste(editor: HTMLElement, text: string): boolean {
@@ -422,6 +485,8 @@ function insertIntoProseMirror(
 
   if (tryProseMirrorPaste(editor, text)) {
     advanceProseMirrorTarget(target, text, insertionTextOffset)
+    restoreProseMirrorAnchor(target)
+    lastFocusedEditor = cloneEditorTarget(target)
     if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
     return
   }
@@ -452,6 +517,8 @@ function insertIntoProseMirror(
   }
 
   advanceProseMirrorTarget(target, text, insertionTextOffset)
+  restoreProseMirrorAnchor(target)
+  lastFocusedEditor = cloneEditorTarget(target)
   if (panelHadFocus && previouslyFocused) previouslyFocused.focus({ preventScroll: true })
 }
 

@@ -1,5 +1,5 @@
 import { createE, DAEL, DOA } from '../../dom/createEl'
-import { uploader } from '../core'
+import { uploader, type UploadResponse, type UploadStatusUpdate } from '../core'
 import {
   captureEditorInsertionTarget,
   insertIntoEditor,
@@ -105,33 +105,38 @@ export async function uploadAndInsert(
   const successIcon = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
   const failIcon = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
   const spinnerSvg = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tertiary)" stroke-width="2" style="animation:fa-spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>`
+  const waitingIcon = `<svg xmlns="${svgNS}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`
 
   let successCount = 0
   let failCount = 0
   let delegatedCount = 0
   let insertionFailureCount = 0
   const failedItems: { file: File; error: any }[] = []
+  type ProgressStatus = 'waiting' | 'uploading' | 'success' | 'failed'
+  const progressStatuses: ProgressStatus[] = filesArray.map(() => 'waiting')
   const rowMap = new Map<
-    string,
+    number,
     { row: HTMLElement; iconSpan: HTMLElement; nameSpan: HTMLElement }
   >()
   const currentProgressPanel = progressPanel
 
-  const updateProgress = (
-    done: number,
-    total: number,
-    file: File,
-    status: 'uploading' | 'success' | 'failed',
-    errMsg?: string
-  ) => {
+  const updateProgress = (index: number, file: File, status: ProgressStatus, errMsg?: string) => {
+    progressStatuses[index] = status
+    const waitingCount = progressStatuses.filter(itemStatus => itemStatus === 'waiting').length
+    const uploadingCount = progressStatuses.filter(itemStatus => itemStatus === 'uploading').length
+    const doneCount = progressStatuses.filter(
+      itemStatus => itemStatus === 'success' || itemStatus === 'failed'
+    ).length
+
     progressTitle.innerHTML = `
-      <span>上传中 ${total - done > 0 ? total - done : '—'}</span>
+      <span>上传 ${uploadingCount}</span>
+      <span style="color:#d97706;margin-left:10px">等待 ${waitingCount}</span>
       <span style="color:var(--success);margin-left:12px">成功 ${successCount}</span>
       <span style="color:var(--danger);margin-left:8px">失败 ${failCount}</span>
     `
-    progressBarInner.style.width = `${(done / total) * 100}%`
+    progressBarInner.style.width = `${(doneCount / filesArray.length) * 100}%`
 
-    let entry = rowMap.get(file.name)
+    let entry = rowMap.get(index)
     if (!entry) {
       const row = createE('div', {
         style: `
@@ -161,47 +166,99 @@ export async function uploadAndInsert(
       row.appendChild(nameSpan)
       progressList.appendChild(row)
       entry = { row, iconSpan, nameSpan }
-      rowMap.set(file.name, entry)
+      rowMap.set(index, entry)
     }
     entry.iconSpan.innerHTML =
-      status === 'success' ? successIcon : status === 'failed' ? failIcon : spinnerSvg
+      status === 'success'
+        ? successIcon
+        : status === 'failed'
+          ? failIcon
+          : status === 'waiting'
+            ? waitingIcon
+            : spinnerSvg
     entry.nameSpan.textContent = errMsg ? `${file.name} — ${errMsg}` : file.name
-    entry.nameSpan.style.color = status === 'failed' ? 'var(--danger)' : 'var(--primary)'
+    entry.nameSpan.style.color =
+      status === 'failed' ? 'var(--danger)' : status === 'waiting' ? '#d97706' : 'var(--primary)'
     progressList.scrollTop = progressList.scrollHeight
   }
 
-  for (let i = 0; i < filesArray.length; i++) {
-    const file = filesArray[i]
-    updateProgress(i, filesArray.length, file, 'uploading')
+  type UploadOutcome =
+    | { status: 'pending' }
+    | { status: 'success'; result: UploadResponse }
+    | { status: 'failed'; error: any }
 
-    try {
-      const result = await uploader.uploadImage(file, routeContext)
-      successCount++
-      if (result.handledByDiscourseRoute) delegatedCount++
-      let successMessage = result.handledByDiscourseRoute
-        ? '已交给 Discourse 原生上传队列'
-        : undefined
+  const outcomes: UploadOutcome[] = filesArray.map(() => ({ status: 'pending' }))
+  let nextInsertionIndex = 0
 
-      // Insert into the exact editor/caret captured when the upload dialog
-      // opened. Never re-read document.activeElement after the async upload.
-      if (!result.handledByDiscourseRoute) {
+  // Uploads are enqueued together so files after the active one really are in
+  // the waiting queue. Results are still inserted in the user's file order,
+  // even if a future uploader completes them out of order.
+  const flushReadyInsertions = () => {
+    while (nextInsertionIndex < outcomes.length) {
+      const outcome = outcomes[nextInsertionIndex]
+      if (outcome.status === 'pending') return
+
+      const file = filesArray[nextInsertionIndex]
+      if (outcome.status === 'success' && !outcome.result.handledByDiscourseRoute) {
         const alt =
-          result.width && result.height
-            ? `${file.name}|${result.width}x${result.height}`
+          outcome.result.width && outcome.result.height
+            ? `${file.name}|${outcome.result.width}x${outcome.result.height}`
             : file.name
-        if (!insertIntoEditor(buildMarkdownImage(alt, result), frozenEditorTarget)) {
+        if (!insertIntoEditor(buildMarkdownImage(alt, outcome.result), frozenEditorTarget)) {
           insertionFailureCount++
-          successMessage = '上传成功，但原编辑器已失效，未自动填入'
+          updateProgress(
+            nextInsertionIndex,
+            file,
+            'success',
+            '上传成功，但原编辑器已失效，未自动填入'
+          )
         }
       }
 
-      updateProgress(i + 1, filesArray.length, file, 'success', successMessage)
-    } catch (error: any) {
-      failCount++
-      updateProgress(i + 1, filesArray.length, file, 'failed', error.message || '上传失败')
-      failedItems.push({ file, error })
+      nextInsertionIndex++
     }
   }
+
+  const statusMessage = (update: UploadStatusUpdate): string | undefined => {
+    if (update.status !== 'waiting') return undefined
+    const remainingSeconds = update.waitUntil
+      ? Math.max(1, Math.ceil((update.waitUntil - Date.now()) / 1000))
+      : update.waitSeconds
+        ? Math.max(1, Math.ceil(update.waitSeconds))
+        : null
+    return remainingSeconds ? `限流等待 ${remainingSeconds} 秒后重试` : '等待上传'
+  }
+
+  filesArray.forEach((file, index) => updateProgress(index, file, 'waiting', '等待上传'))
+
+  const uploadTasks = filesArray.map(async (file, index) => {
+    try {
+      const result = await uploader.uploadImage(file, routeContext, update => {
+        if (update.status === 'waiting' || update.status === 'uploading') {
+          updateProgress(index, file, update.status, statusMessage(update))
+        }
+      })
+      successCount++
+      if (result.handledByDiscourseRoute) delegatedCount++
+      outcomes[index] = { status: 'success', result }
+      updateProgress(
+        index,
+        file,
+        'success',
+        result.handledByDiscourseRoute ? '已交给 Discourse 原生上传队列' : undefined
+      )
+    } catch (error: any) {
+      failCount++
+      outcomes[index] = { status: 'failed', error }
+      updateProgress(index, file, 'failed', error.message || '上传失败')
+      failedItems.push({ file, error })
+    }
+
+    flushReadyInsertions()
+  })
+
+  await Promise.all(uploadTasks)
+  flushReadyInsertions()
 
   // Close progress panel after 1.5s, but keep reference for retry handling
   const closePanel = () => {
