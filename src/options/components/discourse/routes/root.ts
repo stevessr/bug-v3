@@ -238,11 +238,11 @@ export async function loadTag(
 
   if (data?.topic_list?.topics) {
     tab.topics = data.topic_list.topics
+    tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
   } else {
     tab.topics = []
+    tab.hasMoreTopics = false
   }
-
-  tab.hasMoreTopics = false
   tab.topicsPage = 0
   tab.categories = []
   tab.currentCategorySlug = ''

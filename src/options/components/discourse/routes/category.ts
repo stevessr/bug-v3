@@ -78,7 +78,7 @@ export async function loadMoreTopics(
 ) {
   const tab = activeTab.value
   if (!tab || isLoadingMore.value || !tab.hasMoreTopics) return
-  if (tab.viewType !== 'home' && tab.viewType !== 'category') return
+  if (tab.viewType !== 'home' && tab.viewType !== 'category' && tab.viewType !== 'tag') return
 
   isLoadingMore.value = true
   tab.topicsPage++
@@ -87,6 +87,9 @@ export async function loadMoreTopics(
     let url: string
     if (tab.viewType === 'home') {
       url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json?page=${tab.topicsPage}`
+    } else if (tab.viewType === 'tag') {
+      const encoded = encodeURIComponent(tab.currentTagName || '')
+      url = `${baseUrl.value}/tag/${encoded}.json?page=${tab.topicsPage}`
     } else {
       if (tab.currentCategoryId) {
         url = `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json?page=${tab.topicsPage}`

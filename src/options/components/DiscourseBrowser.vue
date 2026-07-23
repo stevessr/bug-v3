@@ -402,7 +402,7 @@ const handleScroll = async () => {
   if (scrollBottom < 200) {
     if (viewType === 'topic') {
       loadMorePosts('down')
-    } else if (viewType === 'home' || viewType === 'category') {
+    } else if (viewType === 'home' || viewType === 'category' || viewType === 'tag') {
       loadMoreTopics()
     } else if (viewType === 'activity') {
       loadMoreActivity()
@@ -1491,6 +1491,33 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
   if (category === 'topic') {
     const topicId = extractTopicIdFromChannel(channel)
     const topicPayload = (payload || {}) as MessageBusTopicPayload
+
+    // Handle boost real-time updates (boost_added / boost_removed)
+    if (
+      tab.currentTopic &&
+      topicId &&
+      tab.currentTopic.id === topicId &&
+      typeof topicPayload.type === 'string' &&
+      topicPayload.type.startsWith('boost_')
+    ) {
+      const postId = Number(topicPayload.id)
+      const post = tab.currentTopic.post_stream.posts.find(p => p.id === postId)
+      if (post) {
+        const postAny = post as any
+        const boosts = Array.isArray(postAny.boosts) ? [...postAny.boosts] : []
+        if (topicPayload.type === 'boost_added' && topicPayload.boost) {
+          boosts.push(topicPayload.boost)
+          postAny.boosts = boosts
+          postAny.can_boost = false
+        } else if (topicPayload.type === 'boost_removed' && topicPayload.boost_id) {
+          const removedId = Number(topicPayload.boost_id)
+          postAny.boosts = boosts.filter((b: any) => b.id !== removedId)
+          postAny.can_boost = true
+        }
+      }
+      return
+    }
+
     if (
       tab.viewType === 'topic' &&
       tab.currentTopic &&
