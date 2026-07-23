@@ -77,7 +77,8 @@ export default defineComponent({
     onDelete: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
     onWiki: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
     onArchiveTopic: { type: Function as PropType<() => void>, required: true },
-    isArchiving: { type: Boolean, required: true }
+    isArchiving: { type: Boolean, required: true },
+    onRefresh: { type: Function as PropType<() => void>, default: null }
   },
   setup(props) {
     const handlePostLike = (post: DiscoursePost, reactionId: string) => {
@@ -141,6 +142,7 @@ export default defineComponent({
               onWiki={props.onWiki}
               onArchiveTopic={props.onArchiveTopic}
               isArchiving={props.isArchiving}
+              onRefresh={props.onRefresh || undefined}
             />
             {props.isRepliesExpanded(post.post_number) && (
               <div class="pl-6 mt-3 space-y-3">

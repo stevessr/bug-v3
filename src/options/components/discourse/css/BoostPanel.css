@@ -1,0 +1,126 @@
+.boost-panel {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.boost-panel__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.boost-panel__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  background: var(--d-surface-2, rgba(148, 163, 184, 0.1));
+  border: 1px solid var(--d-border, rgba(148, 163, 184, 0.2));
+  font-size: 13px;
+  line-height: 1.2;
+  transition: background 0.15s;
+}
+
+.boost-panel__item:hover {
+  background: var(--d-surface-2-hover, rgba(148, 163, 184, 0.18));
+}
+
+.boost-panel__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.boost-panel__cooked {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--d-text, #1f2937);
+}
+
+.boost-panel__cooked img.emoji {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
+}
+
+.dark .boost-panel__cooked {
+  color: #e5e7eb;
+}
+
+.boost-panel__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.boost-panel__action:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.dark .boost-panel__action:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.boost-panel__action--delete:hover {
+  color: #ef4444;
+}
+
+.boost-panel__action--flag:hover {
+  color: #f59e0b;
+}
+
+.boost-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boost-panel__add-btn {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.boost-panel__input-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.boost-panel__input-area .ant-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.boost-panel__flag-preview {
+  padding: 8px 12px;
+  border: 1px solid var(--d-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--d-surface-1, #f9fafb);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dark .boost-panel__flag-preview {
+  border-color: #374151;
+  background: #1f2937;
+}

@@ -209,6 +209,21 @@ export interface DiscourseNotification {
   acting_user_name?: string
 }
 
+export interface Boost {
+  id: number
+  cooked: string
+  can_delete?: boolean
+  can_flag?: boolean
+  user_flag_status?: number | null
+  available_flags?: string[]
+  user: {
+    id: number
+    username: string
+    name?: string
+    avatar_template: string
+  }
+}
+
 export interface DiscoursePost {
   id: number
   username: string
@@ -247,6 +262,8 @@ export interface DiscoursePost {
   admin?: boolean
   moderator?: boolean
   polls?: DiscoursePoll[]
+  boosts?: Boost[]
+  can_boost?: boolean
 }
 
 export interface DiscoursePollOption {

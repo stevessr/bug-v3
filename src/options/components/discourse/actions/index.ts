@@ -27,3 +27,7 @@ export type { BookmarkPayload, FlagPayload, AssignPayload, EditPostPayload } fro
 export * from './tags'
 export { searchTags } from './tags'
 export type { TagSearchResult } from './tags'
+
+// Boost actions
+export * from './boost'
+export { createBoost, deleteBoost, flagBoost } from './boost'

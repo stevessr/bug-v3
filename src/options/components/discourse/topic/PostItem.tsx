@@ -6,6 +6,7 @@ import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../type
 import { formatTime, getAvatarUrl } from '../utils'
 
 import PostContent from './PostContent'
+import BoostPanel from './BoostPanel'
 import '../css/PostItem.css'
 
 export default defineComponent({
@@ -43,7 +44,8 @@ export default defineComponent({
     'edit',
     'delete',
     'wiki',
-    'archiveTopic'
+    'archiveTopic',
+    'refresh'
   ],
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
@@ -199,6 +201,8 @@ export default defineComponent({
           footnotes={props.parsed.footnotes}
           onNavigate={handleContentNavigation}
         />
+
+        <BoostPanel post={props.post} baseUrl={props.baseUrl} onRefresh={() => emit('refresh')} />
 
         <div class="post-actions mt-3 text-xs text-gray-500">
           <div class="flex flex-col gap-2">

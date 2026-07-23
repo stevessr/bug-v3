@@ -13,7 +13,7 @@ export async function loadTopic(
   const hasTargetPost = typeof targetPostNumber === 'number' && targetPostNumber > 0
   const endpoint = hasTargetPost
     ? `${baseUrl.value}/t/${topicId}/${targetPostNumber}.json?track_visit=true&forceLoad=true`
-    : `${baseUrl.value}/t/${topicId}.json`
+    : `${baseUrl.value}/t/${topicId}.json?track_visit=true`
   const result = await pageFetch<any>(endpoint)
   if (result.status === 404 || result.ok === false) {
     tab.currentTopic = null

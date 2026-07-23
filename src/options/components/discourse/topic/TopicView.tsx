@@ -431,6 +431,7 @@ export default defineComponent({
                 onWiki={handleWiki}
                 onArchiveTopic={archiveTopicAsWebp}
                 isArchiving={isArchiving.value}
+                onRefresh={() => emit('refresh')}
               />
             </div>
           ) : (
