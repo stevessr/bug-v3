@@ -28,3 +28,13 @@
   cursor: not-allowed;
   opacity: 0.7;
 }
+
+.chat-message-list-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  padding: 40px 20px;
+}

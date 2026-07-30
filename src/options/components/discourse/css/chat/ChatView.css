@@ -84,6 +84,19 @@
   background: var(--d-surface-1, var(--theme-surface-container-low));
 }
 
+.chat-typing-indicator {
+  font-size: 11px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  padding: 2px 10px;
+  font-style: italic;
+  animation: chat-typing-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes chat-typing-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 @media (max-width: 900px) {
   .chat-view {
     grid-template-columns: 1fr;

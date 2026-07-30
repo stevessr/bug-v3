@@ -34,6 +34,16 @@ const CHAT_INTERACTION_ENDPOINTS = (channelId: number, messageId: number) => [
 
 const CHAT_CHANNEL_UPDATE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}`]
 
+const CHAT_MESSAGE_EDIT_ENDPOINTS = (channelId: number, messageId: number) => [
+  `/chat/api/channels/${channelId}/messages/${messageId}`
+]
+
+const CHAT_MESSAGE_DELETE_ENDPOINTS = (channelId: number, messageId: number) => [
+  `/chat/api/channels/${channelId}/messages/${messageId}`
+]
+
+const CHAT_MESSAGE_FLAG_ENDPOINTS = () => [`/chat/api/chat_messages/flags`]
+
 const buildUrlWithQuery = (baseUrl: string, path: string, params?: URLSearchParams) => {
   const query = params && params.toString() ? `?${params.toString()}` : ''
   return `${baseUrl}${path}${query}`
@@ -156,7 +166,10 @@ const ensureChatState = (tab: BrowserTab) => {
       loadingChannels: false,
       loadingMessages: false,
       sendingMessage: false,
-      errorMessage: ''
+      errorMessage: '',
+      replyToMessage: null,
+      editingMessage: null,
+      typingUsers: {}
     }
   }
 }
@@ -839,4 +852,154 @@ export async function interactChatMessage(
     state.errorMessage = error instanceof Error ? error.message : String(error)
     return null
   }
+}
+
+export async function editChatMessage(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  messageId: number,
+  newMessage: string
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  state.errorMessage = ''
+
+  const jsonPayload = JSON.stringify({ message: newMessage })
+  const formPayload = new URLSearchParams({ message: newMessage }).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MESSAGE_EDIT_ENDPOINTS(channelId, messageId)) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'PUT',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          const chatMessage = data?.chat_message || data?.message || data
+          if (chatMessage && typeof chatMessage.id === 'number') {
+            return normalizeSingleMessage(chatMessage)
+          }
+          return { id: messageId, message: newMessage, edited: true } as ChatMessage
+        }
+        lastError = parseErrorMessage(data, '编辑消息失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '编辑消息失败'
+  return null
+}
+
+export async function deleteChatMessage(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  messageId: number
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MESSAGE_DELETE_ENDPOINTS(channelId, messageId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'DELETE'
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        const channelMessages = state.messagesByChannel[channelId] || []
+        const targetIndex = channelMessages.findIndex(msg => msg.id === messageId)
+        if (targetIndex !== -1) {
+          channelMessages[targetIndex] = { ...channelMessages[targetIndex], deleted: true }
+          state.messagesByChannel[channelId] = [...channelMessages]
+        }
+        return true
+      }
+      lastError = parseErrorMessage(data, '删除消息失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '删除消息失败'
+  return false
+}
+
+export async function flagChatMessage(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  messageId: number,
+  flagTypeId: number,
+  message?: string
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  state.errorMessage = ''
+  void channelId
+
+  const jsonPayload = JSON.stringify({
+    chat_message_id: messageId,
+    flag_type_id: flagTypeId,
+    ...(message ? { message } : {})
+  })
+  const formPayload = new URLSearchParams({
+    chat_message_id: String(messageId),
+    flag_type_id: String(flagTypeId),
+    ...(message ? { message } : {})
+  }).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MESSAGE_FLAG_ENDPOINTS()) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          return data || true
+        }
+        lastError = parseErrorMessage(data, '举报消息失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '举报消息失败'
+  return null
 }

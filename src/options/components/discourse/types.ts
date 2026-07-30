@@ -485,6 +485,15 @@ export interface ChatMessage {
   user?: DiscourseUser
   reactions?: ChatMessageReaction[]
   blocks?: ChatMessageBlock[]
+  edited?: boolean
+  deleted?: boolean
+}
+
+export interface ChatTypingUser {
+  userId: number
+  username: string
+  name?: string
+  avatar_template?: string
 }
 
 export interface ChatChannelUpdatePayload {
@@ -543,6 +552,12 @@ export interface ChatState {
   loadingMessages: boolean
   sendingMessage: boolean
   errorMessage: string
+  // Reply state
+  replyToMessage: ChatMessage | null
+  // Edit state
+  editingMessage: ChatMessage | null
+  // Typing indicator
+  typingUsers: Record<number, ChatTypingUser[]>
 }
 
 export interface ParsedContent {
@@ -875,6 +890,9 @@ export interface MessagesState {
   topics: DiscourseTopic[]
   page: number
   hasMore: boolean
+  searchQuery?: string
+  searchResults?: DiscourseTopic[]
+  searching?: boolean
 }
 
 // Flag types from Discourse /site.json

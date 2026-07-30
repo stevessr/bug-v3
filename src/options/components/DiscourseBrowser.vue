@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
+  ChatMessage,
   DiscourseCategory,
   DiscourseTag,
   DiscourseTopic,
@@ -122,7 +123,14 @@ const {
   patchChatFromMessageBus,
   markNotificationReadOptimistic,
   searchDiscourse,
-  loadMoreSearchResults
+  loadMoreSearchResults,
+  replyToChatMessage,
+  cancelChatReply,
+  editChatMessageAction,
+  cancelChatEdit,
+  deleteChatMessageAction,
+  flagChatMessageAction,
+  searchMessages
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -1097,6 +1105,45 @@ const handleChatMessageInteraction = async (payload: {
   }
 }
 
+const handleReplyToMessage = (message: ChatMessage) => {
+  replyToChatMessage(message)
+}
+
+const handleEditMessage = (message: ChatMessage) => {
+  editChatMessageAction(message)
+}
+
+const handleDeleteMessage = async (payload: { channelId?: number; messageId: number }) => {
+  const channelId = payload.channelId || activeTab.value?.chatState?.activeChannelId
+  if (!channelId) return
+  Modal.confirm({
+    title: '删除消息',
+    content: '确定要删除这条消息吗？',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      const ok = await deleteChatMessageAction(channelId, payload.messageId)
+      if (ok) {
+        message.success('消息已删除')
+      } else {
+        message.error(activeTab.value?.chatState?.errorMessage || '删除消息失败')
+      }
+    }
+  })
+}
+
+const handleFlagMessage = async (payload: { channelId?: number; messageId: number }) => {
+  const channelId = payload.channelId || activeTab.value?.chatState?.activeChannelId
+  if (!channelId) return
+  const result = await flagChatMessageAction(channelId, payload.messageId)
+  if (result) {
+    message.success('举报已发送，感谢你的反馈')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '举报失败')
+  }
+}
+
 const handleChangeTopicListType = (type: TopicListType) => {
   changeTopicListType(type)
 }
@@ -1387,6 +1434,10 @@ const stopPointer = () => {
 // Handle messages tab switch
 const handleMessagesTabSwitch = (tab: MessagesTabType) => {
   switchMessagesTab(tab)
+}
+
+const handleSearchMessages = (query: string) => {
+  searchMessages(query)
 }
 
 const waitFor = (ms: number) =>
@@ -2028,6 +2079,12 @@ onUnmounted(() => {
         @editChannel="handleEditChatChannel"
         @interact="handleChatMessageInteraction"
         @navigate="handleContentNavigation"
+        @replyToMessage="handleReplyToMessage"
+        @cancelReply="cancelChatReply"
+        @editMessage="handleEditMessage"
+        @cancelEdit="cancelChatEdit"
+        @deleteMessage="handleDeleteMessage"
+        @flagMessage="handleFlagMessage"
       />
 
       <!-- Topic detail view -->
@@ -2127,6 +2184,7 @@ onUnmounted(() => {
         @openUser="handleUserClick"
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
+        @searchMessages="handleSearchMessages"
       />
 
       <UserGroupsView

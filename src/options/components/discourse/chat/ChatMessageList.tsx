@@ -15,7 +15,7 @@ export default defineComponent({
     loading: { type: Boolean, required: true },
     hasMore: { type: Boolean, required: true }
   },
-  emits: ['loadMore', 'navigate', 'react', 'interact'],
+  emits: ['loadMore', 'navigate', 'react', 'interact', 'reply', 'edit', 'delete', 'flag'],
   setup(props, { emit }) {
     const listRef = ref<HTMLDivElement | null>(null)
     const parsedCache = new Map<number, ParsedContent>()
@@ -55,6 +55,22 @@ export default defineComponent({
       emit('interact', payload)
     }
 
+    const handleReply = (message: ChatMessage) => {
+      emit('reply', message)
+    }
+
+    const handleEdit = (message: ChatMessage) => {
+      emit('edit', message)
+    }
+
+    const handleDelete = (message: ChatMessage) => {
+      emit('delete', message)
+    }
+
+    const handleFlag = (message: ChatMessage) => {
+      emit('flag', message)
+    }
+
     const handleScroll = () => {
       if (props.loading || !props.hasMore) return
       const el = listRef.value
@@ -79,6 +95,9 @@ export default defineComponent({
             {props.loading ? '加载中...' : '加载更早消息'}
           </button>
         )}
+        {orderedMessages.value.length === 0 && !props.loading && (
+          <div class="chat-message-list-empty">暂无消息，发送第一条消息吧</div>
+        )}
         {orderedMessages.value.map(message => (
           <ChatMessageItem
             key={message.id}
@@ -89,6 +108,10 @@ export default defineComponent({
             onNavigate={handleNavigate}
             onReact={handleReact}
             onInteract={handleInteract}
+            onReply={handleReply}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onFlag={handleFlag}
           />
         ))}
       </div>

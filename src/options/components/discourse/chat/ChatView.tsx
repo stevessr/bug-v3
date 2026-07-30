@@ -1,6 +1,6 @@
 import { defineComponent, computed } from 'vue'
 
-import type { ChatChannel, ChatState } from '../types'
+import type { ChatChannel, ChatMessage, ChatState } from '../types'
 
 import ChatChannelList from './ChatChannelList'
 import ChatMessageList from './ChatMessageList'
@@ -21,7 +21,15 @@ export default defineComponent({
     'navigate',
     'react',
     'editChannel',
-    'interact'
+    'interact',
+    'replyToMessage',
+    'cancelReply',
+    'editMessage',
+    'cancelEdit',
+    'deleteMessage',
+    'flagMessage',
+    'uploadStart',
+    'uploadEnd'
   ],
   setup(props, { emit }) {
     const activeChannel = computed(
@@ -32,17 +40,15 @@ export default defineComponent({
 
     const activeChannelTitle = computed(() => {
       const channel = activeChannel.value
-      if (!channel) return '选择频道'
+      if (!channel) return '聊天'
       if (channel.title) return channel.title
-      if (channel.unicode_title) return channel.unicode_title
-      if (channel.chatable?.users?.length) {
-        return channel.chatable.users.map(user => user.name || user.username).join(', ')
+      if (channel.channelType === 'direct' && channel.direct_message_users) {
+        return channel.direct_message_users
+          .map(u => u.name || u.username)
+          .filter(Boolean)
+          .join(', ')
       }
-      if (channel.direct_message_users?.length) {
-        return channel.direct_message_users.map(user => user.name || user.username).join(', ')
-      }
-      if (channel.chatable?.name) return channel.chatable.name
-      return `频道 #${channel.id}`
+      return channel.chatable?.name || `频道 ${channel.id}`
     })
 
     const activeMessages = computed(() => {
@@ -59,12 +65,24 @@ export default defineComponent({
 
     const canEditActiveChannel = computed(() => {
       const channel = activeChannel.value
-      if (!channel) return false
-      const isDirect =
-        channel.channelType === 'direct' ||
-        channel.chatable_type === 'DirectMessage' ||
-        !!channel.direct_message_users?.length
-      return !isDirect && channel.meta?.can_moderate !== false
+      return !!channel?.meta?.can_moderate
+    })
+
+    const activeTypingUsers = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return []
+      const typing = props.chatState.typingUsers[channelId]
+      if (!typing || typing.length === 0) return []
+      return typing.filter(u => u.username !== props.currentUsername)
+    })
+
+    const typingText = computed(() => {
+      const users = activeTypingUsers.value
+      if (users.length === 0) return ''
+      const names = users.map(u => u.name || u.username)
+      if (names.length === 1) return `${names[0]} 正在输入...`
+      if (names.length === 2) return `${names[0]} 和 ${names[1]} 正在输入...`
+      return `${names[0]} 和其他人正在输入...`
     })
 
     const handleSelectChannel = (channel: ChatChannel) => {
@@ -88,25 +106,7 @@ export default defineComponent({
     const handleEditChannel = () => {
       const channel = activeChannel.value
       if (!channel) return
-
-      const currentName = channel.title || channel.unicode_title || channel.chatable?.name || ''
-      // eslint-disable-next-line no-alert
-      const nameInput = window.prompt('频道名称', currentName)
-      if (nameInput === null) return
-      const name = nameInput.trim()
-      if (!name) return
-
-      // eslint-disable-next-line no-alert
-      const descriptionInput = window.prompt('频道描述（可留空）', channel.description || '')
-      if (descriptionInput === null) return
-
-      emit('editChannel', {
-        channelId: channel.id,
-        updates: {
-          name,
-          description: descriptionInput.trim()
-        }
-      })
+      emit('editChannel', { channelId: channel.id })
     }
 
     const handleReact = (payload: { messageId: number; emoji: string; reacted?: boolean }) => {
@@ -119,6 +119,30 @@ export default defineComponent({
       const channelId = props.chatState.activeChannelId
       if (!channelId) return
       emit('interact', { channelId, ...payload })
+    }
+
+    const handleReplyToMessage = (message: ChatMessage) => {
+      emit('replyToMessage', message)
+    }
+
+    const handleCancelReply = () => {
+      emit('cancelReply')
+    }
+
+    const handleEditMessage = (message: ChatMessage) => {
+      emit('editMessage', message)
+    }
+
+    const handleCancelEdit = () => {
+      emit('cancelEdit')
+    }
+
+    const handleDeleteMessage = (message: ChatMessage) => {
+      emit('deleteMessage', { channelId: props.chatState.activeChannelId, messageId: message.id })
+    }
+
+    const handleFlagMessage = (message: ChatMessage) => {
+      emit('flagMessage', { channelId: props.chatState.activeChannelId, messageId: message.id })
     }
 
     return () => (
@@ -158,14 +182,30 @@ export default defineComponent({
               onNavigate={handleNavigate}
               onReact={handleReact}
               onInteract={handleInteract}
+              onReply={handleReplyToMessage}
+              onEdit={handleEditMessage}
+              onDelete={handleDeleteMessage}
+              onFlag={handleFlagMessage}
             />
           ) : (
             <div class="chat-empty">请选择一个频道开始聊天</div>
           )}
 
+          {typingText.value && (
+            <div class="chat-typing-indicator">{typingText.value}</div>
+          )}
+
           <ChatComposer
             disabled={!activeChannel.value || props.chatState.sendingMessage}
+            replyTo={props.chatState.replyToMessage}
+            editingMessage={props.chatState.editingMessage}
+            baseUrl={props.baseUrl}
+            channelId={props.chatState.activeChannelId || 0}
             onSend={handleSend}
+            onCancelReply={handleCancelReply}
+            onCancelEdit={handleCancelEdit}
+            onUploadStart={() => emit('uploadStart')}
+            onUploadEnd={() => emit('uploadEnd')}
           />
         </div>
       </div>

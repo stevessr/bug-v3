@@ -60,6 +60,9 @@ import {
   toggleChatMessageReaction,
   updateChatChannel as updateChatChannelRoute,
   interactChatMessage,
+  editChatMessage,
+  deleteChatMessage,
+  flagChatMessage,
   dedupeMessagesById,
   normalizeSingleMessage,
   resetChatChannelUnreadCount,
@@ -1751,7 +1754,33 @@ export function useDiscourseBrowser() {
   async function sendChat(channelId: number, message: string) {
     const tab = activeTab.value
     if (!tab?.chatState) return
+
+    // If editing an existing message, call edit API
+    if (tab.chatState.editingMessage) {
+      const editing = tab.chatState.editingMessage
+      const updated = await editChatMessage(tab, baseUrl, channelId, editing.id, message)
+      if (updated && updated.id) {
+        const messages = tab.chatState.messagesByChannel[channelId] || []
+        const idx = messages.findIndex(m => m.id === updated.id)
+        if (idx !== -1) {
+          messages[idx] = { ...messages[idx], ...updated, edited: true }
+          tab.chatState.messagesByChannel[channelId] = [...messages]
+        }
+      }
+      tab.chatState.editingMessage = null
+      return
+    }
+
+    // If replying to a message, include the reply context
+    if (tab.chatState.replyToMessage) {
+      const replyMsg = tab.chatState.replyToMessage
+      const replyUsername = replyMsg.user?.username || replyMsg.username || ''
+      const quoted = replyUsername ? `@${replyUsername} ` : ''
+      message = `${quoted}${message}`
+    }
+
     await sendChatMessage(tab, baseUrl, users, channelId, message)
+    tab.chatState.replyToMessage = null
   }
 
   async function reactToChatMessage(
@@ -1775,6 +1804,69 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     if (!tab?.chatState) return null
     return await interactChatMessage(tab, baseUrl, channelId, messageId, actionId)
+  }
+
+  function replyToChatMessage(message: ChatMessage) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.replyToMessage = message
+    tab.chatState.editingMessage = null
+  }
+
+  function cancelChatReply() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.replyToMessage = null
+  }
+
+  function editChatMessageAction(message: ChatMessage) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.editingMessage = message
+    tab.chatState.replyToMessage = null
+  }
+
+  function cancelChatEdit() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.editingMessage = null
+  }
+
+  async function deleteChatMessageAction(channelId: number, messageId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await deleteChatMessage(tab, baseUrl, channelId, messageId)
+  }
+
+  async function flagChatMessageAction(channelId: number, messageId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    return await flagChatMessage(tab, baseUrl, channelId, messageId, 4)
+  }
+
+  async function searchMessages(query: string) {
+    const tab = activeTab.value
+    if (!tab?.messagesState) return
+    tab.messagesState.searchQuery = query
+    tab.messagesState.searching = !!query
+    if (!query) {
+      tab.messagesState.searchResults = undefined
+      tab.messagesState.searching = false
+      return
+    }
+    try {
+      const result = await pageFetch<any>(
+        `${baseUrl.value}/u/${tab.currentUser?.username}/messages.json?search=${encodeURIComponent(query)}`
+      )
+      const data = extractData(result)
+      if (result.ok && data?.private_messages) {
+        tab.messagesState.searchResults = data.private_messages
+      }
+    } catch {
+      tab.messagesState.searchResults = []
+    } finally {
+      tab.messagesState.searching = false
+    }
   }
 
   // Load more posts (pagination)
@@ -1999,6 +2091,13 @@ export function useDiscourseBrowser() {
     patchChatFromMessageBus,
     markNotificationReadOptimistic,
     searchDiscourse,
-    loadMoreSearchResults
+    loadMoreSearchResults,
+    replyToChatMessage,
+    cancelChatReply,
+    editChatMessageAction,
+    cancelChatEdit,
+    deleteChatMessageAction,
+    flagChatMessageAction,
+    searchMessages
   }
 }

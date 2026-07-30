@@ -1,5 +1,6 @@
-import { defineComponent } from 'vue'
-import { Spin } from 'ant-design-vue'
+import { defineComponent, ref, watch } from 'vue'
+import { Spin, Input } from 'ant-design-vue'
+import { SearchOutlined } from '@ant-design/icons-vue'
 
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
@@ -18,15 +19,45 @@ export default defineComponent({
     showSettings: { type: Boolean, default: false },
     showGroups: { type: Boolean, default: true }
   },
-  emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab'],
+  emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab', 'searchMessages'],
   setup(props, { emit }) {
-    const tabs: { key: MessagesTabType; label: string }[] = [
+    const searchQuery = ref('')
+
+    const tabs: { key: MessagesTabType; label: string; count?: number }[] = [
       { key: 'all', label: '全部' },
       { key: 'sent', label: '已发送' },
       { key: 'new', label: '新消息' },
       { key: 'unread', label: '未读' },
       { key: 'archive', label: '归档' }
     ]
+
+    const displayTopics = () => {
+      const state = props.messagesState
+      if (state.searchQuery && state.searchResults) {
+        return state.searchResults
+      }
+      return state.topics
+    }
+
+    const handleSearch = () => {
+      emit('searchMessages', searchQuery.value)
+    }
+
+    const handleSearchKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleSearch()
+      }
+    }
+
+    // Sync searchQuery when external searchQuery changes
+    watch(() => props.messagesState.searchQuery, (val) => {
+      if (val !== undefined) {
+        searchQuery.value = val
+      }
+    })
+
+    const topics = displayTopics()
+    const searching = props.messagesState.searching || false
 
     return () => (
       <div class="messages-view">
@@ -51,12 +82,10 @@ export default defineComponent({
         </div>
 
         <UserTabs
-          active="messages"
+          active={'summary' as const}
           showSettings={props.showSettings}
           showGroups={props.showGroups}
-          onSwitchTab={(
-            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
-          ) => emit('switchMainTab', tab)}
+          onSwitchTab={(tab: string) => emit('switchMainTab', tab)}
         />
 
         <div class="messages-subtabs">
@@ -67,15 +96,45 @@ export default defineComponent({
                 'messages-subtabs__item',
                 props.messagesState.activeTab === tab.key ? 'is-active' : ''
               ]}
-              onClick={() => emit('switchTab', tab.key)}
+              onClick={() => {
+                if (searchQuery.value) {
+                  searchQuery.value = ''
+                  emit('searchMessages', '')
+                }
+                emit('switchTab', tab.key)
+              }}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
+        <div class="messages-search-bar">
+          <Input
+            value={searchQuery.value}
+            placeholder="搜索私信..."
+            prefix={<SearchOutlined />}
+            allowClear
+            onInput={(val: string | Event) => {
+              searchQuery.value = typeof val === 'string' ? val : (val?.target as HTMLInputElement)?.value || ''
+              if (!searchQuery.value) {
+                emit('searchMessages', '')
+              }
+            }}
+            onKeydown={handleSearchKeydown}
+          >
+          </Input>
+        </div>
+
         <div class="messages-content">
-          {props.messagesState.topics.map(topic => (
+          {searching && (
+            <div class="messages-state-loading">
+              <Spin />
+              <span>搜索中...</span>
+            </div>
+          )}
+
+          {!searching && topics.map(topic => (
             <div
               key={topic.id}
               class="messages-topic-item"
@@ -141,7 +200,7 @@ export default defineComponent({
             </div>
           ))}
 
-          {props.messagesState.topics.length === 0 && !props.isLoadingMore && (
+          {!searching && topics.length === 0 && !props.isLoadingMore && (
             <div class="messages-state-empty">
               {props.messagesState.activeTab === 'all'
                 ? '暂无私信'
@@ -162,11 +221,9 @@ export default defineComponent({
             </div>
           )}
 
-          {!props.messagesState.hasMore &&
-            !props.isLoadingMore &&
-            props.messagesState.topics.length > 0 && (
-              <div class="messages-state-end">已加载全部</div>
-            )}
+          {!props.isLoadingMore && topics.length > 0 && !props.messagesState.hasMore && (
+            <div class="messages-state-end">已加载全部</div>
+          )}
         </div>
       </div>
     )
