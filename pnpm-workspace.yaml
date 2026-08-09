@@ -1,3 +1,6 @@
+packages:
+  - 'scripts/cfworker'
+
 allowBuilds:
   # @google/genai does not need its optional postinstall in the browser build.
   # Keep it explicitly denied so pnpm can install non-interactively in CI.
@@ -6,9 +9,11 @@ allowBuilds:
   protobufjs: true
   typeit: true
   vue-demi: true
+  workerd: true
 onlyBuiltDependencies:
   - core-js
   - electron
   - esbuild
   - protobufjs
   - vue-demi
+  - workerd

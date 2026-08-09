@@ -59,6 +59,8 @@ export interface BrowserTab {
   pendingTopics?: DiscourseTopic[] | null
   pendingTopicsCount?: number
   searchState: SearchState | null
+  reviewState: ReviewState | null
+  invitesState: InvitesState | null
 }
 
 export type ViewType =
@@ -80,6 +82,8 @@ export type ViewType =
   | 'groups'
   | 'preferences'
   | 'search'
+  | 'review'
+  | 'invites'
   | 'error'
 
 export interface DiscourseTopic {
@@ -558,6 +562,43 @@ export interface ChatState {
   editingMessage: ChatMessage | null
   // Typing indicator
   typingUsers: Record<number, ChatTypingUser[]>
+  // Member management
+  membersByChannel: Record<number, ChatMember[]>
+  membersTotalByChannel: Record<number, number>
+  membersLoadingByChannel: Record<number, boolean>
+}
+
+export interface ChatMember {
+  id: number
+  user: DiscourseUser
+  membership?: ChatChannelMembership
+  last_read_message_id?: number | null
+  muted?: boolean
+  notification_level?: number | string | null
+}
+
+export interface ChatMembershipUpdatePayload {
+  muted?: boolean
+  notification_level?: number | string
+  starred?: boolean
+  unread_count?: number
+  last_read_message_id?: number
+}
+
+export interface ChatCreateDirectMessagePayload {
+  targetUsernames: string[]
+  name?: string
+  upsert?: boolean
+}
+
+export interface ChatCreateChannelPayload {
+  name: string
+  chatableId?: number
+  slug?: string
+  description?: string
+  emoji?: string
+  autoJoinUsers?: boolean
+  threadingEnabled?: boolean
 }
 
 export interface ParsedContent {
@@ -908,4 +949,200 @@ export interface DiscourseFlagType {
   enabled: boolean
   applies_to?: string[]
   icon?: string | null
+}
+
+// Review queue types (matches Discourse /review API)
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'ignored' | 'deleted'
+
+export interface ReviewableAction {
+  id: number
+  icon?: string
+  button_class?: string
+  label: string
+  confirm_message?: string
+  description?: string
+  server_action: string
+  client_action?: string
+  require_reject_reason?: boolean
+  completed_message?: string
+}
+
+export interface ReviewableBundledAction {
+  id: number
+  icon?: string
+  label?: string
+  actions: ReviewableAction[]
+}
+
+export interface ReviewableScoreType {
+  id: number
+  title: string
+  type?: string
+}
+
+export interface ReviewableScore {
+  id: number
+  score?: number
+  agree_stats?: { agreed: number; disagreed: number; ignored: number }
+  reason?: string
+  reason_type?: string
+  reason_data?: Record<string, any>
+  created_at?: string
+  reviewed_at?: string
+  status?: number
+  user?: DiscourseUser
+  score_type?: ReviewableScoreType
+  reviewed_by?: DiscourseUser
+  reviewable_conversation?: {
+    id: number
+    permalink?: string
+    has_more?: boolean
+    conversation_posts?: Array<{
+      id: number
+      excerpt?: string
+      user?: DiscourseUser
+      created_at?: string
+    }>
+  } | null
+}
+
+export interface ReviewableEditableField {
+  id: string
+  type: string
+}
+
+export interface ReviewableNote {
+  id: number
+  user?: DiscourseUser
+  created_at?: string
+  note?: string
+  can_delete?: boolean
+}
+
+export interface Reviewable {
+  id: number
+  type: string
+  type_source?: string
+  topic_id?: number | null
+  topic_url?: string
+  topic?: DiscourseTopic | null
+  target_type?: string
+  target_id?: number
+  target_url?: string
+  target_created_at?: string
+  target_deleted_at?: string | null
+  target_deleted_by?: DiscourseUser | null
+  topic_tags?: string[]
+  category_id?: number
+  category?: DiscourseCategory | null
+  created_at: string
+  can_edit?: boolean
+  score?: number
+  version: number
+  status: number
+  created_by?: DiscourseUser | null
+  target_created_by?: DiscourseUser | null
+  created_from_flag?: boolean
+  editable_fields?: ReviewableEditableField[]
+  reviewable_scores?: ReviewableScore[]
+  bundled_actions?: ReviewableBundledAction[]
+  reviewable_notes?: ReviewableNote[]
+  reviewable_histories?: Array<Record<string, any>>
+  claimed_by?: { user?: DiscourseUser } | null
+  payload?: Record<string, any>
+  // ReviewableQueuedPost extras
+  reply_to_post_number?: number | null
+  fancy_title?: string
+  cooked?: string
+  raw?: string
+  title?: string
+  hidden?: boolean
+  // ReviewableUser extras
+  target?: {
+    id: number
+    username?: string
+    name?: string
+    avatar_template?: string
+    created_at?: string
+    last_seen_at?: string
+    trust_level?: number
+    stats?: Array<{ action_type: number; count: number }>
+  } | null
+}
+
+export interface ReviewState {
+  status: ReviewStatus
+  typeFilter: string
+  reviewables: Reviewable[]
+  offset: number
+  hasMore: boolean
+  loading: boolean
+  performingId: number | null
+  errorMessage: string
+  totalRows: number
+  reviewableCount: number
+  unseenReviewableCount: number
+  types: Array<{ id: string; name: string }>
+}
+
+export interface ReviewPerformResult {
+  success: boolean
+  created_post_id?: number
+  created_post_topic_id?: number
+  remove_reviewable_ids?: number[]
+  reviewable_updates?: Record<number, { status: string }>
+  version?: number
+  reviewable_count?: number
+  unseen_reviewable_count?: number
+}
+
+// Invite types (matches Discourse /invites API)
+export interface Invite {
+  id: number
+  invite_key?: string
+  link?: string
+  description?: string | null
+  email?: string | null
+  domain?: string | null
+  emailed?: boolean
+  can_delete_invite?: boolean
+  max_redemptions_allowed?: number | null
+  redemption_count?: number
+  custom_message?: string | null
+  created_at?: string
+  updated_at?: string
+  expires_at?: string | null
+  expired?: boolean
+  grants_admin?: boolean
+  grants_moderator?: boolean
+  topics?: Array<{ id: number; title: string; slug: string }>
+  groups?: Array<{ id: number; name: string }>
+  // Redeemed user fields (InvitedUserSerializer)
+  user?: {
+    id: number
+    username: string
+    name?: string
+    avatar_template?: string
+    created_at?: string
+  } | null
+  redeemed_at?: string
+}
+
+export interface InviteCounts {
+  pending?: number
+  expired?: number
+  redeemed?: number
+  total?: number
+}
+
+export interface InvitesState {
+  filter: 'pending' | 'redeemed' | 'expired'
+  invites: Invite[]
+  offset: number
+  hasMore: boolean
+  loading: boolean
+  creating: boolean
+  errorMessage: string
+  counts: InviteCounts
+  canSeeInviteDetails: boolean
 }

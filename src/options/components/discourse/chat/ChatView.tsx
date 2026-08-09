@@ -1,10 +1,13 @@
 import { defineComponent, computed } from 'vue'
+import { UserAddOutlined, SettingOutlined } from '@ant-design/icons-vue'
 
-import type { ChatChannel, ChatMessage, ChatState } from '../types'
+import type { ChatChannel, ChatMessage, ChatState, DiscourseUser } from '../types'
 
 import ChatChannelList from './ChatChannelList'
 import ChatMessageList from './ChatMessageList'
 import ChatComposer from './ChatComposer'
+import ChatCreateGroupModal from './ChatCreateGroupModal'
+import ChatChannelManageModal from './ChatChannelManageModal'
 import '../css/chat/ChatView.css'
 
 export default defineComponent({
@@ -12,7 +15,12 @@ export default defineComponent({
   props: {
     chatState: { type: Object as () => ChatState, required: true },
     baseUrl: { type: String, required: true },
-    currentUsername: { type: String, default: undefined }
+    currentUsername: { type: String, default: undefined },
+    users: { type: Object as () => Map<number, DiscourseUser>, required: true },
+    createGroupSearching: { type: Boolean, default: false },
+    createGroupResults: { type: Array as () => DiscourseUser[], default: () => [] },
+    manageSearching: { type: Boolean, default: false },
+    manageSearchResults: { type: Array as () => DiscourseUser[], default: () => [] }
   },
   emits: [
     'selectChannel',
@@ -29,9 +37,21 @@ export default defineComponent({
     'deleteMessage',
     'flagMessage',
     'uploadStart',
-    'uploadEnd'
+    'uploadEnd',
+    'createGroup',
+    'createGroupSearch',
+    'loadMembers',
+    'addMembers',
+    'removeMember',
+    'followChannel',
+    'unfollowChannel',
+    'deleteChannel',
+    'manageSearch'
   ],
   setup(props, { emit }) {
+    const showCreateGroup = ref(false)
+    const showManage = ref(false)
+
     const activeChannel = computed(
       () =>
         props.chatState.channels.find(channel => channel.id === props.chatState.activeChannelId) ||
@@ -83,6 +103,24 @@ export default defineComponent({
       if (names.length === 1) return `${names[0]} 正在输入...`
       if (names.length === 2) return `${names[0]} 和 ${names[1]} 正在输入...`
       return `${names[0]} 和其他人正在输入...`
+    })
+
+    const activeMembers = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return []
+      return props.chatState.membersByChannel[channelId] || []
+    })
+
+    const activeMembersTotal = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return 0
+      return props.chatState.membersTotalByChannel[channelId] || 0
+    })
+
+    const activeMembersLoading = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return false
+      return !!props.chatState.membersLoadingByChannel[channelId]
     })
 
     const handleSelectChannel = (channel: ChatChannel) => {
@@ -145,10 +183,24 @@ export default defineComponent({
       emit('flagMessage', { channelId: props.chatState.activeChannelId, messageId: message.id })
     }
 
+    const handleCreateGroup = (payload: { targetUsernames: string[]; name?: string }) => {
+      emit('createGroup', payload)
+      showCreateGroup.value = false
+    }
+
     return () => (
       <div class="chat-view">
         <div class="chat-sidebar">
-          <div class="chat-sidebar-header">聊天</div>
+          <div class="chat-sidebar-header">
+            <span class="chat-sidebar-header__title">聊天</span>
+            <button
+              class="chat-sidebar-header__create"
+              title="创建群聊"
+              onClick={() => (showCreateGroup.value = true)}
+            >
+              <UserAddOutlined />
+            </button>
+          </div>
           {props.chatState.errorMessage && (
             <div class="chat-error">{props.chatState.errorMessage}</div>
           )}
@@ -164,11 +216,22 @@ export default defineComponent({
         <div class="chat-main">
           <div class="chat-main-header">
             <div class="chat-main-title">{activeChannelTitle.value}</div>
-            {canEditActiveChannel.value && (
-              <button class="chat-main-action-btn" onClick={handleEditChannel}>
-                编辑频道
-              </button>
-            )}
+            <div class="chat-main-actions">
+              {(canEditActiveChannel.value || activeChannel.value) && (
+                <button
+                  class="chat-main-action-btn"
+                  onClick={() => (showManage.value = true)}
+                  title="管理频道"
+                >
+                  <SettingOutlined /> 管理
+                </button>
+              )}
+              {canEditActiveChannel.value && (
+                <button class="chat-main-action-btn" onClick={handleEditChannel}>
+                  编辑频道
+                </button>
+              )}
+            </div>
           </div>
 
           {activeChannel.value ? (
@@ -208,6 +271,40 @@ export default defineComponent({
             onUploadEnd={() => emit('uploadEnd')}
           />
         </div>
+
+        <ChatCreateGroupModal
+          open={showCreateGroup.value}
+          baseUrl={props.baseUrl}
+          searching={props.createGroupSearching}
+          searchResults={props.createGroupResults}
+          onClose={() => (showCreateGroup.value = false)}
+          onCreate={handleCreateGroup}
+          onSearch={(query: string) => emit('createGroupSearch', query)}
+        />
+
+        <ChatChannelManageModal
+          open={showManage.value}
+          channel={activeChannel.value}
+          members={activeMembers.value}
+          membersTotal={activeMembersTotal.value}
+          membersLoading={activeMembersLoading.value}
+          baseUrl={props.baseUrl}
+          currentUsername={props.currentUsername}
+          searching={props.manageSearching}
+          searchResults={props.manageSearchResults}
+          onClose={() => (showManage.value = false)}
+          onLoadMembers={(channelId: number) => emit('loadMembers', channelId)}
+          onAddMembers={(payload: { channelId: number; usernames: string[] }) =>
+            emit('addMembers', payload)
+          }
+          onRemoveMember={(payload: { channelId: number; userId: number }) =>
+            emit('removeMember', payload)
+          }
+          onFollow={(channelId: number) => emit('followChannel', channelId)}
+          onUnfollow={(channelId: number) => emit('unfollowChannel', channelId)}
+          onDeleteChannel={(channelId: number) => emit('deleteChannel', channelId)}
+          onSearch={(query: string) => emit('manageSearch', query)}
+        />
       </div>
     )
   }

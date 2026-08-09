@@ -416,6 +416,78 @@ export async function loadMoreFollowFeed(
   }
 }
 
+export async function markPrivateMessagesRead(
+  tab: BrowserTab,
+  topicIds: number[],
+  baseUrl: Ref<string>
+): Promise<boolean> {
+  try {
+    const body = new URLSearchParams()
+    if (topicIds.length > 0) {
+      topicIds.forEach(id => body.append('topic_ids[]', String(id)))
+    }
+    body.append('inbox', 'all')
+    const result = await pageFetch<any>(`${baseUrl.value}/topics/pm-reset-new`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: body.toString()
+    })
+    if (!result.ok) return false
+    const topics = tab.messagesState?.topics || []
+    topics.forEach(topic => {
+      if (topicIds.length === 0 || topicIds.includes(topic.id)) {
+        topic.unread = 0
+        topic.new_posts = 0
+      }
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function archivePrivateMessage(
+  tab: BrowserTab,
+  topicId: number,
+  baseUrl: Ref<string>
+): Promise<boolean> {
+  try {
+    const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}/archive-message`, {
+      method: 'PUT'
+    })
+    if (!result.ok) return false
+    const topics = tab.messagesState?.topics || []
+    const index = topics.findIndex(topic => topic.id === topicId)
+    if (index !== -1) {
+      ;(topics[index] as any).message_archived = true
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function movePrivateMessageToInbox(
+  tab: BrowserTab,
+  topicId: number,
+  baseUrl: Ref<string>
+): Promise<boolean> {
+  try {
+    const result = await pageFetch<any>(`${baseUrl.value}/t/${topicId}/move-to-inbox`, {
+      method: 'PUT'
+    })
+    if (!result.ok) return false
+    const topics = tab.messagesState?.topics || []
+    const index = topics.findIndex(topic => topic.id === topicId)
+    if (index !== -1) {
+      ;(topics[index] as any).message_archived = false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function loadUserPreferences(tab: BrowserTab, username: string, baseUrl: Ref<string>) {
   try {
     let userData = tab.currentUser?.username === username ? tab.currentUser : null

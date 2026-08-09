@@ -3,11 +3,10 @@
 
 echo "🚀 开始部署扩展更新..."
 
-# 进入 CF Worker 目录
-cd "$(dirname "$0")/cfworker"
+# 部署到 Cloudflare Pages（使用仓库锁定的 Wrangler，避免依赖全局 CLI）
+cd "$(dirname "$0")/.."
 
-# 部署到 Cloudflare Pages
 echo "📦 部署到 Cloudflare Pages..."
-wrangler pages deploy
+pnpm --filter video2gif-static deploy
 
 echo "✅ 部署完成！"

@@ -81,28 +81,28 @@ Uses the same KV namespace (`EMOJI_BACKUP`)
 cd scripts/cfworker
 
 # Create KV namespaces (if not already created)
-npx wrangler kv:namespace create "EMOJI_BACKUP"
-npx wrangler kv:namespace create "EMOJI_BACKUP" --preview
+pnpm exec wrangler kv:namespace create "EMOJI_BACKUP"
+pnpm exec wrangler kv:namespace create "EMOJI_BACKUP" --preview
 
 # Update wrangler.toml with the namespace IDs returned above
 
 # Set secrets for production
-npx wrangler pages secret put AUTH_SECRET --project-name=your-project
-npx wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
+pnpm exec wrangler pages secret put AUTH_SECRET --project-name=your-project
+pnpm exec wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
 ```
 
 ### Deploy
 
 ```bash
 cd scripts/cfworker
-npx wrangler pages deploy public
+pnpm deploy
 ```
 
 ### Local Testing
 
 ```bash
 cd scripts/cfworker
-npm run dev
+pnpm dev
 
 # Test the API
 curl -H "Authorization: Bearer dev-secret-password-readonly" \

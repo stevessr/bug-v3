@@ -5,6 +5,10 @@ import { ref, computed, watch } from 'vue'
 import type {
   BrowserTab,
   ChatMessage,
+  ChatChannelUpdatePayload,
+  ChatCreateChannelPayload,
+  ChatCreateDirectMessagePayload,
+  ChatMembershipUpdatePayload,
   DiscourseCategory,
   DiscourseTopic,
   DiscourseUser,
@@ -15,7 +19,8 @@ import type {
   TopicListType,
   DiscourseNotificationFilter,
   DiscourseSearchFilters,
-  ChatChannelUpdatePayload
+  ReviewStatus,
+  ReviewPerformResult
 } from './types'
 import { generateId, pageFetch, extractData } from './utils'
 import {
@@ -50,8 +55,25 @@ import {
   loadMessagesData as loadMessagesDataRoute,
   loadMoreMessages as loadMoreMessagesRoute,
   loadMoreFollowFeed as loadMoreFollowFeedRoute,
-  loadUserPreferences as loadUserPreferencesRoute
+  loadUserPreferences as loadUserPreferencesRoute,
+  archivePrivateMessage as archivePrivateMessageRoute,
+  movePrivateMessageToInbox as movePrivateMessageToInboxRoute,
+  markPrivateMessagesRead as markPrivateMessagesReadRoute
 } from './routes/user'
+import {
+  loadReview as loadReviewRoute,
+  loadMoreReviewables as loadMoreReviewablesRoute,
+  performReviewableAction as performReviewableActionRoute,
+  updateReviewable as updateReviewableRoute,
+  deleteReviewable as deleteReviewableRoute
+} from './routes/review'
+import {
+  loadInvites as loadInvitesRoute,
+  loadMoreInvites as loadMoreInvitesRoute,
+  createInvite as createInviteRoute,
+  deleteInvite as deleteInviteRoute,
+  resendInvite as resendInviteRoute
+} from './routes/invites'
 import { loadUsernameFromExtension } from './routes/session'
 import {
   loadChat as loadChatRoute,
@@ -66,7 +88,18 @@ import {
   dedupeMessagesById,
   normalizeSingleMessage,
   resetChatChannelUnreadCount,
-  updateChannelLastMessage
+  updateChannelLastMessage,
+  createChatChannel as createChatChannelRoute,
+  createDirectMessageChannel as createDirectMessageChannelRoute,
+  getDmChannelForUsernames as getDmChannelForUsernamesRoute,
+  loadChannelMembers as loadChannelMembersRoute,
+  addMembersToChannel as addMembersToChannelRoute,
+  removeMemberFromChannel as removeMemberFromChannelRoute,
+  followChatChannel as followChatChannelRoute,
+  unfollowChatChannel as unfollowChatChannelRoute,
+  deleteChatChannel as deleteChatChannelRoute,
+  updateMembershipSettings as updateMembershipSettingsRoute,
+  searchChatables as searchChatablesRoute
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
 
@@ -403,6 +436,8 @@ export function useDiscourseBrowser() {
       chatState: null,
       pendingTopics: null,
       pendingTopicsCount: 0,
+      reviewState: null,
+      invitesState: null,
       searchState: {
         query: '',
         filters: {
@@ -618,6 +653,15 @@ export function useDiscourseBrowser() {
           await loadUser(tab, username)
           tab.title = `${username} - 用户组`
           tab.viewType = 'groups'
+        } else if (pathParts[1] === 'invited') {
+          await ensureSessionUser()
+          await loadUser(tab, username)
+          const filterParam = urlObj.searchParams.get('filter')
+          const filter: 'pending' | 'redeemed' | 'expired' =
+            filterParam === 'redeemed' || filterParam === 'expired' ? filterParam : 'pending'
+          await loadInvites(tab, filter)
+          tab.title = `${username} - 邀请`
+          tab.viewType = 'invites'
         } else if (pathParts[1] === 'badges') {
           await loadUser(tab, username)
           tab.title = `${username} - 徽章`
@@ -669,6 +713,26 @@ export function useDiscourseBrowser() {
         await loadSearch(tab, query)
         tab.title = '搜索'
         tab.viewType = 'search'
+      } else if (pathname === '/review' || pathname === '/review.json') {
+        const statusParam = urlObj.searchParams.get('status')
+        const status: ReviewStatus =
+          statusParam === 'approved' ||
+          statusParam === 'rejected' ||
+          statusParam === 'ignored' ||
+          statusParam === 'deleted'
+            ? statusParam
+            : 'pending'
+        await loadReview(tab, status)
+        tab.title = '审核队列'
+        tab.viewType = 'review'
+      } else if (pathname === '/invites' || pathname === '/invited') {
+        await ensureSessionUser()
+        const filterParam = urlObj.searchParams.get('filter')
+        const filter: 'pending' | 'redeemed' | 'expired' =
+          filterParam === 'redeemed' || filterParam === 'expired' ? filterParam : 'pending'
+        await loadInvites(tab, filter)
+        tab.title = '邀请'
+        tab.viewType = 'invites'
       } else if (pathname === '/posted') {
         await loadPosted(tab)
         tab.title = '我的帖子'
@@ -1071,7 +1135,7 @@ export function useDiscourseBrowser() {
     const topicId = tab.currentTopic.id
 
     await runTabScopedUpdate(tab.id, `topic-stream:${topicId}`, async () => {
-      const streamUrl = `${baseUrl.value}/t/${topicId}.json`
+      const streamUrl = `${baseUrl.value}/t/${topicId}.json?track_visit=true`
       const data = await fetchUpdateDataWithCache<any>(
         `topic-stream|${streamUrl}`,
         streamUrl,
@@ -2022,6 +2086,188 @@ export function useDiscourseBrowser() {
     return tab.notifications?.filter(item => !item.read).length || 0
   })
 
+  // ==================== Review queue ====================
+
+  async function loadReview(tab: BrowserTab, status: ReviewStatus = 'pending') {
+    await loadReviewRoute(tab, status, baseUrl, users)
+  }
+
+  async function loadMoreReviewables() {
+    await loadMoreReviewablesRoute(activeTab, baseUrl, users, isLoadingMore)
+  }
+
+  async function performReviewAction(
+    reviewableId: number,
+    version: number,
+    serverAction: string,
+    extra: Record<string, any> = {}
+  ): Promise<ReviewPerformResult | null> {
+    const tab = activeTab.value
+    if (!tab?.reviewState) return null
+    return await performReviewableActionRoute(tab, baseUrl, reviewableId, version, serverAction, extra)
+  }
+
+  async function updateReviewableItem(
+    reviewableId: number,
+    version: number,
+    updates: Record<string, any>
+  ) {
+    const tab = activeTab.value
+    if (!tab?.reviewState) return null
+    return await updateReviewableRoute(tab, baseUrl, reviewableId, version, updates)
+  }
+
+  async function deleteReviewableItem(reviewableId: number, version: number) {
+    const tab = activeTab.value
+    if (!tab?.reviewState) return false
+    return await deleteReviewableRoute(tab, baseUrl, reviewableId, version)
+  }
+
+  function openReview(status: ReviewStatus = 'pending') {
+    navigateTo(`${baseUrl.value}/review?status=${status}`)
+  }
+
+  // ==================== Invites ====================
+
+  async function loadInvites(tab: BrowserTab, filter: 'pending' | 'redeemed' | 'expired' = 'pending') {
+    const username = tab.currentUser?.username || (await ensureSessionUser()) || ''
+    if (!username) {
+      if (!tab.invitesState) {
+        tab.invitesState = {
+          filter,
+          invites: [],
+          offset: 0,
+          hasMore: false,
+          loading: false,
+          creating: false,
+          errorMessage: '未登录，无法加载邀请列表',
+          counts: {},
+          canSeeInviteDetails: false
+        }
+      }
+      return
+    }
+    await loadInvitesRoute(tab, username, filter, baseUrl)
+  }
+
+  async function loadMoreInvites() {
+    await loadMoreInvitesRoute(activeTab, baseUrl, isLoadingMore)
+  }
+
+  async function createInvite(payload: {
+    email?: string
+    groupNames?: string[]
+    maxRedemptionsAllowed?: number | null
+    expiresAt?: string | null
+    customMessage?: string
+    description?: string
+    skipEmail?: boolean
+  }) {
+    const tab = activeTab.value
+    if (!tab?.invitesState) return null
+    return await createInviteRoute(tab, baseUrl, payload)
+  }
+
+  async function deleteInvite(inviteId: number) {
+    const tab = activeTab.value
+    if (!tab?.invitesState) return false
+    return await deleteInviteRoute(tab, baseUrl, inviteId)
+  }
+
+  async function resendInvite(email: string) {
+    const tab = activeTab.value
+    if (!tab?.invitesState) return false
+    return await resendInviteRoute(tab, baseUrl, email)
+  }
+
+  function openInvites() {
+    navigateTo(`${baseUrl.value}/invites`)
+  }
+
+  // ==================== Private message management ====================
+
+  async function archivePrivateMessage(topicId: number) {
+    const tab = activeTab.value
+    if (!tab) return false
+    return await archivePrivateMessageRoute(tab, topicId, baseUrl)
+  }
+
+  async function movePrivateMessageToInbox(topicId: number) {
+    const tab = activeTab.value
+    if (!tab) return false
+    return await movePrivateMessageToInboxRoute(tab, topicId, baseUrl)
+  }
+
+  async function markPrivateMessagesRead(topicIds: number[] = []) {
+    const tab = activeTab.value
+    if (!tab) return false
+    return await markPrivateMessagesReadRoute(tab, topicIds, baseUrl)
+  }
+
+  // ==================== Chat group & member management ====================
+
+  async function createChatChannel(payload: ChatCreateChannelPayload) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    return await createChatChannelRoute(tab, baseUrl, payload)
+  }
+
+  async function createDirectMessageChannel(payload: ChatCreateDirectMessagePayload) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    return await createDirectMessageChannelRoute(tab, baseUrl, payload)
+  }
+
+  async function getDmChannelForUsernames(usernames: string[]) {
+    return await getDmChannelForUsernamesRoute(baseUrl, usernames)
+  }
+
+  async function loadChatMembers(channelId: number, reset = true) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    return await loadChannelMembersRoute(tab, baseUrl, channelId, reset)
+  }
+
+  async function addChatMembers(channelId: number, usernames: string[], groups: string[] = []) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await addMembersToChannelRoute(tab, baseUrl, channelId, usernames, groups)
+  }
+
+  async function removeChatMember(channelId: number, userId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await removeMemberFromChannelRoute(tab, baseUrl, channelId, userId)
+  }
+
+  async function followChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await followChatChannelRoute(tab, baseUrl, channelId)
+  }
+
+  async function unfollowChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await unfollowChatChannelRoute(tab, baseUrl, channelId)
+  }
+
+  async function deleteChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await deleteChatChannelRoute(tab, baseUrl, channelId)
+  }
+
+  async function updateChatMembership(channelId: number, payload: ChatMembershipUpdatePayload) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await updateMembershipSettingsRoute(tab, baseUrl, channelId, payload)
+  }
+
+  async function searchChatables(filter: string, limit = 20) {
+    return await searchChatablesRoute(baseUrl, filter, limit)
+  }
+
   return {
     // State
     baseUrl,
@@ -2098,6 +2344,36 @@ export function useDiscourseBrowser() {
     cancelChatEdit,
     deleteChatMessageAction,
     flagChatMessageAction,
-    searchMessages
+    searchMessages,
+    // Review queue
+    loadReview,
+    loadMoreReviewables,
+    performReviewAction,
+    updateReviewableItem,
+    deleteReviewableItem,
+    openReview,
+    // Invites
+    loadInvites,
+    loadMoreInvites,
+    createInvite,
+    deleteInvite,
+    resendInvite,
+    openInvites,
+    // Private message management
+    archivePrivateMessage,
+    movePrivateMessageToInbox,
+    markPrivateMessagesRead,
+    // Chat group & member management
+    createChatChannel,
+    createDirectMessageChannel,
+    getDmChannelForUsernames,
+    loadChatMembers,
+    addChatMembers,
+    removeChatMember,
+    followChatChannel,
+    unfollowChatChannel,
+    deleteChatChannel,
+    updateChatMembership,
+    searchChatables
   }
 }

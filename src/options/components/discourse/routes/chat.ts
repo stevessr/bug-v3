@@ -4,6 +4,10 @@ import type {
   BrowserTab,
   ChatChannel,
   ChatChannelUpdatePayload,
+  ChatCreateChannelPayload,
+  ChatCreateDirectMessagePayload,
+  ChatMember,
+  ChatMembershipUpdatePayload,
   ChatMessage,
   DiscourseUser
 } from '../types'
@@ -33,6 +37,36 @@ const CHAT_INTERACTION_ENDPOINTS = (channelId: number, messageId: number) => [
 ]
 
 const CHAT_CHANNEL_UPDATE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}`]
+
+const CHAT_CHANNEL_CREATE_ENDPOINTS = ['/chat/api/channels']
+
+const CHAT_DIRECT_MESSAGE_CREATE_ENDPOINTS = [
+  '/chat/api/direct-message-channels',
+  '/chat/api/direct-message-channels.json',
+  '/chat/api/direct_messages'
+]
+
+const CHAT_DIRECT_MESSAGE_LOOKUP_ENDPOINTS = ['/chat/direct_messages.json', '/chat/direct_messages']
+
+const CHAT_MEMBERSHIPS_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/memberships`
+]
+
+const CHAT_MEMBERSHIP_ME_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/memberships/me`
+]
+
+const CHAT_MEMBERSHIP_FOLLOWS_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/memberships/me/follows`
+]
+
+const CHAT_CHATABLES_ENDPOINTS = ['/chat/api/chatables']
+
+const CHAT_MEMBER_REMOVE_ENDPOINTS = (channelId: number, userId: number) => [
+  `/chat/api/channels/${channelId}/memberships/${userId}`
+]
+
+const CHAT_CHANNEL_DELETE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}`]
 
 const CHAT_MESSAGE_EDIT_ENDPOINTS = (channelId: number, messageId: number) => [
   `/chat/api/channels/${channelId}/messages/${messageId}`
@@ -169,7 +203,10 @@ const ensureChatState = (tab: BrowserTab) => {
       errorMessage: '',
       replyToMessage: null,
       editingMessage: null,
-      typingUsers: {}
+      typingUsers: {},
+      membersByChannel: {},
+      membersTotalByChannel: {},
+      membersLoadingByChannel: {}
     }
   }
 }
@@ -1001,5 +1038,585 @@ export async function flagChatMessage(
   }
 
   state.errorMessage = lastError || '举报消息失败'
+  return null
+}
+
+// ==================== Chat channel creation & management ====================
+
+export async function createChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  payload: ChatCreateChannelPayload
+): Promise<ChatChannel | null> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  state.errorMessage = ''
+
+  const channelBody: Record<string, any> = {
+    name: payload.name.trim(),
+    chatable_id: payload.chatableId || 0,
+    slug: payload.slug || undefined,
+    description: payload.description || undefined,
+    emoji: payload.emoji || undefined,
+    auto_join_users: payload.autoJoinUsers ?? false,
+    threading_enabled: payload.threadingEnabled ?? false
+  }
+  Object.keys(channelBody).forEach(key => {
+    if (channelBody[key] === undefined) delete channelBody[key]
+  })
+
+  const jsonPayload = JSON.stringify({ channel: channelBody })
+  const formPayload = new URLSearchParams(
+    Object.entries(channelBody).filter(([, v]) => v !== undefined) as [string, string][]
+  ).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_CHANNEL_CREATE_ENDPOINTS) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: `channel[${formPayload.replace(/&/g, '&channel[').replace(/=/g, ']=')}`
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (!result.ok) {
+          lastError = parseErrorMessage(data, '创建频道失败')
+          continue
+        }
+        const channel = data?.channel || data
+        if (channel && typeof channel.id === 'number') {
+          const normalized = normalizeSingleChannel(channel, 'public')
+          state.channels = [normalized, ...state.channels]
+          return normalized
+        }
+        lastError = '频道已创建，但未返回频道数据'
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '创建频道失败'
+  return null
+}
+
+export async function createDirectMessageChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  payload: ChatCreateDirectMessagePayload
+): Promise<ChatChannel | null> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  state.errorMessage = ''
+
+  const usernames = Array.from(new Set(payload.targetUsernames.map(u => u.trim()).filter(Boolean)))
+  if (usernames.length === 0) {
+    state.errorMessage = '请至少选择一个用户'
+    return null
+  }
+
+  const body: Record<string, any> = {
+    target_usernames: usernames,
+    upsert: payload.upsert ?? true,
+    name: payload.name?.trim() || undefined
+  }
+  Object.keys(body).forEach(key => {
+    if (body[key] === undefined) delete body[key]
+  })
+
+  const jsonPayload = JSON.stringify(body)
+  const formPayload = new URLSearchParams(
+    Object.entries(body).filter(([, v]) => v !== undefined) as [string, string][]
+  ).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_DIRECT_MESSAGE_CREATE_ENDPOINTS) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (!result.ok) {
+          lastError = parseErrorMessage(data, '创建群聊失败')
+          continue
+        }
+        const channel = data?.channel || data
+        if (channel && typeof channel.id === 'number') {
+          const normalized = normalizeSingleChannel(channel, 'direct')
+          const existingIndex = state.channels.findIndex(item => item.id === normalized.id)
+          if (existingIndex === -1) {
+            state.channels = [normalized, ...state.channels]
+          } else {
+            state.channels[existingIndex] = {
+              ...state.channels[existingIndex],
+              ...normalized
+            }
+          }
+          return normalized
+        }
+        lastError = '群聊已创建，但未返回频道数据'
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '创建群聊失败'
+  return null
+}
+
+export async function getDmChannelForUsernames(
+  baseUrl: Ref<string>,
+  usernames: string[]
+): Promise<ChatChannel | null> {
+  const unique = Array.from(new Set(usernames.map(u => u.trim()).filter(Boolean)))
+  if (unique.length === 0) return null
+
+  let lastError: string | null = null
+  for (const path of CHAT_DIRECT_MESSAGE_LOOKUP_ENDPOINTS) {
+    try {
+      const result = await pageFetch<any>(
+        `${baseUrl.value}${path}?usernames=${encodeURIComponent(unique.join(','))}`
+      )
+      const data = extractData(result)
+      if (result.ok) {
+        const channel = data?.channel || data
+        if (channel && typeof channel.id === 'number') {
+          return normalizeSingleChannel(channel, 'direct')
+        }
+        return null
+      }
+      lastError = parseErrorMessage(data, '查找私聊频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  if (lastError) {
+    throw new Error(lastError)
+  }
+  return null
+}
+
+export async function loadChannelMembers(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  reset = true
+): Promise<ChatMember[]> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  if (state.membersLoadingByChannel[channelId]) return state.membersByChannel[channelId] || []
+
+  state.membersLoadingByChannel[channelId] = true
+  state.errorMessage = ''
+
+  try {
+    let lastError: string | null = null
+    let members: ChatMember[] = []
+    let total = 0
+
+    for (const path of CHAT_MEMBERSHIPS_ENDPOINTS(channelId)) {
+      try {
+        const result = await pageFetch<any>(
+          `${baseUrl.value}${path}?offset=0&limit=50`
+        )
+        const data = extractData(result)
+        if (result.ok) {
+          members = (data?.memberships || []).map((item: any) => {
+            const user = item.user || (item as any)
+            return {
+              id: item.id ?? user?.id,
+              user: {
+                id: user?.id,
+                username: user?.username || '',
+                name: user?.name,
+                avatar_template: user?.avatar_template || ''
+              },
+              membership: item.membership || item.current_user_membership,
+              last_read_message_id: item.last_read_message_id,
+              muted: item.muted,
+              notification_level: item.notification_level
+            }
+          })
+          total = Number(data?.meta?.total_rows ?? members.length)
+          break
+        }
+        lastError = parseErrorMessage(data, '加载频道成员失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    if (members.length === 0 && lastError) {
+      throw new Error(lastError)
+    }
+
+    if (reset) {
+      state.membersByChannel[channelId] = members
+    } else {
+      const existingIds = new Set((state.membersByChannel[channelId] || []).map(m => m.id))
+      const fresh = members.filter(m => !existingIds.has(m.id))
+      state.membersByChannel[channelId] = [...(state.membersByChannel[channelId] || []), ...fresh]
+    }
+    state.membersTotalByChannel[channelId] = total
+    return state.membersByChannel[channelId] || []
+  } catch (error) {
+    state.errorMessage = error instanceof Error ? error.message : String(error)
+    return state.membersByChannel[channelId] || []
+  } finally {
+    state.membersLoadingByChannel[channelId] = false
+  }
+}
+
+export async function addMembersToChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  usernames: string[],
+  groups: string[] = []
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  const body: Record<string, any> = {}
+  if (usernames.length > 0) body.usernames = usernames
+  if (groups.length > 0) body.groups = groups
+  if (Object.keys(body).length === 0) return false
+
+  const jsonPayload = JSON.stringify(body)
+  const formPayload = new URLSearchParams(
+    Object.entries(body).flatMap(([key, value]) =>
+      (value as string[]).map(v => [key, v])
+    ) as [string, string][]
+  ).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MEMBERSHIPS_ENDPOINTS(channelId)) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          await loadChannelMembers(tab, baseUrl, channelId, true)
+          return true
+        }
+        lastError = parseErrorMessage(data, '添加成员失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '添加成员失败'
+  return false
+}
+
+export async function removeMemberFromChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  userId: number
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MEMBER_REMOVE_ENDPOINTS(channelId, userId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'DELETE'
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        const members = state.membersByChannel[channelId] || []
+        state.membersByChannel[channelId] = members.filter(m => m.id !== userId)
+        state.membersTotalByChannel[channelId] = Math.max(
+          0,
+          (state.membersTotalByChannel[channelId] || 0) - 1
+        )
+        return true
+      }
+      lastError = parseErrorMessage(data, '移除成员失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '移除成员失败'
+  return false
+}
+
+export async function followChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'POST'
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        const channel = state.channels.find(item => item.id === channelId)
+        if (channel) {
+          if (!channel.current_user_membership) {
+            channel.current_user_membership = { chat_channel_id: channelId }
+          }
+          channel.current_user_membership.muted = false
+        }
+        return true
+      }
+      lastError = parseErrorMessage(data, '关注频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '关注频道失败'
+  return false
+}
+
+export async function unfollowChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MEMBERSHIP_FOLLOWS_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'DELETE'
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        const channel = state.channels.find(item => item.id === channelId)
+        if (channel) {
+          if (!channel.current_user_membership) {
+            channel.current_user_membership = { chat_channel_id: channelId }
+          }
+          channel.current_user_membership.muted = true
+        }
+        return true
+      }
+      lastError = parseErrorMessage(data, '取消关注频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '取消关注频道失败'
+  return false
+}
+
+export async function updateMembershipSettings(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  payload: ChatMembershipUpdatePayload
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  const body: Record<string, any> = {}
+  if (typeof payload.muted === 'boolean') body.muted = payload.muted
+  if (payload.notification_level !== undefined) {
+    body.notification_level = payload.notification_level
+  }
+  if (typeof payload.starred === 'boolean') body.starred = payload.starred
+  if (typeof payload.unread_count === 'number') body.unread_count = payload.unread_count
+  if (payload.last_read_message_id !== undefined) {
+    body.last_read_message_id = payload.last_read_message_id
+  }
+  if (Object.keys(body).length === 0) return false
+
+  const jsonPayload = JSON.stringify(body)
+  const formPayload = new URLSearchParams(
+    Object.entries(body).filter(([, v]) => v !== undefined) as [string, string][]
+  ).toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId)) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'PUT',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          const channel = state.channels.find(item => item.id === channelId)
+          if (channel) {
+            if (!channel.current_user_membership) {
+              channel.current_user_membership = { chat_channel_id: channelId }
+            }
+            const membership = data?.membership || data
+            if (membership && typeof membership === 'object') {
+              channel.current_user_membership = {
+                ...channel.current_user_membership,
+                ...membership
+              }
+            } else {
+              channel.current_user_membership = {
+                ...channel.current_user_membership,
+                ...body
+              }
+            }
+          }
+          return true
+        }
+        lastError = parseErrorMessage(data, '更新成员设置失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '更新成员设置失败'
+  return false
+}
+
+export async function deleteChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_CHANNEL_DELETE_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'DELETE'
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        state.channels = state.channels.filter(item => item.id !== channelId)
+        if (state.activeChannelId === channelId) {
+          state.activeChannelId = state.channels[0]?.id || null
+        }
+        return true
+      }
+      lastError = parseErrorMessage(data, '删除频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '删除频道失败'
+  return false
+}
+
+export interface ChatableSearchResult {
+  users: DiscourseUser[]
+  groups: Array<{ id: number; name: string; user_count?: number }>
+}
+
+export async function searchChatables(
+  baseUrl: Ref<string>,
+  filter: string,
+  limit = 20
+): Promise<ChatableSearchResult | null> {
+  const trimmed = filter.trim()
+  let lastError: string | null = null
+
+  for (const path of CHAT_CHATABLES_ENDPOINTS) {
+    try {
+      const params = new URLSearchParams()
+      if (trimmed) params.set('filter', trimmed)
+      params.set('limit', String(limit))
+      const result = await pageFetch<any>(`${baseUrl.value}${path}?${params.toString()}`)
+      const data = extractData(result)
+      if (result.ok) {
+        return {
+          users: data?.users || [],
+          groups: data?.groups || []
+        }
+      }
+      lastError = parseErrorMessage(data, '搜索用户失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  if (lastError) {
+    throw new Error(lastError)
+  }
   return null
 }

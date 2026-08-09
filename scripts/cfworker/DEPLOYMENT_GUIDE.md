@@ -16,10 +16,10 @@ https://902d00ad.s.pwsh.us.kg
 cd scripts/cfworker
 
 # 设置读写权限的认证令牌
-npx wrangler pages secret put AUTH_SECRET --project-name=video2gif-pages
+pnpm exec wrangler pages secret put AUTH_SECRET --project-name=video2gif-pages
 
 # 设置只读权限的认证令牌
-npx wrangler pages secret put AUTH_SECRET_READONLY --project-name=video2gif-pages
+pnpm exec wrangler pages secret put AUTH_SECRET_READONLY --project-name=video2gif-pages
 ```
 
 运行这些命令时，Wrangler 会提示你输入密钥值。**请使用强密码！**
@@ -141,7 +141,7 @@ pnpm update:data
 
 ```bash
 cd scripts/cfworker
-npx wrangler pages deploy public
+pnpm deploy
 ```
 
 ### 方式 3: Git 集成（自动部署）

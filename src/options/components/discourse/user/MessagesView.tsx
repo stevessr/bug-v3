@@ -1,6 +1,12 @@
 import { defineComponent, ref, watch } from 'vue'
-import { Spin, Input } from 'ant-design-vue'
-import { SearchOutlined } from '@ant-design/icons-vue'
+import { Spin, Input, message } from 'ant-design-vue'
+import {
+  SearchOutlined,
+  EditOutlined,
+  CheckOutlined,
+  InboxOutlined,
+  FolderOpenOutlined
+} from '@ant-design/icons-vue'
 
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
@@ -19,7 +25,18 @@ export default defineComponent({
     showSettings: { type: Boolean, default: false },
     showGroups: { type: Boolean, default: true }
   },
-  emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab', 'searchMessages'],
+  emits: [
+    'switchTab',
+    'openTopic',
+    'openUser',
+    'goToProfile',
+    'switchMainTab',
+    'searchMessages',
+    'compose',
+    'markAllRead',
+    'archive',
+    'moveToInbox'
+  ],
   setup(props, { emit }) {
     const searchQuery = ref('')
 
@@ -47,6 +64,27 @@ export default defineComponent({
       if (e.key === 'Enter') {
         handleSearch()
       }
+    }
+
+    const handleCompose = () => {
+      emit('compose')
+    }
+
+    const handleMarkAllRead = () => {
+      const unreadTopics = displayTopics().filter(topic => (topic.unread || 0) > 0)
+      emit('markAllRead', unreadTopics.map(topic => topic.id))
+    }
+
+    const hasUnread = () => displayTopics().some(topic => (topic.unread || 0) > 0)
+
+    const handleArchive = (topicId: number) => {
+      message.info('正在归档...')
+      emit('archive', topicId)
+    }
+
+    const handleMoveToInbox = (topicId: number) => {
+      message.info('正在移回收件箱...')
+      emit('moveToInbox', topicId)
     }
 
     // Sync searchQuery when external searchQuery changes
@@ -126,6 +164,20 @@ export default defineComponent({
           </Input>
         </div>
 
+        <div class="messages-actions">
+          <button class="messages-action-btn is-primary" onClick={handleCompose}>
+            <EditOutlined /> 新建私信
+          </button>
+          <button
+            class="messages-action-btn"
+            disabled={!hasUnread()}
+            onClick={handleMarkAllRead}
+            title="将所有私信标记为已读"
+          >
+            <CheckOutlined /> 全部已读
+          </button>
+        </div>
+
         <div class="messages-content">
           {searching && (
             <div class="messages-state-loading">
@@ -196,6 +248,32 @@ export default defineComponent({
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div class="messages-topic-item__side-actions">
+                {(topic as any).message_archived ? (
+                  <button
+                    class="messages-topic-item__side-btn"
+                    title="移回收件箱"
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation()
+                      handleMoveToInbox(topic.id)
+                    }}
+                  >
+                    <FolderOpenOutlined />
+                  </button>
+                ) : (
+                  <button
+                    class="messages-topic-item__side-btn"
+                    title="归档此私信"
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation()
+                      handleArchive(topic.id)
+                    }}
+                  >
+                    <InboxOutlined />
+                  </button>
+                )}
               </div>
             </div>
           ))}

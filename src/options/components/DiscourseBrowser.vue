@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
+import { EditOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
@@ -18,7 +19,9 @@ import type {
   MessageBusTopicPayload,
   MessageBusTopicListPayload,
   MessageBusNotificationPayload,
-  MessageBusChatPayload
+  MessageBusChatPayload,
+  ReviewStatus,
+  DiscourseUser
 } from './discourse/types'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import Icon from './discourse/layout/Icon'
@@ -62,6 +65,8 @@ const CategoryTopicsView = defineAsyncComponent(
 )
 const ChatView = defineAsyncComponent(() => import('./discourse/chat/ChatView'))
 const SearchView = defineAsyncComponent(() => import('./discourse/search/SearchView'))
+const ReviewView = defineAsyncComponent(() => import('./discourse/review/ReviewView'))
+const InvitesView = defineAsyncComponent(() => import('./discourse/invites/InvitesView'))
 
 const {
   baseUrl,
@@ -130,7 +135,28 @@ const {
   cancelChatEdit,
   deleteChatMessageAction,
   flagChatMessageAction,
-  searchMessages
+  searchMessages,
+  loadReview,
+  loadMoreReviewables,
+  performReviewAction,
+  updateReviewableItem,
+  deleteReviewableItem,
+  loadInvites,
+  loadMoreInvites,
+  createInvite,
+  deleteInvite,
+  resendInvite,
+  archivePrivateMessage,
+  movePrivateMessageToInbox,
+  markPrivateMessagesRead,
+  createDirectMessageChannel,
+  loadChatMembers,
+  addChatMembers,
+  removeChatMember,
+  followChatChannel,
+  unfollowChatChannel,
+  deleteChatChannel,
+  searchChatables
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
@@ -265,6 +291,19 @@ const tagNotificationSaving = ref(false)
 const notificationPreferences = ref<DiscourseUserPreferences | null>(null)
 const notificationPreferencesKey = ref('')
 
+// Chat group creation & member management state
+const createGroupSearching = ref(false)
+const createGroupResults = ref<DiscourseUser[]>([])
+const manageSearching = ref(false)
+const manageSearchResults = ref<DiscourseUser[]>([])
+
+// Private message composer state
+const pmComposerOpen = ref(false)
+const pmComposerTargets = ref('')
+const pmComposerTitle = ref('')
+const pmComposerRaw = ref('')
+const pmComposerSending = ref(false)
+
 const composerTopicId = computed(() => {
   if (composerMode.value === 'edit') {
     return editTarget.value?.topic_id || activeTab.value?.currentTopic?.id
@@ -313,7 +352,9 @@ const homeNavItems: Array<{ key: string; label: string; type: 'path' | 'list'; v
   { key: 'top', label: '排行', type: 'list', value: 'top' },
   { key: 'hot', label: '热门', type: 'list', value: 'hot' },
   { key: 'posted', label: '我的帖子', type: 'list', value: 'posted' },
-  { key: 'bookmarks', label: '书签', type: 'list', value: 'bookmarks' }
+  { key: 'bookmarks', label: '书签', type: 'list', value: 'bookmarks' },
+  { key: 'review', label: '审核', type: 'path', value: '/review' },
+  { key: 'invites', label: '邀请', type: 'path', value: '/invites' }
 ]
 
 const topicSortKey = ref<'replies' | 'views' | 'activity' | null>(null)
@@ -356,6 +397,8 @@ const isHomeNavActive = (item: (typeof homeNavItems)[number]) => {
   if (item.type === 'path') {
     if (item.value === '/categories') return tab.viewType === 'categories'
     if (item.value === '/tags') return tab.viewType === 'tags'
+    if (item.value === '/review') return tab.viewType === 'review'
+    if (item.value === '/invites') return tab.viewType === 'invites'
     return false
   }
   return tab.viewType === 'home' && tab.topicListType === item.value
@@ -418,6 +461,10 @@ const handleScroll = async () => {
       loadMoreMessages()
     } else if (viewType === 'followFeed') {
       loadMoreFollowFeed()
+    } else if (viewType === 'review') {
+      loadMoreReviewables()
+    } else if (viewType === 'invites') {
+      loadMoreInvites()
     } else if (viewType === 'chat') {
       // chat list handles its own pagination
     }
@@ -1141,6 +1188,305 @@ const handleFlagMessage = async (payload: { channelId?: number; messageId: numbe
     message.success('举报已发送，感谢你的反馈')
   } else {
     message.error(activeTab.value?.chatState?.errorMessage || '举报失败')
+  }
+}
+
+const handleChatSearch = async (
+  query: string,
+  resultsRef: { value: DiscourseUser[] },
+  searchingRef: { value: boolean }
+) => {
+  const trimmed = query.trim()
+  if (!trimmed) {
+    resultsRef.value = []
+    return
+  }
+  searchingRef.value = true
+  try {
+    const result = await searchChatables(trimmed)
+    resultsRef.value = result?.users || []
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '搜索用户失败')
+    resultsRef.value = []
+  } finally {
+    searchingRef.value = false
+  }
+}
+
+const handleCreateGroupSearch = (query: string) => {
+  void handleChatSearch(query, createGroupResults, createGroupSearching)
+}
+
+const handleManageSearch = (query: string) => {
+  void handleChatSearch(query, manageSearchResults, manageSearching)
+}
+
+const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: string }) => {
+  const channel = await createDirectMessageChannel({
+    targetUsernames: payload.targetUsernames,
+    name: payload.name,
+    upsert: true
+  })
+  if (channel) {
+    message.success('群聊已创建')
+    selectChatChannel(channel.id)
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '创建群聊失败')
+  }
+}
+
+const handleLoadChatMembers = async (channelId: number) => {
+  await loadChatMembers(channelId, true)
+}
+
+const handleAddChatMembers = async (payload: { channelId: number; usernames: string[] }) => {
+  const ok = await addChatMembers(payload.channelId, payload.usernames)
+  if (ok) {
+    message.success('成员已添加')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '添加成员失败')
+  }
+}
+
+const handleRemoveChatMember = async (payload: { channelId: number; userId: number }) => {
+  Modal.confirm({
+    title: '移除成员',
+    content: '确定要移除该成员吗？',
+    okText: '移除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      const ok = await removeChatMember(payload.channelId, payload.userId)
+      if (ok) {
+        message.success('成员已移除')
+      } else {
+        message.error(activeTab.value?.chatState?.errorMessage || '移除成员失败')
+      }
+    }
+  })
+}
+
+const handleFollowChatChannel = async (channelId: number) => {
+  const ok = await followChatChannel(channelId)
+  if (ok) {
+    message.success('已恢复关注')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '操作失败')
+  }
+}
+
+const handleUnfollowChatChannel = async (channelId: number) => {
+  const ok = await unfollowChatChannel(channelId)
+  if (ok) {
+    message.success('频道已静音')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '操作失败')
+  }
+}
+
+const handleDeleteChatChannel = async (channelId: number) => {
+  const channel = activeTab.value?.chatState?.channels.find(c => c.id === channelId)
+  Modal.confirm({
+    title: '删除频道',
+    content: `确定要删除频道「${channel?.title || channelId}」吗？此操作不可恢复。`,
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      const ok = await deleteChatChannel(channelId)
+      if (ok) {
+        message.success('频道已删除')
+      } else {
+        message.error(activeTab.value?.chatState?.errorMessage || '删除频道失败')
+      }
+    }
+  })
+}
+
+// Review queue handlers
+const handleReviewSwitchStatus = async (status: ReviewStatus) => {
+  const tab = activeTab.value
+  if (!tab) return
+  await loadReview(tab, status)
+}
+
+const handleReviewPerform = async (payload: {
+  reviewableId: number
+  version: number
+  serverAction: string
+  extra: Record<string, any>
+}) => {
+  const result = await performReviewAction(
+    payload.reviewableId,
+    payload.version,
+    payload.serverAction,
+    payload.extra
+  )
+  if (result?.success) {
+    message.success('审核操作已完成')
+  } else {
+    message.error(activeTab.value?.reviewState?.errorMessage || '审核操作失败')
+  }
+}
+
+const handleReviewUpdate = async (payload: {
+  reviewableId: number
+  version: number
+  updates: Record<string, any>
+}) => {
+  const updated = await updateReviewableItem(payload.reviewableId, payload.version, payload.updates)
+  if (updated) {
+    message.success('审核项已更新')
+  } else {
+    message.error(activeTab.value?.reviewState?.errorMessage || '更新失败')
+  }
+}
+
+const handleReviewDelete = async (payload: { reviewableId: number; version: number }) => {
+  Modal.confirm({
+    title: '删除审核项',
+    content: '确定要删除该审核项吗？',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      const ok = await deleteReviewableItem(payload.reviewableId, payload.version)
+      if (ok) {
+        message.success('审核项已删除')
+      } else {
+        message.error(activeTab.value?.reviewState?.errorMessage || '删除失败')
+      }
+    }
+  })
+}
+
+const handleReviewLoadMore = () => {
+  loadMoreReviewables()
+}
+
+// Invites handlers
+const handleInvitesSwitchFilter = async (filter: 'pending' | 'redeemed' | 'expired') => {
+  const tab = activeTab.value
+  if (!tab) return
+  await loadInvites(tab, filter)
+}
+
+const handleInvitesCreate = async (payload: Record<string, any>) => {
+  const invite = await createInvite(payload)
+  if (invite) {
+    message.success('邀请已创建')
+    if (invite.link) {
+      try {
+        await navigator.clipboard.writeText(invite.link)
+        message.success('邀请链接已复制到剪贴板')
+      } catch {
+        // clipboard unavailable, ignore
+      }
+    }
+  } else {
+    message.error(activeTab.value?.invitesState?.errorMessage || '创建邀请失败')
+  }
+}
+
+const handleInvitesDelete = async (inviteId: number) => {
+  Modal.confirm({
+    title: '删除邀请',
+    content: '确定要删除该邀请吗？已生成的链接将失效。',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      const ok = await deleteInvite(inviteId)
+      if (ok) {
+        message.success('邀请已删除')
+      } else {
+        message.error(activeTab.value?.invitesState?.errorMessage || '删除邀请失败')
+      }
+    }
+  })
+}
+
+const handleInvitesResend = async (email: string) => {
+  const ok = await resendInvite(email)
+  if (ok) {
+    message.success('邀请邮件已重发')
+  } else {
+    message.error(activeTab.value?.invitesState?.errorMessage || '重发邀请失败')
+  }
+}
+
+const handleInvitesLoadMore = () => {
+  loadMoreInvites()
+}
+
+// Private message management handlers
+const handleMessagesCompose = () => {
+  pmComposerOpen.value = true
+  pmComposerTargets.value = ''
+  pmComposerTitle.value = ''
+  pmComposerRaw.value = ''
+}
+
+const handleMessagesMarkAllRead = async (topicIds: number[]) => {
+  const ok = await markPrivateMessagesRead(topicIds)
+  if (ok) {
+    message.success('已全部标记为已读')
+  } else {
+    message.error('标记已读失败')
+  }
+}
+
+const handleMessagesArchive = async (topicId: number) => {
+  const ok = await archivePrivateMessage(topicId)
+  if (ok) {
+    message.success('已归档')
+  } else {
+    message.error('归档失败')
+  }
+}
+
+const handleMessagesMoveToInbox = async (topicId: number) => {
+  const ok = await movePrivateMessageToInbox(topicId)
+  if (ok) {
+    message.success('已移回收件箱')
+  } else {
+    message.error('移回收件箱失败')
+  }
+}
+
+const handlePmComposerSend = async () => {
+  const targets = pmComposerTargets.value
+    .split(/[,，\s]+/)
+    .map(t => t.trim())
+    .filter(Boolean)
+  const title = pmComposerTitle.value.trim()
+  const raw = pmComposerRaw.value.trim()
+  if (targets.length === 0) {
+    message.warning('请输入至少一个收件人用户名')
+    return
+  }
+  if (!raw) {
+    message.warning('请输入私信内容')
+    return
+  }
+  pmComposerSending.value = true
+  try {
+    const { createTopic } = await import('./discourse/actions/topic')
+    const data = await createTopic(baseUrl.value, {
+      title: title || `私信给 ${targets.join(', ')}`,
+      raw,
+      targetUsernames: targets
+    })
+    pmComposerOpen.value = false
+    message.success('私信已发送')
+    const topicId = Number(data?.topic_id || data?.id)
+    if (Number.isFinite(topicId) && topicId > 0) {
+      navigateTo(`/t/${topicId}`)
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '发送私信失败')
+  } finally {
+    pmComposerSending.value = false
   }
 }
 
@@ -2072,6 +2418,11 @@ onUnmounted(() => {
         :chatState="activeTab.chatState"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
+        :users="users"
+        :createGroupSearching="createGroupSearching"
+        :createGroupResults="createGroupResults"
+        :manageSearching="manageSearching"
+        :manageSearchResults="manageSearchResults"
         @selectChannel="handleSelectChatChannel"
         @loadMore="handleLoadMoreChatMessages"
         @sendMessage="handleSendChatMessage"
@@ -2085,6 +2436,15 @@ onUnmounted(() => {
         @cancelEdit="cancelChatEdit"
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
+        @createGroup="handleCreateGroup"
+        @createGroupSearch="handleCreateGroupSearch"
+        @loadMembers="handleLoadChatMembers"
+        @addMembers="handleAddChatMembers"
+        @removeMember="handleRemoveChatMember"
+        @followChannel="handleFollowChatChannel"
+        @unfollowChannel="handleUnfollowChatChannel"
+        @deleteChannel="handleDeleteChatChannel"
+        @manageSearch="handleManageSearch"
       />
 
       <!-- Topic detail view -->
@@ -2185,6 +2545,41 @@ onUnmounted(() => {
         @goToProfile="handleGoToProfile"
         @switchMainTab="handleUserMainTabSwitch"
         @searchMessages="handleSearchMessages"
+        @compose="handleMessagesCompose"
+        @markAllRead="handleMessagesMarkAllRead"
+        @archive="handleMessagesArchive"
+        @moveToInbox="handleMessagesMoveToInbox"
+      />
+
+      <!-- Review queue view -->
+      <ReviewView
+        v-else-if="activeTab?.viewType === 'review' && activeTab.reviewState"
+        :reviewState="activeTab.reviewState"
+        :baseUrl="baseUrl"
+        :currentUsername="currentUsername ?? undefined"
+        :users="users"
+        @switchStatus="handleReviewSwitchStatus"
+        @perform="handleReviewPerform"
+        @update="handleReviewUpdate"
+        @delete="handleReviewDelete"
+        @loadMore="handleReviewLoadMore"
+        @openTopic="handleUserTopicClick"
+        @openUser="handleUserClick"
+        @navigate="handleContentNavigation"
+      />
+
+      <!-- Invites view -->
+      <InvitesView
+        v-else-if="activeTab?.viewType === 'invites' && activeTab.invitesState"
+        :user="activeTab.currentUser || undefined"
+        :invitesState="activeTab.invitesState"
+        :baseUrl="baseUrl"
+        @switchFilter="handleInvitesSwitchFilter"
+        @create="handleInvitesCreate"
+        @delete="handleInvitesDelete"
+        @resend="handleInvitesResend"
+        @loadMore="handleInvitesLoadMore"
+        @goToProfile="handleGoToProfile"
       />
 
       <UserGroupsView
@@ -2240,6 +2635,58 @@ onUnmounted(() => {
     @replyPosted="handleReplyPosted"
     @clearReply="handleClearReply"
   />
+
+  <!-- Private message composer -->
+  <div v-if="pmComposerOpen" class="pm-composer-mask">
+    <div class="pm-composer">
+      <div class="pm-composer__header">
+        <div class="pm-composer__title">
+          <EditOutlined /> 新建私信
+        </div>
+        <a-button
+          type="text"
+          size="small"
+          @click="pmComposerOpen = false"
+          aria-label="关闭"
+        >
+          <CloseOutlined />
+        </a-button>
+      </div>
+      <div class="pm-composer__body">
+        <div class="pm-composer__field">
+          <label>收件人（用户名，逗号分隔）</label>
+          <a-input
+            v-model:value="pmComposerTargets"
+            placeholder="例如：user1, user2"
+            :disabled="pmComposerSending"
+          />
+        </div>
+        <div class="pm-composer__field">
+          <label>标题</label>
+          <a-input
+            v-model:value="pmComposerTitle"
+            placeholder="私信标题（可选）"
+            :disabled="pmComposerSending"
+          />
+        </div>
+        <div class="pm-composer__field">
+          <label>内容</label>
+          <a-textarea
+            v-model:value="pmComposerRaw"
+            :rows="8"
+            placeholder="输入私信内容..."
+            :disabled="pmComposerSending"
+          />
+        </div>
+      </div>
+      <div class="pm-composer__footer">
+        <a-button @click="pmComposerOpen = false" :disabled="pmComposerSending">取消</a-button>
+        <a-button type="primary" :loading="pmComposerSending" @click="handlePmComposerSend">
+          发送
+        </a-button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -2264,5 +2711,70 @@ onUnmounted(() => {
 
 .tab-item {
   transition: background-color 0.15s;
+}
+
+.pm-composer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.pm-composer {
+  width: 560px;
+  max-width: calc(100vw - 40px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--d-surface, var(--theme-surface));
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.pm-composer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
+}
+
+.pm-composer__title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pm-composer__body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pm-composer__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-composer__field label {
+  font-size: 12px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.pm-composer__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--d-border, var(--theme-outline-variant));
 }
 </style>

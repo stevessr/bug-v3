@@ -49,24 +49,27 @@
 ```bash
 cd scripts/cfworker
 
-# 首次部署
-npx wrangler pages deploy public
+# 安装工作区锁定的 Wrangler
+pnpm install
+
+# 首次或后续部署
+pnpm deploy
 
 # 配置 KV 命名空间
-npx wrangler kv:namespace create "EMOJI_BACKUP"
-npx wrangler kv:namespace create "EMOJI_BACKUP" --preview
+pnpm exec wrangler kv:namespace create "EMOJI_BACKUP"
+pnpm exec wrangler kv:namespace create "EMOJI_BACKUP" --preview
 
 # 配置环境变量（Secrets）
-npx wrangler pages secret put AUTH_SECRET --project-name=your-project
-npx wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
+pnpm exec wrangler pages secret put AUTH_SECRET --project-name=your-project
+pnpm exec wrangler pages secret put AUTH_SECRET_READONLY --project-name=your-project
 ```
 
 ### 本地开发
 
 ```bash
 cd scripts/cfworker
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 访问 `http://localhost:8788`
@@ -292,17 +295,17 @@ fetch('https://your-project.pages.dev/api/random-image?group=group-1758073408523
 修改 `public/index.html` 后，使用以下命令本地预览：
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ## 📦 部署到 Cloudflare Pages
 
 ```bash
-# 初次部署
-npx wrangler pages deploy public
+# 初次或后续部署
+pnpm deploy
 
 # 后续更新
-npx wrangler pages deploy public --project-name=your-project-name
+pnpm exec wrangler pages deploy public --project-name=your-project-name
 ```
 
 ## 与扩展的关系

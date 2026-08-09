@@ -5,6 +5,9 @@ export interface CreateTopicPayload {
   raw: string
   categoryId?: number | null
   tags?: string[]
+  // Private message support
+  targetUsernames?: string[]
+  targetGroupNames?: string[]
 }
 
 export interface ReplyPayload {
@@ -14,11 +17,19 @@ export interface ReplyPayload {
 }
 
 export async function createTopic(baseUrl: string, payload: CreateTopicPayload) {
+  const isPrivateMessage = (payload.targetUsernames?.length || 0) > 0
   const params = new URLSearchParams()
   params.append('title', payload.title)
   params.append('raw', payload.raw)
-  params.append('archetype', 'regular')
-  if (payload.categoryId) params.append('category', String(payload.categoryId))
+  params.append('archetype', isPrivateMessage ? 'private_message' : 'regular')
+  if (isPrivateMessage) {
+    ;(payload.targetUsernames || []).forEach(username =>
+      params.append('target_usernames[]', username)
+    )
+    ;(payload.targetGroupNames || []).forEach(group => params.append('target_group_names[]', group))
+  } else if (payload.categoryId) {
+    params.append('category', String(payload.categoryId))
+  }
   if (payload.tags && payload.tags.length > 0) {
     payload.tags.forEach(tag => params.append('tags[]', tag))
   }

@@ -1,0 +1,80 @@
+name: Deploy Cloudflare Pages Worker (market)
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - scripts/cfworker/public/assets/market/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-cfworker-market-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Refresh market data and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild market metadata and indexes
+        run: pnpm update:metadata
+
+      - name: Validate market-only deployment inputs
+        run: pnpm validate:market
+
+      - name: Backfill generated market files
+        run: |
+          git add \
+            scripts/cfworker/public/assets/market/metadata.json \
+            scripts/cfworker/public/assets/market/index \
+            scripts/cfworker/functions/api/market-random.ts
+
+          if git diff --cached --quiet; then
+            echo "No generated market files changed."
+            exit 0
+          fi
+
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(market): refresh generated metadata [skip ci]"
+          git push
+
+      - name: Deploy Cloudflare Pages Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || {
+            echo "CLOUDFLARE_API_TOKEN repository secret is required"
+            exit 1
+          }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo "CLOUDFLARE_ACCOUNT_ID repository secret is required"
+            exit 1
+          }
+          pnpm --filter video2gif-static deploy

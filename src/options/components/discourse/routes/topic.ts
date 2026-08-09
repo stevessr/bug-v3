@@ -77,7 +77,7 @@ export async function loadTopic(
       if (lastPostNumber) {
         try {
           const extrasResult = await pageFetch<any>(
-            `${baseUrl.value}/t/${topicId}/${lastPostNumber}.json`
+            `${baseUrl.value}/t/${topicId}/${lastPostNumber}.json?track_visit=true`
           )
           const extrasData = extractData(extrasResult)
           if (extrasData) {

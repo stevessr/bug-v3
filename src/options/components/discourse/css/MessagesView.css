@@ -288,3 +288,85 @@
 .messages-view a:hover {
   text-decoration: underline;
 }
+
+/* Message management actions */
+.messages-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 4px;
+  flex-wrap: wrap;
+}
+
+.messages-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in oklab, var(--theme-outline-variant) 70%, transparent);
+  border-radius: 8px;
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.messages-action-btn:hover {
+  border-color: var(--primary, var(--theme-primary));
+  color: var(--primary, var(--theme-primary));
+}
+
+.messages-action-btn.is-primary {
+  background: var(--primary, var(--theme-primary));
+  border-color: var(--primary, var(--theme-primary));
+  color: var(--theme-on-primary, #fff);
+}
+
+.messages-action-btn.is-primary:hover {
+  opacity: 0.9;
+}
+
+.messages-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.messages-topic-item__side-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.messages-topic-item:hover .messages-topic-item__side-actions {
+  opacity: 1;
+}
+
+.messages-topic-item__side-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  cursor: pointer;
+  font-size: 13px;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.messages-topic-item__side-btn:hover {
+  border-color: var(--primary, var(--theme-primary));
+  color: var(--primary, var(--theme-primary));
+  background: color-mix(in oklab, var(--theme-primary) 8%, transparent);
+}

@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
 import { TOUHOU_KEYWORDS, MAGIC_GIRL_KEYWORDS, keyword_match } from './lib/constants.ts'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -220,7 +221,7 @@ try {
   console.error('Error generating market index files:', err)
 }
 
-// Update MANIFEST_GROUPS in market-random.ts (only IDs for Snippet limitation)
+// Update MANIFEST_GROUPS in the market Pages Function with current group IDs.
 const marketRandomFile = path.join(__dirname, 'cfworker/functions/api/market-random.ts')
 
 try {
