@@ -6,7 +6,8 @@ import {
   setupMessageListener,
   setupStorageChangeListener,
   setupContextMenu,
-  setupPeriodicCleanup
+  setupPeriodicCleanup,
+  setupAgentWorkflows
 } from './utils/handlers'
 import { setupScheduledLikes } from './handlers/scheduledLikes'
 import { setupScheduledBrowse } from './handlers/scheduledBrowse'
@@ -19,6 +20,7 @@ setupMessageListener()
 setupStorageChangeListener()
 setupContextMenu()
 setupPeriodicCleanup()
+setupAgentWorkflows()
 
 // Service Worker 里不能使用 Vite 的 DOM-based dynamic-import preload helper。
 // 模块静态打包，初始化仍放到微任务里，避免阻塞核心监听注册。

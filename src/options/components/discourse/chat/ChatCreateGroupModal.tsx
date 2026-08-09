@@ -53,8 +53,7 @@ export default defineComponent({
       }
     }
 
-    const isSelected = (user: DiscourseUser) =>
-      selected.value.some(u => u.id === user.id)
+    const isSelected = (user: DiscourseUser) => selected.value.some(u => u.id === user.id)
 
     const handleCreate = () => {
       if (selected.value.length === 0 || creating.value) return
@@ -91,7 +90,9 @@ export default defineComponent({
               onUpdate:value={(v: string) => (groupName.value = v)}
             />
 
-            <label class="chat-group-modal__label">搜索用户（选择至少 2 人，将自动包含你自己）</label>
+            <label class="chat-group-modal__label">
+              搜索用户（选择至少 2 人，将自动包含你自己）
+            </label>
             <Input
               value={query.value}
               placeholder="输入用户名搜索..."
@@ -129,10 +130,7 @@ export default defineComponent({
                 props.searchResults.map(user => (
                   <button
                     key={user.id}
-                    class={[
-                      'chat-group-modal__result',
-                      isSelected(user) ? 'is-selected' : ''
-                    ]}
+                    class={['chat-group-modal__result', isSelected(user) ? 'is-selected' : '']}
                     onClick={() => toggleSelect(user)}
                   >
                     <img
@@ -140,9 +138,7 @@ export default defineComponent({
                       alt={user.username}
                       class="chat-group-modal__result-avatar"
                     />
-                    <span class="chat-group-modal__result-name">
-                      {user.name || user.username}
-                    </span>
+                    <span class="chat-group-modal__result-name">{user.name || user.username}</span>
                     <span class="chat-group-modal__result-username">@{user.username}</span>
                   </button>
                 ))}

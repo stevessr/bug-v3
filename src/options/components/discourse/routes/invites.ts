@@ -155,7 +155,10 @@ export async function createInvite(
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
         body: new URLSearchParams(
-          Object.entries(body).filter(([, v]) => v !== undefined && v !== null) as [string, string][]
+          Object.entries(body).filter(([, v]) => v !== undefined && v !== null) as [
+            string,
+            string
+          ][]
         ).toString()
       }
     ]

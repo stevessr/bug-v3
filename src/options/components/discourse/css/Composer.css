@@ -1,6 +1,6 @@
 @import 'katex/dist/katex.min.css';
 
-.composer :deep(textarea) {
+.composer textarea {
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
@@ -28,28 +28,28 @@
   min-height: 0;
 }
 
-.composer :deep(.prosemirror-editor-wrapper) {
+.composer .prosemirror-editor-wrapper {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.composer :deep(.prosemirror-editor) {
+.composer .prosemirror-editor {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.composer :deep(.prosemirror-editor .ProseMirror) {
+.composer .prosemirror-editor .ProseMirror {
   min-height: 100%;
 }
 
-.bbcode-toolbar :deep(.ant-btn) {
+.bbcode-toolbar .ant-btn {
   min-width: 28px;
   height: 28px;
   padding: 0 8px;
   font-size: 13px;
 }
 
-.preview-content :deep(pre) {
+.preview-content pre {
   background: #111827;
   color: #e5e7eb;
   padding: 0.75rem;
@@ -57,20 +57,20 @@
   overflow-x: auto;
 }
 
-.preview-content :deep(code) {
+.preview-content code {
   background: #1f2937;
   padding: 0.1rem 0.25rem;
   border-radius: 4px;
 }
 
-.preview-content :deep(blockquote) {
+.preview-content blockquote {
   border-left: 4px solid #4b5563;
   padding-left: 1rem;
   margin: 1rem 0;
   color: #9ca3af;
 }
 
-.preview-content :deep(blockquote cite) {
+.preview-content blockquote cite {
   font-style: normal;
   font-weight: 500;
   display: block;
@@ -78,30 +78,30 @@
   color: #d1d5db;
 }
 
-.preview-content :deep(ul) {
+.preview-content ul {
   list-style: disc;
   padding-left: 1.5rem;
   margin: 0.5rem 0;
 }
 
-.preview-content :deep(ol) {
+.preview-content ol {
   list-style: decimal;
   padding-left: 1.5rem;
   margin: 0.5rem 0;
 }
 
-.preview-content :deep(img) {
+.preview-content img {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
 }
 
-.preview-content :deep(a) {
+.preview-content a {
   color: #3b82f6;
   text-decoration: underline;
 }
 
-.preview-content :deep(a:hover) {
+.preview-content a:hover {
   color: #2563eb;
 }
 

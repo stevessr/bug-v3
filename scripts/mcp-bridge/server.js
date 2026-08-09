@@ -550,6 +550,53 @@ const TOOLS = [
     }
   },
   {
+    name: 'chrome.debug_start',
+    description: 'Start collecting console and network diagnostics for a tab.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number' },
+        captureConsole: { type: 'boolean' },
+        captureNetwork: { type: 'boolean' },
+        clear: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'chrome.console_logs',
+    description: 'Read console messages and exceptions collected for a tab.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number' },
+        limit: { type: 'number', minimum: 1, maximum: 500 },
+        clear: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'chrome.network_log',
+    description: 'Read request and response diagnostics collected for a tab.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number' },
+        limit: { type: 'number', minimum: 1, maximum: 500 },
+        clear: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'chrome.debug_stop',
+    description: 'Stop developer diagnostics and detach from a tab.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number' }
+      }
+    }
+  },
+  {
     name: 'chrome.wait',
     description: 'Wait for a number of milliseconds.',
     input_schema: {

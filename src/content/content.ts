@@ -15,6 +15,7 @@ logInfo('Content script bootstrap loaded')
 
 const CONTENT_MESSAGE_TYPES = new Set<ContentMessage['type']>([
   'AGENT_ACTION',
+  'AGENT_RECORDING_SET_STATE',
   'DOM_QUERY',
   'GET_CSRF_TOKEN',
   'GET_LINUX_DO_USER',
@@ -119,6 +120,12 @@ if (chrome?.runtime?.onMessage) {
     return true
   })
 }
+
+// A recording session lives in background storage so it survives navigations.
+// Ask the service worker whether this newly loaded document should resume capture.
+void import('./agent/workflowRecorder')
+  .then(({ resumeWorkflowRecorderIfNeeded }) => resumeWorkflowRecorderIfNeeded())
+  .catch(error => logError('Failed to initialize workflow recorder:', error))
 
 // Initialize 429 error interceptor for linux.do
 // This will automatically trigger Cloudflare challenge when rate limit is hit

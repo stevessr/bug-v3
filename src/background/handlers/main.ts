@@ -12,6 +12,8 @@ export { setupContextMenu } from './setupContextMenu'
 export { handleSyncSettings } from './handleSyncSettings'
 export { handleDownloadImage } from './handleDownloadImage'
 export { handleCaptureScreenshot } from './handleCaptureScreenshot'
+export { handleAgentDebugRequest } from './agentDebugger'
+export { handleAgentWorkflowRequest, setupAgentWorkflows } from './agentWorkflows'
 export {
   handleGetEmojiData,
   handleGetEmojiSetting,

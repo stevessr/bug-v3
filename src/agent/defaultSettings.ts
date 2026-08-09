@@ -7,6 +7,8 @@ const defaultPermissions: AgentPermissions = {
   touch: false,
   screenshot: true,
   navigate: true,
+  tabs: true,
+  debugger: true,
   clickDom: true,
   input: true,
   fileAccess: false

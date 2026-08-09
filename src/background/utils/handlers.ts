@@ -13,6 +13,9 @@ import {
   handleLinuxDoChallengeRequest,
   handleDownloadImage,
   handleCaptureScreenshot,
+  handleAgentDebugRequest,
+  handleAgentWorkflowRequest,
+  setupAgentWorkflows,
   setupStorageChangeListener,
   setupContextMenu,
   setupPeriodicCleanup,
@@ -28,10 +31,26 @@ import { getChromeAPI } from './main.ts'
 import type { BackgroundMessage, TypedMessage, MessageResponse } from '@/types/messages'
 
 // Re-export 给 background 入口使用的同步 setup
-export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup }
+export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup, setupAgentWorkflows }
 
 function loadMcpBridge() {
   return Promise.resolve(mcpBridgeModule)
+}
+
+function respondWithMcpBridge<T>(
+  operation: (bridge: typeof mcpBridgeModule) => Promise<T> | T,
+  sendResponse: (resp: MessageResponse) => void,
+  fallbackError: string
+) {
+  void (async () => {
+    try {
+      const bridge = await loadMcpBridge()
+      const data = await operation(bridge)
+      sendResponse({ success: true, data })
+    } catch (error: any) {
+      sendResponse({ success: false, error: error?.message || fallbackError })
+    }
+  })()
 }
 
 export async function setupMcpBridge() {
@@ -45,7 +64,7 @@ export function setupMessageListener() {
     chromeAPI.runtime.onMessage.addListener(
       (
         message: BackgroundMessage,
-        _sender: chrome.runtime.MessageSender,
+        sender: chrome.runtime.MessageSender,
         sendResponse: (resp: MessageResponse) => void
       ) => {
         console.log('Background received message:', message)
@@ -151,6 +170,20 @@ export function setupMessageListener() {
               (typedMsg as any).tabId
             )
             return true
+          case 'AGENT_DEBUG_START':
+          case 'AGENT_DEBUG_READ_CONSOLE':
+          case 'AGENT_DEBUG_READ_NETWORK':
+          case 'AGENT_DEBUG_STOP':
+            void handleAgentDebugRequest(typedMsg as any, sendResponse as any)
+            return true
+          case 'AGENT_RECORDING_START':
+          case 'AGENT_RECORDING_STOP':
+          case 'AGENT_RECORDING_STATUS':
+          case 'AGENT_RECORDING_CONTENT_READY':
+          case 'AGENT_RECORDING_EVENT':
+          case 'AGENT_WORKFLOW_RUN_SCHEDULE':
+            void handleAgentWorkflowRequest(typedMsg as any, sender, sendResponse as any)
+            return true
           case 'PROXY_FETCH':
             if ('options' in typedMsg) {
               handleProxyFetchRequest((typedMsg as any).options, sendResponse as any)
@@ -174,23 +207,13 @@ export function setupMessageListener() {
             })
             return true
           case 'MCP_BRIDGE_TEST':
-            void loadMcpBridge().then(mod =>
-              mod
-                .testMcpBridge()
-                .then(result => sendResponse({ success: true, data: result }))
-                .catch((error: any) =>
-                  sendResponse({ success: false, error: error?.message || 'MCP 测试失败' })
-                )
-            )
+            respondWithMcpBridge(mod => mod.testMcpBridge(), sendResponse, 'MCP 测试失败')
             return true
           case 'MCP_SERVER_TEST':
-            void loadMcpBridge().then(mod =>
-              mod
-                .testMcpServer((typedMsg as any).options || {})
-                .then(result => sendResponse({ success: true, data: result }))
-                .catch((error: any) =>
-                  sendResponse({ success: false, error: error?.message || 'MCP 服务测试失败' })
-                )
+            respondWithMcpBridge(
+              mod => mod.testMcpServer((typedMsg as any).options || {}),
+              sendResponse,
+              'MCP 服务测试失败'
             )
             return true
           case 'MCP_BRIDGE_RECONNECT':
@@ -205,34 +228,20 @@ export function setupMessageListener() {
             )
             return true
           case 'MCP_GET_BRIDGE_SETTINGS':
-            void loadMcpBridge().then(mod =>
-              mod
-                .loadMcpBridgeSettings()
-                .then(settings => sendResponse({ success: true, data: settings }))
-                .catch((error: any) =>
-                  sendResponse({ success: false, error: error?.message || '获取设置失败' })
-                )
-            )
+            respondWithMcpBridge(mod => mod.loadMcpBridgeSettings(), sendResponse, '获取设置失败')
             return true
           case 'MCP_SET_BRIDGE_SETTINGS':
-            void loadMcpBridge().then(mod =>
-              mod
-                .saveMcpBridgeSettings((typedMsg as any).data || {})
-                .then(() => sendResponse({ success: true }))
-                .catch((error: any) =>
-                  sendResponse({ success: false, error: error?.message || '保存设置失败' })
-                )
+            respondWithMcpBridge(
+              async mod => {
+                await mod.saveMcpBridgeSettings((typedMsg as any).data || {})
+                return undefined
+              },
+              sendResponse,
+              '保存设置失败'
             )
             return true
           case 'MCP_DISCOVER_LOCAL':
-            void loadMcpBridge().then(mod =>
-              mod
-                .discoverLocalMcpServers()
-                .then(data => sendResponse({ success: true, data }))
-                .catch((error: any) =>
-                  sendResponse({ success: false, error: error?.message || '本地发现失败' })
-                )
-            )
+            respondWithMcpBridge(mod => mod.discoverLocalMcpServers(), sendResponse, '本地发现失败')
             return true
 
           case 'ADD_TO_FAVORITES':

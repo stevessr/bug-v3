@@ -93,6 +93,53 @@ const TOOLS = [
     }
   },
   {
+    name: 'chrome_debug_start',
+    description: '开始采集指定标签页的控制台与网络诊断',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '标签页 ID' },
+        captureConsole: { type: 'boolean', description: '采集控制台日志' },
+        captureNetwork: { type: 'boolean', description: '采集网络请求' },
+        clear: { type: 'boolean', description: '清除旧记录' }
+      }
+    }
+  },
+  {
+    name: 'chrome_console_logs',
+    description: '读取指定标签页采集的控制台日志与异常',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '标签页 ID' },
+        limit: { type: 'number', minimum: 1, maximum: 500 },
+        clear: { type: 'boolean', description: '读取后清除记录' }
+      }
+    }
+  },
+  {
+    name: 'chrome_network_log',
+    description: '读取指定标签页采集的网络请求诊断',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '标签页 ID' },
+        limit: { type: 'number', minimum: 1, maximum: 500 },
+        clear: { type: 'boolean', description: '读取后清除记录' }
+      }
+    }
+  },
+  {
+    name: 'chrome_debug_stop',
+    description: '停止指定标签页的开发者诊断',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '标签页 ID' }
+      }
+    }
+  },
+  {
     name: 'chrome_window_focus',
     description: '聚焦指定窗口',
     inputSchema: {

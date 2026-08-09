@@ -22,13 +22,13 @@
   justify-content: center;
 }
 
-.buffer-emoji-grid .emoji-thumb :deep(.cached-image-wrapper) {
+.buffer-emoji-grid .emoji-thumb .cached-image-wrapper {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.buffer-emoji-grid .emoji-thumb :deep(.cached-image-img) {
+.buffer-emoji-grid .emoji-thumb .cached-image-img {
   width: 100%;
   height: 100%;
   object-fit: contain;

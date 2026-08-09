@@ -44,6 +44,7 @@ The output file is `scripts/mcp-bridge/host-manifest.json` by default.
 - Input: input, type, key, select
 - Motion: scroll, drag
 - Media: screenshot
+- Developer diagnostics: start/stop capture, console logs and network log (sensitive URL query values are redacted)
 - DOM: dom_tree, dom_at_point
 - Utility: wait
 

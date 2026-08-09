@@ -1,5 +1,11 @@
 import { getChromeAPI } from '../utils/main'
 
+import {
+  readAgentConsole,
+  readAgentNetwork,
+  startAgentDebugSession,
+  stopAgentDebugSession
+} from './agentDebugger'
 import { handleDiscourseTool } from './discourseTools'
 
 import { DEFAULT_MCP_BRIDGE_SETTINGS, type McpBridgeSettings } from '@/agent/types'
@@ -630,25 +636,49 @@ async function captureScreenshot(
     throw new Error('无法截图')
   }
   let windowId: number | undefined
+  let previousActiveTabId: number | undefined
+  let activatedTarget = false
   if (typeof tabId === 'number' && chromeAPI.tabs?.get) {
     try {
       const tab = await chromeAPI.tabs.get(tabId)
       windowId = tab?.windowId
-    } catch {
-      windowId = undefined
+      if (!tab.active && typeof windowId === 'number' && chromeAPI.tabs?.query) {
+        const activeTabs = await chromeAPI.tabs.query({ active: true, windowId })
+        previousActiveTabId = activeTabs[0]?.id
+        await chromeAPI.tabs.update(tabId, { active: true })
+        activatedTarget = true
+        await new Promise(resolve => setTimeout(resolve, 120))
+      }
+    } catch (error: any) {
+      throw new Error(error?.message || '无法访问目标标签页')
     }
   }
 
-  return new Promise((resolve, reject) => {
-    const targetWindowId = typeof windowId === 'number' ? windowId : undefined
-    chromeAPI.tabs.captureVisibleTab(targetWindowId as number, { format }, dataUrl => {
-      if (chromeAPI.runtime.lastError) {
-        reject(new Error(chromeAPI.runtime.lastError.message))
-        return
-      }
-      resolve({ dataUrl })
+  try {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const targetWindowId = typeof windowId === 'number' ? windowId : undefined
+      chromeAPI.tabs.captureVisibleTab(targetWindowId as number, { format }, value => {
+        if (chromeAPI.runtime.lastError) {
+          reject(new Error(chromeAPI.runtime.lastError.message))
+          return
+        }
+        resolve(value)
+      })
     })
-  })
+    return { dataUrl }
+  } finally {
+    if (
+      activatedTarget &&
+      typeof previousActiveTabId === 'number' &&
+      previousActiveTabId !== tabId
+    ) {
+      try {
+        await chromeAPI.tabs.update(previousActiveTabId, { active: true })
+      } catch {
+        // The previous tab may have been closed while capture was running.
+      }
+    }
+  }
 }
 
 async function listTabs(chromeAPI: typeof chrome) {
@@ -1100,6 +1130,38 @@ async function handleToolCall(chromeAPI: typeof chrome, message: McpToolCallMess
       const format = args.format === 'jpeg' ? 'jpeg' : 'png'
       const result = await captureScreenshot(chromeAPI, args.tabId, format)
       return result
+    }
+
+    case 'chrome.debug_start': {
+      const tabId = await getTabId(chromeAPI, args.tabId)
+      if (!tabId) throw new Error('未找到活动标签页')
+      return startAgentDebugSession(
+        tabId,
+        {
+          captureConsole: args.captureConsole,
+          captureNetwork: args.captureNetwork,
+          clear: args.clear
+        },
+        chromeAPI
+      )
+    }
+
+    case 'chrome.console_logs': {
+      const tabId = await getTabId(chromeAPI, args.tabId)
+      if (!tabId) throw new Error('未找到活动标签页')
+      return readAgentConsole(tabId, { clear: args.clear, limit: args.limit })
+    }
+
+    case 'chrome.network_log': {
+      const tabId = await getTabId(chromeAPI, args.tabId)
+      if (!tabId) throw new Error('未找到活动标签页')
+      return readAgentNetwork(tabId, { clear: args.clear, limit: args.limit })
+    }
+
+    case 'chrome.debug_stop': {
+      const tabId = await getTabId(chromeAPI, args.tabId)
+      if (!tabId) throw new Error('未找到活动标签页')
+      return stopAgentDebugSession(tabId, chromeAPI)
     }
 
     case 'chrome.dom_tree': {

@@ -80,9 +80,13 @@ export async function runAgentMessage(
     onUpdate?: (update: AgentStreamUpdate) => void
     sessionId?: string
     isolated?: boolean
+    images?: string[]
   }
 ): Promise<AgentRunResult> {
-  return runPiAgentMessage(input, settings, subagent, context, options)
+  const images = (options?.images || [])
+    .map(dataUrlToImageContent)
+    .filter((image): image is NonNullable<typeof image> => Boolean(image))
+  return runPiAgentMessage(input, settings, subagent, context, { ...options, images })
 }
 
 export async function runAgentFollowup(

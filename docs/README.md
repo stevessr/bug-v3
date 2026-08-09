@@ -19,6 +19,7 @@ This directory contains additional documentation for the Emoji Extension project
 - **[BUILD_FLAGS.md](../scripts/docs/BUILD_FLAGS.md)** - Compile-time optimization flags
 - **[PERFORMANCE_AUDIT.md](./optimizations/PERFORMANCE_AUDIT.md)** - Bundle graph scanner, budgets, and measured optimization results
 - **[CFWORKER_MARKET_DEPLOY.md](./CFWORKER_MARKET_DEPLOY.md)** - Market-only Cloudflare Pages deployment workflow
+- **[PI_AGENT_BROWSER.md](./PI_AGENT_BROWSER.md)** - PI browser actions, approval modes, recorded `/` workflows, safe scheduling, site permissions, and developer diagnostics
 
 ### Internal Documentation
 

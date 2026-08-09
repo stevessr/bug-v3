@@ -1,5 +1,5 @@
 import { defaultAgentSettings } from './defaultSettings'
-import type { AgentSettings, ProviderProfile } from './types'
+import type { AgentPermissions, AgentSettings, ProviderProfile, SubAgentConfig } from './types'
 
 const STORAGE_KEY = 'ai-agent-settings-v1'
 
@@ -118,6 +118,38 @@ const sanitizeProfiles = (input: unknown): ProviderProfile[] => {
   return result
 }
 
+const sanitizeSubagents = (input: unknown): SubAgentConfig[] => {
+  const source = Array.isArray(input) ? input : defaultAgentSettings.subagents
+  const defaultPermissions = defaultAgentSettings.subagents[0].permissions
+
+  return source
+    .filter((item): item is SubAgentConfig => Boolean(item) && typeof item === 'object')
+    .map(item => {
+      const presetPermissions =
+        defaultAgentSettings.subagents.find(preset => preset.id === item.id)?.permissions ||
+        defaultPermissions
+      const storedPermissions =
+        item.permissions && typeof item.permissions === 'object'
+          ? (item.permissions as Partial<AgentPermissions>)
+          : {}
+      const tabs =
+        typeof storedPermissions.tabs === 'boolean'
+          ? storedPermissions.tabs
+          : typeof storedPermissions.navigate === 'boolean'
+            ? storedPermissions.navigate
+            : presetPermissions.tabs
+
+      return {
+        ...item,
+        permissions: {
+          ...presetPermissions,
+          ...storedPermissions,
+          tabs
+        }
+      }
+    })
+}
+
 export function loadAgentSettings(): AgentSettings {
   if (typeof localStorage === 'undefined') return { ...defaultAgentSettings }
 
@@ -148,7 +180,7 @@ export function loadAgentSettings(): AgentSettings {
       activeProvider: active,
       mcpServers: parsed.mcpServers || [],
       folderRoots: parsed.folderRoots || [],
-      subagents: parsed.subagents || defaultAgentSettings.subagents,
+      subagents: sanitizeSubagents(parsed.subagents),
       maxTokens: resolveMaxTokens(parsed.maxTokens, defaultAgentSettings.maxTokens),
       masterSystemPrompt: parsed.masterSystemPrompt || defaultAgentSettings.masterSystemPrompt,
       enableThoughts:

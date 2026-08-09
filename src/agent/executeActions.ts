@@ -1,5 +1,19 @@
 import { executeFolderAction } from './folderAccess'
-import type { AgentAction, AgentActionResult, AgentPermissions, AgentSettings } from './types'
+import { executeDebugAction, isDebugAction } from './debugActions'
+import {
+  executeTabAction,
+  executeWaitAction,
+  isTabAction,
+  resolveActionTabId,
+  waitForTabLoad
+} from './tabActions'
+import type {
+  AgentAction,
+  AgentActionResult,
+  AgentActionType,
+  AgentPermissions,
+  AgentSettings
+} from './types'
 
 type ActionStatus = AgentActionResult
 
@@ -13,18 +27,42 @@ type DomQueryOptions = {
   maxTextBlocks?: number
 }
 
-const ACTION_TYPE_TO_PERMISSION: Record<string, keyof AgentPermissions> = {
-  click: 'click',
-  'click-dom': 'clickDom',
-  scroll: 'scroll',
-  touch: 'touch',
-  screenshot: 'screenshot',
-  navigate: 'navigate',
-  input: 'input',
-  'list-files': 'fileAccess',
-  'read-file': 'fileAccess',
-  'write-file': 'fileAccess'
-}
+const ACTION_TYPE_TO_PERMISSIONS: Partial<Record<AgentActionType, Array<keyof AgentPermissions>>> =
+  {
+    click: ['click'],
+    'click-dom': ['clickDom'],
+    'double-click': ['click'],
+    'right-click': ['click'],
+    hover: ['click'],
+    focus: ['click'],
+    blur: ['click'],
+    drag: ['click'],
+    scroll: ['scroll'],
+    touch: ['touch'],
+    screenshot: ['screenshot'],
+    navigate: ['navigate'],
+    input: ['input'],
+    key: ['input'],
+    type: ['input'],
+    select: ['input'],
+    getDOM: ['clickDom'],
+    'list-tabs': ['tabs'],
+    'open-tab': ['tabs', 'navigate'],
+    'activate-tab': ['tabs'],
+    'close-tab': ['tabs'],
+    'reload-tab': ['tabs', 'navigate'],
+    'go-back': ['tabs', 'navigate'],
+    'go-forward': ['tabs', 'navigate'],
+    'group-tabs': ['tabs'],
+    'ungroup-tabs': ['tabs'],
+    'debug-start': ['debugger'],
+    'read-console': ['debugger'],
+    'read-network': ['debugger'],
+    'debug-stop': ['debugger'],
+    'list-files': ['fileAccess'],
+    'read-file': ['fileAccess'],
+    'write-file': ['fileAccess']
+  }
 
 const clampInteger = (value: unknown, fallback: number, min: number, max: number): number => {
   const parsed = typeof value === 'number' ? value : Number(value)
@@ -65,6 +103,15 @@ async function captureScreenshot(
   }
   return new Promise(resolve => {
     chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT', format, tabId }, (response: any) => {
+      if (chrome.runtime.lastError) {
+        resolve({
+          id: `screenshot-${Date.now()}`,
+          type: 'screenshot',
+          success: false,
+          error: chrome.runtime.lastError.message || '截图失败'
+        })
+        return
+      }
       if (response?.success) {
         resolve({
           id: `screenshot-${Date.now()}`,
@@ -88,6 +135,24 @@ async function getActiveTabId(): Promise<number | null> {
   if (!chrome?.tabs?.query) return null
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   return tabs[0]?.id ?? null
+}
+
+async function sendMessageToTab(tabId: number, message: unknown): Promise<any> {
+  if (!chrome.tabs?.sendMessage) {
+    return { success: false, error: '无法发送消息到内容脚本' }
+  }
+  return new Promise(resolve => {
+    chrome.tabs.sendMessage(tabId, message, (response: any) => {
+      if (chrome.runtime.lastError) {
+        resolve({
+          success: false,
+          error: chrome.runtime.lastError.message || '无法连接目标页面的内容脚本'
+        })
+        return
+      }
+      resolve(response)
+    })
+  })
 }
 
 export async function executeAgentActions(
@@ -128,13 +193,14 @@ export async function executeAgentActions(
         error: '缺少 selector 或坐标'
       }
     }
-    const permissionKey = ACTION_TYPE_TO_PERMISSION[action.type]
-    if (permissionKey && !permissions[permissionKey]) {
+    const requiredPermissions = ACTION_TYPE_TO_PERMISSIONS[action.type] || []
+    const missingPermission = requiredPermissions.find(permission => !permissions[permission])
+    if (missingPermission) {
       return {
         id: action.id,
         type: action.type,
         success: false,
-        error: '权限未开启'
+        error: `权限未开启：${missingPermission}`
       }
     }
 
@@ -154,8 +220,64 @@ export async function executeAgentActions(
       return executeFolderAction(action, options.settings)
     }
 
+    if (action.type === 'wait') {
+      try {
+        return {
+          id: action.id,
+          type: action.type,
+          success: true,
+          data: await executeWaitAction(action)
+        }
+      } catch (error: any) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: error?.message || '等待失败'
+        }
+      }
+    }
+
+    if (isDebugAction(action)) {
+      try {
+        return {
+          id: action.id,
+          type: action.type,
+          success: true,
+          data: await executeDebugAction(chrome, action, tabId)
+        }
+      } catch (error: any) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: error?.message || '开发者观测失败'
+        }
+      }
+    }
+
+    if (isTabAction(action)) {
+      try {
+        return {
+          id: action.id,
+          type: action.type,
+          success: true,
+          data: await executeTabAction(chrome, action, tabId)
+        }
+      } catch (error: any) {
+        return {
+          id: action.id,
+          type: action.type,
+          success: false,
+          error: error?.message || '标签页操作失败'
+        }
+      }
+    }
+
+    const actionTabId = resolveActionTabId(action, tabId)
+
     if (action.type === 'navigate') {
-      if (!chrome.tabs?.update || tabId === null) {
+      if (!chrome.tabs?.update || actionTabId === null) {
         return {
           id: action.id,
           type: action.type,
@@ -164,8 +286,12 @@ export async function executeAgentActions(
         }
       }
       try {
-        await chrome.tabs.update(tabId, { url: action.url })
-        return { id: action.id, type: action.type, success: true }
+        await chrome.tabs.update(actionTabId, { url: action.url })
+        const data =
+          action.waitForLoad === false
+            ? undefined
+            : await waitForTabLoad(chrome, actionTabId, action.timeoutMs)
+        return { id: action.id, type: action.type, success: true, data }
       } catch (error: any) {
         return {
           id: action.id,
@@ -177,12 +303,12 @@ export async function executeAgentActions(
     }
 
     if (action.type === 'screenshot') {
-      const res = await captureScreenshot(action.format, tabId ?? undefined)
+      const res = await captureScreenshot(action.format, actionTabId ?? undefined)
       return { ...res, id: action.id }
     }
 
     if (action.type === 'getDOM') {
-      if (tabId === null) {
+      if (actionTabId === null) {
         return {
           id: action.id,
           type: action.type,
@@ -190,25 +316,11 @@ export async function executeAgentActions(
           error: '未找到目标标签页'
         }
       }
-      if (!chrome.tabs?.sendMessage) {
-        return {
-          id: action.id,
-          type: action.type,
-          success: false,
-          error: '无法发送消息到内容脚本'
-        }
-      }
-      const response = await new Promise<any>(resolve => {
-        chrome.tabs.sendMessage(
-          tabId,
-          {
-            type: 'DOM_QUERY',
-            kind: 'tree',
-            selector: action.selector,
-            options: normalizeDomQueryOptions(action.options)
-          },
-          (resp: any) => resolve(resp)
-        )
+      const response = await sendMessageToTab(actionTabId, {
+        type: 'DOM_QUERY',
+        kind: 'tree',
+        selector: action.selector,
+        options: normalizeDomQueryOptions(action.options)
       })
       return {
         id: action.id,
@@ -219,7 +331,7 @@ export async function executeAgentActions(
       }
     }
 
-    if (tabId === null) {
+    if (actionTabId === null) {
       return {
         id: action.id,
         type: action.type,
@@ -228,20 +340,7 @@ export async function executeAgentActions(
       }
     }
 
-    if (!chrome.tabs?.sendMessage) {
-      return {
-        id: action.id,
-        type: action.type,
-        success: false,
-        error: '无法发送消息到内容脚本'
-      }
-    }
-
-    const response = await new Promise<any>(resolve => {
-      chrome.tabs.sendMessage(tabId, { type: 'AGENT_ACTION', action }, (resp: any) => {
-        resolve(resp)
-      })
-    })
+    const response = await sendMessageToTab(actionTabId, { type: 'AGENT_ACTION', action })
 
     return {
       id: action.id,

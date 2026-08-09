@@ -8,6 +8,7 @@ import { pageUploadHandler } from './pageUploadHandler'
 import { fetchImageHandler } from './fetchImageHandler'
 import { settingsHandler } from './settingsHandler'
 import { discourseIconSpriteHandler } from './discourseIconSpriteHandler'
+import { workflowRecorderHandler } from './workflowRecorderHandler'
 
 const handlers = [
   agentHandler,
@@ -18,6 +19,7 @@ const handlers = [
   pageUploadHandler,
   fetchImageHandler,
   discourseIconSpriteHandler,
+  workflowRecorderHandler,
   settingsHandler
 ]
 

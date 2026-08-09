@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
 import { getProviders } from '@mariozechner/pi-ai'
 
@@ -21,6 +21,24 @@ import {
   runMcpOAuthFlow
 } from '@/agent/mcpOAuth'
 import { setMcpOAuthTokensUpdatedHandler } from '@/agent/mcpClient'
+import {
+  AGENT_APPROVAL_MODE_STORAGE_KEY,
+  AGENT_PERMISSION_HISTORY_STORAGE_KEY,
+  AGENT_SITE_PERMISSIONS_STORAGE_KEY,
+  LEGACY_BYPASS_MODE_STORAGE_KEY,
+  readAgentApprovalMode,
+  readAgentPermissionHistory,
+  readAgentSitePermissions,
+  recordAgentPermissionDecision,
+  removeAgentSitePermission,
+  setAgentSitePermission,
+  writeAgentApprovalMode,
+  type AgentApprovalMode,
+  type AgentPermissionDecision,
+  type AgentPermissionHistoryEntry,
+  type AgentSiteDecision,
+  type AgentSitePermission
+} from '@/agent/permissionPolicy'
 import {
   BUILTIN_AGENT_PLUGINS,
   defaultEnabledPluginIds,
@@ -49,6 +67,81 @@ const {
   updateActiveProfile
 } = useAgentSettings()
 const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
+const managedApprovalMode = ref<AgentApprovalMode>('auto')
+const managedSitePermissions = ref<AgentSitePermission[]>([])
+const managedPermissionHistory = ref<AgentPermissionHistoryEntry[]>([])
+const managedApprovalModeOptions = [
+  { value: 'manual', label: '手动批准' },
+  { value: 'auto', label: '自动批准' },
+  { value: 'skip', label: '跳过批准' }
+]
+
+const reloadManagedPermissions = () => {
+  managedApprovalMode.value = readAgentApprovalMode()
+  managedSitePermissions.value = readAgentSitePermissions()
+  managedPermissionHistory.value = readAgentPermissionHistory()
+}
+
+const managedPermissionStorageKeys = new Set([
+  AGENT_APPROVAL_MODE_STORAGE_KEY,
+  AGENT_SITE_PERMISSIONS_STORAGE_KEY,
+  AGENT_PERMISSION_HISTORY_STORAGE_KEY,
+  LEGACY_BYPASS_MODE_STORAGE_KEY
+])
+
+const handleManagedPermissionStorageChange = (event: StorageEvent) => {
+  if (event.key && !managedPermissionStorageKeys.has(event.key)) return
+  reloadManagedPermissions()
+}
+
+const recordManagedPermissionDecision = (
+  decision: AgentPermissionDecision,
+  site?: AgentSitePermission
+) => {
+  managedPermissionHistory.value = recordAgentPermissionDecision({
+    mode: managedApprovalMode.value,
+    decision,
+    sites: site ? [site.key] : [],
+    actionTypes: [],
+    reason: site?.label
+  })
+}
+
+const updateManagedApprovalMode = (value: unknown) => {
+  if (typeof value !== 'string' || !['manual', 'auto', 'skip'].includes(value)) return
+  managedApprovalMode.value = value as AgentApprovalMode
+  writeAgentApprovalMode(managedApprovalMode.value)
+}
+
+const updateManagedSite = (site: AgentSitePermission, decision: AgentSiteDecision) => {
+  managedSitePermissions.value = setAgentSitePermission(site, decision)
+  recordManagedPermissionDecision(decision === 'allow' ? 'always-allow' : 'block-site', site)
+}
+
+const revokeManagedSite = (site: AgentSitePermission) => {
+  managedSitePermissions.value = removeAgentSitePermission(site.key)
+  recordManagedPermissionDecision('revoke', site)
+}
+
+const managedPermissionDecisionLabel = (decision: AgentPermissionDecision) => {
+  const labels: Record<AgentPermissionDecision, string> = {
+    'allow-once': '允许一次',
+    'always-allow': '始终允许',
+    'block-site': '阻止站点',
+    deny: '拒绝',
+    revoke: '撤销'
+  }
+  return labels[decision]
+}
+
+const formatManagedPermissionTime = (timestamp: number) =>
+  new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(timestamp)
 
 // === 提供商切换 UI ===
 // pi-ai 的 KnownProvider 列表（运行时获取，避免硬编码漂移）
@@ -357,6 +450,8 @@ const addPresetSubagent = () => {
       touch: false,
       screenshot: true,
       navigate: true,
+      tabs: true,
+      debugger: true,
       clickDom: true,
       input: true,
       fileAccess: false
@@ -781,6 +876,15 @@ onMounted(() => {
   void refreshAllPluginAvailability()
 })
 
+onMounted(() => {
+  reloadManagedPermissions()
+  window.addEventListener('storage', handleManagedPermissionStorageChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('storage', handleManagedPermissionStorageChange)
+})
+
 watch(
   () => settings.value.folderRoots.map(root => root.id).join(','),
   () => {
@@ -942,6 +1046,92 @@ watch(
           </p>
         </div>
         <a-switch v-model:checked="settings.enableThoughts" />
+      </div>
+    </div>
+
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+      data-testid="agent-site-permission-settings"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 class="text-base font-medium dark:text-white">浏览器动作与站点权限</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            按站点控制 PI 可访问范围。受保护动作即使在“跳过批准”下也会单独询问。
+          </p>
+        </div>
+        <a-select
+          :value="managedApprovalMode"
+          :options="managedApprovalModeOptions"
+          class="w-36"
+          data-testid="managed-agent-approval-mode"
+          @change="updateManagedApprovalMode"
+        />
+      </div>
+
+      <div class="space-y-2">
+        <div class="text-sm font-medium dark:text-white">
+          已保存站点（{{ managedSitePermissions.length }}）
+        </div>
+        <div
+          v-if="managedSitePermissions.length === 0"
+          class="rounded-md border border-dashed border-gray-300 dark:border-gray-700 px-4 py-5 text-xs text-gray-500 dark:text-gray-400"
+        >
+          尚未保存站点决策。在 PI 侧边栏选择“始终允许”或“阻止站点”后会显示在这里。
+        </div>
+        <div
+          v-for="site in managedSitePermissions"
+          :key="site.key"
+          class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
+        >
+          <div class="min-w-0">
+            <div class="truncate text-sm font-medium dark:text-white">{{ site.label }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{ site.url }} · {{ site.decision === 'allow' ? '已允许' : '已阻止' }}
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a-button
+              size="small"
+              @click="updateManagedSite(site, site.decision === 'allow' ? 'block' : 'allow')"
+            >
+              {{ site.decision === 'allow' ? '改为阻止' : '改为允许' }}
+            </a-button>
+            <a-button size="small" danger @click="revokeManagedSite(site)">撤销</a-button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="managedPermissionHistory.length" class="space-y-2">
+        <div class="text-sm font-medium dark:text-white">最近权限历史</div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
+              <tr>
+                <th class="px-3 py-2">决策</th>
+                <th class="px-3 py-2">站点</th>
+                <th class="px-3 py-2">时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="entry in managedPermissionHistory.slice(0, 10)"
+                :key="entry.id"
+                class="border-t border-gray-200 dark:border-gray-700"
+              >
+                <td class="px-3 py-2 dark:text-gray-200">
+                  {{ managedPermissionDecisionLabel(entry.decision) }}
+                </td>
+                <td class="max-w-xs truncate px-3 py-2 text-gray-500 dark:text-gray-400">
+                  {{ entry.sites.join('、') || '无站点' }}
+                </td>
+                <td class="whitespace-nowrap px-3 py-2 text-gray-500 dark:text-gray-400">
+                  {{ formatManagedPermissionTime(entry.timestamp) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1397,6 +1587,18 @@ watch(
               @change="value => updatePermission(agent, 'navigate', value as boolean)"
               checked-children="切换URL"
               un-checked-children="切换URL"
+            />
+            <a-switch
+              :checked="agent.permissions.tabs"
+              @change="value => updatePermission(agent, 'tabs', value as boolean)"
+              checked-children="多标签"
+              un-checked-children="多标签"
+            />
+            <a-switch
+              :checked="agent.permissions.debugger"
+              @change="value => updatePermission(agent, 'debugger', value as boolean)"
+              checked-children="开发者观测"
+              un-checked-children="开发者观测"
             />
             <a-switch
               :checked="agent.permissions.clickDom"

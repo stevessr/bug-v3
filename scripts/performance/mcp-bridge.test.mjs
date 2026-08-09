@@ -126,6 +126,16 @@ test('native MCP host starts on extension config and serves Streamable HTTP', as
     assert.equal(listed.response.status, 200)
     assert.ok(listed.body.result.tools.length > 0)
     assert.ok('inputSchema' in listed.body.result.tools[0])
+    const toolNames = new Set(listed.body.result.tools.map(tool => tool.name))
+    assert.deepEqual(
+      [
+        'chrome.debug_start',
+        'chrome.console_logs',
+        'chrome.network_log',
+        'chrome.debug_stop'
+      ].filter(name => !toolNames.has(name)),
+      []
+    )
 
     const invalidProtocol = await postRpc(url, { jsonrpc: '1.0', id: 3, method: 'ping' })
     assert.equal(invalidProtocol.body.error.code, -32600)

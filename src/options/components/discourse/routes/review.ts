@@ -145,7 +145,9 @@ export async function loadReview(
     const meta = data.meta || {}
     state.totalRows = Number(meta.total_rows_reviewables ?? state.totalRows)
     state.reviewableCount = Number(meta.reviewable_count ?? state.reviewableCount)
-    state.unseenReviewableCount = Number(meta.unseen_reviewable_count ?? state.unseenReviewableCount)
+    state.unseenReviewableCount = Number(
+      meta.unseen_reviewable_count ?? state.unseenReviewableCount
+    )
     if (Array.isArray(meta.reviewable_types)) {
       state.types = meta.reviewable_types
     }
@@ -208,7 +210,10 @@ export async function performReviewableAction(
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
         body: new URLSearchParams(
-          Object.entries(extra).filter(([, v]) => v !== undefined && v !== null) as [string, string][]
+          Object.entries(extra).filter(([, v]) => v !== undefined && v !== null) as [
+            string,
+            string
+          ][]
         ).toString()
       }
     ]

@@ -121,6 +121,8 @@ export interface AgentPermissions {
   touch: boolean
   screenshot: boolean
   navigate: boolean
+  tabs: boolean
+  debugger: boolean
   clickDom: boolean
   input: boolean
   fileAccess: boolean
@@ -193,6 +195,7 @@ export interface AgentMessage {
   id: string
   role: AgentRole
   content: string
+  attachments?: import('./imageAttachments').AgentImageAttachmentSummary[]
   actions?: AgentAction[]
   segments?: Array<{
     id: string
@@ -220,6 +223,20 @@ export type AgentActionType =
   | 'focus'
   | 'getDOM'
   | 'blur'
+  | 'wait'
+  | 'list-tabs'
+  | 'open-tab'
+  | 'activate-tab'
+  | 'close-tab'
+  | 'reload-tab'
+  | 'go-back'
+  | 'go-forward'
+  | 'group-tabs'
+  | 'ungroup-tabs'
+  | 'debug-start'
+  | 'read-console'
+  | 'read-network'
+  | 'debug-stop'
   | 'list-files'
   | 'read-file'
   | 'write-file'
@@ -228,6 +245,11 @@ export interface AgentActionBase {
   id: string
   type: AgentActionType
   note?: string
+  /**
+   * Optional per-action tab target. This lets one browser_actions call inspect
+   * or operate several tabs without changing the side panel's default target.
+   */
+  tabId?: number
 }
 
 export interface ClickAction extends AgentActionBase {
@@ -260,6 +282,8 @@ export interface ScreenshotAction extends AgentActionBase {
 export interface NavigateAction extends AgentActionBase {
   type: 'navigate'
   url: string
+  waitForLoad?: boolean
+  timeoutMs?: number
 }
 
 export interface InputAction extends AgentActionBase {
@@ -319,6 +343,84 @@ export interface DomTreeAction extends AgentActionBase {
   }
 }
 
+export interface WaitAction extends AgentActionBase {
+  type: 'wait'
+  ms?: number
+}
+
+export interface ListTabsAction extends AgentActionBase {
+  type: 'list-tabs'
+  currentWindow?: boolean
+  windowId?: number
+}
+
+export interface OpenTabAction extends AgentActionBase {
+  type: 'open-tab'
+  url: string
+  active?: boolean
+  pinned?: boolean
+  index?: number
+  windowId?: number
+  waitForLoad?: boolean
+  timeoutMs?: number
+}
+
+export interface ActivateTabAction extends AgentActionBase {
+  type: 'activate-tab'
+  tabId: number
+}
+
+export interface CloseTabAction extends AgentActionBase {
+  type: 'close-tab'
+  tabId: number
+}
+
+export interface ReloadTabAction extends AgentActionBase {
+  type: 'reload-tab'
+  bypassCache?: boolean
+  waitForLoad?: boolean
+  timeoutMs?: number
+}
+
+export interface TabHistoryAction extends AgentActionBase {
+  type: 'go-back' | 'go-forward'
+  waitForLoad?: boolean
+  timeoutMs?: number
+}
+
+export type AgentTabGroupColor =
+  'grey' | 'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan' | 'orange'
+
+export interface GroupTabsAction extends AgentActionBase {
+  type: 'group-tabs'
+  tabIds: number[]
+  groupId?: number
+  title?: string
+  color?: AgentTabGroupColor
+}
+
+export interface UngroupTabsAction extends AgentActionBase {
+  type: 'ungroup-tabs'
+  tabIds: number[]
+}
+
+export interface DebugStartAction extends AgentActionBase {
+  type: 'debug-start'
+  captureConsole?: boolean
+  captureNetwork?: boolean
+  clear?: boolean
+}
+
+export interface DebugReadAction extends AgentActionBase {
+  type: 'read-console' | 'read-network'
+  clear?: boolean
+  limit?: number
+}
+
+export interface DebugStopAction extends AgentActionBase {
+  type: 'debug-stop'
+}
+
 export interface FileActionBase extends AgentActionBase {
   rootId?: string
   rootAlias?: string
@@ -357,6 +459,18 @@ export type AgentAction =
   | DragAction
   | SelectAction
   | DomTreeAction
+  | WaitAction
+  | ListTabsAction
+  | OpenTabAction
+  | ActivateTabAction
+  | CloseTabAction
+  | ReloadTabAction
+  | TabHistoryAction
+  | GroupTabsAction
+  | UngroupTabsAction
+  | DebugStartAction
+  | DebugReadAction
+  | DebugStopAction
   | ListFilesAction
   | ReadFileAction
   | WriteFileAction

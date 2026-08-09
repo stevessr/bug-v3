@@ -59,7 +59,7 @@
   align-items: center;
 }
 
-.poll-tsx-bar :global(.ant-progress) {
+.poll-tsx-bar .ant-progress {
   margin: 0;
 }
 
@@ -105,18 +105,18 @@
   color: #6b7280;
 }
 
-:global(.dark) .poll-tsx {
+.dark .poll-tsx {
   border-color: rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.4);
 }
 
-:global(.dark) .poll-tsx-results {
+.dark .poll-tsx-results {
   border-color: rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.6);
 }
 
-:global(.dark) .poll-tsx-round-desc,
-:global(.dark) .poll-tsx-percent,
-:global(.dark) .poll-tsx-info {
+.dark .poll-tsx-round-desc,
+.dark .poll-tsx-percent,
+.dark .poll-tsx-info {
   color: #cbd5f5;
 }

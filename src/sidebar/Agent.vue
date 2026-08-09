@@ -1,21 +1,78 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import { nanoid } from 'nanoid'
+import { message as antMessage } from 'ant-design-vue'
 
 import { useAgentSettings } from '@/agent/useAgentSettings'
 import { describeScreenshot, generateChecklist, verifyChecklist } from '@/agent/agentService'
 import { AgentCodex } from '@/agent/agentThread'
 import { updateMemory } from '@/agent/memory'
 import { executeAgentActions } from '@/agent/executeActions'
+import {
+  MAX_AGENT_IMAGE_ATTACHMENTS,
+  createAgentImageAttachmentFromDataUrl,
+  createAgentImageAttachmentFromFile,
+  summarizeAgentImageAttachment,
+  type AgentImageAttachment
+} from '@/agent/imageAttachments'
+import {
+  assessWorkflowScheduleEligibility,
+  buildWorkflowReplayActions
+} from '@/agent/browserWorkflows'
+import { useBrowserWorkflows } from '@/agent/useBrowserWorkflows'
+import {
+  AGENT_APPROVAL_MODE_STORAGE_KEY,
+  AGENT_PERMISSION_HISTORY_STORAGE_KEY,
+  AGENT_SITE_PERMISSIONS_STORAGE_KEY,
+  LEGACY_BYPASS_MODE_STORAGE_KEY,
+  assessAgentActionBatch,
+  readAgentApprovalMode,
+  readAgentPermissionHistory,
+  readAgentSitePermissions,
+  recordAgentPermissionDecision,
+  removeAgentSitePermission,
+  resolveAgentActionSites,
+  setAgentSitePermission,
+  writeAgentApprovalMode,
+  type AgentApprovalMode,
+  type AgentPermissionAssessment,
+  type AgentPermissionDecision,
+  type AgentPermissionHistoryEntry,
+  type AgentSiteDecision,
+  type AgentSitePermission
+} from '@/agent/permissionPolicy'
 import type { AgentAction, AgentActionResult, AgentMessage } from '@/agent/types'
 import type { AgentToolPayload } from '@/agent/agentPayload'
 import type { AgentThreadEvent } from '@/agent/agentThreadEvents'
 import type { BrowserActionsItem } from '@/agent/agentThreadItems'
+import type {
+  AgentBrowserWorkflow,
+  AgentRecordingSession,
+  AgentWorkflowSchedule,
+  AgentWorkflowScheduleCadence
+} from '@/agent/browserWorkflows'
+import AgentWorkflowPanel from '@/sidebar/components/AgentWorkflowPanel.vue'
+import AgentImageCropModal from '@/sidebar/components/AgentImageCropModal.vue'
 
 const { settings, activeSubagent } = useAgentSettings()
+const {
+  workflows,
+  schedules,
+  recordingSession,
+  initialize: initializeBrowserWorkflows,
+  startRecording,
+  stopRecording,
+  saveRecording,
+  deleteWorkflow,
+  markWorkflowRun,
+  createSchedule,
+  toggleSchedule,
+  deleteSchedule,
+  runScheduleNow
+} = useBrowserWorkflows()
 
 const inputValue = ref('')
 const isSending = ref(false)
@@ -24,13 +81,25 @@ const pendingActions = ref<AgentAction[]>([])
 const actionResults = ref<Record<string, AgentActionResult>>({})
 const targetTabId = ref<number | null>(null)
 const TARGET_TAB_STORAGE_KEY = 'ai-agent-target-tab-id-v1'
-const BYPASS_MODE_STORAGE_KEY = 'ai-agent-bypass-mode-v1'
-const bypassMode = ref(true)
+const approvalMode = ref<AgentApprovalMode>('auto')
+const sitePermissions = ref<AgentSitePermission[]>([])
+const permissionHistory = ref<AgentPermissionHistoryEntry[]>([])
+const pendingAssessment = ref<AgentPermissionAssessment | null>(null)
+const isAssessingPermissions = ref(false)
+const isExecutingActions = ref(false)
+const permissionPanelOpen = ref(false)
 const lastUserInput = ref('')
 const lastToolUseIds = ref<string[]>([])
 const lastToolInputs = ref<AgentToolPayload[]>([])
 const lastParallelActions = ref(false)
 const pendingActionsAssistantId = ref<string | null>(null)
+const pendingWorkflowId = ref<string | null>(null)
+const recordingDraft = ref<AgentRecordingSession | null>(null)
+const pendingImages = ref<AgentImageAttachment[]>([])
+const imageInputRef = ref<HTMLInputElement | null>(null)
+const screenshotCropOpen = ref(false)
+const screenshotDraftDataUrl = ref('')
+const isPreparingImage = ref(false)
 const lastTabContext = ref<any>(null)
 const lastChecklist = ref<string[]>([])
 const currentThreadId = ref<string | null>(null)
@@ -40,6 +109,52 @@ const streamingEntries = ref<Record<string, { thoughtId?: string; stepId?: strin
 const MESSAGE_STORAGE_KEY = 'ai-agent-messages-v1'
 const SESSION_STORAGE_KEY = 'ai-agent-session-v1'
 const codex = new AgentCodex({ settings: () => settings.value })
+
+const approvalModeOptions = [
+  { value: 'manual', label: '手动批准' },
+  { value: 'auto', label: '自动批准' },
+  { value: 'skip', label: '跳过批准' }
+]
+
+const approvalModeDescription = computed(() => {
+  if (approvalMode.value === 'manual') return '每批动作都需要你确认'
+  if (approvalMode.value === 'skip') return '受保护动作仍会确认，禁止动作始终拦截'
+  return '已授权站点自动执行，其他站点先询问'
+})
+
+const approvedSiteCount = computed(
+  () => sitePermissions.value.filter(item => item.decision === 'allow').length
+)
+const pendingPersistableSites = computed(
+  () => pendingAssessment.value?.sites.filter(site => site.persistable) || []
+)
+const recentPermissionHistory = computed(() => permissionHistory.value.slice(0, 5))
+const workflowShortcutQuery = computed(() => {
+  const input = inputValue.value.trim()
+  if (!input.startsWith('/')) return ''
+  return input.slice(1).toLocaleLowerCase()
+})
+const workflowShortcutSuggestions = computed(() => {
+  if (!inputValue.value.trim().startsWith('/')) return []
+  const query = workflowShortcutQuery.value
+  return workflows.value
+    .filter(workflow => `${workflow.shortcut} ${workflow.name}`.toLocaleLowerCase().includes(query))
+    .slice(0, 6)
+})
+const pendingWorkflow = computed(() =>
+  workflows.value.find(workflow => workflow.id === pendingWorkflowId.value)
+)
+
+const permissionDecisionLabel = (decision: AgentPermissionDecision) => {
+  const labels: Record<AgentPermissionDecision, string> = {
+    'allow-once': '允许一次',
+    'always-allow': '始终允许',
+    'block-site': '阻止站点',
+    deny: '拒绝',
+    revoke: '撤销'
+  }
+  return labels[decision]
+}
 
 const getCurrentThread = () => {
   if (currentThreadId.value) {
@@ -63,6 +178,8 @@ const activePermissions = computed(() => {
     { key: 'touch', label: '触摸' },
     { key: 'screenshot', label: '截图' },
     { key: 'navigate', label: '切换 URL' },
+    { key: 'tabs', label: '多标签' },
+    { key: 'debugger', label: '开发者观测' },
     { key: 'clickDom', label: '点击 DOM' },
     { key: 'input', label: '输入' },
     { key: 'fileAccess', label: '文件夹' }
@@ -133,13 +250,6 @@ const readStoredTabId = (): number | null => {
   return Number.isNaN(id) ? null : id
 }
 
-const readStoredBypassMode = (): boolean => {
-  if (typeof localStorage === 'undefined') return true
-  const raw = localStorage.getItem(BYPASS_MODE_STORAGE_KEY)
-  if (!raw) return true
-  return raw === 'true'
-}
-
 const loadTimelines = () => {
   if (typeof localStorage === 'undefined') return
   const raw = localStorage.getItem(TIMELINE_STORAGE_KEY)
@@ -178,7 +288,8 @@ const saveSession = () => {
     lastUserInput: lastUserInput.value,
     lastChecklist: lastChecklist.value,
     lastTabContext: lastTabContext.value,
-    threadId: currentThreadId.value
+    threadId: currentThreadId.value,
+    pendingWorkflowId: pendingWorkflowId.value
   }
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
 }
@@ -215,10 +326,13 @@ const loadSession = () => {
     lastChecklist.value = Array.isArray(parsed?.lastChecklist) ? parsed.lastChecklist : []
     lastTabContext.value = parsed?.lastTabContext ?? null
     currentThreadId.value = typeof parsed?.threadId === 'string' ? parsed.threadId : null
+    pendingWorkflowId.value =
+      typeof parsed?.pendingWorkflowId === 'string' ? parsed.pendingWorkflowId : null
   } catch {
     pendingActions.value = []
     pendingActionsAssistantId.value = null
     currentThreadId.value = null
+    pendingWorkflowId.value = null
   }
   if (
     pendingActionsAssistantId.value &&
@@ -226,6 +340,7 @@ const loadSession = () => {
   ) {
     pendingActions.value = []
     pendingActionsAssistantId.value = null
+    pendingWorkflowId.value = null
   }
 }
 
@@ -448,13 +563,8 @@ const writeStoredTabId = (id: number | null) => {
   localStorage.setItem(TARGET_TAB_STORAGE_KEY, String(id))
 }
 
-const writeStoredBypassMode = (value: boolean) => {
-  if (typeof localStorage === 'undefined') return
-  localStorage.setItem(BYPASS_MODE_STORAGE_KEY, value ? 'true' : 'false')
-}
-
 const openAgentSettings = () => {
-  if (!chrome?.runtime?.getURL || !chrome?.tabs?.create) return
+  if (typeof chrome === 'undefined' || !chrome.runtime?.getURL || !chrome.tabs?.create) return
   const url = chrome.runtime.getURL('index.html?type=options&tabs=settings&subtab=ai-agent')
   chrome.tabs.create({ url })
 }
@@ -463,6 +573,112 @@ const appendMessage = (message: AgentMessage) => {
   messages.value.push(message)
   saveMessages()
 }
+
+const reloadPermissionState = () => {
+  approvalMode.value = readAgentApprovalMode()
+  sitePermissions.value = readAgentSitePermissions()
+  permissionHistory.value = readAgentPermissionHistory()
+}
+
+const permissionStorageKeys = new Set([
+  AGENT_APPROVAL_MODE_STORAGE_KEY,
+  AGENT_SITE_PERMISSIONS_STORAGE_KEY,
+  AGENT_PERMISSION_HISTORY_STORAGE_KEY,
+  LEGACY_BYPASS_MODE_STORAGE_KEY
+])
+
+const handlePermissionStorageChange = (event: StorageEvent) => {
+  if (event.key && !permissionStorageKeys.has(event.key)) return
+  reloadPermissionState()
+  pendingAssessment.value = null
+  if (pendingActions.value.length > 0) void runActionsAndContinue()
+}
+
+const assessPendingActions = async (): Promise<AgentPermissionAssessment | null> => {
+  if (pendingActions.value.length === 0) {
+    pendingAssessment.value = null
+    return null
+  }
+
+  isAssessingPermissions.value = true
+  try {
+    const resolved =
+      typeof chrome !== 'undefined' && chrome.tabs
+        ? await resolveAgentActionSites(chrome, pendingActions.value, targetTabId.value)
+        : { sites: [], unresolvedTargets: ['浏览器上下文'] }
+    const assessment = assessAgentActionBatch({
+      mode: approvalMode.value,
+      actions: pendingActions.value,
+      resolved,
+      sitePermissions: sitePermissions.value
+    })
+    pendingAssessment.value = assessment
+    return assessment
+  } finally {
+    isAssessingPermissions.value = false
+  }
+}
+
+const recordPermissionDecision = (
+  decision: AgentPermissionDecision,
+  reason?: string,
+  assessment = pendingAssessment.value
+) => {
+  permissionHistory.value = recordAgentPermissionDecision({
+    mode: approvalMode.value,
+    decision,
+    sites: assessment?.sites.map(site => site.key) || [],
+    actionTypes: pendingActions.value.map(action => action.type),
+    reason
+  })
+}
+
+const setAssessmentSites = (decision: AgentSiteDecision) => {
+  const sites = pendingAssessment.value?.sites.filter(site => site.persistable) || []
+  for (const site of sites) {
+    sitePermissions.value = setAgentSitePermission(site, decision)
+  }
+}
+
+const updateStoredSiteDecision = async (site: AgentSitePermission, decision: AgentSiteDecision) => {
+  sitePermissions.value = setAgentSitePermission(site, decision)
+  recordPermissionDecision(decision === 'allow' ? 'always-allow' : 'block-site', site.label, {
+    status: 'approval-required',
+    mode: approvalMode.value,
+    sites: [site],
+    unresolvedTargets: [],
+    prohibitedActions: [],
+    protectedActions: [],
+    reasons: [],
+    canAlwaysAllow: false
+  })
+  pendingAssessment.value = null
+  if (pendingActions.value.length > 0) await runActionsAndContinue()
+}
+
+const revokeStoredSitePermission = async (site: AgentSitePermission) => {
+  sitePermissions.value = removeAgentSitePermission(site.key)
+  recordPermissionDecision('revoke', site.label, {
+    status: 'approval-required',
+    mode: approvalMode.value,
+    sites: [site],
+    unresolvedTargets: [],
+    prohibitedActions: [],
+    protectedActions: [],
+    reasons: [],
+    canAlwaysAllow: false
+  })
+  pendingAssessment.value = null
+  if (pendingActions.value.length > 0) await runActionsAndContinue()
+}
+
+const formatPermissionTime = (timestamp: number) =>
+  new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(timestamp)
 
 const runActions = async () => {
   if (!activeSubagent.value || pendingActions.value.length === 0) return
@@ -536,8 +752,10 @@ const applyToolState = (
   }
 ) => {
   pendingActions.value = payload.actions || []
+  pendingAssessment.value = null
   actionResults.value = {}
   pendingActionsAssistantId.value = assistantId
+  pendingWorkflowId.value = null
   if (payload.toolUseIds?.length) {
     lastToolUseIds.value = payload.toolUseIds
   } else if (payload.toolUseId) {
@@ -565,12 +783,19 @@ const applyToolState = (
 
 const retryFromMessage = async (message: AgentMessage) => {
   if (!message.content || isSending.value) return
+  if (message.attachments?.length) {
+    inputValue.value = message.content
+    antMessage.warning('图片原始数据未持久化；请重新附加图片后发送')
+    return
+  }
   const idx = messages.value.findIndex(item => item.id === message.id)
   if (idx === -1) return
   messages.value = messages.value.slice(0, idx + 1)
   pendingActions.value = []
+  pendingAssessment.value = null
   actionResults.value = {}
   pendingActionsAssistantId.value = null
+  pendingWorkflowId.value = null
   lastToolUseIds.value = []
   lastToolInputs.value = []
   lastParallelActions.value = true
@@ -587,20 +812,44 @@ const retryFromMessage = async (message: AgentMessage) => {
   await sendMessageWithInput(message.content, { reuseUserMessage: true })
 }
 
-const runActionsAndContinue = async () => {
-  if (!pendingActionsAssistantId.value) return
-  if (!lastTabContext.value) {
-    lastTabContext.value = await resolveTabContext(targetTabId.value)
-    saveSession()
-  }
+const runActionsAndContinue = async (options?: {
+  approveCurrent?: boolean
+  deniedReason?: string
+}) => {
+  if (!pendingActionsAssistantId.value || isExecutingActions.value) return
+  isExecutingActions.value = true
+  let approveCurrent = options?.approveCurrent === true
+  let deniedReason = options?.deniedReason
   let hasFollowupFailure = false
   try {
+    if (!lastTabContext.value) {
+      lastTabContext.value = await resolveTabContext(targetTabId.value)
+      saveSession()
+    }
     while (
       pendingActions.value.length > 0 &&
-      lastToolUseIds.value.length > 0 &&
-      lastToolInputs.value.length > 0
+      (pendingWorkflowId.value !== null ||
+        (lastToolUseIds.value.length > 0 && lastToolInputs.value.length > 0))
     ) {
-      const results = (await runActions()) || []
+      const assessment = await assessPendingActions()
+      if (!deniedReason && assessment?.status === 'blocked') break
+      if (!approveCurrent && !deniedReason && assessment?.status !== 'allow') break
+
+      const currentActions = [...pendingActions.value]
+      const workflowId = pendingWorkflowId.value
+      const wasDenied = Boolean(deniedReason)
+      const results = deniedReason
+        ? currentActions.map<AgentActionResult>(action => ({
+            id: action.id,
+            type: action.type,
+            success: false,
+            error: deniedReason
+          }))
+        : (await runActions()) || []
+      for (const result of results) actionResults.value[result.id] = result
+      pendingAssessment.value = null
+      approveCurrent = false
+      deniedReason = undefined
       if (pendingActionsAssistantId.value) {
         addTimelineEntries(
           pendingActionsAssistantId.value,
@@ -641,6 +890,39 @@ const runActionsAndContinue = async () => {
             }
           }
         }
+      }
+      if (workflowId) {
+        const failures = results.filter(result => !result.success)
+        const status = wasDenied ? 'denied' : failures.length > 0 ? 'failed' : 'success'
+        const summary =
+          status === 'success'
+            ? `工作流执行完成：${results.length} 个动作全部成功。`
+            : status === 'denied'
+              ? '工作流未执行：你拒绝了这批动作。'
+              : `工作流执行失败：${failures
+                  .map(result => `${result.type}（${result.error || '未知错误'}）`)
+                  .join('；')}`
+        updateAssistantMessage(
+          pendingActionsAssistantId.value,
+          summary,
+          status === 'failed' ? summary : undefined
+        )
+        await markWorkflowRun(
+          workflowId,
+          status,
+          failures
+            .map(result => result.error)
+            .filter(Boolean)
+            .join('；') || undefined
+        )
+        pendingActions.value = []
+        pendingAssessment.value = null
+        pendingWorkflowId.value = null
+        lastToolUseIds.value = []
+        lastToolInputs.value = []
+        setTimelineCollapsed(pendingActionsAssistantId.value, true)
+        saveSession()
+        break
       }
       const toolUses = lastToolUseIds.value
         .map((id, index) => ({
@@ -776,26 +1058,70 @@ const runActionsAndContinue = async () => {
     hasFollowupFailure = true
     if (pendingActionsAssistantId.value) {
       const message = error?.message || '自动执行后续动作失败。'
+      const workflowId = pendingWorkflowId.value
       updateAssistantMessage(pendingActionsAssistantId.value, message, message)
       applyToolState(pendingActionsAssistantId.value, {
         actions: [],
         toolUseIds: [],
         toolInputs: []
       })
+      if (workflowId) await markWorkflowRun(workflowId, 'failed', message)
     }
   } finally {
+    isExecutingActions.value = false
     saveSession()
   }
 }
 
+const approvePendingOnce = async () => {
+  if (pendingAssessment.value?.status === 'blocked') {
+    antMessage.warning('已阻止的站点或禁止动作不能通过临时批准绕过')
+    return
+  }
+  recordPermissionDecision('allow-once', pendingAssessment.value?.reasons.join('；'))
+  await runActionsAndContinue({ approveCurrent: true })
+}
+
+const alwaysAllowPendingSites = async () => {
+  if (pendingAssessment.value?.status === 'blocked') {
+    antMessage.warning('已阻止的站点或禁止动作不能加入始终允许')
+    return
+  }
+  setAssessmentSites('allow')
+  recordPermissionDecision('always-allow', pendingAssessment.value?.reasons.join('；'))
+  pendingAssessment.value = null
+  await runActionsAndContinue({ approveCurrent: true })
+}
+
+const denyPendingActions = async () => {
+  const reason = '用户拒绝了这批浏览器动作'
+  recordPermissionDecision('deny', reason)
+  await runActionsAndContinue({ deniedReason: reason })
+}
+
+const blockPendingSites = async () => {
+  const reason = '用户阻止了目标站点'
+  setAssessmentSites('block')
+  recordPermissionDecision('block-site', reason)
+  await runActionsAndContinue({ deniedReason: reason })
+}
+
+const onApprovalModeChange = async (value: unknown) => {
+  if (typeof value !== 'string' || !['manual', 'auto', 'skip'].includes(value)) return
+  approvalMode.value = value as AgentApprovalMode
+  writeAgentApprovalMode(approvalMode.value)
+  pendingAssessment.value = null
+  if (pendingActions.value.length > 0) await runActionsAndContinue()
+}
+
 const resolveActiveTabId = async (): Promise<number | null> => {
-  if (!chrome?.tabs?.query) return null
+  if (typeof chrome === 'undefined' || !chrome.tabs?.query) return null
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   return tabs[0]?.id ?? null
 }
 
 const resolveTabContext = async (tabId: number | null) => {
-  if (!chrome?.tabs) return null
+  if (typeof chrome === 'undefined' || !chrome.tabs) return null
   if (typeof tabId === 'number' && chrome.tabs.get) {
     try {
       const tab = await chrome.tabs.get(tabId)
@@ -832,13 +1158,298 @@ const setTargetTabId = (id: number | null) => {
   writeStoredTabId(id)
 }
 
-const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessage?: boolean }) => {
-  const content = rawInput.trim()
+const ensureImageCapacity = (additional = 1) => {
+  if (pendingImages.value.length + additional <= MAX_AGENT_IMAGE_ATTACHMENTS) return true
+  antMessage.warning(`每次最多共享 ${MAX_AGENT_IMAGE_ATTACHMENTS} 张图片`)
+  return false
+}
+
+const addPendingImage = (attachment: AgentImageAttachment) => {
+  if (!ensureImageCapacity()) return
+  pendingImages.value = [...pendingImages.value, attachment]
+}
+
+const removePendingImage = (id: string) => {
+  pendingImages.value = pendingImages.value.filter(image => image.id !== id)
+}
+
+const openImagePicker = () => imageInputRef.value?.click()
+
+const handleImageFiles = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = [...(input.files || [])]
+  input.value = ''
+  if (!files.length || !ensureImageCapacity(files.length)) return
+  isPreparingImage.value = true
+  try {
+    for (const file of files) {
+      try {
+        addPendingImage(await createAgentImageAttachmentFromFile(file))
+      } catch (error) {
+        antMessage.error(error instanceof Error ? error.message : `无法处理 ${file.name}`)
+      }
+    }
+  } finally {
+    isPreparingImage.value = false
+  }
+}
+
+const captureVisibleTab = async (): Promise<string> => {
+  if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+    throw new Error('页面截图仅在已加载的浏览器扩展中可用')
+  }
+  const tabId = await resolveActiveTabId()
+  if (tabId === null) throw new Error('未找到可截图的活动标签页')
+  setTargetTabId(tabId)
+  const response = (await chrome.runtime.sendMessage({
+    type: 'CAPTURE_SCREENSHOT',
+    format: 'png',
+    tabId
+  })) as { success?: boolean; data?: string; error?: string } | undefined
+  if (!response?.success || !response.data) {
+    throw new Error(response?.error || '页面截图失败')
+  }
+  return response.data
+}
+
+const handleCaptureVisualContext = async () => {
+  if (!ensureImageCapacity()) return
+  if (activeSubagent.value && !activeSubagent.value.permissions.screenshot) {
+    antMessage.warning('当前 PI 预设未启用截图权限')
+    return
+  }
+  isPreparingImage.value = true
+  try {
+    screenshotDraftDataUrl.value = await captureVisibleTab()
+    screenshotCropOpen.value = true
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '页面截图失败')
+  } finally {
+    isPreparingImage.value = false
+  }
+}
+
+const closeScreenshotCrop = () => {
+  screenshotCropOpen.value = false
+  screenshotDraftDataUrl.value = ''
+}
+
+const confirmScreenshotCrop = async (payload: { dataUrl: string; cropped: boolean }) => {
+  isPreparingImage.value = true
+  try {
+    const attachment = await createAgentImageAttachmentFromDataUrl(payload.dataUrl, {
+      name: payload.cropped ? '页面选区.png' : '页面截图.png',
+      source: payload.cropped ? 'region' : 'screenshot'
+    })
+    addPendingImage(attachment)
+    closeScreenshotCrop()
+    antMessage.success(payload.cropped ? '已添加截图选区' : '已添加页面截图')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '无法处理页面截图')
+  } finally {
+    isPreparingImage.value = false
+  }
+}
+
+const handleStartWorkflowRecording = async () => {
+  if (isSending.value || isExecutingActions.value || pendingActions.value.length > 0) {
+    antMessage.warning('请先完成当前 PI 任务或权限确认')
+    return
+  }
+  try {
+    const tabId = await resolveActiveTabId()
+    if (tabId === null) throw new Error('未找到可录制的活动标签页')
+    setTargetTabId(tabId)
+    await startRecording(tabId)
+    antMessage.success('已开始录制；敏感字段内容不会保存')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '开始录制失败')
+  }
+}
+
+const handleStopWorkflowRecording = async () => {
+  try {
+    const session = await stopRecording()
+    if (!session) throw new Error('没有正在进行的录制')
+    if (session.actions.length === 0) {
+      antMessage.warning('没有捕获到可回放动作，录制已结束')
+      return
+    }
+    recordingDraft.value = session
+    antMessage.success(`录制完成：${session.actions.length} 个动作`)
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '停止录制失败')
+  }
+}
+
+const handleSaveWorkflowRecording = async (payload: {
+  session: AgentRecordingSession
+  name: string
+}) => {
+  try {
+    const workflow = await saveRecording(payload.session, payload.name)
+    recordingDraft.value = null
+    antMessage.success(`工作流 /${workflow.shortcut} 已保存`)
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '保存工作流失败')
+  }
+}
+
+const handleDeleteWorkflow = async (workflow: AgentBrowserWorkflow) => {
+  try {
+    await deleteWorkflow(workflow.id)
+    antMessage.success(`已删除“${workflow.name}”`)
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '删除工作流失败')
+  }
+}
+
+const handleRunWorkflow = async (workflow: AgentBrowserWorkflow) => {
+  if (recordingSession.value) {
+    antMessage.warning('请先停止录制')
+    return
+  }
+  if (workflow.redactedFields.length > 0) {
+    antMessage.warning('该工作流包含已脱敏字段，不能自动回放；请重新录制不含敏感输入的部分')
+    return
+  }
+  if (isSending.value || isExecutingActions.value || pendingActions.value.length > 0) {
+    antMessage.warning('请先完成当前 PI 任务或权限确认')
+    return
+  }
+  if (!activeSubagent.value) {
+    antMessage.error('没有可用的 PI 子代理配置')
+    return
+  }
+
+  const assistantId = nanoid()
+  try {
+    const tabId = await resolveActiveTabId()
+    if (tabId === null) throw new Error('未找到活动标签页')
+    setTargetTabId(tabId)
+    lastTabContext.value = await resolveTabContext(tabId)
+    const actions = buildWorkflowReplayActions(workflow, lastTabContext.value?.url)
+    if (actions.length === 0) throw new Error('工作流没有可执行动作')
+
+    const command = `运行工作流 /${workflow.shortcut}`
+    appendMessage({ id: nanoid(), role: 'user', content: command })
+    appendMessage({
+      id: assistantId,
+      role: 'assistant',
+      content: `准备运行“${workflow.name}”，正在检查站点和动作权限。`
+    })
+    ensureTimeline(assistantId)
+    addTimelineEntries(assistantId, [
+      {
+        id: nanoid(),
+        type: 'checklist',
+        text: `确定性回放 ${actions.length} 个已录制动作`,
+        status: 'info'
+      }
+    ])
+    lastUserInput.value = command
+    lastChecklist.value = []
+    lastToolUseIds.value = []
+    lastToolInputs.value = []
+    lastParallelActions.value = false
+    pendingActions.value = actions
+    pendingAssessment.value = null
+    actionResults.value = {}
+    pendingActionsAssistantId.value = assistantId
+    pendingWorkflowId.value = workflow.id
+    saveSession()
+    await runActionsAndContinue()
+  } catch (error) {
+    const text = error instanceof Error ? error.message : '运行工作流失败'
+    updateAssistantMessage(assistantId, text, text)
+    pendingActions.value = []
+    pendingAssessment.value = null
+    pendingActionsAssistantId.value = null
+    pendingWorkflowId.value = null
+    saveSession()
+    antMessage.error(text)
+  }
+}
+
+const handleCreateWorkflowSchedule = async (payload: {
+  workflow: AgentBrowserWorkflow
+  cadence: AgentWorkflowScheduleCadence
+  intervalMinutes?: number
+  firstRunAt: number
+}) => {
+  try {
+    const eligibility = assessWorkflowScheduleEligibility(payload.workflow)
+    const blocked = sitePermissions.value.filter(
+      permission => permission.decision === 'block' && eligibility.origins.includes(permission.key)
+    )
+    if (blocked.length > 0) {
+      throw new Error(`不能调度已阻止站点：${blocked.map(site => site.label).join('、')}`)
+    }
+    await createSchedule(payload.workflow, {
+      cadence: payload.cadence,
+      intervalMinutes: payload.intervalMinutes,
+      firstRunAt: payload.firstRunAt
+    })
+    antMessage.success('定时工作流已创建')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '创建定时任务失败')
+  }
+}
+
+const handleToggleWorkflowSchedule = async (payload: {
+  schedule: AgentWorkflowSchedule
+  enabled: boolean
+}) => {
+  try {
+    await toggleSchedule(payload.schedule, payload.enabled)
+    antMessage.success(payload.enabled ? '定时任务已启用' : '定时任务已暂停')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '更新定时任务失败')
+  }
+}
+
+const handleDeleteWorkflowSchedule = async (schedule: AgentWorkflowSchedule) => {
+  try {
+    await deleteSchedule(schedule.id)
+    antMessage.success('定时任务已移除')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '移除定时任务失败')
+  }
+}
+
+const handleRunWorkflowSchedule = async (schedule: AgentWorkflowSchedule) => {
+  try {
+    await runScheduleNow(schedule.id)
+    antMessage.success('已在后台启动工作流；完成后会发送通知')
+  } catch (error) {
+    antMessage.error(error instanceof Error ? error.message : '启动定时工作流失败')
+  }
+}
+
+const findExactWorkflowShortcut = (input: string) => {
+  const shortcut = input.trim().replace(/^\//, '').toLocaleLowerCase()
+  return workflows.value.find(item => item.shortcut.toLocaleLowerCase() === shortcut)
+}
+
+const runWorkflowShortcut = async (workflow: AgentBrowserWorkflow) => {
+  inputValue.value = ''
+  await handleRunWorkflow(workflow)
+}
+
+const sendMessageWithInput = async (
+  rawInput: string,
+  options?: { reuseUserMessage?: boolean; attachments?: AgentImageAttachment[] }
+) => {
+  const attachments = options?.attachments || []
+  const content =
+    rawInput.trim() || (attachments.length ? '请分析这些图片，并结合当前页面完成相关任务。' : '')
   if (!content || isSending.value) return
   lastUserInput.value = content
   pendingActions.value = []
+  pendingAssessment.value = null
   actionResults.value = {}
   pendingActionsAssistantId.value = null
+  pendingWorkflowId.value = null
   lastToolUseIds.value = []
   lastToolInputs.value = []
   lastParallelActions.value = true
@@ -848,7 +1459,8 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
     const userMessage: AgentMessage = {
       id: nanoid(),
       role: 'user',
-      content
+      content,
+      attachments: attachments.map(summarizeAgentImageAttachment)
     }
     appendMessage(userMessage)
   }
@@ -889,7 +1501,17 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
     saveSession()
 
     const thread = getCurrentThread()
-    const streamedTurn = await thread.runStreamed(content, {
+    const threadInput = attachments.length
+      ? [
+          { type: 'text' as const, text: content },
+          ...attachments.map(attachment => ({
+            type: 'image' as const,
+            dataUrl: attachment.dataUrl,
+            name: attachment.name
+          }))
+        ]
+      : content
+    const streamedTurn = await thread.runStreamed(threadInput, {
       subagent: activeSubagent.value,
       context: { tab: lastTabContext.value || undefined }
     })
@@ -921,7 +1543,7 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
     }
 
     saveSession()
-    if (bypassMode.value && pendingActions.value.length > 0) {
+    if (pendingActions.value.length > 0) {
       await runActionsAndContinue()
     }
     if (pendingActions.value.length === 0 && lastChecklist.value.length) {
@@ -958,19 +1580,32 @@ const sendMessageWithInput = async (rawInput: string, options?: { reuseUserMessa
 
 const sendMessage = async () => {
   const content = inputValue.value.trim()
+  const attachments = [...pendingImages.value]
+  const workflow =
+    attachments.length === 0 && content.startsWith('/')
+      ? findExactWorkflowShortcut(content)
+      : undefined
   inputValue.value = ''
-  await sendMessageWithInput(content)
+  if (workflow) {
+    await handleRunWorkflow(workflow)
+    return
+  }
+  pendingImages.value = []
+  await sendMessageWithInput(content, { attachments })
 }
 
 const clearMessages = () => {
   messages.value = []
   pendingActions.value = []
+  pendingAssessment.value = null
   actionResults.value = {}
   setTargetTabId(null)
   lastToolUseIds.value = []
   lastToolInputs.value = []
   pendingActionsAssistantId.value = null
+  pendingWorkflowId.value = null
   currentThreadId.value = null
+  pendingImages.value = []
   timelines.value = {}
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(TIMELINE_STORAGE_KEY)
@@ -980,47 +1615,43 @@ const clearMessages = () => {
 }
 
 onMounted(async () => {
-  const stored = readStoredTabId()
-  if (!stored) return
-  if (!chrome?.tabs?.get) {
-    setTargetTabId(stored)
-    return
-  }
-  try {
-    await chrome.tabs.get(stored)
-    setTargetTabId(stored)
-  } catch {
-    setTargetTabId(null)
-  }
-})
-
-onMounted(() => {
-  bypassMode.value = readStoredBypassMode()
-})
-
-onMounted(() => {
+  window.addEventListener('storage', handlePermissionStorageChange)
+  reloadPermissionState()
   loadTimelines()
-})
-
-onMounted(() => {
   loadMessages()
-})
-
-onMounted(() => {
   loadSession()
-})
+  await initializeBrowserWorkflows()
 
-onMounted(async () => {
-  if (bypassMode.value && pendingActions.value.length > 0) {
-    await runActionsAndContinue()
+  if (
+    pendingWorkflowId.value &&
+    !workflows.value.some(workflow => workflow.id === pendingWorkflowId.value)
+  ) {
+    pendingWorkflowId.value = null
+    pendingActions.value = []
+    pendingActionsAssistantId.value = null
+    saveSession()
   }
+
+  const stored = readStoredTabId()
+  if (stored) {
+    if (typeof chrome === 'undefined' || !chrome.tabs?.get) {
+      setTargetTabId(stored)
+    } else {
+      try {
+        await chrome.tabs.get(stored)
+        setTargetTabId(stored)
+      } catch {
+        setTargetTabId(null)
+      }
+    }
+  }
+
+  if (pendingActions.value.length > 0) await runActionsAndContinue()
 })
 
-const onBypassModeChange = (value: boolean | string | number) => {
-  const enabled = value === true
-  bypassMode.value = enabled
-  writeStoredBypassMode(enabled)
-}
+onUnmounted(() => {
+  window.removeEventListener('storage', handlePermissionStorageChange)
+})
 </script>
 
 <template>
@@ -1042,18 +1673,91 @@ const onBypassModeChange = (value: boolean | string | number) => {
         </div>
       </div>
       <div class="agent-config">
-        <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-          <span>自动执行</span>
-          <a-switch size="small" :checked="bypassMode" @change="onBypassModeChange" />
+        <div class="agent-approval-control">
+          <span class="text-[11px] text-gray-500 dark:text-gray-400">权限模式</span>
+          <a-select
+            :value="approvalMode"
+            :options="approvalModeOptions"
+            size="small"
+            class="agent-approval-select"
+            data-testid="agent-approval-mode"
+            :disabled="isExecutingActions"
+            @change="onApprovalModeChange"
+          />
+          <a-button
+            size="small"
+            type="text"
+            data-testid="agent-site-permissions-toggle"
+            @click="permissionPanelOpen = !permissionPanelOpen"
+          >
+            站点 {{ approvedSiteCount }}
+          </a-button>
         </div>
         <div class="text-[11px] text-gray-500 dark:text-gray-400">
           任务模型：{{ activeSubagent?.taskModel || settings.taskModel }}
         </div>
       </div>
+      <div class="agent-approval-description">{{ approvalModeDescription }}</div>
       <div class="agent-tags">
         <span v-for="item in activePermissions" :key="item.key" class="agent-tag">
           {{ item.label }}
         </span>
+      </div>
+      <AgentWorkflowPanel
+        :workflows="workflows"
+        :schedules="schedules"
+        :recording-session="recordingSession"
+        :recording-draft="recordingDraft"
+        :busy="isSending || isExecutingActions"
+        @start-recording="handleStartWorkflowRecording"
+        @stop-recording="handleStopWorkflowRecording"
+        @save-recording="handleSaveWorkflowRecording"
+        @discard-draft="recordingDraft = null"
+        @run="handleRunWorkflow"
+        @delete="handleDeleteWorkflow"
+        @create-schedule="handleCreateWorkflowSchedule"
+        @toggle-schedule="handleToggleWorkflowSchedule"
+        @delete-schedule="handleDeleteWorkflowSchedule"
+        @run-schedule="handleRunWorkflowSchedule"
+      />
+      <div
+        v-if="permissionPanelOpen"
+        class="agent-site-permission-panel"
+        data-testid="agent-site-permissions-panel"
+      >
+        <div class="agent-site-permission-title">
+          <span>站点权限</span>
+          <span>{{ sitePermissions.length }} 条</span>
+        </div>
+        <div v-if="sitePermissions.length === 0" class="agent-site-permission-empty">
+          暂无持久站点权限；自动模式会在首次访问时询问。
+        </div>
+        <div v-for="site in sitePermissions" :key="site.key" class="agent-site-permission-row">
+          <div class="agent-site-permission-copy">
+            <strong>{{ site.label }}</strong>
+            <span>{{ site.decision === 'allow' ? '已允许' : '已阻止' }}</span>
+          </div>
+          <div class="agent-site-permission-actions">
+            <a-button
+              size="small"
+              type="text"
+              @click="updateStoredSiteDecision(site, site.decision === 'allow' ? 'block' : 'allow')"
+            >
+              {{ site.decision === 'allow' ? '阻止' : '允许' }}
+            </a-button>
+            <a-button size="small" type="text" danger @click="revokeStoredSitePermission(site)">
+              撤销
+            </a-button>
+          </div>
+        </div>
+        <div v-if="recentPermissionHistory.length" class="agent-permission-history">
+          <div class="agent-site-permission-title">最近决策</div>
+          <div v-for="entry in recentPermissionHistory" :key="entry.id" class="agent-history-row">
+            <span>{{ permissionDecisionLabel(entry.decision) }}</span>
+            <span>{{ entry.sites.join('、') || '无站点' }}</span>
+            <time>{{ formatPermissionTime(entry.timestamp) }}</time>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1137,6 +1841,12 @@ const onBypassModeChange = (value: boolean | string | number) => {
           class="agent-message-bubble"
           :class="message.role === 'user' ? 'agent-user' : 'agent-assistant'"
         >
+          <div v-if="message.attachments?.length" class="agent-message-attachments">
+            <span v-for="attachment in message.attachments" :key="attachment.id">
+              {{ attachment.source === 'region' ? '截图选区' : attachment.name }} ·
+              {{ attachment.width }}×{{ attachment.height }}
+            </span>
+          </div>
           <div v-if="message.segments && message.segments.length" class="agent-segments">
             <div v-for="segment in message.segments" :key="segment.id" class="agent-segment">
               <div class="agent-segment-title">Tool {{ segment.id }}</div>
@@ -1156,27 +1866,185 @@ const onBypassModeChange = (value: boolean | string | number) => {
         </div>
       </div>
 
-      <div v-if="pendingActions.length && !bypassMode" class="agent-actions">
+      <div
+        v-if="
+          pendingActions.length &&
+          (isAssessingPermissions || (pendingAssessment && pendingAssessment.status !== 'allow'))
+        "
+        class="agent-actions agent-approval-card"
+        :data-status="pendingAssessment?.status || 'loading'"
+        data-testid="agent-approval-card"
+      >
         <div class="agent-actions-header">
-          <div class="text-xs text-gray-500 dark:text-gray-400">待执行动作</div>
-          <a-button size="small" @click="runActionsAndContinue">执行全部</a-button>
+          <div>
+            <div class="agent-approval-title">
+              {{
+                pendingAssessment?.status === 'blocked'
+                  ? pendingAssessment.prohibitedActions.length
+                    ? '动作已安全阻止'
+                    : '站点已阻止'
+                  : pendingWorkflow
+                    ? `运行工作流：${pendingWorkflow.name}`
+                    : '需要批准'
+              }}
+            </div>
+            <div class="agent-approval-count">{{ pendingActions.length }} 个动作</div>
+          </div>
+          <a-spin v-if="isAssessingPermissions" size="small" />
         </div>
-        <div class="text-xs text-gray-500 dark:text-gray-400">动作详情已显示在过程时间线中。</div>
+        <template v-if="pendingAssessment && !isAssessingPermissions">
+          <div v-if="pendingAssessment.sites.length" class="agent-approval-sites">
+            <span
+              v-for="site in pendingAssessment.sites"
+              :key="site.key"
+              class="agent-approval-site"
+              :data-decision="site.decision || 'unknown'"
+            >
+              {{ site.label }}
+              <small v-if="site.decision === 'allow'">已允许</small>
+              <small v-else-if="site.decision === 'block'">已阻止</small>
+              <small v-else>未授权</small>
+            </span>
+          </div>
+          <ul v-if="pendingAssessment.reasons.length" class="agent-approval-reasons">
+            <li v-for="reason in pendingAssessment.reasons" :key="reason">{{ reason }}</li>
+          </ul>
+          <div class="agent-approval-buttons">
+            <a-button size="small" danger :loading="isExecutingActions" @click="denyPendingActions">
+              {{ pendingAssessment.status === 'blocked' ? '停止这批动作' : '拒绝' }}
+            </a-button>
+            <a-button
+              v-if="pendingAssessment.status !== 'blocked' && pendingPersistableSites.length"
+              size="small"
+              danger
+              ghost
+              :disabled="isExecutingActions"
+              @click="blockPendingSites"
+            >
+              阻止站点
+            </a-button>
+            <a-button
+              v-if="pendingAssessment.status !== 'blocked'"
+              size="small"
+              :loading="isExecutingActions"
+              @click="approvePendingOnce"
+            >
+              仅本次允许
+            </a-button>
+            <a-button
+              v-if="pendingAssessment.status !== 'blocked' && pendingPersistableSites.length"
+              size="small"
+              type="primary"
+              :loading="isExecutingActions"
+              @click="alwaysAllowPendingSites"
+            >
+              始终允许站点并执行
+            </a-button>
+          </div>
+        </template>
       </div>
     </div>
 
     <div class="agent-input">
+      <div
+        v-if="workflowShortcutSuggestions.length"
+        class="agent-shortcut-palette"
+        data-testid="agent-shortcut-palette"
+      >
+        <button
+          v-for="workflow in workflowShortcutSuggestions"
+          :key="workflow.id"
+          type="button"
+          class="agent-shortcut-option"
+          @click="runWorkflowShortcut(workflow)"
+        >
+          <span>
+            <strong>/{{ workflow.shortcut }}</strong>
+            <small>{{ workflow.name }}</small>
+          </span>
+          <span>{{ workflow.actions.length }} 步</span>
+        </button>
+      </div>
+      <div
+        v-if="pendingImages.length"
+        class="agent-image-attachment-tray"
+        data-testid="agent-image-attachment-tray"
+      >
+        <div v-for="image in pendingImages" :key="image.id" class="agent-image-attachment">
+          <img :src="image.dataUrl" :alt="image.name" />
+          <span>
+            <strong>{{ image.name }}</strong>
+            <small>{{ image.width }}×{{ image.height }}</small>
+          </span>
+          <button
+            type="button"
+            :aria-label="`移除 ${image.name}`"
+            @click="removePendingImage(image.id)"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      <div class="agent-input-tools">
+        <input
+          ref="imageInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
+          class="agent-image-file-input"
+          data-testid="agent-image-file-input"
+          @change="handleImageFiles"
+        />
+        <a-button
+          size="small"
+          type="text"
+          data-testid="agent-image-upload"
+          :disabled="
+            isSending || isExecutingActions || pendingImages.length >= MAX_AGENT_IMAGE_ATTACHMENTS
+          "
+          @click="openImagePicker"
+        >
+          添加图片
+        </a-button>
+        <a-button
+          size="small"
+          type="text"
+          data-testid="agent-screenshot-context"
+          :loading="isPreparingImage"
+          :disabled="
+            isSending || isExecutingActions || pendingImages.length >= MAX_AGENT_IMAGE_ATTACHMENTS
+          "
+          @click="handleCaptureVisualContext"
+        >
+          截图选区
+        </a-button>
+        <span>{{ pendingImages.length }}/{{ MAX_AGENT_IMAGE_ATTACHMENTS }} · 图片不持久化</span>
+      </div>
       <div class="agent-input-inner">
         <a-textarea
           v-model:value="inputValue"
           :auto-size="{ minRows: 1, maxRows: 4 }"
-          placeholder="描述任务，支持多步指令..."
+          placeholder="描述任务，或输入 / 运行工作流..."
           class="agent-textarea"
           @pressEnter="sendMessage"
         />
-        <a-button type="primary" :loading="isSending" @click="sendMessage">发送</a-button>
+        <a-button
+          type="primary"
+          :loading="isSending"
+          :disabled="!inputValue.trim() && pendingImages.length === 0"
+          @click="sendMessage"
+        >
+          发送
+        </a-button>
       </div>
     </div>
+
+    <AgentImageCropModal
+      :open="screenshotCropOpen"
+      :image-data-url="screenshotDraftDataUrl"
+      @close="closeScreenshotCrop"
+      @confirm="confirmScreenshotCrop"
+    />
   </div>
 </template>
 
@@ -1216,6 +2084,100 @@ const onBypassModeChange = (value: boolean | string | number) => {
   justify-content: space-between;
   gap: 8px;
   margin-top: 10px;
+}
+
+.agent-approval-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.agent-approval-select {
+  width: 112px;
+}
+
+.agent-approval-description {
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-site-permission-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 14px;
+  background: var(--md3-surface-container);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.agent-site-permission-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md3-on-surface);
+}
+
+.agent-site-permission-empty {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-site-permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--md3-outline-variant);
+}
+
+.agent-site-permission-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-site-permission-copy strong {
+  overflow: hidden;
+  color: var(--md3-on-surface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-site-permission-actions {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.agent-permission-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+}
+
+.agent-history-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-history-row span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-tags {
@@ -1310,6 +2272,20 @@ const onBypassModeChange = (value: boolean | string | number) => {
   border-radius: 14px;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.agent-message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.agent-message-attachments span {
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  border-radius: 999px;
+  font-size: 10px;
 }
 
 .agent-segments {
@@ -1419,6 +2395,70 @@ const onBypassModeChange = (value: boolean | string | number) => {
   background: var(--md3-surface-container-low);
 }
 
+.agent-approval-card[data-status='blocked'] {
+  border-color: var(--md3-error, #b3261e);
+  background: color-mix(in srgb, var(--md3-error-container, #f9dedc) 55%, transparent);
+}
+
+.agent-approval-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--md3-on-surface);
+}
+
+.agent-approval-count {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-approval-sites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.agent-approval-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--md3-surface-container-high);
+  color: var(--md3-on-surface);
+  font-size: 11px;
+}
+
+.agent-approval-site[data-decision='allow'] {
+  background: color-mix(in srgb, var(--md3-primary-container) 70%, transparent);
+}
+
+.agent-approval-site[data-decision='block'] {
+  background: color-mix(in srgb, var(--md3-error-container, #f9dedc) 75%, transparent);
+}
+
+.agent-approval-site small {
+  color: var(--md3-on-surface-variant);
+  font-size: 9px;
+}
+
+.agent-approval-reasons {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--md3-on-surface-variant);
+}
+
+.agent-approval-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .agent-actions-header {
   display: flex;
   align-items: center;
@@ -1454,6 +2494,155 @@ const onBypassModeChange = (value: boolean | string | number) => {
   border-top: 1px solid var(--md3-outline-variant);
   padding: 12px;
   background: var(--md3-surface-container-low);
+}
+
+.agent-shortcut-palette {
+  display: grid;
+  gap: 4px;
+  max-height: 210px;
+  overflow: auto;
+  margin-bottom: 8px;
+  padding: 6px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 14px;
+  background: var(--md3-surface-container);
+  box-shadow: var(--md3-elevation-2);
+}
+
+.agent-shortcut-option {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--md3-on-surface-variant);
+  font: inherit;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-shortcut-option:hover,
+.agent-shortcut-option:focus-visible {
+  outline: none;
+  background: var(--md3-secondary-container);
+  color: var(--md3-on-secondary-container);
+}
+
+.agent-shortcut-option > span:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.agent-shortcut-option strong {
+  color: var(--md3-on-surface);
+  font-size: 12px;
+}
+
+.agent-shortcut-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-image-attachment-tray {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 7px;
+  padding-bottom: 2px;
+}
+
+.agent-image-attachment {
+  display: grid;
+  min-width: 178px;
+  grid-template-columns: 42px minmax(0, 1fr) 24px;
+  gap: 7px;
+  align-items: center;
+  padding: 5px;
+  border: 1px solid var(--md3-outline-variant);
+  border-radius: 11px;
+  background: var(--md3-surface-container);
+}
+
+.agent-image-attachment img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.agent-image-attachment > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.agent-image-attachment strong,
+.agent-image-attachment small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-image-attachment strong {
+  color: var(--md3-on-surface);
+  font-size: 10px;
+}
+
+.agent-image-attachment small {
+  color: var(--md3-on-surface-variant);
+  font-size: 9px;
+}
+
+.agent-image-attachment button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md3-on-surface-variant);
+  cursor: pointer;
+}
+
+.agent-image-attachment button:hover,
+.agent-image-attachment button:focus-visible {
+  outline: none;
+  background: var(--md3-surface-container-highest);
+  color: var(--md3-error);
+}
+
+.agent-input-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 26px;
+  margin-bottom: 5px;
+}
+
+.agent-input-tools > span {
+  overflow: hidden;
+  margin-left: auto;
+  color: var(--md3-on-surface-variant);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-image-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .agent-input-inner {

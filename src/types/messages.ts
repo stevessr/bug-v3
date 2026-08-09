@@ -6,6 +6,7 @@
 import type { Emoji, EmojiGroup, AppSettings } from './type'
 
 import type { AgentAction } from '@/agent/types'
+import type { AgentWorkflowRecordedEvent } from '@/agent/browserWorkflows'
 
 /**
  * 基础消息接口
@@ -155,6 +156,67 @@ export interface CaptureScreenshotMessage extends BaseMessage {
   type: 'CAPTURE_SCREENSHOT'
   format?: 'png' | 'jpeg'
   tabId?: number
+}
+
+export interface AgentDebugStartMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_START'
+  tabId: number
+  captureConsole?: boolean
+  captureNetwork?: boolean
+  clear?: boolean
+}
+
+export interface AgentDebugReadConsoleMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_READ_CONSOLE'
+  tabId: number
+  clear?: boolean
+  limit?: number
+}
+
+export interface AgentDebugReadNetworkMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_READ_NETWORK'
+  tabId: number
+  clear?: boolean
+  limit?: number
+}
+
+export interface AgentDebugStopMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_STOP'
+  tabId: number
+}
+
+export interface AgentRecordingStartMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_START'
+  tabId: number
+}
+
+export interface AgentRecordingStopMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_STOP'
+  tabId?: number
+}
+
+export interface AgentRecordingStatusMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_STATUS'
+  tabId?: number
+}
+
+export interface AgentRecordingContentReadyMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_CONTENT_READY'
+}
+
+export interface AgentRecordingEventMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_EVENT'
+  event: AgentWorkflowRecordedEvent
+}
+
+export interface AgentRecordingSetStateMessage extends BaseMessage {
+  type: 'AGENT_RECORDING_SET_STATE'
+  active: boolean
+}
+
+export interface AgentWorkflowRunScheduleMessage extends BaseMessage {
+  type: 'AGENT_WORKFLOW_RUN_SCHEDULE'
+  scheduleId: string
 }
 
 /**
@@ -339,6 +401,17 @@ export type TypedMessage =
   | ProxyImageMessage
   | DownloadImageMessage
   | CaptureScreenshotMessage
+  | AgentDebugStartMessage
+  | AgentDebugReadConsoleMessage
+  | AgentDebugReadNetworkMessage
+  | AgentDebugStopMessage
+  | AgentRecordingStartMessage
+  | AgentRecordingStopMessage
+  | AgentRecordingStatusMessage
+  | AgentRecordingContentReadyMessage
+  | AgentRecordingEventMessage
+  | AgentRecordingSetStateMessage
+  | AgentWorkflowRunScheduleMessage
   | AgentActionMessage
   | DomQueryMessage
   | GetCsrfTokenMessage
@@ -370,6 +443,7 @@ export type BackgroundMessage = TypedMessage
  */
 export type ContentMessage =
   | AgentActionMessage
+  | AgentRecordingSetStateMessage
   | DomQueryMessage
   | GetCsrfTokenMessage
   | GetLinuxDoUserMessage

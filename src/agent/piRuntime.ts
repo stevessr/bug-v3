@@ -7,6 +7,7 @@ import {
 import {
   Type,
   type AssistantMessage,
+  type ImageContent,
   type Message,
   type ToolResultMessage
 } from '@mariozechner/pi-ai'
@@ -113,6 +114,7 @@ type RunOptions = {
   onUpdate?: (update: AgentStreamUpdate) => void
   sessionId?: string
   isolated?: boolean
+  images?: ImageContent[]
 }
 
 const THREAD_STORAGE_PREFIX = 'pi-agent-thread-v2:'
@@ -143,7 +145,25 @@ const createDeferred = <T>(): Deferred<T> => {
 }
 
 const cloneMessages = (messages: PiAgentMessage[]): Message[] =>
-  JSON.parse(JSON.stringify(messages))
+  JSON.parse(
+    JSON.stringify(
+      messages.map(message => {
+        if (message.role !== 'user' || !Array.isArray(message.content)) return message
+        const imageCount = message.content.filter(block => block.type === 'image').length
+        if (!imageCount) return message
+        return {
+          ...message,
+          content: [
+            ...message.content.filter(block => block.type !== 'image'),
+            {
+              type: 'text',
+              text: `[${imageCount} 张用户图片已用于本轮视觉上下文，原始数据未持久化]`
+            }
+          ]
+        }
+      })
+    )
+  )
 
 const readStoredThreadState = (threadId: string): StoredThreadState | null => {
   if (typeof localStorage === 'undefined') return null
@@ -758,7 +778,7 @@ export async function runPiAgentMessage(
     const unsubscribe = subscribeToRun(runtime, runState, options?.onUpdate)
 
     const promptPromise = runtime.agent
-      .prompt(input)
+      .prompt(input, options?.images)
       .then(() => null)
       .catch(error => {
         if (!suspendResult.settled()) throw error

@@ -19,10 +19,16 @@ import type {
   TodoListItem
 } from './agentThreadItems'
 
-export type AgentUserInput = {
-  type: 'text'
-  text: string
-}
+export type AgentUserInput =
+  | {
+      type: 'text'
+      text: string
+    }
+  | {
+      type: 'image'
+      dataUrl: string
+      name?: string
+    }
 
 export type AgentInput = string | AgentUserInput[]
 
@@ -107,12 +113,17 @@ class AsyncEventQueue<T> {
   }
 }
 
-const normalizeInput = (input: AgentInput): string => {
-  if (typeof input === 'string') return input
-  return input
-    .filter(item => item.type === 'text')
-    .map(item => item.text)
-    .join('\n\n')
+const normalizeInput = (input: AgentInput): { text: string; images: string[] } => {
+  if (typeof input === 'string') return { text: input, images: [] }
+  return {
+    text: input
+      .filter((item): item is Extract<AgentUserInput, { type: 'text' }> => item.type === 'text')
+      .map(item => item.text)
+      .join('\n\n'),
+    images: input
+      .filter((item): item is Extract<AgentUserInput, { type: 'image' }> => item.type === 'image')
+      .map(item => item.dataUrl)
+  }
 }
 
 const toTodoItems = (steps: string[]) => steps.map(text => ({ text, completed: false }))
@@ -256,15 +267,17 @@ export class AgentThread {
       this._id = nanoid()
     }
     this.emitThreadStarted = false
+    const normalized = normalizeInput(input)
     const result = await runAgentMessage(
-      normalizeInput(input),
+      normalized.text,
       this.settingsProvider(),
       options.subagent || this.defaults.subagent,
       options.context || this.defaults.context,
       {
         onUpdate: options.onUpdate,
         sessionId: this._id || undefined,
-        isolated: options.isolated ?? this.defaults.isolated
+        isolated: options.isolated ?? this.defaults.isolated,
+        images: normalized.images
       }
     )
 
@@ -459,7 +472,7 @@ export class AgentThread {
     }
     this.emitThreadStarted = false
     const result = await runAgentFollowup(
-      normalizeInput(input),
+      normalizeInput(input).text,
       toolUses,
       toolResult,
       this.settingsProvider(),
