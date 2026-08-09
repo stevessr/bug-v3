@@ -4,6 +4,9 @@ import { setTimeout as delay } from 'node:timers/promises'
 
 const DEFAULT_PORT = Number.parseInt(process.env.MCP_PORT || '', 10) || 7465
 const TOOL_TIMEOUT_MS = 30_000
+const MAX_NATIVE_MESSAGE_BYTES = 10 * 1024 * 1024
+const MAX_HTTP_BODY_BYTES = 2 * 1024 * 1024
+const MCP_PROTOCOL_VERSION = '2024-11-05'
 
 const TOOLS = [
   {
@@ -718,6 +721,21 @@ const TOOLS = [
     }
   },
   {
+    name: 'discourse.get_user_activity',
+    description: 'Get activity records for a Discourse user.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', default: 'https://linux.do' },
+        username: { type: 'string' },
+        filter: { type: 'string', default: '4,5' },
+        limit: { type: 'number', default: 20 },
+        offset: { type: 'number', default: 0 }
+      },
+      required: ['username']
+    }
+  },
+  {
     name: 'discourse.get_post_context',
     description: 'Get post context near a specific post.',
     input_schema: {
@@ -844,14 +862,25 @@ const TOOLS = [
 const pendingToolCalls = new Map()
 let serverStarted = false
 let serverPort = DEFAULT_PORT
+let httpServer = null
+let shuttingDown = false
+const nativeSessionId = `bug-v3-${process.pid}`
+
+const MCP_TOOLS = TOOLS.map(({ input_schema, ...tool }) => ({
+  ...tool,
+  inputSchema: input_schema
+}))
 
 function sendNativeMessage(message) {
-  const json = JSON.stringify(message)
-  const length = Buffer.byteLength(json)
+  if (shuttingDown || !process.stdout.writable) return false
+  const payload = Buffer.from(JSON.stringify(message), 'utf8')
+  if (payload.length > MAX_NATIVE_MESSAGE_BYTES) {
+    process.stderr.write(`[MCP] Native message too large: ${payload.length} bytes\n`)
+    return false
+  }
   const header = Buffer.alloc(4)
-  header.writeUInt32LE(length, 0)
-  process.stdout.write(header)
-  process.stdout.write(json)
+  header.writeUInt32LE(payload.length, 0)
+  return process.stdout.write(Buffer.concat([header, payload]))
 }
 
 let incomingBuffer = Buffer.alloc(0)
@@ -872,12 +901,11 @@ function handleNativeMessage(message) {
   }
 
   if (message.type === 'MCP_CONFIG') {
-    if (typeof message.port === 'number' && !Number.isNaN(message.port)) {
-      serverPort = message.port
+    const requestedPort = Number(message.port)
+    if (Number.isInteger(requestedPort) && requestedPort >= 1 && requestedPort <= 65535) {
+      serverPort = requestedPort
     }
-    if (!serverStarted) {
-      startHttpServer()
-    }
+    startHttpServer()
     return
   }
 }
@@ -889,6 +917,10 @@ function readNativeMessages() {
 
   while (incomingBuffer.length >= 4) {
     const messageLength = incomingBuffer.readUInt32LE(0)
+    if (messageLength > MAX_NATIVE_MESSAGE_BYTES) {
+      process.stderr.write(`[MCP] Refusing native message of ${messageLength} bytes\n`)
+      process.exit(1)
+    }
     if (incomingBuffer.length < 4 + messageLength) break
     const messageBuffer = incomingBuffer.slice(4, 4 + messageLength)
     incomingBuffer = incomingBuffer.slice(4 + messageLength)
@@ -902,12 +934,16 @@ function readNativeMessages() {
 }
 
 process.stdin.on('readable', readNativeMessages)
-process.stdin.on('end', () => process.exit(0))
+process.stdin.on('end', () => shutdown(0))
 
 function callExtensionTool(name, args) {
   if (name === 'chrome.wait') {
     const ms = Number(args?.ms || 0)
     return delay(ms).then(() => ({ success: true, waitedMs: ms }))
+  }
+
+  if (process.stdin.destroyed || process.stdin.readableEnded) {
+    return Promise.reject(new Error('Extension disconnected'))
   }
 
   const id = `tool_${Date.now()}_${Math.random().toString(16).slice(2)}`
@@ -917,6 +953,7 @@ function callExtensionTool(name, args) {
       reject(new Error('Tool call timed out'))
     }, TOOL_TIMEOUT_MS)
     pendingToolCalls.set(id, {
+      timeout,
       resolve: result => {
         clearTimeout(timeout)
         resolve(result)
@@ -926,7 +963,11 @@ function callExtensionTool(name, args) {
         reject(error)
       }
     })
-    sendNativeMessage({ type: 'MCP_TOOL_CALL', id, tool: name, args })
+    if (!sendNativeMessage({ type: 'MCP_TOOL_CALL', id, tool: name, args })) {
+      pendingToolCalls.delete(id)
+      clearTimeout(timeout)
+      reject(new Error('Native message channel unavailable'))
+    }
   })
 }
 
@@ -942,7 +983,10 @@ function toToolResult(payload) {
     content: [
       {
         type: 'text',
-        text: typeof payload === 'string' ? payload : JSON.stringify(payload)
+        text:
+          typeof payload === 'string'
+            ? payload
+            : JSON.stringify(payload === undefined ? null : payload, null, 2)
       }
     ]
   }
@@ -953,21 +997,30 @@ async function handleRpcRequest(rpc) {
     return jsonRpcResponse(null, null, { code: -32600, message: 'Invalid Request' })
   }
 
+  if (rpc.jsonrpc !== '2.0') {
+    return jsonRpcResponse(rpc.id ?? null, null, { code: -32600, message: 'Invalid Request' })
+  }
+
   const { id, method, params } = rpc
 
-  if (!method) {
+  if (typeof method !== 'string' || !method) {
     return jsonRpcResponse(id ?? null, null, { code: -32600, message: 'Invalid Request' })
   }
 
   if (method === 'initialize') {
     return jsonRpcResponse(id ?? null, {
-      serverInfo: { name: 'bug-v3-chrome-mcp', version: '0.1.0' },
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      serverInfo: { name: 'bug-v3-chrome-mcp', version: '0.2.0' },
       capabilities: { tools: {} }
     })
   }
 
+  if (method === 'notifications/initialized' || method.startsWith('notifications/')) {
+    return null
+  }
+
   if (method === 'tools/list') {
-    return jsonRpcResponse(id ?? null, { tools: TOOLS })
+    return jsonRpcResponse(id ?? null, { tools: MCP_TOOLS })
   }
 
   if (method === 'ping') {
@@ -987,14 +1040,18 @@ async function handleRpcRequest(rpc) {
     if (!toolName) {
       return jsonRpcResponse(id ?? null, null, { code: -32602, message: 'Missing tool name' })
     }
+    if (!MCP_TOOLS.some(tool => tool.name === toolName)) {
+      return jsonRpcResponse(id ?? null, null, {
+        code: -32602,
+        message: `Unknown tool: ${toolName}`
+      })
+    }
     try {
       const result = await callExtensionTool(toolName, params?.arguments || {})
       return jsonRpcResponse(id ?? null, toToolResult(result))
     } catch (error) {
-      return jsonRpcResponse(id ?? null, toToolResult(error?.message || 'Tool call failed'), {
-        code: -32000,
-        message: error?.message || 'Tool call failed'
-      })
+      const message = error?.message || 'Tool call failed'
+      return jsonRpcResponse(id ?? null, { ...toToolResult(message), isError: true })
     }
   }
 
@@ -1004,12 +1061,32 @@ async function handleRpcRequest(rpc) {
 function collectBody(req) {
   return new Promise((resolve, reject) => {
     let raw = ''
+    let bytes = 0
+    let settled = false
     req.setEncoding('utf8')
     req.on('data', chunk => {
+      if (settled) return
+      bytes += Buffer.byteLength(chunk, 'utf8')
+      if (bytes > MAX_HTTP_BODY_BYTES) {
+        settled = true
+        req.resume()
+        reject(new Error('Request body too large'))
+        return
+      }
       raw += chunk
     })
-    req.on('end', () => resolve(raw))
-    req.on('error', reject)
+    req.on('end', () => {
+      if (!settled) {
+        settled = true
+        resolve(raw)
+      }
+    })
+    req.on('error', error => {
+      if (!settled) {
+        settled = true
+        reject(error)
+      }
+    })
   })
 }
 
@@ -1017,7 +1094,9 @@ function writeJson(res, statusCode, payload) {
   const data = JSON.stringify(payload)
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Content-Length': Buffer.byteLength(data)
+    'Content-Length': Buffer.byteLength(data),
+    'MCP-Session-Id': nativeSessionId,
+    'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
   })
   res.end(data)
 }
@@ -1026,7 +1105,9 @@ function writeSse(res, payloads) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    Connection: 'keep-alive'
+    Connection: 'keep-alive',
+    'MCP-Session-Id': nativeSessionId,
+    'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
   })
   for (const payload of payloads) {
     res.write(`event: message\n`)
@@ -1036,6 +1117,8 @@ function writeSse(res, payloads) {
 }
 
 function startHttpServer() {
+  if (httpServer && serverStarted) return
+
   const server = http.createServer(async (req, res) => {
     if (!req.url) {
       res.writeHead(404)
@@ -1043,18 +1126,59 @@ function startHttpServer() {
       return
     }
 
-    if (req.method === 'GET' && req.url === '/health') {
-      writeJson(res, 200, { ok: true })
+    const pathname = new URL(req.url, 'http://127.0.0.1').pathname
+
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, MCP-Session-Id')
+    res.setHeader('Access-Control-Expose-Headers', 'MCP-Session-Id, MCP-Protocol-Version')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204)
+      res.end()
       return
     }
 
-    if (req.method !== 'POST' || req.url !== '/mcp') {
+    if (req.method === 'GET' && pathname === '/health') {
+      writeJson(res, 200, {
+        ok: true,
+        transport: 'native-messaging',
+        extensionConnected: !process.stdin.readableEnded,
+        tools: MCP_TOOLS.length
+      })
+      return
+    }
+
+    if (req.method === 'GET' && pathname === '/') {
+      writeJson(res, 200, {
+        name: 'bug-v3-chrome-mcp',
+        version: '0.2.0',
+        transport: 'streamable-http',
+        endpoint: '/mcp',
+        nativeHost: true,
+        tools: MCP_TOOLS.length
+      })
+      return
+    }
+
+    if (req.method === 'GET' && pathname === '/mcp') {
+      writeSse(res, [])
+      return
+    }
+
+    if (req.method !== 'POST' || pathname !== '/mcp') {
       res.writeHead(404)
       res.end()
       return
     }
 
-    const rawBody = await collectBody(req)
+    let rawBody
+    try {
+      rawBody = await collectBody(req)
+    } catch (error) {
+      writeJson(res, 413, jsonRpcResponse(null, null, { code: -32600, message: error.message }))
+      return
+    }
     let payload
     try {
       payload = JSON.parse(rawBody)
@@ -1064,8 +1188,22 @@ function startHttpServer() {
     }
 
     const isBatch = Array.isArray(payload)
+    if (isBatch && payload.length === 0) {
+      writeJson(res, 400, jsonRpcResponse(null, null, { code: -32600, message: 'Invalid Request' }))
+      return
+    }
+
     const requests = isBatch ? payload : [payload]
-    const responses = await Promise.all(requests.map(handleRpcRequest))
+    const responses = (await Promise.all(requests.map(handleRpcRequest))).filter(Boolean)
+
+    if (responses.length === 0) {
+      res.writeHead(204, {
+        'MCP-Session-Id': nativeSessionId,
+        'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
+      })
+      res.end()
+      return
+    }
 
     const accept = req.headers.accept || ''
     if (accept.includes('text/event-stream')) {
@@ -1076,14 +1214,45 @@ function startHttpServer() {
     writeJson(res, 200, isBatch ? responses : responses[0])
   })
 
+  httpServer = server
+  server.once('error', error => {
+    serverStarted = false
+    httpServer = null
+    process.stderr.write(`[MCP] HTTP server error: ${error.message}\n`)
+    sendNativeMessage({ type: 'MCP_ERROR', error: error.message, port: serverPort })
+  })
   server.listen(serverPort, '127.0.0.1', () => {
     serverStarted = true
     sendNativeMessage({ type: 'MCP_SERVER_STARTED', port: serverPort })
   })
 }
 
-if (!serverStarted) {
-  startHttpServer()
+function rejectPendingToolCalls(error) {
+  for (const [id, pending] of pendingToolCalls) {
+    clearTimeout(pending.timeout)
+    pendingToolCalls.delete(id)
+    pending.reject(error)
+  }
 }
 
+function shutdown(exitCode = 0) {
+  if (shuttingDown) return
+  shuttingDown = true
+  rejectPendingToolCalls(new Error('MCP host shutting down'))
+  if (httpServer) {
+    const server = httpServer
+    httpServer = null
+    serverStarted = false
+    server.close(() => process.exit(exitCode))
+    return
+  }
+  process.exit(exitCode)
+}
+
+process.on('SIGINT', () => shutdown(0))
+process.on('SIGTERM', () => shutdown(0))
+
+// Tell the extension that the native process is alive. The extension sends
+// MCP_CONFIG next; delaying HTTP startup until then avoids binding the wrong
+// port when the user changed it in settings.
 sendNativeMessage({ type: 'MCP_HOST_READY', port: serverPort })

@@ -1,4 +1,4 @@
-import { defineComponent, computed } from 'vue'
+import { computed, defineComponent, ref } from 'vue'
 import { UserAddOutlined, SettingOutlined } from '@ant-design/icons-vue'
 
 import type { ChatChannel, ChatMessage, ChatState, DiscourseUser } from '../types'
@@ -239,6 +239,7 @@ export default defineComponent({
           {activeChannel.value ? (
             <ChatMessageList
               messages={activeMessages.value}
+              channelId={props.chatState.activeChannelId ?? undefined}
               baseUrl={props.baseUrl}
               currentUsername={props.currentUsername}
               loading={props.chatState.loadingMessages}

@@ -69,6 +69,8 @@ export default defineComponent({
       return emoji
     }
 
+    const normalizeReactionValue = (emoji: string) => emoji.trim().replace(/^:([^:]+):$/, '$1')
+
     const handleReact = (emoji: string, reacted?: boolean) => {
       emit('react', { messageId: props.message.id, emoji, reacted })
       showEmojiPicker.value = false
@@ -80,7 +82,10 @@ export default defineComponent({
     }
 
     const handleEmojiSelect = (emoji: string) => {
-      const existing = reactionItems.value.find(r => r.emoji === emoji)
+      const normalized = normalizeReactionValue(emoji)
+      const existing = reactionItems.value.find(
+        reaction => normalizeReactionValue(reaction.emoji) === normalized
+      )
       handleReact(emoji, existing?.reacted || false)
     }
 
@@ -96,6 +101,14 @@ export default defineComponent({
     const closeFloatingControls = () => {
       showActions.value = false
       showEmojiPicker.value = false
+    }
+
+    const handleMouseleave = (event: MouseEvent) => {
+      const relatedTarget = event.relatedTarget
+      if (relatedTarget instanceof Node && floatingControlsRef.value?.contains(relatedTarget)) {
+        return
+      }
+      closeFloatingControls()
     }
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
@@ -178,7 +191,7 @@ export default defineComponent({
           props.isOwn ? 'chat-message-own' : '',
           showActions.value || showEmojiPicker.value ? 'has-floating-controls' : ''
         ]}
-        onMouseleave={closeFloatingControls}
+        onMouseleave={handleMouseleave}
       >
         <img
           class="chat-message-avatar"
@@ -243,6 +256,7 @@ export default defineComponent({
               </button>
               <ChatEmojiPicker
                 visible={showEmojiPicker.value}
+                baseUrl={props.baseUrl}
                 onSelect={handleEmojiSelect}
                 onClose={() => {
                   showEmojiPicker.value = false

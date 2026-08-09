@@ -9,7 +9,8 @@
   border: 0;
   border-radius: var(--d-shape-xl, 28px);
   background: var(--d-surface-1, var(--theme-surface-container-low));
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+  overflow-anchor: none;
 }
 
 .chat-load-more {

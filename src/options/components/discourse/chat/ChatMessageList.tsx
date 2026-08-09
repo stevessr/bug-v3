@@ -1,4 +1,4 @@
-import { defineComponent, computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import type { ChatMessage, ParsedContent } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
@@ -10,6 +10,7 @@ export default defineComponent({
   name: 'ChatMessageList',
   props: {
     messages: { type: Array as () => ChatMessage[], required: true },
+    channelId: { type: Number, default: null },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
     loading: { type: Boolean, required: true },
@@ -19,6 +20,10 @@ export default defineComponent({
   setup(props, { emit }) {
     const listRef = ref<HTMLDivElement | null>(null)
     const parsedCache = new Map<number, ParsedContent>()
+    const hasInitialisedScroll = ref(false)
+    const stickToBottom = ref(true)
+    const loadRequested = ref(false)
+    const pendingPrependAnchor = ref<{ scrollHeight: number; scrollTop: number } | null>(null)
 
     const escapeHtml = (value: string) =>
       value
@@ -39,7 +44,33 @@ export default defineComponent({
 
     const orderedMessages = computed(() => [...props.messages].sort((a, b) => a.id - b.id))
 
+    const isNearBottom = (element: HTMLElement) =>
+      element.scrollHeight - element.clientHeight - element.scrollTop <= 36
+
+    const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+      const element = listRef.value
+      if (!element) return
+      element.scrollTo({ top: element.scrollHeight, behavior })
+    }
+
+    const restorePrependAnchor = () => {
+      const element = listRef.value
+      const anchor = pendingPrependAnchor.value
+      if (!element || !anchor) return false
+      const heightDelta = element.scrollHeight - anchor.scrollHeight
+      element.scrollTop = anchor.scrollTop + Math.max(0, heightDelta)
+      pendingPrependAnchor.value = null
+      return true
+    }
+
     const handleLoadMore = () => {
+      const element = listRef.value
+      if (props.loading || !props.hasMore || loadRequested.value || !element) return
+      pendingPrependAnchor.value = {
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop
+      }
+      loadRequested.value = true
       emit('loadMore')
     }
 
@@ -72,16 +103,74 @@ export default defineComponent({
     }
 
     const handleScroll = () => {
-      if (props.loading || !props.hasMore) return
       const el = listRef.value
       if (!el) return
-      if (el.scrollTop <= 20) {
-        emit('loadMore')
-      }
+      stickToBottom.value = isNearBottom(el)
+      if (el.scrollTop <= 28) handleLoadMore()
     }
+
+    watch(
+      () => props.channelId,
+      async () => {
+        hasInitialisedScroll.value = false
+        stickToBottom.value = true
+        loadRequested.value = false
+        pendingPrependAnchor.value = null
+        await nextTick()
+        if (!props.loading) {
+          scrollToBottom()
+          hasInitialisedScroll.value = true
+        }
+      }
+    )
+
+    watch(
+      () => [
+        props.messages.length,
+        props.messages[0]?.id || 0,
+        props.messages[props.messages.length - 1]?.id || 0
+      ],
+      async () => {
+        await nextTick()
+        if (restorePrependAnchor()) {
+          hasInitialisedScroll.value = true
+          return
+        }
+        if (!hasInitialisedScroll.value && !props.loading) {
+          scrollToBottom()
+          hasInitialisedScroll.value = true
+          return
+        }
+        if (stickToBottom.value) scrollToBottom()
+      },
+      { flush: 'post' }
+    )
+
+    watch(
+      () => props.loading,
+      async loading => {
+        if (loading) return
+        loadRequested.value = false
+        await nextTick()
+        if (pendingPrependAnchor.value) {
+          restorePrependAnchor()
+          return
+        }
+        if (!hasInitialisedScroll.value) {
+          scrollToBottom()
+          hasInitialisedScroll.value = true
+        }
+      }
+    )
 
     onMounted(() => {
       listRef.value?.addEventListener('scroll', handleScroll, { passive: true })
+      void nextTick(() => {
+        if (!props.loading && !hasInitialisedScroll.value) {
+          scrollToBottom()
+          hasInitialisedScroll.value = true
+        }
+      })
     })
 
     onUnmounted(() => {
@@ -91,7 +180,13 @@ export default defineComponent({
     return () => (
       <div ref={listRef} class="chat-message-list">
         {props.hasMore && (
-          <button class="chat-load-more" onClick={handleLoadMore} disabled={props.loading}>
+          <button
+            type="button"
+            class="chat-load-more"
+            onClick={handleLoadMore}
+            disabled={props.loading || loadRequested.value}
+            aria-busy={props.loading}
+          >
             {props.loading ? '加载中...' : '加载更早消息'}
           </button>
         )}

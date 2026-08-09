@@ -260,6 +260,10 @@ export interface McpSetBridgeSettingsMessage extends BaseMessage {
   data?: any
 }
 
+export interface McpDiscoverLocalMessage extends BaseMessage {
+  type: 'MCP_DISCOVER_LOCAL'
+}
+
 /**
  * ADD_TO_FAVORITES 消息
  */
@@ -350,6 +354,7 @@ export type TypedMessage =
   | McpGetStatusMessage
   | McpGetBridgeSettingsMessage
   | McpSetBridgeSettingsMessage
+  | McpDiscoverLocalMessage
   | AddToFavoritesTypedMessage
   | AddEmojiFromWebTypedMessage
   | UploadAndAddEmojiTypedMessage

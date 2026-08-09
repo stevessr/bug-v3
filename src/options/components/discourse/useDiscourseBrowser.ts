@@ -1297,6 +1297,9 @@ export function useDiscourseBrowser() {
       typeof channelPayload.slug === 'string' ||
       typeof channelPayload.description === 'string' ||
       typeof channelPayload.status === 'string' ||
+      isRecordObject(channelPayload.meta) ||
+      typeof channelPayload.last_message_id === 'number' ||
+      isRecordObject(channelPayload.last_message) ||
       typeof channelPayload.unread_count === 'number' ||
       isRecordObject(channelPayload.current_user_membership) ||
       isRecordObject(channelPayload.chatable) ||
@@ -1343,6 +1346,42 @@ export function useDiscourseBrowser() {
 
     if (typeof channelPayload.status === 'string' && channel.status !== channelPayload.status) {
       channel.status = channelPayload.status
+      changed = true
+    }
+
+    if (isRecordObject(channelPayload.meta)) {
+      channel.meta = {
+        ...(channel.meta || {}),
+        ...(channelPayload.meta as Record<string, any>)
+      }
+      changed = true
+    }
+
+    if (typeof channelPayload.chatable_type === 'string') {
+      channel.chatable_type = channelPayload.chatable_type
+      changed = true
+    }
+
+    if (typeof channelPayload.chatable_id === 'number') {
+      channel.chatable_id = channelPayload.chatable_id
+      changed = true
+    }
+
+    if (typeof channelPayload.last_message_id === 'number') {
+      channel.last_message_id = channelPayload.last_message_id
+      changed = true
+    }
+
+    if (isRecordObject(channelPayload.last_message)) {
+      channel.last_message = {
+        ...(channel.last_message || {}),
+        ...(channelPayload.last_message as Record<string, any>)
+      }
+      changed = true
+    }
+
+    if (typeof channelPayload.last_message_sent_at === 'string') {
+      channel.last_message_sent_at = channelPayload.last_message_sent_at
       changed = true
     }
 
@@ -2104,7 +2143,14 @@ export function useDiscourseBrowser() {
   ): Promise<ReviewPerformResult | null> {
     const tab = activeTab.value
     if (!tab?.reviewState) return null
-    return await performReviewableActionRoute(tab, baseUrl, reviewableId, version, serverAction, extra)
+    return await performReviewableActionRoute(
+      tab,
+      baseUrl,
+      reviewableId,
+      version,
+      serverAction,
+      extra
+    )
   }
 
   async function updateReviewableItem(
@@ -2129,7 +2175,10 @@ export function useDiscourseBrowser() {
 
   // ==================== Invites ====================
 
-  async function loadInvites(tab: BrowserTab, filter: 'pending' | 'redeemed' | 'expired' = 'pending') {
+  async function loadInvites(
+    tab: BrowserTab,
+    filter: 'pending' | 'redeemed' | 'expired' = 'pending'
+  ) {
     const username = tab.currentUser?.username || (await ensureSessionUser()) || ''
     if (!username) {
       if (!tab.invitesState) {

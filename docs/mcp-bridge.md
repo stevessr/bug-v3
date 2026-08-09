@@ -1,12 +1,14 @@
 # MCP Bridge (Streamable HTTP)
 
-This extension can expose a local MCP server via a native messaging bridge.
+This extension exposes a local MCP server through Native Messaging when the
+host is installed, and keeps the WebSocket server as a compatibility fallback.
 
 ## Overview
 
 - Native host: `scripts/mcp-bridge/server.js`
 - Default HTTP endpoint: `http://127.0.0.1:7465/mcp`
-- Transport: streamable-http (single endpoint)
+- MCP transport: Streamable HTTP (JSON-RPC POST, optional SSE response)
+- Extension transport: Native Messaging first, WebSocket fallback
 
 ## Install steps
 
@@ -45,8 +47,21 @@ The output file is `scripts/mcp-bridge/host-manifest.json` by default.
 - DOM: dom_tree, dom_at_point
 - Utility: wait
 
+## Settings and discovery
+
+Set the bridge transport to `auto` to try Native Messaging first. If the
+native host is missing, the extension falls back to `pnpm mcp` and
+`ws://127.0.0.1:7465/ws`. The settings page can probe the configured local
+`/health` endpoint; this is local HTTP health discovery, not WebRTC/UDP P2P.
+An extension cannot listen on arbitrary local sockets or perform pure P2P
+discovery without a native host or a separate signaling service.
+
 ## Notes
 
-- The native host is launched by Chrome when the extension connects.
-- Change the server port with `MCP_PORT` env var if needed.
+- The native host is launched by Chrome when the extension connects. The
+  extension sends the configured port before the host binds HTTP.
+- For the standalone WebSocket server, change the port with `MCP_PORT`; the
+  Native host receives the port from extension settings before binding.
 - The bridge exposes browser automation tools (click, scroll, input, navigate, screenshot, tabs).
+- Native Messaging stdout is reserved for framed protocol messages; diagnostics
+  go to stderr so Chrome does not reject the host.

@@ -56,6 +56,10 @@ export async function testMcpBridge(): Promise<{ ok: boolean; error?: string }> 
   return { ok: false, error: getDisabledError() }
 }
 
+export async function discoverLocalMcpServers(): Promise<never[]> {
+  return []
+}
+
 export async function testMcpServer(options: {
   url: string
   headers?: Record<string, string>
@@ -102,4 +106,16 @@ export async function reconnectMcpBridge() {
 
 export function getMcpConnectionStatus(): McpConnectionStatus {
   return 'disconnected'
+}
+
+export function getMcpBridgeStatus(): {
+  status: McpConnectionStatus
+  transport: null
+  error?: string
+} {
+  return {
+    status: 'disconnected',
+    transport: null,
+    error: getDisabledError()
+  }
 }

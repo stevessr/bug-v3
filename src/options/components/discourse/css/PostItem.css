@@ -195,6 +195,11 @@
   gap: 5px;
 }
 
+.reaction-picker-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
 .reactions-list .reaction-item {
   display: flex;
   align-items: center;
@@ -227,6 +232,15 @@
   border-color: transparent;
   background: var(--primary-container, var(--theme-primary-container));
   color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.reactions-list .reaction-item--add {
+  width: 32px;
+  justify-content: center;
+  padding: 0;
+  border-style: dashed;
+  font-size: 18px;
+  font-weight: 400;
 }
 
 .reactions-list .reaction-item .emoji {

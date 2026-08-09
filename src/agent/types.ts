@@ -29,13 +29,17 @@ export interface ProviderProfile {
 
 // MCP 桥接协议类型
 export type McpBridgeProtocol = 'auto' | 'ws' | 'wss'
+export type McpBridgeTransport = 'auto' | 'native' | 'websocket'
 
-// MCP 桥接设置（用于 WebSocket 连接）
+// MCP 桥接设置。Native Messaging 优先，WebSocket 保留作兼容回退。
 export interface McpBridgeSettings {
   host: string
   port: number
   path: string
   protocol: McpBridgeProtocol
+  transport: McpBridgeTransport
+  nativeHostName: string
+  localDiscovery: boolean
   autoConnect: boolean
   reconnectOnFailure: boolean
   // 实验性 UI 特性
@@ -50,6 +54,9 @@ export const DEFAULT_MCP_BRIDGE_SETTINGS: McpBridgeSettings = {
   port: 7465,
   path: '/ws',
   protocol: 'auto',
+  transport: 'auto',
+  nativeHostName: 'com.bugv3.mcp',
+  localDiscovery: true,
   autoConnect: false,
   reconnectOnFailure: true,
   experimentalUI: {

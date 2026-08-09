@@ -35,7 +35,12 @@ export async function deleteBoost(baseUrl: string, boostId: number) {
   return result
 }
 
-export async function flagBoost(baseUrl: string, boostId: number, flagType: string) {
+export async function flagBoost(
+  baseUrl: string,
+  boostId: number,
+  flagType: string,
+  message?: string
+) {
   const result = await pageFetch<any>(`${baseUrl}/discourse-boosts/boosts/${boostId}/flags`, {
     method: 'POST',
     headers: {
@@ -43,7 +48,7 @@ export async function flagBoost(baseUrl: string, boostId: number, flagType: stri
       'Content-Type': 'application/json',
       'Discourse-Logged-In': 'true'
     },
-    body: JSON.stringify({ flag_type: flagType })
+    body: JSON.stringify({ flag_type: flagType, ...(message ? { message } : {}) })
   })
   const data = extractData(result)
   if (result.ok === false) {

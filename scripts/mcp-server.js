@@ -14,6 +14,8 @@ import { randomUUID } from 'node:crypto'
 
 const PORT = Number(process.env.MCP_PORT) || 7465
 const HOST = process.env.MCP_HOST || '127.0.0.1'
+const MCP_PROTOCOL_VERSION = '2024-11-05'
+const MCP_SESSION_ID = `bug-v3-ws-${process.pid}`
 
 // Tool definitions
 const TOOLS = [
@@ -378,21 +380,44 @@ let extensionWs = null
 const pendingCalls = new Map()
 const sseClients = new Set()
 
+const TOOL_NAMES = new Set(TOOLS.map(tool => tool.name))
+
 function log(...args) {
   console.log(`[MCP ${new Date().toISOString()}]`, ...args)
 }
 
 // Send JSON-RPC response to SSE client
 function sendSseMessage(res, message) {
-  res.write(`data: ${JSON.stringify(message)}\n\n`)
+  if (res.writableEnded || res.destroyed) return
+  res.write(`event: message\ndata: ${JSON.stringify(message)}\n\n`)
+}
+
+function rejectPendingCalls(error) {
+  for (const [id, pending] of pendingCalls) {
+    clearTimeout(pending.timeout)
+    pendingCalls.delete(id)
+    pending.reject(error)
+  }
 }
 
 // Handle MCP JSON-RPC request
 async function handleMcpRequest(request) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    return { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid Request' } }
+  }
+
   const { jsonrpc, id, method, params } = request
 
   if (jsonrpc !== '2.0') {
     return { jsonrpc: '2.0', id, error: { code: -32600, message: 'Invalid Request' } }
+  }
+
+  if (typeof method !== 'string') {
+    return { jsonrpc: '2.0', id, error: { code: -32600, message: 'Invalid Request' } }
+  }
+
+  if (method.startsWith('notifications/')) {
+    return null
   }
 
   switch (method) {
@@ -401,7 +426,7 @@ async function handleMcpRequest(request) {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: '2024-11-05',
+          protocolVersion: MCP_PROTOCOL_VERSION,
           capabilities: {
             tools: {}
           },
@@ -424,6 +449,14 @@ async function handleMcpRequest(request) {
 
     case 'tools/call': {
       const { name, arguments: args } = params || {}
+
+      if (!name || !TOOL_NAMES.has(name)) {
+        return {
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32602, message: `Unknown tool: ${name || '<missing>'}` }
+        }
+      }
 
       if (!extensionWs || extensionWs.readyState !== WebSocket.OPEN) {
         return {
@@ -452,7 +485,13 @@ async function handleMcpRequest(request) {
           }, 30000)
 
           pendingCalls.set(callId, { resolve, reject, timeout })
-          extensionWs.send(JSON.stringify(toolCall))
+          try {
+            extensionWs.send(JSON.stringify(toolCall))
+          } catch (error) {
+            clearTimeout(timeout)
+            pendingCalls.delete(callId)
+            reject(error)
+          }
         })
 
         return {
@@ -466,7 +505,10 @@ async function handleMcpRequest(request) {
         return {
           jsonrpc: '2.0',
           id,
-          error: { code: -32000, message: err.message }
+          result: {
+            content: [{ type: 'text', text: err.message || 'Tool call failed' }],
+            isError: true
+          }
         }
       }
     }
@@ -486,8 +528,9 @@ async function handleRequest(req, res) {
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, MCP-Session-Id')
+  res.setHeader('Access-Control-Expose-Headers', 'MCP-Session-Id, MCP-Protocol-Version')
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200)
@@ -500,7 +543,9 @@ async function handleRequest(req, res) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      Connection: 'keep-alive'
+      Connection: 'keep-alive',
+      'MCP-Session-Id': MCP_SESSION_ID,
+      'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
     })
 
     sseClients.add(res)
@@ -522,16 +567,39 @@ async function handleRequest(req, res) {
     req.on('end', async () => {
       try {
         const request = JSON.parse(body)
-        log('MCP Request:', request.method)
+        const isBatch = Array.isArray(request)
+        if (isBatch && request.length === 0) throw new Error('Invalid Request')
+        log('MCP Request:', isBatch ? 'batch' : request.method)
 
-        const response = await handleMcpRequest(request)
+        const responses = (
+          await Promise.all((isBatch ? request : [request]).map(handleMcpRequest))
+        ).filter(Boolean)
 
-        if (response) {
-          res.writeHead(200, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify(response))
-        } else {
-          res.writeHead(204)
+        if (responses.length === 0) {
+          res.writeHead(204, {
+            'MCP-Session-Id': MCP_SESSION_ID,
+            'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
+          })
           res.end()
+        } else if ((req.headers.accept || '').includes('text/event-stream')) {
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'MCP-Session-Id': MCP_SESSION_ID,
+            'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
+          })
+          responses.forEach(response => sendSseMessage(res, response))
+          res.end()
+        } else {
+          const payload = isBatch ? responses : responses[0]
+          const text = JSON.stringify(payload)
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(text),
+            'MCP-Session-Id': MCP_SESSION_ID,
+            'MCP-Protocol-Version': MCP_PROTOCOL_VERSION
+          })
+          res.end(text)
         }
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' })
@@ -554,7 +622,8 @@ async function handleRequest(req, res) {
       JSON.stringify({
         ok: true,
         extensionConnected: extensionWs?.readyState === WebSocket.OPEN,
-        tools: TOOLS.length
+        tools: TOOLS.length,
+        transport: 'websocket'
       })
     )
     return
@@ -570,7 +639,8 @@ async function handleRequest(req, res) {
         description: 'MCP Server for Browser Extension',
         mcp: {
           endpoint: '/mcp',
-          transport: 'streamable-http'
+          transport: 'streamable-http',
+          protocolVersion: MCP_PROTOCOL_VERSION
         },
         ws: {
           endpoint: '/ws',
@@ -594,6 +664,14 @@ const wss = new WebSocketServer({ server, path: '/ws' })
 
 wss.on('connection', ws => {
   log('Extension WebSocket connected')
+  if (extensionWs && extensionWs !== ws) {
+    try {
+      extensionWs.close(1000, 'Replaced by a newer extension connection')
+    } catch {
+      // ignore
+    }
+  }
+  rejectPendingCalls(new Error('Extension connection replaced'))
   extensionWs = ws
 
   // Notify SSE clients
@@ -643,6 +721,7 @@ wss.on('connection', ws => {
     log('Extension WebSocket disconnected')
     if (extensionWs === ws) {
       extensionWs = null
+      rejectPendingCalls(new Error('Extension disconnected'))
     }
 
     // Notify SSE clients

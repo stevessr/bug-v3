@@ -15,12 +15,16 @@ import { message } from 'ant-design-vue'
 
 type ConnectionStatus = 'unknown' | 'connected' | 'connecting' | 'disconnected' | 'reconnecting'
 type BridgeProtocol = 'auto' | 'ws' | 'wss'
+type BridgeTransport = 'auto' | 'native' | 'websocket'
 
 interface BridgeSettings {
   host: string
   port: number
   path: string
   protocol: BridgeProtocol
+  transport: BridgeTransport
+  nativeHostName: string
+  localDiscovery: boolean
   autoConnect: boolean
   reconnectOnFailure: boolean
   experimentalUI?: {
@@ -30,7 +34,10 @@ interface BridgeSettings {
 }
 
 const bridgeStatus = ref<ConnectionStatus>('unknown')
+const activeTransport = ref<'native' | 'websocket' | null>(null)
 const bridgeTesting = ref(false)
+const localDiscoveryLoading = ref(false)
+const localDiscoveryResult = ref('')
 const bridgeError = ref('')
 const reconnectCount = ref(0)
 const showSettings = ref(false)
@@ -42,6 +49,9 @@ const bridgeSettings = ref<BridgeSettings>({
   port: 7465,
   path: '/ws',
   protocol: 'auto',
+  transport: 'auto',
+  nativeHostName: 'com.bugv3.mcp',
+  localDiscovery: true,
   autoConnect: false,
   reconnectOnFailure: true,
   experimentalUI: {
@@ -74,7 +84,14 @@ const wsUrl = computed(() => {
 // 计算 HTTP URL
 const httpUrl = computed(() => {
   const { host, port } = bridgeSettings.value
-  const httpProtocol = inferredProtocol.value === 'wss' ? 'https' : 'http'
+  // Native host always binds a local HTTP endpoint; the protocol setting only
+  // applies to the compatibility WebSocket server.
+  const httpProtocol =
+    bridgeSettings.value.transport === 'native'
+      ? 'http'
+      : inferredProtocol.value === 'wss'
+        ? 'https'
+        : 'http'
   return `${httpProtocol}://${host}:${port}`
 })
 
@@ -126,9 +143,11 @@ const testMcpBridge = async () => {
     const response = await chrome.runtime.sendMessage({ type: 'MCP_BRIDGE_TEST' })
     if (response?.success && response?.data?.ok) {
       bridgeStatus.value = 'connected'
+      activeTransport.value = response.data.transport || null
       message.success('MCP 桥接连接正常')
     } else {
       bridgeStatus.value = 'disconnected'
+      activeTransport.value = null
       bridgeError.value = response?.data?.error || response?.error || '连接失败'
       message.error(`MCP 桥接测试失败：${bridgeError.value}`)
     }
@@ -166,9 +185,28 @@ const fetchConnectionStatus = async () => {
     const response = await chrome.runtime.sendMessage({ type: 'MCP_GET_STATUS' })
     if (response?.success) {
       bridgeStatus.value = response.data?.status || 'unknown'
+      activeTransport.value = response.data?.transport || null
     }
   } catch {
     // ignore
+  }
+}
+
+const discoverLocalMcp = async () => {
+  localDiscoveryLoading.value = true
+  localDiscoveryResult.value = ''
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'MCP_DISCOVER_LOCAL' })
+    const servers = Array.isArray(response?.data) ? response.data : []
+    localDiscoveryResult.value = servers.length
+      ? `发现 ${servers.length} 个本机服务：${servers
+          .map((server: { host: string; port: number }) => `${server.host}:${server.port}`)
+          .join('、')}`
+      : '未发现已配置端口上的 MCP 服务'
+  } catch (error) {
+    localDiscoveryResult.value = error instanceof Error ? error.message : '本地发现失败'
+  } finally {
+    localDiscoveryLoading.value = false
   }
 }
 
@@ -282,6 +320,18 @@ const statusColor: Record<ConnectionStatus, string> = {
   reconnecting: 'text-yellow-600 dark:text-yellow-400'
 }
 
+const transportLabel: Record<BridgeTransport, string> = {
+  auto: 'Native Messaging 优先，WebSocket 回退',
+  native: 'Native Messaging',
+  websocket: 'WebSocket'
+}
+
+const activeTransportLabel = computed(() => {
+  if (activeTransport.value === 'native') return 'Native Messaging'
+  if (activeTransport.value === 'websocket') return 'WebSocket'
+  return ''
+})
+
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
@@ -327,6 +377,9 @@ onUnmounted(() => {
               <SyncOutlined class="text-gray-500" />
             </template>
             <span :class="statusColor[bridgeStatus]">{{ statusLabel[bridgeStatus] }}</span>
+            <span v-if="activeTransportLabel" class="text-xs text-gray-500">
+              · {{ activeTransportLabel }}
+            </span>
           </div>
           <a-button :loading="bridgeTesting" @click="testMcpBridge">
             <template #icon>
@@ -334,6 +387,7 @@ onUnmounted(() => {
             </template>
             测试连接
           </a-button>
+          <a-button :loading="localDiscoveryLoading" @click="discoverLocalMcp">本机发现</a-button>
           <a-button @click="reconnectBridge" :disabled="bridgeTesting">
             <template #icon>
               <SyncOutlined />
@@ -352,35 +406,55 @@ onUnmounted(() => {
       <div v-if="bridgeError" class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
         <p class="text-sm text-red-600 dark:text-red-400">{{ bridgeError }}</p>
       </div>
+      <div v-if="localDiscoveryResult" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        {{ localDiscoveryResult }}
+      </div>
 
       <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <h4 class="text-sm font-medium mb-2 dark:text-white">启动 MCP 服务器</h4>
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          运行以下命令启动本地 MCP 服务器：
+          当前连接方式：{{ transportLabel[bridgeSettings.transport] }}
         </p>
         <div class="flex items-center gap-2">
           <code class="flex-1 px-3 py-2 bg-gray-800 text-green-400 rounded font-mono text-sm">
-            pnpm mcp
+            {{
+              bridgeSettings.transport === 'native'
+                ? 'Native host + 扩展自动启动'
+                : bridgeSettings.transport === 'auto'
+                  ? 'Native host（未安装时运行 pnpm mcp）'
+                  : 'pnpm mcp'
+            }}
           </code>
-          <a-button size="small" @click="copyCommand('pnpm mcp')">
+          <a-button
+            v-if="bridgeSettings.transport !== 'native'"
+            size="small"
+            @click="copyCommand('pnpm mcp')"
+          >
             <template #icon>
               <CopyOutlined />
             </template>
           </a-button>
         </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">服务器运行在 {{ httpUrl }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          HTTP 端点：{{ httpUrl }}；Native host 不需要额外启动 pnpm 进程。
+        </p>
       </div>
 
       <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
         <h4 class="text-sm font-medium mb-2 dark:text-white">使用方式</h4>
         <ol class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
           <li>
-            运行
-            <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code>
-            启动服务器
+            <template v-if="bridgeSettings.transport === 'native'">
+              先按文档安装 Native host，扩展连接时会自动启动服务器
+            </template>
+            <template v-else>
+              运行
+              <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code>
+              启动 WebSocket 回退服务器
+            </template>
           </li>
           <li>
-            点击“重连”后通过 WebSocket 连接
+            点击“重连”后按设置选择 Native Messaging 或 WebSocket
             <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">{{ wsUrl }}</code>
           </li>
           <li>
@@ -393,6 +467,30 @@ onUnmounted(() => {
       <!-- 设置弹窗 -->
       <a-modal v-model:open="showSettings" title="MCP 桥接设置" :footer="null" width="500px">
         <div class="space-y-4 py-4">
+          <div>
+            <label class="block text-sm font-medium mb-1 dark:text-white">连接方式</label>
+            <a-radio-group v-model:value="bridgeSettings.transport" button-style="solid">
+              <a-radio-button value="auto">自动（推荐）</a-radio-button>
+              <a-radio-button value="native">Native host</a-radio-button>
+              <a-radio-button value="websocket">WebSocket</a-radio-button>
+            </a-radio-group>
+            <p class="text-xs text-gray-500 mt-1">
+              自动模式先尝试 Native Messaging，未安装 host 时才回退到本地 WebSocket。
+            </p>
+          </div>
+          <div v-if="bridgeSettings.transport !== 'websocket'">
+            <label class="block text-sm font-medium mb-1 dark:text-white">Native host 名称</label>
+            <a-input v-model:value="bridgeSettings.nativeHostName" placeholder="com.bugv3.mcp" />
+          </div>
+          <div>
+            <a-checkbox v-model:checked="bridgeSettings.localDiscovery">
+              启用本机 MCP 健康发现（仅探测已配置端口，不是 WebRTC P2P）
+            </a-checkbox>
+            <p class="text-xs text-gray-500 mt-1">
+              浏览器扩展不能直接监听本地 TCP/UDP，也不能在没有信令的情况下完成纯 P2P 发现；Native
+              host 是可靠的本地通道。
+            </p>
+          </div>
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">主机地址</label>
             <a-input v-model:value="bridgeSettings.host" placeholder="127.0.0.1" />

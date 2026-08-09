@@ -201,7 +201,7 @@ export function setupMessageListener() {
             return true
           case 'MCP_GET_STATUS':
             void loadMcpBridge().then(mod =>
-              sendResponse({ success: true, data: { status: mod.getMcpConnectionStatus() } })
+              sendResponse({ success: true, data: mod.getMcpBridgeStatus() })
             )
             return true
           case 'MCP_GET_BRIDGE_SETTINGS':
@@ -221,6 +221,16 @@ export function setupMessageListener() {
                 .then(() => sendResponse({ success: true }))
                 .catch((error: any) =>
                   sendResponse({ success: false, error: error?.message || '保存设置失败' })
+                )
+            )
+            return true
+          case 'MCP_DISCOVER_LOCAL':
+            void loadMcpBridge().then(mod =>
+              mod
+                .discoverLocalMcpServers()
+                .then(data => sendResponse({ success: true, data }))
+                .catch((error: any) =>
+                  sendResponse({ success: false, error: error?.message || '本地发现失败' })
                 )
             )
             return true

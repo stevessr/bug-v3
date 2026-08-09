@@ -4,6 +4,7 @@ import { Dropdown, Menu, MenuItem, message } from 'ant-design-vue'
 import { REACTIONS } from '../../../utils/linuxDoReaction'
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 import PostContent from './PostContent'
 import BoostPanel from './BoostPanel'
@@ -49,6 +50,7 @@ export default defineComponent({
   ],
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
+    const showReactionPicker = ref(false)
 
     const isOwnPost = computed(() => {
       if (props.currentUser && props.post.user_id === props.currentUser.id) return true
@@ -97,6 +99,11 @@ export default defineComponent({
 
     const handleToggleLike = (reactionId: string) => {
       emit('toggleLike', props.post, reactionId)
+      showReactionPicker.value = false
+    }
+
+    const handleToggleReactionPicker = () => {
+      showReactionPicker.value = !showReactionPicker.value
     }
 
     const handleToggleReplies = () => {
@@ -238,6 +245,25 @@ export default defineComponent({
                       <span class="count">{props.getReactionCount(props.post, item.id)}</span>
                     </button>
                   ))}
+                  <span class="reaction-picker-anchor">
+                    <button
+                      type="button"
+                      class="reaction-item reaction-item--add discourse-emoji-picker-trigger"
+                      aria-label="从站点表情中选择反应"
+                      aria-expanded={showReactionPicker.value}
+                      onPointerdown={(event: PointerEvent) => event.stopPropagation()}
+                      onClick={handleToggleReactionPicker}
+                    >
+                      +
+                    </button>
+                    <DiscourseEmojiPicker
+                      visible={showReactionPicker.value}
+                      baseUrl={props.baseUrl}
+                      mode="reaction"
+                      onSelect={(emoji: string) => handleToggleLike(emoji)}
+                      onClose={() => (showReactionPicker.value = false)}
+                    />
+                  </span>
                 </div>
               )}
               <div class="post-action-right actions" aria-label="帖子操作">

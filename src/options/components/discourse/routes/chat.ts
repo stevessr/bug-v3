@@ -15,6 +15,11 @@ import { pageFetch, extractData } from '../utils'
 
 type ChatReactionAction = 'add' | 'remove'
 
+const normalizeReactionEmoji = (emoji: string) =>
+  String(emoji || '')
+    .trim()
+    .replace(/^:([^:]+):$/, '$1')
+
 const CHAT_CHANNEL_ENDPOINTS = ['/chat/api/me/channels']
 
 const CHAT_MESSAGE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}/messages`]
@@ -430,13 +435,14 @@ const publishChatReaction = async (
   emoji: string,
   reactAction: ChatReactionAction
 ) => {
+  const normalizedEmoji = normalizeReactionEmoji(emoji)
   const formPayload = new URLSearchParams({
     react_action: reactAction,
-    emoji
+    emoji: normalizedEmoji
   }).toString()
   const jsonPayload = JSON.stringify({
     react_action: reactAction,
-    emoji
+    emoji: normalizedEmoji
   })
 
   let lastError: string | null = null
@@ -481,12 +487,15 @@ const applyLocalReaction = (
   emoji: string,
   reactAction: ChatReactionAction
 ): ChatMessage => {
+  const normalizedEmoji = normalizeReactionEmoji(emoji)
   const reactions = Array.isArray(message.reactions) ? [...message.reactions] : []
-  const targetIndex = reactions.findIndex(item => item.emoji === emoji)
+  const targetIndex = reactions.findIndex(
+    item => normalizeReactionEmoji(item.emoji) === normalizedEmoji
+  )
 
   if (reactAction === 'add') {
     if (targetIndex === -1) {
-      reactions.push({ emoji, count: 1, reacted: true, users: [] })
+      reactions.push({ emoji: normalizedEmoji, count: 1, reacted: true, users: [] })
       return { ...message, reactions }
     }
     const target = reactions[targetIndex]
@@ -531,7 +540,10 @@ const resolveReactionAction = (
   if (typeof reacted === 'boolean') {
     return reacted ? 'remove' : 'add'
   }
-  const target = message?.reactions?.find(item => item.emoji === emoji)
+  const normalizedEmoji = normalizeReactionEmoji(emoji)
+  const target = message?.reactions?.find(
+    item => normalizeReactionEmoji(item.emoji) === normalizedEmoji
+  )
   return target?.reacted ? 'remove' : 'add'
 }
 
@@ -811,7 +823,7 @@ export async function toggleChatMessageReaction(
   if (!state) return false
   state.errorMessage = ''
 
-  const normalizedEmoji = emoji.trim().replace(/^:/, '').replace(/:$/, '')
+  const normalizedEmoji = normalizeReactionEmoji(emoji)
   if (!normalizedEmoji) return false
 
   const channelMessages = state.messagesByChannel[channelId] || []
@@ -1244,9 +1256,7 @@ export async function loadChannelMembers(
 
     for (const path of CHAT_MEMBERSHIPS_ENDPOINTS(channelId)) {
       try {
-        const result = await pageFetch<any>(
-          `${baseUrl.value}${path}?offset=0&limit=50`
-        )
+        const result = await pageFetch<any>(`${baseUrl.value}${path}?offset=0&limit=50`)
         const data = extractData(result)
         if (result.ok) {
           members = (data?.memberships || []).map((item: any) => {
@@ -1314,9 +1324,10 @@ export async function addMembersToChannel(
 
   const jsonPayload = JSON.stringify(body)
   const formPayload = new URLSearchParams(
-    Object.entries(body).flatMap(([key, value]) =>
-      (value as string[]).map(v => [key, v])
-    ) as [string, string][]
+    Object.entries(body).flatMap(([key, value]) => (value as string[]).map(v => [key, v])) as [
+      string,
+      string
+    ][]
   ).toString()
 
   let lastError: string | null = null
