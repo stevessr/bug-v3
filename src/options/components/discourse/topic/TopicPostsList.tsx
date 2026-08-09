@@ -86,13 +86,15 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="posts-list space-y-4">
+      <div class="posts-list">
         {props.posts.map(post => (
-          <div key={post.id}>
+          <div key={post.id} class="posts-list__item">
             {post.reply_to_post_number && props.isParentExpanded(post.post_number) && (
               <div class="post-parent-outer">
                 {props.isParentLoading(post.post_number) ? (
-                  <div class="text-xs text-gray-500">上文加载中...</div>
+                  <div class="post-parent-state" role="status">
+                    上文加载中...
+                  </div>
                 ) : props.getParentPost(post) && props.getParsedParent(post) ? (
                   <PostParentPreview
                     post={props.getParentPost(post) as DiscoursePost}
@@ -112,7 +114,7 @@ export default defineComponent({
                     onToggleParent={props.onToggleParent}
                   />
                 ) : (
-                  <div class="text-xs text-gray-500">上文不可用</div>
+                  <div class="post-parent-state">上文不可用</div>
                 )}
               </div>
             )}
@@ -145,7 +147,7 @@ export default defineComponent({
               onRefresh={props.onRefresh || undefined}
             />
             {props.isRepliesExpanded(post.post_number) && (
-              <div class="pl-6 mt-3 space-y-3">
+              <div class="post-replies-region">
                 <PostRepliesTree
                   posts={props.getRepliesForPost(post.post_number)}
                   baseUrl={props.baseUrl}

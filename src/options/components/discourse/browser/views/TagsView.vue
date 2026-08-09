@@ -16,9 +16,15 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
 <template>
   <div class="discourse-list-view">
     <div class="discourse-list-view__main">
+      <header class="browser-view-heading">
+        <span class="browser-view-heading__eyebrow">内容索引</span>
+        <h2 class="browser-view-heading__title">标签</h2>
+        <p class="browser-view-heading__description">按标签聚合同类讨论，并切换计数或名称排序。</p>
+      </header>
       <TagGrid
         :tags="activeTab.tags"
         :groups="activeTab.tagGroups"
+        title=""
         @click="$emit('tagClick', $event)"
       />
     </div>
@@ -40,12 +46,45 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
 <style scoped>
 .discourse-list-view {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .discourse-list-view__main {
+  display: grid;
   flex: 1;
   min-width: 0;
+  gap: 16px;
+}
+
+.browser-view-heading {
+  display: grid;
+  gap: 4px;
+  padding: 20px 22px;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--tertiary-container, var(--theme-tertiary-container));
+  color: var(--on-tertiary-container, var(--theme-on-tertiary-container));
+}
+
+.browser-view-heading__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.browser-view-heading__title {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.browser-view-heading__description {
+  max-width: 560px;
+  margin: 2px 0 0;
+  color: color-mix(in oklab, currentColor 78%, transparent);
+  font-size: 13px;
 }
 
 .discourse-list-view__side {
@@ -57,6 +96,13 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
 @media (min-width: 1024px) {
   .discourse-list-view__side {
     display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .browser-view-heading {
+    padding: 18px;
+    border-radius: var(--d-shape-lg, 16px);
   }
 }
 </style>

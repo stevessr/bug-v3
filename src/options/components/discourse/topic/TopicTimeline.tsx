@@ -63,6 +63,43 @@ export default defineComponent({
       emit('jump', roundedValue.value)
     }
 
+    const setValue = (value: number) => {
+      localValue.value = clamp(value, 1, props.maxPostNumber || 1)
+      emit('jump', roundedValue.value)
+    }
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      const pageStep = Math.max(5, Math.round((props.maxPostNumber || 1) / 10))
+      let nextValue: number | null = null
+
+      switch (event.key) {
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          nextValue = roundedValue.value - 1
+          break
+        case 'ArrowDown':
+        case 'ArrowRight':
+          nextValue = roundedValue.value + 1
+          break
+        case 'PageUp':
+          nextValue = roundedValue.value - pageStep
+          break
+        case 'PageDown':
+          nextValue = roundedValue.value + pageStep
+          break
+        case 'Home':
+          nextValue = 1
+          break
+        case 'End':
+          nextValue = props.maxPostNumber || 1
+          break
+      }
+
+      if (nextValue === null) return
+      event.preventDefault()
+      setValue(nextValue)
+    }
+
     const handleMouseMove = (event: MouseEvent) => {
       if (!dragging.value) return
       updateValue(event.clientY)
@@ -95,7 +132,7 @@ export default defineComponent({
     })
 
     return () => (
-      <div class="topic-timeline">
+      <section class="topic-timeline" aria-label="话题时间线">
         <div class="topic-timeline__icon">
           <svg class="topic-timeline__icon-svg" viewBox="0 0 24 24" fill="currentColor">
             <use href="#bookmark" />
@@ -105,7 +142,15 @@ export default defineComponent({
         <div
           class="topic-timeline__track"
           ref={trackRef}
+          role="slider"
+          tabindex={0}
+          aria-label="跳转到帖子"
+          aria-valuemin={1}
+          aria-valuemax={props.maxPostNumber || 1}
+          aria-valuenow={roundedValue.value}
+          aria-valuetext={`第 ${roundedValue.value} 条，共 ${props.maxPostNumber} 条`}
           onClick={(event: MouseEvent) => updateValue(event.clientY)}
+          onKeydown={handleKeydown}
         >
           <div class="topic-timeline__line" />
           <div
@@ -125,7 +170,7 @@ export default defineComponent({
           )}
         </div>
         <div class="topic-timeline__label topic-timeline__label--bottom">{maxLabel.value}</div>
-      </div>
+      </section>
     )
   }
 })

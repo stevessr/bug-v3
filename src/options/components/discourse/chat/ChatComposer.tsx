@@ -1,5 +1,6 @@
 import { defineComponent, shallowRef, ref, watch } from 'vue'
 import { LoadingOutlined, PaperClipOutlined, CloseOutlined } from '@ant-design/icons-vue'
+
 import type { ChatMessage } from '../types'
 import { useDiscourseUpload } from '../composables/useDiscourseUpload'
 import '../css/chat/ChatComposer.css'
@@ -28,22 +29,28 @@ export default defineComponent({
         }
       })
 
-    watch(isUploading, (val) => {
+    watch(isUploading, val => {
       if (val) emit('uploadStart')
       else emit('uploadEnd')
     })
 
     // Focus textarea when entering edit/reply mode
-    watch(() => props.editingMessage, (msg) => {
-      if (msg) {
-        message.value = msg.message || ''
+    watch(
+      () => props.editingMessage,
+      msg => {
+        if (msg) {
+          message.value = msg.message || ''
+          nextTickFocus()
+        }
+      }
+    )
+
+    watch(
+      () => props.replyTo,
+      () => {
         nextTickFocus()
       }
-    })
-
-    watch(() => props.replyTo, () => {
-      nextTickFocus()
-    })
+    )
 
     const nextTickFocus = () => {
       requestAnimationFrame(() => {
@@ -103,14 +110,22 @@ export default defineComponent({
     }
 
     return () => (
-      <div class={['chat-composer', props.replyTo ? 'has-reply' : '', props.editingMessage ? 'is-editing' : '']}>
+      <div
+        class={[
+          'chat-composer',
+          props.replyTo ? 'has-reply' : '',
+          props.editingMessage ? 'is-editing' : ''
+        ]}
+      >
         {props.replyTo && (
           <div class="chat-composer-reply-banner">
             <span class="chat-composer-reply-text">{getReplyPreviewText()}</span>
             <button
+              type="button"
               class="chat-composer-reply-cancel"
               onClick={() => emit('cancelReply')}
               title="取消回复"
+              aria-label="取消回复"
             >
               <CloseOutlined />
             </button>
@@ -120,12 +135,14 @@ export default defineComponent({
           <div class="chat-composer-edit-banner">
             <span class="chat-composer-edit-text">编辑消息</span>
             <button
+              type="button"
               class="chat-composer-edit-cancel"
               onClick={() => {
                 message.value = ''
                 emit('cancelEdit')
               }}
               title="取消编辑"
+              aria-label="取消编辑"
             >
               <CloseOutlined />
             </button>
@@ -138,6 +155,7 @@ export default defineComponent({
             class="chat-composer-input"
             disabled={props.disabled}
             placeholder={placeholder}
+            aria-label={placeholder}
             rows={2}
             onKeydown={handleKeydown}
             onPaste={handlePaste}
@@ -145,14 +163,17 @@ export default defineComponent({
           />
           <div class="chat-composer-actions">
             <button
+              type="button"
               class="chat-composer-upload-btn"
               disabled={props.disabled}
               onClick={handleUploadClick}
               title="上传文件或图片"
+              aria-label={isUploading.value ? '正在上传附件' : '上传文件或图片'}
             >
               {isUploading.value ? <LoadingOutlined /> : <PaperClipOutlined />}
             </button>
             <button
+              type="button"
               class="chat-composer-send"
               disabled={props.disabled || !message.value.trim()}
               onClick={handleSend}
@@ -169,9 +190,7 @@ export default defineComponent({
             onChange={handleUploadChange}
           />
         </div>
-        {isUploading.value && (
-          <div class="chat-composer-uploading">上传中...</div>
-        )}
+        {isUploading.value && <div class="chat-composer-uploading">上传中...</div>}
       </div>
     )
   }

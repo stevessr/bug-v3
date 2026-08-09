@@ -63,6 +63,12 @@ export default defineComponent({
       emit('middleClick', getTopicUrl(topic, baseUrl))
     }
 
+    const handleRowKeydown = (event: KeyboardEvent, topic: DiscourseTopic | SuggestedTopic) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      handleClick(topic)
+    }
+
     const getCategory = (
       topic: DiscourseTopic | SuggestedTopic,
       categories?: DiscourseCategory[]
@@ -176,7 +182,11 @@ export default defineComponent({
           <div
             key={topic.id}
             class="topic-row"
+            role="link"
+            tabindex={0}
+            aria-label={`打开话题：${topic.title}`}
             onClick={() => handleClick(topic)}
+            onKeydown={(event: KeyboardEvent) => handleRowKeydown(event, topic)}
             onAuxclick={(e: MouseEvent) => {
               if (e.button === 1) handleMiddleClick(topic, props.baseUrl)
             }}

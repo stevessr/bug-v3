@@ -3,6 +3,7 @@ import { defineComponent, computed } from 'vue'
 import { getTagVisual, hexToRgba, stripHtml } from '../tagVisuals'
 
 import { getDiscourseIconHref } from './iconSprite'
+import '../css/TagPill.css'
 
 export default defineComponent({
   name: 'TagPill',
@@ -34,22 +35,22 @@ export default defineComponent({
     return () => (
       <span
         class={[
-          'tag-pill inline-flex items-center rounded border',
-          props.compact ? 'text-xs px-2 py-0.5' : 'px-2 py-1',
-          props.clickable ? 'cursor-pointer' : '',
-          !visual.value
-            ? 'bg-gray-100 text-gray-700 border-transparent dark:bg-gray-700 dark:text-gray-200'
-            : ''
+          'tag-pill',
+          { 'tag-pill--compact': props.compact },
+          { 'tag-pill--clickable': props.clickable },
+          { 'tag-pill--neutral': !visual.value }
         ]}
         style={labelStyle.value}
         title={titleText.value}
       >
         {visual.value && (
-          <svg class="w-3.5 h-3.5 mr-1" viewBox="0 0 512 512" fill="currentColor">
+          <svg class="tag-pill__icon" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
             <use href={getDiscourseIconHref(visual.value.icon)} />
           </svg>
         )}
-        <span class={props.truncate ? 'truncate' : ''}>{props.text || props.name}</span>
+        <span class={['tag-pill__label', { 'tag-pill__label--truncate': props.truncate }]}>
+          {props.text || props.name}
+        </span>
       </span>
     )
   }

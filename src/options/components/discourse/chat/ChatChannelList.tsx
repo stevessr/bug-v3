@@ -82,6 +82,7 @@ export default defineComponent({
 
     const renderChannel = (channel: ChatChannel, keyPrefix: string) => (
       <button
+        type="button"
         key={`${keyPrefix}-${channel.id}`}
         class={['chat-channel-item', channel.id === props.activeChannelId ? 'active' : '']}
         onClick={() => emit('select', channel)}

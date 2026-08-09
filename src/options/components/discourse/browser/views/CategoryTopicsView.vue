@@ -9,6 +9,7 @@ import type {
 import CategoryGrid from '../../layout/CategoryGrid'
 import TopicList from '../../topic/TopicList'
 import Sidebar from '../../layout/Sidebar'
+import '../../css/BrowserTopicListView.css'
 
 type TopicSortKey = 'replies' | 'views' | 'activity' | null
 
@@ -44,31 +45,37 @@ defineEmits([
 </script>
 
 <template>
-  <div class="discourse-list-view">
+  <div class="discourse-list-view topic-collection-view">
     <div class="discourse-list-view__main">
-      <div class="list-topbar">
-        <h3 class="list-topbar__title">在当前分类发帖</h3>
+      <header class="list-topbar">
+        <div class="list-topbar__copy">
+          <span class="list-topbar__eyebrow">分类</span>
+          <h2 class="list-topbar__title">{{ activeTab.currentCategoryName || '当前分类' }}</h2>
+          <p class="list-topbar__description">浏览分类话题，或直接发布新的讨论。</p>
+        </div>
         <div class="list-topbar__actions">
-          <span class="list-topbar__label">通知等级</span>
-          <a-select
-            size="small"
-            style="width: 128px"
-            :value="notificationLevel"
-            :loading="notificationSaving"
-            :disabled="notificationSaving"
-            @change="$emit('changeNotificationLevel', Number($event))"
-          >
-            <a-select-option :value="0">忽略</a-select-option>
-            <a-select-option :value="1">常规</a-select-option>
-            <a-select-option :value="2">追踪</a-select-option>
-            <a-select-option :value="3">关注</a-select-option>
-            <a-select-option :value="4">仅关注首帖</a-select-option>
-          </a-select>
-          <a-button size="small" @click="$emit('toggleComposer')">
+          <label class="notification-field">
+            <span class="list-topbar__label">通知</span>
+            <a-select
+              class="notification-select"
+              :value="notificationLevel"
+              :loading="notificationSaving"
+              :disabled="notificationSaving"
+              aria-label="分类通知等级"
+              @change="$emit('changeNotificationLevel', Number($event))"
+            >
+              <a-select-option :value="0">忽略</a-select-option>
+              <a-select-option :value="1">常规</a-select-option>
+              <a-select-option :value="2">追踪</a-select-option>
+              <a-select-option :value="3">关注</a-select-option>
+              <a-select-option :value="4">仅关注首帖</a-select-option>
+            </a-select>
+          </label>
+          <a-button class="list-topbar__button" @click="$emit('toggleComposer')">
             {{ composerMode === 'topic' ? '收起' : '发帖' }}
           </a-button>
         </div>
-      </div>
+      </header>
 
       <CategoryGrid
         v-if="activeTab.categories.length > 0"
@@ -79,7 +86,11 @@ defineEmits([
       />
 
       <div v-if="activeTab.pendingTopicsCount" class="pending-topics">
-        <a-button type="primary" size="small" @click="$emit('applyPendingTopics')">
+        <a-button
+          type="primary"
+          class="pending-topics__button"
+          @click="$emit('applyPendingTopics')"
+        >
           发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
         </a-button>
       </div>
@@ -100,7 +111,7 @@ defineEmits([
 
       <div v-if="isLoadingMore" class="discourse-list-view__loading">
         <a-spin />
-        <span class="ml-2">加载更多话题...</span>
+        <span>加载更多话题...</span>
       </div>
 
       <div
@@ -125,82 +136,3 @@ defineEmits([
     </div>
   </div>
 </template>
-
-<style scoped>
-.discourse-list-view {
-  display: flex;
-  gap: 16px;
-}
-
-.discourse-list-view__main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.discourse-list-view__loading,
-.discourse-list-view__end {
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
-}
-
-.discourse-list-view__loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 0;
-}
-
-.discourse-list-view__end {
-  text-align: center;
-  padding: 12px 0;
-  font-size: 13px;
-}
-
-.discourse-list-view__side {
-  width: 256px;
-  flex-shrink: 0;
-  display: none;
-}
-
-.list-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 1px solid var(--d-border, var(--theme-outline-variant));
-  border-radius: 8px;
-  background: var(--d-surface-1, var(--theme-surface-container-low));
-}
-
-.list-topbar__title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--d-text, var(--theme-on-background));
-}
-
-.list-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.list-topbar__label {
-  font-size: 12px;
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
-}
-
-.pending-topics {
-  display: flex;
-  justify-content: center;
-}
-
-@media (min-width: 1024px) {
-  .discourse-list-view__side {
-    display: block;
-  }
-}
-</style>

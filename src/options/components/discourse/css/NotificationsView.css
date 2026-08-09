@@ -1,19 +1,14 @@
-/* NotificationsView.css — Discourse-style notification list */
-
 .ntf-root {
-  display: flex;
-  gap: 0;
-  min-height: 0;
-  border: 1px solid var(--d-border, var(--theme-outline-variant));
-  border-radius: 8px;
+  display: grid;
+  min-height: 280px;
+  grid-template-columns: minmax(0, 1fr) 64px;
   overflow: hidden;
-  background: var(--d-surface, var(--theme-surface));
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-0, var(--theme-surface-container-lowest));
 }
 
-/* ── Notification list ── */
-
 .ntf-list {
-  flex: 1;
   min-width: 0;
   overflow-y: auto;
 }
@@ -23,52 +18,72 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 32px 16px;
+  min-height: 220px;
+  gap: 10px;
+  padding: 40px 20px;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 13px;
+  text-align: center;
 }
 
-/* ── Individual notification item ── */
-
 .ntf-item {
+  position: relative;
   display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
+  gap: 13px;
+  min-height: 78px;
+  padding: 13px 16px 13px 20px;
   border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
-  transition: background-color 0.15s;
+  background: transparent;
+  transition:
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .ntf-item:last-child {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
-.ntf-item:hover {
-  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 10%, transparent));
+.ntf-item.clickable {
+  cursor: pointer;
+}
+
+.ntf-item.clickable:hover {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+}
+
+.ntf-item.clickable:active {
+  transform: scale(0.997);
 }
 
 .ntf-item.unread {
-  background: color-mix(in oklab, var(--theme-primary) 16%, transparent);
+  background: color-mix(in oklab, var(--primary) 9%, var(--d-surface-0));
 }
 
-.ntf-item.unread:hover {
-  background: color-mix(in oklab, var(--theme-primary) 24%, transparent);
+.ntf-item.unread.clickable:hover {
+  background: color-mix(in oklab, var(--primary) 14%, var(--d-surface-0));
 }
 
-/* ── Avatar ── */
+.ntf-unread-indicator {
+  position: absolute;
+  top: 20px;
+  left: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--primary, var(--theme-primary));
+}
 
 .ntf-avatar-wrap {
   position: relative;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
 }
 
 .ntf-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--d-shape-full, 999px);
   object-fit: cover;
 }
 
@@ -77,111 +92,148 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 680;
   user-select: none;
 }
 
 .ntf-type-badge {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
+  right: -4px;
+  bottom: -3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--d-surface, var(--theme-surface));
-  box-sizing: content-box;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--d-surface-0, var(--theme-surface-container-lowest));
+  border-radius: var(--d-shape-full, 999px);
+  box-sizing: border-box;
 }
 
-/* ── Content ── */
-
 .ntf-content {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .ntf-actor-line {
   display: flex;
   align-items: baseline;
+  min-width: 0;
+  flex-wrap: wrap;
   gap: 5px;
   font-size: 13px;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .ntf-actor {
-  font-weight: 600;
-  color: var(--d-text, var(--theme-on-background));
+  overflow: hidden;
+  color: var(--d-text, var(--theme-on-surface));
+  font-weight: 680;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ntf-type-text,
+.ntf-badge-desc,
+.ntf-time {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
 }
 
 .ntf-type-text {
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
-  white-space: nowrap;
 }
 
 .ntf-title {
-  font-size: 13px;
-  color: var(--d-text, var(--theme-on-background));
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 13px;
+  line-height: 1.4;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ntf-badge-desc {
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
 }
 
 .ntf-time {
-  font-size: 11.5px;
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
-  white-space: nowrap;
   margin-top: 1px;
+  font-size: 11px;
+  white-space: nowrap;
 }
-
-/* ── Right filter sidebar ── */
 
 .ntf-filter-bar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 6px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
   border-left: 1px solid var(--d-border, var(--theme-outline-variant));
-  background: var(--d-surface-1, var(--theme-surface-container-low));
-  flex-shrink: 0;
+  background: var(--d-surface-2, var(--theme-surface-container));
 }
 
 .ntf-filter-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
   background: transparent;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .ntf-filter-btn:hover {
-  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
-  color: var(--primary, var(--theme-primary));
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+  color: var(--d-text, var(--theme-on-surface));
 }
 
 .ntf-filter-btn.active {
-  background: color-mix(in oklab, var(--theme-primary) 18%, transparent);
-  color: var(--primary, var(--theme-primary));
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+}
+
+.ntf-filter-btn:active {
+  transform: scale(0.94);
+}
+
+@media (max-width: 640px) {
+  .ntf-root {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: var(--d-shape-lg, 16px);
+  }
+
+  .ntf-filter-bar {
+    grid-row: 1;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+    border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
+    border-left: 0;
+    scrollbar-width: none;
+  }
+
+  .ntf-filter-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ntf-filter-btn {
+    flex: 0 0 auto;
+  }
+
+  .ntf-item {
+    padding-right: 12px;
+  }
 }

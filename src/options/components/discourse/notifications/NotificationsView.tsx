@@ -302,10 +302,19 @@ export default defineComponent({
       if (path) emit('open', path)
     }
 
+    const getAccessibleLabel = (n: DiscourseNotification) => {
+      const actor = formatActor(n)
+      const title = formatTitle(n)
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      return [!n.read ? '未读' : '', actor, formatTypeText(n), title].filter(Boolean).join('，')
+    }
+
     return () => (
-      <div class="ntf-root">
+      <section class="ntf-root" aria-label="通知列表">
         {/* Notification list */}
-        <div class="ntf-list">
+        <div class="ntf-list" aria-live="polite" aria-busy={props.loading}>
           {props.loading ? (
             <div class="ntf-loading">
               <Spin size="small" />
@@ -320,19 +329,33 @@ export default defineComponent({
               const typeIcon = getTypeIcon(item.notification_type)
               const avatar = getAvatarInfo(item)
               const typeText = formatTypeText(item)
+              const path = buildPath(item)
 
               return (
-                <div
+                <article
                   key={item.id}
-                  class={['ntf-item', { unread: !item.read }]}
-                  onClick={() => handleOpen(item)}
+                  class={['ntf-item', { unread: !item.read, clickable: Boolean(path) }]}
+                  role={path ? 'link' : undefined}
+                  tabindex={path ? 0 : undefined}
+                  aria-label={getAccessibleLabel(item)}
+                  onClick={path ? () => handleOpen(item) : undefined}
+                  onKeydown={
+                    path
+                      ? (event: KeyboardEvent) => {
+                          if (event.key !== 'Enter') return
+                          event.preventDefault()
+                          handleOpen(item)
+                        }
+                      : undefined
+                  }
                 >
+                  {!item.read && <span class="ntf-unread-indicator" aria-hidden="true" />}
                   {/* Avatar + type badge */}
                   <div class="ntf-avatar-wrap">
                     {avatar.url && !brokenAvatarKeys.value.has(getAvatarKey(item)) ? (
                       <img
                         src={avatar.url}
-                        alt={avatar.username}
+                        alt=""
                         class="ntf-avatar"
                         onError={() => handleAvatarError(getAvatarKey(item))}
                       />
@@ -344,7 +367,11 @@ export default defineComponent({
                         {(avatar.username || 'U')[0].toUpperCase()}
                       </div>
                     )}
-                    <span class="ntf-type-badge" style={{ backgroundColor: typeIcon.bg }}>
+                    <span
+                      class="ntf-type-badge"
+                      style={{ backgroundColor: typeIcon.bg }}
+                      aria-hidden="true"
+                    >
                       <svg viewBox="0 0 24 24" width="12" height="12">
                         <path d={typeIcon.path} fill={typeIcon.color} />
                       </svg>
@@ -369,28 +396,31 @@ export default defineComponent({
                     ) : null}
                     <span class="ntf-time">{formatTime(item.created_at)}</span>
                   </div>
-                </div>
+                </article>
               )
             })
           )}
         </div>
 
         {/* Right filter sidebar */}
-        <div class="ntf-filter-bar">
+        <div class="ntf-filter-bar" role="toolbar" aria-label="筛选通知">
           {filterIcons.map(f => (
             <button
               key={f.key}
+              type="button"
               class={['ntf-filter-btn', { active: props.filter === f.key }]}
               title={f.label}
+              aria-label={f.label}
+              aria-pressed={props.filter === f.key}
               onClick={() => emit('changeFilter', f.key)}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path d={f.icon} fill="currentColor" />
               </svg>
             </button>
           ))}
         </div>
-      </div>
+      </section>
     )
   }
 })

@@ -98,7 +98,7 @@ export default defineComponent({
 
     return () => (
       <div class="user-profile">
-        <div
+        <header
           class="user-profile-header"
           style={{
             backgroundImage: props.user.card_background_upload_url
@@ -158,7 +158,7 @@ export default defineComponent({
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         <UserTabs
           active="summary"
@@ -232,7 +232,8 @@ export default defineComponent({
         {props.user.featured_topic && (
           <section class="user-profile-card">
             <h3 class="user-profile-card__title">置顶话题</h3>
-            <div
+            <button
+              type="button"
               class="user-profile-featured-topic"
               onClick={() => emit('openTopic', props.user.featured_topic)}
             >
@@ -242,7 +243,7 @@ export default defineComponent({
               <span class="user-profile-featured-topic__meta">
                 ({props.user.featured_topic.posts_count} 帖子)
               </span>
-            </div>
+            </button>
           </section>
         )}
 
@@ -273,8 +274,9 @@ export default defineComponent({
             <h3 class="user-profile-card__title">热门话题</h3>
             <div class="user-profile-topic-list">
               {props.user._topics.slice(0, 6).map(topic => (
-                <div
+                <button
                   key={topic.id}
+                  type="button"
                   class="user-profile-topic-item"
                   onClick={() => emit('openTopic', topic)}
                 >
@@ -285,7 +287,7 @@ export default defineComponent({
                   <div class="user-profile-topic-item__meta">
                     {topic.posts_count} 帖子 · {topic.like_count} 赞
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>

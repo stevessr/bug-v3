@@ -1,42 +1,53 @@
 .user-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
   overflow-x: auto;
-  padding-bottom: 1px;
-  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
-  scrollbar-width: thin;
+  padding: 6px;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-surface-2, var(--theme-surface-container));
+  scrollbar-width: none;
+}
+
+.user-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .user-tabs__item {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 16px;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--d-shape-full, 999px);
   background: transparent;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
-  font-size: 13px;
-  line-height: 1.2;
-  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 620;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .user-tabs__item:hover {
-  color: var(--d-text, var(--theme-on-background));
-  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+  color: var(--d-text, var(--theme-on-surface));
 }
 
 .user-tabs__item.is-active {
-  color: var(--d-text, var(--theme-on-background));
-  background: var(--d-surface, var(--theme-surface));
-  box-shadow: inset 0 -2px 0 var(--primary, var(--theme-primary));
-  font-weight: 600;
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+  font-weight: 680;
 }
 
-.user-tabs__item:focus-visible {
-  outline: 2px solid var(--primary, var(--theme-primary));
-  outline-offset: 2px;
+.user-tabs__item:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 560px) {
+  .user-tabs {
+    border-radius: var(--d-shape-lg, 16px);
+  }
 }

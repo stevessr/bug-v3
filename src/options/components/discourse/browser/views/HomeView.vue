@@ -44,31 +44,36 @@ defineEmits([
 <template>
   <div class="discourse-list-view">
     <div class="discourse-list-view__main">
-      <div class="home-nav">
-        <div class="home-nav-links">
+      <nav class="home-nav" aria-label="话题列表导航">
+        <div class="home-nav-links" role="list">
           <button
             v-for="item in homeNavItems"
             :key="item.key"
             class="home-nav-link"
             :class="{ active: isHomeNavActive(item) }"
+            :aria-current="isHomeNavActive(item) ? 'page' : undefined"
             @click="$emit('homeNavClick', item)"
           >
             {{ item.label }}
           </button>
         </div>
         <div class="home-nav-actions">
-          <a-button size="small" @click="$emit('openChat')">聊天</a-button>
-          <a-button v-if="currentUsername" size="small" @click="$emit('openMyProfile')">
+          <a-button class="home-nav-action" @click="$emit('openChat')">聊天</a-button>
+          <a-button v-if="currentUsername" class="home-nav-action" @click="$emit('openMyProfile')">
             我的主页
           </a-button>
-          <a-button type="primary" size="small" @click="$emit('toggleComposer')">
+          <a-button type="primary" class="home-nav-action" @click="$emit('toggleComposer')">
             {{ composerMode === 'topic' ? '收起' : '新建话题' }}
           </a-button>
         </div>
-      </div>
+      </nav>
 
       <div v-if="activeTab.pendingTopicsCount" class="pending-topics">
-        <a-button type="primary" size="small" @click="$emit('applyPendingTopics')">
+        <a-button
+          type="primary"
+          class="pending-topics__button"
+          @click="$emit('applyPendingTopics')"
+        >
           发现 {{ activeTab.pendingTopicsCount }} 条新话题，点击刷新
         </a-button>
       </div>
@@ -121,7 +126,7 @@ defineEmits([
 <style scoped>
 .discourse-list-view {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .discourse-list-view__main {
@@ -129,13 +134,13 @@ defineEmits([
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .discourse-list-view__list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .discourse-list-view__loading,
@@ -148,16 +153,24 @@ defineEmits([
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 0;
+  min-height: 64px;
+  padding: 12px;
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
 }
 
 .discourse-list-view__end {
-  padding: 12px 0;
+  padding: 18px;
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
 }
 
 .discourse-list-view__empty {
+  min-height: 200px;
+  padding: 64px 24px;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
   text-align: center;
-  padding: 40px 0;
 }
 
 .discourse-list-view__side {
@@ -170,51 +183,107 @@ defineEmits([
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 8px 12px;
-  background: var(--d-surface-1, var(--theme-surface-container-low));
-  border: 1px solid var(--d-border, var(--theme-outline-variant));
-  border-radius: 8px;
+  gap: 16px;
+  padding: 8px;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-2, var(--theme-surface-container));
 }
 
 .home-nav-links {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .home-nav-link {
-  border: 1px solid transparent;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
   background: transparent;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 13px;
-  line-height: 1.2;
-  padding: 5px 10px;
-  border-radius: 9999px;
+  font-weight: 580;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .home-nav-link:hover {
-  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 12%, transparent));
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
 }
 
 .home-nav-link.active {
-  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 16%, transparent));
-  border-color: var(--primary, var(--theme-primary));
-  color: var(--primary, var(--theme-primary));
-  font-weight: 600;
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+  font-weight: 680;
+}
+
+.home-nav-link:active {
+  transform: scale(0.97);
 }
 
 .home-nav-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.home-nav-action,
+.pending-topics__button {
+  min-height: 40px;
+  border-radius: var(--d-shape-full, 999px) !important;
+  font-weight: 620;
 }
 
 .pending-topics {
   display: flex;
   justify-content: center;
+}
+
+.pending-topics__button {
+  box-shadow: var(--d-elevation-1);
+}
+
+@media (max-width: 860px) {
+  .home-nav {
+    align-items: stretch;
+    flex-direction: column;
+    border-radius: var(--d-shape-lg, 16px);
+  }
+
+  .home-nav-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .home-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-nav-link {
+    flex: 0 0 auto;
+  }
+
+  .home-nav-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .home-nav-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-nav-action:last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (min-width: 1024px) {

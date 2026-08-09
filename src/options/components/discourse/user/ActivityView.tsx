@@ -20,6 +20,12 @@ export default defineComponent({
   },
   emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab'],
   setup(props, { emit }) {
+    const handleKeyboardOpen = (event: KeyboardEvent, action: () => void) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      action()
+    }
+
     const tabs: { key: ActivityTabType; label: string }[] = [
       { key: 'all', label: '所有' },
       { key: 'topics', label: '话题' },
@@ -73,18 +79,28 @@ export default defineComponent({
 
     return () => (
       <div class="activity-view">
-        <div class="activity-view-header-card">
-          <img
-            src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 64)}
-            alt={props.user.username}
-            class="activity-view-header-card__avatar"
+        <header class="activity-view-header-card">
+          <button
+            type="button"
+            class="activity-view-header-card__avatar-button"
+            aria-label={`打开 ${props.user.username} 的主页`}
             onClick={() => emit('goToProfile')}
-          />
+          >
+            <img
+              src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 64)}
+              alt=""
+              class="activity-view-header-card__avatar"
+            />
+          </button>
           <div class="activity-view-header-card__info">
             <div class="activity-view-header-card__title-row">
-              <h2 class="activity-view-header-card__title" onClick={() => emit('goToProfile')}>
+              <button
+                type="button"
+                class="activity-view-header-card__title"
+                onClick={() => emit('goToProfile')}
+              >
                 {props.user.username}
-              </h2>
+              </button>
               {props.user.admin ? (
                 <span class="activity-view-header-card__badge is-admin">管理员</span>
               ) : props.user.moderator ? (
@@ -98,7 +114,7 @@ export default defineComponent({
               <div class="activity-view-header-card__title2">{props.user.title}</div>
             )}
           </div>
-        </div>
+        </header>
 
         <UserTabs
           active="activity"
@@ -107,14 +123,17 @@ export default defineComponent({
           onSwitchTab={tab => emit('switchMainTab', tab)}
         />
 
-        <div class="activity-subtabs">
+        <div class="activity-subtabs" role="tablist" aria-label="动态类型">
           {visibleTabs.value.map(tab => (
             <button
               key={tab.key}
+              type="button"
+              role="tab"
               class={[
                 'activity-subtabs__item',
                 props.activityState.activeTab === tab.key ? 'is-active' : ''
               ]}
+              aria-selected={props.activityState.activeTab === tab.key}
               onClick={() => emit('switchTab', tab.key)}
             >
               {tab.label}
@@ -126,32 +145,36 @@ export default defineComponent({
           {['all', 'replies', 'likes'].includes(props.activityState.activeTab) && (
             <div class="activity-list">
               {props.activityState.actions.map(action => (
-                <div
+                <article
                   key={`${action.action_type}-${action.post_id ?? 'na'}-${action.created_at}`}
                   class="activity-item"
-                  onClick={() => emit('openTopic', { id: action.topic_id, slug: action.slug })}
                 >
                   <div class="activity-item__main">
-                    <img
-                      src={getAvatarUrl(action.avatar_template, props.baseUrl, 40)}
-                      alt={action.username}
-                      class="activity-item__avatar"
-                      onClick={(e: Event) => {
-                        e.stopPropagation()
-                        emit('openUser', action.username)
-                      }}
-                    />
-                    <div class="activity-item__body">
+                    <button
+                      type="button"
+                      class="activity-item__avatar-button"
+                      aria-label={`打开 ${action.username} 的主页`}
+                      onClick={() => emit('openUser', action.username)}
+                    >
+                      <img
+                        src={getAvatarUrl(action.avatar_template, props.baseUrl, 40)}
+                        alt=""
+                        class="activity-item__avatar"
+                      />
+                    </button>
+                    <div
+                      class="activity-item__body"
+                      role="link"
+                      tabindex={0}
+                      onClick={() => emit('openTopic', { id: action.topic_id, slug: action.slug })}
+                      onKeydown={(event: KeyboardEvent) =>
+                        handleKeyboardOpen(event, () =>
+                          emit('openTopic', { id: action.topic_id, slug: action.slug })
+                        )
+                      }
+                    >
                       <div class="activity-item__meta">
-                        <span
-                          class="activity-item__actor"
-                          onClick={(e: Event) => {
-                            e.stopPropagation()
-                            emit('openUser', action.username)
-                          }}
-                        >
-                          {action.name || action.username}
-                        </span>
+                        <span class="activity-item__actor">{action.name || action.username}</span>
                         <span>{getActionTypeLabel(action.action_type)}</span>
                         <span class="activity-item__time">{formatTime(action.created_at)}</span>
                       </div>
@@ -164,7 +187,7 @@ export default defineComponent({
                       )}
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
 
               {props.activityState.actions.length === 0 && !props.isLoadingMore && (
@@ -178,8 +201,9 @@ export default defineComponent({
           ) && (
             <div class="activity-list">
               {props.activityState.topics.map(topic => (
-                <div
+                <button
                   key={topic.id}
+                  type="button"
                   class="activity-topic-item"
                   onClick={() => emit('openTopic', topic)}
                 >
@@ -199,7 +223,7 @@ export default defineComponent({
                     )}
                     <span>{formatTime(topic.created_at)}</span>
                   </div>
-                </div>
+                </button>
               ))}
 
               {props.activityState.topics.length === 0 && !props.isLoadingMore && (
@@ -211,27 +235,39 @@ export default defineComponent({
           {props.activityState.activeTab === 'reactions' && (
             <div class="activity-list">
               {props.activityState.reactions.map(reaction => (
-                <div
-                  key={reaction.id}
-                  class="activity-item"
-                  onClick={() =>
-                    emit('openTopic', {
-                      id: reaction.post.topic_id,
-                      slug: reaction.post.topic_slug
-                    })
-                  }
-                >
+                <article key={reaction.id} class="activity-item">
                   <div class="activity-item__main">
-                    <img
-                      src={getAvatarUrl(reaction.post.avatar_template, props.baseUrl, 40)}
-                      alt={reaction.post.username}
-                      class="activity-item__avatar"
-                      onClick={(e: Event) => {
-                        e.stopPropagation()
-                        emit('openUser', reaction.post.username)
-                      }}
-                    />
-                    <div class="activity-item__body">
+                    <button
+                      type="button"
+                      class="activity-item__avatar-button"
+                      aria-label={`打开 ${reaction.post.username} 的主页`}
+                      onClick={() => emit('openUser', reaction.post.username)}
+                    >
+                      <img
+                        src={getAvatarUrl(reaction.post.avatar_template, props.baseUrl, 40)}
+                        alt=""
+                        class="activity-item__avatar"
+                      />
+                    </button>
+                    <div
+                      class="activity-item__body"
+                      role="link"
+                      tabindex={0}
+                      onClick={() =>
+                        emit('openTopic', {
+                          id: reaction.post.topic_id,
+                          slug: reaction.post.topic_slug
+                        })
+                      }
+                      onKeydown={(event: KeyboardEvent) =>
+                        handleKeyboardOpen(event, () =>
+                          emit('openTopic', {
+                            id: reaction.post.topic_id,
+                            slug: reaction.post.topic_slug
+                          })
+                        )
+                      }
+                    >
                       <div class="activity-item__meta">
                         <span class="activity-item__reaction-emoji">
                           {reaction.reaction.reaction_value === '+1'
@@ -239,13 +275,7 @@ export default defineComponent({
                             : reaction.reaction.reaction_value}
                         </span>
                         <span>反应于</span>
-                        <span
-                          class="activity-item__actor"
-                          onClick={(e: Event) => {
-                            e.stopPropagation()
-                            emit('openUser', reaction.post.username)
-                          }}
-                        >
+                        <span class="activity-item__actor">
                           {reaction.post.name || reaction.post.username}
                         </span>
                         <span class="activity-item__time">{formatTime(reaction.created_at)}</span>
@@ -259,7 +289,7 @@ export default defineComponent({
                       )}
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
 
               {props.activityState.reactions.length === 0 && !props.isLoadingMore && (
@@ -271,18 +301,24 @@ export default defineComponent({
           {props.activityState.activeTab === 'solved' && (
             <div class="activity-list">
               {props.activityState.solvedPosts.map(post => (
-                <div
-                  key={post.post_id}
-                  class="activity-item"
-                  onClick={() => emit('openTopic', { id: post.topic_id, slug: post.slug })}
-                >
+                <article key={post.post_id} class="activity-item">
                   <div class="activity-item__main">
                     <img
                       src={getAvatarUrl(post.avatar_template, props.baseUrl, 40)}
                       alt={post.username}
                       class="activity-item__avatar"
                     />
-                    <div class="activity-item__body">
+                    <div
+                      class="activity-item__body"
+                      role="link"
+                      tabindex={0}
+                      onClick={() => emit('openTopic', { id: post.topic_id, slug: post.slug })}
+                      onKeydown={(event: KeyboardEvent) =>
+                        handleKeyboardOpen(event, () =>
+                          emit('openTopic', { id: post.topic_id, slug: post.slug })
+                        )
+                      }
+                    >
                       <div class="activity-item__meta">
                         <span class="activity-item__solved">✓ 已解决</span>
                         <span class="activity-item__time">{formatTime(post.created_at)}</span>
@@ -293,7 +329,7 @@ export default defineComponent({
                       )}
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
 
               {props.activityState.solvedPosts.length === 0 && !props.isLoadingMore && (

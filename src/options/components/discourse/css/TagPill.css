@@ -1,0 +1,44 @@
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 30px;
+  gap: 6px;
+  padding: 4px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--d-shape-full, 999px);
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.25;
+}
+
+.tag-pill--compact {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.tag-pill--clickable {
+  cursor: pointer;
+}
+
+.tag-pill--neutral {
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+}
+
+.tag-pill__icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.tag-pill__label {
+  min-width: 0;
+}
+
+.tag-pill__label--truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

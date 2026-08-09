@@ -390,13 +390,13 @@ export default defineComponent({
     )
 
     return () => (
-      <div class="topic-view flex gap-4">
-        <div class="topic-main flex-1 min-w-0 space-y-4">
+      <div class="topic-view">
+        <main class="topic-main">
           <TopicHeader topic={activeTopic.value} />
 
           {/* Posts list */}
           {activeTopic.value.post_stream?.posts ? (
-            <div ref={postsListRef}>
+            <div ref={postsListRef} class="topic-posts-region">
               <TopicPostsList
                 posts={activeTopic.value.post_stream.posts}
                 baseUrl={props.baseUrl}
@@ -435,14 +435,17 @@ export default defineComponent({
               />
             </div>
           ) : (
-            <div class="text-center text-gray-500 py-8">加载帖子中...</div>
+            <div class="topic-view__state" role="status">
+              <Spin />
+              <span>加载帖子中...</span>
+            </div>
           )}
 
           {/* Loading more indicator */}
           {!summaryMode.value && props.isLoadingMore && (
-            <div class="flex items-center justify-center py-4">
+            <div class="topic-view__state" role="status">
               <Spin />
-              <span class="ml-2 text-gray-500">加载更多帖子...</span>
+              <span>加载更多帖子...</span>
             </div>
           )}
 
@@ -450,7 +453,7 @@ export default defineComponent({
           {!summaryMode.value &&
             !props.hasMorePosts &&
             activeTopic.value.post_stream?.posts?.length && (
-              <div class="text-center text-gray-400 py-4 text-sm">
+              <div class="topic-view__state topic-view__state--end" role="status">
                 已加载全部 {activeTopic.value.post_stream.posts.length} 条帖子
               </div>
             )}
@@ -481,7 +484,7 @@ export default defineComponent({
             baseUrl={props.baseUrl}
             onOpen={handleSuggestedClick}
           />
-        </div>
+        </main>
 
         <TopicAside
           posts={activeTopic.value.post_stream?.posts || []}

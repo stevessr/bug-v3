@@ -194,6 +194,7 @@ export default defineComponent({
           <div class="chat-sidebar-header">
             <span class="chat-sidebar-header__title">聊天</span>
             <button
+              type="button"
               class="chat-sidebar-header__create"
               title="创建群聊"
               onClick={() => (showCreateGroup.value = true)}
@@ -219,6 +220,7 @@ export default defineComponent({
             <div class="chat-main-actions">
               {(canEditActiveChannel.value || activeChannel.value) && (
                 <button
+                  type="button"
                   class="chat-main-action-btn"
                   onClick={() => (showManage.value = true)}
                   title="管理频道"
@@ -227,7 +229,7 @@ export default defineComponent({
                 </button>
               )}
               {canEditActiveChannel.value && (
-                <button class="chat-main-action-btn" onClick={handleEditChannel}>
+                <button type="button" class="chat-main-action-btn" onClick={handleEditChannel}>
                   编辑频道
                 </button>
               )}
@@ -254,9 +256,7 @@ export default defineComponent({
             <div class="chat-empty">请选择一个频道开始聊天</div>
           )}
 
-          {typingText.value && (
-            <div class="chat-typing-indicator">{typingText.value}</div>
-          )}
+          {typingText.value && <div class="chat-typing-indicator">{typingText.value}</div>}
 
           <ChatComposer
             disabled={!activeChannel.value || props.chatState.sendingMessage}

@@ -47,14 +47,14 @@ export default defineComponent({
     })
 
     return () => (
-      <div class="topic-footer">
+      <footer class="topic-footer">
         <div class="topic-footer__left">
           <div class="topic-footer__level">
             <span class="topic-footer__label">通知等级</span>
             <Select
-              size="small"
               value={levelOption.value.value}
               class="topic-footer__select"
+              aria-label="话题通知等级"
               disabled={props.loading}
               onChange={value => emit('changeLevel', value as number)}
               options={LEVEL_OPTIONS.map(option => ({
@@ -69,29 +69,45 @@ export default defineComponent({
           </div>
         </div>
         <div class="topic-footer__right">
-          <Button size="small" onClick={() => emit('bookmark')} loading={props.loading}>
+          <Button
+            class="topic-footer__action"
+            onClick={() => emit('bookmark')}
+            loading={props.loading}
+          >
             {props.bookmarked ? '移除书签' : '加入书签'}
           </Button>
-          <Button size="small" onClick={() => emit('flag')} disabled={props.loading}>
+          <Button
+            class="topic-footer__action"
+            onClick={() => emit('flag')}
+            disabled={props.loading}
+          >
             举报
           </Button>
           {props.canAssign && (
-            <Button size="small" onClick={() => emit('assign')} disabled={props.loading}>
+            <Button
+              class="topic-footer__action"
+              onClick={() => emit('assign')}
+              disabled={props.loading}
+            >
               指定
             </Button>
           )}
           {props.aiAvailable && (
-            <Button size="small" onClick={() => emit('aiSummary')} loading={props.aiLoading}>
+            <Button
+              class="topic-footer__action"
+              onClick={() => emit('aiSummary')}
+              loading={props.aiLoading}
+            >
               AI 总结
             </Button>
           )}
           <Tooltip title="回复此话题">
-            <Button type="primary" size="small" onClick={() => emit('reply')}>
+            <Button type="primary" class="topic-footer__action" onClick={() => emit('reply')}>
               回复
             </Button>
           </Tooltip>
         </div>
-      </div>
+      </footer>
     )
   }
 })

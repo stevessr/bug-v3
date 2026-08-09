@@ -49,12 +49,15 @@ export default defineComponent({
       if (!availableTabs.value.length) return null
 
       return (
-        <div class="topic-extras">
-          <div class="topic-extras__tabs">
+        <section class="topic-extras" aria-label="更多话题">
+          <div class="topic-extras__tabs" role="tablist" aria-label="更多话题类型">
             {availableTabs.value.map(tab => (
               <button
                 key={tab.key}
+                type="button"
+                role="tab"
                 class={['topic-extras__tab', activeTab.value === tab.key ? 'is-active' : '']}
+                aria-selected={activeTab.value === tab.key}
                 onClick={() => {
                   activeTab.value = tab.key
                 }}
@@ -64,7 +67,7 @@ export default defineComponent({
               </button>
             ))}
           </div>
-          <div class="topic-extras__body">
+          <div class="topic-extras__body" role="tabpanel">
             <TopicList
               topics={activeList.value}
               baseUrl={props.baseUrl}
@@ -72,7 +75,7 @@ export default defineComponent({
               onClick={(topic: SuggestedTopic) => emit('open', topic)}
             />
           </div>
-        </div>
+        </section>
       )
     }
   }

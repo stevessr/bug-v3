@@ -1,5 +1,5 @@
-import { defineComponent, ref, computed, watch } from 'vue'
-import { Button, Input, Select, Switch, Tag } from 'ant-design-vue'
+import { defineComponent, ref, computed, watch, onBeforeUnmount } from 'vue'
+import { Button, Input, Select, Switch } from 'ant-design-vue'
 
 import type {
   SearchState,
@@ -16,6 +16,7 @@ import {
   getAllPreloadedCategories,
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
+import '../css/SearchView.css'
 
 export default defineComponent({
   name: 'SearchView',
@@ -194,6 +195,10 @@ export default defineComponent({
       }
     }
 
+    onBeforeUnmount(() => {
+      if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+    })
+
     watch(
       () => localFilters.value.category,
       () => {
@@ -226,31 +231,69 @@ export default defineComponent({
       return ''
     }
 
+    const openResult = (path: string) => {
+      if (path) emit('open', path)
+    }
+
+    const handleResultKeydown = (event: KeyboardEvent, path: string) => {
+      if (event.key !== 'Enter' || !path) return
+      event.preventDefault()
+      openResult(path)
+    }
+
     return () => (
-      <div class="search-view space-y-4">
-        <div class="search-panel rounded-lg border dark:border-gray-700 p-4 space-y-3">
-          <div class="flex items-center gap-2">
+      <div class="search-view">
+        <header class="search-view__heading">
+          <div>
+            <span class="search-view__eyebrow">全站检索</span>
+            <h2 class="search-view__title">搜索论坛</h2>
+            <p class="search-view__description">组合分类、标签与高级条件，精确定位讨论。</p>
+          </div>
+          {props.state.posts.length > 0 && (
+            <span class="search-view__result-count">{props.state.posts.length} 条结果</span>
+          )}
+        </header>
+
+        <section class="search-panel" aria-label="搜索条件">
+          <form
+            class="search-query"
+            role="search"
+            onSubmit={(event: Event) => {
+              event.preventDefault()
+              handleSearch()
+            }}
+          >
             <Input
+              id="discourse-search-query"
+              class="search-query__input"
               value={localQuery.value}
               placeholder="搜索话题、回复、用户..."
+              aria-label="搜索关键词"
               onUpdate:value={(value: string) => {
                 localQuery.value = value
               }}
-              onPressEnter={handleSearch}
             />
-            <Button type="primary" onClick={handleSearch} loading={props.state.loading}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              class="search-query__button"
+              loading={props.state.loading}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />
+              </svg>
               搜索
             </Button>
-          </div>
+          </form>
 
           {/* Basic filters row */}
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500 shrink-0">排序</span>
+          <div class="search-filter-grid search-filter-grid--basic">
+            <div class="search-field">
+              <span class="search-field__label">排序</span>
               <Select
-                size="small"
                 value={localFilters.value.order}
-                class="flex-1"
+                class="search-field__control"
+                aria-label="结果排序"
                 options={[
                   { value: '', label: '默认' },
                   { value: 'latest', label: '最新回复' },
@@ -265,24 +308,24 @@ export default defineComponent({
                 }}
               />
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500 shrink-0">发帖人</span>
+            <div class="search-field">
+              <span class="search-field__label">发帖人</span>
               <Input
-                size="small"
                 value={localFilters.value.postedBy}
                 placeholder="用户名"
-                class="flex-1"
+                class="search-field__control"
+                aria-label="按发帖人筛选"
                 onUpdate:value={(value: string) => {
                   localFilters.value.postedBy = value
                 }}
               />
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500 shrink-0">状态</span>
+            <div class="search-field">
+              <span class="search-field__label">状态</span>
               <Select
-                size="small"
                 value={localFilters.value.status}
-                class="flex-1"
+                class="search-field__control"
+                aria-label="按话题状态筛选"
                 options={[
                   { value: '', label: '不限' },
                   { value: 'open', label: '开放' },
@@ -298,14 +341,14 @@ export default defineComponent({
                 }}
               />
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500 shrink-0">分类</span>
+            <div class="search-field">
+              <span class="search-field__label">分类</span>
               <Select
-                size="small"
                 mode="SECRET_COMBOBOX_MODE_DO_NOT_USE"
                 showSearch
                 allowClear
-                class="flex-1"
+                class="search-field__control"
+                aria-label="按分类筛选"
                 value={localFilters.value.category || undefined}
                 placeholder="选择分类"
                 options={categoryOptions.value}
@@ -318,13 +361,13 @@ export default defineComponent({
           </div>
 
           {/* Tags row */}
-          <div class="flex items-center gap-2 text-xs">
-            <span class="text-gray-500 shrink-0">标签</span>
+          <div class="search-field search-field--tags">
+            <span class="search-field__label">标签</span>
             <Select
-              size="small"
-              class="flex-1"
+              class="search-field__control"
               mode="tags"
               showSearch
+              aria-label="按标签筛选"
               value={selectedTags.value}
               filterOption={false}
               notFoundContent={tagsLoading.value ? '加载中...' : '无结果'}
@@ -335,7 +378,7 @@ export default defineComponent({
               onUpdate:value={(value: any) => updateSelectedTags((value || []) as string[])}
               v-slots={{
                 tagRender: ({ value, closable, onClose }: any) => (
-                  <span class="inline-flex items-center gap-1 mr-1">
+                  <span class="search-tag-selection">
                     <TagPill
                       name={String(value)}
                       text={getTagOption(String(value))?.label || String(value)}
@@ -345,7 +388,8 @@ export default defineComponent({
                     {closable ? (
                       <button
                         type="button"
-                        class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        class="search-tag-selection__remove"
+                        aria-label={`移除标签 ${String(value)}`}
                         onMousedown={(event: Event) => event.preventDefault()}
                         onClick={onClose}
                       >
@@ -370,19 +414,22 @@ export default defineComponent({
           </div>
 
           {/* Toggle advanced filters */}
-          <div class="flex items-center justify-between">
+          <div class="search-advanced-toggle-row">
             <button
               type="button"
-              class="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+              class="search-advanced-toggle"
+              aria-expanded={showAdvanced.value}
+              aria-controls="discourse-search-advanced"
               onClick={() => {
                 showAdvanced.value = !showAdvanced.value
               }}
             >
               <span>{showAdvanced.value ? '收起' : '展开'}高级筛选</span>
               <svg
-                class={['w-3 h-3 transition-transform', showAdvanced.value ? 'rotate-180' : '']}
+                class={['search-advanced-toggle__icon', { expanded: showAdvanced.value }]}
                 viewBox="0 0 20 20"
                 fill="currentColor"
+                aria-hidden="true"
               >
                 <path
                   fill-rule="evenodd"
@@ -395,163 +442,163 @@ export default defineComponent({
 
           {/* Advanced filters */}
           {showAdvanced.value && (
-            <div class="space-y-3 pt-2 border-t dark:border-gray-700">
+            <div id="discourse-search-advanced" class="search-advanced-panel">
               {/* Search type toggles */}
-              <div class="text-xs text-gray-500 font-medium">搜索类型</div>
-              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                <div class="flex items-center gap-1">
+              <div class="search-filter-section__title">搜索类型</div>
+              <div class="search-toggle-grid">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inTitle}
+                    aria-label="只搜索标题"
                     onChange={checked => {
                       localFilters.value.inTitle = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">标题内</span>
+                  <span>标题内</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inFirst}
+                    aria-label="只搜索首帖"
                     onChange={checked => {
                       localFilters.value.inFirst = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">仅首帖</span>
+                  <span>仅首帖</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inPinned}
+                    aria-label="只搜索置顶内容"
                     onChange={checked => {
                       localFilters.value.inPinned = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">置顶</span>
+                  <span>置顶</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inWiki}
+                    aria-label="只搜索 Wiki 内容"
                     onChange={checked => {
                       localFilters.value.inWiki = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">Wiki</span>
+                  <span>Wiki</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inMessages}
+                    aria-label="搜索私信"
                     onChange={checked => {
                       localFilters.value.inMessages = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">私信</span>
+                  <span>私信</span>
                 </div>
               </div>
 
               {/* My activity toggles */}
-              <div class="text-xs text-gray-500 font-medium">仅回访话题/帖子</div>
-              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                <div class="flex items-center gap-1">
+              <div class="search-filter-section__title">仅回访话题／帖子</div>
+              <div class="search-toggle-grid">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inPosted}
+                    aria-label="只搜索我发布的内容"
                     onChange={checked => {
                       localFilters.value.inPosted = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">我发布的</span>
+                  <span>我发布的</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inBookmarks}
+                    aria-label="只搜索我的书签"
                     onChange={checked => {
                       localFilters.value.inBookmarks = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">我的书签</span>
+                  <span>我的书签</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inLikes}
+                    aria-label="只搜索我点赞的内容"
                     onChange={checked => {
                       localFilters.value.inLikes = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">我点赞的</span>
+                  <span>我点赞的</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inWatching}
+                    aria-label="只搜索关注中的内容"
                     onChange={checked => {
                       localFilters.value.inWatching = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">关注中</span>
+                  <span>关注中</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inTracking}
+                    aria-label="只搜索跟踪中的内容"
                     onChange={checked => {
                       localFilters.value.inTracking = Boolean(checked)
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">跟踪中</span>
+                  <span>跟踪中</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inSeen}
+                    aria-label="只搜索已读内容"
                     onChange={checked => {
                       const next = Boolean(checked)
                       localFilters.value.inSeen = next
                       if (next) localFilters.value.inUnseen = false
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">已读</span>
+                  <span>已读</span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="search-toggle">
                   <Switch
-                    size="small"
                     checked={localFilters.value.inUnseen}
+                    aria-label="只搜索未读内容"
                     onChange={checked => {
                       const next = Boolean(checked)
                       localFilters.value.inUnseen = next
                       if (next) localFilters.value.inSeen = false
                     }}
                   />
-                  <span class="text-gray-600 dark:text-gray-400">未读</span>
+                  <span>未读</span>
                 </div>
               </div>
 
               {/* User filters */}
-              <div class="text-xs text-gray-500 font-medium">用户筛选</div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">已指定给</span>
+              <div class="search-filter-section__title">用户筛选</div>
+              <div class="search-filter-grid search-filter-grid--three">
+                <div class="search-field">
+                  <span class="search-field__label">已指定给</span>
                   <Input
-                    size="small"
                     value={localFilters.value.assignedTo}
                     placeholder="用户名"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="按指定用户筛选"
                     onUpdate:value={(value: string) => {
                       localFilters.value.assignedTo = value
                     }}
                   />
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">群组</span>
+                <div class="search-field">
+                  <span class="search-field__label">群组</span>
                   <Input
-                    size="small"
                     value={localFilters.value.group}
                     placeholder="群组名称"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="按群组筛选"
                     onUpdate:value={(value: string) => {
                       localFilters.value.group = value
                     }}
@@ -560,27 +607,27 @@ export default defineComponent({
               </div>
 
               {/* Date filters */}
-              <div class="text-xs text-gray-500 font-medium">时间范围</div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">早于</span>
+              <div class="search-filter-section__title">时间范围</div>
+              <div class="search-filter-grid search-filter-grid--two">
+                <div class="search-field">
+                  <span class="search-field__label">早于</span>
                   <Input
-                    size="small"
                     value={localFilters.value.before}
                     placeholder="YYYY-MM-DD"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="早于指定日期"
                     onUpdate:value={(value: string) => {
                       localFilters.value.before = value
                     }}
                   />
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">晚于</span>
+                <div class="search-field">
+                  <span class="search-field__label">晚于</span>
                   <Input
-                    size="small"
                     value={localFilters.value.after}
                     placeholder="YYYY-MM-DD"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="晚于指定日期"
                     onUpdate:value={(value: string) => {
                       localFilters.value.after = value
                     }}
@@ -589,51 +636,51 @@ export default defineComponent({
               </div>
 
               {/* Count filters */}
-              <div class="text-xs text-gray-500 font-medium">数量筛选</div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">最少帖子</span>
+              <div class="search-filter-section__title">数量筛选</div>
+              <div class="search-filter-grid search-filter-grid--four">
+                <div class="search-field">
+                  <span class="search-field__label">最少帖子</span>
                   <Input
-                    size="small"
                     value={localFilters.value.minPosts}
                     placeholder="数量"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="最少帖子数"
                     onUpdate:value={(value: string) => {
                       localFilters.value.minPosts = value
                     }}
                   />
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">最多帖子</span>
+                <div class="search-field">
+                  <span class="search-field__label">最多帖子</span>
                   <Input
-                    size="small"
                     value={localFilters.value.maxPosts}
                     placeholder="数量"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="最多帖子数"
                     onUpdate:value={(value: string) => {
                       localFilters.value.maxPosts = value
                     }}
                   />
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">最少浏览</span>
+                <div class="search-field">
+                  <span class="search-field__label">最少浏览</span>
                   <Input
-                    size="small"
                     value={localFilters.value.minViews}
                     placeholder="数量"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="最少浏览量"
                     onUpdate:value={(value: string) => {
                       localFilters.value.minViews = value
                     }}
                   />
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-500 shrink-0">最多浏览</span>
+                <div class="search-field">
+                  <span class="search-field__label">最多浏览</span>
                   <Input
-                    size="small"
                     value={localFilters.value.maxViews}
                     placeholder="数量"
-                    class="flex-1"
+                    class="search-field__control"
+                    aria-label="最多浏览量"
                     onUpdate:value={(value: string) => {
                       localFilters.value.maxViews = value
                     }}
@@ -643,54 +690,78 @@ export default defineComponent({
             </div>
           )}
 
-          <div class="text-xs text-gray-400">
-            支持 Discourse 高级语法（如
-            in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
-          </div>
-        </div>
+          <aside class="search-syntax-hint">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 17h2v-6h-2v6Zm1-15a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18.2A8.2 8.2 0 1 1 12 3.8a8.2 8.2 0 0 1 0 16.4ZM11 9h2V7h-2v2Z" />
+            </svg>
+            <span>
+              支持 Discourse 高级语法（如
+              in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
+            </span>
+          </aside>
+        </section>
 
         {props.state.errorMessage && (
-          <div class="text-sm text-red-500">{props.state.errorMessage}</div>
+          <div class="search-error" role="alert">
+            {props.state.errorMessage}
+          </div>
         )}
 
-        <div class="search-results space-y-3">
+        <section
+          class="search-results"
+          aria-label="搜索结果"
+          aria-live="polite"
+          aria-busy={props.state.loading}
+        >
           {props.state.posts.map(post => {
             const topic = topicMap.value.get(post.topic_id)
             const path = buildPath(post)
             return (
-              <div
+              <article
                 key={post.id}
-                class="rounded-lg border dark:border-gray-700 p-3 bg-white dark:bg-gray-800 cursor-pointer"
-                onClick={() => path && emit('open', path)}
+                class={['search-result', { 'search-result--clickable': Boolean(path) }]}
+                role={path ? 'link' : undefined}
+                tabindex={path ? 0 : undefined}
+                onClick={path ? () => openResult(path) : undefined}
+                onKeydown={(event: KeyboardEvent) => handleResultKeydown(event, path)}
               >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="font-medium dark:text-white">
+                <div class="search-result__header">
+                  <h3 class="search-result__title">
                     {topic?.fancy_title || topic?.title || '话题'}
-                  </div>
-                  <span class="text-xs text-gray-400">{formatTime(post.created_at)}</span>
+                  </h3>
+                  <time class="search-result__time" datetime={post.created_at}>
+                    {formatTime(post.created_at)}
+                  </time>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  <span>#{post.post_number}</span>
-                  {post.username && <span class="ml-2">@{post.username}</span>}
-                  {topic?.category_id && <Tag class="ml-2">分类 {topic.category_id}</Tag>}
+                <div class="search-result__meta">
+                  <span class="search-result__chip">#{post.post_number}</span>
+                  {post.username && <span>@{post.username}</span>}
+                  {topic?.category_id && (
+                    <span class="search-result__chip">分类 {topic.category_id}</span>
+                  )}
                 </div>
-                {post.blurb && (
-                  <div
-                    class="text-sm text-gray-600 dark:text-gray-300 mt-2"
-                    innerHTML={post.blurb}
-                  />
-                )}
-              </div>
+                {post.blurb && <div class="search-result__excerpt" innerHTML={post.blurb} />}
+              </article>
             )
           })}
           {!props.state.loading && props.state.posts.length === 0 && (
-            <div class="text-gray-500">暂无搜索结果</div>
+            <div class="search-results__empty" role="status">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />
+              </svg>
+              <strong>暂无搜索结果</strong>
+              <span>尝试减少筛选条件或使用更宽泛的关键词。</span>
+            </div>
           )}
-        </div>
+        </section>
 
         {props.state.hasMore && (
-          <div class="flex justify-center">
-            <Button onClick={() => emit('loadMore')} loading={props.state.loading}>
+          <div class="search-load-more">
+            <Button
+              class="search-load-more__button"
+              onClick={() => emit('loadMore')}
+              loading={props.state.loading}
+            >
               加载更多
             </Button>
           </div>

@@ -125,9 +125,14 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="invites-view">
+      <section class="invites-view" aria-labelledby="invites-view-title">
         <div class="invites-header">
-          <div class="invites-header__profile" onClick={() => emit('goToProfile')}>
+          <button
+            type="button"
+            class="invites-header__profile"
+            onClick={() => emit('goToProfile')}
+            aria-label={props.user ? `查看 ${props.user.username} 的个人资料` : '查看个人资料'}
+          >
             {props.user ? (
               <img
                 src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 48)}
@@ -139,13 +144,13 @@ export default defineComponent({
                 <LinkOutlined />
               </div>
             )}
-            <div>
-              <div class="invites-header__username">
+            <span class="invites-header__profile-copy">
+              <span id="invites-view-title" class="invites-header__username">
                 {props.user?.username || '邀请管理'}
-              </div>
-              <div class="invites-header__subtitle">邀请管理</div>
-            </div>
-          </div>
+              </span>
+              <span class="invites-header__subtitle">管理链接邀请、邮件邀请与兑换状态</span>
+            </span>
+          </button>
 
           <div class="invites-header__counts">
             {props.invitesState.counts.pending !== undefined && (
@@ -167,14 +172,14 @@ export default defineComponent({
         </div>
 
         <div class="invites-toolbar">
-          <div class="invites-tabs">
+          <div class="invites-tabs" role="tablist" aria-label="按邀请状态筛选">
             {filters.map(filter => (
               <button
                 key={filter}
-                class={[
-                  'invites-tab',
-                  props.invitesState.filter === filter ? 'is-active' : ''
-                ]}
+                type="button"
+                role="tab"
+                aria-selected={props.invitesState.filter === filter}
+                class={['invites-tab', props.invitesState.filter === filter ? 'is-active' : '']}
                 onClick={() => emit('switchFilter', filter)}
               >
                 {FILTER_LABELS[filter]}
@@ -186,14 +191,31 @@ export default defineComponent({
           </div>
 
           {canCreate.value && (
-            <button class="invites-create-btn" onClick={() => (showCreateForm.value = !showCreateForm.value)}>
+            <button
+              type="button"
+              class="invites-create-btn"
+              aria-expanded={showCreateForm.value}
+              aria-controls="discourse-invite-create-form"
+              onClick={() => (showCreateForm.value = !showCreateForm.value)}
+            >
               <PlusOutlined /> {showCreateForm.value ? '收起' : '创建邀请'}
             </button>
           )}
         </div>
 
         {showCreateForm.value && (
-          <div class="invites-form">
+          <form
+            id="discourse-invite-create-form"
+            class="invites-form"
+            onSubmit={(event: Event) => {
+              event.preventDefault()
+              handleCreate()
+            }}
+          >
+            <div class="invites-form__heading">
+              <h3>创建新邀请</h3>
+              <p>填写邮箱可直接发送；留空则生成可复制的邀请链接。</p>
+            </div>
             <div class="invites-form__grid">
               <label class="invites-form__field">
                 <span>邮箱（留空则生成链接邀请码）</span>
@@ -257,18 +279,27 @@ export default defineComponent({
               <span>跳过发送邮件（仅生成链接）</span>
             </label>
             <div class="invites-form__actions">
-              <button class="invites-form__submit" onClick={handleCreate}>
+              <button
+                type="button"
+                class="invites-form__cancel"
+                onClick={() => (showCreateForm.value = false)}
+              >
+                取消
+              </button>
+              <button type="submit" class="invites-form__submit">
                 <PlusOutlined /> 生成邀请
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {props.invitesState.errorMessage && (
-          <div class="invites-error">{props.invitesState.errorMessage}</div>
+          <div class="invites-error" role="alert">
+            {props.invitesState.errorMessage}
+          </div>
         )}
 
-        <div class="invites-list">
+        <div class="invites-list" aria-busy={props.invitesState.loading} aria-live="polite">
           {props.invitesState.loading && visibleInvites.value.length === 0 && (
             <div class="invites-loading">
               <Spin />
@@ -283,7 +314,7 @@ export default defineComponent({
           )}
 
           {visibleInvites.value.map(invite => (
-            <div key={invite.id} class="invite-item">
+            <article key={invite.id} class="invite-item">
               <div class="invite-item__avatar">
                 {getAvatarForRedeemed(invite) ? (
                   <img src={getAvatarForRedeemed(invite)} alt={invite.user?.username} />
@@ -301,7 +332,9 @@ export default defineComponent({
                       <UserOutlined /> {invite.user.username}
                     </span>
                   ) : (
-                    <span>{invite.email || (invite.link ? '链接邀请码' : `邀请 #${invite.id}`)}</span>
+                    <span>
+                      {invite.email || (invite.link ? '链接邀请码' : `邀请 #${invite.id}`)}
+                    </span>
                   )}
                   {invite.expired && <span class="invite-badge is-expired">已过期</span>}
                   {invite.grants_admin && <span class="invite-badge is-admin">管理员</span>}
@@ -323,9 +356,11 @@ export default defineComponent({
                   <div class="invite-item__link">
                     <span class="invite-item__link-text">{inviteLink(invite)}</span>
                     <button
+                      type="button"
                       class="invite-item__copy"
                       onClick={() => handleCopyLink(invite)}
                       title="复制链接"
+                      aria-label={`复制邀请 ${invite.id} 的链接`}
                     >
                       <CopyOutlined />
                     </button>
@@ -351,8 +386,10 @@ export default defineComponent({
               <div class="invite-item__actions">
                 {props.invitesState.filter === 'pending' && invite.email && (
                   <button
+                    type="button"
                     class="invite-action-btn"
                     title="重发邀请邮件"
+                    aria-label={`向 ${invite.email} 重发邀请邮件`}
                     onClick={() => emit('resend', invite.email)}
                   >
                     <SendOutlined />
@@ -360,26 +397,28 @@ export default defineComponent({
                 )}
                 {invite.can_delete_invite !== false && (
                   <button
+                    type="button"
                     class="invite-action-btn is-danger"
                     title="删除邀请"
+                    aria-label={`删除邀请 ${invite.id}`}
                     onClick={() => emit('delete', invite.id)}
                   >
                     <DeleteOutlined />
                   </button>
                 )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
 
         {props.invitesState.hasMore && !props.invitesState.loading && (
           <div class="invites-loadmore">
-            <button class="invites-loadmore__btn" onClick={() => emit('loadMore')}>
+            <button type="button" class="invites-loadmore__btn" onClick={() => emit('loadMore')}>
               加载更多
             </button>
           </div>
         )}
-      </div>
+      </section>
     )
   }
 })

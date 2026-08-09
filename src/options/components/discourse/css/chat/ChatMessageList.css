@@ -1,40 +1,47 @@
 .chat-message-list {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--d-border, var(--theme-outline-variant));
-  border-radius: 10px;
-  background: var(--d-surface, var(--theme-surface));
   min-height: 0;
   flex: 1;
+  flex-direction: column;
+  gap: 6px;
   overflow: auto;
+  padding: 16px 12px 20px;
+  border: 0;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  scroll-behavior: smooth;
 }
 
 .chat-load-more {
+  min-height: 36px;
   align-self: center;
+  padding: 0 14px;
   border: 0;
+  border-radius: var(--d-shape-full, 999px);
   background: transparent;
-  font-size: 12px;
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  color: var(--primary, var(--theme-primary));
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  transition: background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .chat-load-more:hover {
-  color: var(--primary, var(--theme-primary));
+  background: var(--primary-low, color-mix(in oklab, var(--theme-primary) 10%, transparent));
 }
 
 .chat-load-more:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 .chat-message-list-empty {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  padding: 48px 20px;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
-  padding: 40px 20px;
+  font-size: 13px;
+  text-align: center;
 }

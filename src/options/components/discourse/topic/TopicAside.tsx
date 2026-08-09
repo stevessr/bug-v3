@@ -78,14 +78,16 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="topic-aside hidden lg:block w-64">
-        <div class="topic-aside__inner space-y-4">
+      <aside class="topic-aside" aria-label="话题导航与数据">
+        <div class="topic-aside__inner">
           <div class="topic-aside__card">
             <div class="topic-aside__card-header">
               <span class="topic-aside__card-title">话题数据</span>
               <button
+                type="button"
                 class="topic-aside__summary-toggle"
                 disabled={props.summaryLoading}
+                aria-pressed={props.summaryMode}
                 onClick={() => props.onToggleSummary()}
               >
                 {props.summaryMode ? '全部回复' : '热门回复'}
@@ -95,10 +97,12 @@ export default defineComponent({
               {stats.value.map(item => (
                 <button
                   key={item.key}
+                  type="button"
                   class={[
                     'topic-aside__stat-item',
                     activeDetail.value === item.key ? 'is-active' : ''
                   ]}
+                  aria-expanded={activeDetail.value === item.key}
                   onClick={() => handleDetailToggle(item.key)}
                 >
                   <span class="topic-aside__stat-label">{item.label}</span>
@@ -130,6 +134,7 @@ export default defineComponent({
                       likeItems.value.map(item => (
                         <button
                           key={`like-${item.postNumber}`}
+                          type="button"
                           class="topic-aside__detail-row topic-aside__detail-link"
                           onClick={() => handleJump(item.postNumber)}
                         >
@@ -175,7 +180,7 @@ export default defineComponent({
             onJump={props.onJump}
           />
         </div>
-      </div>
+      </aside>
     )
   }
 })

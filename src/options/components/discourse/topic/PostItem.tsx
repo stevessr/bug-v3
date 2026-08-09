@@ -140,38 +140,43 @@ export default defineComponent({
     }
 
     return () => (
-      <div
+      <article
         data-post-number={props.post.post_number}
-        class={[
-          'post-item p-4 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800',
-          props.isHighlighted ? 'post-item--highlighted' : ''
-        ]}
+        class={['post-item', props.isHighlighted ? 'post-item--highlighted' : '']}
       >
-        <div class="post-header mb-3">
-          <img
-            src={getAvatarUrl(props.post.avatar_template, props.baseUrl)}
-            alt={props.post.username}
-            class="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
-            title={`查看 ${props.post.username} 的主页`}
+        <header class="post-header">
+          <button
+            type="button"
+            class="post-author-avatar-button"
+            aria-label={`查看 ${props.post.username} 的主页`}
             onClick={() => handleUserClick(props.post.username)}
-          />
+          >
+            <img
+              src={getAvatarUrl(props.post.avatar_template, props.baseUrl)}
+              alt=""
+              class="post-author-avatar"
+            />
+          </button>
           <div class="post-header-main">
-            <div
-              class="font-medium dark:text-white cursor-pointer hover:text-blue-500"
+            <button
+              type="button"
+              class="post-author-name"
               onClick={() => handleUserClick(props.post.username)}
             >
               {props.post.name || props.post.username}
-            </div>
-            <div class="text-xs text-gray-500">
-              <span
-                class="cursor-pointer hover:text-blue-500"
+            </button>
+            <div class="post-meta">
+              <button
+                type="button"
+                class="post-meta__author"
                 onClick={() => handleUserClick(props.post.username)}
               >
                 @{props.post.username}
-              </span>
+              </button>
               <span>
                 {' '}
-                · #{props.post.post_number} · {formatTime(props.post.created_at)}
+                · #{props.post.post_number} ·{' '}
+                <time datetime={props.post.created_at}>{formatTime(props.post.created_at)}</time>
               </span>
             </div>
             {props.post.reply_to_post_number && (
@@ -186,12 +191,12 @@ export default defineComponent({
           </div>
           {props.post.reply_to_post_number && (
             <div class="post-parent-inline-actions">
-              <button class="post-parent-toggle" onClick={handleToggleParent}>
+              <button type="button" class="post-parent-toggle" onClick={handleToggleParent}>
                 {props.isParentExpanded ? '收起上文' : '展开上文'}
               </button>
             </div>
           )}
-        </div>
+        </header>
 
         <PostContent
           segments={props.parsed.segments}
@@ -204,19 +209,22 @@ export default defineComponent({
 
         <BoostPanel post={props.post} baseUrl={props.baseUrl} onRefresh={() => emit('refresh')} />
 
-        <div class="post-actions mt-3 text-xs text-gray-500">
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
+        <footer class="post-actions">
+          <div class="post-actions__layout">
+            <div class="post-actions__primary-row">
               {!isOwnPost.value && (
-                <div class="reactions-list">
+                <div class="reactions-list" aria-label="帖子反应">
                   {REACTIONS.map(item => (
                     <button
                       key={item.id}
+                      type="button"
                       class={[
                         'reaction-item',
                         props.isPostLiked(props.post, item.id) ? 'active' : ''
                       ]}
                       disabled={props.isLiking}
+                      aria-pressed={props.isPostLiked(props.post, item.id)}
+                      aria-label={`${item.name}，${props.getReactionCount(props.post, item.id)} 次`}
                       onClick={() => handleToggleLike(item.id)}
                       title={item.name}
                     >
@@ -232,7 +240,7 @@ export default defineComponent({
                   ))}
                 </div>
               )}
-              <div class="post-action-right actions flex items-center gap-2">
+              <div class="post-action-right actions" aria-label="帖子操作">
                 <button
                   class={[
                     'btn no-text btn-icon post-action-menu__copy-link btn-flat',
@@ -365,17 +373,21 @@ export default defineComponent({
                 </button>
               </div>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="post-actions__meta-row">
               {props.post.reply_count > 0 && (
-                <button class="post-action-btn post-replies-toggle" onClick={handleToggleReplies}>
+                <button
+                  type="button"
+                  class="post-action-btn post-replies-toggle"
+                  onClick={handleToggleReplies}
+                >
                   {props.post.reply_count} 回复
                 </button>
               )}
               {props.post.like_count > 0 && <span>{props.post.like_count} 赞</span>}
             </div>
           </div>
-        </div>
-      </div>
+        </footer>
+      </article>
     )
   }
 })

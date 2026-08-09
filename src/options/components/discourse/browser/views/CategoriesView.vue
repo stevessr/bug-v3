@@ -16,10 +16,15 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
 <template>
   <div class="discourse-list-view">
     <div class="discourse-list-view__main">
-      <h3 class="categories-title">分类目录</h3>
+      <header class="browser-view-heading">
+        <span class="browser-view-heading__eyebrow">探索社区</span>
+        <h2 class="browser-view-heading__title">分类目录</h2>
+        <p class="browser-view-heading__description">按主题浏览板块，快速找到感兴趣的讨论。</p>
+      </header>
       <CategoryGrid
         :categories="activeTab.categories"
         :baseUrl="baseUrl"
+        title=""
         layout="directory"
         @click="$emit('categoryClick', $event as DiscourseCategory)"
         @topicClick="$emit('topicClick', $event)"
@@ -43,19 +48,45 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
 <style scoped>
 .discourse-list-view {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .discourse-list-view__main {
+  display: grid;
   flex: 1;
   min-width: 0;
+  gap: 16px;
 }
 
-.categories-title {
-  margin: 0 0 14px;
-  font-size: 16px;
+.browser-view-heading {
+  display: grid;
+  gap: 4px;
+  padding: 20px 22px;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.browser-view-heading__eyebrow {
+  font-size: 12px;
   font-weight: 700;
-  color: var(--d-text, var(--theme-on-background));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.browser-view-heading__title {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.browser-view-heading__description {
+  max-width: 560px;
+  margin: 2px 0 0;
+  color: color-mix(in oklab, currentColor 78%, transparent);
+  font-size: 13px;
 }
 
 .discourse-list-view__side {
@@ -67,6 +98,13 @@ defineEmits(['categoryClick', 'topicClick', 'openUser', 'changeTopicListType', '
 @media (min-width: 1024px) {
   .discourse-list-view__side {
     display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .browser-view-heading {
+    padding: 18px;
+    border-radius: var(--d-shape-lg, 16px);
   }
 }
 </style>

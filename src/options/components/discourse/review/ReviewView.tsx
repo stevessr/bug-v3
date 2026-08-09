@@ -1,10 +1,6 @@
-import { defineComponent, ref, computed } from 'vue'
+import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 import { Spin, Empty } from 'ant-design-vue'
-import {
-  EyeOutlined,
-  UndoOutlined,
-  FlagOutlined
-} from '@ant-design/icons-vue'
+import { EyeOutlined, UndoOutlined, FlagOutlined } from '@ant-design/icons-vue'
 
 import type {
   DiscourseUser,
@@ -52,12 +48,27 @@ export default defineComponent({
     currentUsername: { type: String, default: undefined },
     users: { type: Object as () => Map<number, DiscourseUser>, required: true }
   },
-  emits: ['switchStatus', 'perform', 'update', 'delete', 'openTopic', 'openUser', 'navigate', 'loadMore'],
+  emits: [
+    'switchStatus',
+    'perform',
+    'update',
+    'delete',
+    'openTopic',
+    'openUser',
+    'navigate',
+    'loadMore'
+  ],
   setup(props, { emit }) {
-    const confirmAction = ref<{ reviewableId: number; version: number; action: ReviewableAction } | null>(null)
+    const confirmAction = ref<{
+      reviewableId: number
+      version: number
+      action: ReviewableAction
+    } | null>(null)
     const rejectReason = ref('')
     const categoryId = ref<number | undefined>(undefined)
     const editingCategory = ref<number | null>(null)
+    const modalPanel = ref<HTMLDivElement | null>(null)
+    const modalTrigger = ref<HTMLElement | null>(null)
 
     const statusTabs: ReviewStatus[] = ['pending', 'approved', 'rejected', 'ignored', 'deleted']
 
@@ -65,8 +76,7 @@ export default defineComponent({
 
     const getScoreReason = (reviewable: Reviewable) => {
       const scores = reviewable.reviewable_scores || []
-      if (scores.length === 0) return null
-      const reasons = scores.map(score => {
+      return scores.map(score => {
         const title = score.score_type?.title || score.reason || '举报'
         return {
           title,
@@ -75,7 +85,6 @@ export default defineComponent({
           reason: score.reason
         }
       })
-      return reasons
     }
 
     const getActions = (reviewable: Reviewable) => {
@@ -93,7 +102,11 @@ export default defineComponent({
       if (!raw) return ''
       const html = reviewable.cooked || ''
       if (html) {
-        return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+        return html
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 300)
       }
       return String(raw).slice(0, 300)
     }
@@ -114,10 +127,7 @@ export default defineComponent({
     }
 
     const getTargetUsername = (reviewable: Reviewable) => {
-      const targetUser =
-        reviewable.target ||
-        reviewable.target_created_by ||
-        reviewable.created_by
+      const targetUser = reviewable.target || reviewable.target_created_by || reviewable.created_by
       return targetUser?.username || ''
     }
 
@@ -132,11 +142,12 @@ export default defineComponent({
       return cached?.username || user.username || ''
     }
 
-    const isPerforming = (reviewableId: number) =>
-      props.reviewState.performingId === reviewableId
+    const isPerforming = (reviewableId: number) => props.reviewState.performingId === reviewableId
 
     const handlePerform = (reviewable: Reviewable, action: ReviewableAction) => {
       if (action.confirm_message) {
+        modalTrigger.value =
+          typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null)
         confirmAction.value = { reviewableId: reviewable.id, version: reviewable.version, action }
         return
       }
@@ -157,9 +168,49 @@ export default defineComponent({
         serverAction: pending.action.server_action,
         extra: rejectReason.value ? { reject_reason: rejectReason.value } : {}
       })
+      closeConfirm()
+    }
+
+    const closeConfirm = () => {
       confirmAction.value = null
       rejectReason.value = ''
+      nextTick(() => modalTrigger.value?.focus())
     }
+
+    const handleModalKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeConfirm()
+        return
+      }
+
+      if (event.key !== 'Tab' || !modalPanel.value) return
+
+      const focusable = Array.from(
+        modalPanel.value.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      )
+      if (focusable.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey && (active === first || active === modalPanel.value)) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (active === last || active === modalPanel.value)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    watch(confirmAction, action => {
+      if (action) nextTick(() => modalPanel.value?.focus())
+    })
 
     const handleSaveCategory = (reviewable: Reviewable) => {
       if (editingCategory.value !== reviewable.id) {
@@ -195,10 +246,14 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="review-view">
+      <section class="review-view" aria-labelledby="review-view-title">
         <div class="review-header">
-          <div class="review-header__title">
-            <h2>审核队列</h2>
+          <div class="review-header__content">
+            <div class="review-header__eyebrow">社区管理</div>
+            <div class="review-header__title">
+              <h2 id="review-view-title">审核队列</h2>
+              <p>集中处理举报、待审内容与用户审核请求。</p>
+            </div>
             <div class="review-header__counts">
               {props.reviewState.reviewableCount > 0 && (
                 <span class="review-count review-count--total">
@@ -214,10 +269,13 @@ export default defineComponent({
             </div>
           </div>
 
-          <div class="review-status-tabs">
+          <div class="review-status-tabs" role="tablist" aria-label="按审核状态筛选">
             {statusTabs.map(status => (
               <button
                 key={status}
+                type="button"
+                role="tab"
+                aria-selected={props.reviewState.status === status}
                 class={[
                   'review-status-tab',
                   props.reviewState.status === status ? 'is-active' : ''
@@ -234,10 +292,12 @@ export default defineComponent({
         </div>
 
         {props.reviewState.errorMessage && (
-          <div class="review-error">{props.reviewState.errorMessage}</div>
+          <div class="review-error" role="alert">
+            {props.reviewState.errorMessage}
+          </div>
         )}
 
-        <div class="review-list">
+        <div class="review-list" aria-busy={props.reviewState.loading} aria-live="polite">
           {props.reviewState.loading && visibleReviewables.value.length === 0 && (
             <div class="review-loading">
               <Spin />
@@ -252,7 +312,7 @@ export default defineComponent({
           )}
 
           {visibleReviewables.value.map(reviewable => (
-            <div key={reviewable.id} class="review-item">
+            <article key={reviewable.id} class="review-item">
               <div class="review-item__head">
                 <span class={`review-item__type ${STATUS_META[props.reviewState.status].class}`}>
                   {typeLabel(reviewable.type)}
@@ -268,13 +328,17 @@ export default defineComponent({
               </div>
 
               <div class="review-item__content">
-                {getTitle(reviewable) && (
-                  <div
-                    class="review-item__title"
-                    onClick={() => handleOpenPayloadUrl(reviewable)}
-                    innerHTML={getTitle(reviewable)}
-                  />
-                )}
+                {getTitle(reviewable) &&
+                  (reviewable.target_url || reviewable.topic_url ? (
+                    <button
+                      type="button"
+                      class="review-item__title review-item__title--button"
+                      onClick={() => handleOpenPayloadUrl(reviewable)}
+                      innerHTML={getTitle(reviewable)}
+                    />
+                  ) : (
+                    <h3 class="review-item__title" innerHTML={getTitle(reviewable)} />
+                  ))}
 
                 {getPostPreview(reviewable) && (
                   <div class="review-item__preview">{getPostPreview(reviewable)}</div>
@@ -302,20 +366,20 @@ export default defineComponent({
 
                 <div class="review-item__meta">
                   {getTargetUsername(reviewable) && (
-                    <span
+                    <button
+                      type="button"
                       class="review-item__user"
                       onClick={() => emit('openUser', getTargetUsername(reviewable))}
                     >
                       👤 {getTargetUsername(reviewable)}
-                    </span>
+                    </button>
                   )}
                   {reviewable.category_id && (
-                    <span class="review-item__category">
-                      分类 {reviewable.category_id}
-                    </span>
+                    <span class="review-item__category">分类 {reviewable.category_id}</span>
                   )}
                   {reviewable.topic_id && (
                     <button
+                      type="button"
                       class="review-item__link"
                       onClick={() => handleOpenPayloadUrl(reviewable)}
                     >
@@ -323,7 +387,11 @@ export default defineComponent({
                     </button>
                   )}
                   {reviewable.can_edit && (
-                    <button class="review-item__link" onClick={() => handleSaveCategory(reviewable)}>
+                    <button
+                      type="button"
+                      class="review-item__link"
+                      onClick={() => handleSaveCategory(reviewable)}
+                    >
                       {editingCategory.value === reviewable.id ? '保存分类' : '修改分类'}
                     </button>
                   )}
@@ -341,6 +409,7 @@ export default defineComponent({
                       }}
                     />
                     <button
+                      type="button"
                       class="review-item__link"
                       onClick={() => {
                         editingCategory.value = null
@@ -353,9 +422,9 @@ export default defineComponent({
                 )}
               </div>
 
-              {getScoreReason(reviewable) && (
+              {getScoreReason(reviewable).length > 0 && (
                 <div class="review-item__scores">
-                  {getScoreReason(reviewable)!.map((score, index) => (
+                  {getScoreReason(reviewable).map((score, index) => (
                     <div key={index} class="review-score">
                       <span class="review-score__icon">
                         {score.user ? (
@@ -372,20 +441,19 @@ export default defineComponent({
                         <div class="review-score__title">
                           {score.title}
                           {score.user && (
-                            <span
+                            <button
+                              type="button"
                               class="review-score__user"
                               onClick={() => emit('openUser', usernameFor(score.user))}
                             >
                               @{usernameFor(score.user)}
-                            </span>
+                            </button>
                           )}
                           {score.createdAt && (
                             <span class="review-score__time">{formatTime(score.createdAt)}</span>
                           )}
                         </div>
-                        {score.reason && (
-                          <div class="review-score__reason">{score.reason}</div>
-                        )}
+                        {score.reason && <div class="review-score__reason">{score.reason}</div>}
                       </div>
                     </div>
                   ))}
@@ -396,6 +464,7 @@ export default defineComponent({
                 {getActions(reviewable).map(action => (
                   <button
                     key={action.id}
+                    type="button"
                     class={[
                       'review-action-btn',
                       action.button_class || '',
@@ -408,20 +477,27 @@ export default defineComponent({
                     onClick={() => handlePerform(reviewable, action)}
                     title={action.description || action.label}
                   >
-                    {isPerforming(reviewable.id) ? <Spin size="small" /> : <span>{actionIcon(action)}</span>}
+                    {isPerforming(reviewable.id) ? (
+                      <Spin size="small" />
+                    ) : (
+                      <span>{actionIcon(action)}</span>
+                    )}
                     <span>{action.label}</span>
                   </button>
                 ))}
 
                 {reviewable.can_edit && (
                   <button
+                    type="button"
                     class="review-action-btn"
                     disabled={isPerforming(reviewable.id)}
-                    onClick={() => emit('update', {
-                      reviewableId: reviewable.id,
-                      version: reviewable.version,
-                      updates: { category_id: reviewable.category_id }
-                    })}
+                    onClick={() =>
+                      emit('update', {
+                        reviewableId: reviewable.id,
+                        version: reviewable.version,
+                        updates: { category_id: reviewable.category_id }
+                      })
+                    }
                   >
                     <UndoOutlined /> 刷新
                   </button>
@@ -429,6 +505,7 @@ export default defineComponent({
 
                 {reviewable.type === 'ReviewableUser' && (
                   <button
+                    type="button"
                     class="review-action-btn"
                     onClick={() => emit('openUser', getTargetUsername(reviewable))}
                   >
@@ -436,13 +513,13 @@ export default defineComponent({
                   </button>
                 )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
 
         {props.reviewState.hasMore && !props.reviewState.loading && (
           <div class="review-loadmore">
-            <button class="review-loadmore__btn" onClick={() => emit('loadMore')}>
+            <button type="button" class="review-loadmore__btn" onClick={() => emit('loadMore')}>
               加载更多
             </button>
           </div>
@@ -450,9 +527,17 @@ export default defineComponent({
 
         {confirmAction.value && (
           <div class="review-modal">
-            <div class="review-modal__backdrop" onClick={() => (confirmAction.value = null)} />
-            <div class="review-modal__panel">
-              <div class="review-modal__title">
+            <div class="review-modal__backdrop" aria-hidden="true" onClick={closeConfirm} />
+            <div
+              ref={modalPanel}
+              class="review-modal__panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="review-confirm-title"
+              tabindex={-1}
+              onKeydown={handleModalKeydown}
+            >
+              <div id="review-confirm-title" class="review-modal__title">
                 {confirmAction.value.action.confirm_message ||
                   `确认执行「${confirmAction.value.action.label}」？`}
               </div>
@@ -467,10 +552,11 @@ export default defineComponent({
                 />
               )}
               <div class="review-modal__actions">
-                <button class="review-modal__cancel" onClick={() => (confirmAction.value = null)}>
+                <button type="button" class="review-modal__cancel" onClick={closeConfirm}>
                   取消
                 </button>
                 <button
+                  type="button"
                   class="review-modal__confirm"
                   disabled={
                     confirmAction.value.action.require_reject_reason && !rejectReason.value.trim()
@@ -483,7 +569,7 @@ export default defineComponent({
             </div>
           </div>
         )}
-      </div>
+      </section>
     )
   }
 })

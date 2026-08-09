@@ -1,9 +1,16 @@
-import { computed, defineComponent, ref } from 'vue'
-import { MoreOutlined, EditOutlined, DeleteOutlined, FlagOutlined, ForwardOutlined } from '@ant-design/icons-vue'
+import { computed, defineComponent, onBeforeUnmount, ref, watch } from 'vue'
+import {
+  MoreOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FlagOutlined,
+  ForwardOutlined
+} from '@ant-design/icons-vue'
 
 import type { ChatMessage, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 import PostContent from '../topic/PostContent'
+
 import ChatEmojiPicker from './ChatEmojiPicker'
 import '../css/chat/ChatMessageItem.css'
 
@@ -19,7 +26,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const showActions = ref(false)
     const showEmojiPicker = ref(false)
-    const actionsRef = ref<HTMLDivElement | null>(null)
+    const floatingControlsRef = ref<HTMLDivElement | null>(null)
 
     const getDisplayName = () => {
       const user = props.message.user
@@ -28,9 +35,7 @@ export default defineComponent({
 
     const getAvatarTemplate = () => {
       return (
-        props.message.user?.avatar_template ||
-        props.message.avatar_template ||
-        '/images/avatar.png'
+        props.message.user?.avatar_template || props.message.avatar_template || '/images/avatar.png'
       )
     }
 
@@ -88,6 +93,49 @@ export default defineComponent({
       showEmojiPicker.value = false
     }
 
+    const closeFloatingControls = () => {
+      showActions.value = false
+      showEmojiPicker.value = false
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && !floatingControlsRef.value?.contains(target)) {
+        closeFloatingControls()
+      }
+    }
+
+    const handleDocumentKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeFloatingControls()
+      }
+    }
+
+    const handleControlsFocusout = (event: FocusEvent) => {
+      const nextTarget = event.relatedTarget
+      if (nextTarget instanceof Node && floatingControlsRef.value?.contains(nextTarget)) return
+      closeFloatingControls()
+    }
+
+    const removeDismissListeners = () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
+      document.removeEventListener('keydown', handleDocumentKeydown)
+    }
+
+    watch(
+      () => showActions.value || showEmojiPicker.value,
+      open => {
+        removeDismissListeners()
+        if (open) {
+          document.addEventListener('pointerdown', handleDocumentPointerDown, true)
+          document.addEventListener('keydown', handleDocumentKeydown)
+        }
+      },
+      { flush: 'sync' }
+    )
+
+    onBeforeUnmount(removeDismissListeners)
+
     const handleReply = () => {
       emit('reply', props.message)
       showActions.value = false
@@ -125,9 +173,12 @@ export default defineComponent({
 
     return () => (
       <div
-        class={['chat-message-item', props.isOwn ? 'chat-message-own' : '']}
-        onMouseenter={() => { if (!showActions.value) showActions.value = true }}
-        onMouseleave={() => { if (!showActions.value) showActions.value = false }}
+        class={[
+          'chat-message-item',
+          props.isOwn ? 'chat-message-own' : '',
+          showActions.value || showEmojiPicker.value ? 'has-floating-controls' : ''
+        ]}
+        onMouseleave={closeFloatingControls}
       >
         <img
           class="chat-message-avatar"
@@ -152,6 +203,7 @@ export default defineComponent({
           <div class="chat-message-footer">
             {reactionItems.value.map(reaction => (
               <button
+                type="button"
                 key={`${props.message.id}-${reaction.emoji}`}
                 class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
                 onClick={() => handleReact(reaction.emoji, reaction.reacted)}
@@ -163,43 +215,76 @@ export default defineComponent({
                 <span class="chat-message-reaction-count">{reaction.count}</span>
               </button>
             ))}
-            <div class="chat-message-reaction-actions">
+            <div
+              ref={floatingControlsRef}
+              class="chat-message-reaction-actions"
+              onFocusout={handleControlsFocusout}
+            >
               <button
+                type="button"
                 class="chat-message-reaction-add"
                 title="添加反应"
                 onClick={handleAddReaction}
+                aria-label="添加消息反应"
+                aria-expanded={showEmojiPicker.value}
               >
                 +
               </button>
               <button
+                type="button"
                 class="chat-message-actions-toggle"
                 title="更多操作"
                 onClick={toggleActions}
+                aria-label="更多消息操作"
+                aria-haspopup="menu"
+                aria-expanded={showActions.value}
               >
                 <MoreOutlined />
               </button>
               <ChatEmojiPicker
                 visible={showEmojiPicker.value}
                 onSelect={handleEmojiSelect}
-                onClose={() => { showEmojiPicker.value = false }}
+                onClose={() => {
+                  showEmojiPicker.value = false
+                }}
               />
               {showActions.value && (
-                <div ref={actionsRef} class="chat-message-actions-menu">
-                  <button class="chat-message-actions-item" onClick={handleReply}>
+                <div class="chat-message-actions-menu" role="menu" aria-label="消息操作">
+                  <button
+                    type="button"
+                    class="chat-message-actions-item"
+                    role="menuitem"
+                    onClick={handleReply}
+                  >
                     <ForwardOutlined /> 回复
                   </button>
                   {props.isOwn && (
-                    <button class="chat-message-actions-item" onClick={handleEdit}>
+                    <button
+                      type="button"
+                      class="chat-message-actions-item"
+                      role="menuitem"
+                      onClick={handleEdit}
+                    >
                       <EditOutlined /> 编辑
                     </button>
                   )}
                   {props.isOwn && (
-                    <button class="chat-message-actions-item is-danger" onClick={handleDelete}>
+                    <button
+                      type="button"
+                      class="chat-message-actions-item is-danger"
+                      role="menuitem"
+                      onClick={handleDelete}
+                    >
                       <DeleteOutlined /> 删除
                     </button>
                   )}
                   {!props.isOwn && (
-                    <button class="chat-message-actions-item is-danger" onClick={handleFlag}>
+                    <button
+                      type="button"
+                      class="chat-message-actions-item is-danger"
+                      role="menuitem"
+                      onClick={handleFlag}
+                    >
                       <FlagOutlined /> 举报
                     </button>
                   )}
@@ -212,6 +297,7 @@ export default defineComponent({
             <div class="chat-message-blocks">
               {blockButtons.value.map((button, index) => (
                 <button
+                  type="button"
                   key={`${button.actionId}-${index}`}
                   class={['chat-message-block-button', button.style ? `is-${button.style}` : '']}
                   onClick={() => handleInteract(button.actionId)}

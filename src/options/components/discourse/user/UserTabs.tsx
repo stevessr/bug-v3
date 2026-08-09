@@ -23,13 +23,16 @@ export default defineComponent({
     ]
 
     return () => (
-      <div class="user-tabs">
+      <div class="user-tabs" role="tablist" aria-label="用户页面">
         {tabs
           .filter(tab => (tab.visible ? tab.visible() : true))
           .map(tab => (
             <button
               key={tab.key}
+              type="button"
+              role="tab"
               class={['user-tabs__item', props.active === tab.key ? 'is-active' : '']}
+              aria-selected={props.active === tab.key}
               onClick={() => emit('switchTab', tab.key)}
             >
               {tab.label}

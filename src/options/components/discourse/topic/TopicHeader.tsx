@@ -10,15 +10,17 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <div class="border-b dark:border-gray-700 pb-4">
-        <h1 class="text-xl font-bold dark:text-white">
-          {props.topic.fancy_title || props.topic.title}
-        </h1>
-        <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-          <span>{props.topic.posts_count} 回复</span>
-          <span>创建于 {formatTime(props.topic.created_at)}</span>
+      <header class="topic-header">
+        <span class="topic-header__eyebrow">讨论主题</span>
+        <h1 class="topic-header__title">{props.topic.fancy_title || props.topic.title}</h1>
+        <div class="topic-header__meta">
+          <span class="topic-header__meta-item">{props.topic.posts_count} 回复</span>
+          <span class="topic-header__meta-item">
+            创建于{' '}
+            <time datetime={props.topic.created_at}>{formatTime(props.topic.created_at)}</time>
+          </span>
         </div>
-      </div>
+      </header>
     )
   }
 })

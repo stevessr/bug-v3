@@ -4,6 +4,7 @@ import type { DiscourseTag, DiscourseTagGroup } from '../types'
 import { stripHtml } from '../tagVisuals'
 
 import TagPill from './TagPill'
+import '../css/TagGrid.css'
 
 export default defineComponent({
   name: 'TagGrid',
@@ -42,47 +43,44 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="space-y-8">
-        <div>
-          <h3 class="text-2xl font-bold mb-2 dark:text-white">{props.title}</h3>
-          <div class="text-base text-gray-600 dark:text-gray-400">
-            排序依据：
+      <section class="tag-grid" aria-label={props.title || '标签'}>
+        <header class="tag-grid__toolbar">
+          {props.title && <h3 class="tag-grid__title">{props.title}</h3>}
+          <div class="tag-grid__sort" role="group" aria-label="标签排序方式">
+            <span class="tag-grid__sort-label">排序依据</span>
             <button
               type="button"
-              class={[
-                'underline font-semibold',
-                sortBy.value === 'count' ? 'text-blue-600 dark:text-blue-400' : ''
-              ]}
+              class={['tag-grid__sort-button', { active: sortBy.value === 'count' }]}
+              aria-pressed={sortBy.value === 'count'}
               onClick={() => (sortBy.value = 'count')}
             >
               计数
             </button>
             <button
               type="button"
-              class={[
-                'underline font-semibold ml-2',
-                sortBy.value === 'name' ? 'text-blue-600 dark:text-blue-400' : ''
-              ]}
+              class={['tag-grid__sort-button', { active: sortBy.value === 'name' }]}
+              aria-pressed={sortBy.value === 'name'}
               onClick={() => (sortBy.value = 'name')}
             >
               名称
             </button>
           </div>
-        </div>
+        </header>
 
         {displayedGroups.value.length > 0 ? (
           displayedGroups.value.map(group => (
-            <section
-              key={group.id || group.name}
-              class="pt-2 border-t border-gray-300 dark:border-gray-600"
-            >
-              <h4 class="text-2xl font-bold mb-4 dark:text-white">{group.name}</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
+            <section key={group.id || group.name} class="tag-group">
+              <header class="tag-group__header">
+                <h4 class="tag-group__title">{group.name}</h4>
+                <span class="tag-group__count">{group.tags.length} 个标签</span>
+              </header>
+              <div class="tag-group__items">
                 {group.tags.map(tag => (
                   <button
                     key={tag.id || tag.name}
                     type="button"
-                    class="inline-flex items-center justify-start gap-2 text-left"
+                    class="tag-group__item"
+                    aria-label={`${tag.text || tag.name}，${tag.count} 个话题`}
                     onClick={() => emit('click', tag)}
                   >
                     <TagPill
@@ -91,8 +89,8 @@ export default defineComponent({
                       description={getTagHoverDescription(tag)}
                       clickable
                     />
-                    <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
-                      x {tag.count}
+                    <span class="tag-group__item-count" aria-hidden="true">
+                      {tag.count}
                     </span>
                   </button>
                 ))}
@@ -100,9 +98,11 @@ export default defineComponent({
             </section>
           ))
         ) : (
-          <div class="text-sm text-gray-500 dark:text-gray-400">暂无标签</div>
+          <div class="tag-grid__empty" role="status">
+            暂无标签
+          </div>
         )}
-      </div>
+      </section>
     )
   }
 })

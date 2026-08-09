@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { EditOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, CloseOutlined, WarningOutlined } from '@ant-design/icons-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
@@ -37,6 +37,7 @@ import {
   type MessageBusCallback,
   type MessageBusSubscriptionSpec
 } from './discourse/messageBusClient'
+import './discourse/css/DiscourseMd3.css'
 
 // Route-only views stay out of the forum shell. This especially avoids parsing
 // the ProseMirror/Markdown stack until a topic, chat, or composer is opened.
@@ -2287,21 +2288,29 @@ onUnmounted(() => {
     <div
       ref="contentAreaRef"
       class="content-area discourse-main flex-1 overflow-y-auto discourse-body"
+      :aria-busy="activeTab?.loading || undefined"
     >
       <!-- Loading -->
-      <div v-if="activeTab?.loading" class="flex items-center justify-center h-full">
-        <a-spin size="large" />
+      <div v-if="activeTab?.loading" class="browser-state browser-state--loading" role="status">
+        <div class="browser-state__indicator"><a-spin size="large" /></div>
+        <div class="browser-state__copy">
+          <div class="browser-state__title">正在打开页面</div>
+          <div class="browser-state__description">正在从论坛同步最新内容…</div>
+        </div>
       </div>
 
       <!-- Error page -->
       <div
         v-else-if="activeTab?.viewType === 'error'"
-        class="flex flex-col items-center justify-center h-full text-gray-500"
+        class="browser-state browser-state--error"
+        role="alert"
       >
-        <div class="text-6xl mb-4">:(</div>
-        <div class="text-lg mb-2">加载失败</div>
-        <div class="text-sm text-red-500">{{ activeTab.errorMessage }}</div>
-        <a-button type="primary" class="mt-4" @click="refresh">重试</a-button>
+        <div class="browser-state__icon" aria-hidden="true"><WarningOutlined /></div>
+        <div class="browser-state__copy">
+          <div class="browser-state__title">页面暂时无法打开</div>
+          <div class="browser-state__description">{{ activeTab.errorMessage }}</div>
+        </div>
+        <button type="button" class="browser-state__action" @click="refresh">重新加载</button>
       </div>
 
       <HomeView
@@ -2641,14 +2650,10 @@ onUnmounted(() => {
     <div class="pm-composer">
       <div class="pm-composer__header">
         <div class="pm-composer__title">
-          <EditOutlined /> 新建私信
+          <EditOutlined />
+          新建私信
         </div>
-        <a-button
-          type="text"
-          size="small"
-          @click="pmComposerOpen = false"
-          aria-label="关闭"
-        >
+        <a-button type="text" size="small" @click="pmComposerOpen = false" aria-label="关闭">
           <CloseOutlined />
         </a-button>
       </div>
@@ -2680,8 +2685,19 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="pm-composer__footer">
-        <a-button @click="pmComposerOpen = false" :disabled="pmComposerSending">取消</a-button>
-        <a-button type="primary" :loading="pmComposerSending" @click="handlePmComposerSend">
+        <a-button
+          class="pm-composer__button"
+          @click="pmComposerOpen = false"
+          :disabled="pmComposerSending"
+        >
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          class="pm-composer__button"
+          :loading="pmComposerSending"
+          @click="handlePmComposerSend"
+        >
           发送
         </a-button>
       </div>
@@ -2691,13 +2707,9 @@ onUnmounted(() => {
 
 <style scoped>
 .discourse-browser {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
   position: relative;
-  background: var(--d-background, var(--theme-background));
-  color: var(--d-text, var(--theme-on-background));
+  min-width: 0;
+  border-radius: inherit;
 }
 
 .discourse-main {
@@ -2705,12 +2717,94 @@ onUnmounted(() => {
 }
 
 .discourse-body {
-  background: transparent;
-  padding: 12px 16px 16px;
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      color-mix(in oklab, var(--primary, var(--theme-primary)) 5%, transparent),
+      transparent 32rem
+    ),
+    var(--d-background, var(--theme-background));
+  padding: 16px 20px 24px;
 }
 
 .tab-item {
   transition: background-color 0.15s;
+}
+
+.browser-state {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 48px 24px;
+  color: var(--d-text, var(--theme-on-surface));
+  text-align: center;
+}
+
+.browser-state__indicator,
+.browser-state__icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.browser-state__icon {
+  background: var(--danger-container, var(--theme-error-container));
+  color: var(--on-danger-container, var(--theme-on-error-container));
+  font-size: 30px;
+}
+
+.browser-state__copy {
+  display: flex;
+  max-width: 560px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.browser-state__title {
+  font-size: 22px;
+  font-weight: 540;
+  letter-spacing: -0.01em;
+}
+
+.browser-state__description {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.browser-state--error .browser-state__description {
+  color: var(--on-danger-container, var(--theme-on-error-container));
+}
+
+.browser-state__action {
+  min-height: 40px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--primary, var(--theme-primary));
+  box-shadow: var(--d-elevation-1);
+  color: var(--on-primary, var(--theme-on-primary));
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    box-shadow var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
+}
+
+.browser-state__action:hover {
+  box-shadow: var(--d-elevation-2);
+}
+
+.browser-state__action:active {
+  transform: scale(0.97);
 }
 
 .pm-composer-mask {
@@ -2720,18 +2814,19 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  padding: 20px;
+  background: color-mix(in oklab, var(--md3-scrim, #000) 40%, transparent);
+  backdrop-filter: blur(2px);
 }
 
 .pm-composer {
-  width: 560px;
-  max-width: calc(100vw - 40px);
-  max-height: 85vh;
+  width: min(600px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
   display: flex;
   flex-direction: column;
-  background: var(--d-surface, var(--theme-surface));
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  background: var(--d-surface-3, var(--theme-surface-container-high));
+  border-radius: var(--d-shape-xl, 28px);
+  box-shadow: var(--d-elevation-3);
   overflow: hidden;
 }
 
@@ -2739,42 +2834,59 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--d-border, var(--theme-outline-variant));
+  min-height: 72px;
+  padding: 12px 16px 12px 24px;
+  background: var(--d-surface-2, var(--theme-surface-container));
 }
 
 .pm-composer__title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 560;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .pm-composer__body {
-  padding: 14px 16px;
+  padding: 20px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .pm-composer__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .pm-composer__field label {
+  padding-left: 2px;
   font-size: 12px;
+  font-weight: 620;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
 }
 
 .pm-composer__footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--d-border, var(--theme-outline-variant));
+  gap: 8px;
+  min-height: 72px;
+  padding: 12px 20px;
+  background: var(--d-surface-2, var(--theme-surface-container));
+}
+
+.pm-composer__button {
+  min-height: 40px;
+  padding-inline: 20px;
+  border-radius: var(--d-shape-full, 999px);
+  font-weight: 620;
+}
+
+@media (max-width: 720px) {
+  .discourse-body {
+    padding: 12px 10px 20px;
+  }
 }
 </style>

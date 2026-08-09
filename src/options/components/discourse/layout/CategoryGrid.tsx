@@ -79,8 +79,8 @@ export default defineComponent({
       if (props.categories.length === 0) return null
 
       return (
-        <div>
-          <h3 class="text-lg font-semibold mb-3 dark:text-white">{props.title}</h3>
+        <section class="category-grid" aria-label={props.title || '分类'}>
+          {props.title && <h3 class="category-grid__title">{props.title}</h3>}
           {props.layout === 'directory' ? (
             <div class="category-directory">
               {topCategories.value.map(cat => (
@@ -89,54 +89,64 @@ export default defineComponent({
                   class="category-directory-row"
                   style={{ borderLeftColor: `#${cat.color}` }}
                 >
-                  <div class="category-directory-left" onClick={() => emit('click', cat)}>
-                    <div class="category-directory-title-wrap">
-                      <div
-                        class="category-icon-wrap category-icon-wrap-lg"
-                        style={{ color: `#${cat.color}` }}
-                      >
-                        {cat.uploaded_logo?.url ? (
-                          <img
-                            src={getImageUrl(cat.uploaded_logo.url)}
-                            alt={cat.name}
-                            class="category-icon-img category-icon-img-lg"
-                          />
-                        ) : cat.uploaded_logo_dark?.url ? (
-                          <img
-                            src={getImageUrl(cat.uploaded_logo_dark.url)}
-                            alt={cat.name}
-                            class="category-icon-img category-icon-img-lg"
-                          />
-                        ) : cat.emoji ? (
-                          <span class="category-emoji">{cat.emoji}</span>
-                        ) : cat.icon ? (
-                          <svg class="category-icon-svg" viewBox="0 0 24 24">
-                            <use href={getDiscourseIconHref(cat.icon)} />
-                          </svg>
-                        ) : (
-                          <span
-                            class="category-icon-dot category-icon-dot-lg"
-                            style={{ backgroundColor: `#${cat.color}` }}
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <div class="font-semibold dark:text-white">{cat.name}</div>
-                        <div class="text-xs text-gray-500">{cat.topic_count} 话题</div>
-                      </div>
-                    </div>
-                    <div class="text-xs text-gray-500 mt-2 line-clamp-2">
-                      {cat.description_excerpt || cat.description || ''}
-                    </div>
+                  <div class="category-directory-left">
+                    <button
+                      type="button"
+                      class="category-directory-primary"
+                      onClick={() => emit('click', cat)}
+                    >
+                      <span class="category-directory-title-wrap">
+                        <span
+                          class="category-icon-wrap category-icon-wrap-lg"
+                          style={{ color: `#${cat.color}` }}
+                        >
+                          {cat.uploaded_logo?.url ? (
+                            <img
+                              src={getImageUrl(cat.uploaded_logo.url)}
+                              alt=""
+                              class="category-icon-img category-icon-img-lg"
+                            />
+                          ) : cat.uploaded_logo_dark?.url ? (
+                            <img
+                              src={getImageUrl(cat.uploaded_logo_dark.url)}
+                              alt=""
+                              class="category-icon-img category-icon-img-lg"
+                            />
+                          ) : cat.emoji ? (
+                            <span class="category-emoji" aria-hidden="true">
+                              {cat.emoji}
+                            </span>
+                          ) : cat.icon ? (
+                            <svg class="category-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                              <use href={getDiscourseIconHref(cat.icon)} />
+                            </svg>
+                          ) : (
+                            <span
+                              class="category-icon-dot category-icon-dot-lg"
+                              style={{ backgroundColor: `#${cat.color}` }}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </span>
+                        <span class="category-directory-heading">
+                          <span class="category-directory-name">{cat.name}</span>
+                          <span class="category-directory-count">{cat.topic_count} 话题</span>
+                        </span>
+                      </span>
+                      <span class="category-directory-description">
+                        {cat.description_excerpt || cat.description || ''}
+                      </span>
+                    </button>
                     {hasHierarchy.value &&
                       (childrenByParent.value.get(cat.id)?.length || 0) > 0 && (
-                        <div class="mt-2 flex flex-wrap gap-x-2 gap-y-1">
+                        <div class="subcategory-list" aria-label={`${cat.name} 的子分类`}>
                           {childrenByParent.value
                             .get(cat.id)
                             ?.slice(0, 8)
                             .map(child => (
                               <button
                                 key={child.id}
+                                type="button"
                                 class="subcategory-chip"
                                 onClick={(e: Event) => {
                                   e.stopPropagation()
@@ -152,8 +162,9 @@ export default defineComponent({
 
                   <div class="category-directory-right">
                     {(cat.topics || []).slice(0, 10).map(topic => (
-                      <div
+                      <button
                         key={topic.id}
+                        type="button"
                         class="category-topic-row"
                         onClick={() => emit('topicClick', topic as DiscourseTopic)}
                       >
@@ -173,71 +184,84 @@ export default defineComponent({
                             />
                           )}
                           {topic.last_poster?.username && (
-                            <span class="truncate max-w-[100px]">{topic.last_poster.username}</span>
+                            <span class="category-topic-username">
+                              {topic.last_poster.username}
+                            </span>
                           )}
                           {topic.last_posted_at && <span>{formatTime(topic.last_posted_at)}</span>}
-                          <span>{topic.reply_count ?? 0}</span>
+                          <span aria-label={`${topic.reply_count ?? 0} 条回复`}>
+                            {topic.reply_count ?? 0}
+                          </span>
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div class="category-card-grid">
               {topCategories.value.map(cat => (
-                <div
+                <article
                   key={cat.id}
-                  class="p-3 rounded-lg border dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"
+                  class="category-card"
                   style={{ borderLeftColor: `#${cat.color}`, borderLeftWidth: '4px' }}
-                  onClick={() => emit('click', cat)}
                 >
-                  <div class="flex items-center gap-2">
-                    <div class="category-icon-wrap" style={{ color: `#${cat.color}` }}>
-                      {cat.uploaded_logo?.url ? (
-                        <img
-                          src={getImageUrl(cat.uploaded_logo.url)}
-                          alt={cat.name}
-                          class="category-icon-img"
-                        />
-                      ) : cat.uploaded_logo_dark?.url ? (
-                        <img
-                          src={getImageUrl(cat.uploaded_logo_dark.url)}
-                          alt={cat.name}
-                          class="category-icon-img"
-                        />
-                      ) : cat.emoji ? (
-                        <span class="category-emoji">{cat.emoji}</span>
-                      ) : cat.icon ? (
-                        <svg class="category-icon-svg" viewBox="0 0 24 24">
-                          <use href={getDiscourseIconHref(cat.icon)} />
-                        </svg>
-                      ) : (
-                        <span
-                          class="category-icon-dot"
-                          style={{ backgroundColor: `#${cat.color}` }}
-                        />
-                      )}
-                    </div>
-                    <div class="font-medium dark:text-white">{cat.name}</div>
-                  </div>
-                  <div class="text-xs text-gray-500">{cat.topic_count} 话题</div>
+                  <button
+                    type="button"
+                    class="category-card__primary"
+                    onClick={() => emit('click', cat)}
+                  >
+                    <span class="category-card__heading">
+                      <span class="category-icon-wrap" style={{ color: `#${cat.color}` }}>
+                        {cat.uploaded_logo?.url ? (
+                          <img
+                            src={getImageUrl(cat.uploaded_logo.url)}
+                            alt=""
+                            class="category-icon-img"
+                          />
+                        ) : cat.uploaded_logo_dark?.url ? (
+                          <img
+                            src={getImageUrl(cat.uploaded_logo_dark.url)}
+                            alt=""
+                            class="category-icon-img"
+                          />
+                        ) : cat.emoji ? (
+                          <span class="category-emoji" aria-hidden="true">
+                            {cat.emoji}
+                          </span>
+                        ) : cat.icon ? (
+                          <svg class="category-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                            <use href={getDiscourseIconHref(cat.icon)} />
+                          </svg>
+                        ) : (
+                          <span
+                            class="category-icon-dot"
+                            style={{ backgroundColor: `#${cat.color}` }}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </span>
+                      <span class="category-card__name">{cat.name}</span>
+                    </span>
+                    <span class="category-card__count">{cat.topic_count} 话题</span>
+                  </button>
                   {hasHierarchy.value && (childrenByParent.value.get(cat.id)?.length || 0) > 0 && (
-                    <div class="mt-2 space-y-1">
+                    <div class="category-card__children" aria-label={`${cat.name} 的子分类`}>
                       {childrenByParent.value
                         .get(cat.id)
                         ?.slice(0, 4)
                         .map(child => (
-                          <div
+                          <button
                             key={child.id}
-                            class="text-xs text-gray-600 dark:text-gray-300 truncate cursor-pointer hover:text-blue-600"
+                            type="button"
+                            class="category-card__child"
                             onClick={(e: Event) => {
                               e.stopPropagation()
                               emit('click', child)
                             }}
                           >
-                            <span class="inline-flex items-center gap-1">
+                            <span class="category-card__child-content">
                               <span class="subcategory-icon" style={{ color: `#${child.color}` }}>
                                 {child.uploaded_logo?.url ? (
                                   <img
@@ -266,20 +290,20 @@ export default defineComponent({
                               </span>
                               {child.name}
                             </span>
-                          </div>
+                          </button>
                         ))}
                       {(childrenByParent.value.get(cat.id)?.length || 0) > 4 && (
-                        <div class="text-xs text-gray-400">
+                        <div class="category-card__more">
                           还有 {(childrenByParent.value.get(cat.id)?.length || 0) - 4} 个子分类...
                         </div>
                       )}
                     </div>
                   )}
-                </div>
+                </article>
               ))}
             </div>
           )}
-        </div>
+        </section>
       )
     }
   }

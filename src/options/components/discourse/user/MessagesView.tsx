@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch } from 'vue'
+import { defineComponent, ref, watch, computed } from 'vue'
 import { Spin, Input, message } from 'ant-design-vue'
 import {
   SearchOutlined,
@@ -72,7 +72,10 @@ export default defineComponent({
 
     const handleMarkAllRead = () => {
       const unreadTopics = displayTopics().filter(topic => (topic.unread || 0) > 0)
-      emit('markAllRead', unreadTopics.map(topic => topic.id))
+      emit(
+        'markAllRead',
+        unreadTopics.map(topic => topic.id)
+      )
     }
 
     const hasUnread = () => displayTopics().some(topic => (topic.unread || 0) > 0)
@@ -88,52 +91,74 @@ export default defineComponent({
     }
 
     // Sync searchQuery when external searchQuery changes
-    watch(() => props.messagesState.searchQuery, (val) => {
-      if (val !== undefined) {
-        searchQuery.value = val
+    watch(
+      () => props.messagesState.searchQuery,
+      val => {
+        if (val !== undefined) {
+          searchQuery.value = val
+        }
       }
-    })
+    )
 
-    const topics = displayTopics()
-    const searching = props.messagesState.searching || false
+    const topics = computed(displayTopics)
+    const searching = computed(() => props.messagesState.searching || false)
+
+    const handleTopicKeydown = (event: KeyboardEvent, topic: MessagesState['topics'][number]) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      emit('openTopic', topic)
+    }
 
     return () => (
       <div class="messages-view">
-        <div class="messages-view-header-card">
-          <img
-            src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 64)}
-            alt={props.user.username}
-            class="messages-view-header-card__avatar"
+        <header class="messages-view-header-card">
+          <button
+            type="button"
+            class="messages-view-header-card__avatar-button"
+            aria-label={`打开 ${props.user.username} 的主页`}
             onClick={() => emit('goToProfile')}
-          />
+          >
+            <img
+              src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 64)}
+              alt=""
+              class="messages-view-header-card__avatar"
+            />
+          </button>
           <div class="messages-view-header-card__info">
             <div class="messages-view-header-card__title-row">
-              <h2 class="messages-view-header-card__title" onClick={() => emit('goToProfile')}>
+              <button
+                type="button"
+                class="messages-view-header-card__title"
+                onClick={() => emit('goToProfile')}
+              >
                 {props.user.username}
-              </h2>
+              </button>
               <span class="messages-view-header-card__badge">私信</span>
             </div>
             {props.user.name && (
               <div class="messages-view-header-card__subtitle">{props.user.name}</div>
             )}
           </div>
-        </div>
+        </header>
 
         <UserTabs
-          active={'summary' as const}
+          active="messages"
           showSettings={props.showSettings}
           showGroups={props.showGroups}
           onSwitchTab={(tab: string) => emit('switchMainTab', tab)}
         />
 
-        <div class="messages-subtabs">
+        <div class="messages-subtabs" role="tablist" aria-label="私信类型">
           {tabs.map(tab => (
             <button
               key={tab.key}
+              type="button"
+              role="tab"
               class={[
                 'messages-subtabs__item',
                 props.messagesState.activeTab === tab.key ? 'is-active' : ''
               ]}
+              aria-selected={props.messagesState.activeTab === tab.key}
               onClick={() => {
                 if (searchQuery.value) {
                   searchQuery.value = ''
@@ -153,22 +178,24 @@ export default defineComponent({
             placeholder="搜索私信..."
             prefix={<SearchOutlined />}
             allowClear
+            aria-label="搜索私信"
             onInput={(val: string | Event) => {
-              searchQuery.value = typeof val === 'string' ? val : (val?.target as HTMLInputElement)?.value || ''
+              searchQuery.value =
+                typeof val === 'string' ? val : (val?.target as HTMLInputElement)?.value || ''
               if (!searchQuery.value) {
                 emit('searchMessages', '')
               }
             }}
             onKeydown={handleSearchKeydown}
-          >
-          </Input>
+          ></Input>
         </div>
 
         <div class="messages-actions">
-          <button class="messages-action-btn is-primary" onClick={handleCompose}>
+          <button type="button" class="messages-action-btn is-primary" onClick={handleCompose}>
             <EditOutlined /> 新建私信
           </button>
           <button
+            type="button"
             class="messages-action-btn"
             disabled={!hasUnread()}
             onClick={handleMarkAllRead}
@@ -179,106 +206,117 @@ export default defineComponent({
         </div>
 
         <div class="messages-content">
-          {searching && (
+          {searching.value && (
             <div class="messages-state-loading">
               <Spin />
               <span>搜索中...</span>
             </div>
           )}
 
-          {!searching && topics.map(topic => (
-            <div
-              key={topic.id}
-              class="messages-topic-item"
-              onClick={() => emit('openTopic', topic)}
-            >
-              <div class="messages-topic-item__main">
-                <div class="messages-topic-item__avatars">
-                  {topic.participants && topic.participants.length > 0 ? (
-                    topic.participants.slice(0, 3).map((participant, index) => {
-                      const participantUser = props.users.get(participant.user_id)
-                      return (
-                        <div
-                          key={participant.user_id}
-                          class="messages-topic-item__avatar-wrap"
-                          style={{ zIndex: 3 - index }}
-                        >
-                          {participantUser ? (
-                            <img
-                              src={getAvatarUrl(participantUser.avatar_template, props.baseUrl, 40)}
-                              alt={participantUser.username}
-                              class="messages-topic-item__avatar"
-                            />
-                          ) : (
-                            <div class="messages-topic-item__avatar-fallback">{index + 1}</div>
-                          )}
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <div class="messages-topic-item__avatar-empty">@</div>
-                  )}
-                </div>
-
-                <div class="messages-topic-item__body">
-                  <div
-                    class="messages-topic-item__title"
-                    innerHTML={topic.fancy_title || topic.title}
-                  />
-
-                  <div class="messages-topic-item__meta">
-                    <span>{topic.posts_count} 条消息</span>
-                    {topic.allowed_user_count && <span>{topic.allowed_user_count} 位参与者</span>}
-                    <span>{topic.like_count} 赞</span>
-                    <span>{formatTime(topic.last_posted_at || topic.created_at)}</span>
+          {!searching.value &&
+            topics.value.map(topic => (
+              <article key={topic.id} class="messages-topic-item">
+                <div
+                  class="messages-topic-item__main"
+                  role="link"
+                  tabindex={0}
+                  onClick={() => emit('openTopic', topic)}
+                  onKeydown={(event: KeyboardEvent) => handleTopicKeydown(event, topic)}
+                >
+                  <div class="messages-topic-item__avatars">
+                    {topic.participants && topic.participants.length > 0 ? (
+                      topic.participants.slice(0, 3).map((participant, index) => {
+                        const participantUser = props.users.get(participant.user_id)
+                        return (
+                          <div
+                            key={participant.user_id}
+                            class="messages-topic-item__avatar-wrap"
+                            style={{ zIndex: 3 - index }}
+                          >
+                            {participantUser ? (
+                              <img
+                                src={getAvatarUrl(
+                                  participantUser.avatar_template,
+                                  props.baseUrl,
+                                  40
+                                )}
+                                alt={participantUser.username}
+                                class="messages-topic-item__avatar"
+                              />
+                            ) : (
+                              <div class="messages-topic-item__avatar-fallback">{index + 1}</div>
+                            )}
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div class="messages-topic-item__avatar-empty">@</div>
+                    )}
                   </div>
 
-                  {((topic.unread || 0) > 0 || (topic.new_posts || 0) > 0) && (
-                    <div class="messages-topic-item__badges">
-                      {(topic.unread || 0) > 0 && (
-                        <span class="messages-topic-item__badge is-unread">
-                          {topic.unread} 未读
-                        </span>
-                      )}
-                      {(topic.new_posts || 0) > 0 && (
-                        <span class="messages-topic-item__badge is-new">
-                          {topic.new_posts} 新消息
-                        </span>
-                      )}
+                  <div class="messages-topic-item__body">
+                    <div
+                      class="messages-topic-item__title"
+                      innerHTML={topic.fancy_title || topic.title}
+                    />
+
+                    <div class="messages-topic-item__meta">
+                      <span>{topic.posts_count} 条消息</span>
+                      {topic.allowed_user_count && <span>{topic.allowed_user_count} 位参与者</span>}
+                      <span>{topic.like_count} 赞</span>
+                      <span>{formatTime(topic.last_posted_at || topic.created_at)}</span>
                     </div>
+
+                    {((topic.unread || 0) > 0 || (topic.new_posts || 0) > 0) && (
+                      <div class="messages-topic-item__badges">
+                        {(topic.unread || 0) > 0 && (
+                          <span class="messages-topic-item__badge is-unread">
+                            {topic.unread} 未读
+                          </span>
+                        )}
+                        {(topic.new_posts || 0) > 0 && (
+                          <span class="messages-topic-item__badge is-new">
+                            {topic.new_posts} 新消息
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div class="messages-topic-item__side-actions">
+                  {(topic as any).message_archived ? (
+                    <button
+                      type="button"
+                      class="messages-topic-item__side-btn"
+                      title="移回收件箱"
+                      aria-label="移回收件箱"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleMoveToInbox(topic.id)
+                      }}
+                    >
+                      <FolderOpenOutlined />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      class="messages-topic-item__side-btn"
+                      title="归档此私信"
+                      aria-label="归档此私信"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleArchive(topic.id)
+                      }}
+                    >
+                      <InboxOutlined />
+                    </button>
                   )}
                 </div>
-              </div>
+              </article>
+            ))}
 
-              <div class="messages-topic-item__side-actions">
-                {(topic as any).message_archived ? (
-                  <button
-                    class="messages-topic-item__side-btn"
-                    title="移回收件箱"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      handleMoveToInbox(topic.id)
-                    }}
-                  >
-                    <FolderOpenOutlined />
-                  </button>
-                ) : (
-                  <button
-                    class="messages-topic-item__side-btn"
-                    title="归档此私信"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      handleArchive(topic.id)
-                    }}
-                  >
-                    <InboxOutlined />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {!searching && topics.length === 0 && !props.isLoadingMore && (
+          {!searching.value && topics.value.length === 0 && !props.isLoadingMore && (
             <div class="messages-state-empty">
               {props.messagesState.activeTab === 'all'
                 ? '暂无私信'
@@ -299,7 +337,7 @@ export default defineComponent({
             </div>
           )}
 
-          {!props.isLoadingMore && topics.length > 0 && !props.messagesState.hasMore && (
+          {!props.isLoadingMore && topics.value.length > 0 && !props.messagesState.hasMore && (
             <div class="messages-state-end">已加载全部</div>
           )}
         </div>
