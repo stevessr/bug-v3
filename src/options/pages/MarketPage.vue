@@ -480,7 +480,7 @@ onMounted(() => {
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {{ t('cloudMarketDescription') }}
           <template v-if="marketMetadata">
-            {{ t('totalPackages', [marketMetadata.totalGroups]) }}
+            {{ t('totalPackages', { count: marketMetadata.totalGroups }) }}
           </template>
         </p>
       </div>
