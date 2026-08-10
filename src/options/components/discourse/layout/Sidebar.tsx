@@ -34,7 +34,7 @@ export default defineComponent({
       { path: '/search', label: '搜索', icon: 'discourse-chat-search' },
       { path: '/categories', label: '分类', icon: 'folder' },
       { path: '/tags', label: '标签', icon: 'tags' },
-      { path: '/posted', label: '我的帖子', icon: 'edit' },
+      { path: '/posted', label: '我的帖子', icon: 'user-pen' },
       { path: '/bookmarks', label: '书签', icon: 'bookmark' },
       { path: '/notifications', label: '通知', icon: 'bell' }
     ]
