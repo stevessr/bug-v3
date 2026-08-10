@@ -13,6 +13,9 @@ import type {
   DiscourseUser
 } from '../types'
 import { pageFetch, extractData } from '../utils'
+import { fetchDiscourseChatCapabilities } from '../siteCapabilities'
+
+import { normalizeCategoriesFromResponse } from './categories'
 
 type ChatReactionAction = 'add' | 'remove'
 
@@ -239,7 +242,29 @@ const ensureChatState = (tab: BrowserTab) => {
       typingUsers: {},
       membersByChannel: {},
       membersTotalByChannel: {},
-      membersLoadingByChannel: {}
+      membersLoadingByChannel: {},
+      capabilities: {
+        loaded: false,
+        chatEnabled: false,
+        currentUserChatEnabled: false,
+        canDirectMessage: false,
+        publicChannelsEnabled: false,
+        canCreatePublicChannel: false,
+        maxAutoJoinedUsers: 0,
+        source: 'unavailable'
+      }
+    }
+  }
+  if (!tab.chatState.capabilities) {
+    tab.chatState.capabilities = {
+      loaded: false,
+      chatEnabled: false,
+      currentUserChatEnabled: false,
+      canDirectMessage: false,
+      publicChannelsEnabled: false,
+      canCreatePublicChannel: false,
+      maxAutoJoinedUsers: 0,
+      source: 'unavailable'
     }
   }
 }
@@ -720,10 +745,30 @@ export async function loadChat(
   state.errorMessage = ''
 
   try {
-    const channels = await fetchChatChannels(baseUrl.value)
+    const [channels, capabilities] = await Promise.all([
+      fetchChatChannels(baseUrl.value),
+      fetchDiscourseChatCapabilities(baseUrl.value)
+    ])
     state.channels = channels
+    state.capabilities = capabilities
+
+    if (capabilities.canCreatePublicChannel && tab.categories.length === 0) {
+      try {
+        const categoryResult = await pageFetch<any>(`${baseUrl.value}/categories.json`)
+        if (categoryResult.ok) {
+          tab.categories = normalizeCategoriesFromResponse(extractData(categoryResult))
+        }
+      } catch {
+        // Existing chat remains usable when the category chooser cannot load.
+      }
+    }
+
     if (channels.length === 0) {
-      state.errorMessage = '暂无可用聊天频道，请确认已登录。'
+      state.activeChannelId = null
+      state.errorMessage =
+        capabilities.canDirectMessage || capabilities.canCreatePublicChannel
+          ? '暂无聊天频道，可以创建一个新频道。'
+          : '暂无可用聊天频道，请确认已登录且站点已开放聊天。'
       return
     }
 
@@ -1105,9 +1150,24 @@ export async function createChatChannel(
   if (!state) return null
   state.errorMessage = ''
 
+  if (!state.capabilities.canCreatePublicChannel) {
+    state.errorMessage = '站点未开放公开频道创建权限'
+    return null
+  }
+
+  const name = payload.name.trim()
+  if (!name) {
+    state.errorMessage = '请输入频道名称'
+    return null
+  }
+  if (!Number.isFinite(payload.chatableId) || payload.chatableId <= 0) {
+    state.errorMessage = '请选择频道所属分类'
+    return null
+  }
+
   const channelBody: Record<string, any> = {
-    name: payload.name.trim(),
-    chatable_id: payload.chatableId || 0,
+    name,
+    chatable_id: payload.chatableId,
     slug: payload.slug || undefined,
     description: payload.description || undefined,
     emoji: payload.emoji || undefined,
@@ -1119,9 +1179,11 @@ export async function createChatChannel(
   })
 
   const jsonPayload = JSON.stringify({ channel: channelBody })
-  const formPayload = new URLSearchParams(
-    Object.entries(channelBody).filter(([, v]) => v !== undefined) as [string, string][]
-  ).toString()
+  const formParams = new URLSearchParams()
+  Object.entries(channelBody).forEach(([key, value]) => {
+    formParams.set(`channel[${key}]`, String(value))
+  })
+  const formPayload = formParams.toString()
 
   let lastError: string | null = null
 
@@ -1133,7 +1195,7 @@ export async function createChatChannel(
       },
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-        body: `channel[${formPayload.replace(/&/g, '&channel[').replace(/=/g, ']=')}`
+        body: formPayload
       }
     ]) {
       try {
@@ -1174,6 +1236,11 @@ export async function createDirectMessageChannel(
   if (!state) return null
   state.errorMessage = ''
 
+  if (!state.capabilities.canDirectMessage) {
+    state.errorMessage = '站点未开放私聊，或你已关闭聊天功能'
+    return null
+  }
+
   const usernames = Array.from(new Set(payload.targetUsernames.map(u => u.trim()).filter(Boolean)))
   if (usernames.length === 0) {
     state.errorMessage = '请至少选择一个用户'
@@ -1190,9 +1257,11 @@ export async function createDirectMessageChannel(
   })
 
   const jsonPayload = JSON.stringify(body)
-  const formPayload = new URLSearchParams(
-    Object.entries(body).filter(([, v]) => v !== undefined) as [string, string][]
-  ).toString()
+  const formParams = new URLSearchParams()
+  usernames.forEach(username => formParams.append('target_usernames[]', username))
+  formParams.set('upsert', String(body.upsert))
+  if (body.name) formParams.set('name', String(body.name))
+  const formPayload = formParams.toString()
 
   let lastError: string | null = null
 
@@ -1215,7 +1284,7 @@ export async function createDirectMessageChannel(
         })
         const data = extractData(result)
         if (!result.ok) {
-          lastError = parseErrorMessage(data, '创建群聊失败')
+          lastError = parseErrorMessage(data, '创建聊天频道失败')
           continue
         }
         const channel = data?.channel || data
@@ -1232,14 +1301,14 @@ export async function createDirectMessageChannel(
           }
           return normalized
         }
-        lastError = '群聊已创建，但未返回频道数据'
+        lastError = '聊天频道已创建，但未返回频道数据'
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error)
       }
     }
   }
 
-  state.errorMessage = lastError || '创建群聊失败'
+  state.errorMessage = lastError || '创建聊天频道失败'
   return null
 }
 
@@ -1768,6 +1837,38 @@ export interface ChatableSearchResult {
   groups: Array<{ id: number; name: string; user_count?: number }>
 }
 
+const normalizeChatableUser = (entry: any): DiscourseUser | null => {
+  const model = entry?.model || entry?.user || entry
+  const id = Number(model?.id)
+  const username = typeof model?.username === 'string' ? model.username.trim() : ''
+  if (!Number.isFinite(id) || !username) return null
+  return {
+    ...model,
+    id,
+    username,
+    name: typeof model.name === 'string' ? model.name : undefined,
+    avatar_template: typeof model.avatar_template === 'string' ? model.avatar_template : '',
+    can_chat: typeof model.can_chat === 'boolean' ? model.can_chat : undefined,
+    has_chat_enabled:
+      typeof model.has_chat_enabled === 'boolean' ? model.has_chat_enabled : undefined,
+    can_chat_user: typeof model.can_chat_user === 'boolean' ? model.can_chat_user : undefined
+  }
+}
+
+const normalizeChatableGroup = (
+  entry: any
+): { id: number; name: string; user_count?: number } | null => {
+  const model = entry?.model || entry?.group || entry
+  const id = Number(model?.id)
+  const name = typeof model?.name === 'string' ? model.name.trim() : ''
+  if (!Number.isFinite(id) || !name) return null
+  return {
+    id,
+    name,
+    user_count: typeof model.user_count === 'number' ? model.user_count : undefined
+  }
+}
+
 export async function searchChatables(
   baseUrl: Ref<string>,
   filter: string,
@@ -1784,9 +1885,19 @@ export async function searchChatables(
       const result = await pageFetch<any>(`${baseUrl.value}${path}?${params.toString()}`)
       const data = extractData(result)
       if (result.ok) {
+        const users = (Array.isArray(data?.users) ? data.users : [])
+          .map(normalizeChatableUser)
+          .filter((user: DiscourseUser | null): user is DiscourseUser => !!user)
+        const groups = (Array.isArray(data?.groups) ? data.groups : [])
+          .map(normalizeChatableGroup)
+          .filter(
+            (
+              group: { id: number; name: string; user_count?: number } | null
+            ): group is { id: number; name: string; user_count?: number } => !!group
+          )
         return {
-          users: data?.users || [],
-          groups: data?.groups || []
+          users,
+          groups
         }
       }
       lastError = parseErrorMessage(data, '搜索用户失败')

@@ -1,3 +1,6 @@
+import { loadSessionUserFromExtension } from './routes/session'
+import type { ChatCapabilities } from './types'
+
 import type { DiscourseSiteSettingsResponse } from '@/types/messages'
 
 const REACTION_SETTING_KEYS = [
@@ -7,7 +10,14 @@ const REACTION_SETTING_KEYS = [
   'discourse_reactions_allow_any_emoji'
 ] as const
 
+const CHAT_SETTING_KEYS = [
+  'chat_enabled',
+  'enable_public_channels',
+  'max_chat_auto_joined_users'
+] as const
+
 const CAPABILITIES_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CHAT_CAPABILITIES_CACHE_TTL_MS = 60 * 1000
 const CAPABILITIES_STORAGE_PREFIX = 'discourse-browser:site-capabilities:v1:'
 
 export interface DiscourseReactionCapabilities {
@@ -18,13 +28,17 @@ export interface DiscourseReactionCapabilities {
   source: 'site' | 'unavailable'
 }
 
+export type DiscourseChatCapabilities = ChatCapabilities
+
 interface StoredCapabilities {
   expiresAt: number
   value: DiscourseReactionCapabilities
 }
 
-const memoryCache = new Map<string, StoredCapabilities>()
-const inFlight = new Map<string, Promise<DiscourseReactionCapabilities>>()
+const reactionMemoryCache = new Map<string, StoredCapabilities>()
+const reactionInFlight = new Map<string, Promise<DiscourseReactionCapabilities>>()
+const chatMemoryCache = new Map<string, { expiresAt: number; value: DiscourseChatCapabilities }>()
+const chatInFlight = new Map<string, Promise<DiscourseChatCapabilities>>()
 
 const getOrigin = (baseUrl: string) => {
   try {
@@ -101,8 +115,20 @@ const unavailableCapabilities = (): DiscourseReactionCapabilities => ({
   source: 'unavailable'
 })
 
+export const unavailableChatCapabilities = (): DiscourseChatCapabilities => ({
+  loaded: true,
+  chatEnabled: false,
+  currentUserChatEnabled: false,
+  canDirectMessage: false,
+  publicChannelsEnabled: false,
+  canCreatePublicChannel: false,
+  maxAutoJoinedUsers: 0,
+  source: 'unavailable'
+})
+
 const sendSettingsMessage = async (
-  origin: string
+  origin: string,
+  keys: readonly string[]
 ): Promise<DiscourseSiteSettingsResponse | null> => {
   if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return null
   try {
@@ -111,7 +137,7 @@ const sendSettingsMessage = async (
         {
           type: 'GET_DISCOURSE_SITE_SETTINGS',
           url: origin,
-          keys: [...REACTION_SETTING_KEYS]
+          keys: [...keys]
         },
         (response: DiscourseSiteSettingsResponse) => {
           if (chrome.runtime.lastError) {
@@ -140,22 +166,22 @@ export async function fetchDiscourseReactionCapabilities(
   if (!origin) return unavailableCapabilities()
 
   const now = Date.now()
-  const memory = memoryCache.get(origin)
+  const memory = reactionMemoryCache.get(origin)
   if (!force && memory && memory.expiresAt > now) return memory.value
 
   if (!force) {
     const stored = readStoredCapabilities(origin)
     if (stored) {
-      memoryCache.set(origin, stored)
+      reactionMemoryCache.set(origin, stored)
       return stored.value
     }
   }
 
-  const pending = inFlight.get(origin)
+  const pending = reactionInFlight.get(origin)
   if (!force && pending) return pending
 
   const request = (async () => {
-    const response = await sendSettingsMessage(origin)
+    const response = await sendSettingsMessage(origin, REACTION_SETTING_KEYS)
     if (!response?.success || !response.settings) return unavailableCapabilities()
 
     const settings = response.settings
@@ -176,11 +202,68 @@ export async function fetchDiscourseReactionCapabilities(
       source: 'site'
     }
     const entry = { expiresAt: Date.now() + CAPABILITIES_CACHE_TTL_MS, value }
-    memoryCache.set(origin, entry)
+    reactionMemoryCache.set(origin, entry)
     writeStoredCapabilities(origin, entry)
     return value
-  })().finally(() => inFlight.delete(origin))
+  })().finally(() => reactionInFlight.delete(origin))
 
-  inFlight.set(origin, request)
+  reactionInFlight.set(origin, request)
+  return request
+}
+
+/**
+ * Loads the current site's Chat contract and the authenticated user's Chat
+ * preferences. Creation controls stay hidden unless Discourse explicitly
+ * confirms the required permission.
+ */
+export async function fetchDiscourseChatCapabilities(
+  baseUrl: string,
+  force = false
+): Promise<DiscourseChatCapabilities> {
+  const origin = getOrigin(baseUrl)
+  if (!origin) return unavailableChatCapabilities()
+
+  const cached = chatMemoryCache.get(origin)
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.value
+
+  const pending = chatInFlight.get(origin)
+  if (!force && pending) return pending
+
+  const request = (async () => {
+    const [settingsResponse, sessionUser] = await Promise.all([
+      sendSettingsMessage(origin, CHAT_SETTING_KEYS),
+      loadSessionUserFromExtension(origin)
+    ])
+    const settings = settingsResponse?.success ? settingsResponse.settings || {} : {}
+    const hasChatSetting = Object.prototype.hasOwnProperty.call(settings, 'chat_enabled')
+    const siteChatEnabled = hasChatSetting
+      ? asBoolean(settings.chat_enabled)
+      : sessionUser?.canChat === true
+    const currentUserChatEnabled = sessionUser?.hasChatEnabled === true
+    const chatEnabled = siteChatEnabled && sessionUser?.canChat === true && currentUserChatEnabled
+    const publicChannelsEnabled = asBoolean(settings.enable_public_channels)
+    const maxAutoJoinedUsers = Math.max(
+      0,
+      Number.parseInt(String(settings.max_chat_auto_joined_users ?? '0'), 10) || 0
+    )
+
+    const value: DiscourseChatCapabilities = {
+      loaded: true,
+      chatEnabled,
+      currentUserChatEnabled,
+      canDirectMessage: chatEnabled && sessionUser?.canDirectMessage === true,
+      publicChannelsEnabled,
+      canCreatePublicChannel: chatEnabled && publicChannelsEnabled && sessionUser?.staff === true,
+      maxAutoJoinedUsers,
+      source: settingsResponse?.success && sessionUser ? 'site' : 'unavailable'
+    }
+    chatMemoryCache.set(origin, {
+      expiresAt: Date.now() + CHAT_CAPABILITIES_CACHE_TTL_MS,
+      value
+    })
+    return value
+  })().finally(() => chatInFlight.delete(origin))
+
+  chatInFlight.set(origin, request)
   return request
 }

@@ -14,6 +14,7 @@ import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
   ChatChannelEditableStatus,
   ChatChannelUpdatePayload,
+  ChatCreateChannelPayload,
   ChatMembershipUpdatePayload,
   ChatMessage,
   DiscourseCategory,
@@ -174,6 +175,7 @@ const {
   archivePrivateMessage,
   movePrivateMessageToInbox,
   markPrivateMessagesRead,
+  createChatChannel,
   createDirectMessageChannel,
   loadChatMembers,
   addChatMembers,
@@ -348,6 +350,8 @@ const notificationPreferencesKey = ref('')
 // Chat group creation & member management state
 const createGroupSearching = ref(false)
 const createGroupResults = ref<DiscourseUser[]>([])
+const chatDirectCreating = ref(false)
+const chatPublicCreating = ref(false)
 const manageSearching = ref(false)
 const manageSearchResults = ref<DiscourseUser[]>([])
 const chatChannelSaving = ref(false)
@@ -1567,16 +1571,38 @@ const handleManageSearch = (query: string) => {
 }
 
 const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: string }) => {
-  const channel = await createDirectMessageChannel({
-    targetUsernames: payload.targetUsernames,
-    name: payload.name,
-    upsert: true
-  })
-  if (channel) {
-    message.success('群聊已创建')
-    selectChatChannel(channel.id)
-  } else {
-    message.error(activeTab.value?.chatState?.errorMessage || '创建群聊失败')
+  if (chatDirectCreating.value) return
+  chatDirectCreating.value = true
+  try {
+    const channel = await createDirectMessageChannel({
+      targetUsernames: payload.targetUsernames,
+      name: payload.name,
+      upsert: true
+    })
+    if (channel) {
+      message.success(payload.targetUsernames.length > 1 ? '群聊已创建' : '聊天已创建')
+      selectChatChannel(channel.id)
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '创建聊天频道失败')
+    }
+  } finally {
+    chatDirectCreating.value = false
+  }
+}
+
+const handleCreateChatChannel = async (payload: ChatCreateChannelPayload) => {
+  if (chatPublicCreating.value) return
+  chatPublicCreating.value = true
+  try {
+    const channel = await createChatChannel(payload)
+    if (channel) {
+      message.success('公开频道已创建')
+      selectChatChannel(channel.id)
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '创建公开频道失败')
+    }
+  } finally {
+    chatPublicCreating.value = false
   }
 }
 
@@ -2904,8 +2930,11 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
         :users="users"
+        :categories="activeTab.categories"
         :createGroupSearching="createGroupSearching"
         :createGroupResults="createGroupResults"
+        :creatingGroup="chatDirectCreating"
+        :creatingChannel="chatPublicCreating"
         :manageSearching="manageSearching"
         :manageSearchResults="manageSearchResults"
         :savingChannel="chatChannelSaving"
@@ -2928,6 +2957,7 @@ onUnmounted(() => {
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
         @createGroup="handleCreateGroup"
+        @createChannel="handleCreateChatChannel"
         @createGroupSearch="handleCreateGroupSearch"
         @loadMembers="handleLoadChatMembers"
         @addMembers="handleAddChatMembers"
@@ -3183,8 +3213,11 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
         :users="users"
+        :categories="activeTab.categories"
         :createGroupSearching="createGroupSearching"
         :createGroupResults="createGroupResults"
+        :creatingGroup="chatDirectCreating"
+        :creatingChannel="chatPublicCreating"
         :manageSearching="manageSearching"
         :manageSearchResults="manageSearchResults"
         :savingChannel="chatChannelSaving"
@@ -3207,6 +3240,7 @@ onUnmounted(() => {
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
         @createGroup="handleCreateGroup"
+        @createChannel="handleCreateChatChannel"
         @createGroupSearch="handleCreateGroupSearch"
         @loadMembers="handleLoadChatMembers"
         @addMembers="handleAddChatMembers"

@@ -61,6 +61,12 @@
   transform: scale(0.92);
 }
 
+.chat-sidebar-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .chat-error {
   margin: 0 8px 8px;
   padding: 10px 12px;

@@ -121,7 +121,10 @@ export function setupMessageListener() {
             handleLinuxDoAuthRequest(sendResponse as any)
             return true
           case 'GET_LINUX_DO_USER':
-            handleLinuxDoUserRequest(sendResponse as any)
+            handleLinuxDoUserRequest(
+              'url' in typedMsg && typeof typedMsg.url === 'string' ? typedMsg.url : undefined,
+              sendResponse as any
+            )
             return true
           case 'LINUX_DO_PAGE_FETCH':
           case 'PAGE_FETCH':

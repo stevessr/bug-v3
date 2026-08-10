@@ -75,8 +75,32 @@ test.describe('Discourse chat channel settings', () => {
         id: 3,
         username: 'bob',
         name: 'Bob',
-        avatar_template: '/letter_avatar_proxy/v4/letter/b/8491ac/{size}.png'
+        avatar_template: '/letter_avatar_proxy/v4/letter/b/8491ac/{size}.png',
+        can_chat: true,
+        has_chat_enabled: true
       }
+      const chatDisabledUser = {
+        id: 4,
+        username: 'eve',
+        name: 'Eve',
+        avatar_template: '/letter_avatar_proxy/v4/letter/e/8491ac/{size}.png',
+        can_chat: true,
+        has_chat_enabled: false
+      }
+      const chatPermissionFixture = {
+        currentUser: {
+          staff: true,
+          can_chat: true,
+          can_direct_message: true,
+          has_chat_enabled: true
+        },
+        settings: {
+          chat_enabled: true,
+          enable_public_channels: true,
+          max_chat_auto_joined_users: 100
+        }
+      }
+      ;(globalThis as any).__chatPermissionFixture = chatPermissionFixture
 
       const readChannelForm = (body: string) => {
         const params = new URLSearchParams(body)
@@ -93,7 +117,24 @@ test.describe('Discourse chat channel settings', () => {
         lastError: null,
         sendMessage(request: any, callback: (response: any) => void) {
           if (request.type === 'GET_LINUX_DO_USER') {
-            queueMicrotask(() => callback({ success: true, user: users[0] }))
+            queueMicrotask(() =>
+              callback({
+                success: true,
+                user: { ...users[0], ...chatPermissionFixture.currentUser }
+              })
+            )
+            return
+          }
+          if (request.type === 'GET_DISCOURSE_SITE_SETTINGS') {
+            const settings = Object.fromEntries(
+              (request.keys || [])
+                .filter((key: string) => key in chatPermissionFixture.settings)
+                .map((key: string) => [
+                  key,
+                  chatPermissionFixture.settings[key as keyof typeof chatPermissionFixture.settings]
+                ])
+            )
+            queueMicrotask(() => callback({ success: true, settings }))
             return
           }
 
@@ -187,12 +228,81 @@ test.describe('Discourse chat channel settings', () => {
               channel.unicode_title = parsed.name
             }
             data = { channel: { ...channel } }
+          } else if (url.endsWith('/chat/api/direct-message-channels') && method === 'POST') {
+            const parsed = body.startsWith('{')
+              ? JSON.parse(body)
+              : {
+                  target_usernames: new URLSearchParams(body).getAll('target_usernames[]'),
+                  upsert: new URLSearchParams(body).get('upsert') === 'true',
+                  name: new URLSearchParams(body).get('name') || undefined
+                }
+            const selectedUsers = [searchableUser, chatDisabledUser].filter(user =>
+              parsed.target_usernames.includes(user.username)
+            )
+            data = {
+              channel: {
+                id: 9,
+                title: parsed.name || selectedUsers.map(user => user.name).join(', '),
+                channelType: 'direct',
+                chatable_type: 'DirectMessage',
+                direct_message_users: selectedUsers,
+                current_user_membership: { chat_channel_id: 9, unread_count: 0 }
+              }
+            }
+          } else if (url.endsWith('/chat/api/channels') && method === 'POST') {
+            const parsed = body.startsWith('{') ? JSON.parse(body).channel : readChannelForm(body)
+            data = {
+              channel: {
+                id: 10,
+                title: parsed.name,
+                unicode_title: parsed.name,
+                channelType: 'public',
+                chatable_type: 'Category',
+                chatable_id: Number(parsed.chatable_id),
+                chatable: { id: Number(parsed.chatable_id), name: '设计', slug: 'design' },
+                description: parsed.description,
+                slug: parsed.slug,
+                emoji: parsed.emoji,
+                auto_join_users: parsed.auto_join_users,
+                threading_enabled: parsed.threading_enabled,
+                current_user_membership: { chat_channel_id: 10, unread_count: 0 }
+              }
+            }
           } else if (url.includes('/chat/api/chatables')) {
-            data = { users: [searchableUser], groups: [] }
+            data = {
+              users: [searchableUser, chatDisabledUser].map(user => ({
+                identifier: `u-${user.id}`,
+                model: user,
+                type: 'user',
+                match_quality: 1
+              })),
+              groups: []
+            }
           } else if (url.includes('/latest')) {
             data = { topic_list: { topics: [] }, users: [] }
           } else if (url.includes('/categories')) {
-            data = { category_list: { categories: [] } }
+            data = {
+              category_list: {
+                categories: [
+                  {
+                    id: 12,
+                    name: '产品',
+                    slug: 'product',
+                    color: '0f6cbd',
+                    text_color: 'ffffff',
+                    topic_count: 3
+                  },
+                  {
+                    id: 13,
+                    name: '设计',
+                    slug: 'design',
+                    color: '8e44ad',
+                    text_color: 'ffffff',
+                    topic_count: 2
+                  }
+                ]
+              }
+            }
           }
 
           queueMicrotask(() => callback({ success: true, data: { status, ok, data } }))
@@ -219,6 +329,91 @@ test.describe('Discourse chat channel settings', () => {
     await page.getByRole('button', { name: /管理/ }).click()
     await expect(page.getByRole('dialog', { name: '产品交流' })).toBeVisible()
   }
+
+  const openChat = async (page: import('@playwright/test').Page) => {
+    await page.goto('/discourse.html')
+    await page.locator('.toolbar-address input').fill('https://linux.do/chat')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(page.locator('.chat-main-title')).toHaveText('产品交流')
+  }
+
+  test('creates permission-aware direct and public chat channels without refreshing', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    await expect(page.getByRole('button', { name: '发起聊天' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '创建公开频道' })).toBeVisible()
+
+    await page.getByRole('button', { name: '发起聊天' }).click()
+    const directDialog = page.getByRole('dialog', { name: '发起聊天' })
+    await expect(directDialog).toBeVisible()
+    await directDialog.getByLabel('搜索用户（可选择一人或多人）').fill('bo')
+
+    const bob = directDialog.locator('.chat-group-modal__result').filter({ hasText: '@bob' })
+    const eve = directDialog.locator('.chat-group-modal__result').filter({ hasText: '@eve' })
+    await expect(bob).toBeEnabled()
+    await expect(eve).toBeDisabled()
+    await expect(eve).toContainText('对方已关闭聊天')
+
+    await bob.click()
+    await directDialog.getByRole('button', { name: /创建聊天.*1 人/ }).click()
+    await expect(page.locator('.chat-main-title')).toHaveText('Bob')
+    await expect(directDialog).toHaveCount(0)
+
+    const directRequest = await page.evaluate(() =>
+      (globalThis as any).__chatSettingsRequests.find(
+        (request: any) =>
+          request.url.endsWith('/chat/api/direct-message-channels') && request.method === 'POST'
+      )
+    )
+    expect(JSON.parse(directRequest.body)).toEqual({
+      target_usernames: ['bob'],
+      upsert: true
+    })
+
+    await page.getByRole('button', { name: '创建公开频道' }).click()
+    const publicDialog = page.getByRole('dialog', { name: '创建公开频道' })
+    await publicDialog.getByLabel('所属分类').selectOption('13')
+    await publicDialog.getByLabel('频道名称').fill('设计协作')
+    await publicDialog.getByLabel('描述（可选）').fill('设计师与产品协作频道')
+    await publicDialog.getByLabel('Slug（可选）').fill('design-chat')
+    await publicDialog.getByLabel('频道表情（可选）').fill(':art:')
+    await publicDialog.getByText('启用消息串', { exact: true }).click()
+    await publicDialog.getByText('用户自动加入', { exact: true }).click()
+    await publicDialog.getByRole('button', { name: '创建频道', exact: true }).click()
+
+    await expect(page.locator('.chat-main-title')).toHaveText('设计协作')
+    await expect(publicDialog).toHaveCount(0)
+    const publicRequest = await page.evaluate(() =>
+      (globalThis as any).__chatSettingsRequests.find(
+        (request: any) => request.url.endsWith('/chat/api/channels') && request.method === 'POST'
+      )
+    )
+    expect(JSON.parse(publicRequest.body)).toEqual({
+      channel: {
+        name: '设计协作',
+        chatable_id: 13,
+        slug: 'design-chat',
+        description: '设计师与产品协作频道',
+        emoji: 'art',
+        auto_join_users: true,
+        threading_enabled: true
+      }
+    })
+  })
+
+  test('hides creation controls when the site disables chat', async ({ page }) => {
+    await page.goto('/discourse.html')
+    await page.evaluate(() => {
+      ;(globalThis as any).__chatPermissionFixture.settings.chat_enabled = false
+    })
+    await page.locator('.toolbar-address input').fill('https://linux.do/chat')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(page.locator('.chat-main-title')).toHaveText('产品交流')
+    await expect(page.getByRole('button', { name: '发起聊天' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '创建公开频道' })).toHaveCount(0)
+  })
 
   test('shows and saves every channel and personal setting through the correct APIs', async ({
     page

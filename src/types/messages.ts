@@ -72,6 +72,8 @@ export interface RequestLinuxDoAuthMessage extends BaseMessage {
  */
 export interface GetLinuxDoUserMessage extends BaseMessage {
   type: 'GET_LINUX_DO_USER'
+  /** Route the request to a tab on this exact Discourse origin. */
+  url?: string
 }
 
 /**
@@ -490,8 +492,20 @@ export interface CsrfTokenResponse {
 
 export interface LinuxDoUserResponse {
   success: boolean
-  user?: any
+  user?: DiscourseSessionUser
   error?: string
+}
+
+export interface DiscourseSessionUser {
+  id?: number
+  username: string
+  trustLevel?: number
+  staff?: boolean
+  admin?: boolean
+  moderator?: boolean
+  canChat?: boolean
+  canDirectMessage?: boolean
+  hasChatEnabled?: boolean
 }
 
 export interface DiscourseSiteSettingsResponse {

@@ -1,13 +1,15 @@
 import { computed, defineComponent, ref, watch } from 'vue'
-import { UserAddOutlined, SettingOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, SettingOutlined, UserAddOutlined } from '@ant-design/icons-vue'
 
 import type {
   ChatChannel,
   ChatChannelEditableStatus,
   ChatChannelUpdatePayload,
+  ChatCreateChannelPayload,
   ChatMembershipUpdatePayload,
   ChatMessage,
   ChatState,
+  DiscourseCategory,
   DiscourseUser
 } from '../types'
 
@@ -15,6 +17,7 @@ import ChatChannelList from './ChatChannelList'
 import ChatMessageList from './ChatMessageList'
 import ChatComposer from './ChatComposer'
 import ChatCreateGroupModal from './ChatCreateGroupModal'
+import ChatCreateChannelModal from './ChatCreateChannelModal'
 import ChatChannelManageModal from './ChatChannelManageModal'
 import '../css/chat/ChatView.css'
 
@@ -25,8 +28,11 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
     users: { type: Object as () => Map<number, DiscourseUser>, required: true },
+    categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     createGroupSearching: { type: Boolean, default: false },
     createGroupResults: { type: Array as () => DiscourseUser[], default: () => [] },
+    creatingGroup: { type: Boolean, default: false },
+    creatingChannel: { type: Boolean, default: false },
     manageSearching: { type: Boolean, default: false },
     manageSearchResults: { type: Array as () => DiscourseUser[], default: () => [] },
     savingChannel: { type: Boolean, default: false },
@@ -53,6 +59,7 @@ export default defineComponent({
     'uploadStart',
     'uploadEnd',
     'createGroup',
+    'createChannel',
     'createGroupSearch',
     'loadMembers',
     'addMembers',
@@ -67,6 +74,7 @@ export default defineComponent({
   ],
   setup(props, { emit }) {
     const showCreateGroup = ref(false)
+    const showCreateChannel = ref(false)
     const showManage = ref(false)
 
     const activeChannel = computed(
@@ -80,6 +88,28 @@ export default defineComponent({
       (channelId, previousChannelId) => {
         if (showManage.value && previousChannelId && channelId !== previousChannelId) {
           showManage.value = false
+        }
+        if (channelId && channelId !== previousChannelId) {
+          showCreateGroup.value = false
+          showCreateChannel.value = false
+        }
+      }
+    )
+
+    watch(
+      () => props.creatingGroup,
+      (creating, wasCreating) => {
+        if (wasCreating && !creating && !props.chatState.errorMessage) {
+          showCreateGroup.value = false
+        }
+      }
+    )
+
+    watch(
+      () => props.creatingChannel,
+      (creating, wasCreating) => {
+        if (wasCreating && !creating && !props.chatState.errorMessage) {
+          showCreateChannel.value = false
         }
       }
     )
@@ -200,7 +230,10 @@ export default defineComponent({
 
     const handleCreateGroup = (payload: { targetUsernames: string[]; name?: string }) => {
       emit('createGroup', payload)
-      showCreateGroup.value = false
+    }
+
+    const handleCreateChannel = (payload: ChatCreateChannelPayload) => {
+      emit('createChannel', payload)
     }
 
     return () => (
@@ -208,14 +241,30 @@ export default defineComponent({
         <div class="chat-sidebar">
           <div class="chat-sidebar-header">
             <span class="chat-sidebar-header__title">聊天</span>
-            <button
-              type="button"
-              class="chat-sidebar-header__create"
-              title="创建群聊"
-              onClick={() => (showCreateGroup.value = true)}
-            >
-              <UserAddOutlined />
-            </button>
+            <div class="chat-sidebar-header__actions">
+              {props.chatState.capabilities.canDirectMessage && (
+                <button
+                  type="button"
+                  class="chat-sidebar-header__create"
+                  aria-label="发起聊天"
+                  title="发起聊天"
+                  onClick={() => (showCreateGroup.value = true)}
+                >
+                  <UserAddOutlined />
+                </button>
+              )}
+              {props.chatState.capabilities.canCreatePublicChannel && (
+                <button
+                  type="button"
+                  class="chat-sidebar-header__create"
+                  aria-label="创建公开频道"
+                  title="创建公开频道"
+                  onClick={() => (showCreateChannel.value = true)}
+                >
+                  <PlusOutlined />
+                </button>
+              )}
+            </div>
           </div>
           {props.chatState.errorMessage && (
             <div class="chat-error">{props.chatState.errorMessage}</div>
@@ -286,11 +335,22 @@ export default defineComponent({
         <ChatCreateGroupModal
           open={showCreateGroup.value}
           baseUrl={props.baseUrl}
+          currentUsername={props.currentUsername}
           searching={props.createGroupSearching}
+          creating={props.creatingGroup}
           searchResults={props.createGroupResults}
           onClose={() => (showCreateGroup.value = false)}
           onCreate={handleCreateGroup}
           onSearch={(query: string) => emit('createGroupSearch', query)}
+        />
+
+        <ChatCreateChannelModal
+          open={showCreateChannel.value}
+          categories={props.categories}
+          creating={props.creatingChannel}
+          maxAutoJoinedUsers={props.chatState.capabilities.maxAutoJoinedUsers}
+          onClose={() => (showCreateChannel.value = false)}
+          onCreate={handleCreateChannel}
         />
 
         <ChatChannelManageModal

@@ -172,6 +172,10 @@ export interface DiscourseUser {
   username: string
   name?: string
   avatar_template: string
+  /** ChatableUserSerializer fields used to avoid contacting opted-out users. */
+  can_chat?: boolean
+  has_chat_enabled?: boolean
+  can_chat_user?: boolean
 }
 
 export interface DiscourseTag {
@@ -633,6 +637,18 @@ export interface ChatState {
   membersByChannel: Record<number, ChatMember[]>
   membersTotalByChannel: Record<number, number>
   membersLoadingByChannel: Record<number, boolean>
+  capabilities: ChatCapabilities
+}
+
+export interface ChatCapabilities {
+  loaded: boolean
+  chatEnabled: boolean
+  currentUserChatEnabled: boolean
+  canDirectMessage: boolean
+  publicChannelsEnabled: boolean
+  canCreatePublicChannel: boolean
+  maxAutoJoinedUsers: number
+  source: 'site' | 'unavailable'
 }
 
 export interface ChatMember {
@@ -658,7 +674,7 @@ export interface ChatCreateDirectMessagePayload {
 
 export interface ChatCreateChannelPayload {
   name: string
-  chatableId?: number
+  chatableId: number
   slug?: string
   description?: string
   emoji?: string

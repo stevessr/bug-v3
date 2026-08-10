@@ -379,7 +379,7 @@ export function useDiscourseBrowser() {
       return sessionUserPromise
     }
 
-    sessionUserPromise = loadUsernameFromExtension()
+    sessionUserPromise = loadUsernameFromExtension(baseUrl.value)
       .then(username => {
         currentUsername.value = username
         return username
