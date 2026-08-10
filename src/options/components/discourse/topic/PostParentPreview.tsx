@@ -54,7 +54,14 @@ const PostParentPreview = defineComponent({
     }
 
     return () => (
-      <div class="post-parent-preview">
+      <div
+        class="post-parent-preview"
+        data-discourse-url={
+          props.post.topic_id
+            ? `${props.baseUrl}/t/${props.post.topic_id}/${props.post.post_number}`
+            : undefined
+        }
+      >
         {hasParent.value && isExpanded.value && (
           <div class="post-parent-preview-nested">
             {isLoading.value ? (
@@ -84,10 +91,15 @@ const PostParentPreview = defineComponent({
             src={getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)}
             alt={props.post.username}
             class="post-parent-avatar"
+            data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
             onClick={() => handleUserClick(props.post.username)}
           />
           <div class="post-parent-title">
-            <span class="post-parent-name" onClick={() => handleUserClick(props.post.username)}>
+            <span
+              class="post-parent-name"
+              data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
+              onClick={() => handleUserClick(props.post.username)}
+            >
               {props.post.name || props.post.username}
             </span>
             <span class="post-parent-time">{formatTime(props.post.created_at)}</span>
@@ -98,7 +110,15 @@ const PostParentPreview = defineComponent({
                 {isExpanded.value ? '收起上文' : '展开上文'}
               </button>
             )}
-            <button class="post-parent-jump" onClick={handleJumpToPost}>
+            <button
+              class="post-parent-jump"
+              data-discourse-url={
+                props.post.topic_id
+                  ? `${props.baseUrl}/t/${props.post.topic_id}/${props.post.post_number}`
+                  : undefined
+              }
+              onClick={handleJumpToPost}
+            >
               跳到帖子
             </button>
           </div>

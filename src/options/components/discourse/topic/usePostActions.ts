@@ -7,6 +7,7 @@ import {
   toggleBookmark,
   flagPost,
   fetchFlagTypes,
+  assignPost,
   deletePost,
   toggleWiki
 } from '../actions'
@@ -24,7 +25,7 @@ export function usePostActions(options: {
   notify: Notify
   onRefresh?: () => void
 }) {
-  const likedPostIds = ref<Set<number>>(new Set())
+  const likedPostIds = ref<Map<number, string>>(new Map())
   const likingPostIds = ref<Set<number>>(new Set())
 
   // Flag modal state
@@ -35,7 +36,7 @@ export function usePostActions(options: {
   const flagSubmitting = ref(false)
 
   const isPostLiked = (post: DiscoursePost, reactionId: string) => {
-    if (likedPostIds.value.has(post.id)) return true
+    if (likedPostIds.value.get(post.id) === reactionId) return true
     const postAny = post as any
     const currentUserReaction = postAny?.current_user_reaction
     if (currentUserReaction) {
@@ -90,7 +91,9 @@ export function usePostActions(options: {
         postAny.reaction_users_count = data.reaction_users_count || 0
       }
       if (data?.current_user_reaction) {
-        likedPostIds.value.add(post.id)
+        const current = data.current_user_reaction
+        const selected = typeof current === 'string' ? current : current?.id
+        if (selected) likedPostIds.value.set(post.id, selected)
       } else {
         likedPostIds.value.delete(post.id)
       }
@@ -166,9 +169,30 @@ export function usePostActions(options: {
     }
   }
 
-  const handleAssign = async (_post: DiscoursePost) => {
-    void _post
-    options.notify.info('指定功能需要选择用户，请在 Web 界面中使用')
+  const handleAssign = async (post: DiscoursePost) => {
+    // Discourse Assign accepts a concrete target id. Resolve the entered
+    // username on the same origin before sending the assignment request.
+    // eslint-disable-next-line no-alert
+    const input = window.prompt('请输入要指定的用户名')
+    const username = input?.trim()
+    if (!username) return
+    try {
+      const userResult = await options.pageFetch<any>(
+        `${options.baseUrl}/u/${encodeURIComponent(username)}.json`
+      )
+      const userData = options.extractData(userResult)
+      const resolvedUsername = String(userData?.user?.username || '').trim()
+      if (!resolvedUsername) {
+        options.notify.error('未找到该用户')
+        return
+      }
+      await assignPost(options.baseUrl, { postId: post.id, username: resolvedUsername })
+      options.notify.success(`已指定给 @${resolvedUsername}`)
+      options.onRefresh?.()
+    } catch (error) {
+      console.warn('[DiscourseBrowser] assign failed:', error)
+      options.notify.error(error instanceof Error ? error.message : '指定失败')
+    }
   }
 
   const handleDelete = async (post: DiscoursePost) => {

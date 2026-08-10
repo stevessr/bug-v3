@@ -124,6 +124,7 @@
   gap: 6px;
 }
 
+.chat-composer-emoji-btn,
 .chat-composer-upload-btn,
 .chat-composer-send {
   display: inline-flex;
@@ -140,6 +141,7 @@
     transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
+.chat-composer-emoji-btn,
 .chat-composer-upload-btn {
   width: 44px;
   flex: 0 0 44px;
@@ -149,6 +151,7 @@
   font-size: 16px;
 }
 
+.chat-composer-emoji-btn:hover:not(:disabled),
 .chat-composer-upload-btn:hover:not(:disabled) {
   background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
   color: var(--d-text, var(--theme-on-surface));
@@ -170,11 +173,13 @@
   filter: brightness(1.03);
 }
 
+.chat-composer-emoji-btn:active:not(:disabled),
 .chat-composer-upload-btn:active:not(:disabled),
 .chat-composer-send:active:not(:disabled) {
   transform: scale(0.94);
 }
 
+.chat-composer-emoji-btn:disabled,
 .chat-composer-upload-btn:disabled,
 .chat-composer-send:disabled {
   box-shadow: none;

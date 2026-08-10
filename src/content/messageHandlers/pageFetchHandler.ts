@@ -11,7 +11,7 @@ function getCsrfToken(): string | null {
   return meta?.getAttribute('content') || null
 }
 
-function getDiscoursePreloadedData(): Record<string, unknown> | null {
+export function getDiscoursePreloadedData(): Record<string, unknown> | null {
   const preloaded = document.getElementById('data-preloaded') as HTMLElement | null
   const raw = preloaded?.dataset?.preloaded || ''
 

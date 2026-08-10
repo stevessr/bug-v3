@@ -11,6 +11,8 @@ import type {
 import { parsePostContent } from '../parser/parsePostContent'
 import { pageFetch, extractData } from '../utils'
 import { assignPost, setTopicNotificationLevel } from '../actions'
+import { fetchDiscourseReactionCapabilities } from '../siteCapabilities'
+import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 
 import TopicHeader from './TopicHeader'
 import TopicPostsList from './TopicPostsList'
@@ -24,6 +26,7 @@ import { usePostRelations } from './usePostRelations'
 import { useTopicNavigation } from './useTopicNavigation'
 import AiSummaryModal from './AiSummaryModal'
 import FlagModal from './FlagModal'
+import PrivateMessageParticipants from './PrivateMessageParticipants'
 import '../css/TopicView.css'
 
 export default defineComponent({
@@ -80,12 +83,21 @@ export default defineComponent({
     const likeDetails = ref<
       Array<{ postNumber: number; likeCount: number; username: string; blurb?: string }>
     >([])
+    const reactionsEnabled = ref(false)
+    const allowedReactionNames = ref<string[]>([])
+    const allowAnyReaction = ref(false)
+    const reactionEmojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
+    let reactionLoadSequence = 0
 
     const activeTopic = computed(() => topicOverride.value ?? props.topic)
 
     const viewCount = computed(() => viewStats.value?.views ?? activeTopic.value?.views ?? null)
     const likeCount = computed(() => likeStats.value ?? activeTopic.value?.like_count ?? null)
-    const participants = computed(() => activeTopic.value?.details?.participants || [])
+    const participants = computed(() =>
+      (activeTopic.value?.details?.participants || [])
+        .map(value => ('user' in value ? value.user : value))
+        .filter(Boolean)
+    )
     const userCount = computed(() => viewStats.value?.users ?? participants.value.length)
 
     const sumStats = (items?: Array<Record<string, any>> | null) => {
@@ -147,6 +159,35 @@ export default defineComponent({
       await Promise.all([fetchViewStats(topicId), fetchLikeStats(topicId)])
     }
 
+    const loadReactionContract = async () => {
+      const sequence = ++reactionLoadSequence
+      reactionsEnabled.value = false
+      allowedReactionNames.value = []
+      allowAnyReaction.value = false
+      try {
+        const [capabilities, groups] = await Promise.all([
+          fetchDiscourseReactionCapabilities(props.baseUrl),
+          fetchDiscourseEmojiGroups(props.baseUrl)
+        ])
+        if (sequence !== reactionLoadSequence) return
+        reactionsEnabled.value = capabilities.source === 'site' && capabilities.enabled
+        allowedReactionNames.value = capabilities.enabledReactions
+        allowAnyReaction.value = capabilities.allowAnyEmoji
+        const map: Record<string, { url?: string; unicode?: string }> = {}
+        groups.forEach(group => {
+          group.emojis.forEach(emoji => {
+            const value = { url: emoji.url || undefined, unicode: emoji.unicode }
+            map[emoji.name] = value
+            map[emoji.id] = value
+          })
+        })
+        reactionEmojiMap.value = map
+      } catch (error) {
+        if (sequence !== reactionLoadSequence) return
+        console.warn('[DiscourseBrowser] load reaction capabilities failed:', error)
+      }
+    }
+
     const updateTopicOverride = (data: DiscourseTopicDetail | null, mode: 'summary' | 'full') => {
       topicOverride.value = data
       summaryMode.value = mode === 'summary'
@@ -190,6 +231,7 @@ export default defineComponent({
         summaryMode.value = false
         emit('toggleSummaryMode', false)
         void fetchTopicStats(topicId)
+        void loadReactionContract()
       },
       { immediate: true }
     )
@@ -329,18 +371,56 @@ export default defineComponent({
           `${props.baseUrl}/u/${encodeURIComponent(username)}.json`
         )
         const userData = extractData(userResult)
-        const assigneeId = userData?.user?.id
-        if (!assigneeId) {
+        const resolvedUsername = String(userData?.user?.username || '').trim()
+        if (!resolvedUsername) {
           message.error('未找到该用户')
           return
         }
-        await assignPost(props.baseUrl, { postId: firstPost.value.id, assigneeId })
+        await assignPost(props.baseUrl, {
+          postId: firstPost.value.id,
+          username: resolvedUsername
+        })
         message.success('指定成功')
       } catch (error) {
         console.warn('[DiscourseBrowser] assign failed:', error)
         message.error('指定失败')
       }
     }
+
+    const handleTopicShare = async () => {
+      const topic = activeTopic.value
+      const path = topic.slug
+        ? `/t/${encodeURIComponent(topic.slug)}/${topic.id}`
+        : `/t/${topic.id}`
+      const url = new URL(path, `${props.baseUrl}/`).toString()
+      try {
+        if (typeof navigator.share === 'function') {
+          await navigator.share({ title: topic.title, url })
+          return
+        }
+        await navigator.clipboard.writeText(url)
+        message.success('话题链接已复制')
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        try {
+          const input = document.createElement('input')
+          input.value = url
+          document.body.appendChild(input)
+          input.select()
+          document.execCommand('copy')
+          input.remove()
+          message.success('话题链接已复制')
+        } catch {
+          message.error('分享失败')
+        }
+      }
+    }
+
+    const isPrivateMessage = computed(
+      () =>
+        activeTopic.value.archetype === 'private_message' ||
+        Array.isArray(activeTopic.value.details?.allowed_users)
+    )
 
     const handleChangeNotificationLevel = async (level: number) => {
       try {
@@ -382,7 +462,7 @@ export default defineComponent({
     watch(
       () => props.topic?.id,
       () => {
-        likedPostIds.value = new Set()
+        likedPostIds.value = new Map()
         likingPostIds.value = new Set()
         resetRelations()
         timelinePostNumber.value = 1
@@ -393,6 +473,16 @@ export default defineComponent({
       <div class="topic-view">
         <main class="topic-main">
           <TopicHeader topic={activeTopic.value} />
+
+          {isPrivateMessage.value && (
+            <PrivateMessageParticipants
+              topic={activeTopic.value}
+              baseUrl={props.baseUrl}
+              currentUsername={props.currentUsername || ''}
+              onOpenUser={handleUserClick}
+              onRefresh={() => emit('refresh')}
+            />
+          )}
 
           {/* Posts list */}
           {activeTopic.value.post_stream?.posts ? (
@@ -416,9 +506,17 @@ export default defineComponent({
                 isPostLiked={isPostLiked}
                 getReactionCount={getReactionCount}
                 isLiking={(postId: number) => likingPostIds.value.has(postId)}
+                reactionsEnabled={reactionsEnabled.value}
+                allowedReactionNames={allowedReactionNames.value}
+                allowAnyReaction={allowAnyReaction.value}
+                reactionEmojiMap={reactionEmojiMap.value}
+                topicCanAssign={
+                  activeTopic.value.can_assign === true ||
+                  activeTopic.value.details?.can_assign === true
+                }
                 onOpenUser={handleUserClick}
                 onReplyTo={handleReplyClick}
-                onToggleLike={post => toggleLike(post, 'heart')}
+                onToggleLike={(post, reactionId) => toggleLike(post, reactionId)}
                 onToggleReplies={handleToggleReplies}
                 onToggleParent={handleToggleParent}
                 onNavigate={handleContentNavigation}
@@ -466,7 +564,9 @@ export default defineComponent({
             }
             bookmarked={!!firstPost.value?.bookmarked}
             canAssign={
-              !!props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
+              activeTopic.value.can_assign === true ||
+              activeTopic.value.details?.can_assign === true ||
+              (!!props.currentUser && (props.currentUser.admin || props.currentUser.moderator))
             }
             aiAvailable={aiAvailable.value}
             aiLoading={aiLoading.value}
@@ -474,6 +574,7 @@ export default defineComponent({
             onBookmark={handleTopicBookmark}
             onFlag={handleTopicFlag}
             onAssign={handleTopicAssign}
+            onShare={handleTopicShare}
             onReply={handleTopicReply}
             onAiSummary={handleAiSummary}
           />

@@ -2,6 +2,7 @@
 
 export type TopicListType =
   'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'bookmarks'
+export type TopicListPeriod = 'all' | 'yearly' | 'quarterly' | 'monthly' | 'weekly' | 'daily'
 
 export interface BrowserTab {
   id: string
@@ -9,6 +10,7 @@ export interface BrowserTab {
   url: string
   loading: boolean
   history: string[]
+  historyScrollPositions: number[]
   historyIndex: number
   scrollTop: number
   // Per-tab state
@@ -37,6 +39,7 @@ export interface BrowserTab {
   currentTagName: string
   // Topic list type for home view
   topicListType: TopicListType
+  topicListPeriod: TopicListPeriod | null
   // Activity state
   activityState: UserActivityState | null
   // Messages state
@@ -268,6 +271,35 @@ export interface DiscoursePost {
   polls?: DiscoursePoll[]
   boosts?: Boost[]
   can_boost?: boolean
+  can_assign?: boolean
+  reactions?: DiscoursePostReactionSummary[] | Record<string, DiscoursePostReactionSummary>
+  current_user_reaction?:
+    | string
+    | {
+        id: string
+        type?: string
+        can_undo?: boolean
+      }
+    | null
+  current_user_used_main_reaction?: boolean
+  reaction_users_count?: number
+  actions_summary?: Array<{ id: number; count?: number; acted?: boolean }>
+}
+
+export interface DiscoursePostReactionSummary {
+  id: string
+  type?: string
+  count: number
+  reacted?: boolean
+}
+
+export interface DiscourseReactionUser {
+  id: number
+  username: string
+  name?: string
+  avatar_template: string
+  reaction?: string
+  created_at?: string
 }
 
 export interface DiscoursePollOption {
@@ -312,6 +344,8 @@ export interface SuggestedTopic {
 
 export interface DiscourseTopicDetail {
   id: number
+  slug?: string
+  archetype?: 'regular' | 'private_message' | string
   title: string
   fancy_title: string
   posts_count: number
@@ -322,14 +356,22 @@ export interface DiscourseTopicDetail {
   last_posted_at?: string
   last_read_post_number?: number
   notification_level?: number
+  can_assign?: boolean
   post_stream: {
     posts: DiscoursePost[]
     stream: number[]
   }
   details: {
     created_by: DiscourseUser
-    participants: DiscourseUser[]
+    participants: Array<DiscourseUser | { user: DiscourseUser; post_count?: number }>
     notification_level?: number
+    allowed_users?: DiscourseUser[]
+    allowed_groups?: Array<{ id: number; name: string; full_name?: string }>
+    can_invite_to?: boolean
+    can_remove_allowed_users?: boolean
+    can_remove_self_id?: number | null
+    can_edit?: boolean
+    can_assign?: boolean
   }
   suggested_topics?: SuggestedTopic[]
   related_topics?: SuggestedTopic[]
@@ -407,7 +449,11 @@ export interface ChatChannelMembership {
   unread_count?: number
   starred?: boolean
   muted?: boolean
-  notification_level?: string
+  following?: boolean
+  notification_level?: 'never' | 'mention' | 'always' | number | string
+  last_viewed_at?: string
+  last_viewed_pins_at?: string | null
+  has_unseen_pins?: boolean
 }
 
 export interface ChatChannel {
@@ -417,6 +463,8 @@ export interface ChatChannel {
   channelType?: 'public' | 'direct'
   slug?: string
   description?: string
+  emoji?: string | null
+  chatable_url?: string
   chatable_type?: string
   chatable_id?: number
   chatable?: {
@@ -435,10 +483,24 @@ export interface ChatChannel {
     can_flag?: boolean
     can_join_chat_channel?: boolean
     can_remove_members?: boolean
+    can_delete_self?: boolean
+    can_delete_others?: boolean
+    can_manage_pins?: boolean
+    can_manage?: boolean
     user_silenced?: boolean
     [key: string]: any
   }
   status?: string
+  auto_join_users?: boolean
+  allow_channel_wide_mentions?: boolean
+  threading_enabled?: boolean
+  memberships_count?: number
+  pinned_messages_count?: number
+  archive_failed?: boolean
+  archive_completed?: boolean
+  archived_messages?: number
+  total_messages?: number
+  archive_topic_id?: number | null
   last_message_sent_at?: string
   last_message_id?: number
   last_message?: {
@@ -506,7 +568,11 @@ export interface ChatChannelUpdatePayload {
   slug?: string
   emoji?: string
   threading_enabled?: boolean
+  auto_join_users?: boolean
+  allow_channel_wide_mentions?: boolean
 }
+
+export type ChatChannelEditableStatus = 'open' | 'closed'
 
 export interface MessageBusTopicPayload {
   topic_id?: number
@@ -581,8 +647,6 @@ export interface ChatMembershipUpdatePayload {
   muted?: boolean
   notification_level?: number | string
   starred?: boolean
-  unread_count?: number
-  last_read_message_id?: number
 }
 
 export interface ChatCreateDirectMessagePayload {

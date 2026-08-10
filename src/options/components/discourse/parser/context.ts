@@ -26,8 +26,19 @@ export const createParseContext = (
 }
 
 export const resolveUrl = (ctx: ParseContext, url?: string | null) => {
-  if (!url) return ''
-  return url.startsWith('http') ? url : ctx.baseUrl ? `${ctx.baseUrl}${url}` : url
+  const value = url?.trim()
+  if (!value) return ''
+
+  try {
+    const resolved = ctx.baseUrl
+      ? new URL(value, `${ctx.baseUrl.replace(/\/+$/, '')}/`)
+      : new URL(value)
+    return resolved.protocol === 'http:' || resolved.protocol === 'https:'
+      ? resolved.toString()
+      : ''
+  } catch {
+    return ''
+  }
 }
 
 export const addImage = (ctx: ParseContext, url?: string | null) => {

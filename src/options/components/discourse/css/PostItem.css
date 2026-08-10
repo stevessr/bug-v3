@@ -243,6 +243,21 @@
   font-weight: 400;
 }
 
+.reactions-list .reaction-item--total {
+  border-style: dotted;
+  font-size: 10px;
+  font-weight: 680;
+}
+
+.reactions-list .reaction-item__fallback {
+  width: auto;
+  max-width: 86px;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .reactions-list .reaction-item .emoji {
   display: flex;
   align-items: center;

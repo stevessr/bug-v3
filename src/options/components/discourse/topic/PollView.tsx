@@ -2,6 +2,7 @@ import { defineComponent, computed, ref, watch } from 'vue'
 import { Button, Checkbox, Radio, Select, Progress, message } from 'ant-design-vue'
 
 import type { DiscoursePoll } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import '../css/PollView.css'
 
 type PollOption = {
@@ -325,7 +326,7 @@ export default defineComponent({
 
     return () => (
       <div class="poll-tsx">
-        <div class="poll-tsx-title" innerHTML={props.pollTitleHtml}></div>
+        <div class="poll-tsx-title" innerHTML={sanitizeDiscourseHtml(props.pollTitleHtml)}></div>
         {viewMode.value === 'results' ? renderResults() : renderVoteList()}
         <div class="poll-tsx-footer">
           <div class="poll-tsx-actions">

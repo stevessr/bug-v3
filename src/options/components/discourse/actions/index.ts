@@ -1,6 +1,12 @@
 // Topic actions
 export * from './topic'
-export { createTopic, replyToTopic, setTopicNotificationLevel } from './topic'
+export {
+  createTopic,
+  replyToTopic,
+  setTopicNotificationLevel,
+  inviteUserToPrivateMessage,
+  removeUserFromPrivateMessage
+} from './topic'
 export { fetchAiTopicSummary, requestAiTopicSummaryRegenerate } from './ai'
 export type { CreateTopicPayload, ReplyPayload } from './topic'
 

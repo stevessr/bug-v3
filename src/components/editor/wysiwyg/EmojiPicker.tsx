@@ -1,22 +1,11 @@
 /* @jsxImportSource vue */
 import { defineComponent, ref, computed, watch, onMounted, Teleport, Transition } from 'vue'
 
-import { pageFetch, extractData } from '@/options/components/discourse/utils'
-
-type DiscourseEmojiItem = {
-  name: string
-  url?: string
-  image_url?: string
-  sprite_url?: string
-  id?: string | number
-}
-
-type EmojiGroup = {
-  id: string
-  name: string
-  iconUrl?: string | null
-  emojis: Array<{ id: string; name: string; url: string }>
-}
+import {
+  fetchDiscourseEmojiGroups,
+  type DiscourseEmojiEntry,
+  type DiscourseEmojiGroup
+} from '@/options/components/discourse/linux.do/emojis'
 
 export default defineComponent({
   name: 'EmojiPicker',
@@ -29,70 +18,14 @@ export default defineComponent({
   setup(props, { emit }) {
     const searchQuery = ref('')
     const activeGroup = ref<string>('')
-    const emojiGroups = ref<EmojiGroup[]>([])
+    const emojiGroups = ref<DiscourseEmojiGroup[]>([])
     const loading = ref(false)
-
-    const normalizeEmojiUrl = (origin: string, url?: string | null) => {
-      if (!url) return ''
-      try {
-        return new URL(url, origin).toString()
-      } catch {
-        return url
-      }
-    }
 
     const loadDiscourseEmojis = async () => {
       if (!props.baseUrl) return
-      let origin = ''
-      try {
-        origin = new URL(props.baseUrl).origin
-      } catch {
-        return
-      }
-
       loading.value = true
       try {
-        const response = await pageFetch<any>(
-          `${origin}/emojis.json`,
-          {
-            headers: {
-              accept: 'application/json, text/javascript, */*; q=0.01',
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          },
-          'json'
-        )
-
-        const data = extractData(response)
-        if (!response.ok || !data || typeof data !== 'object') {
-          emojiGroups.value = []
-          return
-        }
-
-        const groups: EmojiGroup[] = []
-        Object.entries(data).forEach(([groupName, items]) => {
-          if (!Array.isArray(items)) return
-          const emojis = (items as DiscourseEmojiItem[])
-            .map(item => {
-              const url = normalizeEmojiUrl(origin, item.url || item.image_url || item.sprite_url)
-              if (!item.name || !url) return null
-              return {
-                id: String(item.id ?? item.name),
-                name: item.name,
-                url
-              }
-            })
-            .filter(Boolean) as Array<{ id: string; name: string; url: string }>
-
-          if (!emojis.length) return
-          groups.push({
-            id: groupName,
-            name: groupName.replace(/_/g, ' '),
-            iconUrl: emojis[0]?.url || null,
-            emojis
-          })
-        })
-
+        const groups = await fetchDiscourseEmojiGroups(props.baseUrl)
         emojiGroups.value = groups
         if (!activeGroup.value && groups.length) {
           activeGroup.value = groups[0].id
@@ -124,10 +57,10 @@ export default defineComponent({
       return emojiGroups.value
     })
 
-    const selectEmoji = (emoji: { name: string; url: string }) => {
+    const selectEmoji = (emoji: DiscourseEmojiEntry) => {
       emit('select', {
         name: emoji.name,
-        url: emoji.url,
+        url: emoji.url || '',
         shortcode: `:${emoji.name}:`
       })
       emit('close')
@@ -204,9 +137,9 @@ export default defineComponent({
                         }}
                         title={group.name}
                       >
-                        {group.iconUrl ? (
+                        {group.emojis[0]?.url ? (
                           <span class="group-icon-img">
-                            <img src={group.iconUrl} alt={group.name} />
+                            <img src={group.emojis[0].url} alt={group.name} />
                           </span>
                         ) : (
                           <span class="group-icon-text">🙂</span>
@@ -230,7 +163,11 @@ export default defineComponent({
                           title={emoji.name}
                           onClick={() => selectEmoji(emoji)}
                         >
-                          <img src={emoji.url} alt={emoji.name} loading="lazy" />
+                          {emoji.url ? (
+                            <img src={emoji.url} alt={emoji.name} loading="lazy" />
+                          ) : (
+                            <span aria-hidden="true">{emoji.unicode || emoji.name}</span>
+                          )}
                         </button>
                       ))}
                     </div>

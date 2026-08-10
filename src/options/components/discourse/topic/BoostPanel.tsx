@@ -26,6 +26,7 @@ export default defineComponent({
     const showEmojiPicker = ref(false)
     const boostText = ref('')
     const inputRef = ref<HTMLTextAreaElement | null>(null)
+    const emojiButtonRef = ref<HTMLButtonElement | null>(null)
     const submitting = ref(false)
     const flagTargetBoost = ref<Boost | null>(null)
     const flagMessage = ref('')
@@ -205,6 +206,7 @@ export default defineComponent({
                   }}
                 />
                 <button
+                  ref={emojiButtonRef}
                   type="button"
                   class="boost-panel__emoji-btn discourse-emoji-picker-trigger"
                   aria-label="插入站点表情短码"
@@ -218,6 +220,7 @@ export default defineComponent({
                   visible={showEmojiPicker.value}
                   baseUrl={props.baseUrl}
                   mode="shortcode"
+                  anchorEl={emojiButtonRef.value}
                   onSelect={insertShortcode}
                   onClose={() => (showEmojiPicker.value = false)}
                 />

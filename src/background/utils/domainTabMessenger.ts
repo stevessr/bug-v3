@@ -9,6 +9,8 @@ import * as storage from '@/utils/simpleStorage'
 export interface DomainTabMessage {
   type: string
   options?: Record<string, unknown>
+  url?: string
+  keys?: string[]
 }
 
 export interface DomainTabResponse {

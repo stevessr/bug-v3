@@ -1,4 +1,4 @@
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref, watch } from 'vue'
 
 import type { ChatChannel } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
@@ -14,6 +14,9 @@ export default defineComponent({
   },
   emits: ['select'],
   setup(props, { emit }) {
+    type SectionId = 'starred' | 'public' | 'direct'
+    const collapsedSections = ref<Set<SectionId>>(new Set())
+
     const getChannelLastTime = (channel: ChatChannel) => {
       const fallback = channel.last_message?.created_at
       const raw = channel.last_message_sent_at || fallback
@@ -80,11 +83,39 @@ export default defineComponent({
       return typeof count === 'number' && count > 0 ? count : 0
     }
 
+    const getChannelUrl = (channel: ChatChannel) => {
+      const slug = channel.slug ? `/${encodeURIComponent(channel.slug)}` : ''
+      return `${props.baseUrl}/chat/channel${slug}/${channel.id}`
+    }
+
+    const toggleSection = (section: SectionId) => {
+      const next = new Set(collapsedSections.value)
+      if (next.has(section)) next.delete(section)
+      else next.add(section)
+      collapsedSections.value = next
+    }
+
+    watch(
+      () => props.activeChannelId,
+      channelId => {
+        if (!channelId) return
+        const groups = groupedChannels.value
+        const section = (Object.keys(groups) as SectionId[]).find(key =>
+          groups[key].some(channel => channel.id === channelId)
+        )
+        if (!section || !collapsedSections.value.has(section)) return
+        const next = new Set(collapsedSections.value)
+        next.delete(section)
+        collapsedSections.value = next
+      }
+    )
+
     const renderChannel = (channel: ChatChannel, keyPrefix: string) => (
       <button
         type="button"
         key={`${keyPrefix}-${channel.id}`}
         class={['chat-channel-item', channel.id === props.activeChannelId ? 'active' : '']}
+        data-discourse-url={getChannelUrl(channel)}
         onClick={() => emit('select', channel)}
       >
         <div class="chat-channel-avatar">
@@ -106,30 +137,42 @@ export default defineComponent({
       </button>
     )
 
+    const renderSection = (id: SectionId, label: string, channels: ChatChannel[]) => {
+      if (channels.length === 0) return null
+      const collapsed = collapsedSections.value.has(id)
+      const unread = channels.reduce((total, channel) => total + getUnreadCount(channel), 0)
+      return (
+        <section class="chat-channel-group" data-chat-channel-group={id}>
+          <button
+            type="button"
+            class="chat-channel-section"
+            aria-expanded={!collapsed}
+            aria-controls={`chat-channel-section-${id}`}
+            onClick={() => toggleSection(id)}
+          >
+            <span class="chat-channel-section__chevron" aria-hidden="true">
+              {collapsed ? '▶' : '▼'}
+            </span>
+            <span>{label}</span>
+            <span class="chat-channel-section__count">{channels.length}</span>
+            {unread > 0 && <span class="chat-channel-section__unread">{unread}</span>}
+          </button>
+          {!collapsed && (
+            <div id={`chat-channel-section-${id}`} class="chat-channel-group__items">
+              {channels.map(channel => renderChannel(channel, id))}
+            </div>
+          )}
+        </section>
+      )
+    }
+
     return () => (
       <div class="chat-channel-list">
         {props.loading && <div class="chat-channel-loading">加载频道中...</div>}
 
-        {groupedChannels.value.starred.length > 0 && (
-          <>
-            <div class="chat-channel-section">收藏</div>
-            {groupedChannels.value.starred.map(c => renderChannel(c, 'starred'))}
-          </>
-        )}
-
-        {groupedChannels.value.public.length > 0 && (
-          <>
-            <div class="chat-channel-section">频道</div>
-            {groupedChannels.value.public.map(c => renderChannel(c, 'public'))}
-          </>
-        )}
-
-        {groupedChannels.value.direct.length > 0 && (
-          <>
-            <div class="chat-channel-section">直接消息</div>
-            {groupedChannels.value.direct.map(c => renderChannel(c, 'direct'))}
-          </>
-        )}
+        {renderSection('starred', '收藏', groupedChannels.value.starred)}
+        {renderSection('public', '频道', groupedChannels.value.public)}
+        {renderSection('direct', '直接消息', groupedChannels.value.direct)}
       </div>
     )
   }

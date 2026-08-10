@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { EditOutlined, CloseOutlined, WarningOutlined } from '@ant-design/icons-vue'
+import {
+  EditOutlined,
+  CloseOutlined,
+  WarningOutlined,
+  MessageOutlined,
+  MinusOutlined,
+  ExpandOutlined
+} from '@ant-design/icons-vue'
 
 import { useDiscourseBrowser } from './discourse/useDiscourseBrowser'
 import type {
+  ChatChannelEditableStatus,
+  ChatChannelUpdatePayload,
+  ChatMembershipUpdatePayload,
   ChatMessage,
   DiscourseCategory,
   DiscourseTag,
@@ -13,6 +23,8 @@ import type {
   ActivityTabType,
   MessagesTabType,
   DiscoursePost,
+  DiscourseNotification,
+  DiscourseNotificationFilter,
   DiscourseSearchFilters,
   TopicListType,
   DiscourseUserPreferences,
@@ -23,14 +35,22 @@ import type {
   ReviewStatus,
   DiscourseUser
 } from './discourse/types'
+import { resolveDiscourseHttpUrl } from './discourse/navigation'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
 import Icon from './discourse/layout/Icon'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
 import BrowserToolbar from './discourse/browser/BrowserToolbar'
 import BrowserTabs from './discourse/browser/BrowserTabs'
+import DiscourseContextMenu from './discourse/browser/DiscourseContextMenu'
 import HomeView from './discourse/browser/views/HomeView.vue'
-import { pageFetch, extractData } from './discourse/utils'
+import {
+  pageFetch,
+  extractData,
+  getPageFetchActivity,
+  subscribePageFetchActivity,
+  type PageFetchActivity
+} from './discourse/utils'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 import {
   createDiscourseMessageBusClient,
@@ -103,6 +123,7 @@ const {
   openUserGroups,
   openUserPreferences,
   openChat,
+  ensureChatLoaded,
   openQuote,
   loadMorePosts,
   ensurePostNumberLoaded,
@@ -157,6 +178,9 @@ const {
   followChatChannel,
   unfollowChatChannel,
   deleteChatChannel,
+  leaveChatChannel,
+  updateChatStatus,
+  updateChatMembership,
   searchChatables
 } = useDiscourseBrowser()
 
@@ -187,6 +211,22 @@ const quickSidebarLoading = ref(false)
 const quickSidebarSections = ref<QuickSidebarSection[]>([])
 const quickSidebarError = ref<string | null>(null)
 const quickSidebarFetchedAt = ref(0)
+const initialPageFetchActivity = getPageFetchActivity()
+const pageFetchActivity = ref<PageFetchActivity>(initialPageFetchActivity)
+// useDiscourseBrowser can start the first navigation before this component's
+// watchers are registered. Count any requests that are already active/queued
+// while excluding requests completed by an earlier browser mount.
+const pageFetchBaseline = ref({
+  total: Math.max(
+    0,
+    initialPageFetchActivity.total -
+      initialPageFetchActivity.active -
+      initialPageFetchActivity.queued
+  ),
+  completed: initialPageFetchActivity.completed
+})
+let unsubscribePageFetchActivity: (() => void) | null = null
+const contextMenu = ref({ open: false, x: 0, y: 0, url: '' })
 const MESSAGE_BUS_USER_ID_CACHE_TTL_MS = 5 * 60 * 1000
 const MESSAGE_BUS_USER_ID_ERROR_CACHE_TTL_MS = 60 * 1000
 const MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS = 1200
@@ -282,6 +322,11 @@ const shouldSubscribeListChannel = (channel: '/latest' | '/new' | '/unread') => 
   return tab.viewType === 'home' ? tab.topicListType === 'unread' : true
 }
 const notificationsOpen = ref(false)
+const notificationSnapshots = new Map<
+  string,
+  { notifications: DiscourseNotification[]; unreadCount: number }
+>()
+const notificationFiltersFetchedThisOpen = new Set<string>()
 
 type NotificationLevel = 0 | 1 | 2 | 3 | 4
 
@@ -297,6 +342,29 @@ const createGroupSearching = ref(false)
 const createGroupResults = ref<DiscourseUser[]>([])
 const manageSearching = ref(false)
 const manageSearchResults = ref<DiscourseUser[]>([])
+const chatChannelSaving = ref(false)
+const chatMembershipSaving = ref(false)
+const chatStatusSaving = ref(false)
+const chatFollowSaving = ref(false)
+const chatLeavingChannel = ref(false)
+const chatDeletingChannel = ref(false)
+const floatingChatOpen = ref(false)
+const floatingChatMinimized = ref(false)
+const floatingChatLoading = ref(false)
+
+const floatingChatUnreadCount = computed(() =>
+  (activeTab.value?.chatState?.channels || []).reduce(
+    (total, channel) =>
+      total + Math.max(0, Number(channel.current_user_membership?.unread_count || 0)),
+    0
+  )
+)
+
+const floatingChatTitle = computed(() => {
+  const state = activeTab.value?.chatState
+  const channel = state?.channels.find(item => item.id === state.activeChannelId)
+  return channel?.title || channel?.unicode_title || channel?.chatable?.name || '聊天'
+})
 
 // Private message composer state
 const pmComposerOpen = ref(false)
@@ -304,6 +372,22 @@ const pmComposerTargets = ref('')
 const pmComposerTitle = ref('')
 const pmComposerRaw = ref('')
 const pmComposerSending = ref(false)
+
+const pageRequestProgress = computed(() => {
+  const activity = pageFetchActivity.value
+  const requested = Math.max(0, activity.total - pageFetchBaseline.value.total)
+  const completed = Math.max(0, activity.completed - pageFetchBaseline.value.completed)
+  const total = Math.max(requested, completed)
+  const pending = Math.max(0, total - completed)
+  return {
+    total,
+    pending,
+    active: Math.min(activity.active, pending),
+    queued: Math.min(activity.queued, Math.max(0, pending - activity.active)),
+    completed: Math.min(completed, total),
+    percent: total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0
+  }
+})
 
 const composerTopicId = computed(() => {
   if (composerMode.value === 'edit') {
@@ -434,9 +518,14 @@ const handleScrollRaf = () => {
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
   if (!activeTab.value || !contentAreaRef.value) return
+  const el = contentAreaRef.value
+  activeTab.value.scrollTop = el.scrollTop
+  if (!activeTab.value.historyScrollPositions) {
+    activeTab.value.historyScrollPositions = []
+  }
+  activeTab.value.historyScrollPositions[activeTab.value.historyIndex] = el.scrollTop
   if (activeTab.value.loading || isLoadingMore.value) return
 
-  const el = contentAreaRef.value
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
   const viewType = activeTab.value.viewType
 
@@ -471,6 +560,38 @@ const handleScroll = async () => {
     }
   }
 }
+
+let scrollRestoreRafId: number | null = null
+watch(
+  () => activeTab.value?.loading,
+  loading => {
+    if (!loading) return
+    const activity = getPageFetchActivity()
+    pageFetchBaseline.value = {
+      total: activity.total,
+      completed: activity.completed
+    }
+  },
+  { flush: 'sync' }
+)
+
+watch(
+  () => [activeTabId.value, activeTab.value?.url, activeTab.value?.loading] as const,
+  async ([tabId, url, loading]) => {
+    if (!tabId || !url || loading) return
+    await nextTick()
+    if (scrollRestoreRafId !== null) cancelAnimationFrame(scrollRestoreRafId)
+    scrollRestoreRafId = requestAnimationFrame(() => {
+      scrollRestoreRafId = null
+      const tab = activeTab.value
+      const container = contentAreaRef.value
+      if (!tab || tab.id !== tabId || tab.url !== url || !container) return
+      const saved = tab.historyScrollPositions?.[tab.historyIndex] ?? tab.scrollTop ?? 0
+      container.scrollTop = Math.max(0, saved)
+    })
+  },
+  { immediate: true }
+)
 
 // Handle topic click
 const handleTopicClick = (topic: DiscourseTopic | SuggestedTopic) => {
@@ -520,11 +641,20 @@ const handleOpenMyProfile = () => {
 
 const handleNotificationsOpenChange = async (open: boolean) => {
   notificationsOpen.value = open
-  if (!open) return
+  if (!open) {
+    notificationFiltersFetchedThisOpen.clear()
+    return
+  }
   const tab = activeTab.value
   if (!tab) return
   try {
-    await loadNotifications(tab, tab.notificationsFilter)
+    await loadNotifications(tab, tab.notificationsFilter, true)
+    const key = `${tab.id}:${tab.notificationsFilter}`
+    notificationSnapshots.set(key, {
+      notifications: [...tab.notifications],
+      unreadCount: tab.unreadNotificationsCount
+    })
+    notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications load failed:', error)
   }
@@ -534,18 +664,49 @@ const handleRefreshNotifications = async () => {
   const tab = activeTab.value
   if (!tab) return
   try {
-    await loadNotifications(tab, tab.notificationsFilter)
+    await loadNotifications(tab, tab.notificationsFilter, true)
+    const key = `${tab.id}:${tab.notificationsFilter}`
+    notificationSnapshots.set(key, {
+      notifications: [...tab.notifications],
+      unreadCount: tab.unreadNotificationsCount
+    })
+    if (notificationsOpen.value) notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications refresh failed:', error)
   }
 }
 
-const handleNotificationFilterChange = async (filter: any) => {
+const handleNotificationFilterChange = async (filter: DiscourseNotificationFilter) => {
   const tab = activeTab.value
   if (!tab) return
+  if (tab.viewType === 'notifications') {
+    const target = new URL(tab.url, baseUrl.value)
+    target.pathname = target.pathname.replace(/(\/notifications)(?:\/[^/]+)?\/?$/i, '$1')
+    if (filter === 'all') {
+      target.searchParams.delete('filter')
+    } else {
+      target.searchParams.set('filter', filter)
+    }
+    await navigateTo(target.toString())
+    return
+  }
   tab.notificationsFilter = filter
+  const key = `${tab.id}:${filter}`
+  if (notificationsOpen.value && notificationFiltersFetchedThisOpen.has(key)) {
+    const snapshot = notificationSnapshots.get(key)
+    if (snapshot) {
+      tab.notifications = [...snapshot.notifications]
+      tab.unreadNotificationsCount = snapshot.unreadCount
+      return
+    }
+  }
   try {
-    await loadNotifications(tab, filter)
+    await loadNotifications(tab, filter, true)
+    notificationSnapshots.set(key, {
+      notifications: [...tab.notifications],
+      unreadCount: tab.unreadNotificationsCount
+    })
+    if (notificationsOpen.value) notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications load failed:', error)
   }
@@ -573,13 +734,70 @@ const handleQuoteClick = (payload: { topicId: number; postNumber: number }) => {
 
 // Handle content navigation (links in posts)
 const handleContentNavigation = (url: string) => {
-  if (url.startsWith('/')) {
-    // Internal path
-    navigateTo(url)
-  } else {
-    // External URL, open in new tab
-    window.open(url, '_blank')
+  const target = resolveDiscourseHttpUrl(url, baseUrl.value)
+  if (!target) return
+
+  const targetUrl = new URL(target)
+  const forumUrl = new URL(baseUrl.value)
+  if (targetUrl.origin === forumUrl.origin) {
+    navigateTo(targetUrl.toString())
+    return
   }
+
+  const opened = window.open(targetUrl.toString(), '_blank', 'noopener,noreferrer')
+  if (opened) opened.opener = null
+}
+
+const closeContextMenu = () => {
+  contextMenu.value.open = false
+}
+
+const handleBrowserContextMenu = (event: MouseEvent) => {
+  const target = event.target
+  if (!(target instanceof Element)) return
+
+  const clickable = target.closest<HTMLElement>('[data-discourse-url], a[href]')
+  if (!clickable) return
+  const rawUrl =
+    clickable.dataset.discourseUrl ||
+    (clickable instanceof HTMLAnchorElement ? clickable.getAttribute('href') : '') ||
+    ''
+  const resolved = resolveDiscourseHttpUrl(rawUrl, baseUrl.value)
+  if (!resolved) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  contextMenu.value = {
+    open: true,
+    x: event.clientX,
+    y: event.clientY,
+    url: resolved
+  }
+}
+
+const openContextUrlInBrowserTab = () => {
+  const target = contextMenu.value.url
+  if (!target) return
+  const opened = window.open(target, '_blank', 'noopener,noreferrer')
+  if (opened) opened.opener = null
+}
+
+const copyContextUrl = async () => {
+  const target = contextMenu.value.url
+  if (!target) return
+  try {
+    await navigator.clipboard.writeText(target)
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = target
+    input.style.position = 'fixed'
+    input.style.opacity = '0'
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    input.remove()
+  }
+  message.success('链接已复制')
 }
 
 // Handle topic click from user view
@@ -610,6 +828,38 @@ const handleOpenUserMessages = (username: string) => {
 }
 
 const handleOpenChat = () => {
+  openChat()
+}
+
+const openFloatingChat = async () => {
+  const wasOpen = floatingChatOpen.value
+  floatingChatOpen.value = true
+  if (!wasOpen) floatingChatMinimized.value = false
+  if (floatingChatLoading.value) return
+  floatingChatLoading.value = true
+  try {
+    const loaded = await ensureChatLoaded()
+    if (!loaded) message.error('无法加载聊天')
+  } finally {
+    floatingChatLoading.value = false
+  }
+}
+
+const toggleFloatingChat = () => {
+  if (floatingChatOpen.value) {
+    floatingChatOpen.value = false
+    return
+  }
+  void openFloatingChat()
+}
+
+const closeFloatingChat = () => {
+  floatingChatOpen.value = false
+  floatingChatMinimized.value = false
+}
+
+const expandFloatingChatToPage = () => {
+  closeFloatingChat()
   openChat()
 }
 
@@ -981,16 +1231,57 @@ const handleTagNotificationLevelChange = async (level: number) => {
 
 const loadQuickSidebar = async (force = false) => {
   const now = Date.now()
-  if (!currentUsername.value) return
   if (!force && now - quickSidebarFetchedAt.value < 60000) return
   if (quickSidebarLoading.value) return
+
+  const username = currentUsername.value
+  const shortcutSection: QuickSidebarSection = {
+    title: '快捷入口',
+    items: [
+      { id: 'home', label: '主页', path: '/', icon: 'list' },
+      { id: 'latest', label: '最新', path: '/latest', icon: 'clock' },
+      { id: 'new', label: '新话题', path: '/new', icon: 'plus' },
+      { id: 'unread', label: '未读', path: '/unread', icon: 'circle' },
+      { id: 'categories', label: '分类', path: '/categories', icon: 'list' },
+      { id: 'tags', label: '标签', path: '/tags', icon: 'tags' },
+      { id: 'chat', label: '聊天', path: '/chat', icon: 'comment' },
+      {
+        id: 'notifications',
+        label: '通知',
+        path: username ? `/u/${encodeURIComponent(username)}/notifications` : '/my/notifications',
+        icon: 'bell'
+      },
+      {
+        id: 'private-messages',
+        label: '私信',
+        path: username
+          ? `/u/${encodeURIComponent(username)}/user-menu-private-messages`
+          : '/my/messages',
+        icon: 'envelope'
+      },
+      {
+        id: 'bookmarks',
+        label: '书签',
+        path: username ? `/u/${encodeURIComponent(username)}/user-menu-bookmarks` : '/bookmarks',
+        icon: 'bookmark'
+      },
+      { id: 'posted', label: '我的帖子', path: '/posted', icon: 'pencil' }
+    ]
+  }
+
+  quickSidebarSections.value = [shortcutSection]
+  if (!username) {
+    quickSidebarFetchedAt.value = now
+    quickSidebarError.value = null
+    return
+  }
 
   quickSidebarLoading.value = true
   quickSidebarError.value = null
 
   try {
     const [userResult, categoriesResult] = await Promise.all([
-      pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(currentUsername.value)}.json`),
+      pageFetch<any>(`${baseUrl.value}/u/${encodeURIComponent(username)}.json`),
       pageFetch<any>(`${baseUrl.value}/categories.json`)
     ])
 
@@ -1005,41 +1296,7 @@ const loadQuickSidebar = async (force = false) => {
     const normalizedPrefs = normalizeNotificationPreferences(user.user_option || {})
     notificationPreferences.value = normalizedPrefs
     notificationPreferencesKey.value = buildNotificationPreferencesKey()
-    const sections: QuickSidebarSection[] = []
-
-    sections.push({
-      title: '快捷入口',
-      items: [
-        { id: 'home', label: '主页', path: '/', icon: 'list' },
-        { id: 'categories', label: '分类', path: '/categories', icon: 'list' },
-        { id: 'tags', label: '标签', path: '/tags', icon: 'tags' },
-        {
-          id: 'notifications',
-          label: '通知',
-          path: currentUsername.value
-            ? `/u/${encodeURIComponent(currentUsername.value)}/notifications`
-            : '/my/notifications',
-          icon: 'bell'
-        },
-        {
-          id: 'private-messages',
-          label: '私信',
-          path: currentUsername.value
-            ? `/u/${encodeURIComponent(currentUsername.value)}/user-menu-private-messages`
-            : '/my/messages',
-          icon: 'envelope'
-        },
-        {
-          id: 'bookmarks',
-          label: '书签',
-          path: currentUsername.value
-            ? `/u/${encodeURIComponent(currentUsername.value)}/user-menu-bookmarks`
-            : '/bookmarks',
-          icon: 'bookmark'
-        },
-        { id: 'posted', label: '我的帖子', path: '/posted', icon: 'pencil' }
-      ]
-    })
+    const sections: QuickSidebarSection[] = [shortcutSection]
 
     const watchedCategoryItems = buildCategoryItems(
       normalizedPrefs.watched_category_ids,
@@ -1124,19 +1381,55 @@ const handleReactChatMessage = async (payload: {
 
 const handleEditChatChannel = async (payload: {
   channelId: number
-  updates: {
-    name?: string
-    description?: string
-    slug?: string
-    emoji?: string
-    threading_enabled?: boolean
-  }
+  updates: ChatChannelUpdatePayload
 }) => {
-  const channel = await updateChatChannel(payload.channelId, payload.updates)
-  if (channel) {
-    message.success('频道已更新')
-  } else {
-    message.error(activeTab.value?.chatState?.errorMessage || '频道更新失败')
+  if (chatChannelSaving.value) return
+  chatChannelSaving.value = true
+  try {
+    const channel = await updateChatChannel(payload.channelId, payload.updates)
+    if (channel) {
+      message.success('频道设置已保存')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '频道更新失败')
+    }
+  } finally {
+    chatChannelSaving.value = false
+  }
+}
+
+const handleUpdateChatMembership = async (payload: {
+  channelId: number
+  updates: ChatMembershipUpdatePayload
+}) => {
+  if (chatMembershipSaving.value) return
+  chatMembershipSaving.value = true
+  try {
+    const ok = await updateChatMembership(payload.channelId, payload.updates)
+    if (ok) {
+      message.success('个人频道设置已更新')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '个人频道设置更新失败')
+    }
+  } finally {
+    chatMembershipSaving.value = false
+  }
+}
+
+const handleUpdateChatStatus = async (payload: {
+  channelId: number
+  status: ChatChannelEditableStatus
+}) => {
+  if (chatStatusSaving.value) return
+  chatStatusSaving.value = true
+  try {
+    const ok = await updateChatStatus(payload.channelId, payload.status)
+    if (ok) {
+      message.success(payload.status === 'open' ? '频道已开放' : '频道已关闭')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '频道状态更新失败')
+    }
+  } finally {
+    chatStatusSaving.value = false
   }
 }
 
@@ -1268,21 +1561,59 @@ const handleRemoveChatMember = async (payload: { channelId: number; userId: numb
 }
 
 const handleFollowChatChannel = async (channelId: number) => {
-  const ok = await followChatChannel(channelId)
-  if (ok) {
-    message.success('已恢复关注')
-  } else {
-    message.error(activeTab.value?.chatState?.errorMessage || '操作失败')
+  if (chatFollowSaving.value) return
+  chatFollowSaving.value = true
+  try {
+    const ok = await followChatChannel(channelId)
+    if (ok) {
+      message.success('已关注频道')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '关注频道失败')
+    }
+  } finally {
+    chatFollowSaving.value = false
   }
 }
 
 const handleUnfollowChatChannel = async (channelId: number) => {
-  const ok = await unfollowChatChannel(channelId)
-  if (ok) {
-    message.success('频道已静音')
-  } else {
-    message.error(activeTab.value?.chatState?.errorMessage || '操作失败')
+  if (chatFollowSaving.value) return
+  chatFollowSaving.value = true
+  try {
+    const ok = await unfollowChatChannel(channelId)
+    if (ok) {
+      message.success('已取消关注频道')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '取消关注失败')
+    }
+  } finally {
+    chatFollowSaving.value = false
   }
+}
+
+const handleLeaveChatChannel = (channelId: number) => {
+  const channel = activeTab.value?.chatState?.channels.find(c => c.id === channelId)
+  Modal.confirm({
+    title: '退出频道',
+    content: `确定要退出「${channel?.title || channel?.chatable?.name || channelId}」吗？群组私信会将你从成员列表中移除。`,
+    okText: '退出',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      if (chatLeavingChannel.value) return
+      chatLeavingChannel.value = true
+      try {
+        const ok = await leaveChatChannel(channelId)
+        if (ok) {
+          message.success('已退出频道')
+        } else {
+          message.error(activeTab.value?.chatState?.errorMessage || '退出频道失败')
+          throw new Error(activeTab.value?.chatState?.errorMessage || '退出频道失败')
+        }
+      } finally {
+        chatLeavingChannel.value = false
+      }
+    }
+  })
 }
 
 const handleDeleteChatChannel = async (channelId: number) => {
@@ -1294,11 +1625,18 @@ const handleDeleteChatChannel = async (channelId: number) => {
     cancelText: '取消',
     okButtonProps: { danger: true },
     onOk: async () => {
-      const ok = await deleteChatChannel(channelId)
-      if (ok) {
-        message.success('频道已删除')
-      } else {
-        message.error(activeTab.value?.chatState?.errorMessage || '删除频道失败')
+      if (chatDeletingChannel.value) return
+      chatDeletingChannel.value = true
+      try {
+        const ok = await deleteChatChannel(channelId)
+        if (ok) {
+          message.success('频道已删除')
+        } else {
+          message.error(activeTab.value?.chatState?.errorMessage || '删除频道失败')
+          throw new Error(activeTab.value?.chatState?.errorMessage || '删除频道失败')
+        }
+      } finally {
+        chatDeletingChannel.value = false
       }
     }
   })
@@ -1666,21 +2004,9 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const normalizeImageUrl = (img: HTMLImageElement) => {
   const rawSrc = img.getAttribute('src') || ''
-  if (rawSrc.startsWith('http://') || rawSrc.startsWith('https://')) return rawSrc
-  if (rawSrc.startsWith('//')) return `https:${rawSrc}`
   if (rawSrc.startsWith('data:') || rawSrc.startsWith('blob:')) return rawSrc
-
-  if (rawSrc.startsWith('/')) {
-    const base = baseUrl.value?.replace(/\/+$/, '')
-    return base ? `${base}${rawSrc}` : rawSrc
-  }
-
   if (rawSrc) {
-    try {
-      return new URL(rawSrc, baseUrl.value || window.location.href).toString()
-    } catch {
-      return rawSrc
-    }
+    return resolveDiscourseHttpUrl(rawSrc, baseUrl.value || window.location.href) || rawSrc
   }
 
   return img.currentSrc || img.src || ''
@@ -1964,7 +2290,7 @@ function dispatchMessageBusMessage(payload: unknown, channel: string, _messageId
       return
     }
 
-    if (tab.viewType === 'chat' && tab.chatState) {
+    if ((tab.viewType === 'chat' || floatingChatOpen.value) && tab.chatState) {
       void runSerialMessageBusRefresh(async () => {
         const patched = await patchChatFromMessageBus(tab, channelId, chatPayload, channel)
         if (!patched) {
@@ -2023,7 +2349,7 @@ const messageBusDesiredSubscriptions = computed(() => {
     })
   }
 
-  if (tab?.viewType === 'chat' && tab.chatState?.activeChannelId) {
+  if ((tab?.viewType === 'chat' || floatingChatOpen.value) && tab?.chatState?.activeChannelId) {
     const channelId = tab.chatState.activeChannelId
     subscriptions.set(`/chat/${channelId}`, {
       channel: `/chat/${channelId}`,
@@ -2138,10 +2464,18 @@ watch(
   () => [
     activeTab.value?.id,
     activeTab.value?.viewType,
-    activeTab.value?.chatState?.activeChannelId
+    activeTab.value?.chatState?.activeChannelId,
+    floatingChatOpen.value
   ],
   () => {
     syncMessageBusSubscriptions()
+  }
+)
+
+watch(
+  () => [floatingChatOpen.value, activeTab.value?.id, baseUrl.value] as const,
+  ([open]) => {
+    if (open) void openFloatingChat()
   }
 )
 
@@ -2191,6 +2525,9 @@ watch(
 
 // Initialize
 onMounted(() => {
+  unsubscribePageFetchActivity = subscribePageFetchActivity(activity => {
+    pageFetchActivity.value = activity
+  })
   ensureSessionUser()
   createTab()
   nextTick(() => {
@@ -2213,6 +2550,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  unsubscribePageFetchActivity?.()
+  unsubscribePageFetchActivity = null
   clearMessageBusSubscriptions()
   messageBus.stop()
   if (contentAreaRef.value) {
@@ -2221,6 +2560,10 @@ onUnmounted(() => {
   if (scrollRafId !== null) {
     cancelAnimationFrame(scrollRafId)
     scrollRafId = null
+  }
+  if (scrollRestoreRafId !== null) {
+    cancelAnimationFrame(scrollRestoreRafId)
+    scrollRestoreRafId = null
   }
   window.removeEventListener('mousemove', handlePointerMove)
   window.removeEventListener('mouseup', stopPointer)
@@ -2236,7 +2579,10 @@ onUnmounted(() => {
 
 <template>
   <Icon :baseUrl="baseUrl" />
-  <div class="discourse-browser flex flex-col h-full min-h-0 overflow-hidden">
+  <div
+    class="discourse-browser flex flex-col h-full min-h-0 overflow-hidden"
+    @contextmenu="handleBrowserContextMenu"
+  >
     <!-- Toolbar -->
     <BrowserToolbar
       v-model="urlInput"
@@ -2249,6 +2595,20 @@ onUnmounted(() => {
       @toggleQuickSidebar="toggleQuickSidebar"
     >
       <template #right>
+        <button
+          type="button"
+          class="toolbar-icon-button floating-chat-trigger"
+          :class="{ 'is-active': floatingChatOpen }"
+          :aria-pressed="floatingChatOpen"
+          aria-label="打开聊天悬浮窗"
+          title="聊天悬浮窗"
+          @click="toggleFloatingChat"
+        >
+          <MessageOutlined />
+          <span v-if="floatingChatUnreadCount > 0" class="floating-chat-trigger__badge">
+            {{ floatingChatUnreadCount > 99 ? '99+' : floatingChatUnreadCount }}
+          </span>
+        </button>
         <NotificationsDropdown
           :notifications="activeTab?.notifications || []"
           :filter="activeTab?.notificationsFilter || 'all'"
@@ -2296,6 +2656,16 @@ onUnmounted(() => {
         <div class="browser-state__copy">
           <div class="browser-state__title">正在打开页面</div>
           <div class="browser-state__description">正在从论坛同步最新内容…</div>
+          <div class="browser-state__progress" aria-live="polite">
+            <div class="browser-state__progress-track" aria-hidden="true">
+              <span :style="{ width: `${pageRequestProgress.percent}%` }" />
+            </div>
+            <span v-if="pageRequestProgress.total > 0">
+              请求 {{ pageRequestProgress.completed }} / {{ pageRequestProgress.total }}，正在处理
+              {{ pageRequestProgress.active }} 个，排队 {{ pageRequestProgress.queued }} 个
+            </span>
+            <span v-else>正在准备请求…</span>
+          </div>
         </div>
       </div>
 
@@ -2432,6 +2802,12 @@ onUnmounted(() => {
         :createGroupResults="createGroupResults"
         :manageSearching="manageSearching"
         :manageSearchResults="manageSearchResults"
+        :savingChannel="chatChannelSaving"
+        :savingMembership="chatMembershipSaving"
+        :savingStatus="chatStatusSaving"
+        :savingFollow="chatFollowSaving"
+        :leavingChannel="chatLeavingChannel"
+        :deletingChannel="chatDeletingChannel"
         @selectChannel="handleSelectChatChannel"
         @loadMore="handleLoadMoreChatMessages"
         @sendMessage="handleSendChatMessage"
@@ -2452,6 +2828,9 @@ onUnmounted(() => {
         @removeMember="handleRemoveChatMember"
         @followChannel="handleFollowChatChannel"
         @unfollowChannel="handleUnfollowChatChannel"
+        @updateMembership="handleUpdateChatMembership"
+        @updateStatus="handleUpdateChatStatus"
+        @leaveChannel="handleLeaveChatChannel"
         @deleteChannel="handleDeleteChatChannel"
         @manageSearch="handleManageSearch"
       />
@@ -2622,6 +3001,111 @@ onUnmounted(() => {
     </div>
   </div>
 
+  <DiscourseContextMenu
+    :open="contextMenu.open"
+    :x="contextMenu.x"
+    :y="contextMenu.y"
+    :url="contextMenu.url"
+    @close="closeContextMenu"
+    @openCurrent="handleContentNavigation(contextMenu.url)"
+    @openForumTab="openInNewTab(contextMenu.url)"
+    @openBrowserTab="openContextUrlInBrowserTab"
+    @copy="copyContextUrl"
+  />
+
+  <section
+    v-if="floatingChatOpen"
+    class="floating-chat"
+    :class="{ 'is-minimized': floatingChatMinimized }"
+    aria-label="Discourse 聊天悬浮窗"
+    @contextmenu="handleBrowserContextMenu"
+  >
+    <header class="floating-chat__header">
+      <div class="floating-chat__identity">
+        <span class="floating-chat__logo" aria-hidden="true"><MessageOutlined /></span>
+        <span>
+          <strong>{{ floatingChatTitle }}</strong>
+          <small>Discourse Chat</small>
+        </span>
+      </div>
+      <div class="floating-chat__window-actions">
+        <button
+          type="button"
+          :aria-label="floatingChatMinimized ? '展开聊天' : '最小化聊天'"
+          :title="floatingChatMinimized ? '展开' : '最小化'"
+          @click="floatingChatMinimized = !floatingChatMinimized"
+        >
+          <MessageOutlined v-if="floatingChatMinimized" />
+          <MinusOutlined v-else />
+        </button>
+        <button
+          type="button"
+          aria-label="在聊天页打开"
+          title="在聊天页打开"
+          @click="expandFloatingChatToPage"
+        >
+          <ExpandOutlined />
+        </button>
+        <button type="button" aria-label="关闭聊天悬浮窗" title="关闭" @click="closeFloatingChat">
+          <CloseOutlined />
+        </button>
+      </div>
+    </header>
+
+    <div v-show="!floatingChatMinimized" class="floating-chat__body">
+      <div v-if="floatingChatLoading && !activeTab?.chatState" class="floating-chat__loading">
+        <a-spin />
+        <span>正在加载聊天…</span>
+      </div>
+      <ChatView
+        v-else-if="activeTab?.chatState"
+        :chatState="activeTab.chatState"
+        :baseUrl="baseUrl"
+        :currentUsername="currentUsername ?? undefined"
+        :users="users"
+        :createGroupSearching="createGroupSearching"
+        :createGroupResults="createGroupResults"
+        :manageSearching="manageSearching"
+        :manageSearchResults="manageSearchResults"
+        :savingChannel="chatChannelSaving"
+        :savingMembership="chatMembershipSaving"
+        :savingStatus="chatStatusSaving"
+        :savingFollow="chatFollowSaving"
+        :leavingChannel="chatLeavingChannel"
+        :deletingChannel="chatDeletingChannel"
+        @selectChannel="handleSelectChatChannel"
+        @loadMore="handleLoadMoreChatMessages"
+        @sendMessage="handleSendChatMessage"
+        @react="handleReactChatMessage"
+        @editChannel="handleEditChatChannel"
+        @interact="handleChatMessageInteraction"
+        @navigate="handleContentNavigation"
+        @replyToMessage="handleReplyToMessage"
+        @cancelReply="cancelChatReply"
+        @editMessage="handleEditMessage"
+        @cancelEdit="cancelChatEdit"
+        @deleteMessage="handleDeleteMessage"
+        @flagMessage="handleFlagMessage"
+        @createGroup="handleCreateGroup"
+        @createGroupSearch="handleCreateGroupSearch"
+        @loadMembers="handleLoadChatMembers"
+        @addMembers="handleAddChatMembers"
+        @removeMember="handleRemoveChatMember"
+        @followChannel="handleFollowChatChannel"
+        @unfollowChannel="handleUnfollowChatChannel"
+        @updateMembership="handleUpdateChatMembership"
+        @updateStatus="handleUpdateChatStatus"
+        @leaveChannel="handleLeaveChatChannel"
+        @deleteChannel="handleDeleteChatChannel"
+        @manageSearch="handleManageSearch"
+      />
+      <div v-else class="floating-chat__loading">
+        <span>聊天暂时不可用</span>
+        <button type="button" @click="openFloatingChat">重试</button>
+      </div>
+    </div>
+  </section>
+
   <FloatingComposer
     v-if="composerMode"
     :composerMode="composerMode!"
@@ -2779,6 +3263,30 @@ onUnmounted(() => {
   overflow-wrap: anywhere;
 }
 
+.browser-state__progress {
+  display: grid;
+  width: min(420px, calc(100vw - 64px));
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+}
+
+.browser-state__progress-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 16%, transparent);
+}
+
+.browser-state__progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary, var(--theme-primary));
+  transition: width var(--d-motion-medium, 220ms) var(--d-motion-standard, ease);
+}
+
 .browser-state--error .browser-state__description {
   color: var(--on-danger-container, var(--theme-on-error-container));
 }
@@ -2805,6 +3313,169 @@ onUnmounted(() => {
 
 .browser-state__action:active {
   transform: scale(0.97);
+}
+
+.floating-chat-trigger {
+  position: relative;
+}
+
+.floating-chat-trigger.is-active {
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+}
+
+.floating-chat-trigger__badge {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  display: inline-flex;
+  min-width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--d-surface, var(--theme-surface));
+  border-radius: 999px;
+  background: var(--danger, var(--theme-error));
+  color: var(--on-danger, var(--theme-on-error));
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.floating-chat {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147482000;
+  display: flex;
+  width: min(820px, calc(100vw - 40px));
+  height: min(680px, calc(100vh - 40px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-3, var(--theme-surface-container-high));
+  box-shadow: var(--d-elevation-3, 0 18px 52px rgba(0, 0, 0, 0.28));
+  color: var(--d-text, var(--theme-on-surface));
+}
+
+.floating-chat.is-minimized {
+  width: min(360px, calc(100vw - 40px));
+  height: 68px;
+  border-radius: var(--d-shape-xl, 28px);
+}
+
+.floating-chat__header {
+  display: flex;
+  min-height: 68px;
+  flex: 0 0 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px 8px 16px;
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.floating-chat__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.floating-chat__identity > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.floating-chat__identity strong,
+.floating-chat__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-chat__identity small {
+  opacity: 0.72;
+  font-size: 10px;
+}
+
+.floating-chat__logo {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  font-size: 18px;
+}
+
+.floating-chat__window-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.floating-chat__window-actions button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.floating-chat__window-actions button:hover {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.floating-chat__body {
+  min-height: 0;
+  flex: 1;
+  padding: 12px;
+  background: var(--d-background, var(--theme-background));
+}
+
+.floating-chat__body :deep(.chat-view) {
+  min-height: 0;
+  height: 100%;
+  grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.floating-chat__body :deep(.chat-main-header) {
+  min-height: 52px;
+}
+
+.floating-chat__body :deep(.chat-sidebar-header) {
+  min-height: 48px;
+}
+
+.floating-chat__loading {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.floating-chat__loading button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--primary, var(--theme-primary));
+  color: var(--on-primary, var(--theme-on-primary));
+  cursor: pointer;
 }
 
 .pm-composer-mask {
@@ -2887,6 +3558,22 @@ onUnmounted(() => {
 @media (max-width: 720px) {
   .discourse-body {
     padding: 12px 10px 20px;
+  }
+
+  .floating-chat {
+    right: 8px;
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    border-radius: var(--d-shape-lg, 16px);
+  }
+
+  .floating-chat__body :deep(.chat-view) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .floating-chat__body :deep(.chat-sidebar) {
+    max-height: 180px;
   }
 }
 </style>

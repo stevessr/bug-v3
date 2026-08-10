@@ -22,6 +22,7 @@ export default defineComponent({
               alt={user.username}
               title={user.username}
               class="w-8 h-8 rounded-full cursor-pointer transition-all hover:ring-2"
+              data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
               onClick={() => emit('select', user.username)}
             />
           ))}

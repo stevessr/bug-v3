@@ -1,6 +1,7 @@
 import { defineComponent } from 'vue'
 
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
@@ -134,7 +135,8 @@ export default defineComponent({
                     </div>
                     <div
                       class="user-extras-feed-item__title"
-                      innerHTML={post.topic.fancy_title || post.topic.title}
+                      data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(post.topic.slug)}/${post.topic.id}/${post.post_number}`}
+                      innerHTML={sanitizeDiscourseHtml(post.topic.fancy_title || post.topic.title)}
                       onClick={() => emit('openTopic', post.topic)}
                     />
                     <div class="user-extras-feed-item__excerpt">{post.excerpt}</div>
@@ -159,6 +161,7 @@ export default defineComponent({
                   <div
                     key={u.id}
                     class="user-extras-user-item"
+                    data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(u.username)}`}
                     onClick={() => emit('openUser', u.username)}
                   >
                     <img
@@ -184,6 +187,7 @@ export default defineComponent({
                   <div
                     key={u.id}
                     class="user-extras-user-item"
+                    data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(u.username)}`}
                     onClick={() => emit('openUser', u.username)}
                   >
                     <img

@@ -2,6 +2,7 @@ import { defineComponent, ref, computed, watch, type PropType } from 'vue'
 import { Modal, Radio, Input, Spin } from 'ant-design-vue'
 
 import type { DiscourseFlagType, DiscoursePost } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 
 export default defineComponent({
   name: 'FlagModal',
@@ -102,7 +103,7 @@ export default defineComponent({
                           {flagType.description && (
                             <div
                               class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                              innerHTML={flagType.description}
+                              innerHTML={sanitizeDiscourseHtml(flagType.description)}
                             />
                           )}
                         </div>

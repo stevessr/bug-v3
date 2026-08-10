@@ -27,6 +27,7 @@ export default defineComponent({
     const showActions = ref(false)
     const showEmojiPicker = ref(false)
     const floatingControlsRef = ref<HTMLDivElement | null>(null)
+    const reactionButtonRef = ref<HTMLButtonElement | null>(null)
 
     const getDisplayName = () => {
       const user = props.message.user
@@ -113,6 +114,7 @@ export default defineComponent({
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
       const target = event.target
+      if (target instanceof Element && target.closest('.discourse-emoji-picker')) return
       if (target instanceof Node && !floatingControlsRef.value?.contains(target)) {
         closeFloatingControls()
       }
@@ -234,6 +236,7 @@ export default defineComponent({
               onFocusout={handleControlsFocusout}
             >
               <button
+                ref={reactionButtonRef}
                 type="button"
                 class="chat-message-reaction-add"
                 title="添加反应"
@@ -257,6 +260,7 @@ export default defineComponent({
               <ChatEmojiPicker
                 visible={showEmojiPicker.value}
                 baseUrl={props.baseUrl}
+                anchorEl={reactionButtonRef.value}
                 onSelect={handleEmojiSelect}
                 onClose={() => {
                   showEmojiPicker.value = false

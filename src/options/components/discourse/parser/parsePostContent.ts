@@ -4,6 +4,7 @@ import rehypeStringify from 'rehype-stringify'
 import type { Root, Node } from 'hast'
 
 import type { ParsedContent } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 
 import { createParseContext } from './context'
 import { extractCarousels } from './extractCarousels'
@@ -19,9 +20,12 @@ import { renderSegmentsToHtml } from './renderSegmentsToHtml'
 export const parsePostContent = (cooked: string, baseUrl?: string): ParsedContent => {
   if (!cooked) return { html: '', images: [], segments: [] }
 
-  const hasSpoiler = cooked.includes('spoiled') || cooked.includes('spoiler-blurred')
+  const sanitizedCooked = sanitizeDiscourseHtml(cooked)
+
+  const hasSpoiler =
+    sanitizedCooked.includes('spoiled') || sanitizedCooked.includes('spoiler-blurred')
   if (hasSpoiler) {
-    console.log('[parsePostContent] Input contains spoiler:', cooked.substring(0, 500))
+    console.log('[parsePostContent] Input contains spoiler:', sanitizedCooked.substring(0, 500))
   }
 
   const processor = unified().use(rehypeStringify)
@@ -30,7 +34,7 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
     String(processor.stringify(node as Root))
   )
 
-  const tree = unified().use(rehypeParse, { fragment: true }).parse(cooked) as Root
+  const tree = unified().use(rehypeParse, { fragment: true }).parse(sanitizedCooked) as Root
 
   transformQuotes(tree as Node, ctx)
 

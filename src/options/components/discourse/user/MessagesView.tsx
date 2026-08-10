@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons-vue'
 
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
@@ -115,6 +116,7 @@ export default defineComponent({
           <button
             type="button"
             class="messages-view-header-card__avatar-button"
+            data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.user.username)}`}
             aria-label={`打开 ${props.user.username} 的主页`}
             onClick={() => emit('goToProfile')}
           >
@@ -129,6 +131,7 @@ export default defineComponent({
               <button
                 type="button"
                 class="messages-view-header-card__title"
+                data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.user.username)}`}
                 onClick={() => emit('goToProfile')}
               >
                 {props.user.username}
@@ -220,6 +223,7 @@ export default defineComponent({
                   class="messages-topic-item__main"
                   role="link"
                   tabindex={0}
+                  data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(topic.slug)}/${topic.id}`}
                   onClick={() => emit('openTopic', topic)}
                   onKeydown={(event: KeyboardEvent) => handleTopicKeydown(event, topic)}
                 >
@@ -257,7 +261,7 @@ export default defineComponent({
                   <div class="messages-topic-item__body">
                     <div
                       class="messages-topic-item__title"
-                      innerHTML={topic.fancy_title || topic.title}
+                      innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
                     />
 
                     <div class="messages-topic-item__meta">

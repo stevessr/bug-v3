@@ -3,7 +3,10 @@ import { pageFetch, extractData } from '../utils'
 
 let currentOrigin: string | null = null
 let loadingPromise: Promise<number> | null = null
-const EMOJI_GROUP_CACHE_TTL = 10 * 60 * 1000
+// Emoji names and shortcode mappings are site-specific and expensive to load.
+// Keep a high, persistent cache while still allowing callers to force refresh.
+const EMOJI_GROUP_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
+const EMOJI_GROUP_STORAGE_PREFIX = 'discourse-browser:emoji-groups:v2:'
 
 export interface DiscourseEmojiEntry extends EmojiShortcode {
   group?: string
@@ -20,6 +23,60 @@ export interface DiscourseEmojiGroup {
 
 const emojiGroupsCache = new Map<string, { expiresAt: number; groups: DiscourseEmojiGroup[] }>()
 const emojiGroupsInFlight = new Map<string, Promise<DiscourseEmojiGroup[]>>()
+
+interface StoredEmojiGroups {
+  expiresAt: number
+  groups: DiscourseEmojiGroup[]
+}
+
+const getEmojiStorageKey = (origin: string) =>
+  `${EMOJI_GROUP_STORAGE_PREFIX}${encodeURIComponent(origin)}`
+
+const isEmojiGroups = (value: unknown): value is DiscourseEmojiGroup[] =>
+  Array.isArray(value) &&
+  value.every(
+    group =>
+      isRecord(group) &&
+      typeof group.id === 'string' &&
+      typeof group.name === 'string' &&
+      Array.isArray(group.emojis) &&
+      group.emojis.every(
+        entry =>
+          isRecord(entry) &&
+          typeof entry.name === 'string' &&
+          (typeof entry.url === 'string' || typeof entry.unicode === 'string')
+      )
+  )
+
+const readPersistentEmojiGroups = (origin: string): StoredEmojiGroups | null => {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(getEmojiStorageKey(origin))
+    if (!raw) return null
+    const value = JSON.parse(raw) as StoredEmojiGroups
+    if (
+      !value ||
+      typeof value.expiresAt !== 'number' ||
+      value.expiresAt <= Date.now() ||
+      !isEmojiGroups(value.groups)
+    ) {
+      localStorage.removeItem(getEmojiStorageKey(origin))
+      return null
+    }
+    return value
+  } catch {
+    return null
+  }
+}
+
+const writePersistentEmojiGroups = (origin: string, value: StoredEmojiGroups) => {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(getEmojiStorageKey(origin), JSON.stringify(value))
+  } catch {
+    // A full localStorage should not prevent the picker from using memory.
+  }
+}
 
 const normalizeEmojiUrl = (origin: string, url?: string | null) => {
   if (!url) return ''
@@ -161,6 +218,14 @@ export async function fetchDiscourseEmojiGroups(
   const cached = emojiGroupsCache.get(origin)
   if (!force && cached && cached.expiresAt > Date.now()) return cached.groups
 
+  if (!force) {
+    const persistent = readPersistentEmojiGroups(origin)
+    if (persistent) {
+      emojiGroupsCache.set(origin, persistent)
+      return persistent.groups
+    }
+  }
+
   const inFlight = emojiGroupsInFlight.get(origin)
   if (!force && inFlight) return inFlight
 
@@ -188,10 +253,12 @@ export async function fetchDiscourseEmojiGroups(
 
         const groups = normalizeEmojiGroups(origin, data)
         if (groups.length > 0) {
-          emojiGroupsCache.set(origin, {
+          const cacheEntry = {
             expiresAt: Date.now() + EMOJI_GROUP_CACHE_TTL,
             groups
-          })
+          }
+          emojiGroupsCache.set(origin, cacheEntry)
+          writePersistentEmojiGroups(origin, cacheEntry)
           return groups
         }
       } catch (error) {
@@ -209,6 +276,18 @@ export async function fetchDiscourseEmojiGroups(
 
   emojiGroupsInFlight.set(origin, request)
   return request
+}
+
+export function findDiscourseEmoji(
+  groups: DiscourseEmojiGroup[],
+  name: string
+): DiscourseEmojiEntry | null {
+  const normalized = String(name || '').replace(/^:([^:]+):$/, '$1')
+  for (const group of groups) {
+    const entry = group.emojis.find(emoji => emoji.name === normalized || emoji.id === normalized)
+    if (entry) return entry
+  }
+  return null
 }
 
 export async function ensureEmojiShortcodesLoaded(baseUrl?: string | null): Promise<number> {

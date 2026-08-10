@@ -2,6 +2,7 @@ import { defineComponent, computed, ref } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { getAvatarUrl, formatTime } from '../utils'
 import '../css/NotificationsView.css'
 
@@ -222,6 +223,8 @@ export default defineComponent({
 
     const buildPath = (n: DiscourseNotification) => {
       if (isBadgeNotification(n)) {
+        const username = props.currentUsername.trim()
+        if (username) return `/u/${encodeURIComponent(username)}/badges`
         const badgeId = n.data?.badge_id || n.data?.badgeId
         if (!badgeId) return ''
         const slug = n.data?.badge_slug || n.data?.badge_name || 'badge'
@@ -336,6 +339,7 @@ export default defineComponent({
                   key={item.id}
                   class={['ntf-item', { unread: !item.read, clickable: Boolean(path) }]}
                   role={path ? 'link' : undefined}
+                  data-discourse-url={path || undefined}
                   tabindex={path ? 0 : undefined}
                   aria-label={getAccessibleLabel(item)}
                   onClick={path ? () => handleOpen(item) : undefined}
@@ -392,7 +396,7 @@ export default defineComponent({
                         )}
                       </div>
                     ) : title ? (
-                      <div class="ntf-title" innerHTML={title} />
+                      <div class="ntf-title" innerHTML={sanitizeDiscourseHtml(title)} />
                     ) : null}
                     <span class="ntf-time">{formatTime(item.created_at)}</span>
                   </div>

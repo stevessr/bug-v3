@@ -276,13 +276,11 @@ export const transformQuotes = (root: Node, ctx: ParseContext) => {
         const src = getPropString(img, 'src')
         if (!src) return
         const full = resolveUrl(ctx, src)
-        if (full.includes('/user_avatar/')) {
-          const gifUrl = full.replace(/\.(png|jpg|jpeg|webp)(\?.*)?$/i, '.gif$2')
-          img.properties = {
-            ...(img.properties || {}),
-            src: gifUrl
-          }
-        } else if (!src.startsWith('http')) {
+        // Keep the exact path and extension returned by Discourse. Avatar
+        // routes frequently issue a 302 to the real CDN asset (and may also
+        // change both size and format), so synthesising a .gif URL here makes
+        // valid PNG/WebP CDN avatars fail instead of following that redirect.
+        if (full && full !== src) {
           img.properties = {
             ...(img.properties || {}),
             src: full

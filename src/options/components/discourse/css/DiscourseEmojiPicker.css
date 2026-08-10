@@ -1,8 +1,6 @@
 .discourse-emoji-picker {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 30;
+  position: fixed;
+  z-index: 2147483500;
   display: flex;
   width: min(380px, calc(100vw - 24px));
   max-height: min(520px, calc(100vh - 32px));
@@ -211,11 +209,6 @@
 
 @media (max-width: 520px) {
   .discourse-emoji-picker {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    width: auto;
     max-height: min(620px, calc(100vh - 24px));
   }
 }

@@ -14,6 +14,7 @@ import {
 import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
+import { resolveDiscourseHttpUrl } from '../navigation'
 import TagPill from '../layout/TagPill'
 import { getDiscourseIconHref } from '../layout/iconSprite'
 import ProseMirrorEditor from '../ProseMirrorEditor'
@@ -132,7 +133,7 @@ export default defineComponent({
 
     const getImageUrl = (url?: string | null) => {
       if (!url) return ''
-      return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+      return resolveDiscourseHttpUrl(url, props.baseUrl) || ''
     }
 
     const mergedCategories = computed(() => {

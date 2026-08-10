@@ -90,3 +90,47 @@ export async function setTopicNotificationLevel(baseUrl: string, topicId: number
   }
   return data
 }
+
+export async function inviteUserToPrivateMessage(
+  baseUrl: string,
+  topicId: number,
+  username: string
+) {
+  const params = new URLSearchParams({ user: username.trim() })
+  const result = await pageFetch<any>(`${baseUrl}/t/${topicId}/invite`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Discourse-Logged-In': 'true'
+    },
+    body: params.toString()
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    throw new Error(data?.errors?.join(', ') || data?.error || '添加私信参与者失败')
+  }
+  return data
+}
+
+export async function removeUserFromPrivateMessage(
+  baseUrl: string,
+  topicId: number,
+  username: string
+) {
+  const params = new URLSearchParams({ username: username.trim() })
+  const result = await pageFetch<any>(`${baseUrl}/t/${topicId}/remove-allowed-user`, {
+    method: 'PUT',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Discourse-Logged-In': 'true'
+    },
+    body: params.toString()
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    throw new Error(data?.errors?.join(', ') || data?.error || '移除私信参与者失败')
+  }
+  return data
+}

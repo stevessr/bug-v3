@@ -1,6 +1,7 @@
 import { defineComponent, computed } from 'vue'
 
 import type { DiscourseCategory } from '../types'
+import { resolveDiscourseHttpUrl } from '../navigation'
 
 import { getDiscourseIconHref } from './iconSprite'
 
@@ -62,7 +63,7 @@ export default defineComponent({
 
     const getImageUrl = (url?: string | null) => {
       if (!url) return ''
-      return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+      return resolveDiscourseHttpUrl(url, props.baseUrl) || ''
     }
 
     return () => (
@@ -71,7 +72,11 @@ export default defineComponent({
         <div class="space-y-1">
           {topCategories.value.map(cat => (
             <div key={cat.id}>
-              <div class="sidebar-item" onClick={() => emit('select', cat)}>
+              <div
+                class="sidebar-item"
+                data-discourse-url={`${props.baseUrl}/c/${encodeURIComponent(cat.slug)}/${cat.id}`}
+                onClick={() => emit('select', cat)}
+              >
                 <div class="sidebar-icon">
                   {cat.uploaded_logo?.url ? (
                     <img
@@ -107,6 +112,7 @@ export default defineComponent({
                       <div
                         key={child.id}
                         class="sidebar-item"
+                        data-discourse-url={`${props.baseUrl}/c/${encodeURIComponent(child.slug)}/${child.id}`}
                         onClick={() => emit('select', child)}
                       >
                         <span class="sidebar-icon">

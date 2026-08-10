@@ -1,6 +1,7 @@
 import { defineComponent } from 'vue'
 
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
@@ -170,7 +171,10 @@ export default defineComponent({
         {props.user.bio_cooked && (
           <section class="user-profile-card user-profile-card--bio">
             <h3 class="user-profile-card__title">个人简介</h3>
-            <div class="user-bio-content" innerHTML={props.user.bio_cooked} />
+            <div
+              class="user-bio-content"
+              innerHTML={sanitizeDiscourseHtml(props.user.bio_cooked)}
+            />
           </section>
         )}
 
@@ -235,10 +239,13 @@ export default defineComponent({
             <button
               type="button"
               class="user-profile-featured-topic"
+              data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(props.user.featured_topic.slug)}/${props.user.featured_topic.id}`}
               onClick={() => emit('openTopic', props.user.featured_topic)}
             >
               <span
-                innerHTML={props.user.featured_topic.fancy_title || props.user.featured_topic.title}
+                innerHTML={sanitizeDiscourseHtml(
+                  props.user.featured_topic.fancy_title || props.user.featured_topic.title
+                )}
               />
               <span class="user-profile-featured-topic__meta">
                 ({props.user.featured_topic.posts_count} 帖子)
@@ -278,11 +285,12 @@ export default defineComponent({
                   key={topic.id}
                   type="button"
                   class="user-profile-topic-item"
+                  data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(topic.slug)}/${topic.id}`}
                   onClick={() => emit('openTopic', topic)}
                 >
                   <div
                     class="user-profile-topic-item__title"
-                    innerHTML={topic.fancy_title || topic.title}
+                    innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
                   />
                   <div class="user-profile-topic-item__meta">
                     {topic.posts_count} 帖子 · {topic.like_count} 赞

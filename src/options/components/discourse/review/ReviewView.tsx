@@ -9,6 +9,7 @@ import type {
   Reviewable,
   ReviewableAction
 } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import '../css/ReviewView.css'
 
@@ -333,11 +334,15 @@ export default defineComponent({
                     <button
                       type="button"
                       class="review-item__title review-item__title--button"
+                      data-discourse-url={reviewable.target_url || reviewable.topic_url}
                       onClick={() => handleOpenPayloadUrl(reviewable)}
-                      innerHTML={getTitle(reviewable)}
+                      innerHTML={sanitizeDiscourseHtml(getTitle(reviewable))}
                     />
                   ) : (
-                    <h3 class="review-item__title" innerHTML={getTitle(reviewable)} />
+                    <h3
+                      class="review-item__title"
+                      innerHTML={sanitizeDiscourseHtml(getTitle(reviewable))}
+                    />
                   ))}
 
                 {getPostPreview(reviewable) && (
@@ -369,6 +374,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="review-item__user"
+                      data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(getTargetUsername(reviewable))}`}
                       onClick={() => emit('openUser', getTargetUsername(reviewable))}
                     >
                       👤 {getTargetUsername(reviewable)}
@@ -381,6 +387,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="review-item__link"
+                      data-discourse-url={reviewable.target_url || reviewable.topic_url}
                       onClick={() => handleOpenPayloadUrl(reviewable)}
                     >
                       查看主题 →

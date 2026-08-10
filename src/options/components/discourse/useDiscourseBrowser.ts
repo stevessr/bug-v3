@@ -5,6 +5,7 @@ import { ref, computed, watch } from 'vue'
 import type {
   BrowserTab,
   ChatMessage,
+  ChatChannelEditableStatus,
   ChatChannelUpdatePayload,
   ChatCreateChannelPayload,
   ChatCreateDirectMessagePayload,
@@ -25,13 +26,20 @@ import type {
 import { generateId, pageFetch, extractData } from './utils'
 import {
   loadHome as loadHomeRoute,
-  changeTopicListType as changeTopicListTypeRoute,
   loadCategories as loadCategoriesRoute,
   loadTags as loadTagsRoute,
   loadTag as loadTagRoute,
-  loadPosted as loadPostedRoute,
   loadBookmarks as loadBookmarksRoute
 } from './routes/root'
+import {
+  buildTopicListApiUrl,
+  categoryRouteFromPath,
+  messagesTabFromPath,
+  normalizeNotificationFilter,
+  normalizeTopicListPeriod,
+  resolveDiscourseAddressInput,
+  topicListRouteFromPath
+} from './navigation'
 import {
   loadNotifications as loadNotificationsRoute,
   normalizeNotificationsFromResponse
@@ -52,7 +60,6 @@ import {
   loadActivityData as loadActivityDataRoute,
   loadMoreActivity as loadMoreActivityRoute,
   loadMessages as loadMessagesRoute,
-  loadMessagesData as loadMessagesDataRoute,
   loadMoreMessages as loadMoreMessagesRoute,
   loadMoreFollowFeed as loadMoreFollowFeedRoute,
   loadUserPreferences as loadUserPreferencesRoute,
@@ -98,6 +105,8 @@ import {
   followChatChannel as followChatChannelRoute,
   unfollowChatChannel as unfollowChatChannelRoute,
   deleteChatChannel as deleteChatChannelRoute,
+  leaveChatChannel as leaveChatChannelRoute,
+  updateChatChannelStatus as updateChatChannelStatusRoute,
   updateMembershipSettings as updateMembershipSettingsRoute,
   searchChatables as searchChatablesRoute
 } from './routes/chat'
@@ -354,6 +363,8 @@ export function useDiscourseBrowser() {
     tab => {
       if (tab) {
         urlInput.value = tab.url
+        const origin = new URL(tab.url).origin
+        if (origin !== baseUrl.value) baseUrl.value = origin
       }
     },
     { immediate: true }
@@ -392,13 +403,14 @@ export function useDiscourseBrowser() {
   // Create a new tab
   function createTab(url?: string) {
     const id = generateId()
-    const targetUrl = url || baseUrl.value
+    const targetUrl = resolveDiscourseAddressInput(url || baseUrl.value, baseUrl.value).url
     const newTab: BrowserTab = {
       id,
       title: '新标签页',
       url: targetUrl,
       loading: false,
       history: [targetUrl],
+      historyScrollPositions: [0],
       historyIndex: 0,
       scrollTop: 0,
       // Per-tab state
@@ -424,6 +436,7 @@ export function useDiscourseBrowser() {
       currentCategoryName: '',
       currentTagName: '',
       topicListType: 'latest',
+      topicListPeriod: null,
       activityState: null,
       messagesState: null,
       followFeedPage: 0,
@@ -478,7 +491,7 @@ export function useDiscourseBrowser() {
     }
     tabs.value.push(newTab)
     activeTabId.value = id
-    navigateTo(targetUrl)
+    void navigateTo(targetUrl, false)
   }
 
   // Close a tab
@@ -512,19 +525,15 @@ export function useDiscourseBrowser() {
 
     const rawUrl = (url || '').trim()
     const base = baseUrl.value.replace(/\/+$/, '')
-    const normalizedUrl = (() => {
-      if (!rawUrl) return base
-      if (rawUrl.startsWith('/')) return `${base}${rawUrl}`
-      if (rawUrl.startsWith('//')) return `https:${rawUrl}`
-      try {
-        return new URL(rawUrl).toString()
-      } catch {
-        return new URL(rawUrl, `${base}/`).toString()
-      }
-    })()
+    const normalizedUrl = resolveDiscourseAddressInput(rawUrl || base, base).url
+    const targetOrigin = new URL(normalizedUrl).origin
+    if (targetOrigin !== baseUrl.value) baseUrl.value = targetOrigin
 
     tab.loading = true
     tab.url = normalizedUrl
+    tab.scrollTop = addToHistory
+      ? 0
+      : (tab.historyScrollPositions?.[tab.historyIndex] ?? tab.scrollTop ?? 0)
     urlInput.value = normalizedUrl
     tab.errorMessage = ''
     tab.tags = []
@@ -535,24 +544,43 @@ export function useDiscourseBrowser() {
     try {
       const urlObj = new URL(normalizedUrl)
       const pathname = urlObj.pathname
+      const topicListRoute = topicListRouteFromPath(pathname)
 
       if (pathname === '/' || pathname === '') {
+        tab.topicListType = 'latest'
+        tab.topicListPeriod = null
         await loadHome(tab)
         tab.title = '首页 - ' + urlObj.hostname
         tab.viewType = 'home'
+      } else if (topicListRoute) {
+        tab.topicListType = topicListRoute.type
+        tab.topicListPeriod =
+          topicListRoute.type === 'top'
+            ? (topicListRoute.period ?? normalizeTopicListPeriod(urlObj.searchParams.get('period')))
+            : null
+        await loadHome(tab)
+        const labels: Record<TopicListType, string> = {
+          latest: '最新',
+          new: '新话题',
+          unread: '未读',
+          unseen: '未见',
+          top: '排行',
+          hot: '热门',
+          posted: '我的帖子',
+          bookmarks: '书签'
+        }
+        tab.title = labels[topicListRoute.type]
+        tab.viewType = 'home'
       } else if (pathname.startsWith('/my/notifications')) {
-        const filterParam = urlObj.searchParams.get('filter')
-        const notificationFilter: DiscourseNotificationFilter =
-          filterParam === 'unread' ? 'unread' : 'all'
+        const notificationFilter = normalizeNotificationFilter(urlObj.searchParams.get('filter'))
         await loadNotifications(tab, notificationFilter)
         tab.title = '通知'
         tab.viewType = 'notifications'
       } else if (pathname.startsWith('/c/')) {
-        const parts = pathname.replace('/c/', '').split('/').filter(Boolean)
-        const categorySlug = parts[0]
-        const categoryId = parts[1] ? parseInt(parts[1]) : null
-        await loadCategory(tab, categorySlug, categoryId)
-        tab.title = `分类：${categorySlug}`
+        const categoryRoute = categoryRouteFromPath(pathname)
+        if (!categoryRoute) throw new Error('无效的分类地址')
+        await loadCategory(tab, categoryRoute.slug, categoryRoute.categoryId)
+        tab.title = `分类：${tab.currentCategoryName || categoryRoute.slug}`
         tab.viewType = 'category'
       } else if (pathname.startsWith('/t/')) {
         isTopicNavigation = true
@@ -624,9 +652,9 @@ export function useDiscourseBrowser() {
           await loadUserActivity(tab, username, activityTab)
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
-        } else if (pathParts[1] === 'messages') {
-          // Messages page
-          await loadMessages(tab, username, 'all')
+        } else if (pathParts[1] === 'messages' || pathParts[1] === 'private-messages') {
+          const messagesTab = messagesTabFromPath(pathname)
+          await loadMessages(tab, username, messagesTab)
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
         } else if (pathParts[1] === 'user-menu-private-messages') {
@@ -638,10 +666,11 @@ export function useDiscourseBrowser() {
           tab.title = `${username} - 书签`
           tab.viewType = 'home'
           tab.topicListType = 'bookmarks'
+          tab.topicListPeriod = null
         } else if (pathParts[1] === 'notifications') {
-          const filterParam = urlObj.searchParams.get('filter')
-          const notificationFilter: DiscourseNotificationFilter =
-            filterParam === 'unread' ? 'unread' : 'all'
+          const notificationFilter = normalizeNotificationFilter(
+            pathParts[2] || urlObj.searchParams.get('filter')
+          )
           await loadNotifications(tab, notificationFilter)
           tab.title = `${username} - 通知`
           tab.viewType = 'notifications'
@@ -693,9 +722,7 @@ export function useDiscourseBrowser() {
         tab.title = '标签'
         tab.viewType = 'tags'
       } else if (pathname === '/notifications' || pathname === '/notifications.json') {
-        const filterParam = urlObj.searchParams.get('filter')
-        const notificationFilter: DiscourseNotificationFilter =
-          filterParam === 'unread' ? 'unread' : 'all'
+        const notificationFilter = normalizeNotificationFilter(urlObj.searchParams.get('filter'))
         await loadNotifications(tab, notificationFilter)
         tab.title = '通知'
         tab.viewType = 'notifications'
@@ -733,17 +760,9 @@ export function useDiscourseBrowser() {
         await loadInvites(tab, filter)
         tab.title = '邀请'
         tab.viewType = 'invites'
-      } else if (pathname === '/posted') {
-        await loadPosted(tab)
-        tab.title = '我的帖子'
-        tab.viewType = 'home'
-        tab.topicListType = 'posted'
-      } else if (pathname === '/bookmarks') {
-        await loadBookmarks(tab)
-        tab.title = '书签'
-        tab.viewType = 'home'
-        tab.topicListType = 'bookmarks'
       } else {
+        tab.topicListType = 'latest'
+        tab.topicListPeriod = null
         await loadHome(tab)
         tab.title = urlObj.hostname
         tab.viewType = 'home'
@@ -753,9 +772,14 @@ export function useDiscourseBrowser() {
         tab.targetPostNumber = null
       }
 
-      if (addToHistory) {
+      if (addToHistory && tab.history[tab.historyIndex] !== normalizedUrl) {
         tab.history = tab.history.slice(0, tab.historyIndex + 1)
+        tab.historyScrollPositions = (tab.historyScrollPositions || []).slice(
+          0,
+          tab.historyIndex + 1
+        )
         tab.history.push(normalizedUrl)
+        tab.historyScrollPositions.push(0)
         tab.historyIndex = tab.history.length - 1
       }
     } catch (e) {
@@ -795,11 +819,15 @@ export function useDiscourseBrowser() {
     await loadTagsRoute(tab, baseUrl)
   }
 
-  async function loadNotifications(tab: BrowserTab, filter: DiscourseNotificationFilter) {
+  async function loadNotifications(
+    tab: BrowserTab,
+    filter: DiscourseNotificationFilter,
+    force = false
+  ) {
     const cacheKey = `${baseUrl.value}|${filter}`
     const now = Date.now()
     const cached = notificationsSnapshotCache.get(cacheKey)
-    if (cached && cached.expiresAt > now) {
+    if (!force && cached && cached.expiresAt > now) {
       tab.notifications = cloneNotifications(cached.notifications)
       tab.notificationsFilter = filter
       applyUnreadNotificationState(tab, cached.unreadState)
@@ -1037,7 +1065,11 @@ export function useDiscourseBrowser() {
     await runTabScopedUpdate(tab.id, 'topic-list', async () => {
       let url = ''
       if (tab.viewType === 'home') {
-        url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json`
+        url = buildTopicListApiUrl(
+          baseUrl.value,
+          tab.topicListType || 'latest',
+          tab.topicListPeriod
+        )
       } else if (tab.viewType === 'category') {
         url = tab.currentCategoryId
           ? `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json`
@@ -1187,11 +1219,6 @@ export function useDiscourseBrowser() {
     await loadTagRoute(tab, baseUrl, users, tagName)
   }
 
-  // Load posted topics
-  async function loadPosted(tab: BrowserTab) {
-    await loadPostedRoute(tab, baseUrl, users)
-  }
-
   // Load bookmarks
   async function loadBookmarks(tab: BrowserTab) {
     await loadBookmarksRoute(tab, baseUrl, users)
@@ -1204,6 +1231,17 @@ export function useDiscourseBrowser() {
 
   async function loadChat(tab: BrowserTab, targetChannelId?: number | null) {
     await loadChatRoute(tab, baseUrl, users, targetChannelId)
+  }
+
+  async function ensureChatLoaded(targetChannelId?: number | null) {
+    const tab = activeTab.value
+    if (!tab) return false
+    if (!tab.chatState || tab.chatState.channels.length === 0) {
+      await loadChat(tab, targetChannelId)
+    } else if (targetChannelId && tab.chatState.activeChannelId !== targetChannelId) {
+      await selectChatChannel(targetChannelId)
+    }
+    return Boolean(tab.chatState)
   }
 
   function applyChatMessagePatch(tab: BrowserTab, channelId: number, payload: unknown) {
@@ -1578,16 +1616,6 @@ export function useDiscourseBrowser() {
     await loadMessagesRoute(tab, username, messagesTab, baseUrl, users)
   }
 
-  // Load messages data for specific tab
-  async function loadMessagesData(
-    tab: BrowserTab,
-    username: string,
-    messagesTab: MessagesTabType,
-    reset = false
-  ) {
-    await loadMessagesDataRoute(tab, username, messagesTab, baseUrl, users, reset)
-  }
-
   async function loadMoreFollowFeed() {
     await loadMoreFollowFeedRoute(activeTab, baseUrl, isLoadingMore)
   }
@@ -1596,15 +1624,10 @@ export function useDiscourseBrowser() {
   async function switchMessagesTab(messagesTab: MessagesTabType) {
     const tab = activeTab.value
     if (!tab || !tab.currentUser || !tab.messagesState) return
-
-    tab.messagesState.activeTab = messagesTab
-    isLoadingMore.value = true
-
-    try {
-      await loadMessagesData(tab, tab.currentUser.username, messagesTab, true)
-    } finally {
-      isLoadingMore.value = false
-    }
+    const suffix = messagesTab === 'all' ? '' : `/${messagesTab}`
+    await navigateTo(
+      `${baseUrl.value}/u/${encodeURIComponent(tab.currentUser.username)}/messages${suffix}`
+    )
   }
 
   // Load more messages
@@ -2016,13 +2039,16 @@ export function useDiscourseBrowser() {
 
   function updateBaseUrl() {
     try {
-      const url = new URL(urlInput.value)
-      baseUrl.value = url.origin
-      navigateTo(urlInput.value)
-    } catch {
+      const resolved = resolveDiscourseAddressInput(urlInput.value, baseUrl.value)
+      if (resolved.origin !== baseUrl.value) {
+        baseUrl.value = resolved.origin
+      }
+      void navigateTo(resolved.url)
+    } catch (error) {
       const tab = activeTab.value
       if (tab) {
-        tab.errorMessage = '无效的 URL'
+        tab.errorMessage = error instanceof Error ? error.message : '无效的 URL'
+        urlInput.value = tab.url
       }
     }
   }
@@ -2099,18 +2125,7 @@ export function useDiscourseBrowser() {
 
   // Change topic list type (latest, new, unread, etc.)
   async function changeTopicListType(type: TopicListType) {
-    const tab = activeTab.value
-    if (!tab || tab.viewType !== 'home') return
-
-    tab.loading = true
-    try {
-      await changeTopicListTypeRoute(tab, type, baseUrl, users)
-    } catch (err) {
-      console.error('[DiscourseBrowser] changeTopicListType error:', err)
-      tab.errorMessage = '切换话题列表类型失败'
-    } finally {
-      tab.loading = false
-    }
+    await navigateTo(`${baseUrl.value}/${type}`)
   }
 
   const unreadNotificationsCount = computed(() => {
@@ -2307,6 +2322,18 @@ export function useDiscourseBrowser() {
     return await deleteChatChannelRoute(tab, baseUrl, channelId)
   }
 
+  async function leaveChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await leaveChatChannelRoute(tab, baseUrl, channelId)
+  }
+
+  async function updateChatStatus(channelId: number, status: ChatChannelEditableStatus) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await updateChatChannelStatusRoute(tab, baseUrl, channelId, status)
+  }
+
   async function updateChatMembership(channelId: number, payload: ChatMembershipUpdatePayload) {
     const tab = activeTab.value
     if (!tab?.chatState) return false
@@ -2359,6 +2386,7 @@ export function useDiscourseBrowser() {
     openUserPreferences,
     openChat,
     openChatChannel,
+    ensureChatLoaded,
     openQuote,
     loadMorePosts,
     ensurePostNumberLoaded,
@@ -2422,6 +2450,8 @@ export function useDiscourseBrowser() {
     followChatChannel,
     unfollowChatChannel,
     deleteChatChannel,
+    leaveChatChannel,
+    updateChatStatus,
     updateChatMembership,
     searchChatables
   }

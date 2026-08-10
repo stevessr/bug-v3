@@ -1,13 +1,13 @@
 import { defineComponent, ref, computed } from 'vue'
 import { Dropdown, Menu, MenuItem, message } from 'ant-design-vue'
 
-import { REACTIONS } from '../../../utils/linuxDoReaction'
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 import PostContent from './PostContent'
 import BoostPanel from './BoostPanel'
+import ReactionDetailsModal from './ReactionDetailsModal'
 import '../css/PostItem.css'
 
 export default defineComponent({
@@ -30,7 +30,15 @@ export default defineComponent({
       required: true
     },
     isLiking: { type: Boolean, required: true },
-    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null }
+    currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
+    reactionsEnabled: { type: Boolean, default: false },
+    allowedReactionNames: { type: Array as () => string[], default: () => [] },
+    allowAnyReaction: { type: Boolean, default: false },
+    reactionEmojiMap: {
+      type: Object as () => Record<string, { url?: string; unicode?: string }>,
+      default: () => ({})
+    },
+    topicCanAssign: { type: Boolean, default: false }
   },
   emits: [
     'openUser',
@@ -51,6 +59,9 @@ export default defineComponent({
   setup(props, { emit }) {
     const isCopyLinkClicked = ref(false)
     const showReactionPicker = ref(false)
+    const reactionPickerAnchorRef = ref<HTMLElement | null>(null)
+    const reactionDetailsOpen = ref(false)
+    const reactionDetailsValue = ref<string | null>(null)
 
     const isOwnPost = computed(() => {
       if (props.currentUser && props.post.user_id === props.currentUser.id) return true
@@ -66,8 +77,41 @@ export default defineComponent({
     })
 
     const canAssign = computed(() => {
-      return props.currentUser && (props.currentUser.admin || props.currentUser.moderator)
+      return (
+        props.post.can_assign === true ||
+        props.topicCanAssign ||
+        Boolean(props.currentUser && (props.currentUser.admin || props.currentUser.moderator))
+      )
     })
+
+    const normalizedReactions = computed(() => {
+      const reactions = props.post.reactions
+      const values = Array.isArray(reactions)
+        ? reactions
+        : reactions && typeof reactions === 'object'
+          ? Object.entries(reactions).map(([id, value]) => ({ ...value, id: value.id || id }))
+          : []
+      return values
+        .map(value => ({
+          id: String(value?.id || '').replace(/^:([^:]+):$/, '$1'),
+          count: Number(value?.count || 0)
+        }))
+        .filter(value => value.id && Number.isFinite(value.count) && value.count > 0)
+        .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
+    })
+
+    const visibleReactions = computed(() => normalizedReactions.value.slice(0, 3))
+    const reactionUsersTotal = computed(() => {
+      const provided = Number(props.post.reaction_users_count)
+      if (Number.isFinite(provided) && provided >= 0) return provided
+      return normalizedReactions.value.reduce((total, item) => total + item.count, 0)
+    })
+    const canAddReaction = computed(
+      () =>
+        !isOwnPost.value &&
+        props.reactionsEnabled &&
+        (props.allowAnyReaction || props.allowedReactionNames.length > 0)
+    )
 
     const handleUserClick = (username: string) => {
       emit('openUser', username)
@@ -98,12 +142,19 @@ export default defineComponent({
     }
 
     const handleToggleLike = (reactionId: string) => {
+      if (isOwnPost.value) return
       emit('toggleLike', props.post, reactionId)
       showReactionPicker.value = false
     }
 
     const handleToggleReactionPicker = () => {
+      if (!canAddReaction.value) return
       showReactionPicker.value = !showReactionPicker.value
+    }
+
+    const openReactionDetails = (reaction: string | null) => {
+      reactionDetailsValue.value = reaction
+      reactionDetailsOpen.value = true
     }
 
     const handleToggleReplies = () => {
@@ -149,6 +200,7 @@ export default defineComponent({
     return () => (
       <article
         data-post-number={props.post.post_number}
+        data-discourse-url={`${props.baseUrl}/t/${props.topicId}/${props.post.post_number}`}
         class={['post-item', props.isHighlighted ? 'post-item--highlighted' : '']}
       >
         <header class="post-header">
@@ -157,6 +209,7 @@ export default defineComponent({
             class="post-author-avatar-button"
             aria-label={`查看 ${props.post.username} 的主页`}
             onClick={() => handleUserClick(props.post.username)}
+            data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
           >
             <img
               src={getAvatarUrl(props.post.avatar_template, props.baseUrl)}
@@ -169,6 +222,7 @@ export default defineComponent({
               type="button"
               class="post-author-name"
               onClick={() => handleUserClick(props.post.username)}
+              data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
             >
               {props.post.name || props.post.username}
             </button>
@@ -177,6 +231,7 @@ export default defineComponent({
                 type="button"
                 class="post-meta__author"
                 onClick={() => handleUserClick(props.post.username)}
+                data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
               >
                 @{props.post.username}
               </button>
@@ -219,51 +274,72 @@ export default defineComponent({
         <footer class="post-actions">
           <div class="post-actions__layout">
             <div class="post-actions__primary-row">
-              {!isOwnPost.value && (
+              {(visibleReactions.value.length > 0 || canAddReaction.value) && (
                 <div class="reactions-list" aria-label="帖子反应">
-                  {REACTIONS.map(item => (
+                  {visibleReactions.value.map(item => {
+                    const emoji = props.reactionEmojiMap[item.id]
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        class={[
+                          'reaction-item',
+                          props.isPostLiked(props.post, item.id) ? 'active' : ''
+                        ]}
+                        aria-label={`:${item.id}: 共 ${item.count} 次，查看详情`}
+                        onClick={() => openReactionDetails(item.id)}
+                        title={`:${item.id}: · 查看反应详情`}
+                      >
+                        {emoji?.url ? (
+                          <span class="emoji emoji-image">
+                            <img src={emoji.url} alt={item.id} loading="lazy" />
+                          </span>
+                        ) : (
+                          <span class="emoji reaction-item__fallback">
+                            {emoji?.unicode || `:${item.id}:`}
+                          </span>
+                        )}
+                        <span class="count">{item.count}</span>
+                      </button>
+                    )
+                  })}
+                  {reactionUsersTotal.value > 0 && (
                     <button
-                      key={item.id}
                       type="button"
-                      class={[
-                        'reaction-item',
-                        props.isPostLiked(props.post, item.id) ? 'active' : ''
-                      ]}
-                      disabled={props.isLiking}
-                      aria-pressed={props.isPostLiked(props.post, item.id)}
-                      aria-label={`${item.name}，${props.getReactionCount(props.post, item.id)} 次`}
-                      onClick={() => handleToggleLike(item.id)}
-                      title={item.name}
+                      class="reaction-item reaction-item--total"
+                      onClick={() => openReactionDetails(null)}
+                      aria-label={`查看全部 ${reactionUsersTotal.value} 人次反应`}
+                      title="查看全部反应统计"
                     >
-                      {item.emoji.startsWith('http') ? (
-                        <span class="emoji emoji-image">
-                          <img src={item.emoji} alt={item.name} loading="lazy" />
-                        </span>
-                      ) : (
-                        <span class="emoji">{item.emoji}</span>
-                      )}
-                      <span class="count">{props.getReactionCount(props.post, item.id)}</span>
+                      共 {reactionUsersTotal.value}
                     </button>
-                  ))}
-                  <span class="reaction-picker-anchor">
-                    <button
-                      type="button"
-                      class="reaction-item reaction-item--add discourse-emoji-picker-trigger"
-                      aria-label="从站点表情中选择反应"
-                      aria-expanded={showReactionPicker.value}
-                      onPointerdown={(event: PointerEvent) => event.stopPropagation()}
-                      onClick={handleToggleReactionPicker}
-                    >
-                      +
-                    </button>
-                    <DiscourseEmojiPicker
-                      visible={showReactionPicker.value}
-                      baseUrl={props.baseUrl}
-                      mode="reaction"
-                      onSelect={(emoji: string) => handleToggleLike(emoji)}
-                      onClose={() => (showReactionPicker.value = false)}
-                    />
-                  </span>
+                  )}
+                  {canAddReaction.value && (
+                    <span class="reaction-picker-anchor">
+                      <button
+                        ref={reactionPickerAnchorRef}
+                        type="button"
+                        class="reaction-item reaction-item--add discourse-emoji-picker-trigger"
+                        disabled={props.isLiking}
+                        aria-label="从站点表情中选择反应"
+                        aria-expanded={showReactionPicker.value}
+                        onPointerdown={(event: PointerEvent) => event.stopPropagation()}
+                        onClick={handleToggleReactionPicker}
+                      >
+                        +
+                      </button>
+                      <DiscourseEmojiPicker
+                        visible={showReactionPicker.value}
+                        baseUrl={props.baseUrl}
+                        mode="reaction"
+                        anchorEl={reactionPickerAnchorRef.value}
+                        allowedNames={props.allowedReactionNames}
+                        allowAnyEmoji={props.allowAnyReaction}
+                        onSelect={(emoji: string) => handleToggleLike(emoji)}
+                        onClose={() => (showReactionPicker.value = false)}
+                      />
+                    </span>
+                  )}
                 </div>
               )}
               <div class="post-action-right actions" aria-label="帖子操作">
@@ -413,6 +489,14 @@ export default defineComponent({
             </div>
           </div>
         </footer>
+        <ReactionDetailsModal
+          open={reactionDetailsOpen.value}
+          post={props.post}
+          reaction={reactionDetailsValue.value}
+          baseUrl={props.baseUrl}
+          onClose={() => (reactionDetailsOpen.value = false)}
+          onOpenUser={handleUserClick}
+        />
       </article>
     )
   }

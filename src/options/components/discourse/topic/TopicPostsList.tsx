@@ -65,7 +65,10 @@ export default defineComponent({
       type: Function as PropType<(payload: { postNumber: number; username: string }) => void>,
       required: true
     },
-    onToggleLike: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
+    onToggleLike: {
+      type: Function as PropType<(post: DiscoursePost, reactionId: string) => void>,
+      required: true
+    },
     onToggleReplies: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
     onToggleParent: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
     onNavigate: { type: Function as PropType<(url: string) => void>, required: true },
@@ -78,6 +81,14 @@ export default defineComponent({
     onWiki: { type: Function as PropType<(post: DiscoursePost) => void>, required: true },
     onArchiveTopic: { type: Function as PropType<() => void>, required: true },
     isArchiving: { type: Boolean, required: true },
+    reactionsEnabled: { type: Boolean, default: false },
+    allowedReactionNames: { type: Array as PropType<string[]>, default: () => [] },
+    allowAnyReaction: { type: Boolean, default: false },
+    reactionEmojiMap: {
+      type: Object as PropType<Record<string, { url?: string; unicode?: string }>>,
+      default: () => ({})
+    },
+    topicCanAssign: { type: Boolean, default: false },
     onRefresh: { type: Function as PropType<() => void>, default: null }
   },
   setup(props) {
@@ -130,6 +141,11 @@ export default defineComponent({
               isLiking={props.isLiking(post.id)}
               currentUser={props.currentUser}
               currentUsername={props.currentUsername}
+              reactionsEnabled={props.reactionsEnabled}
+              allowedReactionNames={props.allowedReactionNames}
+              allowAnyReaction={props.allowAnyReaction}
+              reactionEmojiMap={props.reactionEmojiMap}
+              topicCanAssign={props.topicCanAssign}
               onOpenUser={props.onOpenUser}
               onReplyTo={props.onReplyTo}
               onToggleLike={props.onToggleLike}

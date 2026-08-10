@@ -1,8 +1,14 @@
 import { defineComponent, shallowRef, ref, watch } from 'vue'
-import { LoadingOutlined, PaperClipOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import {
+  LoadingOutlined,
+  PaperClipOutlined,
+  CloseOutlined,
+  SmileOutlined
+} from '@ant-design/icons-vue'
 
 import type { ChatMessage } from '../types'
 import { useDiscourseUpload } from '../composables/useDiscourseUpload'
+import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 import '../css/chat/ChatComposer.css'
 
 export default defineComponent({
@@ -18,6 +24,8 @@ export default defineComponent({
   setup(props, { emit }) {
     const message = shallowRef('')
     const textareaRef = ref<HTMLTextAreaElement | null>(null)
+    const emojiButtonRef = ref<HTMLButtonElement | null>(null)
+    const showEmojiPicker = ref(false)
 
     // Upload integration
     const { handleUploadClick, handleUploadChange, fileInputRef, isUploading, uploadFile } =
@@ -63,6 +71,22 @@ export default defineComponent({
       if (!trimmed) return
       emit('send', trimmed)
       message.value = ''
+      showEmojiPicker.value = false
+    }
+
+    const insertEmojiShortcode = (shortcode: string) => {
+      const textarea = textareaRef.value
+      const start = textarea?.selectionStart ?? message.value.length
+      const end = textarea?.selectionEnd ?? start
+      const prefix = message.value.slice(0, start)
+      const suffix = message.value.slice(end)
+      message.value = `${prefix}${shortcode}${suffix}`
+      showEmojiPicker.value = false
+      requestAnimationFrame(() => {
+        const cursor = start + shortcode.length
+        textareaRef.value?.focus()
+        textareaRef.value?.setSelectionRange(cursor, cursor)
+      })
     }
 
     const handleKeydown = (event: KeyboardEvent) => {
@@ -163,6 +187,19 @@ export default defineComponent({
           />
           <div class="chat-composer-actions">
             <button
+              ref={emojiButtonRef}
+              type="button"
+              class="chat-composer-emoji-btn discourse-emoji-picker-trigger"
+              disabled={props.disabled}
+              onPointerdown={(event: PointerEvent) => event.stopPropagation()}
+              onClick={() => (showEmojiPicker.value = !showEmojiPicker.value)}
+              title="插入当前站点表情"
+              aria-label="插入当前站点表情"
+              aria-expanded={showEmojiPicker.value}
+            >
+              <SmileOutlined />
+            </button>
+            <button
               type="button"
               class="chat-composer-upload-btn"
               disabled={props.disabled}
@@ -181,6 +218,14 @@ export default defineComponent({
               {props.editingMessage ? '保存' : '发送'}
             </button>
           </div>
+          <DiscourseEmojiPicker
+            visible={showEmojiPicker.value}
+            baseUrl={props.baseUrl}
+            mode="shortcode"
+            anchorEl={emojiButtonRef.value}
+            onSelect={insertEmojiShortcode}
+            onClose={() => (showEmojiPicker.value = false)}
+          />
           <input
             ref={fileInputRef}
             type="file"

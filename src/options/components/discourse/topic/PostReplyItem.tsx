@@ -28,18 +28,27 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="post-reply-item border-l border-gray-200 dark:border-gray-700 pl-4">
+      <div
+        class="post-reply-item border-l border-gray-200 dark:border-gray-700 pl-4"
+        data-discourse-url={
+          props.post.topic_id
+            ? `${props.baseUrl}/t/${props.post.topic_id}/${props.post.post_number}`
+            : undefined
+        }
+      >
         <div class="post-header mb-2">
           <img
             src={getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)}
             alt={props.post.username}
             class="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
             title={`查看 ${props.post.username} 的主页`}
+            data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
             onClick={() => handleUserClick(props.post.username)}
           />
           <div class="post-header-main text-sm">
             <span
               class="font-medium dark:text-white cursor-pointer hover:text-blue-500"
+              data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
               onClick={() => handleUserClick(props.post.username)}
             >
               {props.post.name || props.post.username}

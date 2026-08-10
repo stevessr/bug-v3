@@ -3,7 +3,9 @@ import { Image } from 'ant-design-vue'
 
 import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
 import { parseEmojiShortcodeToHTML } from '../bbcode'
+import { resolveDiscourseHttpUrl } from '../navigation'
 import { parsePostContent } from '../parser/parsePostContent'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { pageFetch, extractData } from '../utils'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 
@@ -81,24 +83,13 @@ export default defineComponent({
     const processHtmlContent = (html: string) => {
       // Access token to trigger reactivity
       emojiReadyToken.value
-      return replaceEmojiShortcodesInHtml(html)
+      return sanitizeDiscourseHtml(replaceEmojiShortcodesInHtml(sanitizeDiscourseHtml(html)))
     }
 
     const getImageGridColumnsCount = (segment: ImageGridSegment) => {
       if (segment.columnsCount) return Math.max(segment.columnsCount, 1)
       if (segment.columns.length > 1) return segment.columns.length
       return 2
-    }
-
-    const isSameSiteUrl = (url: string): boolean => {
-      if (!url) return false
-      try {
-        const urlObj = new URL(url, props.baseUrl)
-        const baseUrlObj = new URL(props.baseUrl)
-        return urlObj.origin === baseUrlObj.origin
-      } catch {
-        return false
-      }
     }
 
     const handleClick = (event: MouseEvent) => {
@@ -142,24 +133,10 @@ export default defineComponent({
       const href = anchor.getAttribute('href')
       if (!href) return
 
-      // Check if it's a same-site URL
-      if (href.startsWith('/')) {
-        // Internal path
-        event.preventDefault()
-        emit('navigate', href)
-      } else if (href.startsWith('http') && isSameSiteUrl(href)) {
-        // Same-site full URL, convert to internal path
-        event.preventDefault()
-        try {
-          const urlObj = new URL(href)
-          const internalPath = urlObj.pathname + urlObj.search + urlObj.hash
-          emit('navigate', internalPath)
-        } catch {
-          // Invalid URL, let it open
-          return
-        }
-      }
-      // External links will open normally or in new tab
+      const resolved = resolveDiscourseHttpUrl(href, props.baseUrl)
+      if (!resolved) return
+      event.preventDefault()
+      emit('navigate', resolved)
     }
 
     const updateFootnotePosition = () => {
@@ -587,20 +564,25 @@ export default defineComponent({
             )
           } else {
             return (
-              <Image
+              <span
                 key={idx}
-                class="post-inline-image rounded"
-                wrapperClassName="post-inline-image-wrapper"
-                src={getLightboxThumb(segment.image)}
-                preview={getLightboxPreview(segment.image)}
-                // @ts-ignore
-                alt={segment.image.alt || ''}
-                width={segment.image.width}
-                height={segment.image.height}
-                // @ts-ignore
-                srcset={segment.image.srcset}
-                style={segment.image.style}
-              />
+                class="post-inline-image-context"
+                data-discourse-url={segment.image.href}
+              >
+                <Image
+                  class="post-inline-image rounded"
+                  wrapperClassName="post-inline-image-wrapper"
+                  src={getLightboxThumb(segment.image)}
+                  preview={getLightboxPreview(segment.image)}
+                  // @ts-ignore
+                  alt={segment.image.alt || ''}
+                  width={segment.image.width}
+                  height={segment.image.height}
+                  // @ts-ignore
+                  srcset={segment.image.srcset}
+                  style={segment.image.style}
+                />
+              </span>
             )
           }
         })}

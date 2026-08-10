@@ -20,7 +20,12 @@ export default defineComponent({
             <a
               key={link.path}
               class="quick-link sidebar-item"
-              onClick={() => emit('navigate', link.path)}
+              href={link.path}
+              data-discourse-url={link.path}
+              onClick={(event: MouseEvent) => {
+                event.preventDefault()
+                emit('navigate', link.path)
+              }}
             >
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                 <use href={getDiscourseIconHref(link.icon)} />

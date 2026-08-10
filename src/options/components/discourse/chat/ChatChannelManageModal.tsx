@@ -1,17 +1,34 @@
-import { computed, defineComponent, onBeforeUnmount, ref, watch } from 'vue'
-import { Spin, Input } from 'ant-design-vue'
+import { computed, defineComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { Input, Spin } from 'ant-design-vue'
 import {
   CloseOutlined,
+  DeleteOutlined,
+  InfoCircleOutlined,
+  LogoutOutlined,
   SearchOutlined,
+  SettingOutlined,
+  TeamOutlined,
   UserAddOutlined,
   UserDeleteOutlined,
-  BellOutlined,
-  DeleteOutlined
+  WarningOutlined
 } from '@ant-design/icons-vue'
 
 import type { ChatChannel, ChatMember, DiscourseUser } from '../types'
 import { getAvatarUrl } from '../utils'
+
+import ChatChannelSettingsPanel from './ChatChannelSettingsPanel'
 import '../css/chat/ChatChannelManageModal.css'
+
+type ManageTab = 'settings' | 'members' | 'info'
+
+const formatValue = (value: unknown): string => {
+  if (value === true) return '是'
+  if (value === false) return '否'
+  if (value === null || value === undefined || value === '') return '—'
+  if (Array.isArray(value)) return value.length ? value.join('、') : '—'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
 
 export default defineComponent({
   name: 'ChatChannelManageModal',
@@ -24,7 +41,13 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
     searchResults: { type: Array as () => DiscourseUser[], default: () => [] },
-    searching: { type: Boolean, default: false }
+    searching: { type: Boolean, default: false },
+    savingChannel: { type: Boolean, default: false },
+    savingMembership: { type: Boolean, default: false },
+    savingStatus: { type: Boolean, default: false },
+    savingFollow: { type: Boolean, default: false },
+    leavingChannel: { type: Boolean, default: false },
+    deletingChannel: { type: Boolean, default: false }
   },
   emits: [
     'close',
@@ -33,16 +56,26 @@ export default defineComponent({
     'removeMember',
     'follow',
     'unfollow',
+    'updateChannel',
+    'updateMembership',
+    'updateStatus',
+    'leaveChannel',
     'deleteChannel',
     'search'
   ],
   setup(props, { emit }) {
     const channel = computed(() => props.channel)
+    const activeTab = ref<ManageTab>('settings')
     const query = ref('')
     const showAddForm = ref(false)
     const removingId = ref<number | null>(null)
+    const panelRef = ref<HTMLElement | null>(null)
 
     const canModerate = computed(() => {
+      const meta = channel.value?.meta
+      return Boolean(meta?.can_moderate || meta?.can_manage)
+    })
+    const canManageMembers = computed(() => {
       const meta = channel.value?.meta
       return Boolean(meta?.can_moderate || meta?.can_remove_members || meta?.can_manage)
     })
@@ -52,54 +85,78 @@ export default defineComponent({
         channel.value?.chatable_type === 'DirectMessage' ||
         !!channel.value?.chatable?.users?.length
     )
-    const isMuted = computed(() => !!channel.value?.current_user_membership?.muted)
+    const hasMembership = computed(() => !!channel.value?.current_user_membership)
+
+    const displayMembers = computed(() => {
+      if (
+        !props.members.length &&
+        !props.membersLoading &&
+        channel.value?.chatable?.users?.length
+      ) {
+        return channel.value.chatable.users.map(user => ({ id: user.id, user })) as ChatMember[]
+      }
+      return props.members
+    })
+
+    const memberCount = computed(
+      () => props.membersTotal || channel.value?.memberships_count || displayMembers.value.length
+    )
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') emit('close')
+    }
+
+    const resetModal = () => {
+      activeTab.value = 'settings'
+      query.value = ''
+      showAddForm.value = false
+      removingId.value = null
+    }
 
     watch(
       () => props.open,
       open => {
         document.removeEventListener('keydown', handleKeydown)
-        if (open) {
-          query.value = ''
-          showAddForm.value = false
-          removingId.value = null
-          document.addEventListener('keydown', handleKeydown)
-          if (channel.value?.id) {
-            emit('loadMembers', channel.value.id)
-          }
-        }
+        if (!open) return
+        resetModal()
+        document.addEventListener('keydown', handleKeydown)
+        if (channel.value?.id) emit('loadMembers', channel.value.id)
+        void nextTick(() => panelRef.value?.focus())
       }
     )
 
     watch(
       () => props.channel?.id,
       channelId => {
-        if (props.open && channelId) emit('loadMembers', channelId)
+        if (!props.open || !channelId) return
+        resetModal()
+        emit('loadMembers', channelId)
       }
     )
 
     let searchTimer: ReturnType<typeof setTimeout> | null = null
-
     onBeforeUnmount(() => {
       if (searchTimer) clearTimeout(searchTimer)
       document.removeEventListener('keydown', handleKeydown)
     })
+
+    const selectTab = (tab: ManageTab) => {
+      activeTab.value = tab
+      if (tab === 'members' && channel.value?.id) emit('loadMembers', channel.value.id)
+    }
 
     const handleSearchInput = (value: string) => {
       query.value = value
       if (searchTimer) clearTimeout(searchTimer)
       searchTimer = setTimeout(() => {
         const trimmed = value.trim()
-        if (!trimmed) return
-        emit('search', trimmed)
+        if (trimmed) emit('search', trimmed)
       }, 300)
     }
 
-    const handleAdd = () => {
-      const usernames = props.searchResults
-        .filter(user => !props.members.some(member => member.user.id === user.id))
-        .map(user => user.username)
-      if (usernames.length === 0 || !channel.value) return
-      emit('addMembers', { channelId: channel.value.id, usernames })
+    const handleAdd = (user: DiscourseUser) => {
+      if (!channel.value || props.members.some(member => member.user.id === user.id)) return
+      emit('addMembers', { channelId: channel.value.id, usernames: [user.username] })
       showAddForm.value = false
       query.value = ''
     }
@@ -111,253 +168,358 @@ export default defineComponent({
       removingId.value = null
     }
 
-    const displayMembers = computed(() => {
-      if (
-        !props.members.length &&
-        !props.membersLoading &&
-        channel.value?.chatable?.users?.length
-      ) {
-        return channel.value.chatable.users.map(user => ({
-          id: user.id,
-          user
-        })) as ChatMember[]
-      }
-      return props.members
-    })
+    const renderMembers = () => (
+      <section class="chat-manage-members" aria-labelledby="chat-members-title">
+        <div class="chat-manage-modal__section-heading">
+          <div>
+            <h3 id="chat-members-title" class="chat-manage-modal__section-title">
+              频道成员
+            </h3>
+            <div class="chat-manage-modal__section-caption">
+              已显示 {displayMembers.value.length} / {memberCount.value} 人
+            </div>
+          </div>
+          {canManageMembers.value && !isDirect.value && (
+            <button
+              type="button"
+              class="chat-manage-modal__add-btn"
+              aria-label="添加成员"
+              onClick={() => (showAddForm.value = !showAddForm.value)}
+            >
+              <UserAddOutlined /> 添加成员
+            </button>
+          )}
+        </div>
 
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') emit('close')
+        {showAddForm.value && canManageMembers.value && !isDirect.value && (
+          <div class="chat-manage-modal__add-form">
+            <Input
+              value={query.value}
+              placeholder="搜索用户添加…"
+              prefix={<SearchOutlined />}
+              allowClear
+              onUpdate:value={handleSearchInput}
+            />
+            <div class="chat-manage-modal__add-results">
+              {props.searching && (
+                <div class="chat-manage-modal__loading">
+                  <Spin size="small" />
+                </div>
+              )}
+              {!props.searching &&
+                props.searchResults
+                  .filter(user => !props.members.some(member => member.user.id === user.id))
+                  .map(user => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      class="chat-manage-modal__add-result"
+                      onClick={() => handleAdd(user)}
+                    >
+                      <img src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)} alt="" />
+                      <span>
+                        <strong>{user.name || user.username}</strong>
+                        <small>@{user.username}</small>
+                      </span>
+                      <UserAddOutlined />
+                    </button>
+                  ))}
+              {!props.searching && query.value.trim() && props.searchResults.length === 0 && (
+                <div class="chat-manage-modal__hint">未找到匹配的用户</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div class="chat-manage-modal__member-list">
+          {props.membersLoading && displayMembers.value.length === 0 && (
+            <div class="chat-manage-modal__loading">
+              <Spin size="small" />
+            </div>
+          )}
+          {!props.membersLoading && displayMembers.value.length === 0 && (
+            <div class="chat-manage-modal__empty">暂无可显示的成员</div>
+          )}
+          {displayMembers.value.map(member => (
+            <div key={member.user.id} class="chat-manage-modal__member">
+              <img
+                src={getAvatarUrl(member.user.avatar_template, props.baseUrl, 40)}
+                alt=""
+                class="chat-manage-modal__member-avatar"
+              />
+              <div class="chat-manage-modal__member-info">
+                <span class="chat-manage-modal__member-name">
+                  {member.user.name || member.user.username}
+                  {member.user.username === props.currentUsername && (
+                    <span class="chat-manage-modal__you">（我）</span>
+                  )}
+                </span>
+                <span class="chat-manage-modal__member-username">@{member.user.username}</span>
+              </div>
+              {canManageMembers.value &&
+                member.user.username !== props.currentUsername &&
+                !isDirect.value && (
+                  <button
+                    type="button"
+                    class="chat-manage-modal__remove"
+                    aria-label={`移除 ${member.user.username}`}
+                    title="移除成员"
+                    disabled={removingId.value === member.user.id}
+                    onClick={() => handleRemove(member)}
+                  >
+                    <UserDeleteOutlined />
+                  </button>
+                )}
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+
+    const renderInfoGroup = (title: string, rows: Array<[string, unknown]>, id: string) => (
+      <section class="chat-channel-info" aria-labelledby={id}>
+        <h3 id={id} class="chat-manage-modal__section-title">
+          {title}
+        </h3>
+        <dl class="chat-channel-info__grid">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd title={formatValue(value)}>{formatValue(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    )
+
+    const renderInfo = (activeChannel: ChatChannel) => {
+      const membership = activeChannel.current_user_membership
+      const permissionRows = Object.entries(activeChannel.meta || {}).sort(([a], [b]) =>
+        a.localeCompare(b)
+      )
+
+      return (
+        <div class="chat-channel-info-list">
+          {renderInfoGroup(
+            '频道标识',
+            [
+              ['ID', activeChannel.id],
+              ['标题', activeChannel.title || activeChannel.unicode_title],
+              ['Slug', activeChannel.slug],
+              ['表情', activeChannel.emoji || activeChannel.chatable?.emoji],
+              ['频道类型', activeChannel.channelType],
+              ['Chatable 类型', activeChannel.chatable_type],
+              ['Chatable ID', activeChannel.chatable_id || activeChannel.chatable?.id],
+              ['Chatable URL', activeChannel.chatable_url],
+              ['描述', activeChannel.description]
+            ],
+            'chat-channel-identity-title'
+          )}
+          {renderInfoGroup(
+            '功能与状态',
+            [
+              ['状态', activeChannel.status || 'open'],
+              ['启用消息串', activeChannel.threading_enabled],
+              ['用户自动加入', activeChannel.auto_join_users],
+              ['允许全频道提及', activeChannel.allow_channel_wide_mentions],
+              ['成员数', activeChannel.memberships_count],
+              ['置顶消息数', activeChannel.pinned_messages_count],
+              ['最后消息 ID', activeChannel.last_message_id || activeChannel.last_message?.id],
+              ['最后消息时间', activeChannel.last_message_sent_at]
+            ],
+            'chat-channel-capabilities-title'
+          )}
+          {renderInfoGroup(
+            '历史与归档',
+            [
+              ['总消息数', activeChannel.total_messages],
+              ['已归档消息', activeChannel.archived_messages],
+              ['归档已完成', activeChannel.archive_completed],
+              ['归档失败', activeChannel.archive_failed],
+              ['归档主题 ID', activeChannel.archive_topic_id]
+            ],
+            'chat-channel-archive-title'
+          )}
+          {renderInfoGroup(
+            '我的成员资料',
+            [
+              ['成员资料 ID', membership?.id],
+              ['关注中', membership?.following],
+              ['已收藏', membership?.starred],
+              ['免打扰', membership?.muted],
+              ['通知级别', membership?.notification_level],
+              ['未读数', membership?.unread_count],
+              ['最后已读消息 ID', membership?.last_read_message_id],
+              ['最后查看时间', membership?.last_viewed_at],
+              ['最后查看置顶时间', membership?.last_viewed_pins_at],
+              ['有未读置顶', membership?.has_unseen_pins]
+            ],
+            'chat-channel-membership-title'
+          )}
+          {renderInfoGroup('当前权限', permissionRows, 'chat-channel-permissions-title')}
+          <details class="chat-manage-modal__metadata-details">
+            <summary>查看完整频道 JSON</summary>
+            <pre>{JSON.stringify(activeChannel, null, 2)}</pre>
+          </details>
+        </div>
+      )
     }
+
+    const renderDangerZone = (activeChannel: ChatChannel) => (
+      <section class="chat-settings-card chat-settings-danger" aria-labelledby="chat-danger-title">
+        <div class="chat-settings-card__heading">
+          <div>
+            <h3 id="chat-danger-title">危险操作</h3>
+            <p>退出或删除频道前请确认影响范围。</p>
+          </div>
+          <WarningOutlined />
+        </div>
+        {hasMembership.value && (
+          <div class="chat-settings-danger__row">
+            <div>
+              <strong>退出频道</strong>
+              <span>退出后将停止追踪频道；群组私信会移除你的成员资料。</span>
+            </div>
+            <button
+              type="button"
+              class="chat-settings-button is-danger"
+              aria-label="退出频道"
+              disabled={props.leavingChannel}
+              onClick={() => emit('leaveChannel', activeChannel.id)}
+            >
+              <LogoutOutlined /> {props.leavingChannel ? '退出中…' : '退出频道'}
+            </button>
+          </div>
+        )}
+        {canModerate.value && !isDirect.value && (
+          <div class="chat-settings-danger__row">
+            <div>
+              <strong>删除频道</strong>
+              <span>永久删除频道及其聊天历史，此操作不可恢复。</span>
+            </div>
+            <button
+              type="button"
+              class="chat-settings-button is-danger"
+              aria-label="删除频道"
+              disabled={props.deletingChannel}
+              onClick={() => emit('deleteChannel', activeChannel.id)}
+            >
+              <DeleteOutlined /> {props.deletingChannel ? '删除中…' : '删除频道'}
+            </button>
+          </div>
+        )}
+      </section>
+    )
 
     return () => {
       const activeChannel = channel.value
       if (!props.open || !activeChannel) return null
+      const title =
+        activeChannel.title ||
+        activeChannel.unicode_title ||
+        activeChannel.chatable?.name ||
+        `频道 ${activeChannel.id}`
+      const rawChannelEmoji = activeChannel.emoji || activeChannel.chatable?.emoji || ''
+      const channelIcon =
+        rawChannelEmoji && /\p{Emoji_Presentation}/u.test(rawChannelEmoji)
+          ? rawChannelEmoji
+          : isDirect.value
+            ? '💬'
+            : '#'
 
-      const metadata = {
-        id: activeChannel.id,
-        title: activeChannel.title || activeChannel.unicode_title || '',
-        slug: activeChannel.slug || '',
-        channelType: activeChannel.channelType || '',
-        chatableType: activeChannel.chatable_type || '',
-        chatableId: activeChannel.chatable_id ?? activeChannel.chatable?.id ?? null,
-        status: activeChannel.status || '',
-        lastMessageId: activeChannel.last_message_id ?? activeChannel.last_message?.id ?? null,
-        lastMessageSentAt: activeChannel.last_message_sent_at || '',
-        membership: activeChannel.current_user_membership || null,
-        meta: activeChannel.meta || {}
-      }
+      const tabs: Array<{ id: ManageTab; label: string; icon: any }> = [
+        { id: 'settings', label: '设置', icon: <SettingOutlined /> },
+        { id: 'members', label: `成员 ${memberCount.value}`, icon: <TeamOutlined /> },
+        { id: 'info', label: '信息', icon: <InfoCircleOutlined /> }
+      ]
 
       return (
-        <div class="chat-manage-modal" onKeydown={handleKeydown}>
+        <div class="chat-manage-modal">
           <div class="chat-manage-modal__backdrop" onClick={() => emit('close')} />
           <div
+            ref={panelRef}
             class="chat-manage-modal__panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby="chat-manage-modal-title"
             tabindex="-1"
           >
-            <div class="chat-manage-modal__header">
-              <div id="chat-manage-modal-title" class="chat-manage-modal__title">
-                {activeChannel.title || activeChannel.chatable?.name || `频道 ${activeChannel.id}`}
-                <span class="chat-manage-modal__type">{isDirect.value ? '直接消息' : '频道'}</span>
+            <header class="chat-manage-modal__header">
+              <div class="chat-manage-modal__title-wrap">
+                <div class="chat-manage-modal__channel-icon" aria-hidden="true">
+                  {channelIcon}
+                </div>
+                <div>
+                  <div id="chat-manage-modal-title" class="chat-manage-modal__title">
+                    {title}
+                  </div>
+                  <div class="chat-manage-modal__subtitle">
+                    {isDirect.value ? '直接消息' : '聊天频道'} · #{activeChannel.id}
+                  </div>
+                </div>
               </div>
               <button
                 type="button"
                 class="chat-manage-modal__close"
-                aria-label="关闭频道管理"
+                aria-label="关闭聊天设置"
                 onClick={() => emit('close')}
               >
                 <CloseOutlined />
               </button>
-            </div>
+            </header>
 
-            <div class="chat-manage-modal__body">
-              <section
-                class="chat-manage-modal__metadata"
-                aria-labelledby="chat-channel-metadata-title"
-              >
-                <div class="chat-manage-modal__section-heading">
-                  <div>
-                    <div id="chat-channel-metadata-title" class="chat-manage-modal__section-title">
-                      频道 metadata
-                    </div>
-                    <div class="chat-manage-modal__section-caption">来自当前站点的最新频道字段</div>
-                  </div>
-                  <span class="chat-manage-modal__metadata-id">#{activeChannel.id}</span>
-                </div>
-                {activeChannel.description && (
-                  <p class="chat-manage-modal__description">{activeChannel.description}</p>
-                )}
-                <dl class="chat-manage-modal__metadata-grid">
-                  <div>
-                    <dt>类型</dt>
-                    <dd>{metadata.channelType || metadata.chatableType || '未知'}</dd>
-                  </div>
-                  <div>
-                    <dt>Slug</dt>
-                    <dd>{metadata.slug || '—'}</dd>
-                  </div>
-                  <div>
-                    <dt>Chatable</dt>
-                    <dd>
-                      {metadata.chatableType || '—'}
-                      {metadata.chatableId !== null ? ` #${metadata.chatableId}` : ''}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>状态</dt>
-                    <dd>{metadata.status || 'active'}</dd>
-                  </div>
-                  <div>
-                    <dt>最后消息</dt>
-                    <dd>{metadata.lastMessageId ? `#${metadata.lastMessageId}` : '—'}</dd>
-                  </div>
-                  <div>
-                    <dt>关注</dt>
-                    <dd>{metadata.membership?.muted ? '已静音' : '已关注'}</dd>
-                  </div>
-                </dl>
-                <details class="chat-manage-modal__metadata-details">
-                  <summary>查看完整 metadata JSON</summary>
-                  <pre>{JSON.stringify(metadata, null, 2)}</pre>
-                </details>
-              </section>
-
-              <div class="chat-manage-modal__section-title">
-                成员（{props.membersTotal || displayMembers.value.length}）
-              </div>
-
-              <div class="chat-manage-modal__member-list">
-                {props.membersLoading && displayMembers.value.length === 0 && (
-                  <div class="chat-manage-modal__loading">
-                    <Spin size="small" />
-                  </div>
-                )}
-                {displayMembers.value.map(member => (
-                  <div key={member.user.id} class="chat-manage-modal__member">
-                    <img
-                      src={getAvatarUrl(member.user.avatar_template, props.baseUrl, 32)}
-                      alt={member.user.username}
-                      class="chat-manage-modal__member-avatar"
-                    />
-                    <div class="chat-manage-modal__member-info">
-                      <span class="chat-manage-modal__member-name">
-                        {member.user.name || member.user.username}
-                        {member.user.username === props.currentUsername && (
-                          <span class="chat-manage-modal__you">（我）</span>
-                        )}
-                      </span>
-                      <span class="chat-manage-modal__member-username">
-                        @{member.user.username}
-                      </span>
-                    </div>
-                    {canModerate.value &&
-                      member.user.username !== props.currentUsername &&
-                      !isDirect.value && (
-                        <button
-                          type="button"
-                          class="chat-manage-modal__remove"
-                          title="移除成员"
-                          disabled={removingId.value === member.user.id}
-                          onClick={() => handleRemove(member)}
-                        >
-                          <UserDeleteOutlined />
-                        </button>
-                      )}
-                  </div>
-                ))}
-              </div>
-
-              {canModerate.value && !isDirect.value && (
-                <div class="chat-manage-modal__add-section">
-                  {!showAddForm.value ? (
-                    <button
-                      type="button"
-                      class="chat-manage-modal__add-btn"
-                      onClick={() => (showAddForm.value = true)}
-                    >
-                      <UserAddOutlined /> 添加成员
-                    </button>
-                  ) : (
-                    <div class="chat-manage-modal__add-form">
-                      <Input
-                        value={query.value}
-                        placeholder="搜索用户添加..."
-                        prefix={<SearchOutlined />}
-                        onUpdate:value={handleSearchInput}
-                      />
-                      <div class="chat-manage-modal__add-results">
-                        {props.searching && (
-                          <div class="chat-manage-modal__loading">
-                            <Spin size="small" />
-                          </div>
-                        )}
-                        {!props.searching &&
-                          props.searchResults
-                            .filter(
-                              user => !props.members.some(member => member.user.id === user.id)
-                            )
-                            .map(user => (
-                              <button
-                                key={user.id}
-                                type="button"
-                                class="chat-manage-modal__add-result"
-                                onClick={() => handleAdd()}
-                              >
-                                <img
-                                  src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)}
-                                  alt={user.username}
-                                />
-                                <span>@{user.username}</span>
-                                <UserAddOutlined />
-                              </button>
-                            ))}
-                        {!props.searching &&
-                          query.value.trim() &&
-                          props.searchResults.filter(user =>
-                            props.members.some(member => member.user.id === user.id)
-                          ).length === props.searchResults.length &&
-                          props.searchResults.length > 0 && (
-                            <div class="chat-manage-modal__hint">以上用户已在群中</div>
-                          )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div class="chat-manage-modal__settings">
+            <div class="chat-manage-modal__tabs" role="tablist" aria-label="聊天频道管理">
+              {tabs.map(tab => (
                 <button
+                  key={tab.id}
+                  id={`chat-manage-tab-${tab.id}`}
                   type="button"
-                  class="chat-manage-modal__setting-btn"
-                  onClick={() =>
-                    isMuted.value
-                      ? emit('follow', activeChannel.id)
-                      : emit('unfollow', activeChannel.id)
-                  }
+                  role="tab"
+                  aria-selected={activeTab.value === tab.id}
+                  aria-controls={`chat-manage-panel-${tab.id}`}
+                  tabindex={activeTab.value === tab.id ? 0 : -1}
+                  class={['chat-manage-modal__tab', activeTab.value === tab.id && 'is-active']}
+                  onClick={() => selectTab(tab.id)}
                 >
-                  {isMuted.value ? <BellOutlined /> : <BellOutlined />}
-                  {isMuted.value ? '恢复关注' : '静音频道'}
+                  {tab.icon}
+                  <span>{tab.label}</span>
                 </button>
-
-                {canModerate.value && !isDirect.value && (
-                  <button
-                    type="button"
-                    class="chat-manage-modal__setting-btn is-danger"
-                    onClick={() => emit('deleteChannel', activeChannel.id)}
-                  >
-                    <DeleteOutlined /> 删除频道
-                  </button>
-                )}
-              </div>
+              ))}
             </div>
 
-            <div class="chat-manage-modal__footer">
+            <main
+              id={`chat-manage-panel-${activeTab.value}`}
+              class="chat-manage-modal__body"
+              role="tabpanel"
+              aria-labelledby={`chat-manage-tab-${activeTab.value}`}
+            >
+              {activeTab.value === 'settings' && (
+                <>
+                  <ChatChannelSettingsPanel
+                    channel={activeChannel}
+                    savingChannel={props.savingChannel}
+                    savingMembership={props.savingMembership}
+                    savingStatus={props.savingStatus}
+                    savingFollow={props.savingFollow}
+                    onUpdateChannel={payload => emit('updateChannel', payload)}
+                    onUpdateMembership={payload => emit('updateMembership', payload)}
+                    onUpdateStatus={payload => emit('updateStatus', payload)}
+                    onFollow={(channelId: number) => emit('follow', channelId)}
+                    onUnfollow={(channelId: number) => emit('unfollow', channelId)}
+                  />
+                  {renderDangerZone(activeChannel)}
+                </>
+              )}
+              {activeTab.value === 'members' && renderMembers()}
+              {activeTab.value === 'info' && renderInfo(activeChannel)}
+            </main>
+
+            <footer class="chat-manage-modal__footer">
+              <span>所有值均来自当前 Discourse 频道。</span>
               <button type="button" class="chat-manage-modal__done" onClick={() => emit('close')}>
                 完成
               </button>
-            </div>
+            </footer>
           </div>
         </div>
       )

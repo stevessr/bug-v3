@@ -16,6 +16,40 @@ const PAGE_FETCH_TIMEOUT_MS = 30000
 const pageFetchQueue: Array<() => void> = []
 let pageFetchInFlight = 0
 
+export interface PageFetchActivity {
+  active: number
+  queued: number
+  completed: number
+  failed: number
+  total: number
+}
+
+const pageFetchActivity: PageFetchActivity = {
+  active: 0,
+  queued: 0,
+  completed: 0,
+  failed: 0,
+  total: 0
+}
+const pageFetchActivityListeners = new Set<(activity: PageFetchActivity) => void>()
+
+const emitPageFetchActivity = () => {
+  const snapshot = { ...pageFetchActivity }
+  pageFetchActivityListeners.forEach(listener => listener(snapshot))
+}
+
+export function getPageFetchActivity(): PageFetchActivity {
+  return { ...pageFetchActivity }
+}
+
+export function subscribePageFetchActivity(
+  listener: (activity: PageFetchActivity) => void
+): () => void {
+  pageFetchActivityListeners.add(listener)
+  listener(getPageFetchActivity())
+  return () => pageFetchActivityListeners.delete(listener)
+}
+
 function drainPageFetchQueue() {
   while (pageFetchInFlight < PAGE_FETCH_MAX_CONCURRENCY && pageFetchQueue.length > 0) {
     const task = pageFetchQueue.shift()
@@ -26,13 +60,27 @@ function drainPageFetchQueue() {
 }
 
 function enqueuePageFetch<T>(task: () => Promise<T>): Promise<T> {
+  pageFetchActivity.total += 1
+  pageFetchActivity.queued += 1
+  emitPageFetchActivity()
+
   return new Promise((resolve, reject) => {
     pageFetchQueue.push(() => {
+      pageFetchActivity.queued = Math.max(0, pageFetchActivity.queued - 1)
+      pageFetchActivity.active += 1
+      emitPageFetchActivity()
+
       return task()
         .then(resolve)
-        .catch(reject)
+        .catch(error => {
+          pageFetchActivity.failed += 1
+          reject(error)
+        })
         .finally(() => {
           pageFetchInFlight = Math.max(0, pageFetchInFlight - 1)
+          pageFetchActivity.active = Math.max(0, pageFetchActivity.active - 1)
+          pageFetchActivity.completed += 1
+          emitPageFetchActivity()
           drainPageFetchQueue()
         })
     })
@@ -154,11 +202,14 @@ export function generateId(): string {
 export function getAvatarUrl(template: string, baseUrl: string, size = 45): string {
   if (!template) return ''
   const url = template.replace('{size}', String(size))
-  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`
-  if (fullUrl.includes('/user_avatar/')) {
-    return fullUrl.replace(/\.(png|jpg|jpeg|webp)(\?.*)?$/i, '.gif$2')
+  try {
+    const base = new URL(baseUrl)
+    const resolved = new URL(url, `${base.origin}/`)
+    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') return ''
+    return resolved.toString()
+  } catch {
+    return ''
   }
-  return fullUrl
 }
 
 // Format time

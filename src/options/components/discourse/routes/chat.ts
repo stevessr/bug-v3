@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import type {
   BrowserTab,
   ChatChannel,
+  ChatChannelEditableStatus,
   ChatChannelUpdatePayload,
   ChatCreateChannelPayload,
   ChatCreateDirectMessagePayload,
@@ -65,6 +66,14 @@ const CHAT_MEMBERSHIP_FOLLOWS_ENDPOINTS = (channelId: number) => [
   `/chat/api/channels/${channelId}/memberships/me/follows`
 ]
 
+const CHAT_NOTIFICATIONS_SETTINGS_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/notifications-settings/me`
+]
+
+const CHAT_CHANNEL_STATUS_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/status`
+]
+
 const CHAT_CHATABLES_ENDPOINTS = ['/chat/api/chatables']
 
 const CHAT_MEMBER_REMOVE_ENDPOINTS = (channelId: number, userId: number) => [
@@ -95,6 +104,25 @@ const parseErrorMessage = (data: any, fallback: string) => {
   if (typeof data?.error === 'string' && data.error.trim()) return data.error
   if (typeof data?.message === 'string' && data.message.trim()) return data.message
   return fallback
+}
+
+const extractMembershipPayload = (data: any): Record<string, any> => {
+  const candidate = data?.membership || data
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return {}
+  const membershipKeys = [
+    'id',
+    'chat_channel_id',
+    'following',
+    'muted',
+    'notification_level',
+    'starred',
+    'unread_count',
+    'last_read_message_id',
+    'last_viewed_at',
+    'last_viewed_pins_at',
+    'has_unseen_pins'
+  ]
+  return membershipKeys.some(key => key in candidate) ? candidate : {}
 }
 
 const normalizeSingleChannel = (
@@ -611,6 +639,12 @@ const normalizeChannelUpdatePayload = (
   if (typeof payload.threading_enabled === 'boolean') {
     normalized.threading_enabled = payload.threading_enabled
   }
+  if (typeof payload.auto_join_users === 'boolean') {
+    normalized.auto_join_users = payload.auto_join_users
+  }
+  if (typeof payload.allow_channel_wide_mentions === 'boolean') {
+    normalized.allow_channel_wide_mentions = payload.allow_channel_wide_mentions
+  }
   return normalized
 }
 
@@ -867,7 +901,13 @@ export async function updateChatChannel(
       return channel
     }
 
-    Object.assign(channel, normalizeChannelUpdatePayload(payload))
+    const normalized = normalizeChannelUpdatePayload(payload)
+    const { name, ...channelFields } = normalized
+    Object.assign(channel, channelFields)
+    if (name) {
+      channel.title = name
+      channel.unicode_title = name
+    }
     return channel
   } catch (error) {
     state.errorMessage = error instanceof Error ? error.message : String(error)
@@ -1386,7 +1426,7 @@ export async function removeMemberFromChannel(
       const data = extractData(result)
       if (result.ok) {
         const members = state.membersByChannel[channelId] || []
-        state.membersByChannel[channelId] = members.filter(m => m.id !== userId)
+        state.membersByChannel[channelId] = members.filter(m => m.user.id !== userId)
         state.membersTotalByChannel[channelId] = Math.max(
           0,
           (state.membersTotalByChannel[channelId] || 0) - 1
@@ -1424,10 +1464,13 @@ export async function followChatChannel(
       if (result.ok) {
         const channel = state.channels.find(item => item.id === channelId)
         if (channel) {
-          if (!channel.current_user_membership) {
-            channel.current_user_membership = { chat_channel_id: channelId }
+          const membership = extractMembershipPayload(data)
+          channel.current_user_membership = {
+            chat_channel_id: channelId,
+            ...channel.current_user_membership,
+            ...membership,
+            following: true
           }
-          channel.current_user_membership.muted = false
         }
         return true
       }
@@ -1462,10 +1505,13 @@ export async function unfollowChatChannel(
       if (result.ok) {
         const channel = state.channels.find(item => item.id === channelId)
         if (channel) {
-          if (!channel.current_user_membership) {
-            channel.current_user_membership = { chat_channel_id: channelId }
+          const membership = extractMembershipPayload(data)
+          channel.current_user_membership = {
+            chat_channel_id: channelId,
+            ...channel.current_user_membership,
+            ...membership,
+            following: false
           }
-          channel.current_user_membership.muted = true
         }
         return true
       }
@@ -1490,36 +1536,124 @@ export async function updateMembershipSettings(
   if (!state) return false
   state.errorMessage = ''
 
-  const body: Record<string, any> = {}
-  if (typeof payload.muted === 'boolean') body.muted = payload.muted
+  const notificationSettings: Record<string, boolean | number | string> = {}
+  if (typeof payload.muted === 'boolean') notificationSettings.muted = payload.muted
   if (payload.notification_level !== undefined) {
-    body.notification_level = payload.notification_level
+    notificationSettings.notification_level = payload.notification_level
   }
-  if (typeof payload.starred === 'boolean') body.starred = payload.starred
-  if (typeof payload.unread_count === 'number') body.unread_count = payload.unread_count
-  if (payload.last_read_message_id !== undefined) {
-    body.last_read_message_id = payload.last_read_message_id
+  const membershipSettings: Record<string, boolean> = {}
+  if (typeof payload.starred === 'boolean') membershipSettings.starred = payload.starred
+  if (
+    Object.keys(notificationSettings).length === 0 &&
+    Object.keys(membershipSettings).length === 0
+  ) {
+    return false
   }
-  if (Object.keys(body).length === 0) return false
-
-  const jsonPayload = JSON.stringify(body)
-  const formPayload = new URLSearchParams(
-    Object.entries(body).filter(([, v]) => v !== undefined) as [string, string][]
-  ).toString()
 
   let lastError: string | null = null
 
-  for (const path of CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId)) {
-    for (const request of [
-      {
-        headers: { 'Content-Type': 'application/json' },
-        body: jsonPayload
-      },
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-        body: formPayload
+  const applyMembershipResponse = (data: any, fallback: Record<string, any>) => {
+    const channel = state.channels.find(item => item.id === channelId)
+    if (!channel) return
+    const membership = extractMembershipPayload(data)
+    channel.current_user_membership = {
+      chat_channel_id: channelId,
+      ...channel.current_user_membership,
+      ...fallback,
+      ...membership
+    }
+  }
+
+  const sendSettings = async (
+    paths: string[],
+    body: Record<string, boolean | number | string>,
+    rootKey?: string
+  ) => {
+    const jsonBody = rootKey ? { [rootKey]: body } : body
+    const formParams = new URLSearchParams()
+    Object.entries(body).forEach(([key, value]) => {
+      formParams.set(rootKey ? `${rootKey}[${key}]` : key, String(value))
+    })
+
+    for (const path of paths) {
+      for (const request of [
+        {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(jsonBody)
+        },
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: formParams.toString()
+        }
+      ]) {
+        try {
+          const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+            method: 'PUT',
+            headers: request.headers,
+            body: request.body
+          })
+          const data = extractData(result)
+          if (result.ok) {
+            applyMembershipResponse(data, body)
+            return true
+          }
+          lastError = parseErrorMessage(data, '更新成员设置失败')
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error)
+        }
       }
-    ]) {
+    }
+    return false
+  }
+
+  if (
+    Object.keys(notificationSettings).length > 0 &&
+    !(await sendSettings(
+      CHAT_NOTIFICATIONS_SETTINGS_ENDPOINTS(channelId),
+      notificationSettings,
+      'notifications_settings'
+    ))
+  ) {
+    state.errorMessage = lastError || '更新通知设置失败'
+    return false
+  }
+
+  if (
+    Object.keys(membershipSettings).length > 0 &&
+    !(await sendSettings(CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId), membershipSettings))
+  ) {
+    state.errorMessage = lastError || '更新收藏设置失败'
+    return false
+  }
+
+  return true
+}
+
+export async function updateChatChannelStatus(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  status: ChatChannelEditableStatus
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+  const requests = [
+    {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    },
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: new URLSearchParams({ status }).toString()
+    }
+  ]
+
+  for (const path of CHAT_CHANNEL_STATUS_ENDPOINTS(channelId)) {
+    for (const request of requests) {
       try {
         const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
           method: 'PUT',
@@ -1529,33 +1663,62 @@ export async function updateMembershipSettings(
         const data = extractData(result)
         if (result.ok) {
           const channel = state.channels.find(item => item.id === channelId)
+          const updated = data?.channel || data
           if (channel) {
-            if (!channel.current_user_membership) {
-              channel.current_user_membership = { chat_channel_id: channelId }
-            }
-            const membership = data?.membership || data
-            if (membership && typeof membership === 'object') {
-              channel.current_user_membership = {
-                ...channel.current_user_membership,
-                ...membership
-              }
-            } else {
-              channel.current_user_membership = {
-                ...channel.current_user_membership,
-                ...body
-              }
-            }
+            Object.assign(
+              channel,
+              updated && typeof updated === 'object' ? normalizeSingleChannel(updated) : { status }
+            )
+            channel.status = status
           }
           return true
         }
-        lastError = parseErrorMessage(data, '更新成员设置失败')
+        lastError = parseErrorMessage(data, '更新频道状态失败')
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error)
       }
     }
   }
 
-  state.errorMessage = lastError || '更新成员设置失败'
+  state.errorMessage = lastError || '更新频道状态失败'
+  return false
+}
+
+export async function leaveChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  let lastError: string | null = null
+  for (const path of CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, { method: 'DELETE' })
+      const data = extractData(result)
+      if (result.ok) {
+        state.channels = state.channels.filter(item => item.id !== channelId)
+        delete state.messagesByChannel[channelId]
+        delete state.hasMoreByChannel[channelId]
+        delete state.beforeMessageIdByChannel[channelId]
+        delete state.membersByChannel[channelId]
+        delete state.membersTotalByChannel[channelId]
+        delete state.membersLoadingByChannel[channelId]
+        if (state.activeChannelId === channelId) {
+          state.activeChannelId = state.channels[0]?.id || null
+        }
+        return true
+      }
+      lastError = parseErrorMessage(data, '退出频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  state.errorMessage = lastError || '退出频道失败'
   return false
 }
 
@@ -1579,6 +1742,12 @@ export async function deleteChatChannel(
       const data = extractData(result)
       if (result.ok) {
         state.channels = state.channels.filter(item => item.id !== channelId)
+        delete state.messagesByChannel[channelId]
+        delete state.hasMoreByChannel[channelId]
+        delete state.beforeMessageIdByChannel[channelId]
+        delete state.membersByChannel[channelId]
+        delete state.membersTotalByChannel[channelId]
+        delete state.membersLoadingByChannel[channelId]
         if (state.activeChannelId === channelId) {
           state.activeChannelId = state.channels[0]?.id || null
         }

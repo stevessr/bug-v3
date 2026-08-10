@@ -1,7 +1,15 @@
-import { computed, defineComponent, ref } from 'vue'
+import { computed, defineComponent, ref, watch } from 'vue'
 import { UserAddOutlined, SettingOutlined } from '@ant-design/icons-vue'
 
-import type { ChatChannel, ChatMessage, ChatState, DiscourseUser } from '../types'
+import type {
+  ChatChannel,
+  ChatChannelEditableStatus,
+  ChatChannelUpdatePayload,
+  ChatMembershipUpdatePayload,
+  ChatMessage,
+  ChatState,
+  DiscourseUser
+} from '../types'
 
 import ChatChannelList from './ChatChannelList'
 import ChatMessageList from './ChatMessageList'
@@ -20,7 +28,13 @@ export default defineComponent({
     createGroupSearching: { type: Boolean, default: false },
     createGroupResults: { type: Array as () => DiscourseUser[], default: () => [] },
     manageSearching: { type: Boolean, default: false },
-    manageSearchResults: { type: Array as () => DiscourseUser[], default: () => [] }
+    manageSearchResults: { type: Array as () => DiscourseUser[], default: () => [] },
+    savingChannel: { type: Boolean, default: false },
+    savingMembership: { type: Boolean, default: false },
+    savingStatus: { type: Boolean, default: false },
+    savingFollow: { type: Boolean, default: false },
+    leavingChannel: { type: Boolean, default: false },
+    deletingChannel: { type: Boolean, default: false }
   },
   emits: [
     'selectChannel',
@@ -45,6 +59,9 @@ export default defineComponent({
     'removeMember',
     'followChannel',
     'unfollowChannel',
+    'updateMembership',
+    'updateStatus',
+    'leaveChannel',
     'deleteChannel',
     'manageSearch'
   ],
@@ -56,6 +73,15 @@ export default defineComponent({
       () =>
         props.chatState.channels.find(channel => channel.id === props.chatState.activeChannelId) ||
         null
+    )
+
+    watch(
+      () => props.chatState.activeChannelId,
+      (channelId, previousChannelId) => {
+        if (showManage.value && previousChannelId && channelId !== previousChannelId) {
+          showManage.value = false
+        }
+      }
     )
 
     const activeChannelTitle = computed(() => {
@@ -81,11 +107,6 @@ export default defineComponent({
       const channelId = props.chatState.activeChannelId
       if (!channelId) return false
       return props.chatState.hasMoreByChannel[channelId] !== false
-    })
-
-    const canEditActiveChannel = computed(() => {
-      const channel = activeChannel.value
-      return !!channel?.meta?.can_moderate
     })
 
     const activeTypingUsers = computed(() => {
@@ -139,12 +160,6 @@ export default defineComponent({
 
     const handleNavigate = (url: string) => {
       emit('navigate', url)
-    }
-
-    const handleEditChannel = () => {
-      const channel = activeChannel.value
-      if (!channel) return
-      emit('editChannel', { channelId: channel.id })
     }
 
     const handleReact = (payload: { messageId: number; emoji: string; reacted?: boolean }) => {
@@ -218,7 +233,7 @@ export default defineComponent({
           <div class="chat-main-header">
             <div class="chat-main-title">{activeChannelTitle.value}</div>
             <div class="chat-main-actions">
-              {(canEditActiveChannel.value || activeChannel.value) && (
+              {activeChannel.value && (
                 <button
                   type="button"
                   class="chat-main-action-btn"
@@ -226,11 +241,6 @@ export default defineComponent({
                   title="管理频道"
                 >
                   <SettingOutlined /> 管理
-                </button>
-              )}
-              {canEditActiveChannel.value && (
-                <button type="button" class="chat-main-action-btn" onClick={handleEditChannel}>
-                  编辑频道
                 </button>
               )}
             </div>
@@ -293,6 +303,12 @@ export default defineComponent({
           currentUsername={props.currentUsername}
           searching={props.manageSearching}
           searchResults={props.manageSearchResults}
+          savingChannel={props.savingChannel}
+          savingMembership={props.savingMembership}
+          savingStatus={props.savingStatus}
+          savingFollow={props.savingFollow}
+          leavingChannel={props.leavingChannel}
+          deletingChannel={props.deletingChannel}
           onClose={() => (showManage.value = false)}
           onLoadMembers={(channelId: number) => emit('loadMembers', channelId)}
           onAddMembers={(payload: { channelId: number; usernames: string[] }) =>
@@ -303,6 +319,17 @@ export default defineComponent({
           }
           onFollow={(channelId: number) => emit('followChannel', channelId)}
           onUnfollow={(channelId: number) => emit('unfollowChannel', channelId)}
+          onUpdateChannel={(payload: { channelId: number; updates: ChatChannelUpdatePayload }) =>
+            emit('editChannel', payload)
+          }
+          onUpdateMembership={(payload: {
+            channelId: number
+            updates: ChatMembershipUpdatePayload
+          }) => emit('updateMembership', payload)}
+          onUpdateStatus={(payload: { channelId: number; status: ChatChannelEditableStatus }) =>
+            emit('updateStatus', payload)
+          }
+          onLeaveChannel={(channelId: number) => emit('leaveChannel', channelId)}
           onDeleteChannel={(channelId: number) => emit('deleteChannel', channelId)}
           onSearch={(query: string) => emit('manageSearch', query)}
         />

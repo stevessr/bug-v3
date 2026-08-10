@@ -8,6 +8,7 @@ import { pageUploadHandler } from './pageUploadHandler'
 import { fetchImageHandler } from './fetchImageHandler'
 import { settingsHandler } from './settingsHandler'
 import { discourseIconSpriteHandler } from './discourseIconSpriteHandler'
+import { discourseSiteSettingsHandler } from './discourseSiteSettingsHandler'
 import { workflowRecorderHandler } from './workflowRecorderHandler'
 
 const handlers = [
@@ -19,6 +20,7 @@ const handlers = [
   pageUploadHandler,
   fetchImageHandler,
   discourseIconSpriteHandler,
+  discourseSiteSettingsHandler,
   workflowRecorderHandler,
   settingsHandler
 ]

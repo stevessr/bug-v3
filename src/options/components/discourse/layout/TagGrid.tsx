@@ -11,7 +11,8 @@ export default defineComponent({
   props: {
     tags: { type: Array as () => DiscourseTag[], required: true },
     groups: { type: Array as () => DiscourseTagGroup[], default: () => [] },
-    title: { type: String, default: '标签' }
+    title: { type: String, default: '标签' },
+    baseUrl: { type: String, default: '' }
   },
   emits: ['click'],
   setup(props, { emit }) {
@@ -80,6 +81,7 @@ export default defineComponent({
                     key={tag.id || tag.name}
                     type="button"
                     class="tag-group__item"
+                    data-discourse-url={`${props.baseUrl}/tag/${encodeURIComponent(tag.name)}`}
                     aria-label={`${tag.text || tag.name}，${tag.count} 个话题`}
                     onClick={() => emit('click', tag)}
                   >

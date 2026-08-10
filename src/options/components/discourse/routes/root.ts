@@ -7,6 +7,7 @@ import type {
   DiscourseUser,
   TopicListType
 } from '../types'
+import { buildTopicListApiUrl } from '../navigation'
 import { pageFetch, extractData } from '../utils'
 import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
 
@@ -23,7 +24,9 @@ export async function loadHome(
 
   const [catResult, topicResult] = await Promise.all([
     pageFetch<any>(`${baseUrl.value}/categories.json`),
-    pageFetch<any>(`${baseUrl.value}/${tab.topicListType || 'latest'}.json`)
+    pageFetch<any>(
+      buildTopicListApiUrl(baseUrl.value, tab.topicListType || 'latest', tab.topicListPeriod)
+    )
   ])
 
   const catData = extractData(catResult)
@@ -63,13 +66,14 @@ export async function changeTopicListType(
   users: Ref<Map<number, DiscourseUser>>
 ) {
   tab.topicListType = type
+  tab.topicListPeriod = null
   tab.topicsPage = 0
   tab.currentTagName = ''
   tab.tagGroups = []
   tab.pendingTopics = null
   tab.pendingTopicsCount = 0
 
-  const result = await pageFetch<any>(`${baseUrl.value}/${type}.json`)
+  const result = await pageFetch<any>(buildTopicListApiUrl(baseUrl.value, type))
   const data = extractData(result)
 
   if (data?.topic_list?.topics) {

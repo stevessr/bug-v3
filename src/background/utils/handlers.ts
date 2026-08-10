@@ -9,6 +9,7 @@ import {
   handleLinuxDoUserRequest,
   handlePageFetchRequest,
   handleDiscourseIconSpriteRequest,
+  handleDiscourseSiteSettingsRequest,
   handleLinuxDoUploadRequest,
   handleLinuxDoChallengeRequest,
   handleDownloadImage,
@@ -138,6 +139,21 @@ export function setupMessageListener() {
               return true
             }
             sendResponse({ success: false, error: 'Missing url for GET_DISCOURSE_ICON_SPRITE' })
+            return false
+
+          case 'GET_DISCOURSE_SITE_SETTINGS':
+            if ('url' in typedMsg && typedMsg.url && 'keys' in typedMsg) {
+              void handleDiscourseSiteSettingsRequest(
+                typedMsg.url,
+                typedMsg.keys,
+                sendResponse as any
+              )
+              return true
+            }
+            sendResponse({
+              success: false,
+              error: 'Missing url or keys for GET_DISCOURSE_SITE_SETTINGS'
+            })
             return false
 
           case 'LINUX_DO_UPLOAD':

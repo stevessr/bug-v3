@@ -75,6 +75,17 @@ export interface GetLinuxDoUserMessage extends BaseMessage {
 }
 
 /**
+ * Read the public client-side Discourse site settings from an authenticated
+ * forum tab. Only explicitly requested keys are returned by the content
+ * handler; cookies and the full bootstrap payload never leave that tab.
+ */
+export interface GetDiscourseSiteSettingsMessage extends BaseMessage {
+  type: 'GET_DISCOURSE_SITE_SETTINGS'
+  url: string
+  keys: string[]
+}
+
+/**
  * LINUX_DO_PAGE_FETCH 消息
  */
 export interface LinuxDoPageFetchMessage extends BaseMessage {
@@ -394,6 +405,7 @@ export type TypedMessage =
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
   | GetLinuxDoUserMessage
+  | GetDiscourseSiteSettingsMessage
   | LinuxDoPageFetchMessage
   | LinuxDoUploadMessage
   | LinuxDoRecoverChallengeMessage
@@ -447,6 +459,7 @@ export type ContentMessage =
   | DomQueryMessage
   | GetCsrfTokenMessage
   | GetLinuxDoUserMessage
+  | GetDiscourseSiteSettingsMessage
   | PageFetchMessage
   | GetDiscourseIconSpriteMessage
   | PageUploadMessage
@@ -478,6 +491,12 @@ export interface CsrfTokenResponse {
 export interface LinuxDoUserResponse {
   success: boolean
   user?: any
+  error?: string
+}
+
+export interface DiscourseSiteSettingsResponse {
+  success: boolean
+  settings?: Record<string, string | number | boolean | null>
   error?: string
 }
 

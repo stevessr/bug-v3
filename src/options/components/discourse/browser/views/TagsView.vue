@@ -24,6 +24,7 @@ defineEmits(['tagClick', 'categoryClick', 'openUser', 'changeTopicListType', 'na
       <TagGrid
         :tags="activeTab.tags"
         :groups="activeTab.tagGroups"
+        :baseUrl="baseUrl"
         title=""
         @click="$emit('tagClick', $event)"
       />

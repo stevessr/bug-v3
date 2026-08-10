@@ -1,6 +1,7 @@
 import type { ComputedRef, Ref } from 'vue'
 
 import type { BrowserTab, DiscourseTopic, DiscourseUser } from '../types'
+import { buildTopicListApiUrl } from '../navigation'
 import { pageFetch, extractData } from '../utils'
 import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
 
@@ -86,7 +87,12 @@ export async function loadMoreTopics(
   try {
     let url: string
     if (tab.viewType === 'home') {
-      url = `${baseUrl.value}/${tab.topicListType || 'latest'}.json?page=${tab.topicsPage}`
+      url = buildTopicListApiUrl(
+        baseUrl.value,
+        tab.topicListType || 'latest',
+        tab.topicListPeriod,
+        tab.topicsPage
+      )
     } else if (tab.viewType === 'tag') {
       const encoded = encodeURIComponent(tab.currentTagName || '')
       url = `${baseUrl.value}/tag/${encoded}.json?page=${tab.topicsPage}`

@@ -1,5 +1,6 @@
 import { defineComponent, computed } from 'vue'
 
+import { resolveDiscourseHttpUrl } from '../navigation'
 import type { DiscourseCategory, DiscourseTopic } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 
@@ -68,12 +69,18 @@ export default defineComponent({
 
     const getImageUrl = (url?: string | null) => {
       if (!url) return ''
-      return url.startsWith('http') ? url : `${props.baseUrl}${url}`
+      return resolveDiscourseHttpUrl(url, props.baseUrl) || ''
     }
 
     const getTopicTitle = (topic: CategoryTopic) => {
       return topic.fancy_title || topic.title
     }
+
+    const getCategoryUrl = (category: DiscourseCategory) =>
+      `${props.baseUrl}/c/${encodeURIComponent(category.slug)}/${category.id}`
+
+    const getTopicUrl = (topic: CategoryTopic) =>
+      `${props.baseUrl}/t/${encodeURIComponent(topic.slug || String(topic.id))}/${topic.id}`
 
     return () => {
       if (props.categories.length === 0) return null
@@ -93,6 +100,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="category-directory-primary"
+                      data-discourse-url={getCategoryUrl(cat)}
                       onClick={() => emit('click', cat)}
                     >
                       <span class="category-directory-title-wrap">
@@ -148,6 +156,7 @@ export default defineComponent({
                                 key={child.id}
                                 type="button"
                                 class="subcategory-chip"
+                                data-discourse-url={getCategoryUrl(child)}
                                 onClick={(e: Event) => {
                                   e.stopPropagation()
                                   emit('click', child)
@@ -166,6 +175,7 @@ export default defineComponent({
                         key={topic.id}
                         type="button"
                         class="category-topic-row"
+                        data-discourse-url={getTopicUrl(topic)}
                         onClick={() => emit('topicClick', topic as DiscourseTopic)}
                       >
                         <span class="category-topic-title" title={getTopicTitle(topic)}>
@@ -210,6 +220,7 @@ export default defineComponent({
                   <button
                     type="button"
                     class="category-card__primary"
+                    data-discourse-url={getCategoryUrl(cat)}
                     onClick={() => emit('click', cat)}
                   >
                     <span class="category-card__heading">
@@ -256,6 +267,7 @@ export default defineComponent({
                             key={child.id}
                             type="button"
                             class="category-card__child"
+                            data-discourse-url={getCategoryUrl(child)}
                             onClick={(e: Event) => {
                               e.stopPropagation()
                               emit('click', child)

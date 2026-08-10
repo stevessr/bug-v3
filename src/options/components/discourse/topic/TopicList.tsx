@@ -7,6 +7,7 @@ import type {
   DiscourseUser,
   DiscourseTopicTag
 } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import TagPill from '../layout/TagPill'
 import '../css/TopicList.css'
@@ -184,6 +185,7 @@ export default defineComponent({
             class="topic-row"
             role="link"
             tabindex={0}
+            data-discourse-url={getTopicUrl(topic, props.baseUrl)}
             aria-label={`打开话题：${topic.title}`}
             onClick={() => handleClick(topic)}
             onKeydown={(event: KeyboardEvent) => handleRowKeydown(event, topic)}
@@ -193,7 +195,10 @@ export default defineComponent({
           >
             <div class="topic-main">
               <div class="topic-title-row">
-                <div class="topic-title" innerHTML={topic.fancy_title || topic.title} />
+                <div
+                  class="topic-title"
+                  innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
+                />
                 {getUnreadCount(topic) > 0 && (
                   <span class="topic-unread">未读 +{getUnreadCount(topic)}</span>
                 )}
@@ -204,6 +209,7 @@ export default defineComponent({
                   <span
                     key={getTagKey(tag)}
                     class="topic-tag"
+                    data-discourse-url={`${props.baseUrl}/tag/${encodeURIComponent(getTagLabel(tag))}`}
                     onClick={(e: Event) => {
                       e.stopPropagation()
                       handleTagClick(tag)
@@ -229,6 +235,11 @@ export default defineComponent({
                     <div
                       key={poster.user_id}
                       class={['poster-avatar', poster.extras === 'latest' ? 'latest-poster' : '']}
+                      data-discourse-url={
+                        poster.user
+                          ? `${props.baseUrl}/u/${encodeURIComponent(poster.user.username)}`
+                          : undefined
+                      }
                       title={
                         poster.user
                           ? `${poster.user.name || poster.user.username} - ${poster.description}`

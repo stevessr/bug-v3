@@ -2,6 +2,7 @@ import { defineComponent, computed } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseUserProfile, UserActivityState, ActivityTabType } from '../types'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
@@ -153,6 +154,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="activity-item__avatar-button"
+                      data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(action.username)}`}
                       aria-label={`打开 ${action.username} 的主页`}
                       onClick={() => emit('openUser', action.username)}
                     >
@@ -166,6 +168,7 @@ export default defineComponent({
                       class="activity-item__body"
                       role="link"
                       tabindex={0}
+                      data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(action.slug || String(action.topic_id))}/${action.topic_id}${action.post_number ? `/${action.post_number}` : ''}`}
                       onClick={() => emit('openTopic', { id: action.topic_id, slug: action.slug })}
                       onKeydown={(event: KeyboardEvent) =>
                         handleKeyboardOpen(event, () =>
@@ -178,11 +181,14 @@ export default defineComponent({
                         <span>{getActionTypeLabel(action.action_type)}</span>
                         <span class="activity-item__time">{formatTime(action.created_at)}</span>
                       </div>
-                      <div class="activity-item__title" innerHTML={action.title} />
+                      <div
+                        class="activity-item__title"
+                        innerHTML={sanitizeDiscourseHtml(action.title)}
+                      />
                       {action.excerpt && (
                         <div
                           class="activity-item__excerpt line-clamp-2"
-                          innerHTML={action.excerpt}
+                          innerHTML={sanitizeDiscourseHtml(action.excerpt)}
                         />
                       )}
                     </div>
@@ -205,11 +211,12 @@ export default defineComponent({
                   key={topic.id}
                   type="button"
                   class="activity-topic-item"
+                  data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(topic.slug)}/${topic.id}`}
                   onClick={() => emit('openTopic', topic)}
                 >
                   <div
                     class="activity-topic-item__title"
-                    innerHTML={topic.fancy_title || topic.title}
+                    innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
                   />
                   <div class="activity-topic-item__meta">
                     <span>{topic.posts_count} 帖子</span>
@@ -240,6 +247,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="activity-item__avatar-button"
+                      data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(reaction.post.username)}`}
                       aria-label={`打开 ${reaction.post.username} 的主页`}
                       onClick={() => emit('openUser', reaction.post.username)}
                     >
@@ -253,6 +261,7 @@ export default defineComponent({
                       class="activity-item__body"
                       role="link"
                       tabindex={0}
+                      data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(reaction.post.topic_slug || String(reaction.post.topic_id))}/${reaction.post.topic_id}/${reaction.post.post_number}`}
                       onClick={() =>
                         emit('openTopic', {
                           id: reaction.post.topic_id,
@@ -280,11 +289,14 @@ export default defineComponent({
                         </span>
                         <span class="activity-item__time">{formatTime(reaction.created_at)}</span>
                       </div>
-                      <div class="activity-item__title" innerHTML={reaction.post.topic_title} />
+                      <div
+                        class="activity-item__title"
+                        innerHTML={sanitizeDiscourseHtml(reaction.post.topic_title)}
+                      />
                       {reaction.post.excerpt && (
                         <div
                           class="activity-item__excerpt line-clamp-2"
-                          innerHTML={reaction.post.excerpt}
+                          innerHTML={sanitizeDiscourseHtml(reaction.post.excerpt)}
                         />
                       )}
                     </div>
@@ -312,6 +324,7 @@ export default defineComponent({
                       class="activity-item__body"
                       role="link"
                       tabindex={0}
+                      data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(post.slug)}/${post.topic_id}/${post.post_number}`}
                       onClick={() => emit('openTopic', { id: post.topic_id, slug: post.slug })}
                       onKeydown={(event: KeyboardEvent) =>
                         handleKeyboardOpen(event, () =>
@@ -323,9 +336,15 @@ export default defineComponent({
                         <span class="activity-item__solved">✓ 已解决</span>
                         <span class="activity-item__time">{formatTime(post.created_at)}</span>
                       </div>
-                      <div class="activity-item__title" innerHTML={post.topic_title} />
+                      <div
+                        class="activity-item__title"
+                        innerHTML={sanitizeDiscourseHtml(post.topic_title)}
+                      />
                       {post.excerpt && (
-                        <div class="activity-item__excerpt line-clamp-2" innerHTML={post.excerpt} />
+                        <div
+                          class="activity-item__excerpt line-clamp-2"
+                          innerHTML={sanitizeDiscourseHtml(post.excerpt)}
+                        />
                       )}
                     </div>
                   </div>

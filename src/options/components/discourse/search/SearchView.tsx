@@ -9,6 +9,7 @@ import type {
   DiscourseCategory
 } from '../types'
 import { searchTags } from '../actions'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime } from '../utils'
 import TagPill from '../layout/TagPill'
 import {
@@ -721,6 +722,7 @@ export default defineComponent({
                 key={post.id}
                 class={['search-result', { 'search-result--clickable': Boolean(path) }]}
                 role={path ? 'link' : undefined}
+                data-discourse-url={path || undefined}
                 tabindex={path ? 0 : undefined}
                 onClick={path ? () => openResult(path) : undefined}
                 onKeydown={(event: KeyboardEvent) => handleResultKeydown(event, path)}
@@ -740,7 +742,12 @@ export default defineComponent({
                     <span class="search-result__chip">分类 {topic.category_id}</span>
                   )}
                 </div>
-                {post.blurb && <div class="search-result__excerpt" innerHTML={post.blurb} />}
+                {post.blurb && (
+                  <div
+                    class="search-result__excerpt"
+                    innerHTML={sanitizeDiscourseHtml(post.blurb)}
+                  />
+                )}
               </article>
             )
           })}

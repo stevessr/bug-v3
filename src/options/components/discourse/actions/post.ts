@@ -102,7 +102,7 @@ export interface FlagPayload {
 
 export interface AssignPayload {
   postId: number
-  assigneeId: number
+  username: string
 }
 
 export interface EditPostPayload {
@@ -223,9 +223,9 @@ export async function assignPost(baseUrl: string, payload: AssignPayload) {
       'Discourse-Logged-In': 'true'
     },
     body: JSON.stringify({
-      target_id: payload.assigneeId,
-      target_type: 'User',
-      post_id: payload.postId
+      username: payload.username,
+      target_id: payload.postId,
+      target_type: 'Post'
     })
   })
   const data = extractData(result)

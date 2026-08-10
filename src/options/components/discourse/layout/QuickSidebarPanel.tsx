@@ -150,6 +150,7 @@ export default defineComponent({
                       <button
                         class={['quick-sidebar-item', item.muted ? 'is-muted' : '']}
                         key={item.id}
+                        data-discourse-url={item.path}
                         onClick={() => emit('navigate', item.path)}
                         type="button"
                       >

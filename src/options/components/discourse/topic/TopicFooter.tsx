@@ -39,7 +39,7 @@ export default defineComponent({
     aiAvailable: { type: Boolean, default: true },
     aiLoading: { type: Boolean, default: false }
   },
-  emits: ['changeLevel', 'bookmark', 'flag', 'assign', 'reply', 'aiSummary'],
+  emits: ['changeLevel', 'bookmark', 'flag', 'assign', 'share', 'reply', 'aiSummary'],
   setup(props, { emit }) {
     const levelOption = computed(() => {
       const level = props.notificationLevel ?? 1
@@ -82,6 +82,13 @@ export default defineComponent({
             disabled={props.loading}
           >
             举报
+          </Button>
+          <Button
+            class="topic-footer__action"
+            onClick={() => emit('share')}
+            disabled={props.loading}
+          >
+            分享
           </Button>
           {props.canAssign && (
             <Button
