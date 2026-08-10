@@ -26,6 +26,8 @@ test.describe('Discourse topic actions and private messages', () => {
         avatar_template: '/user_avatar/linux.do/bob/{size}/300_2.gif'
       }
       const allowedUsers = [steve, alice]
+      const interactionPermissions = { aliceCanChat: true }
+      ;(globalThis as any).__interactionPermissions = interactionPermissions
 
       const makeTopic = () => ({
         id: 42,
@@ -218,7 +220,7 @@ test.describe('Discourse topic actions and private messages', () => {
                 location: '香港',
                 can_send_private_messages: true,
                 can_send_private_message_to_user: true,
-                can_chat_user: true,
+                can_chat_user: interactionPermissions.aliceCanChat,
                 can_follow: true,
                 is_followed: false,
                 total_followers: 12,
@@ -235,7 +237,7 @@ test.describe('Discourse topic actions and private messages', () => {
                 bio_cooked: '<p>Alice 的简介</p>',
                 can_send_private_messages: true,
                 can_send_private_message_to_user: true,
-                can_chat_user: true,
+                can_chat_user: interactionPermissions.aliceCanChat,
                 can_follow: true,
                 is_followed: false,
                 total_followers: 12,
@@ -501,6 +503,23 @@ test.describe('Discourse topic actions and private messages', () => {
       'background-image',
       /cdn3\.ldstatic\.com\/original\/4X\/alice-profile-background\.png/
     )
+  })
+
+  test('does not offer chat when the other user has disabled it', async ({ page }) => {
+    await openTopic(page)
+    await page.evaluate(() => {
+      ;(globalThis as any).__interactionPermissions.aliceCanChat = false
+    })
+    await page.locator('[data-post-number="2"] .post-author-avatar-button').click()
+
+    const card = page.getByRole('dialog', { name: 'alice 的用户卡片' })
+    await expect(card.getByRole('button', { name: '私信' })).toBeVisible()
+    await expect(card.getByRole('button', { name: '聊天' })).toHaveCount(0)
+
+    await card.getByRole('button', { name: '主页', exact: true }).click()
+    const profile = page.locator('.user-profile')
+    await expect(profile.getByRole('button', { name: '私信' })).toBeVisible()
+    await expect(profile.getByRole('button', { name: '聊天' })).toHaveCount(0)
   })
 
   test('uses the official Post assignment payload and shares the canonical topic URL', async ({

@@ -17,6 +17,7 @@ import type {
   ChatCreateChannelPayload,
   ChatMembershipUpdatePayload,
   ChatMessage,
+  ChatThread,
   DiscourseCategory,
   DiscourseTag,
   DiscourseTopic,
@@ -102,6 +103,7 @@ const {
   users,
   isLoadingMore,
   currentUsername,
+  currentUserStaff,
   unreadNotificationsCount,
   ensureSessionUser,
   createTab,
@@ -128,6 +130,11 @@ const {
   openUserPreferences,
   openChat,
   ensureChatLoaded,
+  loadMyThreads,
+  loadMoreMyThreads,
+  loadThreadsForChatChannel,
+  loadMoreThreadsForChatChannel,
+  searchChatMessages,
   openQuote,
   loadMorePosts,
   ensurePostNumberLoaded,
@@ -139,7 +146,14 @@ const {
   loadMoreFollowFeed,
   selectChatChannel,
   loadMoreChatMessagesForChannel,
+  openChatMessageThread,
+  openChatThreadFromList,
+  closeActiveChatThread,
+  loadMoreChatThreadMessagesForActive,
+  updateActiveChatThreadNotificationLevel,
+  updateActiveChatThreadTitle,
   sendChat,
+  sendChatThread,
   reactToChatMessage,
   updateChatChannel,
   replyChatInteraction,
@@ -156,9 +170,13 @@ const {
   searchDiscourse,
   loadMoreSearchResults,
   replyToChatMessage,
+  replyToChatThreadMessage,
   cancelChatReply,
+  cancelChatThreadReply,
   editChatMessageAction,
+  editChatThreadMessageAction,
   cancelChatEdit,
+  cancelChatThreadEdit,
   deleteChatMessageAction,
   flagChatMessageAction,
   searchMessages,
@@ -207,7 +225,10 @@ const editTarget = ref<DiscoursePost | null>(null)
 const editInitialRaw = ref('')
 const editOriginalRaw = ref('')
 const proxiedBlobUrls = new Set<string>()
-const proxyingImages = new WeakSet<HTMLImageElement>()
+const proxiedImageBlobUrls = new WeakMap<HTMLImageElement, string>()
+const proxyingImages = new WeakMap<HTMLImageElement, string>()
+const attemptedImageSources = new WeakMap<HTMLImageElement, string>()
+const proxyImageRequests = new Map<string, Promise<Blob | null>>()
 const messageBusUserId = ref<number | null>(null)
 let messageBusUserIdFor = ''
 let messageBusUserIdPromise: Promise<void> | null = null
@@ -519,10 +540,43 @@ const handleTopicSort = (key: 'replies' | 'views' | 'activity') => {
 }
 
 let scrollRafId: number | null = null
+let suppressScrollPersistence = false
+let renderedHistoryEntry: { tabId: string; historyIndex: number } | null = null
+
+const persistCurrentScrollPosition = () => {
+  const tab = activeTab.value
+  const container = contentAreaRef.value
+  if (!tab || !container) return
+  const historyIndex =
+    renderedHistoryEntry?.tabId === tab.id ? renderedHistoryEntry.historyIndex : tab.historyIndex
+  if (!tab.historyScrollPositions) tab.historyScrollPositions = []
+  tab.historyScrollPositions[historyIndex] = container.scrollTop
+  if (historyIndex === tab.historyIndex) {
+    tab.scrollTop = container.scrollTop
+  }
+}
+
 const handleScrollRaf = () => {
   if (scrollRafId !== null) return
+  const scheduledTab = activeTab.value
+  const scheduledContainer = contentAreaRef.value
+  const scheduledTabId = scheduledTab?.id
+  const scheduledUrl = scheduledTab?.url
+  const scheduledHistoryIndex = scheduledTab?.historyIndex
+  const shouldIgnore = suppressScrollPersistence || !!scheduledTab?.loading
   scrollRafId = requestAnimationFrame(() => {
     scrollRafId = null
+    const currentTab = activeTab.value
+    if (
+      shouldIgnore ||
+      !currentTab ||
+      currentTab.id !== scheduledTabId ||
+      currentTab.url !== scheduledUrl ||
+      currentTab.historyIndex !== scheduledHistoryIndex ||
+      contentAreaRef.value !== scheduledContainer
+    ) {
+      return
+    }
     void handleScroll()
   })
 }
@@ -530,13 +584,10 @@ const handleScrollRaf = () => {
 // Scroll event handler (infinite loading for all view types)
 const handleScroll = async () => {
   if (!activeTab.value || !contentAreaRef.value) return
+  if (suppressScrollPersistence || activeTab.value.loading) return
   const el = contentAreaRef.value
-  activeTab.value.scrollTop = el.scrollTop
-  if (!activeTab.value.historyScrollPositions) {
-    activeTab.value.historyScrollPositions = []
-  }
-  activeTab.value.historyScrollPositions[activeTab.value.historyIndex] = el.scrollTop
-  if (activeTab.value.loading || isLoadingMore.value) return
+  persistCurrentScrollPosition()
+  if (isLoadingMore.value) return
 
   const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight
   const viewType = activeTab.value.viewType
@@ -578,6 +629,16 @@ watch(
   () => activeTab.value?.loading,
   loading => {
     if (!loading) return
+    persistCurrentScrollPosition()
+    suppressScrollPersistence = true
+    if (scrollRafId !== null) {
+      cancelAnimationFrame(scrollRafId)
+      scrollRafId = null
+    }
+    if (scrollRestoreRafId !== null) {
+      cancelAnimationFrame(scrollRestoreRafId)
+      scrollRestoreRafId = null
+    }
     const activity = getPageFetchActivity()
     pageFetchBaseline.value = {
       total: activity.total,
@@ -604,15 +665,25 @@ watch(
   () => [activeTabId.value, activeTab.value?.url, activeTab.value?.loading] as const,
   async ([tabId, url, loading]) => {
     if (!tabId || !url || loading) return
+    suppressScrollPersistence = true
+    renderedHistoryEntry = {
+      tabId,
+      historyIndex: activeTab.value?.historyIndex ?? 0
+    }
     await nextTick()
     if (scrollRestoreRafId !== null) cancelAnimationFrame(scrollRestoreRafId)
     scrollRestoreRafId = requestAnimationFrame(() => {
       scrollRestoreRafId = null
       const tab = activeTab.value
       const container = contentAreaRef.value
-      if (!tab || tab.id !== tabId || tab.url !== url || !container) return
+      if (!tab || tab.id !== tabId || tab.url !== url || !container) {
+        suppressScrollPersistence = false
+        return
+      }
       const saved = tab.historyScrollPositions?.[tab.historyIndex] ?? tab.scrollTop ?? 0
       container.scrollTop = Math.max(0, saved)
+      renderedHistoryEntry = { tabId: tab.id, historyIndex: tab.historyIndex }
+      suppressScrollPersistence = false
     })
   },
   { immediate: true }
@@ -1413,8 +1484,88 @@ const handleLoadMoreChatMessages = (channelId: number) => {
   loadMoreChatMessagesForChannel(channelId)
 }
 
+const handleSearchChatMessages = (payload: {
+  query: string
+  channelId: number | null
+  sort: 'relevance' | 'latest'
+}) => {
+  void searchChatMessages(payload.query, payload.channelId, payload.sort, true)
+}
+
+const handleLoadMoreChatSearch = () => {
+  const search = activeTab.value?.chatState?.searchState
+  if (!search) return
+  void searchChatMessages(search.query, search.channelId, search.sort, false)
+}
+
+const handleOpenChatThread = async (chatMessage: ChatMessage) => {
+  const thread = await openChatMessageThread(chatMessage)
+  if (!thread) {
+    message.error(activeTab.value?.chatState?.threadErrorMessage || '无法打开消息串')
+  }
+}
+
+const handleLoadMyChatThreads = () => {
+  void loadMyThreads(true)
+}
+
+const handleLoadMoreMyChatThreads = () => {
+  void loadMoreMyThreads()
+}
+
+const handleLoadChatChannelThreads = (channelId: number) => {
+  void loadThreadsForChatChannel(channelId, true)
+}
+
+const handleLoadMoreChatChannelThreads = (channelId: number) => {
+  void loadMoreThreadsForChatChannel(channelId)
+}
+
+const handleSelectChatThread = async (thread: ChatThread) => {
+  const opened = await openChatThreadFromList(thread)
+  if (!opened) {
+    message.error(activeTab.value?.chatState?.threadErrorMessage || '无法打开消息串')
+  }
+}
+
+const handleCloseChatThread = () => {
+  closeActiveChatThread()
+}
+
+const handleLoadMoreChatThreadMessages = (threadId: number) => {
+  loadMoreChatThreadMessagesForActive(threadId)
+}
+
+const handleUpdateChatThreadNotification = async (payload: {
+  threadId?: number
+  level: number
+}) => {
+  if (!payload.threadId) return
+  const membership = await updateActiveChatThreadNotificationLevel(payload.threadId, payload.level)
+  if (!membership) {
+    message.error(activeTab.value?.chatState?.threadErrorMessage || '消息串通知设置更新失败')
+  }
+}
+
+const handleUpdateChatThreadTitle = async (payload: { threadId?: number; title: string }) => {
+  if (!payload.threadId) return
+  const updated = await updateActiveChatThreadTitle(payload.threadId, payload.title)
+  if (!updated) {
+    message.error(activeTab.value?.chatState?.threadErrorMessage || '消息串标题更新失败')
+  }
+}
+
 const handleSendChatMessage = (payload: { channelId: number; message: string }) => {
   sendChat(payload.channelId, payload.message)
+}
+
+const handleSendChatThreadMessage = (payload: {
+  channelId?: number
+  threadId?: number
+  message: string
+}) => {
+  if (!payload.channelId || !payload.threadId) return
+  sendChatThread(payload.channelId, payload.threadId, payload.message)
 }
 
 const handleReactChatMessage = async (payload: {
@@ -1505,8 +1656,16 @@ const handleReplyToMessage = (message: ChatMessage) => {
   replyToChatMessage(message)
 }
 
+const handleReplyToThreadMessage = (message: ChatMessage) => {
+  replyToChatThreadMessage(message)
+}
+
 const handleEditMessage = (message: ChatMessage) => {
   editChatMessageAction(message)
+}
+
+const handleEditThreadMessage = (message: ChatMessage) => {
+  editChatThreadMessageAction(message)
 }
 
 const handleDeleteMessage = async (payload: { channelId?: number; messageId: number }) => {
@@ -2122,36 +2281,137 @@ const normalizeImageUrl = (img: HTMLImageElement) => {
   return img.currentSrc || img.src || ''
 }
 
+const isProxyableImageUrl = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+const blobFromProxyImageResponse = (response: any): Blob | null => {
+  if (!response?.success) return null
+  const bytes = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.arrayData)
+      ? response.data.arrayData
+      : null
+  if (!bytes?.length) return null
+  return new Blob([Uint8Array.from(bytes)], {
+    type: response.mimeType || response.data?.mimeType || 'application/octet-stream'
+  })
+}
+
+const requestDedicatedImageProxy = async (
+  url: string
+): Promise<{ supported: boolean; blob: Blob | null }> => {
+  const chromeAPI = (globalThis as any).chrome
+  if (!chromeAPI?.runtime?.sendMessage) return { supported: false, blob: null }
+
+  return await new Promise(resolve => {
+    let settled = false
+    const finish = (value: { supported: boolean; blob: Blob | null }) => {
+      if (settled) return
+      settled = true
+      globalThis.clearTimeout(timeoutId)
+      resolve(value)
+    }
+    const timeoutId = globalThis.setTimeout(() => finish({ supported: false, blob: null }), 12_000)
+
+    try {
+      chromeAPI.runtime.sendMessage({ type: 'PROXY_IMAGE', url }, (response: any) => {
+        if (chromeAPI.runtime.lastError || !response) {
+          finish({ supported: false, blob: null })
+          return
+        }
+        finish({ supported: true, blob: blobFromProxyImageResponse(response) })
+      })
+    } catch {
+      finish({ supported: false, blob: null })
+    }
+  })
+}
+
+const requestImageFallback = (url: string): Promise<Blob | null> => {
+  const existing = proxyImageRequests.get(url)
+  if (existing) return existing
+
+  const request = (async () => {
+    const dedicated = await requestDedicatedImageProxy(url)
+    if (dedicated.supported) return dedicated.blob
+
+    // Compatibility fallback for an older background worker which does not
+    // yet understand PROXY_IMAGE. This still runs only after native loading
+    // has failed.
+    try {
+      const result = await pageFetch<Blob>(url, undefined, 'blob')
+      return result.ok ? result.data : null
+    } catch {
+      return null
+    }
+  })().finally(() => proxyImageRequests.delete(url))
+
+  proxyImageRequests.set(url, request)
+  return request
+}
+
 const handleGlobalImageLoad = (event: Event) => {
   const target = event.target
   if (!(target instanceof HTMLImageElement)) return
-  target.removeAttribute('data-page-fetch-proxy-tried')
+  attemptedImageSources.delete(target)
+
+  const previousBlobUrl = proxiedImageBlobUrls.get(target)
+  if (previousBlobUrl && target.src !== previousBlobUrl) {
+    URL.revokeObjectURL(previousBlobUrl)
+    proxiedBlobUrls.delete(previousBlobUrl)
+    proxiedImageBlobUrls.delete(target)
+  }
+  if (!previousBlobUrl || target.src !== previousBlobUrl) {
+    target.removeAttribute('data-discourse-image-source')
+  }
 }
 
 const handleGlobalImageError = (event: Event) => {
   const target = event.target
   if (!(target instanceof HTMLImageElement)) return
-  if (target.dataset.pageFetchProxyTried === '1') return
-  if (proxyingImages.has(target)) return
 
   const imageUrl = normalizeImageUrl(target)
-  if (!imageUrl || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) return
+  if (!imageUrl || !isProxyableImageUrl(imageUrl)) return
+  if (attemptedImageSources.get(target) === imageUrl) return
+  if (proxyingImages.get(target) === imageUrl) return
 
-  target.dataset.pageFetchProxyTried = '1'
-  proxyingImages.add(target)
+  // Delay component-level broken-image placeholders until the authenticated
+  // fallback has had a chance to recover the original resource.
+  event.stopImmediatePropagation()
+  attemptedImageSources.set(target, imageUrl)
+  proxyingImages.set(target, imageUrl)
+  target.dataset.discourseImageSource = 'proxy-loading'
 
   void (async () => {
     try {
-      const result = await pageFetch<Blob>(imageUrl, undefined, 'blob')
-      if (!result.ok || !result.data) return
+      const blob = await requestImageFallback(imageUrl)
+      if (!target.isConnected || normalizeImageUrl(target) !== imageUrl) return
+      if (!blob) {
+        target.dataset.discourseImageSource = 'failed'
+        target.dispatchEvent(new Event('error'))
+        return
+      }
 
-      const blobUrl = URL.createObjectURL(result.data)
+      const previousBlobUrl = proxiedImageBlobUrls.get(target)
+      if (previousBlobUrl) {
+        URL.revokeObjectURL(previousBlobUrl)
+        proxiedBlobUrls.delete(previousBlobUrl)
+      }
+      const blobUrl = URL.createObjectURL(blob)
       proxiedBlobUrls.add(blobUrl)
+      proxiedImageBlobUrls.set(target, blobUrl)
+      target.dataset.discourseImageSource = 'proxy'
       target.src = blobUrl
-    } catch {
-      // Keep original failed image if proxy fetch also fails.
     } finally {
-      proxyingImages.delete(target)
+      if (proxyingImages.get(target) === imageUrl) {
+        proxyingImages.delete(target)
+      }
     }
   })()
 }
@@ -2929,6 +3189,7 @@ onUnmounted(() => {
         :chatState="activeTab.chatState"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
+        :currentUserStaff="currentUserStaff"
         :users="users"
         :categories="activeTab.categories"
         :createGroupSearching="createGroupSearching"
@@ -2945,15 +3206,32 @@ onUnmounted(() => {
         :deletingChannel="chatDeletingChannel"
         @selectChannel="handleSelectChatChannel"
         @loadMore="handleLoadMoreChatMessages"
+        @openThread="handleOpenChatThread"
+        @selectThread="handleSelectChatThread"
+        @closeThread="handleCloseChatThread"
+        @loadMoreThread="handleLoadMoreChatThreadMessages"
+        @loadMyThreads="handleLoadMyChatThreads"
+        @loadMoreMyThreads="handleLoadMoreMyChatThreads"
+        @loadChannelThreads="handleLoadChatChannelThreads"
+        @loadMoreChannelThreads="handleLoadMoreChatChannelThreads"
+        @searchMessages="handleSearchChatMessages"
+        @loadMoreSearch="handleLoadMoreChatSearch"
+        @updateThreadNotification="handleUpdateChatThreadNotification"
+        @updateThreadTitle="handleUpdateChatThreadTitle"
         @sendMessage="handleSendChatMessage"
+        @sendThreadMessage="handleSendChatThreadMessage"
         @react="handleReactChatMessage"
         @editChannel="handleEditChatChannel"
         @interact="handleChatMessageInteraction"
         @navigate="handleContentNavigation"
         @replyToMessage="handleReplyToMessage"
+        @replyToThreadMessage="handleReplyToThreadMessage"
         @cancelReply="cancelChatReply"
+        @cancelThreadReply="cancelChatThreadReply"
         @editMessage="handleEditMessage"
+        @editThreadMessage="handleEditThreadMessage"
         @cancelEdit="cancelChatEdit"
+        @cancelThreadEdit="cancelChatThreadEdit"
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
         @createGroup="handleCreateGroup"
@@ -3083,6 +3361,7 @@ onUnmounted(() => {
         :reviewState="activeTab.reviewState"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
+        :currentUserStaff="currentUserStaff"
         :users="users"
         @switchStatus="handleReviewSwitchStatus"
         @perform="handleReviewPerform"
@@ -3212,6 +3491,7 @@ onUnmounted(() => {
         :chatState="activeTab.chatState"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername ?? undefined"
+        :currentUserStaff="currentUserStaff"
         :users="users"
         :categories="activeTab.categories"
         :createGroupSearching="createGroupSearching"
@@ -3228,15 +3508,32 @@ onUnmounted(() => {
         :deletingChannel="chatDeletingChannel"
         @selectChannel="handleSelectChatChannel"
         @loadMore="handleLoadMoreChatMessages"
+        @openThread="handleOpenChatThread"
+        @selectThread="handleSelectChatThread"
+        @closeThread="handleCloseChatThread"
+        @loadMoreThread="handleLoadMoreChatThreadMessages"
+        @loadMyThreads="handleLoadMyChatThreads"
+        @loadMoreMyThreads="handleLoadMoreMyChatThreads"
+        @loadChannelThreads="handleLoadChatChannelThreads"
+        @loadMoreChannelThreads="handleLoadMoreChatChannelThreads"
+        @searchMessages="handleSearchChatMessages"
+        @loadMoreSearch="handleLoadMoreChatSearch"
+        @updateThreadNotification="handleUpdateChatThreadNotification"
+        @updateThreadTitle="handleUpdateChatThreadTitle"
         @sendMessage="handleSendChatMessage"
+        @sendThreadMessage="handleSendChatThreadMessage"
         @react="handleReactChatMessage"
         @editChannel="handleEditChatChannel"
         @interact="handleChatMessageInteraction"
         @navigate="handleContentNavigation"
         @replyToMessage="handleReplyToMessage"
+        @replyToThreadMessage="handleReplyToThreadMessage"
         @cancelReply="cancelChatReply"
+        @cancelThreadReply="cancelChatThreadReply"
         @editMessage="handleEditMessage"
+        @editThreadMessage="handleEditThreadMessage"
         @cancelEdit="cancelChatEdit"
+        @cancelThreadEdit="cancelChatThreadEdit"
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
         @createGroup="handleCreateGroup"

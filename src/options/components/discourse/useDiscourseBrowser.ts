@@ -5,6 +5,8 @@ import { ref, computed, watch } from 'vue'
 import type {
   BrowserTab,
   ChatMessage,
+  ChatSearchSort,
+  ChatThread,
   ChatChannelEditableStatus,
   ChatChannelUpdatePayload,
   ChatCreateChannelPayload,
@@ -81,10 +83,19 @@ import {
   deleteInvite as deleteInviteRoute,
   resendInvite as resendInviteRoute
 } from './routes/invites'
-import { loadUsernameFromExtension } from './routes/session'
+import { loadSessionUserFromExtension } from './routes/session'
 import {
   loadChat as loadChatRoute,
   loadChatMessages,
+  loadMyChatThreads,
+  loadChatChannelThreads,
+  loadChatThreadMessages,
+  searchChatMessages as searchChatMessagesRoute,
+  openChatThread as openChatThreadRoute,
+  openChatThreadById as openChatThreadByIdRoute,
+  closeChatThread as closeChatThreadRoute,
+  updateChatThreadNotificationLevel as updateChatThreadNotificationLevelRoute,
+  updateChatThreadTitle as updateChatThreadTitleRoute,
   sendChatMessage,
   toggleChatMessageReaction,
   updateChatChannel as updateChatChannelRoute,
@@ -94,6 +105,7 @@ import {
   flagChatMessage,
   dedupeMessagesById,
   normalizeSingleMessage,
+  syncThreadSummaryFromMessage,
   resetChatChannelUnreadCount,
   updateChannelLastMessage,
   createChatChannel as createChatChannelRoute,
@@ -111,6 +123,8 @@ import {
   searchChatables as searchChatablesRoute
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
+
+import type { DiscourseSessionUser } from '@/types/messages'
 
 type MessageBusListPatchOptions = {
   applyToPending?: boolean
@@ -355,6 +369,8 @@ export function useDiscourseBrowser() {
   const isLoadingMore = ref(false)
 
   const currentUsername = ref<string | null>(null)
+  const currentSessionUser = ref<DiscourseSessionUser | null>(null)
+  const currentUserStaff = computed(() => currentSessionUser.value?.staff === true)
   let sessionUserPromise: Promise<string | null> | null = null
 
   // Sync URL input with active tab's URL
@@ -379,10 +395,11 @@ export function useDiscourseBrowser() {
       return sessionUserPromise
     }
 
-    sessionUserPromise = loadUsernameFromExtension(baseUrl.value)
-      .then(username => {
-        currentUsername.value = username
-        return username
+    sessionUserPromise = loadSessionUserFromExtension(baseUrl.value)
+      .then(user => {
+        currentSessionUser.value = user
+        currentUsername.value = user?.username || null
+        return currentUsername.value
       })
       .finally(() => {
         sessionUserPromise = null
@@ -624,12 +641,50 @@ export function useDiscourseBrowser() {
       } else if (pathname.startsWith('/chat')) {
         await ensureSessionUser()
         const parts = pathname.split('/').filter(Boolean)
-        const lastPart = parts[parts.length - 1]
-        const channelId = lastPart ? parseInt(lastPart) : NaN
-        const targetChannelId = Number.isNaN(channelId) ? null : channelId
-        await loadChat(tab, targetChannelId)
-        tab.title = '聊天'
+        const toPositiveId = (value?: string) => {
+          const parsed = value ? Number.parseInt(value, 10) : NaN
+          return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+        }
+        const threadSegmentIndex = parts.indexOf('t')
+        const targetThreadId =
+          threadSegmentIndex >= 0 ? toPositiveId(parts[threadSegmentIndex + 1]) : null
+        const targetMessageId =
+          threadSegmentIndex >= 0
+            ? toPositiveId(parts[threadSegmentIndex + 2])
+            : parts[1] === 'c'
+              ? toPositiveId(parts[4])
+              : parts[1] === 'channel'
+                ? null
+                : toPositiveId(parts[2])
+        let targetChannelId: number | null = null
+
+        if (parts[1] === 'c') {
+          targetChannelId = toPositiveId(parts[3])
+        } else if (parts[1] === 'channel') {
+          // Support both Discourse's /chat/channel/:id/:title legacy route and
+          // this browser's older /chat/channel/:slug/:id route.
+          targetChannelId = toPositiveId(parts[3]) || toPositiveId(parts[2])
+        } else {
+          targetChannelId = toPositiveId(parts[1])
+        }
+
+        await loadChat(tab, targetChannelId, targetThreadId ? null : targetMessageId)
         tab.viewType = 'chat'
+        if (targetChannelId && targetThreadId) {
+          const thread = await openChatThreadByIdRoute(
+            tab,
+            baseUrl,
+            users,
+            targetChannelId,
+            targetThreadId,
+            targetMessageId
+          )
+          tab.title = thread?.title?.trim() || '消息串'
+        } else {
+          closeChatThreadRoute(tab)
+          if (tab.chatState) tab.chatState.activeTargetMessageId = targetMessageId
+          tab.title = '聊天'
+        }
       } else if (pathname.startsWith('/u/')) {
         await ensureSessionUser()
         const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
@@ -1236,8 +1291,12 @@ export function useDiscourseBrowser() {
     await loadTopicRoute(tab, topicId, baseUrl, postNumber)
   }
 
-  async function loadChat(tab: BrowserTab, targetChannelId?: number | null) {
-    await loadChatRoute(tab, baseUrl, users, targetChannelId)
+  async function loadChat(
+    tab: BrowserTab,
+    targetChannelId?: number | null,
+    targetMessageId?: number | null
+  ) {
+    await loadChatRoute(tab, baseUrl, users, targetChannelId, targetMessageId)
   }
 
   async function ensureChatLoaded(targetChannelId?: number | null) {
@@ -1249,6 +1308,49 @@ export function useDiscourseBrowser() {
       await selectChatChannel(targetChannelId)
     }
     return Boolean(tab.chatState)
+  }
+
+  async function loadMyThreads(reset = false) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    if (!reset && tab.chatState.myThreadsLoaded) return tab.chatState.myThreads
+    return await loadMyChatThreads(tab, baseUrl, users, true)
+  }
+
+  async function loadMoreMyThreads() {
+    const tab = activeTab.value
+    if (!tab?.chatState || !tab.chatState.myThreadsLoaded) return []
+    if (!tab.chatState.myThreadsLoadMoreUrl) return tab.chatState.myThreads
+    return await loadMyChatThreads(tab, baseUrl, users, false)
+  }
+
+  async function loadThreadsForChatChannel(channelId: number, reset = false) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    if (!reset && tab.chatState.channelThreadsLoadedByChannel[channelId]) {
+      return tab.chatState.channelThreadsByChannel[channelId] || []
+    }
+    return await loadChatChannelThreads(tab, baseUrl, users, channelId, true)
+  }
+
+  async function loadMoreThreadsForChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState || !tab.chatState.channelThreadsLoadedByChannel[channelId]) return []
+    if (!tab.chatState.channelThreadsLoadMoreUrlByChannel[channelId]) {
+      return tab.chatState.channelThreadsByChannel[channelId] || []
+    }
+    return await loadChatChannelThreads(tab, baseUrl, users, channelId, false)
+  }
+
+  async function searchChatMessages(
+    query: string,
+    channelId: number | null,
+    sort: ChatSearchSort,
+    reset = true
+  ) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    return await searchChatMessagesRoute(tab, baseUrl, users, query, channelId, sort, reset)
   }
 
   function applyChatMessagePatch(tab: BrowserTab, channelId: number, payload: unknown) {
@@ -1266,6 +1368,52 @@ export function useDiscourseBrowser() {
 
     normalized.chat_channel_id =
       normalized.chat_channel_id || Number(data.chat_channel_id || data.channel_id || channelId)
+
+    const registerNormalizedUser = () => {
+      const normalizedUserId = Number(normalized.user?.id ?? normalized.user_id)
+      if (!Number.isFinite(normalizedUserId) || normalizedUserId <= 0) return
+      const username = normalized.user?.username || normalized.username
+      if (!username) return
+      const existingUser = users.value.get(normalizedUserId)
+      users.value.set(normalizedUserId, {
+        id: normalizedUserId,
+        username,
+        name: normalized.user?.name || normalized.name || existingUser?.name,
+        avatar_template:
+          normalized.user?.avatar_template ||
+          normalized.avatar_template ||
+          existingUser?.avatar_template ||
+          ''
+      })
+    }
+
+    const threadId = Number(normalized.thread_id || 0)
+    const isThreadReply = Number.isFinite(threadId) && threadId > 0 && !normalized.thread
+    if (isThreadReply) {
+      const existingThreadMessages = state.threadMessagesById[threadId] || []
+      const alreadyExists = existingThreadMessages.some(message => message.id === normalized.id)
+      if (state.activeThread?.id === threadId || existingThreadMessages.length > 0) {
+        const merged = dedupeMessagesById([...existingThreadMessages, normalized])
+        state.threadMessagesById[threadId] = merged
+        state.beforeMessageIdByThread[threadId] ??= merged[0]?.id || null
+      }
+      const messageUserId = Number(normalized.user?.id ?? normalized.user_id ?? 0)
+      const currentUserId = Number(tab.currentUser?.id || 0)
+      const messageUsername = normalized.user?.username || normalized.username
+      const isCurrentUserMessage =
+        (messageUserId > 0 && currentUserId > 0 && messageUserId === currentUserId) ||
+        Boolean(messageUsername && messageUsername === tab.currentUser?.username)
+      syncThreadSummaryFromMessage(
+        state,
+        threadId,
+        normalized,
+        !alreadyExists,
+        !alreadyExists && state.activeThread?.id !== threadId && !isCurrentUserMessage
+      )
+      updateChannelLastMessage(state.channels, channelId, normalized)
+      registerNormalizedUser()
+      return true
+    }
 
     const existing = state.messagesByChannel[channelId] || []
     const alreadyExists = existing.some(message => message?.id === normalized.id)
@@ -1294,23 +1442,7 @@ export function useDiscourseBrowser() {
       }
     }
 
-    const normalizedUserId = Number(normalized.user?.id ?? normalized.user_id)
-    if (Number.isFinite(normalizedUserId) && normalizedUserId > 0) {
-      const username = normalized.user?.username || normalized.username
-      if (username) {
-        const existingUser = users.value.get(normalizedUserId)
-        users.value.set(normalizedUserId, {
-          id: normalizedUserId,
-          username,
-          name: normalized.user?.name || normalized.name || existingUser?.name,
-          avatar_template:
-            normalized.user?.avatar_template ||
-            normalized.avatar_template ||
-            existingUser?.avatar_template ||
-            ''
-        })
-      }
-    }
+    registerNormalizedUser()
 
     return true
   }
@@ -1861,13 +1993,14 @@ export function useDiscourseBrowser() {
   }
 
   function openChatChannel(channel: { id: number; slug?: string }) {
-    const slug = channel.slug ? `/${channel.slug}` : ''
-    navigateTo(`${baseUrl.value}/chat/channel${slug}/${channel.id}`)
+    const slug = channel.slug ? encodeURIComponent(channel.slug) : '-'
+    navigateTo(`${baseUrl.value}/chat/c/${slug}/${channel.id}`)
   }
 
   async function selectChatChannel(channelId: number) {
     const tab = activeTab.value
     if (!tab?.chatState) return
+    closeChatThreadRoute(tab)
     tab.chatState.activeChannelId = channelId
     resetChatChannelUnreadCount(tab.chatState.channels, channelId)
     if (!tab.chatState.messagesByChannel[channelId]) {
@@ -1893,27 +2026,108 @@ export function useDiscourseBrowser() {
       const editing = tab.chatState.editingMessage
       const updated = await editChatMessage(tab, baseUrl, channelId, editing.id, message)
       if (updated && updated.id) {
-        const messages = tab.chatState.messagesByChannel[channelId] || []
-        const idx = messages.findIndex(m => m.id === updated.id)
-        if (idx !== -1) {
-          messages[idx] = { ...messages[idx], ...updated, edited: true }
-          tab.chatState.messagesByChannel[channelId] = [...messages]
-        }
+        updateChatMessageEverywhere(tab.chatState, updated.id, { ...updated, edited: true })
       }
       tab.chatState.editingMessage = null
       return
     }
 
-    // If replying to a message, include the reply context
-    if (tab.chatState.replyToMessage) {
-      const replyMsg = tab.chatState.replyToMessage
-      const replyUsername = replyMsg.user?.username || replyMsg.username || ''
-      const quoted = replyUsername ? `@${replyUsername} ` : ''
-      message = `${quoted}${message}`
+    const inReplyToId = tab.chatState.replyToMessage?.id || null
+    await sendChatMessage(tab, baseUrl, users, channelId, message, { inReplyToId })
+    tab.chatState.replyToMessage = null
+  }
+
+  async function openChatMessageThread(message: ChatMessage) {
+    const tab = activeTab.value
+    const channelId = tab?.chatState?.activeChannelId || message.chat_channel_id
+    if (!tab?.chatState || !channelId) return null
+    return await openChatThreadRoute(tab, baseUrl, users, channelId, message)
+  }
+
+  async function openChatThreadFromList(thread: ChatThread) {
+    const tab = activeTab.value
+    const channelId = Number(thread.channel_id || thread.channel?.id || 0)
+    if (!tab?.chatState || !Number.isFinite(channelId) || channelId <= 0) return null
+
+    if (!tab.chatState.channels.some(channel => channel.id === channelId) && thread.channel) {
+      tab.chatState.channels.push(thread.channel)
+    }
+    if (tab.chatState.activeChannelId !== channelId) {
+      await selectChatChannel(channelId)
+    }
+    return await openChatThreadByIdRoute(tab, baseUrl, users, channelId, thread.id)
+  }
+
+  function closeActiveChatThread() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    closeChatThreadRoute(tab)
+  }
+
+  async function loadMoreChatThreadMessagesForActive(threadId: number) {
+    const tab = activeTab.value
+    const channelId = tab?.chatState?.activeChannelId
+    if (!tab?.chatState || !channelId || tab.chatState.loadingThread) return
+    if (tab.chatState.threadHasMoreById[threadId] === false) return
+    await loadChatThreadMessages(tab, baseUrl, users, channelId, threadId, false)
+  }
+
+  async function updateActiveChatThreadNotificationLevel(threadId: number, level: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    const thread =
+      (tab.chatState.activeThread?.id === threadId ? tab.chatState.activeThread : null) ||
+      tab.chatState.myThreads.find(item => item.id === threadId)
+    const channelId = Number(
+      thread?.channel_id || thread?.channel?.id || tab.chatState.activeChannelId || 0
+    )
+    if (!thread || !Number.isFinite(channelId) || channelId <= 0) return null
+    return await updateChatThreadNotificationLevelRoute(tab, baseUrl, channelId, threadId, level)
+  }
+
+  const updateChatMessageEverywhere = (
+    state: NonNullable<BrowserTab['chatState']>,
+    messageId: number,
+    updates: Partial<ChatMessage>
+  ) => {
+    for (const [channelId, messages] of Object.entries(state.messagesByChannel)) {
+      if (!messages.some(message => message.id === messageId)) continue
+      state.messagesByChannel[Number(channelId)] = messages.map(message =>
+        message.id === messageId ? { ...message, ...updates } : message
+      )
+    }
+    for (const [threadId, messages] of Object.entries(state.threadMessagesById)) {
+      if (!messages.some(message => message.id === messageId)) continue
+      state.threadMessagesById[Number(threadId)] = messages.map(message =>
+        message.id === messageId ? { ...message, ...updates } : message
+      )
+    }
+  }
+
+  async function sendChatThread(channelId: number, threadId: number, message: string) {
+    const tab = activeTab.value
+    if (!tab?.chatState || tab.chatState.activeThread?.id !== threadId) return null
+
+    if (tab.chatState.threadEditingMessage) {
+      const editing = tab.chatState.threadEditingMessage
+      const updated = await editChatMessage(tab, baseUrl, channelId, editing.id, message)
+      if (updated?.id) {
+        updateChatMessageEverywhere(tab.chatState, updated.id, {
+          ...updated,
+          edited: true
+        })
+      }
+      tab.chatState.threadEditingMessage = null
+      return updated
     }
 
-    await sendChatMessage(tab, baseUrl, users, channelId, message)
-    tab.chatState.replyToMessage = null
+    const inReplyToId = tab.chatState.threadReplyToMessage?.id || null
+    const sent = await sendChatMessage(tab, baseUrl, users, channelId, message, {
+      threadId,
+      inReplyToId
+    })
+    if (sent) tab.chatState.threadReplyToMessage = null
+    return sent
   }
 
   async function reactToChatMessage(
@@ -1946,10 +2160,23 @@ export function useDiscourseBrowser() {
     tab.chatState.editingMessage = null
   }
 
+  function replyToChatThreadMessage(message: ChatMessage) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.threadReplyToMessage = message
+    tab.chatState.threadEditingMessage = null
+  }
+
   function cancelChatReply() {
     const tab = activeTab.value
     if (!tab?.chatState) return
     tab.chatState.replyToMessage = null
+  }
+
+  function cancelChatThreadReply() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.threadReplyToMessage = null
   }
 
   function editChatMessageAction(message: ChatMessage) {
@@ -1959,10 +2186,23 @@ export function useDiscourseBrowser() {
     tab.chatState.replyToMessage = null
   }
 
+  function editChatThreadMessageAction(message: ChatMessage) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.threadEditingMessage = message
+    tab.chatState.threadReplyToMessage = null
+  }
+
   function cancelChatEdit() {
     const tab = activeTab.value
     if (!tab?.chatState) return
     tab.chatState.editingMessage = null
+  }
+
+  function cancelChatThreadEdit() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    tab.chatState.threadEditingMessage = null
   }
 
   async function deleteChatMessageAction(channelId: number, messageId: number) {
@@ -2175,6 +2415,22 @@ export function useDiscourseBrowser() {
     )
   }
 
+  async function updateActiveChatThreadTitle(threadId: number, title: string) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    const thread =
+      (tab.chatState.activeThread?.id === threadId ? tab.chatState.activeThread : null) ||
+      tab.chatState.myThreads.find(item => item.id === threadId) ||
+      Object.values(tab.chatState.channelThreadsByChannel)
+        .flat()
+        .find(item => item.id === threadId)
+    const channelId = Number(
+      thread?.channel_id || thread?.channel?.id || tab.chatState.activeChannelId || 0
+    )
+    if (!thread || !Number.isFinite(channelId) || channelId <= 0) return false
+    return await updateChatThreadTitleRoute(tab, baseUrl, channelId, threadId, title)
+  }
+
   async function updateReviewableItem(
     reviewableId: number,
     version: number,
@@ -2361,6 +2617,7 @@ export function useDiscourseBrowser() {
     users,
     isLoadingMore,
     currentUsername,
+    currentUserStaff,
     unreadNotificationsCount,
     ensureSessionUser,
 
@@ -2394,6 +2651,11 @@ export function useDiscourseBrowser() {
     openChat,
     openChatChannel,
     ensureChatLoaded,
+    loadMyThreads,
+    loadMoreMyThreads,
+    loadThreadsForChatChannel,
+    loadMoreThreadsForChatChannel,
+    searchChatMessages,
     openQuote,
     loadMorePosts,
     ensurePostNumberLoaded,
@@ -2406,7 +2668,14 @@ export function useDiscourseBrowser() {
     loadMoreFollowFeed,
     selectChatChannel,
     loadMoreChatMessagesForChannel,
+    openChatMessageThread,
+    openChatThreadFromList,
+    closeActiveChatThread,
+    loadMoreChatThreadMessagesForActive,
+    updateActiveChatThreadNotificationLevel,
+    updateActiveChatThreadTitle,
     sendChat,
+    sendChatThread,
     reactToChatMessage,
     updateChatChannel,
     replyChatInteraction,
@@ -2423,9 +2692,13 @@ export function useDiscourseBrowser() {
     searchDiscourse,
     loadMoreSearchResults,
     replyToChatMessage,
+    replyToChatThreadMessage,
     cancelChatReply,
+    cancelChatThreadReply,
     editChatMessageAction,
+    editChatThreadMessageAction,
     cancelChatEdit,
+    cancelChatThreadEdit,
     deleteChatMessageAction,
     flagChatMessageAction,
     searchMessages,

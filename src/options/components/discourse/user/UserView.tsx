@@ -95,7 +95,7 @@ export default defineComponent({
         !props.showSettings &&
         Boolean(props.user.can_send_private_message_to_user ?? props.user.can_send_private_messages)
     )
-    const canChat = computed(() => !props.showSettings && props.user.can_chat_user !== false)
+    const canChat = computed(() => !props.showSettings && props.user.can_chat_user === true)
     const canFollow = computed(
       () => !props.showSettings && Boolean(props.user.can_follow || props.user.is_followed)
     )

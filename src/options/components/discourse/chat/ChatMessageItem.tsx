@@ -4,7 +4,8 @@ import {
   EditOutlined,
   DeleteOutlined,
   FlagOutlined,
-  ForwardOutlined
+  ForwardOutlined,
+  CommentOutlined
 } from '@ant-design/icons-vue'
 
 import type { ChatMessage, ParsedContent } from '../types'
@@ -20,9 +21,13 @@ export default defineComponent({
     message: { type: Object as () => ChatMessage, required: true },
     parsed: { type: Object as () => ParsedContent, required: true },
     baseUrl: { type: String, required: true },
-    isOwn: { type: Boolean, required: true }
+    channelId: { type: Number, default: undefined },
+    isOwn: { type: Boolean, required: true },
+    highlighted: { type: Boolean, default: false },
+    threadingEnabled: { type: Boolean, default: false },
+    inThread: { type: Boolean, default: false }
   },
-  emits: ['navigate', 'react', 'interact', 'reply', 'edit', 'delete', 'flag'],
+  emits: ['navigate', 'react', 'interact', 'reply', 'openThread', 'edit', 'delete', 'flag'],
   setup(props, { emit }) {
     const showActions = ref(false)
     const showEmojiPicker = ref(false)
@@ -44,6 +49,23 @@ export default defineComponent({
 
     const reactionItems = computed(() =>
       Array.isArray(props.message.reactions) ? props.message.reactions : []
+    )
+
+    const threadReplyCount = computed(() =>
+      Math.max(
+        0,
+        Number(props.message.thread?.reply_count || props.message.thread?.preview?.reply_count || 0)
+      )
+    )
+
+    const threadParticipants = computed(() =>
+      (props.message.thread?.preview?.participant_users || []).slice(0, 3)
+    )
+
+    const hasThreadAction = computed(
+      () =>
+        !props.inThread &&
+        Boolean(props.threadingEnabled || props.message.thread?.force || props.message.thread?.id)
     )
 
     const blockButtons = computed(() => {
@@ -154,8 +176,17 @@ export default defineComponent({
     onBeforeUnmount(removeDismissListeners)
 
     const handleReply = () => {
-      emit('reply', props.message)
+      if (hasThreadAction.value) {
+        emit('openThread', props.message)
+      } else {
+        emit('reply', props.message)
+      }
       showActions.value = false
+    }
+
+    const handleOpenThread = () => {
+      emit('openThread', props.message)
+      closeFloatingControls()
     }
 
     const handleEdit = () => {
@@ -176,7 +207,15 @@ export default defineComponent({
     // If deleted, render placeholder
     if (props.message.deleted) {
       return (
-        <div class={['chat-message-item', props.isOwn ? 'chat-message-own' : '', 'is-deleted']}>
+        <div
+          class={[
+            'chat-message-item',
+            props.isOwn ? 'chat-message-own' : '',
+            'is-deleted',
+            props.highlighted ? 'is-search-target' : ''
+          ]}
+          data-chat-message-id={props.message.id}
+        >
           <div class="chat-message-content">
             <div class="chat-message-meta">
               <span class="chat-message-name">{getDisplayName()}</span>
@@ -193,8 +232,10 @@ export default defineComponent({
         class={[
           'chat-message-item',
           props.isOwn ? 'chat-message-own' : '',
+          props.highlighted ? 'is-search-target' : '',
           showActions.value || showEmojiPicker.value ? 'has-floating-controls' : ''
         ]}
+        data-chat-message-id={props.message.id}
         onMouseleave={handleMouseleave}
       >
         <img
@@ -217,6 +258,43 @@ export default defineComponent({
               onNavigate={(url: string) => emit('navigate', url)}
             />
           ) : null}
+
+          {!props.inThread && props.message.thread?.id && threadReplyCount.value > 0 && (
+            <a
+              class="chat-message-thread-indicator"
+              href={`${props.baseUrl}/chat/c/-/${props.channelId || props.message.chat_channel_id}/t/${props.message.thread.id}`}
+              aria-label={`打开消息串，共 ${threadReplyCount.value} 条回复`}
+              title="打开消息串"
+              onClick={(event: MouseEvent) => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+                event.preventDefault()
+                handleOpenThread()
+              }}
+            >
+              <span class="chat-message-thread-indicator__icon" aria-hidden="true">
+                <CommentOutlined />
+              </span>
+              {threadParticipants.value.length > 0 && (
+                <span class="chat-message-thread-indicator__participants" aria-hidden="true">
+                  {threadParticipants.value.map(user => (
+                    <img
+                      key={user.id}
+                      src={getAvatarUrl(user.avatar_template, props.baseUrl, 20)}
+                      alt=""
+                    />
+                  ))}
+                </span>
+              )}
+              <span class="chat-message-thread-indicator__count">
+                {threadReplyCount.value} 条回复
+              </span>
+              {props.message.thread.preview?.last_reply_excerpt && (
+                <span class="chat-message-thread-indicator__excerpt">
+                  {props.message.thread.preview.last_reply_excerpt.replace(/<[^>]*>/g, '')}
+                </span>
+              )}
+            </a>
+          )}
 
           <div class="chat-message-footer">
             {reactionItems.value.map(reaction => (
@@ -277,7 +355,12 @@ export default defineComponent({
                     role="menuitem"
                     onClick={handleReply}
                   >
-                    <ForwardOutlined /> 回复
+                    {hasThreadAction.value ? <CommentOutlined /> : <ForwardOutlined />}
+                    {hasThreadAction.value
+                      ? props.message.thread?.id
+                        ? '打开消息串'
+                        : '在消息串中回复'
+                      : '回复'}
                   </button>
                   {props.isOwn && (
                     <button

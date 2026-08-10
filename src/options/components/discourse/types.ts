@@ -452,6 +452,8 @@ export interface ChatChannelMembership {
   chat_channel_id?: number
   last_read_message_id?: number
   unread_count?: number
+  mention_count?: number
+  watched_threads_unread_count?: number
   starred?: boolean
   muted?: boolean
   following?: boolean
@@ -525,6 +527,45 @@ export interface ChatMessageReaction {
   users?: DiscourseUser[]
 }
 
+export interface ChatThreadPreview {
+  last_reply_created_at?: string
+  last_reply_excerpt?: string
+  last_reply_id?: number
+  last_reply_user?: DiscourseUser
+  participant_count?: number
+  participant_users?: DiscourseUser[]
+  reply_count?: number
+}
+
+export interface ChatThreadTracking {
+  channel_id?: number
+  unread_count?: number
+  mention_count?: number
+  watched_threads_unread_count?: number
+  last_reply_created_at?: string | null
+}
+
+export interface ChatThread {
+  id: number
+  title?: string | null
+  status?: 'open' | 'read_only' | 'closed' | 'archived' | string
+  channel_id?: number
+  reply_count?: number
+  last_message_id?: number
+  force?: boolean
+  channel?: ChatChannel
+  original_message?: ChatMessage
+  preview?: ChatThreadPreview
+  tracking?: ChatThreadTracking
+  current_user_membership?: {
+    id?: number
+    notification_level?: number | string
+    last_read_message_id?: number | null
+    unread_count?: number
+    thread_title_prompt_seen?: boolean
+  }
+}
+
 export interface ChatMessageBlockText {
   type?: string
   text?: string
@@ -549,6 +590,10 @@ export interface ChatMessage {
   created_at: string
   chat_channel_id?: number
   thread_id?: number | null
+  thread_title?: string | null
+  thread?: ChatThread
+  channel?: ChatChannel
+  in_reply_to?: ChatMessage | null
   user_id?: number
   username?: string
   name?: string
@@ -558,6 +603,20 @@ export interface ChatMessage {
   blocks?: ChatMessageBlock[]
   edited?: boolean
   deleted?: boolean
+}
+
+export type ChatSearchSort = 'relevance' | 'latest'
+
+export interface ChatSearchState {
+  query: string
+  channelId: number | null
+  sort: ChatSearchSort
+  results: ChatMessage[]
+  offset: number
+  hasMore: boolean
+  loading: boolean
+  loadingMore: boolean
+  errorMessage: string
 }
 
 export interface ChatTypingUser {
@@ -623,14 +682,39 @@ export interface ChatState {
   messagesByChannel: Record<number, ChatMessage[]>
   hasMoreByChannel: Record<number, boolean>
   beforeMessageIdByChannel: Record<number, number | null>
+  activeTargetMessageId: number | null
+  activeThread: ChatThread | null
+  threadMessagesById: Record<number, ChatMessage[]>
+  threadHasMoreById: Record<number, boolean>
+  beforeMessageIdByThread: Record<number, number | null>
+  myThreads: ChatThread[]
+  myThreadsLoadMoreUrl: string | null
+  myThreadsLoaded: boolean
+  loadingMyThreads: boolean
+  loadingMoreMyThreads: boolean
+  myThreadsErrorMessage: string
+  threadNotificationSavingById: Record<number, boolean>
+  threadTitleSavingById: Record<number, boolean>
+  searchState: ChatSearchState
+  channelThreadsByChannel: Record<number, ChatThread[]>
+  channelThreadsLoadMoreUrlByChannel: Record<number, string | null>
+  channelThreadsLoadedByChannel: Record<number, boolean>
+  channelThreadsLoadingByChannel: Record<number, boolean>
+  channelThreadsLoadingMoreByChannel: Record<number, boolean>
+  channelThreadsErrorByChannel: Record<number, string>
   loadingChannels: boolean
   loadingMessages: boolean
+  loadingThread: boolean
   sendingMessage: boolean
+  sendingThreadMessage: boolean
   errorMessage: string
+  threadErrorMessage: string
   // Reply state
   replyToMessage: ChatMessage | null
+  threadReplyToMessage: ChatMessage | null
   // Edit state
   editingMessage: ChatMessage | null
+  threadEditingMessage: ChatMessage | null
   // Typing indicator
   typingUsers: Record<number, ChatTypingUser[]>
   // Member management
@@ -720,6 +804,7 @@ export interface DiscourseUserProfile {
   trust_level: number
   moderator?: boolean
   admin?: boolean
+  staff?: boolean
   bio_excerpt?: string
   bio_cooked?: string
   website?: string

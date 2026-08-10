@@ -10,6 +10,9 @@ import type {
   ChatMember,
   ChatMembershipUpdatePayload,
   ChatMessage,
+  ChatSearchSort,
+  ChatThread,
+  ChatThreadTracking,
   DiscourseUser
 } from '../types'
 import { pageFetch, extractData } from '../utils'
@@ -19,6 +22,11 @@ import { normalizeCategoriesFromResponse } from './categories'
 
 type ChatReactionAction = 'add' | 'remove'
 
+type PostChatMessageOptions = {
+  threadId?: number | null
+  inReplyToId?: number | null
+}
+
 const normalizeReactionEmoji = (emoji: string) =>
   String(emoji || '')
     .trim()
@@ -26,7 +34,33 @@ const normalizeReactionEmoji = (emoji: string) =>
 
 const CHAT_CHANNEL_ENDPOINTS = ['/chat/api/me/channels']
 
+const CHAT_CHANNEL_SHOW_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}`]
+
+const CHAT_SEARCH_ENDPOINTS = ['/chat/api/search']
+
 const CHAT_MESSAGE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}/messages`]
+
+const CHAT_THREAD_ENDPOINTS = (channelId: number, threadId: number) => [
+  `/chat/api/channels/${channelId}/threads/${threadId}`
+]
+
+const CHAT_THREAD_CREATE_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/threads`
+]
+
+const CHAT_THREAD_MESSAGE_ENDPOINTS = (channelId: number, threadId: number) => [
+  `/chat/api/channels/${channelId}/threads/${threadId}/messages`
+]
+
+const CHAT_THREAD_READ_ENDPOINTS = (channelId: number, threadId: number) => [
+  `/chat/api/channels/${channelId}/threads/${threadId}/read`
+]
+
+const CHAT_CURRENT_USER_THREADS_ENDPOINTS = ['/chat/api/me/threads']
+
+const CHAT_THREAD_NOTIFICATION_SETTINGS_ENDPOINTS = (channelId: number, threadId: number) => [
+  `/chat/api/channels/${channelId}/threads/${threadId}/notifications-settings/me`
+]
 
 const CHAT_SEND_ENDPOINTS = (channelId: number) => [
   `/chat/${channelId}.json`,
@@ -100,6 +134,16 @@ const buildUrlWithQuery = (baseUrl: string, path: string, params?: URLSearchPara
   return `${baseUrl}${path}${query}`
 }
 
+const resolveSameOriginChatUrl = (baseUrl: string, path: string) => {
+  try {
+    const origin = new URL(baseUrl).origin
+    const resolved = new URL(path, `${origin}/`)
+    return resolved.origin === origin ? resolved.toString() : null
+  } catch {
+    return null
+  }
+}
+
 const parseErrorMessage = (data: any, fallback: string) => {
   if (Array.isArray(data?.errors) && data.errors.length > 0) {
     return String(data.errors[0])
@@ -120,6 +164,8 @@ const extractMembershipPayload = (data: any): Record<string, any> => {
     'notification_level',
     'starred',
     'unread_count',
+    'mention_count',
+    'watched_threads_unread_count',
     'last_read_message_id',
     'last_viewed_at',
     'last_viewed_pins_at',
@@ -168,6 +214,13 @@ const normalizeChatChannels = (data: any): ChatChannel[] => {
     if (typeof tracked.unread_count === 'number') {
       channel.current_user_membership.unread_count = tracked.unread_count
     }
+    if (typeof tracked.mention_count === 'number') {
+      channel.current_user_membership.mention_count = tracked.mention_count
+    }
+    if (typeof tracked.watched_threads_unread_count === 'number') {
+      channel.current_user_membership.watched_threads_unread_count =
+        tracked.watched_threads_unread_count
+    }
   })
 
   return channels
@@ -175,13 +228,84 @@ const normalizeChatChannels = (data: any): ChatChannel[] => {
 
 export const normalizeSingleMessage = (value: any): ChatMessage => {
   const message = { ...(value as ChatMessage) }
+  if (message.channel && typeof message.channel.id === 'number') {
+    message.channel = normalizeSingleChannel(message.channel)
+    message.chat_channel_id ||= message.channel.id
+  }
   if (!Array.isArray(message.reactions)) {
     message.reactions = []
   }
   if (!Array.isArray(message.blocks)) {
     message.blocks = []
   }
+  if (message.thread && typeof message.thread.id === 'number') {
+    message.thread = normalizeChatThread(message.thread)
+  }
+  if (message.in_reply_to && typeof message.in_reply_to.id === 'number') {
+    message.in_reply_to = normalizeSingleMessage({
+      ...message.in_reply_to,
+      thread: undefined,
+      in_reply_to: undefined
+    })
+  }
   return message
+}
+
+export const normalizeChatThread = (value: any): ChatThread => {
+  const source = value?.thread || value || {}
+  const thread = { ...(source as ChatThread) }
+  if (source.channel && typeof source.channel.id === 'number') {
+    thread.channel = normalizeSingleChannel(source.channel)
+    thread.channel_id ||= thread.channel.id
+  }
+  if (source.original_message && typeof source.original_message.id === 'number') {
+    thread.original_message = normalizeSingleMessage({
+      ...source.original_message,
+      thread: undefined
+    })
+  }
+  if (source.preview && typeof source.preview === 'object') {
+    thread.preview = {
+      ...source.preview,
+      participant_users: Array.isArray(source.preview.participant_users)
+        ? source.preview.participant_users
+        : []
+    }
+  }
+  return thread
+}
+
+const normalizeChatThreadTracking = (value: any): ChatThreadTracking => {
+  const source = value && typeof value === 'object' ? value : {}
+  const toOptionalNumber = (candidate: unknown) => {
+    const parsed = Number(candidate)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+  }
+
+  return {
+    channel_id: toOptionalNumber(source.channel_id),
+    unread_count: toOptionalNumber(source.unread_count) ?? 0,
+    mention_count: toOptionalNumber(source.mention_count) ?? 0,
+    watched_threads_unread_count: toOptionalNumber(source.watched_threads_unread_count) ?? 0,
+    last_reply_created_at:
+      typeof source.last_reply_created_at === 'string' ? source.last_reply_created_at : null
+  }
+}
+
+const extractChatThreadList = (data: any) => {
+  const rawThreads = Array.isArray(data?.threads) ? data.threads : []
+  const rawTracking = data?.tracking?.thread_tracking || data?.tracking || {}
+  const threads = rawThreads.map((item: any) => {
+    const thread = normalizeChatThread(item)
+    thread.tracking = normalizeChatThreadTracking(rawTracking?.[thread.id])
+    return thread
+  })
+  const loadMoreUrl =
+    typeof data?.meta?.load_more_url === 'string' && data.meta.load_more_url.trim()
+      ? data.meta.load_more_url.trim()
+      : null
+
+  return { threads, loadMoreUrl }
 }
 
 const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boolean } => {
@@ -233,12 +357,47 @@ const ensureChatState = (tab: BrowserTab) => {
       messagesByChannel: {},
       hasMoreByChannel: {},
       beforeMessageIdByChannel: {},
+      activeTargetMessageId: null,
+      activeThread: null,
+      threadMessagesById: {},
+      threadHasMoreById: {},
+      beforeMessageIdByThread: {},
+      myThreads: [],
+      myThreadsLoadMoreUrl: null,
+      myThreadsLoaded: false,
+      loadingMyThreads: false,
+      loadingMoreMyThreads: false,
+      myThreadsErrorMessage: '',
+      threadNotificationSavingById: {},
+      threadTitleSavingById: {},
+      searchState: {
+        query: '',
+        channelId: null,
+        sort: 'relevance',
+        results: [],
+        offset: 0,
+        hasMore: false,
+        loading: false,
+        loadingMore: false,
+        errorMessage: ''
+      },
+      channelThreadsByChannel: {},
+      channelThreadsLoadMoreUrlByChannel: {},
+      channelThreadsLoadedByChannel: {},
+      channelThreadsLoadingByChannel: {},
+      channelThreadsLoadingMoreByChannel: {},
+      channelThreadsErrorByChannel: {},
       loadingChannels: false,
       loadingMessages: false,
+      loadingThread: false,
       sendingMessage: false,
+      sendingThreadMessage: false,
       errorMessage: '',
+      threadErrorMessage: '',
       replyToMessage: null,
+      threadReplyToMessage: null,
       editingMessage: null,
+      threadEditingMessage: null,
       typingUsers: {},
       membersByChannel: {},
       membersTotalByChannel: {},
@@ -267,15 +426,48 @@ const ensureChatState = (tab: BrowserTab) => {
       source: 'unavailable'
     }
   }
+  tab.chatState.activeThread ??= null
+  tab.chatState.activeTargetMessageId ??= null
+  tab.chatState.threadMessagesById ??= {}
+  tab.chatState.threadHasMoreById ??= {}
+  tab.chatState.beforeMessageIdByThread ??= {}
+  tab.chatState.myThreads ??= []
+  tab.chatState.myThreadsLoadMoreUrl ??= null
+  tab.chatState.myThreadsLoaded ??= false
+  tab.chatState.loadingMyThreads ??= false
+  tab.chatState.loadingMoreMyThreads ??= false
+  tab.chatState.myThreadsErrorMessage ??= ''
+  tab.chatState.threadNotificationSavingById ??= {}
+  tab.chatState.threadTitleSavingById ??= {}
+  tab.chatState.searchState ??= {
+    query: '',
+    channelId: null,
+    sort: 'relevance',
+    results: [],
+    offset: 0,
+    hasMore: false,
+    loading: false,
+    loadingMore: false,
+    errorMessage: ''
+  }
+  tab.chatState.channelThreadsByChannel ??= {}
+  tab.chatState.channelThreadsLoadMoreUrlByChannel ??= {}
+  tab.chatState.channelThreadsLoadedByChannel ??= {}
+  tab.chatState.channelThreadsLoadingByChannel ??= {}
+  tab.chatState.channelThreadsLoadingMoreByChannel ??= {}
+  tab.chatState.channelThreadsErrorByChannel ??= {}
+  tab.chatState.loadingThread ??= false
+  tab.chatState.sendingThreadMessage ??= false
+  tab.chatState.threadErrorMessage ??= ''
+  tab.chatState.threadReplyToMessage ??= null
+  tab.chatState.threadEditingMessage ??= null
 }
 
 const registerMessageUsers = (users: Ref<Map<number, DiscourseUser>>, messages: ChatMessage[]) => {
   messages.forEach(message => {
     if (message.user) {
       users.value.set(message.user.id, message.user)
-      return
-    }
-    if (message.user_id && message.username) {
+    } else if (message.user_id && message.username) {
       users.value.set(message.user_id, {
         id: message.user_id,
         username: message.username,
@@ -283,6 +475,25 @@ const registerMessageUsers = (users: Ref<Map<number, DiscourseUser>>, messages: 
         avatar_template: message.avatar_template || ''
       })
     }
+    const threadUsers = [
+      message.thread?.original_message?.user,
+      message.thread?.preview?.last_reply_user,
+      ...(message.thread?.preview?.participant_users || [])
+    ].filter((user): user is DiscourseUser => Boolean(user?.id && user?.username))
+    threadUsers.forEach(user => users.value.set(user.id, user))
+  })
+}
+
+const registerChatThreadUsers = (users: Ref<Map<number, DiscourseUser>>, threads: ChatThread[]) => {
+  threads.forEach(thread => {
+    const threadUsers = [
+      thread.original_message?.user,
+      thread.preview?.last_reply_user,
+      ...(thread.preview?.participant_users || []),
+      ...(thread.channel?.direct_message_users || []),
+      ...(thread.channel?.chatable?.users || [])
+    ].filter((user): user is DiscourseUser => Boolean(user?.id && user?.username))
+    threadUsers.forEach(user => users.value.set(user.id, user))
   })
 }
 
@@ -344,15 +555,40 @@ const fetchChatChannels = async (baseUrl: string) => {
   return []
 }
 
+const fetchChatChannel = async (baseUrl: string, channelId: number) => {
+  let lastError: string | null = null
+  for (const path of CHAT_CHANNEL_SHOW_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`)
+      const data = extractData(result)
+      if (result.ok) {
+        const channel = data?.channel || data
+        if (channel && typeof channel.id === 'number') return normalizeSingleChannel(channel)
+        lastError = '站点未返回聊天频道数据'
+      } else {
+        lastError = parseErrorMessage(data, '加载聊天频道失败')
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  throw new Error(lastError || '加载聊天频道失败')
+}
+
 const fetchChatMessages = async (
   baseUrl: string,
   channelId: number,
-  beforeMessageId?: number | null
+  beforeMessageId?: number | null,
+  aroundMessageId?: number | null
 ) => {
   const params = new URLSearchParams()
   params.set('page_size', '50')
-  params.set('direction', 'past')
-  if (beforeMessageId) {
+  if (aroundMessageId) {
+    params.set('target_message_id', String(aroundMessageId))
+  } else {
+    params.set('direction', 'past')
+  }
+  if (!aroundMessageId && beforeMessageId) {
     params.set('target_message_id', String(beforeMessageId))
   }
 
@@ -373,6 +609,177 @@ const fetchChatMessages = async (
   }
 
   throw new Error(lastError || '加载聊天消息失败')
+}
+
+const fetchChatThread = async (baseUrl: string, channelId: number, threadId: number) => {
+  let lastError: string | null = null
+  for (const path of CHAT_THREAD_ENDPOINTS(channelId, threadId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`)
+      const data = extractData(result)
+      if (result.ok) {
+        const thread = data?.thread || data
+        if (thread && typeof thread.id === 'number') return normalizeChatThread(thread)
+        lastError = '站点未返回消息串数据'
+      } else {
+        lastError = parseErrorMessage(data, '加载消息串失败')
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  throw new Error(lastError || '加载消息串失败')
+}
+
+const fetchCurrentUserChatThreads = async (baseUrl: string, loadMoreUrl?: string | null) => {
+  const urls = loadMoreUrl
+    ? [resolveSameOriginChatUrl(baseUrl, loadMoreUrl)].filter((url): url is string => Boolean(url))
+    : CHAT_CURRENT_USER_THREADS_ENDPOINTS.map(path => `${baseUrl}${path}`)
+
+  if (urls.length === 0) {
+    throw new Error('站点返回了无效的消息串分页地址')
+  }
+
+  let lastError: string | null = null
+  for (const url of urls) {
+    try {
+      const result = await pageFetch<any>(url)
+      const data = extractData(result)
+      if (result.ok) return extractChatThreadList(data)
+      lastError = parseErrorMessage(data, '加载我的消息串失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  throw new Error(lastError || '加载我的消息串失败')
+}
+
+const fetchChannelChatThreads = async (
+  baseUrl: string,
+  channelId: number,
+  loadMoreUrl?: string | null
+) => {
+  const urls = loadMoreUrl
+    ? [resolveSameOriginChatUrl(baseUrl, loadMoreUrl)].filter((url): url is string => Boolean(url))
+    : CHAT_THREAD_CREATE_ENDPOINTS(channelId).map(path => `${baseUrl}${path}`)
+
+  if (urls.length === 0) {
+    throw new Error('站点返回了无效的频道消息串分页地址')
+  }
+
+  let lastError: string | null = null
+  for (const url of urls) {
+    try {
+      const result = await pageFetch<any>(url)
+      const data = extractData(result)
+      if (result.ok) return extractChatThreadList(data)
+      lastError = parseErrorMessage(data, '加载频道消息串失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  throw new Error(lastError || '加载频道消息串失败')
+}
+
+const createChatThreadRequest = async (
+  baseUrl: string,
+  channelId: number,
+  originalMessageId: number
+) => {
+  const payload = {
+    original_message_id: originalMessageId
+  }
+  const requests = [
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: new URLSearchParams({ original_message_id: String(originalMessageId) }).toString()
+    },
+    {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }
+  ]
+  let lastError: string | null = null
+
+  for (const path of CHAT_THREAD_CREATE_ENDPOINTS(channelId)) {
+    for (const request of requests) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl}${path}`, {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          const thread = data?.thread || data
+          if (thread && typeof thread.id === 'number') return normalizeChatThread(thread)
+          lastError = '消息串已创建，但站点未返回消息串数据'
+        } else {
+          lastError = parseErrorMessage(data, '创建消息串失败')
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  throw new Error(lastError || '创建消息串失败')
+}
+
+const fetchChatThreadMessages = async (
+  baseUrl: string,
+  channelId: number,
+  threadId: number,
+  beforeMessageId?: number | null,
+  aroundMessageId?: number | null
+) => {
+  const params = new URLSearchParams({ page_size: '50' })
+  if (aroundMessageId) {
+    params.set('target_message_id', String(aroundMessageId))
+  } else {
+    params.set('direction', 'past')
+  }
+  if (!aroundMessageId && beforeMessageId) {
+    params.set('target_message_id', String(beforeMessageId))
+  } else if (!aroundMessageId) {
+    params.set('fetch_from_last_message', 'true')
+  }
+
+  let lastError: string | null = null
+  for (const path of CHAT_THREAD_MESSAGE_ENDPOINTS(channelId, threadId)) {
+    try {
+      const result = await pageFetch<any>(buildUrlWithQuery(baseUrl, path, params))
+      const data = extractData(result)
+      if (result.ok) return extractChatMessages(data)
+      lastError = parseErrorMessage(data, '加载消息串回复失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  throw new Error(lastError || '加载消息串回复失败')
+}
+
+const markChatThreadReadRequest = async (
+  baseUrl: string,
+  channelId: number,
+  threadId: number,
+  messageId: number
+) => {
+  const params = new URLSearchParams({ message_id: String(messageId) })
+  for (const path of CHAT_THREAD_READ_ENDPOINTS(channelId, threadId)) {
+    try {
+      const result = await pageFetch<any>(buildUrlWithQuery(baseUrl, path, params), {
+        method: 'PUT'
+      })
+      if (result.ok) return true
+    } catch {
+      // Read tracking must never make the loaded thread unusable.
+    }
+  }
+  return false
 }
 
 const extractChatMessageId = (data: any): number | null => {
@@ -406,15 +813,22 @@ const extractChatMessage = (data: any): ChatMessage | null => {
   return null
 }
 
-const postChatMessage = async (baseUrl: string, channelId: number, message: string) => {
-  const jsonPayload = JSON.stringify({
+const postChatMessage = async (
+  baseUrl: string,
+  channelId: number,
+  message: string,
+  options: PostChatMessageOptions = {}
+) => {
+  const payload = {
     chat_channel_id: channelId,
-    message
-  })
-  const formPayload = new URLSearchParams({
-    chat_channel_id: String(channelId),
-    message
-  }).toString()
+    message,
+    ...(options.threadId ? { thread_id: options.threadId } : {}),
+    ...(options.inReplyToId ? { in_reply_to_id: options.inReplyToId } : {})
+  }
+  const jsonPayload = JSON.stringify(payload)
+  const formParams = new URLSearchParams()
+  Object.entries(payload).forEach(([key, value]) => formParams.set(key, String(value)))
+  const formPayload = formParams.toString()
 
   let lastError: string | null = null
 
@@ -461,11 +875,19 @@ const postChatMessage = async (baseUrl: string, channelId: number, message: stri
   throw new Error(lastError || '发送消息失败')
 }
 
-const fetchChatMessageById = async (baseUrl: string, channelId: number, messageId: number) => {
+const fetchChatMessageById = async (
+  baseUrl: string,
+  channelId: number,
+  messageId: number,
+  threadId?: number | null
+) => {
   const aroundTargetParams = new URLSearchParams({
     target_message_id: String(messageId)
   })
-  for (const path of CHAT_MESSAGE_ENDPOINTS(channelId)) {
+  const endpoints = threadId
+    ? CHAT_THREAD_MESSAGE_ENDPOINTS(channelId, threadId)
+    : CHAT_MESSAGE_ENDPOINTS(channelId)
+  for (const path of endpoints) {
     const url = buildUrlWithQuery(baseUrl, path, aroundTargetParams)
     try {
       const result = await pageFetch<any>(url)
@@ -736,7 +1158,8 @@ export async function loadChat(
   tab: BrowserTab,
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>,
-  targetChannelId?: number | null
+  targetChannelId?: number | null,
+  targetMessageId?: number | null
 ) {
   ensureChatState(tab)
   const state = tab.chatState
@@ -745,10 +1168,24 @@ export async function loadChat(
   state.errorMessage = ''
 
   try {
-    const [channels, capabilities] = await Promise.all([
+    const [loadedChannels, capabilities] = await Promise.all([
       fetchChatChannels(baseUrl.value),
       fetchDiscourseChatCapabilities(baseUrl.value)
     ])
+    let channels = loadedChannels
+    if (targetChannelId && !channels.some(channel => channel.id === targetChannelId)) {
+      try {
+        const targetChannel = await fetchChatChannel(baseUrl.value, targetChannelId)
+        channels = [targetChannel, ...channels]
+      } catch (error) {
+        // A deep link must never fall back to an unrelated first channel. Keep
+        // the requested URL visible and surface the server's access/not-found
+        // response instead.
+        throw new Error(
+          error instanceof Error && error.message ? error.message : '无法访问指定聊天频道'
+        )
+      }
+    }
     state.channels = channels
     state.capabilities = capabilities
 
@@ -779,9 +1216,10 @@ export async function loadChat(
       null
 
     state.activeChannelId = nextChannelId
+    state.activeTargetMessageId = targetMessageId || null
 
     if (nextChannelId) {
-      await loadChatMessages(tab, baseUrl, users, nextChannelId, true)
+      await loadChatMessages(tab, baseUrl, users, nextChannelId, true, targetMessageId)
     }
   } catch (error) {
     state.errorMessage = error instanceof Error ? error.message : String(error)
@@ -790,12 +1228,254 @@ export async function loadChat(
   }
 }
 
-export async function loadChatMessages(
+const chatSearchRequestVersions = new WeakMap<BrowserTab, number>()
+
+const mergeChatSearchResults = (existing: ChatMessage[], incoming: ChatMessage[]) => {
+  const merged = [...existing]
+  const positions = new Map<number, number>()
+  merged.forEach((message, index) => positions.set(message.id, index))
+  incoming.forEach(message => {
+    const index = positions.get(message.id)
+    if (index === undefined) {
+      positions.set(message.id, merged.length)
+      merged.push(message)
+    } else {
+      merged[index] = { ...merged[index], ...message }
+    }
+  })
+  return merged
+}
+
+export async function searchChatMessages(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  query: string,
+  channelId: number | null,
+  sort: ChatSearchSort,
+  reset = true
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  const search = state.searchState
+  const normalizedQuery = query.trim()
+  const normalizedChannelId = channelId && channelId > 0 ? channelId : null
+  const normalizedSort: ChatSearchSort = sort === 'latest' ? 'latest' : 'relevance'
+
+  if (!normalizedQuery) {
+    chatSearchRequestVersions.set(tab, (chatSearchRequestVersions.get(tab) || 0) + 1)
+    Object.assign(search, {
+      query: '',
+      channelId: normalizedChannelId,
+      sort: normalizedSort,
+      results: [],
+      offset: 0,
+      hasMore: false,
+      loading: false,
+      loadingMore: false,
+      errorMessage: ''
+    })
+    return []
+  }
+
+  const sameSearch =
+    search.query === normalizedQuery &&
+    search.channelId === normalizedChannelId &&
+    search.sort === normalizedSort
+  if (!reset && (!sameSearch || !search.hasMore || search.loading || search.loadingMore)) {
+    return search.results
+  }
+
+  const offset = reset ? 0 : search.offset
+  const requestVersion = (chatSearchRequestVersions.get(tab) || 0) + 1
+  chatSearchRequestVersions.set(tab, requestVersion)
+  Object.assign(search, {
+    query: normalizedQuery,
+    channelId: normalizedChannelId,
+    sort: normalizedSort,
+    ...(reset ? { results: [], offset: 0, hasMore: false } : {}),
+    loading: reset,
+    loadingMore: !reset,
+    errorMessage: ''
+  })
+
+  const params = new URLSearchParams({
+    query: normalizedQuery,
+    sort: normalizedSort,
+    offset: String(offset),
+    limit: '20'
+  })
+  if (normalizedChannelId) params.set('channel_id', String(normalizedChannelId))
+
+  let lastError: string | null = null
+  try {
+    for (const path of CHAT_SEARCH_ENDPOINTS) {
+      try {
+        const result = await pageFetch<any>(buildUrlWithQuery(baseUrl.value, path, params))
+        const data = extractData(result)
+        if (!result.ok) {
+          lastError = parseErrorMessage(data, '搜索聊天消息失败')
+          continue
+        }
+
+        const messages = (Array.isArray(data?.messages) ? data.messages : []).map((item: any) =>
+          normalizeSingleMessage(item)
+        )
+        if (chatSearchRequestVersions.get(tab) !== requestVersion) return search.results
+        registerMessageUsers(users, messages)
+        search.results = reset ? messages : mergeChatSearchResults(search.results, messages)
+        search.offset = offset + messages.length
+        search.hasMore = Boolean(data?.meta?.has_more)
+        return search.results
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    if (chatSearchRequestVersions.get(tab) === requestVersion) {
+      search.errorMessage = lastError || '搜索聊天消息失败'
+    }
+    return search.results
+  } finally {
+    if (chatSearchRequestVersions.get(tab) === requestVersion) {
+      search.loading = false
+      search.loadingMore = false
+    }
+  }
+}
+
+const mergeChatThreadsById = (existing: ChatThread[], incoming: ChatThread[]) => {
+  const merged = new Map<number, ChatThread>()
+  existing.forEach(thread => merged.set(thread.id, thread))
+  incoming.forEach(thread => {
+    const previous = merged.get(thread.id)
+    merged.set(thread.id, previous ? { ...previous, ...thread } : thread)
+  })
+  return [...merged.values()]
+}
+
+const mergeThreadChannelsIntoState = (
+  state: NonNullable<BrowserTab['chatState']>,
+  threads: ChatThread[]
+) => {
+  threads.forEach(thread => {
+    const incoming = thread.channel
+    if (!incoming) return
+    const index = state.channels.findIndex(channel => channel.id === incoming.id)
+    if (index === -1) {
+      state.channels.push(incoming)
+      return
+    }
+    state.channels[index] = {
+      ...state.channels[index],
+      ...incoming,
+      current_user_membership:
+        incoming.current_user_membership || state.channels[index].current_user_membership
+    }
+  })
+}
+
+export async function loadMyChatThreads(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  reset = false
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  if (state.loadingMyThreads || state.loadingMoreMyThreads) return state.myThreads
+  if (!reset && state.myThreadsLoaded && !state.myThreadsLoadMoreUrl) return state.myThreads
+
+  const loadMoreUrl = reset ? null : state.myThreadsLoadMoreUrl
+  if (!reset && state.myThreadsLoaded && !loadMoreUrl) return state.myThreads
+
+  state.loadingMyThreads = reset || !state.myThreadsLoaded
+  state.loadingMoreMyThreads = !state.loadingMyThreads
+  state.myThreadsErrorMessage = ''
+
+  try {
+    const page = await fetchCurrentUserChatThreads(baseUrl.value, loadMoreUrl)
+    registerChatThreadUsers(users, page.threads)
+    mergeThreadChannelsIntoState(state, page.threads)
+    state.myThreads = reset ? page.threads : mergeChatThreadsById(state.myThreads, page.threads)
+    state.myThreadsLoadMoreUrl = page.threads.length === 0 ? null : page.loadMoreUrl
+    state.myThreadsLoaded = true
+    return state.myThreads
+  } catch (error) {
+    state.myThreadsErrorMessage = error instanceof Error ? error.message : String(error)
+    return state.myThreads
+  } finally {
+    state.loadingMyThreads = false
+    state.loadingMoreMyThreads = false
+  }
+}
+
+export async function loadChatChannelThreads(
   tab: BrowserTab,
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>,
   channelId: number,
   reset = false
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  const channel = state.channels.find(item => item.id === channelId)
+  if (!channel?.threading_enabled) {
+    state.channelThreadsErrorByChannel[channelId] = '当前频道未开放消息串'
+    return state.channelThreadsByChannel[channelId] || []
+  }
+  if (
+    state.channelThreadsLoadingByChannel[channelId] ||
+    state.channelThreadsLoadingMoreByChannel[channelId]
+  ) {
+    return state.channelThreadsByChannel[channelId] || []
+  }
+
+  const loaded = Boolean(state.channelThreadsLoadedByChannel[channelId])
+  const loadMoreUrl = reset ? null : state.channelThreadsLoadMoreUrlByChannel[channelId]
+  if (!reset && loaded && !loadMoreUrl) return state.channelThreadsByChannel[channelId] || []
+
+  state.channelThreadsLoadingByChannel[channelId] = reset || !loaded
+  state.channelThreadsLoadingMoreByChannel[channelId] =
+    !state.channelThreadsLoadingByChannel[channelId]
+  state.channelThreadsErrorByChannel[channelId] = ''
+
+  try {
+    const page = await fetchChannelChatThreads(baseUrl.value, channelId, loadMoreUrl)
+    const threads = page.threads.map((thread: ChatThread): ChatThread => ({
+      ...thread,
+      channel_id: thread.channel_id || channelId,
+      channel: thread.channel || channel
+    }))
+    registerChatThreadUsers(users, threads)
+    mergeThreadChannelsIntoState(state, threads)
+    state.channelThreadsByChannel[channelId] = reset
+      ? threads
+      : mergeChatThreadsById(state.channelThreadsByChannel[channelId] || [], threads)
+    state.channelThreadsLoadMoreUrlByChannel[channelId] =
+      threads.length === 0 ? null : page.loadMoreUrl
+    state.channelThreadsLoadedByChannel[channelId] = true
+    return state.channelThreadsByChannel[channelId]
+  } catch (error) {
+    state.channelThreadsErrorByChannel[channelId] =
+      error instanceof Error ? error.message : String(error)
+    return state.channelThreadsByChannel[channelId] || []
+  } finally {
+    state.channelThreadsLoadingByChannel[channelId] = false
+    state.channelThreadsLoadingMoreByChannel[channelId] = false
+  }
+}
+
+export async function loadChatMessages(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  reset = false,
+  targetMessageId?: number | null
 ) {
   ensureChatState(tab)
   const state = tab.chatState
@@ -807,11 +1487,17 @@ export async function loadChatMessages(
     state.messagesByChannel[channelId] = []
     state.beforeMessageIdByChannel[channelId] = null
     state.hasMoreByChannel[channelId] = true
+    state.activeTargetMessageId = targetMessageId || null
   }
 
   try {
     const beforeId = reset ? null : state.beforeMessageIdByChannel[channelId]
-    const { messages, hasMore } = await fetchChatMessages(baseUrl.value, channelId, beforeId)
+    const { messages, hasMore } = await fetchChatMessages(
+      baseUrl.value,
+      channelId,
+      beforeId,
+      reset ? targetMessageId : null
+    )
 
     registerMessageUsers(users, messages)
 
@@ -832,6 +1518,524 @@ export async function loadChatMessages(
   }
 }
 
+const attachThreadToChannelMessage = (
+  state: NonNullable<BrowserTab['chatState']>,
+  channelId: number,
+  originalMessageId: number,
+  thread: ChatThread
+) => {
+  const messages = state.messagesByChannel[channelId] || []
+  const index = messages.findIndex(message => message.id === originalMessageId)
+  if (index === -1) return
+  messages[index] = {
+    ...messages[index],
+    thread_id: thread.id,
+    thread: normalizeChatThread(thread)
+  }
+  state.messagesByChannel[channelId] = [...messages]
+}
+
+const patchChatThreadEverywhere = (
+  state: NonNullable<BrowserTab['chatState']>,
+  threadId: number,
+  updater: (thread: ChatThread) => ChatThread
+) => {
+  if (state.activeThread?.id === threadId) {
+    state.activeThread = updater(state.activeThread)
+  }
+
+  state.myThreads = state.myThreads.map(thread =>
+    thread.id === threadId ? updater(thread) : thread
+  )
+
+  for (const [channelId, threads] of Object.entries(state.channelThreadsByChannel)) {
+    if (!threads.some(thread => thread.id === threadId)) continue
+    state.channelThreadsByChannel[Number(channelId)] = threads.map(thread =>
+      thread.id === threadId ? updater(thread) : thread
+    )
+  }
+
+  for (const [channelId, messages] of Object.entries(state.messagesByChannel)) {
+    if (!messages.some(message => message.thread?.id === threadId)) continue
+    state.messagesByChannel[Number(channelId)] = messages.map(message =>
+      message.thread?.id === threadId ? { ...message, thread: updater(message.thread) } : message
+    )
+  }
+}
+
+const markChatThreadReadInState = (
+  state: NonNullable<BrowserTab['chatState']>,
+  threadId: number,
+  messageId: number
+) => {
+  const knownThreads = [
+    state.activeThread,
+    state.myThreads.find(thread => thread.id === threadId),
+    ...Object.values(state.channelThreadsByChannel).map(threads =>
+      threads.find(thread => thread.id === threadId)
+    )
+  ].filter((thread): thread is ChatThread => Boolean(thread))
+  const watchedUnreadCount = Math.max(
+    0,
+    ...knownThreads.map(thread => Number(thread.tracking?.watched_threads_unread_count || 0))
+  )
+  const channelId = Number(
+    knownThreads.find(thread => thread.channel_id || thread.channel?.id)?.channel_id ||
+      knownThreads.find(thread => thread.channel?.id)?.channel?.id ||
+      0
+  )
+  const channel = state.channels.find(item => item.id === channelId)
+  if (channel?.current_user_membership && watchedUnreadCount > 0) {
+    channel.current_user_membership.watched_threads_unread_count = Math.max(
+      0,
+      Number(channel.current_user_membership.watched_threads_unread_count || 0) - watchedUnreadCount
+    )
+  }
+
+  patchChatThreadEverywhere(state, threadId, thread => ({
+    ...thread,
+    current_user_membership: {
+      ...(thread.current_user_membership || {}),
+      last_read_message_id: messageId,
+      unread_count: 0
+    },
+    tracking: {
+      ...(thread.tracking || {}),
+      unread_count: 0,
+      mention_count: 0,
+      watched_threads_unread_count: 0
+    }
+  }))
+}
+
+export const syncThreadSummaryFromMessage = (
+  state: NonNullable<BrowserTab['chatState']>,
+  threadId: number,
+  message: ChatMessage,
+  incrementReplyCount: boolean,
+  markUnread = false
+) => {
+  const activeThread = state.activeThread?.id === threadId ? state.activeThread : null
+  const channelMessages = Object.values(state.messagesByChannel).flat()
+  const original = channelMessages.find(item => item.thread?.id === threadId)
+  const listedThread = state.myThreads.find(item => item.id === threadId)
+  const thread = activeThread || original?.thread || listedThread
+  if (!thread) return
+
+  const currentCount = Number(thread.reply_count || thread.preview?.reply_count || 0)
+  const isAlreadyLatest = thread.preview?.last_reply_id === message.id
+  const nextCount = incrementReplyCount && !isAlreadyLatest ? currentCount + 1 : currentCount
+  const participantUsers = [...(thread.preview?.participant_users || [])]
+  if (message.user && !participantUsers.some(user => user.id === message.user?.id)) {
+    participantUsers.push(message.user)
+  }
+  const preview = {
+    ...(thread.preview || {}),
+    last_reply_created_at: message.created_at,
+    last_reply_excerpt: message.message || message.cooked || '',
+    last_reply_id: message.id,
+    last_reply_user: message.user,
+    participant_count: Math.max(
+      Number(thread.preview?.participant_count || 0),
+      participantUsers.length
+    ),
+    participant_users: participantUsers,
+    reply_count: nextCount
+  }
+  const updatedThread: ChatThread = {
+    ...thread,
+    reply_count: nextCount,
+    last_message_id: message.id,
+    preview
+  }
+  if (markUnread) {
+    const notificationLevel = Number(updatedThread.current_user_membership?.notification_level || 1)
+    const tracking = { ...(updatedThread.tracking || {}) }
+    if (notificationLevel === 3) {
+      tracking.watched_threads_unread_count = Number(tracking.watched_threads_unread_count || 0) + 1
+    } else if (notificationLevel === 2) {
+      tracking.unread_count = Number(tracking.unread_count || 0) + 1
+    }
+    updatedThread.tracking = tracking
+  }
+
+  patchChatThreadEverywhere(state, threadId, existing => ({
+    ...existing,
+    ...updatedThread,
+    current_user_membership:
+      existing.current_user_membership || updatedThread.current_user_membership,
+    tracking: updatedThread.tracking || existing.tracking
+  }))
+
+  const channelId = Number(updatedThread.channel_id || updatedThread.channel?.id || 0)
+  if (
+    channelId > 0 &&
+    nextCount > 0 &&
+    state.channelThreadsLoadedByChannel[channelId] &&
+    !state.channelThreadsByChannel[channelId]?.some(item => item.id === threadId)
+  ) {
+    state.channelThreadsByChannel[channelId] = [
+      updatedThread,
+      ...(state.channelThreadsByChannel[channelId] || [])
+    ]
+  }
+}
+
+export async function loadChatThreadMessages(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  threadId: number,
+  reset = false,
+  targetMessageId?: number | null
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  state.loadingThread = true
+  state.threadErrorMessage = ''
+
+  if (reset) {
+    state.threadMessagesById[threadId] = []
+    state.beforeMessageIdByThread[threadId] = null
+    state.threadHasMoreById[threadId] = true
+    state.activeTargetMessageId = targetMessageId || null
+  }
+
+  try {
+    const beforeId = reset ? null : state.beforeMessageIdByThread[threadId]
+    const { messages, hasMore } = await fetchChatThreadMessages(
+      baseUrl.value,
+      channelId,
+      threadId,
+      beforeId,
+      reset ? targetMessageId : null
+    )
+    registerMessageUsers(users, messages)
+
+    const originalMessage =
+      state.activeThread?.id === threadId ? state.activeThread.original_message : undefined
+    const incoming =
+      reset && originalMessage && !messages.some(message => message.id === originalMessage.id)
+        ? [originalMessage, ...messages]
+        : messages
+    const existing = state.threadMessagesById[threadId] || []
+    const merged = dedupeMessagesById(reset ? incoming : [...incoming, ...existing])
+    state.threadMessagesById[threadId] = merged
+    state.threadHasMoreById[threadId] = hasMore
+
+    if (merged.length > 0) {
+      state.beforeMessageIdByThread[threadId] = messages[0]?.id || merged[0].id
+      const lastMessage = merged[merged.length - 1]
+      const readMessageId = targetMessageId || lastMessage.id
+      void markChatThreadReadRequest(baseUrl.value, channelId, threadId, readMessageId)
+      markChatThreadReadInState(state, threadId, readMessageId)
+    }
+    return merged
+  } catch (error) {
+    state.threadErrorMessage = error instanceof Error ? error.message : String(error)
+    return state.threadMessagesById[threadId] || []
+  } finally {
+    state.loadingThread = false
+  }
+}
+
+const activateChatThread = async (
+  tab: BrowserTab,
+  state: NonNullable<BrowserTab['chatState']>,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  thread: ChatThread,
+  fallbackOriginalMessage?: ChatMessage,
+  targetMessageId?: number | null
+) => {
+  if (!thread.original_message && fallbackOriginalMessage) {
+    thread.original_message = normalizeSingleMessage(fallbackOriginalMessage)
+  }
+  if (!thread.original_message) {
+    throw new Error('站点未返回消息串的原始消息')
+  }
+  const listedThread = state.myThreads.find(item => item.id === thread.id)
+  const activeThread: ChatThread = {
+    ...(listedThread || {}),
+    ...thread,
+    channel_id: thread.channel_id || listedThread?.channel_id || channelId,
+    channel:
+      thread.channel ||
+      listedThread?.channel ||
+      state.channels.find(channel => channel.id === channelId),
+    tracking: thread.tracking || listedThread?.tracking
+  }
+  state.activeThread = activeThread
+  const activeOriginalMessage = activeThread.original_message
+  if (!activeOriginalMessage) {
+    throw new Error('站点未返回消息串的原始消息')
+  }
+  attachThreadToChannelMessage(state, channelId, activeOriginalMessage.id, activeThread)
+  await loadChatThreadMessages(
+    tab,
+    baseUrl,
+    users,
+    channelId,
+    activeThread.id,
+    true,
+    targetMessageId
+  )
+  return state.activeThread
+}
+
+export async function openChatThread(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  originalMessage: ChatMessage,
+  targetMessageId?: number | null
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  const channel = state.channels.find(item => item.id === channelId)
+  if (!channel) return null
+
+  state.loadingThread = true
+  state.threadErrorMessage = ''
+  state.threadReplyToMessage = null
+  state.threadEditingMessage = null
+
+  try {
+    let thread: ChatThread
+    const serializedThread = originalMessage.thread
+    const existingThreadId = serializedThread?.id || originalMessage.thread_id
+
+    if (existingThreadId) {
+      try {
+        thread = await fetchChatThread(baseUrl.value, channelId, existingThreadId)
+      } catch (error) {
+        if (!serializedThread) throw error
+        thread = normalizeChatThread(serializedThread)
+      }
+    } else {
+      if (!channel.threading_enabled) {
+        throw new Error('当前频道未开放消息串')
+      }
+      thread = await createChatThreadRequest(baseUrl.value, channelId, originalMessage.id)
+    }
+
+    return await activateChatThread(
+      tab,
+      state,
+      baseUrl,
+      users,
+      channelId,
+      thread,
+      originalMessage,
+      targetMessageId
+    )
+  } catch (error) {
+    state.activeThread = null
+    state.threadErrorMessage = error instanceof Error ? error.message : String(error)
+    return null
+  } finally {
+    state.loadingThread = false
+  }
+}
+
+export async function openChatThreadById(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  threadId: number,
+  targetMessageId?: number | null
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  if (!state.channels.some(channel => channel.id === channelId)) return null
+
+  state.loadingThread = true
+  state.threadErrorMessage = ''
+  state.threadReplyToMessage = null
+  state.threadEditingMessage = null
+
+  try {
+    const thread = await fetchChatThread(baseUrl.value, channelId, threadId)
+    return await activateChatThread(
+      tab,
+      state,
+      baseUrl,
+      users,
+      channelId,
+      thread,
+      undefined,
+      targetMessageId
+    )
+  } catch (error) {
+    state.activeThread = null
+    state.threadErrorMessage = error instanceof Error ? error.message : String(error)
+    return null
+  } finally {
+    state.loadingThread = false
+  }
+}
+
+export function closeChatThread(tab: BrowserTab) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return
+  state.activeThread = null
+  state.activeTargetMessageId = null
+  state.threadReplyToMessage = null
+  state.threadEditingMessage = null
+  state.threadErrorMessage = ''
+}
+
+export async function updateChatThreadNotificationLevel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  threadId: number,
+  notificationLevel: number
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  if (![1, 2, 3].includes(notificationLevel)) {
+    state.threadErrorMessage = '站点不支持该消息串通知级别'
+    return null
+  }
+
+  state.threadNotificationSavingById[threadId] = true
+  state.threadErrorMessage = ''
+  let lastError: string | null = null
+  const formPayload = new URLSearchParams({
+    notification_level: String(notificationLevel)
+  }).toString()
+  const jsonPayload = JSON.stringify({ notification_level: notificationLevel })
+
+  try {
+    for (const path of CHAT_THREAD_NOTIFICATION_SETTINGS_ENDPOINTS(channelId, threadId)) {
+      for (const request of [
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: formPayload
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonPayload
+        }
+      ]) {
+        try {
+          const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+            method: 'PUT',
+            headers: request.headers,
+            body: request.body
+          })
+          const data = extractData(result)
+          if (!result.ok) {
+            lastError = parseErrorMessage(data, '更新消息串通知设置失败')
+            continue
+          }
+
+          const returnedMembership = extractMembershipPayload(data)
+          const returnedLevel = Number(returnedMembership.notification_level)
+          const membership = {
+            ...returnedMembership,
+            notification_level: Number.isFinite(returnedLevel) ? returnedLevel : notificationLevel
+          }
+          patchChatThreadEverywhere(state, threadId, thread => ({
+            ...thread,
+            current_user_membership: {
+              ...(thread.current_user_membership || {}),
+              ...membership
+            }
+          }))
+          return membership
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error)
+        }
+      }
+    }
+
+    state.threadErrorMessage = lastError || '更新消息串通知设置失败'
+    return null
+  } finally {
+    state.threadNotificationSavingById[threadId] = false
+  }
+}
+
+export async function updateChatThreadTitle(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  threadId: number,
+  title: string
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  const normalizedTitle = title.trim()
+  if (normalizedTitle.length > 100) {
+    state.threadErrorMessage = '消息串标题不能超过 100 个字符'
+    return false
+  }
+
+  state.threadTitleSavingById[threadId] = true
+  state.threadErrorMessage = ''
+  let lastError: string | null = null
+  const formPayload = new URLSearchParams({ title: normalizedTitle }).toString()
+  const jsonPayload = JSON.stringify({ title: normalizedTitle })
+
+  try {
+    for (const path of CHAT_THREAD_ENDPOINTS(channelId, threadId)) {
+      for (const request of [
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: formPayload
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonPayload
+        }
+      ]) {
+        try {
+          const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+            method: 'PUT',
+            headers: request.headers,
+            body: request.body
+          })
+          const data = extractData(result)
+          if (!result.ok) {
+            lastError = parseErrorMessage(data, '更新消息串标题失败')
+            continue
+          }
+
+          patchChatThreadEverywhere(state, threadId, thread => ({
+            ...thread,
+            title: normalizedTitle
+          }))
+          const messages = state.threadMessagesById[threadId] || []
+          state.threadMessagesById[threadId] = messages.map(message => ({
+            ...message,
+            thread_title: normalizedTitle
+          }))
+          return true
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error)
+        }
+      }
+    }
+
+    state.threadErrorMessage = lastError || '更新消息串标题失败'
+    return false
+  } finally {
+    state.threadTitleSavingById[threadId] = false
+  }
+}
+
 const channelsFromState = (state: NonNullable<BrowserTab['chatState']>) => state.channels
 
 export async function sendChatMessage(
@@ -839,20 +2043,31 @@ export async function sendChatMessage(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>,
   channelId: number,
-  message: string
+  message: string,
+  options: PostChatMessageOptions = {}
 ) {
   ensureChatState(tab)
   const state = tab.chatState
   if (!state) return null
-  state.sendingMessage = true
+  if (options.threadId) {
+    state.sendingThreadMessage = true
+  } else {
+    state.sendingMessage = true
+  }
   state.errorMessage = ''
+  if (options.threadId) state.threadErrorMessage = ''
 
   try {
-    const created = await postChatMessage(baseUrl.value, channelId, message)
+    const created = await postChatMessage(baseUrl.value, channelId, message, options)
     let sentMessage = created.message
 
     if (!sentMessage && created.messageId) {
-      sentMessage = await fetchChatMessageById(baseUrl.value, channelId, created.messageId)
+      sentMessage = await fetchChatMessageById(
+        baseUrl.value,
+        channelId,
+        created.messageId,
+        options.threadId
+      )
     }
 
     if (!sentMessage && created.messageId) {
@@ -860,7 +2075,14 @@ export async function sendChatMessage(
         id: created.messageId,
         message,
         created_at: new Date().toISOString(),
-        chat_channel_id: channelId
+        chat_channel_id: channelId,
+        thread_id: options.threadId || null,
+        in_reply_to: options.inReplyToId
+          ? [
+              ...(options.threadId ? state.threadMessagesById[options.threadId] || [] : []),
+              ...(state.messagesByChannel[channelId] || [])
+            ].find(item => item.id === options.inReplyToId)
+          : null
       })
     }
 
@@ -869,6 +2091,17 @@ export async function sendChatMessage(
     }
 
     registerMessageUsers(users, [sentMessage])
+
+    if (options.threadId) {
+      const existing = state.threadMessagesById[options.threadId] || []
+      const alreadyExists = existing.some(item => item.id === sentMessage?.id)
+      const merged = dedupeMessagesById([...existing, sentMessage])
+      state.threadMessagesById[options.threadId] = merged
+      state.beforeMessageIdByThread[options.threadId] ??= merged[0]?.id || null
+      syncThreadSummaryFromMessage(state, options.threadId, sentMessage, !alreadyExists)
+      void markChatThreadReadRequest(baseUrl.value, channelId, options.threadId, sentMessage.id)
+      return sentMessage
+    }
 
     const existing = state.messagesByChannel[channelId] || []
     const merged = dedupeMessagesById([...existing, sentMessage])
@@ -882,8 +2115,13 @@ export async function sendChatMessage(
     return sentMessage
   } catch (error) {
     state.errorMessage = error instanceof Error ? error.message : String(error)
+    if (options.threadId) state.threadErrorMessage = state.errorMessage
   } finally {
-    state.sendingMessage = false
+    if (options.threadId) {
+      state.sendingThreadMessage = false
+    } else {
+      state.sendingMessage = false
+    }
   }
 
   return null
@@ -906,17 +2144,25 @@ export async function toggleChatMessageReaction(
   if (!normalizedEmoji) return false
 
   const channelMessages = state.messagesByChannel[channelId] || []
-  const targetIndex = channelMessages.findIndex(message => message.id === messageId)
-  if (targetIndex === -1) return false
-
-  const targetMessage = channelMessages[targetIndex]
+  const threadId = state.activeThread?.id
+  const threadMessages = threadId ? state.threadMessagesById[threadId] || [] : []
+  const targetMessage =
+    channelMessages.find(message => message.id === messageId) ||
+    threadMessages.find(message => message.id === messageId)
+  if (!targetMessage) return false
   const reactAction = resolveReactionAction(targetMessage, normalizedEmoji, reacted)
 
   try {
     await publishChatReaction(baseUrl.value, channelId, messageId, normalizedEmoji, reactAction)
     const updated = applyLocalReaction(targetMessage, normalizedEmoji, reactAction)
-    channelMessages[targetIndex] = updated
-    state.messagesByChannel[channelId] = [...channelMessages]
+    const updateCollection = (messages: ChatMessage[]) =>
+      messages.map(message => (message.id === messageId ? { ...message, ...updated } : message))
+    if (channelMessages.some(message => message.id === messageId)) {
+      state.messagesByChannel[channelId] = updateCollection(channelMessages)
+    }
+    if (threadId && threadMessages.some(message => message.id === messageId)) {
+      state.threadMessagesById[threadId] = updateCollection(threadMessages)
+    }
     return true
   } catch (error) {
     state.errorMessage = error instanceof Error ? error.message : String(error)
@@ -1062,10 +2308,16 @@ export async function deleteChatMessage(
       const data = extractData(result)
       if (result.ok) {
         const channelMessages = state.messagesByChannel[channelId] || []
-        const targetIndex = channelMessages.findIndex(msg => msg.id === messageId)
-        if (targetIndex !== -1) {
-          channelMessages[targetIndex] = { ...channelMessages[targetIndex], deleted: true }
-          state.messagesByChannel[channelId] = [...channelMessages]
+        if (channelMessages.some(message => message.id === messageId)) {
+          state.messagesByChannel[channelId] = channelMessages.map(message =>
+            message.id === messageId ? { ...message, deleted: true } : message
+          )
+        }
+        for (const [threadId, messages] of Object.entries(state.threadMessagesById)) {
+          if (!messages.some(message => message.id === messageId)) continue
+          state.threadMessagesById[Number(threadId)] = messages.map(message =>
+            message.id === messageId ? { ...message, deleted: true } : message
+          )
         }
         return true
       }
@@ -1875,19 +3127,28 @@ export async function searchChatables(
   limit = 20
 ): Promise<ChatableSearchResult | null> {
   const trimmed = filter.trim()
+  const resultLimit = Math.max(1, Math.floor(limit))
   let lastError: string | null = null
 
   for (const path of CHAT_CHATABLES_ENDPOINTS) {
     try {
-      const params = new URLSearchParams()
-      if (trimmed) params.set('filter', trimmed)
-      params.set('limit', String(limit))
+      // Keep this aligned with Chat's official ChatablesLoader contract. The
+      // endpoint owns its server-side result limit and expects `term`, not the
+      // generic Discourse user-search `filter` parameter.
+      const params = new URLSearchParams({
+        term: trimmed,
+        include_users: 'true',
+        include_groups: 'false',
+        include_category_channels: 'false',
+        include_direct_message_channels: 'false'
+      })
       const result = await pageFetch<any>(`${baseUrl.value}${path}?${params.toString()}`)
       const data = extractData(result)
       if (result.ok) {
         const users = (Array.isArray(data?.users) ? data.users : [])
           .map(normalizeChatableUser)
           .filter((user: DiscourseUser | null): user is DiscourseUser => !!user)
+          .slice(0, resultLimit)
         const groups = (Array.isArray(data?.groups) ? data.groups : [])
           .map(normalizeChatableGroup)
           .filter(
@@ -1895,6 +3156,7 @@ export async function searchChatables(
               group: { id: number; name: string; user_count?: number } | null
             ): group is { id: number; name: string; user_count?: number } => !!group
           )
+          .slice(0, resultLimit)
         return {
           users,
           groups

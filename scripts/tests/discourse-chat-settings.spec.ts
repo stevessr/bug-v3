@@ -356,6 +356,19 @@ test.describe('Discourse chat channel settings', () => {
     await expect(eve).toBeDisabled()
     await expect(eve).toContainText('对方已关闭聊天')
 
+    const chatablesRequest = await page.evaluate(() =>
+      (globalThis as any).__chatSettingsRequests.find((request: any) =>
+        request.url.includes('/chat/api/chatables')
+      )
+    )
+    const chatablesUrl = new URL(chatablesRequest.url)
+    expect(chatablesUrl.searchParams.get('term')).toBe('bo')
+    expect(chatablesUrl.searchParams.has('filter')).toBe(false)
+    expect(chatablesUrl.searchParams.get('include_users')).toBe('true')
+    expect(chatablesUrl.searchParams.get('include_groups')).toBe('false')
+    expect(chatablesUrl.searchParams.get('include_category_channels')).toBe('false')
+    expect(chatablesUrl.searchParams.get('include_direct_message_channels')).toBe('false')
+
     await bob.click()
     await directDialog.getByRole('button', { name: /创建聊天.*1 人/ }).click()
     await expect(page.locator('.chat-main-title')).toHaveText('Bob')

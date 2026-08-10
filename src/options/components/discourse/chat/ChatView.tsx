@@ -1,5 +1,11 @@
 import { computed, defineComponent, ref, watch } from 'vue'
-import { PlusOutlined, SettingOutlined, UserAddOutlined } from '@ant-design/icons-vue'
+import {
+  CommentOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  UserAddOutlined
+} from '@ant-design/icons-vue'
 
 import type {
   ChatChannel,
@@ -9,16 +15,21 @@ import type {
   ChatMembershipUpdatePayload,
   ChatMessage,
   ChatState,
+  ChatThread,
   DiscourseCategory,
   DiscourseUser
 } from '../types'
 
 import ChatChannelList from './ChatChannelList'
+import ChatThreadList from './ChatThreadList'
 import ChatMessageList from './ChatMessageList'
 import ChatComposer from './ChatComposer'
 import ChatCreateGroupModal from './ChatCreateGroupModal'
 import ChatCreateChannelModal from './ChatCreateChannelModal'
 import ChatChannelManageModal from './ChatChannelManageModal'
+import ChatThreadPanel from './ChatThreadPanel'
+import ChatChannelThreadsPanel from './ChatChannelThreadsPanel'
+import ChatSearchPanel from './ChatSearchPanel'
 import '../css/chat/ChatView.css'
 
 export default defineComponent({
@@ -27,6 +38,7 @@ export default defineComponent({
     chatState: { type: Object as () => ChatState, required: true },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
+    currentUserStaff: { type: Boolean, default: false },
     users: { type: Object as () => Map<number, DiscourseUser>, required: true },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     createGroupSearching: { type: Boolean, default: false },
@@ -45,15 +57,32 @@ export default defineComponent({
   emits: [
     'selectChannel',
     'loadMore',
+    'openThread',
+    'selectThread',
+    'closeThread',
+    'loadMoreThread',
+    'loadMyThreads',
+    'loadMoreMyThreads',
+    'loadChannelThreads',
+    'loadMoreChannelThreads',
+    'searchMessages',
+    'loadMoreSearch',
+    'updateThreadNotification',
+    'updateThreadTitle',
     'sendMessage',
+    'sendThreadMessage',
     'navigate',
     'react',
     'editChannel',
     'interact',
     'replyToMessage',
+    'replyToThreadMessage',
     'cancelReply',
+    'cancelThreadReply',
     'editMessage',
+    'editThreadMessage',
     'cancelEdit',
+    'cancelThreadEdit',
     'deleteMessage',
     'flagMessage',
     'uploadStart',
@@ -76,6 +105,9 @@ export default defineComponent({
     const showCreateGroup = ref(false)
     const showCreateChannel = ref(false)
     const showManage = ref(false)
+    const showChannelThreads = ref(false)
+    const showSearch = ref(false)
+    const searchInitialChannelId = ref<number | null>(null)
 
     const activeChannel = computed(
       () =>
@@ -89,9 +121,23 @@ export default defineComponent({
         if (showManage.value && previousChannelId && channelId !== previousChannelId) {
           showManage.value = false
         }
+        if (previousChannelId && channelId !== previousChannelId) {
+          showChannelThreads.value = false
+          showSearch.value = false
+        }
         if (channelId && channelId !== previousChannelId) {
           showCreateGroup.value = false
           showCreateChannel.value = false
+        }
+      }
+    )
+
+    watch(
+      () => props.chatState.activeThread?.id,
+      threadId => {
+        if (threadId) {
+          showChannelThreads.value = false
+          showSearch.value = false
         }
       }
     )
@@ -137,6 +183,42 @@ export default defineComponent({
       const channelId = props.chatState.activeChannelId
       if (!channelId) return false
       return props.chatState.hasMoreByChannel[channelId] !== false
+    })
+
+    const activeThreadMessages = computed(() => {
+      const threadId = props.chatState.activeThread?.id
+      if (!threadId) return []
+      return props.chatState.threadMessagesById[threadId] || []
+    })
+
+    const activeThreadHasMore = computed(() => {
+      const threadId = props.chatState.activeThread?.id
+      if (!threadId) return false
+      return props.chatState.threadHasMoreById[threadId] !== false
+    })
+
+    const activeChannelThreads = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return []
+      return props.chatState.channelThreadsByChannel[channelId] || []
+    })
+
+    const activeChannelThreadUnreadCount = computed(() => {
+      const channel = activeChannel.value
+      if (!channel) return 0
+      const membershipCount = Number(
+        channel.current_user_membership?.watched_threads_unread_count || 0
+      )
+      if (membershipCount > 0) return membershipCount
+      return activeChannelThreads.value.reduce(
+        (total, thread) =>
+          total +
+          Math.max(
+            Number(thread.tracking?.unread_count || 0),
+            Number(thread.tracking?.watched_threads_unread_count || 0)
+          ),
+        0
+      )
     })
 
     const activeTypingUsers = computed(() => {
@@ -208,6 +290,16 @@ export default defineComponent({
       emit('replyToMessage', message)
     }
 
+    const handleOpenThread = (message: ChatMessage) => {
+      showChannelThreads.value = false
+      emit('openThread', message)
+    }
+
+    const handleSelectChannelThread = (thread: ChatThread) => {
+      showChannelThreads.value = false
+      emit('selectThread', thread)
+    }
+
     const handleCancelReply = () => {
       emit('cancelReply')
     }
@@ -236,12 +328,29 @@ export default defineComponent({
       emit('createChannel', payload)
     }
 
+    const openSearch = (initialChannelId: number | null) => {
+      searchInitialChannelId.value = initialChannelId
+      showChannelThreads.value = false
+      showSearch.value = true
+    }
+
     return () => (
-      <div class="chat-view">
+      <div class={['chat-view', props.chatState.activeThread ? 'has-thread-panel' : '']}>
         <div class="chat-sidebar">
           <div class="chat-sidebar-header">
             <span class="chat-sidebar-header__title">聊天</span>
             <div class="chat-sidebar-header__actions">
+              {props.chatState.capabilities.chatEnabled && (
+                <button
+                  type="button"
+                  class="chat-sidebar-header__create"
+                  aria-label="搜索聊天消息"
+                  title="搜索聊天消息"
+                  onClick={() => openSearch(null)}
+                >
+                  <SearchOutlined />
+                </button>
+              )}
               {props.chatState.capabilities.canDirectMessage && (
                 <button
                   type="button"
@@ -269,19 +378,70 @@ export default defineComponent({
           {props.chatState.errorMessage && (
             <div class="chat-error">{props.chatState.errorMessage}</div>
           )}
-          <ChatChannelList
-            channels={props.chatState.channels}
-            activeChannelId={props.chatState.activeChannelId}
-            baseUrl={props.baseUrl}
-            loading={props.chatState.loadingChannels}
-            onSelect={handleSelectChannel}
-          />
+          <div class="chat-sidebar__scroll">
+            <ChatThreadList
+              threads={props.chatState.myThreads}
+              activeThreadId={props.chatState.activeThread?.id || null}
+              baseUrl={props.baseUrl}
+              loaded={props.chatState.myThreadsLoaded}
+              loading={props.chatState.loadingMyThreads}
+              loadingMore={props.chatState.loadingMoreMyThreads}
+              loadMoreUrl={props.chatState.myThreadsLoadMoreUrl}
+              errorMessage={props.chatState.myThreadsErrorMessage}
+              onLoad={() => emit('loadMyThreads')}
+              onLoadMore={() => emit('loadMoreMyThreads')}
+              onSelect={(thread: ChatThread) => emit('selectThread', thread)}
+            />
+            <ChatChannelList
+              channels={props.chatState.channels}
+              activeChannelId={props.chatState.activeChannelId}
+              baseUrl={props.baseUrl}
+              loading={props.chatState.loadingChannels}
+              onSelect={handleSelectChannel}
+            />
+          </div>
         </div>
 
         <div class="chat-main">
           <div class="chat-main-header">
             <div class="chat-main-title">{activeChannelTitle.value}</div>
             <div class="chat-main-actions">
+              {activeChannel.value && (
+                <button
+                  type="button"
+                  class="chat-main-action-btn"
+                  aria-label={`在${activeChannelTitle.value}中搜索`}
+                  title="在当前频道搜索"
+                  onClick={() => openSearch(activeChannel.value?.id || null)}
+                >
+                  <SearchOutlined />
+                  <span>搜索</span>
+                </button>
+              )}
+              {activeChannel.value?.threading_enabled && (
+                <button
+                  type="button"
+                  class={[
+                    'chat-main-action-btn',
+                    activeChannelThreadUnreadCount.value > 0 ? 'has-unread' : ''
+                  ]}
+                  aria-label={
+                    activeChannelThreadUnreadCount.value > 0
+                      ? `查看频道消息串，${activeChannelThreadUnreadCount.value} 条未读`
+                      : '查看频道消息串'
+                  }
+                  title="查看频道消息串"
+                  onClick={() => (showChannelThreads.value = true)}
+                >
+                  <CommentOutlined />
+                  <span>消息串</span>
+                  {activeChannelThreadUnreadCount.value > 0 && (
+                    <span class="chat-main-action-btn__badge">
+                      {activeChannelThreadUnreadCount.value}
+                    </span>
+                  )}
+                </button>
+              )}
               {activeChannel.value && (
                 <button
                   type="button"
@@ -295,6 +455,23 @@ export default defineComponent({
             </div>
           </div>
 
+          {showSearch.value && (
+            <ChatSearchPanel
+              searchState={props.chatState.searchState}
+              channels={props.chatState.channels}
+              baseUrl={props.baseUrl}
+              initialChannelId={searchInitialChannelId.value ?? undefined}
+              onClose={() => (showSearch.value = false)}
+              onSearch={(payload: {
+                query: string
+                channelId: number | null
+                sort: 'relevance' | 'latest'
+              }) => emit('searchMessages', payload)}
+              onLoadMore={() => emit('loadMoreSearch')}
+              onNavigate={handleNavigate}
+            />
+          )}
+
           {activeChannel.value ? (
             <ChatMessageList
               messages={activeMessages.value}
@@ -303,11 +480,14 @@ export default defineComponent({
               currentUsername={props.currentUsername}
               loading={props.chatState.loadingMessages}
               hasMore={hasMore.value}
+              targetMessageId={props.chatState.activeTargetMessageId ?? undefined}
+              threadingEnabled={Boolean(activeChannel.value?.threading_enabled)}
               onLoadMore={handleLoadMore}
               onNavigate={handleNavigate}
               onReact={handleReact}
               onInteract={handleInteract}
               onReply={handleReplyToMessage}
+              onOpenThread={handleOpenThread}
               onEdit={handleEditMessage}
               onDelete={handleDeleteMessage}
               onFlag={handleFlagMessage}
@@ -330,6 +510,99 @@ export default defineComponent({
             onUploadStart={() => emit('uploadStart')}
             onUploadEnd={() => emit('uploadEnd')}
           />
+
+          {props.chatState.loadingThread && !props.chatState.activeThread && (
+            <div class="chat-thread-opening" role="status" aria-live="polite">
+              正在打开消息串…
+            </div>
+          )}
+          {!props.chatState.activeThread && props.chatState.threadErrorMessage && (
+            <div class="chat-thread-opening is-error" role="alert">
+              {props.chatState.threadErrorMessage}
+            </div>
+          )}
+          {showChannelThreads.value && activeChannel.value && (
+            <ChatChannelThreadsPanel
+              channel={activeChannel.value}
+              threads={activeChannelThreads.value}
+              activeThreadId={props.chatState.activeThread?.id || null}
+              baseUrl={props.baseUrl}
+              loaded={Boolean(
+                props.chatState.channelThreadsLoadedByChannel[activeChannel.value.id]
+              )}
+              loading={Boolean(
+                props.chatState.channelThreadsLoadingByChannel[activeChannel.value.id]
+              )}
+              loadingMore={Boolean(
+                props.chatState.channelThreadsLoadingMoreByChannel[activeChannel.value.id]
+              )}
+              loadMoreUrl={
+                props.chatState.channelThreadsLoadMoreUrlByChannel[activeChannel.value.id] || null
+              }
+              errorMessage={
+                props.chatState.channelThreadsErrorByChannel[activeChannel.value.id] || ''
+              }
+              onClose={() => (showChannelThreads.value = false)}
+              onLoad={(channelId: number) => emit('loadChannelThreads', channelId)}
+              onLoadMore={(channelId: number) => emit('loadMoreChannelThreads', channelId)}
+              onSelect={handleSelectChannelThread}
+            />
+          )}
+          {props.chatState.activeThread && activeChannel.value && (
+            <ChatThreadPanel
+              thread={props.chatState.activeThread}
+              messages={activeThreadMessages.value}
+              channelId={activeChannel.value.id}
+              baseUrl={props.baseUrl}
+              currentUsername={props.currentUsername}
+              currentUserStaff={props.currentUserStaff}
+              loading={props.chatState.loadingThread}
+              sending={props.chatState.sendingThreadMessage}
+              hasMore={activeThreadHasMore.value}
+              targetMessageId={props.chatState.activeTargetMessageId ?? undefined}
+              errorMessage={props.chatState.threadErrorMessage}
+              replyTo={props.chatState.threadReplyToMessage}
+              editingMessage={props.chatState.threadEditingMessage}
+              notificationSaving={Boolean(
+                props.chatState.threadNotificationSavingById[props.chatState.activeThread.id]
+              )}
+              titleSaving={Boolean(
+                props.chatState.threadTitleSavingById[props.chatState.activeThread.id]
+              )}
+              onClose={() => emit('closeThread')}
+              onLoadMore={(threadId: number) => emit('loadMoreThread', threadId)}
+              onSend={(message: string) =>
+                emit('sendThreadMessage', {
+                  channelId: activeChannel.value?.id,
+                  threadId: props.chatState.activeThread?.id,
+                  message
+                })
+              }
+              onNavigate={handleNavigate}
+              onReact={handleReact}
+              onInteract={handleInteract}
+              onReply={(message: ChatMessage) => emit('replyToThreadMessage', message)}
+              onCancelReply={() => emit('cancelThreadReply')}
+              onEdit={(message: ChatMessage) => emit('editThreadMessage', message)}
+              onCancelEdit={() => emit('cancelThreadEdit')}
+              onUpdateNotificationLevel={(level: number) =>
+                emit('updateThreadNotification', {
+                  threadId: props.chatState.activeThread?.id,
+                  level
+                })
+              }
+              onUpdateTitle={(title: string) =>
+                emit('updateThreadTitle', {
+                  threadId: props.chatState.activeThread?.id,
+                  title
+                })
+              }
+              onDelete={handleDeleteMessage}
+              onFlag={handleFlagMessage}
+              onUploadStart={() => emit('uploadStart')}
+              onUploadEnd={() => emit('uploadEnd')}
+            />
+          )}
         </div>
 
         <ChatCreateGroupModal

@@ -29,11 +29,26 @@ test.describe('Discourse browser navigation and content safety', () => {
         )
       )
       const requests: string[] = []
+      const imageProxyRequests: string[] = []
       ;(globalThis as any).__discourseRequests = requests
+      ;(globalThis as any).__discourseImageProxyRequests = imageProxyRequests
 
       const runtime = {
         lastError: null,
         sendMessage(request: any, callback: (response: any) => void) {
+          if (request.type === 'PROXY_IMAGE') {
+            imageProxyRequests.push(String(request.url || ''))
+            const transparentPng = [
+              137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
+              8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 8, 215, 99, 248, 207,
+              192, 240, 31, 0, 5, 0, 1, 255, 137, 153, 61, 29, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66,
+              96, 130
+            ]
+            queueMicrotask(() =>
+              callback({ success: true, data: transparentPng, mimeType: 'image/png' })
+            )
+            return
+          }
           if (request.type === 'GET_LINUX_DO_USER') {
             queueMicrotask(() =>
               callback({
@@ -278,6 +293,57 @@ test.describe('Discourse browser navigation and content safety', () => {
       'https://linuxdo-uploads.s3.ldstatic.com/original/4X/7/2/5/725e864d7b0f17ece0b468d5f22140b7de497834.png'
     )
     await expect(logo).not.toHaveAttribute('src', /linux\.do\/\/linuxdo-uploads/)
+  })
+
+  test('loads UI images directly and only uses the image proxy after a native failure', async ({
+    page
+  }) => {
+    const imageUrl = 'https://assets.example.test/direct-first.png'
+    let directRequestSeen = false
+    let proxyStartedBeforeNativeFailure = false
+    await page.route(imageUrl, async route => {
+      directRequestSeen = true
+      proxyStartedBeforeNativeFailure = await page.evaluate(
+        url => (globalThis as any).__discourseImageProxyRequests.includes(url),
+        imageUrl
+      )
+      await route.abort('failed')
+    })
+
+    await page.goto('/discourse.html')
+    await page.evaluate(url => {
+      const image = document.createElement('img')
+      image.id = 'direct-first-image'
+      image.alt = 'direct first fallback test'
+      image.src = url
+      document.querySelector('.discourse-browser')?.append(image)
+    }, imageUrl)
+
+    await expect.poll(() => directRequestSeen).toBe(true)
+    expect(proxyStartedBeforeNativeFailure).toBe(false)
+    await expect
+      .poll(() =>
+        page.evaluate(
+          url => (globalThis as any).__discourseImageProxyRequests.includes(url),
+          imageUrl
+        )
+      )
+      .toBe(true)
+
+    const image = page.locator('#direct-first-image')
+    await expect(image).toHaveAttribute('data-discourse-image-source', 'proxy')
+    await expect(image).toHaveAttribute('src', /^blob:/)
+    await expect
+      .poll(() =>
+        page.evaluate(
+          url =>
+            (globalThis as any).__discourseRequests.filter(
+              (requestUrl: string) => requestUrl === url
+            ).length,
+          imageUrl
+        )
+      )
+      .toBe(0)
   })
 
   test('sanitizes rich topic titles received from a remote forum', async ({ page }) => {

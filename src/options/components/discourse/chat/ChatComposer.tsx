@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef, ref, watch } from 'vue'
+import { computed, defineComponent, shallowRef, ref, watch } from 'vue'
 import {
   LoadingOutlined,
   PaperClipOutlined,
@@ -119,11 +119,9 @@ export default defineComponent({
       }
     }
 
-    const placeholder = props.editingMessage
-      ? '编辑消息...'
-      : props.replyTo
-        ? '回复消息...'
-        : '输入消息，回车发送'
+    const placeholder = computed(() =>
+      props.editingMessage ? '编辑消息...' : props.replyTo ? '回复消息...' : '输入消息，回车发送'
+    )
 
     const getReplyPreviewText = () => {
       if (!props.replyTo) return ''
@@ -178,8 +176,8 @@ export default defineComponent({
             value={message.value}
             class="chat-composer-input"
             disabled={props.disabled}
-            placeholder={placeholder}
-            aria-label={placeholder}
+            placeholder={placeholder.value}
+            aria-label={placeholder.value}
             rows={2}
             onKeydown={handleKeydown}
             onPaste={handlePaste}

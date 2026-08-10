@@ -5,6 +5,30 @@
   gap: 8px;
   padding: 4px 6px;
   border-radius: var(--d-shape-lg, 16px);
+  scroll-margin-block: 36px;
+}
+
+.chat-message-item.is-search-target {
+  outline: 2px solid var(--primary, var(--theme-primary));
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 14%, transparent);
+  animation: chat-search-target-pulse 900ms var(--d-motion-standard, ease) 1;
+}
+
+@keyframes chat-search-target-pulse {
+  0% {
+    background: color-mix(in oklab, var(--primary, var(--theme-primary)) 30%, transparent);
+  }
+
+  100% {
+    background: color-mix(in oklab, var(--primary, var(--theme-primary)) 14%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-message-item.is-search-target {
+    animation: none;
+  }
 }
 
 .chat-message-own {
@@ -81,6 +105,86 @@
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
   font-style: italic;
+}
+
+.chat-message-thread-indicator {
+  display: grid;
+  width: 100%;
+  min-height: 40px;
+  grid-template-columns: auto auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: var(--d-shape-md, 12px);
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+  color: var(--primary, var(--theme-primary));
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
+}
+
+.chat-message-thread-indicator:hover {
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+}
+
+.chat-message-thread-indicator:active {
+  transform: scale(0.985);
+}
+
+.chat-message-thread-indicator__icon {
+  display: inline-grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+.chat-message-thread-indicator__participants {
+  display: flex;
+  padding-left: 5px;
+}
+
+.chat-message-thread-indicator__participants img {
+  width: 20px;
+  height: 20px;
+  margin-left: -5px;
+  border: 2px solid var(--d-surface-0, var(--theme-surface-container-lowest));
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-surface-3, var(--theme-surface-container-high));
+  object-fit: cover;
+}
+
+.chat-message-thread-indicator__count {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chat-message-thread-indicator__excerpt {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-message-own .chat-message-thread-indicator {
+  background: color-mix(in oklab, var(--on-primary-container) 9%, transparent);
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+  text-align: left;
+}
+
+.chat-message-own .chat-message-thread-indicator:hover {
+  background: color-mix(in oklab, var(--on-primary-container) 15%, transparent);
+}
+
+.chat-message-own .chat-message-thread-indicator__excerpt {
+  color: color-mix(in oklab, var(--on-primary-container) 72%, transparent);
 }
 
 .chat-message-footer {

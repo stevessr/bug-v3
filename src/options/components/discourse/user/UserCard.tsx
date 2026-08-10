@@ -60,7 +60,7 @@ export default defineComponent({
           user.value?.can_send_private_message_to_user ?? user.value?.can_send_private_messages
         )
     )
-    const canChat = computed(() => !isSelf.value && user.value?.can_chat_user !== false)
+    const canChat = computed(() => !isSelf.value && user.value?.can_chat_user === true)
     const canFollow = computed(
       () => !isSelf.value && Boolean(user.value?.can_follow || user.value?.is_followed)
     )

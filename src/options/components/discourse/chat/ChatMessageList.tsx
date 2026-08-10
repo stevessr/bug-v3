@@ -14,9 +14,22 @@ export default defineComponent({
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
     loading: { type: Boolean, required: true },
-    hasMore: { type: Boolean, required: true }
+    hasMore: { type: Boolean, required: true },
+    targetMessageId: { type: Number, default: null },
+    threadingEnabled: { type: Boolean, default: false },
+    inThread: { type: Boolean, default: false }
   },
-  emits: ['loadMore', 'navigate', 'react', 'interact', 'reply', 'edit', 'delete', 'flag'],
+  emits: [
+    'loadMore',
+    'navigate',
+    'react',
+    'interact',
+    'reply',
+    'openThread',
+    'edit',
+    'delete',
+    'flag'
+  ],
   setup(props, { emit }) {
     const listRef = ref<HTMLDivElement | null>(null)
     const parsedCache = new Map<number, ParsedContent>()
@@ -24,6 +37,7 @@ export default defineComponent({
     const stickToBottom = ref(true)
     const loadRequested = ref(false)
     const pendingPrependAnchor = ref<{ scrollHeight: number; scrollTop: number } | null>(null)
+    const scrolledTargetKey = ref('')
 
     const escapeHtml = (value: string) =>
       value
@@ -51,6 +65,26 @@ export default defineComponent({
       const element = listRef.value
       if (!element) return
       element.scrollTo({ top: element.scrollHeight, behavior })
+    }
+
+    const scrollToTarget = () => {
+      const element = listRef.value
+      const targetMessageId = props.targetMessageId
+      if (!element || !targetMessageId) return false
+      const key = `${props.channelId || 0}:${targetMessageId}`
+      if (scrolledTargetKey.value === key) return false
+      const target = element.querySelector<HTMLElement>(
+        `[data-chat-message-id="${targetMessageId}"]`
+      )
+      if (!target) return false
+      element.scrollTo({
+        top: Math.max(0, target.offsetTop - (element.clientHeight - target.offsetHeight) / 2),
+        behavior: 'auto'
+      })
+      scrolledTargetKey.value = key
+      stickToBottom.value = false
+      hasInitialisedScroll.value = true
+      return true
     }
 
     const restorePrependAnchor = () => {
@@ -90,6 +124,10 @@ export default defineComponent({
       emit('reply', message)
     }
 
+    const handleOpenThread = (message: ChatMessage) => {
+      emit('openThread', message)
+    }
+
     const handleEdit = (message: ChatMessage) => {
       emit('edit', message)
     }
@@ -116,11 +154,21 @@ export default defineComponent({
         stickToBottom.value = true
         loadRequested.value = false
         pendingPrependAnchor.value = null
+        scrolledTargetKey.value = ''
         await nextTick()
         if (!props.loading) {
-          scrollToBottom()
+          if (!scrollToTarget()) scrollToBottom()
           hasInitialisedScroll.value = true
         }
+      }
+    )
+
+    watch(
+      () => props.targetMessageId,
+      async () => {
+        scrolledTargetKey.value = ''
+        await nextTick()
+        scrollToTarget()
       }
     )
 
@@ -128,16 +176,18 @@ export default defineComponent({
       () => [
         props.messages.length,
         props.messages[0]?.id || 0,
-        props.messages[props.messages.length - 1]?.id || 0
+        props.messages[props.messages.length - 1]?.id || 0,
+        props.targetMessageId || 0
       ],
       async () => {
         await nextTick()
+        if (scrollToTarget()) return
         if (restorePrependAnchor()) {
           hasInitialisedScroll.value = true
           return
         }
         if (!hasInitialisedScroll.value && !props.loading) {
-          scrollToBottom()
+          if (!scrollToTarget()) scrollToBottom()
           hasInitialisedScroll.value = true
           return
         }
@@ -152,6 +202,7 @@ export default defineComponent({
         if (loading) return
         loadRequested.value = false
         await nextTick()
+        if (scrollToTarget()) return
         if (pendingPrependAnchor.value) {
           restorePrependAnchor()
           return
@@ -167,7 +218,7 @@ export default defineComponent({
       listRef.value?.addEventListener('scroll', handleScroll, { passive: true })
       void nextTick(() => {
         if (!props.loading && !hasInitialisedScroll.value) {
-          scrollToBottom()
+          if (!scrollToTarget()) scrollToBottom()
           hasInitialisedScroll.value = true
         }
       })
@@ -191,7 +242,9 @@ export default defineComponent({
           </button>
         )}
         {orderedMessages.value.length === 0 && !props.loading && (
-          <div class="chat-message-list-empty">暂无消息，发送第一条消息吧</div>
+          <div class="chat-message-list-empty">
+            {props.inThread ? '暂无消息串回复' : '暂无消息，发送第一条消息吧'}
+          </div>
         )}
         {orderedMessages.value.map(message => (
           <ChatMessageItem
@@ -199,11 +252,16 @@ export default defineComponent({
             message={message}
             parsed={getParsedMessage(message)}
             baseUrl={props.baseUrl}
+            channelId={props.channelId ?? message.chat_channel_id}
             isOwn={(message.user?.username || message.username) === props.currentUsername}
+            highlighted={message.id === props.targetMessageId}
+            threadingEnabled={props.threadingEnabled}
+            inThread={props.inThread}
             onNavigate={handleNavigate}
             onReact={handleReact}
             onInteract={handleInteract}
             onReply={handleReply}
+            onOpenThread={handleOpenThread}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onFlag={handleFlag}

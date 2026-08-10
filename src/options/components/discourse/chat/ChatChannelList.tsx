@@ -87,8 +87,8 @@ export default defineComponent({
     }
 
     const getChannelUrl = (channel: ChatChannel) => {
-      const slug = channel.slug ? `/${encodeURIComponent(channel.slug)}` : ''
-      return `${props.baseUrl}/chat/channel${slug}/${channel.id}`
+      const slug = channel.slug ? encodeURIComponent(channel.slug) : '-'
+      return `${props.baseUrl}/chat/c/${slug}/${channel.id}`
     }
 
     const toggleSection = (section: SectionId) => {
