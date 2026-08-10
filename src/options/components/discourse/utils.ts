@@ -198,6 +198,44 @@ export function generateId(): string {
   return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+// ── linux.do 头像特判 ──────────────────────────────────────────────
+// linux.do 主站返回的 user_avatar 模板（形如 /user_avatar/linux.do/<user>/{size}/<hash>）
+// 服务端实际由 CDN 提供。这里在客户端直接改写为 CDN 地址，
+// 例如 https://linux.do/user_avatar/linux.do/stevessr/32/1589755_2.png
+//   → https://cdn.ldstatic.com/user_avatar/linux.do/stevessr/96/1589755_2.png
+// 从而减少对主站 linux.do 的请求。
+// 仅特判 linux.do 主站自身的头像：主机必须为 linux.do 且路径形如
+// /user_avatar/linux.do/...；其他站点返回的类似物（主机非 linux.do，
+// 或路径首段为其他论坛名）一律保持原样。
+// 尺寸段统一抬升到至少 96px（示例 32 → 96），便于 CDN 侧缓存复用。
+const LINUXDO_AVATAR_CDN_HOST = 'cdn.ldstatic.com'
+const LINUXDO_AVATAR_CDN_MIN_SIZE = 96
+
+/**
+ * linux.do 头像特判：把主站 user_avatar URL 直接改写为 CDN URL。
+ * 不匹配特判条件的 URL 原样返回。
+ */
+export function rewriteAvatarUrlForCdn(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname !== 'linux.do') return url
+    const segments = parsed.pathname.split('/')
+    // ['', 'user_avatar', 'linux.do', '<user>', '<size>', '<hash>.<ext>']
+    if (segments.length < 6 || segments[1] !== 'user_avatar' || segments[2] !== 'linux.do') {
+      return url
+    }
+    parsed.hostname = LINUXDO_AVATAR_CDN_HOST
+    const sizeInUrl = Number(segments[4])
+    if (Number.isFinite(sizeInUrl) && sizeInUrl > 0) {
+      segments[4] = String(Math.max(sizeInUrl, LINUXDO_AVATAR_CDN_MIN_SIZE))
+      parsed.pathname = segments.join('/')
+    }
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 // Get avatar URL
 export function getAvatarUrl(template: string, baseUrl: string, size = 45): string {
   if (!template) return ''
@@ -206,7 +244,7 @@ export function getAvatarUrl(template: string, baseUrl: string, size = 45): stri
     const base = new URL(baseUrl)
     const resolved = new URL(url, `${base.origin}/`)
     if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') return ''
-    return resolved.toString()
+    return rewriteAvatarUrlForCdn(resolved.toString())
   } catch {
     return ''
   }

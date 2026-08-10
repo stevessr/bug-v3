@@ -159,15 +159,17 @@ test('parsed media URLs use URL semantics and reject executable protocols', () =
   assert.equal(parserContext.resolveUrl(ctx, 'data:text/html,unsafe'), '')
 })
 
-test('avatar templates preserve the server path and let HTTP redirects choose the final format', () => {
+test('linux.do avatar templates are rewritten to the CDN to offload the main site', () => {
+  // linux.do 主站头像直接改写为 CDN 地址，尺寸抬升到至少 96px（示例 32 → 96）
   assert.equal(
     discourseUtils.getAvatarUrl(
       '/user_avatar/linux.do/atri/{size}/2345717_2.gif',
       'https://linux.do',
       32
     ),
-    'https://linux.do/user_avatar/linux.do/atri/32/2345717_2.gif'
+    'https://cdn.ldstatic.com/user_avatar/linux.do/atri/96/2345717_2.gif'
   )
+  // 已是 CDN 地址的模板保持原样
   assert.equal(
     discourseUtils.getAvatarUrl(
       '//cdn.ldstatic.com/user_avatar/linux.do/atri/{size}/2345717_2.png',
@@ -176,9 +178,53 @@ test('avatar templates preserve the server path and let HTTP redirects choose th
     ),
     'https://cdn.ldstatic.com/user_avatar/linux.do/atri/24/2345717_2.png'
   )
+  // 其他站点返回的类似物（路径首段为其他论坛名）不改写
   assert.equal(
     discourseUtils.getAvatarUrl('/user_avatar/example/{size}/avatar.png', 'https://linux.do', 48),
     'https://linux.do/user_avatar/example/48/avatar.png'
+  )
+  // 其他站点主机的类似物不改写
+  assert.equal(
+    discourseUtils.getAvatarUrl(
+      '/user_avatar/meta.discourse.org/atri/{size}/2345717_2.png',
+      'https://meta.discourse.org',
+      32
+    ),
+    'https://meta.discourse.org/user_avatar/meta.discourse.org/atri/32/2345717_2.png'
+  )
+})
+
+test('rewriteAvatarUrlForCdn handles the special case directly', () => {
+  assert.equal(
+    discourseUtils.rewriteAvatarUrlForCdn(
+      'https://linux.do/user_avatar/linux.do/stevessr/32/1589755_2.png'
+    ),
+    'https://cdn.ldstatic.com/user_avatar/linux.do/stevessr/96/1589755_2.png'
+  )
+  // 小于 96 的尺寸统一抬升到 96
+  assert.equal(
+    discourseUtils.rewriteAvatarUrlForCdn(
+      'https://linux.do/user_avatar/linux.do/alice/20/100_2.png'
+    ),
+    'https://cdn.ldstatic.com/user_avatar/linux.do/alice/96/100_2.png'
+  )
+  // 不小于 96 的尺寸保持不变
+  assert.equal(
+    discourseUtils.rewriteAvatarUrlForCdn(
+      'https://linux.do/user_avatar/linux.do/bob/120/200_2.png'
+    ),
+    'https://cdn.ldstatic.com/user_avatar/linux.do/bob/120/200_2.png'
+  )
+  // 非 linux.do 主机 / 非 user_avatar 路径不改写
+  assert.equal(
+    discourseUtils.rewriteAvatarUrlForCdn('https://linux.do/u/stevessr/avatar/90.png'),
+    'https://linux.do/u/stevessr/avatar/90.png'
+  )
+  assert.equal(
+    discourseUtils.rewriteAvatarUrlForCdn(
+      'https://linux.do/user_avatar/example/stevessr/32/1589755_2.png'
+    ),
+    'https://linux.do/user_avatar/example/stevessr/32/1589755_2.png'
   )
 })
 
