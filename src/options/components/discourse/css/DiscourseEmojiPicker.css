@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 2147483500;
   display: flex;
-  width: min(380px, calc(100vw - 24px));
+  width: min(440px, calc(100vw - 24px));
   max-height: min(520px, calc(100vh - 32px));
   flex-direction: column;
   overflow: hidden;
@@ -82,15 +82,21 @@
   display: flex;
   min-height: 0;
   flex: 1;
-  flex-direction: column;
+  flex-direction: row;
   gap: 8px;
+  padding-top: 8px;
 }
 
 .discourse-emoji-picker__nav {
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 8px 2px 2px;
+  width: 48px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 5px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 2px 4px 2px 0;
+  border-right: 1px solid var(--d-border, var(--theme-outline-variant));
   scrollbar-width: thin;
 }
 
@@ -123,6 +129,7 @@
 
 .discourse-emoji-picker__scrollable {
   min-height: 0;
+  min-width: 0;
   flex: 1;
   overflow-y: auto;
   padding: 0 2px 4px;
@@ -135,10 +142,37 @@
 }
 
 .discourse-emoji-picker__section h3 {
-  margin: 4px 4px 8px;
+  margin: 0;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 11px;
   font-weight: 700;
+}
+
+.discourse-emoji-picker__section-title {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 4px 8px;
+}
+
+.discourse-emoji-picker__section-title button {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.discourse-emoji-picker__section-title button:hover {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
 }
 
 .discourse-emoji-picker__grid {
@@ -210,5 +244,9 @@
 @media (max-width: 520px) {
   .discourse-emoji-picker {
     max-height: min(620px, calc(100vh - 24px));
+  }
+
+  .discourse-emoji-picker__nav {
+    width: 44px;
   }
 }

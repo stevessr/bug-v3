@@ -20,6 +20,11 @@ export interface DomainTabResponse {
   [key: string]: unknown
 }
 
+export interface DomainTabDispatch<T> {
+  response: T
+  tabId?: number
+}
+
 const DISCOURSE_BASE_DOMAINS = ['linux.do', 'meta.discourse.org', 'idcflare.com']
 const X_BASE_DOMAINS = ['x.com', 'twitter.com', 'twimg.com']
 
@@ -106,14 +111,16 @@ const getTabOrigin = (tabUrl?: string | null) => {
   }
 }
 
-export async function sendMessageToDomainTab<T extends { success: boolean; error?: string }>(
+export async function sendMessageToDomainTabDetailed<
+  T extends { success: boolean; error?: string }
+>(
   targetUrl: string,
   message: DomainTabMessage,
   successCheck?: (resp: T) => boolean
-): Promise<T> {
+): Promise<DomainTabDispatch<T>> {
   const chromeAPI = getChromeAPI()
   if (!chromeAPI || !chromeAPI.tabs) {
-    return { success: false, error: 'Chrome API not available' } as T
+    return { response: { success: false, error: 'Chrome API not available' } as T }
   }
 
   let targetOrigin: string
@@ -125,7 +132,7 @@ export async function sendMessageToDomainTab<T extends { success: boolean; error
     host = parsed.host
     hostname = parsed.hostname
   } catch {
-    return { success: false, error: 'Invalid url' } as T
+    return { response: { success: false, error: 'Invalid url' } as T }
   }
 
   try {
@@ -143,7 +150,7 @@ export async function sendMessageToDomainTab<T extends { success: boolean; error
     }
 
     if (!tabs.length) {
-      return { success: false, error: `No tabs found for ${host}` } as T
+      return { response: { success: false, error: `No tabs found for ${host}` } as T }
     }
 
     for (const tab of tabs) {
@@ -152,16 +159,27 @@ export async function sendMessageToDomainTab<T extends { success: boolean; error
         const resp = await chromeAPI.tabs.sendMessage(tab.id, message)
         const isSuccess = successCheck ? successCheck(resp) : resp?.success
         if (isSuccess) {
-          return resp as T
+          return { response: resp as T, tabId: tab.id }
         }
       } catch {
         continue
       }
     }
 
-    return { success: false, error: `${message.type} failed on all ${host} tabs` } as T
+    return {
+      response: { success: false, error: `${message.type} failed on all ${host} tabs` } as T
+    }
   } catch (error) {
     console.error(`[DomainTabMessenger] Failed to send ${message.type}`, error)
-    return { success: false, error: 'Unknown error' } as T
+    return { response: { success: false, error: 'Unknown error' } as T }
   }
+}
+
+export async function sendMessageToDomainTab<T extends { success: boolean; error?: string }>(
+  targetUrl: string,
+  message: DomainTabMessage,
+  successCheck?: (resp: T) => boolean
+): Promise<T> {
+  const dispatched = await sendMessageToDomainTabDetailed(targetUrl, message, successCheck)
+  return dispatched.response
 }

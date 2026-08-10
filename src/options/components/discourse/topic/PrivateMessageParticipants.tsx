@@ -120,6 +120,7 @@ export default defineComponent({
                   <button
                     type="button"
                     class="pm-participants__identity"
+                    data-user-card={user.username}
                     data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
                     onClick={() => emit('openUser', user.username)}
                   >

@@ -125,9 +125,36 @@ test.describe('Discourse browser navigation and content safety', () => {
                 id: 1,
                 username: 'steve',
                 name: 'Steve',
-                avatar_template: '/letter_avatar_proxy/v4/letter/s/7c8e57/{size}.png'
+                avatar_template: '/letter_avatar_proxy/v4/letter/s/7c8e57/{size}.png',
+                trust_level: 3,
+                created_at: '2024-01-01T00:00:00Z',
+                profile_background_upload_url:
+                  '//cdn3.ldstatic.com/original/4X/profile-background.png',
+                card_background_upload_url:
+                  '//linuxdo-uploads.s3.ldstatic.com/original/4X/card-background.png'
               }
             }
+          } else if (parsed.pathname === '/u/steve/summary.json') {
+            data = {
+              user_summary: {
+                likes_given: 2,
+                likes_received: 3,
+                topics_entered: 4,
+                posts_read_count: 5,
+                days_visited: 6,
+                topic_count: 7,
+                post_count: 8,
+                time_read: 3600,
+                topic_ids: [],
+                top_categories: [],
+                most_liked_by_users: [],
+                most_liked_users: [],
+                most_replied_to_users: []
+              },
+              topics: []
+            }
+          } else if (parsed.pathname === '/topics/messages/steve.json') {
+            data = { topic_list: { topics: [topic(3000, '收件箱私信')] }, users: [] }
           } else if (parsed.pathname === '/topics/messages-sent/steve.json') {
             data = { topic_list: { topics: [topic(3001, '已发送私信')] }, users: [] }
           } else if (parsed.pathname === '/topics/messages-archive/steve.json') {
@@ -284,6 +311,57 @@ test.describe('Discourse browser navigation and content safety', () => {
     await expect(address).toHaveValue('https://linux.do/u/steve/messages/archive')
     await expect(page.getByRole('tab', { name: '归档', selected: true })).toBeVisible()
     await expect(page.locator('.messages-topic-item__title')).toHaveText('归档私信')
+  })
+
+  test('resolves /my/messages to the current user inbox', async ({ page }) => {
+    await page.goto('/discourse.html')
+    const address = page.locator('.toolbar-address input')
+    await address.fill('https://linux.do/my/messages')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    await expect(address).toHaveValue('https://linux.do/u/steve/messages')
+    await expect(page.getByRole('tab', { name: '全部', selected: true })).toBeVisible()
+    await expect(page.locator('.messages-topic-item__title')).toHaveText('收件箱私信')
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__discourseRequests.includes(
+            'https://linux.do/topics/messages/steve.json'
+          )
+        )
+      )
+      .toBe(true)
+  })
+
+  test('uses the profile background and exposes all own-profile modules', async ({ page }) => {
+    await page.goto('/discourse.html')
+    const address = page.locator('.toolbar-address input')
+    await address.fill('https://linux.do/u/steve/summary')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const header = page.locator('.user-profile-header')
+    await expect(header).toHaveCSS(
+      'background-image',
+      /cdn3\.ldstatic\.com\/original\/4X\/profile-background\.png/
+    )
+    const tabs = page.getByRole('tablist', { name: '用户页面' })
+    for (const label of [
+      '总结',
+      '活动',
+      '通知',
+      '消息',
+      '邀请',
+      '徽章',
+      '作品集',
+      '关注',
+      '结算',
+      '偏好设置'
+    ]) {
+      await expect(tabs.getByRole('tab', { name: label, exact: true })).toBeVisible()
+    }
+
+    await tabs.getByRole('tab', { name: '作品集', exact: true }).click()
+    await expect(address).toHaveValue('https://linux.do/u/steve/activity/portfolio')
   })
 
   test('switches the active forum origin when traversing history', async ({ page }) => {

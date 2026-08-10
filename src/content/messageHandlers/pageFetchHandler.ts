@@ -13,7 +13,10 @@ function getCsrfToken(): string | null {
 
 export function getDiscoursePreloadedData(): Record<string, unknown> | null {
   const preloaded = document.getElementById('data-preloaded') as HTMLElement | null
-  const raw = preloaded?.dataset?.preloaded || ''
+  // Older Discourse builds exposed the bootstrap payload through a data
+  // attribute, while current builds use a JSON script tag. Support both so
+  // site settings (notably the reactions contract) remain discoverable.
+  const raw = preloaded?.dataset?.preloaded || preloaded?.textContent?.trim() || ''
 
   if (!raw) {
     cachedPreloadedRaw = ''

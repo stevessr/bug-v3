@@ -1,8 +1,11 @@
-import { defineComponent } from 'vue'
+import { computed, defineComponent, ref } from 'vue'
+import { message } from 'ant-design-vue'
 
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
+import { resolveDiscourseHttpUrl } from '../navigation'
+import { setUserFollowed } from '../actions'
 
 import UserTabs from './UserTabs'
 import '../css/UserView.css'
@@ -75,9 +78,47 @@ export default defineComponent({
     'openFollowFeed',
     'openFollowing',
     'openFollowers',
+    'composeMessage',
+    'startChat',
     'switchMainTab'
   ],
   setup(props, { emit }) {
+    const followSaving = ref(false)
+    const isFollowed = computed(() => Boolean(props.user.is_followed))
+    const profileBackground = computed(() => {
+      const raw =
+        props.user.profile_background_upload_url || props.user.card_background_upload_url || ''
+      return raw ? resolveDiscourseHttpUrl(raw, props.baseUrl) : ''
+    })
+    const canMessage = computed(
+      () =>
+        !props.showSettings &&
+        Boolean(props.user.can_send_private_message_to_user ?? props.user.can_send_private_messages)
+    )
+    const canChat = computed(() => !props.showSettings && props.user.can_chat_user !== false)
+    const canFollow = computed(
+      () => !props.showSettings && Boolean(props.user.can_follow || props.user.is_followed)
+    )
+
+    const toggleFollow = async () => {
+      if (followSaving.value) return
+      const next = !isFollowed.value
+      followSaving.value = true
+      try {
+        await setUserFollowed(props.baseUrl, props.user.username, next)
+        props.user.is_followed = next
+        props.user.total_followers = Math.max(
+          0,
+          Number(props.user.total_followers || 0) + (next ? 1 : -1)
+        )
+        message.success(next ? '已关注' : '已取消关注')
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '关注操作失败')
+      } finally {
+        followSaving.value = false
+      }
+    }
+
     const formatTimeRead = (seconds: number): string => {
       if (!seconds) return '0 小时'
       const hours = Math.floor(seconds / 3600)
@@ -102,8 +143,8 @@ export default defineComponent({
         <header
           class="user-profile-header"
           style={{
-            backgroundImage: props.user.card_background_upload_url
-              ? `url(${props.baseUrl}${props.user.card_background_upload_url})`
+            backgroundImage: profileBackground.value
+              ? `url("${profileBackground.value.replace(/"/g, '%22')}")`
               : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             backgroundSize: 'cover',
             backgroundPosition: 'center'
@@ -115,6 +156,7 @@ export default defineComponent({
                 src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 120)}
                 alt={props.user.username}
                 class="user-profile-header__avatar"
+                data-user-card={props.user.username}
               />
 
               <div class="user-profile-header__info">
@@ -157,6 +199,34 @@ export default defineComponent({
 
                 <div class="user-profile-header__hint">用户概览</div>
               </div>
+
+              {!props.showSettings && (
+                <div class="user-profile-header__actions">
+                  {canMessage.value && (
+                    <button
+                      type="button"
+                      onClick={() => emit('composeMessage', props.user.username)}
+                    >
+                      私信
+                    </button>
+                  )}
+                  {canChat.value && (
+                    <button type="button" onClick={() => emit('startChat', props.user.username)}>
+                      聊天
+                    </button>
+                  )}
+                  {canFollow.value && (
+                    <button
+                      type="button"
+                      class={isFollowed.value ? 'is-following' : ''}
+                      disabled={followSaving.value}
+                      onClick={() => void toggleFollow()}
+                    >
+                      {followSaving.value ? '处理中…' : isFollowed.value ? '已关注' : '关注'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>

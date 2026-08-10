@@ -155,7 +155,7 @@ export default defineComponent({
                   <div class="topic-aside__detail-users">
                     {userItems.value.length ? (
                       userItems.value.map(user => (
-                        <div key={user.id} class="topic-aside__user">
+                        <div key={user.id} class="topic-aside__user" data-user-card={user.username}>
                           <img
                             class="topic-aside__user-avatar"
                             src={getAvatarUrl(user.avatar_template, props.baseUrl, 32)}

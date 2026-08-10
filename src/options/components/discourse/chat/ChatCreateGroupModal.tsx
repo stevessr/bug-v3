@@ -107,6 +107,7 @@ export default defineComponent({
                     <img
                       src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)}
                       alt={user.username}
+                      data-user-card={user.username}
                     />
                     {user.username}
                     <button
@@ -137,6 +138,7 @@ export default defineComponent({
                       src={getAvatarUrl(user.avatar_template, props.baseUrl, 32)}
                       alt={user.username}
                       class="chat-group-modal__result-avatar"
+                      data-user-card={user.username}
                     />
                     <span class="chat-group-modal__result-name">{user.name || user.username}</span>
                     <span class="chat-group-modal__result-username">@{user.username}</span>

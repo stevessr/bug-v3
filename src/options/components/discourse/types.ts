@@ -357,6 +357,7 @@ export interface DiscourseTopicDetail {
   last_read_post_number?: number
   notification_level?: number
   can_assign?: boolean
+  valid_reactions?: string[]
   post_stream: {
     posts: DiscoursePost[]
     stream: number[]
@@ -721,6 +722,13 @@ export interface DiscourseUserProfile {
   flair_color?: string
   card_background_upload_url?: string
   profile_background_upload_url?: string
+  can_send_private_messages?: boolean
+  can_send_private_message_to_user?: boolean
+  can_chat_user?: boolean
+  can_follow?: boolean
+  is_followed?: boolean
+  total_followers?: number
+  total_following?: number
   user_option?: DiscourseUserPreferences
   featured_topic?: {
     id: number

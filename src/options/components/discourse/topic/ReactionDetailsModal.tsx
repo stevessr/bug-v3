@@ -97,6 +97,7 @@ export default defineComponent({
                   type="button"
                   key={`${user.id}-${user.reaction || ''}`}
                   class="reaction-details-modal__user"
+                  data-user-card={user.username}
                   data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
                   onClick={() => emit('openUser', user.username)}
                 >

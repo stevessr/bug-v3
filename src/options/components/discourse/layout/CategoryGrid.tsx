@@ -191,6 +191,7 @@ export default defineComponent({
                               )}
                               class="category-topic-avatar"
                               alt={topic.last_poster?.username || ''}
+                              data-user-card={topic.last_poster?.username}
                             />
                           )}
                           {topic.last_poster?.username && (

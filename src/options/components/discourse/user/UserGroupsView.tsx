@@ -4,6 +4,7 @@ import type { DiscourseGroup, DiscourseUserProfile } from '../types'
 import { pageFetch, extractData } from '../utils'
 
 import UserTabs from './UserTabs'
+import type { UserMainTab } from './UserTabs'
 import '../css/UserExtrasView.css'
 
 export default defineComponent({
@@ -44,9 +45,7 @@ export default defineComponent({
           active="groups"
           showSettings={props.showSettings}
           showGroups={true}
-          onSwitchTab={(
-            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
-          ) => emit('switchMainTab', tab)}
+          onSwitchTab={(tab: UserMainTab) => emit('switchMainTab', tab)}
         />
 
         <div class="user-extras-toolbar user-extras-toolbar--groups">

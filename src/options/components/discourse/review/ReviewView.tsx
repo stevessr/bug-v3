@@ -439,6 +439,7 @@ export default defineComponent({
                             src={avatarFor(score.user)}
                             alt={usernameFor(score.user)}
                             class="review-score__avatar"
+                            data-user-card={usernameFor(score.user)}
                           />
                         ) : (
                           <FlagOutlined />

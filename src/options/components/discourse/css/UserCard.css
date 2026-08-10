@@ -1,0 +1,202 @@
+.discourse-user-card {
+  position: fixed;
+  z-index: 2147483400;
+  max-height: min(520px, calc(100vh - 24px));
+  overflow: hidden auto;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-xl, 28px);
+  background: var(--d-surface-2, var(--theme-surface-container));
+  box-shadow: var(--d-elevation-3, 0 18px 48px rgba(15, 23, 42, 0.28));
+  color: var(--d-text, var(--theme-on-surface));
+}
+
+.discourse-user-card__cover {
+  height: 118px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary, #6750a4) 82%, #111),
+    var(--tertiary, #7d5260)
+  );
+  background-position: center;
+  background-size: cover;
+}
+
+.discourse-user-card__body {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 13px;
+  padding: 0 18px 18px;
+}
+
+.discourse-user-card__avatar-button {
+  width: 82px;
+  height: 82px;
+  margin-top: -38px;
+  padding: 0;
+  border: 4px solid var(--d-surface-2, var(--theme-surface-container));
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  cursor: pointer;
+}
+
+.discourse-user-card__avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.discourse-user-card__identity {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 1px;
+  padding-top: 8px;
+}
+
+.discourse-user-card__identity > span,
+.discourse-user-card__identity > small {
+  overflow: hidden;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discourse-user-card__username {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 740;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discourse-user-card__close {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.discourse-user-card__close:hover {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+}
+
+.discourse-user-card__status,
+.discourse-user-card__bio,
+.discourse-user-card__metadata,
+.discourse-user-card__stats,
+.discourse-user-card__actions {
+  grid-column: 1 / -1;
+}
+
+.discourse-user-card__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  font-size: 11px;
+}
+
+.discourse-user-card__bio {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 12px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.discourse-user-card__bio :where(p) {
+  margin: 0;
+}
+
+.discourse-user-card__metadata,
+.discourse-user-card__stats {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px 13px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+}
+
+.discourse-user-card__metadata a {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--primary, var(--theme-primary));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discourse-user-card__stats strong {
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 12px;
+}
+
+.discourse-user-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-top: 4px;
+}
+
+.discourse-user-card__actions button,
+.discourse-user-card__state button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.discourse-user-card__actions button:first-child {
+  background: var(--primary, var(--theme-primary));
+  color: var(--on-primary, var(--theme-on-primary));
+}
+
+.discourse-user-card__actions button.is-following {
+  background: var(--secondary-container, var(--theme-secondary-container));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+}
+
+.discourse-user-card__state {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  text-align: center;
+}
+
+.discourse-user-card__state.is-error {
+  color: var(--danger, var(--theme-error));
+}

@@ -84,6 +84,7 @@ export default defineComponent({
           <button
             type="button"
             class="activity-view-header-card__avatar-button"
+            data-user-card={props.user.username}
             aria-label={`打开 ${props.user.username} 的主页`}
             onClick={() => emit('goToProfile')}
           >
@@ -118,7 +119,13 @@ export default defineComponent({
         </header>
 
         <UserTabs
-          active="activity"
+          active={
+            props.activityState.activeTab === 'portfolio'
+              ? 'portfolio'
+              : props.activityState.activeTab === 'solved'
+                ? 'solved'
+                : 'activity'
+          }
           showSettings={props.showSettings}
           showGroups={props.showGroups}
           onSwitchTab={tab => emit('switchMainTab', tab)}
@@ -154,6 +161,7 @@ export default defineComponent({
                     <button
                       type="button"
                       class="activity-item__avatar-button"
+                      data-user-card={action.username}
                       data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(action.username)}`}
                       aria-label={`打开 ${action.username} 的主页`}
                       onClick={() => emit('openUser', action.username)}

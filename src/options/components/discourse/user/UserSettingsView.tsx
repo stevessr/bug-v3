@@ -13,6 +13,7 @@ import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import { findEmojiByName, searchEmojis, type EmojiShortcode } from '../bbcode'
 
 import UserTabs from './UserTabs'
+import type { UserMainTab } from './UserTabs'
 import SettingsBasicInfo from './settings/SettingsBasicInfo'
 import SettingsEmailSection from './settings/SettingsEmailSection'
 import SettingsNotificationSection from './settings/SettingsNotificationSection'
@@ -390,9 +391,7 @@ export default defineComponent({
           active="settings"
           showSettings={true}
           showGroups={true}
-          onSwitchTab={(
-            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
-          ) => emit('switchMainTab', tab)}
+          onSwitchTab={(tab: UserMainTab) => emit('switchMainTab', tab)}
         />
 
         <div class="user-extras-toolbar user-extras-toolbar--settings">

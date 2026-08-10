@@ -355,7 +355,7 @@ export default defineComponent({
                 >
                   {!item.read && <span class="ntf-unread-indicator" aria-hidden="true" />}
                   {/* Avatar + type badge */}
-                  <div class="ntf-avatar-wrap">
+                  <div class="ntf-avatar-wrap" data-user-card={avatar.username || undefined}>
                     {avatar.url && !brokenAvatarKeys.value.has(getAvatarKey(item)) ? (
                       <img
                         src={avatar.url}

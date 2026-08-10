@@ -34,6 +34,8 @@ export default defineComponent({
       return user?.name || props.message.name || user?.username || props.message.username || '匿名'
     }
 
+    const getUsername = () => props.message.user?.username || props.message.username || ''
+
     const getAvatarTemplate = () => {
       return (
         props.message.user?.avatar_template || props.message.avatar_template || '/images/avatar.png'
@@ -197,6 +199,7 @@ export default defineComponent({
       >
         <img
           class="chat-message-avatar"
+          data-user-card={getUsername() || undefined}
           src={getAvatarUrl(getAvatarTemplate(), props.baseUrl, 32)}
           alt={getDisplayName()}
         />

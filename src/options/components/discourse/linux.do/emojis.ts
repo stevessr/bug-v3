@@ -5,8 +5,24 @@ let currentOrigin: string | null = null
 let loadingPromise: Promise<number> | null = null
 // Emoji names and shortcode mappings are site-specific and expensive to load.
 // Keep a high, persistent cache while still allowing callers to force refresh.
-const EMOJI_GROUP_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
-const EMOJI_GROUP_STORAGE_PREFIX = 'discourse-browser:emoji-groups:v2:'
+const EMOJI_GROUP_CACHE_TTL = 30 * 24 * 60 * 60 * 1000
+const EMOJI_GROUP_STORAGE_PREFIX = 'discourse-browser:emoji-groups:v3:'
+
+const DISCOURSE_EMOJI_GROUP_META: Record<string, { name: string; icon: string }> = {
+  'smileys_&_emotion': { name: '笑脸与情感', icon: '😀' },
+  'people_&_body': { name: '人与身体', icon: '👋' },
+  'animals_&_nature': { name: '动物与自然', icon: '🐵' },
+  'food_&_drink': { name: '食物和饮料', icon: '🍇' },
+  'travel_&_places': { name: '旅行与地点', icon: '🚗' },
+  activities: { name: '活动', icon: '⚽' },
+  objects: { name: '对象', icon: '💡' },
+  symbols: { name: '符号', icon: '❤' },
+  flags: { name: '旗帜', icon: '🏳' },
+  default: { name: '自定义表情符号', icon: '✨' },
+  custom: { name: '自定义表情符号', icon: '✨' },
+  reactions: { name: '站点反应', icon: '💬' },
+  site: { name: '站点表情', icon: '📌' }
+}
 
 export interface DiscourseEmojiEntry extends EmojiShortcode {
   group?: string
@@ -145,9 +161,11 @@ function normalizeEmojiGroups(origin: string, payload: any): DiscourseEmojiGroup
     const normalizedId = id.trim() || 'site'
     const existing = groups.get(normalizedId)
     if (existing) return existing
+    const meta = DISCOURSE_EMOJI_GROUP_META[normalizedId]
     const group: DiscourseEmojiGroup = {
       id: normalizedId,
-      name: name.trim() || normalizedId,
+      name: meta?.name || name.trim() || normalizedId,
+      icon: meta?.icon,
       emojis: []
     }
     groups.set(normalizedId, group)
@@ -208,6 +226,25 @@ function normalizeEmojiGroups(origin: string, payload: any): DiscourseEmojiGroup
   return [...groups.values()].filter(group => group.emojis.length > 0)
 }
 
+function applyEmojiSearchAliases(groups: DiscourseEmojiGroup[], payload: unknown) {
+  if (!isRecord(payload)) return groups
+  const aliasMap = isRecord(payload.search_aliases) ? payload.search_aliases : payload
+
+  groups.forEach(group => {
+    group.emojis.forEach(emoji => {
+      const rawAliases = aliasMap[emoji.name]
+      const aliases = Array.isArray(rawAliases)
+        ? rawAliases.filter((value: unknown): value is string => typeof value === 'string')
+        : typeof rawAliases === 'string'
+          ? rawAliases.split(/[,|\s]+/).filter(Boolean)
+          : []
+      if (!aliases.length) return
+      emoji.search_aliases = Array.from(new Set([...(emoji.search_aliases || []), ...aliases]))
+    })
+  })
+  return groups
+}
+
 export async function fetchDiscourseEmojiGroups(
   baseUrl?: string | null,
   force = false
@@ -251,8 +288,28 @@ export async function fetchDiscourseEmojiGroups(
           continue
         }
 
-        const groups = normalizeEmojiGroups(origin, data)
+        let groups = normalizeEmojiGroups(origin, data)
         if (groups.length > 0) {
+          if (url.endsWith('/emojis.json')) {
+            try {
+              const aliasResponse = await pageFetch<any>(
+                `${origin}/emojis/search-aliases.json`,
+                {
+                  headers: {
+                    accept: 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest'
+                  }
+                },
+                'json'
+              )
+              if (aliasResponse.ok) {
+                groups = applyEmojiSearchAliases(groups, extractData(aliasResponse))
+              }
+            } catch {
+              // Search aliases improve filtering but are not required to use
+              // the site's canonical shortcode groups.
+            }
+          }
           const cacheEntry = {
             expiresAt: Date.now() + EMOJI_GROUP_CACHE_TTL,
             groups

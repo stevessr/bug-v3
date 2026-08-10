@@ -103,10 +103,18 @@
 }
 
 .boost-panel__add-btn {
-  padding: 0 14px;
+  padding: 0;
   border: 1px dashed var(--primary, var(--theme-primary));
   background: transparent;
   color: var(--primary, var(--theme-primary));
+}
+
+.boost-panel__icon-btn {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
 }
 
 .boost-panel__add-btn:hover {
@@ -305,6 +313,57 @@
 
 .boost-panel__flag-message {
   padding: 10px 12px;
+}
+
+.boost-panel__flag-state {
+  padding: 14px;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  text-align: center;
+}
+
+.boost-panel__flag-types {
+  display: grid;
+  max-height: 220px;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.boost-panel__flag-type {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-md, 12px);
+  cursor: pointer;
+}
+
+.boost-panel__flag-type:has(input:checked) {
+  border-color: var(--primary, var(--theme-primary));
+  background: var(--primary-container, var(--theme-primary-container));
+}
+
+.boost-panel__flag-type input {
+  margin-top: 2px;
+  accent-color: var(--primary, var(--theme-primary));
+}
+
+.boost-panel__flag-type span {
+  display: grid;
+  gap: 3px;
+}
+
+.boost-panel__flag-type strong {
+  font-size: 12px;
+}
+
+.boost-panel__flag-type small {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 @media (max-width: 560px) {

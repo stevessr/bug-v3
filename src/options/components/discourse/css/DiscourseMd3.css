@@ -132,3 +132,63 @@
     animation-iteration-count: 1 !important;
   }
 }
+.browser-load-more-progress {
+  position: sticky;
+  z-index: 70;
+  top: 10px;
+  display: grid;
+  width: min(460px, calc(100% - 24px));
+  min-height: 48px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  margin: 10px auto -58px;
+  padding: 9px 14px 11px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(
+    in oklab,
+    var(--d-surface-2, var(--theme-surface-container)) 94%,
+    transparent
+  );
+  box-shadow: var(--d-elevation-2, 0 8px 24px rgba(15, 23, 42, 0.16));
+  color: var(--d-text, var(--theme-on-surface));
+  backdrop-filter: blur(14px);
+}
+
+.browser-load-more-progress__copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.browser-load-more-progress__copy small {
+  overflow: hidden;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 9px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-load-more-progress__track {
+  position: absolute;
+  right: 14px;
+  bottom: 6px;
+  left: 48px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 16%, transparent);
+}
+
+.browser-load-more-progress__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary, var(--theme-primary));
+  transition: width 120ms ease;
+}

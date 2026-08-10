@@ -138,6 +138,7 @@ export default defineComponent({
                 src={getAvatarUrl(props.user.avatar_template, props.baseUrl, 48)}
                 alt={props.user.username}
                 class="invites-header__avatar"
+                data-user-card={props.user.username}
               />
             ) : (
               <div class="invites-header__avatar invites-header__avatar--fallback">
@@ -317,7 +318,11 @@ export default defineComponent({
             <article key={invite.id} class="invite-item">
               <div class="invite-item__avatar">
                 {getAvatarForRedeemed(invite) ? (
-                  <img src={getAvatarForRedeemed(invite)} alt={invite.user?.username} />
+                  <img
+                    src={getAvatarForRedeemed(invite)}
+                    alt={invite.user?.username}
+                    data-user-card={invite.user?.username}
+                  />
                 ) : (
                   <span class="invite-item__avatar-fallback">
                     {invite.email ? <SendOutlined /> : <LinkOutlined />}

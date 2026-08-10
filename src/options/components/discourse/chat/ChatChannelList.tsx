@@ -67,8 +67,11 @@ export default defineComponent({
       return `频道 #${channel.id}`
     }
 
+    const getChannelUser = (channel: ChatChannel) =>
+      channel.chatable?.users?.[0] || channel.direct_message_users?.[0]
+
     const getChannelAvatar = (channel: ChatChannel) => {
-      const user = channel.chatable?.users?.[0] || channel.direct_message_users?.[0]
+      const user = getChannelUser(channel)
       if (!user?.avatar_template) return ''
       return getAvatarUrl(user.avatar_template, props.baseUrl, 32)
     }
@@ -120,7 +123,11 @@ export default defineComponent({
       >
         <div class="chat-channel-avatar">
           {getChannelAvatar(channel) ? (
-            <img src={getChannelAvatar(channel)} alt={getChannelTitle(channel)} />
+            <img
+              src={getChannelAvatar(channel)}
+              alt={getChannelTitle(channel)}
+              data-user-card={getChannelUser(channel)?.username}
+            />
           ) : (
             <span>#</span>
           )}

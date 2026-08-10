@@ -25,9 +25,46 @@
 
 .user-profile-header__main {
   display: flex;
+  width: 100%;
   align-items: flex-start;
   min-width: 0;
   gap: 18px;
+}
+
+.user-profile-header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.user-profile-header__actions button {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid color-mix(in oklab, #fff 35%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, #111 36%, transparent);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 680;
+  backdrop-filter: blur(10px);
+}
+
+.user-profile-header__actions button:hover:not(:disabled) {
+  background: color-mix(in oklab, #fff 24%, transparent);
+}
+
+.user-profile-header__actions button.is-following {
+  background: color-mix(in oklab, var(--primary, #6750a4) 78%, transparent);
+}
+
+.user-profile-header__actions button:disabled {
+  cursor: progress;
+  opacity: 0.65;
 }
 
 .user-profile-header__avatar {
@@ -470,6 +507,12 @@
   .user-profile-header__main {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .user-profile-header__actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   .user-profile-header__avatar {

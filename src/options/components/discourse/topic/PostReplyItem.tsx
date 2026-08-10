@@ -42,6 +42,7 @@ export default defineComponent({
             alt={props.post.username}
             class="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
             title={`查看 ${props.post.username} 的主页`}
+            data-user-card={props.post.username}
             data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
             onClick={() => handleUserClick(props.post.username)}
           />

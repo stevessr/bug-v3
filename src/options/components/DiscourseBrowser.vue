@@ -37,6 +37,8 @@ import type {
 } from './discourse/types'
 import { resolveDiscourseHttpUrl } from './discourse/navigation'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
+import type { UserMainTab } from './discourse/user/UserTabs'
+import type { UserCardAnchor } from './discourse/user/UserCard'
 import Icon from './discourse/layout/Icon'
 import NotificationsDropdown from './discourse/notifications/NotificationsDropdown'
 import QuickSidebarPanel from './discourse/layout/QuickSidebarPanel'
@@ -66,6 +68,7 @@ const UserView = defineAsyncComponent(() => import('./discourse/user/UserView'))
 const UserExtrasView = defineAsyncComponent(() => import('./discourse/user/UserExtrasView'))
 const UserGroupsView = defineAsyncComponent(() => import('./discourse/user/UserGroupsView'))
 const UserSettingsView = defineAsyncComponent(() => import('./discourse/user/UserSettingsView'))
+const UserCard = defineAsyncComponent(() => import('./discourse/user/UserCard'))
 const ActivityView = defineAsyncComponent(() => import('./discourse/user/ActivityView'))
 const MessagesView = defineAsyncComponent(() => import('./discourse/user/MessagesView'))
 const FloatingComposer = defineAsyncComponent(
@@ -227,6 +230,11 @@ const pageFetchBaseline = ref({
 })
 let unsubscribePageFetchActivity: (() => void) | null = null
 const contextMenu = ref({ open: false, x: 0, y: 0, url: '' })
+const userCard = ref<{
+  open: boolean
+  username: string
+  anchor: UserCardAnchor | null
+}>({ open: false, username: '', anchor: null })
 const MESSAGE_BUS_USER_ID_CACHE_TTL_MS = 5 * 60 * 1000
 const MESSAGE_BUS_USER_ID_ERROR_CACHE_TTL_MS = 60 * 1000
 const MESSAGE_BUS_TOPIC_REFRESH_COOLDOWN_MS = 1200
@@ -576,6 +584,19 @@ watch(
 )
 
 watch(
+  () => isLoadingMore.value,
+  loading => {
+    if (!loading) return
+    const activity = getPageFetchActivity()
+    pageFetchBaseline.value = {
+      total: activity.total,
+      completed: activity.completed
+    }
+  },
+  { flush: 'sync' }
+)
+
+watch(
   () => [activeTabId.value, activeTab.value?.url, activeTab.value?.loading] as const,
   async ([tabId, url, loading]) => {
     if (!tabId || !url || loading) return
@@ -724,7 +745,37 @@ const handleSuggestedTopicClick = (topic: SuggestedTopic) => {
 
 // Handle user click
 const handleUserClick = (username: string) => {
+  userCard.value.open = false
   openUser(username)
+}
+
+const closeUserCard = () => {
+  userCard.value = { open: false, username: '', anchor: null }
+}
+
+const handleUserCardClick = (event: MouseEvent) => {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const trigger = target.closest<HTMLElement>('[data-user-card]')
+  const username = trigger?.dataset.userCard?.trim()
+  if (!trigger || !username) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  const rect = trigger.getBoundingClientRect()
+  userCard.value = {
+    open: true,
+    username,
+    anchor: {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height
+    }
+  }
 }
 
 // Handle quote click
@@ -1759,9 +1810,9 @@ const handleInvitesLoadMore = () => {
 }
 
 // Private message management handlers
-const handleMessagesCompose = () => {
+const handleMessagesCompose = (targetUsername = '') => {
   pmComposerOpen.value = true
-  pmComposerTargets.value = ''
+  pmComposerTargets.value = targetUsername
   pmComposerTitle.value = ''
   pmComposerRaw.value = ''
 }
@@ -1837,19 +1888,25 @@ const handleNavigate = (path: string) => {
   navigateTo(path)
 }
 
-const handleUserMainTabSwitch = (
-  tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
-) => {
+const handleUserMainTabSwitch = (tab: UserMainTab) => {
   if (!activeTab.value?.currentUser) return
   const username = activeTab.value.currentUser.username
   if (tab === 'summary') {
     openUser(username)
   } else if (tab === 'activity') {
     openUserActivity(username)
+  } else if (tab === 'notifications') {
+    navigateTo(`/u/${encodeURIComponent(username)}/notifications`)
   } else if (tab === 'messages') {
     openUserMessages(username)
+  } else if (tab === 'invites') {
+    navigateTo(`/u/${encodeURIComponent(username)}/invited`)
   } else if (tab === 'badges') {
     openUserBadges(username)
+  } else if (tab === 'portfolio') {
+    navigateTo(`/u/${encodeURIComponent(username)}/activity/portfolio`)
+  } else if (tab === 'solved') {
+    navigateTo(`/u/${encodeURIComponent(username)}/activity/solved`)
   } else if (tab === 'groups') {
     openUserGroups(username)
   } else if (tab === 'settings') {
@@ -1857,6 +1914,33 @@ const handleUserMainTabSwitch = (
   } else {
     openUserFollowFeed(username)
   }
+}
+
+const handleUserCardProfile = (username?: string) => {
+  if (!username) return
+  closeUserCard()
+  openUser(username)
+}
+
+const handleUserCardMessage = (username?: string) => {
+  if (!username) return
+  closeUserCard()
+  handleMessagesCompose(username)
+}
+
+const handleStartUserChat = async (username?: string) => {
+  if (!username) return
+  closeUserCard()
+  await openFloatingChat()
+  const channel = await createDirectMessageChannel({
+    targetUsernames: [username],
+    upsert: true
+  })
+  if (!channel) {
+    message.error(activeTab.value?.chatState?.errorMessage || '无法创建私聊')
+    return
+  }
+  selectChatChannel(channel.id)
 }
 
 const handleOpenUserBadges = (username: string) => {
@@ -2541,6 +2625,7 @@ onMounted(() => {
   window.addEventListener('touchend', stopPointer)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('load', handleGlobalImageLoad, true)
+  window.addEventListener('click', handleUserCardClick, true)
   document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
   messageBus.start()
   handleDocumentVisibilityChange()
@@ -2571,6 +2656,7 @@ onUnmounted(() => {
   window.removeEventListener('touchend', stopPointer)
   window.removeEventListener('error', handleGlobalImageError, true)
   window.removeEventListener('load', handleGlobalImageLoad, true)
+  window.removeEventListener('click', handleUserCardClick, true)
   document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
   proxiedBlobUrls.forEach(url => URL.revokeObjectURL(url))
   proxiedBlobUrls.clear()
@@ -2648,8 +2734,28 @@ onUnmounted(() => {
     <div
       ref="contentAreaRef"
       class="content-area discourse-main flex-1 overflow-y-auto discourse-body"
-      :aria-busy="activeTab?.loading || undefined"
+      :aria-busy="activeTab?.loading || isLoadingMore || undefined"
     >
+      <div
+        v-if="isLoadingMore && !activeTab?.loading"
+        class="browser-load-more-progress"
+        role="status"
+        aria-live="polite"
+      >
+        <a-spin size="small" />
+        <div class="browser-load-more-progress__copy">
+          <span>正在加载更多内容</span>
+          <small v-if="pageRequestProgress.total > 0">
+            请求 {{ pageRequestProgress.completed }} / {{ pageRequestProgress.total }} · 处理
+            {{ pageRequestProgress.active }} · 排队 {{ pageRequestProgress.queued }}
+          </small>
+          <small v-else>正在准备请求…</small>
+        </div>
+        <div class="browser-load-more-progress__track" aria-hidden="true">
+          <span :style="{ width: `${pageRequestProgress.percent}%` }" />
+        </div>
+      </div>
+
       <!-- Loading -->
       <div v-if="activeTab?.loading" class="browser-state browser-state--loading" role="status">
         <div class="browser-state__indicator"><a-spin size="large" /></div>
@@ -2871,6 +2977,8 @@ onUnmounted(() => {
         @openFollowFeed="handleOpenUserFollowFeed"
         @openFollowing="handleOpenUserFollowing"
         @openFollowers="handleOpenUserFollowers"
+        @composeMessage="handleMessagesCompose"
+        @startChat="handleStartUserChat"
         @switchMainTab="handleUserMainTabSwitch"
       />
 
@@ -3011,6 +3119,18 @@ onUnmounted(() => {
     @openForumTab="openInNewTab(contextMenu.url)"
     @openBrowserTab="openContextUrlInBrowserTab"
     @copy="copyContextUrl"
+  />
+
+  <UserCard
+    :open="userCard.open"
+    :username="userCard.username"
+    :baseUrl="baseUrl"
+    :currentUsername="currentUsername || ''"
+    :anchor="userCard.anchor"
+    @close="closeUserCard"
+    @openProfile="handleUserCardProfile"
+    @composeMessage="handleUserCardMessage"
+    @startChat="handleStartUserChat"
   />
 
   <section

@@ -99,6 +99,7 @@ export function usePostActions(options: {
       }
     } catch (error) {
       console.warn('[DiscourseBrowser] toggle like failed:', error)
+      options.notify.error(error instanceof Error ? error.message : '反应操作失败')
     } finally {
       likingPostIds.value.delete(post.id)
     }

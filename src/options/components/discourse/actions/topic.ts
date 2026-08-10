@@ -16,6 +16,28 @@ export interface ReplyPayload {
   replyToPostNumber?: number | null
 }
 
+export async function updateTopicTitle(
+  baseUrl: string,
+  topicId: number,
+  title: string,
+  originalTitle: string
+) {
+  const result = await pageFetch<any>(`${baseUrl}/t/${topicId}`, {
+    method: 'PUT',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json',
+      'Discourse-Logged-In': 'true'
+    },
+    body: JSON.stringify({ title, original_title: originalTitle })
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    throw new Error(data?.errors?.join(', ') || data?.error || '修改话题标题失败')
+  }
+  return data
+}
+
 export async function createTopic(baseUrl: string, payload: CreateTopicPayload) {
   const isPrivateMessage = (payload.targetUsernames?.length || 0) > 0
   const params = new URLSearchParams()

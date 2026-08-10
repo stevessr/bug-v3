@@ -1,15 +1,22 @@
 import { pageFetch, extractData } from '../utils'
 import type { DiscourseFlagType } from '../types'
 
-// Cache for flag types to avoid repeated fetches
-let cachedFlagTypes: DiscourseFlagType[] | null = null
-let flagTypesFetchedAt = 0
+// Flag contracts are site-specific. Never reuse one forum's flag reasons on
+// another origin.
+const flagTypesCache = new Map<string, { value: DiscourseFlagType[]; fetchedAt: number }>()
 const FLAG_TYPES_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 export async function fetchFlagTypes(baseUrl: string): Promise<DiscourseFlagType[]> {
   const now = Date.now()
-  if (cachedFlagTypes && now - flagTypesFetchedAt < FLAG_TYPES_CACHE_TTL) {
-    return cachedFlagTypes
+  let origin = baseUrl
+  try {
+    origin = new URL(baseUrl).origin
+  } catch {
+    // pageFetch will surface an invalid target below.
+  }
+  const cached = flagTypesCache.get(origin)
+  if (cached && now - cached.fetchedAt < FLAG_TYPES_CACHE_TTL) {
+    return cached.value
   }
 
   const result = await pageFetch<any>(`${baseUrl}/site.json`, {
@@ -41,8 +48,7 @@ export async function fetchFlagTypes(baseUrl: string): Promise<DiscourseFlagType
       icon: t.icon || null
     }))
 
-  cachedFlagTypes = flagTypes
-  flagTypesFetchedAt = now
+  flagTypesCache.set(origin, { value: flagTypes, fetchedAt: now })
   return flagTypes
 }
 
@@ -115,7 +121,8 @@ export interface EditPostPayload {
 }
 
 export async function togglePostLike(baseUrl: string, postId: number, reactionId = 'heart') {
-  const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
+  const normalizedReaction = reactionId.replace(/^:([^:]+):$/, '$1')
+  const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${encodeURIComponent(normalizedReaction)}/toggle.json`
   const result = await pageFetch<any>(url, {
     method: 'PUT',
     headers: {

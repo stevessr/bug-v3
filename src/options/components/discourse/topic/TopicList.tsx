@@ -240,6 +240,7 @@ export default defineComponent({
                           ? `${props.baseUrl}/u/${encodeURIComponent(poster.user.username)}`
                           : undefined
                       }
+                      data-user-card={poster.user?.username}
                       title={
                         poster.user
                           ? `${poster.user.name || poster.user.username} - ${poster.description}`

@@ -216,7 +216,11 @@ export default defineComponent({
                       class="chat-manage-modal__add-result"
                       onClick={() => handleAdd(user)}
                     >
-                      <img src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)} alt="" />
+                      <img
+                        src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)}
+                        alt=""
+                        data-user-card={user.username}
+                      />
                       <span>
                         <strong>{user.name || user.username}</strong>
                         <small>@{user.username}</small>
@@ -246,6 +250,7 @@ export default defineComponent({
                 src={getAvatarUrl(member.user.avatar_template, props.baseUrl, 40)}
                 alt=""
                 class="chat-manage-modal__member-avatar"
+                data-user-card={member.user.username}
               />
               <div class="chat-manage-modal__member-info">
                 <span class="chat-manage-modal__member-name">

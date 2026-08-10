@@ -2,8 +2,8 @@ import DOMPurify from 'dompurify'
 import { computed, defineComponent, nextTick, ref } from 'vue'
 import { message } from 'ant-design-vue'
 
-import type { Boost, DiscoursePost } from '../types'
-import { createBoost, deleteBoost, flagBoost } from '../actions'
+import type { Boost, DiscourseFlagType, DiscoursePost } from '../types'
+import { createBoost, deleteBoost, fetchFlagTypes, flagBoost } from '../actions'
 import { getAvatarUrl } from '../utils'
 import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 import '../css/BoostPanel.css'
@@ -14,36 +14,51 @@ const sanitizeBoostHtml = (html: string) =>
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form']
   })
 
+const appliesToBoost = (type: DiscourseFlagType) =>
+  !type.applies_to?.length ||
+  type.applies_to.some(value =>
+    ['DiscourseBoosts::Boost', 'Boost'].includes(String(value || '').trim())
+  )
+
 export default defineComponent({
   name: 'BoostPanel',
   props: {
     post: { type: Object as () => DiscoursePost, required: true },
-    baseUrl: { type: String, required: true }
+    baseUrl: { type: String, required: true },
+    currentUsername: { type: String, default: '' }
   },
-  emits: ['refresh'],
-  setup(props, { emit }) {
+  setup(props) {
     const showInput = ref(false)
     const showEmojiPicker = ref(false)
     const boostText = ref('')
     const inputRef = ref<HTMLTextAreaElement | null>(null)
     const emojiButtonRef = ref<HTMLButtonElement | null>(null)
     const submitting = ref(false)
+    const deletingIds = ref(new Set<number>())
     const flagTargetBoost = ref<Boost | null>(null)
     const flagMessage = ref('')
     const flagSubmitting = ref(false)
+    const flagTypesLoading = ref(false)
+    const flagTypes = ref<DiscourseFlagType[]>([])
+    const selectedFlagTypeId = ref<number | null>(null)
     const flagModalOpen = ref(false)
 
     const boosts = computed(() => props.post.boosts || [])
     const canBoost = computed(() => props.post.can_boost ?? false)
     const hasBoosts = computed(() => boosts.value.length > 0)
+    const selectedFlagType = computed(
+      () => flagTypes.value.find(type => type.id === selectedFlagTypeId.value) || null
+    )
+
+    const replaceBoosts = (next: Boost[]) => {
+      props.post.boosts = next
+    }
 
     const handleAddBoost = () => {
       showInput.value = !showInput.value
       showEmojiPicker.value = false
       if (!showInput.value) boostText.value = ''
-      if (showInput.value) {
-        void nextTick(() => inputRef.value?.focus())
-      }
+      if (showInput.value) void nextTick(() => inputRef.value?.focus())
     }
 
     const handleCancelBoost = () => {
@@ -58,13 +73,13 @@ export default defineComponent({
       if (!text) return
       submitting.value = true
       try {
-        await createBoost(props.baseUrl, props.post.id, text)
+        const created = await createBoost(props.baseUrl, props.post.id, text)
+        if (created?.id) replaceBoosts([...boosts.value, created as Boost])
+        props.post.can_boost = false
         handleCancelBoost()
         message.success('Boost 已添加')
-        emit('refresh')
       } catch (error) {
-        const msg = error instanceof Error ? error.message : '添加 Boost 失败'
-        message.error(msg)
+        message.error(error instanceof Error ? error.message : '添加 Boost 失败')
       } finally {
         submitting.value = false
       }
@@ -88,43 +103,79 @@ export default defineComponent({
     }
 
     const handleDeleteBoost = async (boost: Boost) => {
-      if (!boost.can_delete) return
+      if (!boost.can_delete || deletingIds.value.has(boost.id)) return
+      const isOwnBoost =
+        !!props.currentUsername &&
+        boost.user.username.toLowerCase() === props.currentUsername.toLowerCase()
+      // eslint-disable-next-line no-alert
+      const confirmed = window.confirm(
+        isOwnBoost
+          ? '确定删除自己的 Boost 吗？此操作无法撤销。'
+          : '确定删除此 Boost 吗？此操作无法撤销。'
+      )
+      if (!confirmed) {
+        return
+      }
+      deletingIds.value.add(boost.id)
       try {
         await deleteBoost(props.baseUrl, boost.id)
+        replaceBoosts(boosts.value.filter(item => item.id !== boost.id))
+        if (isOwnBoost) props.post.can_boost = true
         message.success('Boost 已删除')
-        emit('refresh')
       } catch (error) {
-        const msg = error instanceof Error ? error.message : '删除 Boost 失败'
-        message.error(msg)
+        message.error(error instanceof Error ? error.message : '删除 Boost 失败')
+      } finally {
+        deletingIds.value.delete(boost.id)
       }
     }
 
-    const handleFlagBoost = (boost: Boost) => {
+    const handleFlagBoost = async (boost: Boost) => {
       if (!boost.can_flag) return
       flagTargetBoost.value = boost
       flagMessage.value = ''
+      flagTypes.value = []
+      selectedFlagTypeId.value = null
       flagModalOpen.value = true
+      flagTypesLoading.value = true
+      try {
+        const available = new Set(boost.available_flags || [])
+        const types = (await fetchFlagTypes(props.baseUrl)).filter(
+          type => appliesToBoost(type) && (!available.size || available.has(type.name_key))
+        )
+        flagTypes.value = types
+        selectedFlagTypeId.value = types[0]?.id ?? null
+        if (!types.length) message.error('站点没有提供可用的 Boost 举报理由')
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '获取举报理由失败')
+      } finally {
+        flagTypesLoading.value = false
+      }
     }
 
     const handleFlagSubmit = async () => {
-      if (!flagTargetBoost.value || flagSubmitting.value) return
+      if (!flagTargetBoost.value || !selectedFlagTypeId.value || flagSubmitting.value) return
+      if (selectedFlagType.value?.require_message && !flagMessage.value.trim()) {
+        message.warning('此举报理由需要填写说明')
+        return
+      }
       flagSubmitting.value = true
       try {
-        const flagType = flagTargetBoost.value.available_flags?.[0] || 'inappropriate'
-        await flagBoost(
-          props.baseUrl,
-          flagTargetBoost.value.id,
-          flagType,
-          flagMessage.value.trim() || undefined
-        )
+        await flagBoost(props.baseUrl, flagTargetBoost.value.id, {
+          flagTypeId: selectedFlagTypeId.value,
+          message: flagMessage.value.trim() || undefined,
+          takeAction: false,
+          queueForReview: false
+        })
+        const target = boosts.value.find(item => item.id === flagTargetBoost.value?.id)
+        if (target) {
+          target.can_flag = false
+          target.user_flag_status = selectedFlagTypeId.value
+        }
         message.success('Boost 已举报')
         flagModalOpen.value = false
         flagTargetBoost.value = null
-        flagMessage.value = ''
-        emit('refresh')
       } catch (error) {
-        const msg = error instanceof Error ? error.message : '举报 Boost 失败'
-        message.error(msg)
+        message.error(error instanceof Error ? error.message : '举报 Boost 失败')
       } finally {
         flagSubmitting.value = false
       }
@@ -135,6 +186,8 @@ export default defineComponent({
       flagModalOpen.value = false
       flagTargetBoost.value = null
       flagMessage.value = ''
+      flagTypes.value = []
+      selectedFlagTypeId.value = null
     }
 
     return () => (
@@ -148,28 +201,30 @@ export default defineComponent({
                   alt={boost.user.username}
                   class="boost-panel__avatar"
                   title={boost.user.username}
+                  data-user-card={boost.user.username}
                 />
                 <span class="boost-panel__cooked" innerHTML={sanitizeBoostHtml(boost.cooked)} />
-                {boost.can_delete && (
-                  <button
-                    type="button"
-                    class="boost-panel__action boost-panel__action--delete"
-                    title="删除 Boost"
-                    aria-label="删除 Boost"
-                    onClick={() => void handleDeleteBoost(boost)}
-                  >
-                    ×
-                  </button>
-                )}
                 {boost.can_flag && (
                   <button
                     type="button"
                     class="boost-panel__action boost-panel__action--flag"
                     title="举报 Boost"
                     aria-label="举报 Boost"
-                    onClick={() => handleFlagBoost(boost)}
+                    onClick={() => void handleFlagBoost(boost)}
                   >
-                    !
+                    ⚑
+                  </button>
+                )}
+                {boost.can_delete && (
+                  <button
+                    type="button"
+                    class="boost-panel__action boost-panel__action--delete"
+                    title="删除 Boost"
+                    aria-label="删除 Boost"
+                    disabled={deletingIds.value.has(boost.id)}
+                    onClick={() => void handleDeleteBoost(boost)}
+                  >
+                    🗑
                   </button>
                 )}
               </div>
@@ -179,8 +234,14 @@ export default defineComponent({
 
         <div class="boost-panel__actions">
           {canBoost.value && !showInput.value && (
-            <button type="button" class="boost-panel__add-btn" onClick={handleAddBoost}>
-              <span aria-hidden="true">✎</span> Boost
+            <button
+              type="button"
+              class="boost-panel__add-btn boost-panel__icon-btn"
+              title="添加 Boost"
+              aria-label="添加 Boost"
+              onClick={handleAddBoost}
+            >
+              ⬆
             </button>
           )}
 
@@ -210,6 +271,7 @@ export default defineComponent({
                   type="button"
                   class="boost-panel__emoji-btn discourse-emoji-picker-trigger"
                   aria-label="插入站点表情短码"
+                  title="插入站点表情短码"
                   aria-expanded={showEmojiPicker.value}
                   onPointerdown={(event: PointerEvent) => event.stopPropagation()}
                   onClick={() => (showEmojiPicker.value = !showEmojiPicker.value)}
@@ -228,16 +290,24 @@ export default defineComponent({
               <div class="boost-panel__composer-footer">
                 <span class="boost-panel__helper">Ctrl/⌘ + Enter 发送</span>
                 <div class="boost-panel__composer-actions">
-                  <button type="button" class="boost-panel__cancel-btn" onClick={handleCancelBoost}>
-                    取消
+                  <button
+                    type="button"
+                    class="boost-panel__cancel-btn boost-panel__icon-btn"
+                    title="取消"
+                    aria-label="取消"
+                    onClick={handleCancelBoost}
+                  >
+                    ×
                   </button>
                   <button
                     type="button"
-                    class="boost-panel__send-btn"
+                    class="boost-panel__send-btn boost-panel__icon-btn"
+                    title={submitting.value ? '发送中' : '发送 Boost'}
+                    aria-label={submitting.value ? '发送中' : '发送 Boost'}
                     disabled={submitting.value || !boostText.value.trim()}
                     onClick={() => void handleSubmitBoost()}
                   >
-                    {submitting.value ? '发送中…' : '发送'}
+                    {submitting.value ? '…' : '✓'}
                   </button>
                 </div>
               </div>
@@ -260,11 +330,34 @@ export default defineComponent({
                   ×
                 </button>
               </div>
-              <p class="boost-panel__modal-copy">确认要举报此 Boost 吗？</p>
+              <p class="boost-panel__modal-copy">请选择举报理由，举报将交由站点审核。</p>
               {flagTargetBoost.value && (
                 <div class="boost-panel__flag-preview">
                   <div innerHTML={sanitizeBoostHtml(flagTargetBoost.value.cooked)} />
                   <div class="boost-panel__flag-user">@{flagTargetBoost.value.user.username}</div>
+                </div>
+              )}
+              {flagTypesLoading.value ? (
+                <div class="boost-panel__flag-state">正在加载站点举报理由…</div>
+              ) : (
+                <div class="boost-panel__flag-types" role="radiogroup" aria-label="举报理由">
+                  {flagTypes.value.map(type => (
+                    <label key={type.id} class="boost-panel__flag-type">
+                      <input
+                        type="radio"
+                        name={`boost-flag-${flagTargetBoost.value?.id || 0}`}
+                        value={type.id}
+                        checked={selectedFlagTypeId.value === type.id}
+                        onChange={() => (selectedFlagTypeId.value = type.id)}
+                      />
+                      <span>
+                        <strong>{type.name || type.name_key}</strong>
+                        {(type.short_description || type.description) && (
+                          <small>{type.short_description || type.description}</small>
+                        )}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               )}
               <textarea
@@ -272,7 +365,10 @@ export default defineComponent({
                 value={flagMessage.value}
                 rows="3"
                 maxlength="500"
-                placeholder="补充说明（可选）"
+                placeholder={
+                  selectedFlagType.value?.require_message ? '补充说明（必填）' : '补充说明（可选）'
+                }
+                aria-label="举报补充说明"
                 onInput={(event: Event) => {
                   flagMessage.value = (event.target as HTMLTextAreaElement).value
                 }}
@@ -284,7 +380,12 @@ export default defineComponent({
                 <button
                   type="button"
                   class="boost-panel__send-btn is-danger"
-                  disabled={flagSubmitting.value}
+                  disabled={
+                    flagSubmitting.value ||
+                    flagTypesLoading.value ||
+                    !selectedFlagTypeId.value ||
+                    Boolean(selectedFlagType.value?.require_message && !flagMessage.value.trim())
+                  }
                   onClick={() => void handleFlagSubmit()}
                 >
                   {flagSubmitting.value ? '提交中…' : '提交举报'}

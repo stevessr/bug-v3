@@ -37,3 +37,7 @@ export type { TagSearchResult } from './tags'
 // Boost actions
 export * from './boost'
 export { createBoost, deleteBoost, flagBoost } from './boost'
+
+// User actions
+export * from './user'
+export { fetchUserCard, setUserFollowed } from './user'

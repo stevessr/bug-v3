@@ -165,14 +165,25 @@ export default defineComponent({
       allowedReactionNames.value = []
       allowAnyReaction.value = false
       try {
+        const validReactions = (activeTopic.value.valid_reactions || [])
+          .map(name => String(name || '').replace(/^:([^:]+):$/, '$1'))
+          .filter(Boolean)
         const [capabilities, groups] = await Promise.all([
-          fetchDiscourseReactionCapabilities(props.baseUrl),
+          validReactions.length > 0
+            ? Promise.resolve(null)
+            : fetchDiscourseReactionCapabilities(props.baseUrl),
           fetchDiscourseEmojiGroups(props.baseUrl)
         ])
         if (sequence !== reactionLoadSequence) return
-        reactionsEnabled.value = capabilities.source === 'site' && capabilities.enabled
-        allowedReactionNames.value = capabilities.enabledReactions
-        allowAnyReaction.value = capabilities.allowAnyEmoji
+        reactionsEnabled.value =
+          validReactions.length > 0 ||
+          Boolean(capabilities?.source === 'site' && capabilities.enabled)
+        allowedReactionNames.value = validReactions.length
+          ? validReactions
+          : capabilities?.enabledReactions || []
+        allowAnyReaction.value = validReactions.length
+          ? false
+          : capabilities?.allowAnyEmoji || false
         const map: Record<string, { url?: string; unicode?: string }> = {}
         groups.forEach(group => {
           group.emojis.forEach(emoji => {
@@ -472,7 +483,7 @@ export default defineComponent({
     return () => (
       <div class="topic-view">
         <main class="topic-main">
-          <TopicHeader topic={activeTopic.value} />
+          <TopicHeader topic={activeTopic.value} baseUrl={props.baseUrl} />
 
           {isPrivateMessage.value && (
             <PrivateMessageParticipants

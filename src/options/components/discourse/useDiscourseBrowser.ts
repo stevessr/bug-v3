@@ -571,6 +571,13 @@ export function useDiscourseBrowser() {
         }
         tab.title = labels[topicListRoute.type]
         tab.viewType = 'home'
+      } else if (pathname.startsWith('/my/messages')) {
+        const username = await ensureSessionUser()
+        if (!username) throw new Error('无法确定当前登录用户')
+        const suffix = pathname.slice('/my/messages'.length).replace(/^\/+/, '')
+        const canonicalPath = `/u/${encodeURIComponent(username)}/messages${suffix ? `/${suffix}` : ''}`
+        await navigateTo(`${baseUrl.value}${canonicalPath}${urlObj.search}`, addToHistory)
+        return
       } else if (pathname.startsWith('/my/notifications')) {
         const notificationFilter = normalizeNotificationFilter(urlObj.searchParams.get('filter'))
         await loadNotifications(tab, notificationFilter)

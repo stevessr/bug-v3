@@ -5,6 +5,7 @@ import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
 import UserTabs from './UserTabs'
+import type { UserMainTab } from './UserTabs'
 import '../css/UserExtrasView.css'
 
 type ExtrasTab = 'badges' | 'followFeed' | 'following' | 'followers'
@@ -52,9 +53,7 @@ export default defineComponent({
           active={props.tab === 'badges' ? 'badges' : 'follow'}
           showSettings={props.showSettings}
           showGroups={props.showGroups}
-          onSwitchTab={(
-            tab: 'summary' | 'activity' | 'messages' | 'badges' | 'follow' | 'groups' | 'settings'
-          ) => emit('switchMainTab', tab)}
+          onSwitchTab={(tab: UserMainTab) => emit('switchMainTab', tab)}
         />
 
         <div class="user-extras-toolbar">
@@ -161,6 +160,7 @@ export default defineComponent({
                   <div
                     key={u.id}
                     class="user-extras-user-item"
+                    data-user-card={u.username}
                     data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(u.username)}`}
                     onClick={() => emit('openUser', u.username)}
                   >
@@ -187,6 +187,7 @@ export default defineComponent({
                   <div
                     key={u.id}
                     class="user-extras-user-item"
+                    data-user-card={u.username}
                     data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(u.username)}`}
                     onClick={() => emit('openUser', u.username)}
                   >

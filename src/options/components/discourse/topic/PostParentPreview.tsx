@@ -91,6 +91,7 @@ const PostParentPreview = defineComponent({
             src={getAvatarUrl(props.post.avatar_template, props.baseUrl, 32)}
             alt={props.post.username}
             class="post-parent-avatar"
+            data-user-card={props.post.username}
             data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
             onClick={() => handleUserClick(props.post.username)}
           />

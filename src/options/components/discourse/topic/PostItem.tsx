@@ -207,6 +207,7 @@ export default defineComponent({
           <button
             type="button"
             class="post-author-avatar-button"
+            data-user-card={props.post.username}
             aria-label={`查看 ${props.post.username} 的主页`}
             onClick={() => handleUserClick(props.post.username)}
             data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.post.username)}`}
@@ -269,7 +270,11 @@ export default defineComponent({
           onNavigate={handleContentNavigation}
         />
 
-        <BoostPanel post={props.post} baseUrl={props.baseUrl} onRefresh={() => emit('refresh')} />
+        <BoostPanel
+          post={props.post}
+          baseUrl={props.baseUrl}
+          currentUsername={props.currentUsername || ''}
+        />
 
         <footer class="post-actions">
           <div class="post-actions__layout">

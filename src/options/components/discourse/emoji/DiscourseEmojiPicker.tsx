@@ -35,6 +35,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const pickerRef = ref<HTMLDivElement | null>(null)
     const groups = ref<DiscourseEmojiGroup[]>([])
+    const recentNames = ref<string[]>([])
     const query = ref('')
     const loading = ref(false)
     const loadError = ref('')
@@ -48,8 +49,64 @@ export default defineComponent({
     const effectiveAllowedNames = computed(() => props.allowedNames ?? siteAllowedNames.value)
     const effectiveAllowAnyEmoji = computed(() => props.allowAnyEmoji ?? siteAllowsAnyEmoji.value)
 
+    const recentStorageKey = computed(() => {
+      try {
+        return `discourse-browser:emoji-recent:v1:${encodeURIComponent(new URL(props.baseUrl).origin)}`
+      } catch {
+        return ''
+      }
+    })
+
+    const loadRecentNames = () => {
+      if (!recentStorageKey.value || typeof localStorage === 'undefined') {
+        recentNames.value = []
+        return
+      }
+      try {
+        const value = JSON.parse(localStorage.getItem(recentStorageKey.value) || '[]')
+        recentNames.value = Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === 'string').slice(0, 30)
+          : []
+      } catch {
+        recentNames.value = []
+      }
+    }
+
+    const saveRecentNames = () => {
+      if (!recentStorageKey.value || typeof localStorage === 'undefined') return
+      try {
+        localStorage.setItem(recentStorageKey.value, JSON.stringify(recentNames.value.slice(0, 30)))
+      } catch {
+        // Recent history is optional when extension storage is full.
+      }
+    }
+
+    const siteGroupsWithRecent = computed(() => {
+      const entriesByName = new Map<string, DiscourseEmojiEntry>()
+      groups.value.forEach(group => {
+        group.emojis.forEach(emoji => {
+          entriesByName.set(emoji.name, emoji)
+          entriesByName.set(emoji.id, emoji)
+        })
+      })
+      const recent = recentNames.value
+        .map(name => entriesByName.get(name))
+        .filter((entry): entry is DiscourseEmojiEntry => Boolean(entry))
+      if (!recent.length) return groups.value
+      return [
+        {
+          id: 'recent',
+          name: '近期使用',
+          icon: '⭐',
+          emojis: recent
+        },
+        ...groups.value
+      ]
+    })
+
     const modeGroups = computed(() => {
-      if (props.mode !== 'reaction' || effectiveAllowAnyEmoji.value) return groups.value
+      if (props.mode !== 'reaction' || effectiveAllowAnyEmoji.value)
+        return siteGroupsWithRecent.value
 
       const allowed = new Set(
         effectiveAllowedNames.value.map(name => name.replace(/^:([^:]+):$/, '$1'))
@@ -57,7 +114,7 @@ export default defineComponent({
       if (!allowed.size) return []
 
       const present = new Set<string>()
-      const filtered = groups.value
+      const filtered = siteGroupsWithRecent.value
         .map(group => ({
           ...group,
           emojis: group.emojis.filter(emoji => {
@@ -109,6 +166,7 @@ export default defineComponent({
         ])
         if (sequence !== loadSequence) return
         groups.value = result
+        loadRecentNames()
         if (capabilities) {
           siteAllowedNames.value = capabilities.enabledReactions
           siteAllowsAnyEmoji.value = capabilities.allowAnyEmoji
@@ -165,7 +223,7 @@ export default defineComponent({
       if (typeof window === 'undefined') return
       const padding = 12
       const gap = 8
-      const width = Math.min(380, Math.max(280, window.innerWidth - padding * 2))
+      const width = Math.min(440, Math.max(280, window.innerWidth - padding * 2))
       const height = Math.min(520, Math.max(260, window.innerHeight - padding * 2))
       const anchor = props.anchorEl?.getBoundingClientRect()
 
@@ -224,6 +282,11 @@ export default defineComponent({
     const getEntryLabel = (entry: DiscourseEmojiEntry) => `:${entry.name}:`
 
     const handleSelect = (entry: DiscourseEmojiEntry) => {
+      recentNames.value = [
+        entry.name,
+        ...recentNames.value.filter(name => name !== entry.name)
+      ].slice(0, 30)
+      saveRecentNames()
       const value = props.mode === 'shortcode' ? getEntryLabel(entry) : entry.name
       emit('select', value)
       if (props.closeOnSelect) emit('close')
@@ -238,8 +301,32 @@ export default defineComponent({
       section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
 
+    const handleGroupScroll = (event: Event) => {
+      if (query.value.trim()) return
+      const container = event.currentTarget
+      if (!(container instanceof HTMLElement)) return
+      const sections = Array.from(
+        container.querySelectorAll<HTMLElement>('[data-emoji-group-index]')
+      )
+      let nextIndex = 0
+      for (const section of sections) {
+        if (section.offsetTop <= container.scrollTop + 20) {
+          nextIndex = Number(section.dataset.emojiGroupIndex || 0)
+        } else {
+          break
+        }
+      }
+      activeGroupIndex.value = nextIndex
+    }
+
     const getGroupIcon = (group: DiscourseEmojiGroup) =>
       group.icon || group.emojis[0]?.unicode || '📁'
+
+    const clearRecent = () => {
+      recentNames.value = []
+      saveRecentNames()
+      activeGroupIndex.value = 0
+    }
 
     return () => {
       if (!props.visible) return null
@@ -309,7 +396,9 @@ export default defineComponent({
                         title={group.name}
                         onClick={() => void scrollToGroup(index)}
                       >
-                        {group.emojis[0]?.url ? (
+                        {group.icon ? (
+                          <span aria-hidden="true">{group.icon}</span>
+                        ) : group.emojis[0]?.url ? (
                           <img src={group.emojis[0].url} alt="" loading="lazy" />
                         ) : (
                           getGroupIcon(group)
@@ -318,7 +407,7 @@ export default defineComponent({
                     ))}
                   </div>
                 )}
-                <div class="discourse-emoji-picker__scrollable">
+                <div class="discourse-emoji-picker__scrollable" onScroll={handleGroupScroll}>
                   {displayGroups.map((group, index) => (
                     <section
                       key={group.id}
@@ -326,7 +415,19 @@ export default defineComponent({
                       data-emoji-group-index={index}
                       aria-label={group.name}
                     >
-                      <h3>{group.name}</h3>
+                      <div class="discourse-emoji-picker__section-title">
+                        <h3>{group.name}</h3>
+                        {group.id === 'recent' && (
+                          <button
+                            type="button"
+                            title="清空近期使用"
+                            aria-label="清空近期使用"
+                            onClick={clearRecent}
+                          >
+                            🗑
+                          </button>
+                        )}
+                      </div>
                       <div class="discourse-emoji-picker__grid">
                         {group.emojis.map(entry => (
                           <button

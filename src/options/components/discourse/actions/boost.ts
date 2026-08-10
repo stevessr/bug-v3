@@ -15,7 +15,7 @@ export async function createBoost(baseUrl: string, postId: number, raw: string) 
     const message = data?.errors?.join(', ') || data?.error || '添加 Boost 失败'
     throw new Error(message)
   }
-  return data
+  return data?.boost || data
 }
 
 export async function deleteBoost(baseUrl: string, boostId: number) {
@@ -38,17 +38,26 @@ export async function deleteBoost(baseUrl: string, boostId: number) {
 export async function flagBoost(
   baseUrl: string,
   boostId: number,
-  flagType: string,
-  message?: string
+  payload: {
+    flagTypeId: number
+    message?: string
+    takeAction?: boolean
+    queueForReview?: boolean
+  }
 ) {
   const result = await pageFetch<any>(`${baseUrl}/discourse-boosts/boosts/${boostId}/flags`, {
     method: 'POST',
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'Discourse-Logged-In': 'true'
     },
-    body: JSON.stringify({ flag_type: flagType, ...(message ? { message } : {}) })
+    body: new URLSearchParams({
+      flag_type_id: String(payload.flagTypeId),
+      message: payload.message || '',
+      take_action: String(payload.takeAction ?? false),
+      queue_for_review: String(payload.queueForReview ?? false)
+    }).toString()
   })
   const data = extractData(result)
   if (result.ok === false) {

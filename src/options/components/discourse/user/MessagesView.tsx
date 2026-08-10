@@ -116,6 +116,7 @@ export default defineComponent({
           <button
             type="button"
             class="messages-view-header-card__avatar-button"
+            data-user-card={props.user.username}
             data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(props.user.username)}`}
             aria-label={`打开 ${props.user.username} 的主页`}
             onClick={() => emit('goToProfile')}
@@ -246,6 +247,7 @@ export default defineComponent({
                                 )}
                                 alt={participantUser.username}
                                 class="messages-topic-item__avatar"
+                                data-user-card={participantUser.username}
                               />
                             ) : (
                               <div class="messages-topic-item__avatar-fallback">{index + 1}</div>

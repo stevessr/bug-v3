@@ -39,6 +39,7 @@ test.describe('Discourse topic actions and private messages', () => {
         like_count: 9,
         created_at: '2026-08-10T01:00:00Z',
         can_assign: true,
+        valid_reactions: ['heart', 'laughing', 'tada'],
         post_stream: {
           stream: [4201, 4202],
           posts: [
@@ -77,7 +78,27 @@ test.describe('Discourse topic actions and private messages', () => {
                 { id: 'tada', count: 2 },
                 { id: 'eyes', count: 1 }
               ],
-              reaction_users_count: 10
+              reaction_users_count: 10,
+              can_boost: true,
+              boosts: [
+                {
+                  id: 801,
+                  cooked: '<p>自己的 Boost</p>',
+                  can_delete: true,
+                  can_flag: false,
+                  user_flag_status: null,
+                  user: steve
+                },
+                {
+                  id: 802,
+                  cooked: '<p>需要举报的 Boost</p>',
+                  can_delete: false,
+                  can_flag: true,
+                  user_flag_status: null,
+                  available_flags: ['spam', 'inappropriate'],
+                  user: alice
+                }
+              ]
             }
           ]
         },
@@ -88,6 +109,7 @@ test.describe('Discourse topic actions and private messages', () => {
           allowed_groups: [],
           can_invite_to: true,
           can_remove_allowed_users: true,
+          can_edit: true,
           can_assign: true,
           notification_level: 1
         },
@@ -144,18 +166,83 @@ test.describe('Discourse topic actions and private messages', () => {
             data = { category_list: { categories: [] } }
           } else if (parsed.pathname === '/t/42.json') {
             data = makeTopic()
+          } else if (parsed.pathname === '/t/42' && method === 'PUT') {
+            const payload = JSON.parse(body)
+            data = { id: 42, title: payload.title, fancy_title: payload.title }
           } else if (parsed.pathname === '/t/42/view-stats.json') {
             data = { views: [{ count: 12 }], users: [{ count: 2 }] }
           } else if (parsed.pathname === '/search.json') {
             data = { posts: [], topics: [], users: [] }
           } else if (parsed.pathname === '/emojis.json') {
             data = {
-              smileys: [
+              'smileys_&_emotion': [
                 { id: 'heart', name: 'heart', url: '/images/emoji/twitter/heart.png' },
                 { id: 'laughing', name: 'laughing', url: '/images/emoji/twitter/laughing.png' }
               ],
-              celebrations: [{ id: 'tada', name: 'tada', url: '/images/emoji/twitter/tada.png' }],
+              activities: [{ id: 'tada', name: 'tada', url: '/images/emoji/twitter/tada.png' }],
               extras: [{ id: 'eyes', name: 'eyes', url: '/images/emoji/twitter/eyes.png' }]
+            }
+          } else if (parsed.pathname === '/emojis/search-aliases.json') {
+            data = { heart: ['love'], laughing: ['happy'], tada: ['party'] }
+          } else if (parsed.pathname === '/site.json') {
+            data = {
+              post_action_types: [
+                {
+                  id: 3,
+                  name_key: 'spam',
+                  name: '垃圾广告',
+                  description: '垃圾广告或恶意推广',
+                  is_flag: true,
+                  enabled: true,
+                  require_message: false,
+                  applies_to: ['DiscourseBoosts::Boost']
+                },
+                {
+                  id: 4,
+                  name_key: 'inappropriate',
+                  name: '不当内容',
+                  description: '违反社区规范',
+                  is_flag: true,
+                  enabled: true,
+                  require_message: true,
+                  applies_to: ['DiscourseBoosts::Boost']
+                }
+              ]
+            }
+          } else if (parsed.pathname === '/u/alice/card.json') {
+            data = {
+              user: {
+                ...alice,
+                title: '测试用户',
+                bio_cooked: '<p>Alice 的简介</p>',
+                location: '香港',
+                can_send_private_messages: true,
+                can_send_private_message_to_user: true,
+                can_chat_user: true,
+                can_follow: true,
+                is_followed: false,
+                total_followers: 12,
+                total_following: 7
+              }
+            }
+          } else if (parsed.pathname === '/u/alice.json') {
+            data = {
+              user: {
+                ...alice,
+                trust_level: 2,
+                created_at: '2025-01-01T00:00:00Z',
+                title: '测试用户',
+                bio_cooked: '<p>Alice 的简介</p>',
+                can_send_private_messages: true,
+                can_send_private_message_to_user: true,
+                can_chat_user: true,
+                can_follow: true,
+                is_followed: false,
+                total_followers: 12,
+                total_following: 7,
+                profile_background_upload_url:
+                  '//cdn3.ldstatic.com/original/4X/alice-profile-background.png'
+              }
             }
           } else if (parsed.pathname === '/u/bob.json') {
             data = { user: bob }
@@ -168,6 +255,42 @@ test.describe('Discourse topic actions and private messages', () => {
             if (index >= 0) allowedUsers.splice(index, 1)
             data = { success: 'OK' }
           } else if (parsed.pathname === '/assign/assign' && method === 'PUT') {
+            data = { success: 'OK' }
+          } else if (
+            parsed.pathname ===
+              '/discourse-reactions/posts/4202/custom-reactions/tada/toggle.json' &&
+            method === 'PUT'
+          ) {
+            data = {
+              reactions: [
+                { id: 'heart', count: 4 },
+                { id: 'laughing', count: 3 },
+                { id: 'tada', count: 3, reacted: true },
+                { id: 'eyes', count: 1 }
+              ],
+              current_user_reaction: { id: 'tada', type: 'emoji' },
+              reaction_users_count: 11
+            }
+          } else if (
+            parsed.pathname === '/discourse-boosts/posts/4202/boosts' &&
+            method === 'POST'
+          ) {
+            data = {
+              id: 803,
+              cooked: `<p>${body ? JSON.parse(body).raw : ''}</p>`,
+              can_delete: true,
+              can_flag: false,
+              user_flag_status: null,
+              user: steve
+            }
+          } else if (parsed.pathname === '/discourse-boosts/boosts/801' && method === 'DELETE') {
+            data = { success: 'OK' }
+          } else if (
+            parsed.pathname === '/discourse-boosts/boosts/802/flags' &&
+            method === 'POST'
+          ) {
+            data = { success: 'OK' }
+          } else if (parsed.pathname === '/follow/alice.json' && method === 'PUT') {
             data = { success: 'OK' }
           } else if (
             parsed.pathname === '/discourse-reactions/posts/4202/reactions-users-list.json'
@@ -242,12 +365,142 @@ test.describe('Discourse topic actions and private messages', () => {
     await otherPost.getByLabel('从站点表情中选择反应').click()
     const picker = page.getByRole('dialog', { name: '选择反应' })
     await expect(picker).toBeVisible()
-    await expect(picker.getByRole('heading', { name: 'smileys' })).toBeVisible()
-    await expect(picker.getByRole('heading', { name: 'celebrations' })).toBeVisible()
+    await expect(picker.getByRole('heading', { name: '笑脸与情感' })).toBeVisible()
+    await expect(picker.getByRole('heading', { name: '活动' })).toBeVisible()
     await expect(picker.getByLabel(':eyes:')).toHaveCount(0)
     await expect
       .poll(() => picker.evaluate(element => Number(getComputedStyle(element).zIndex)))
       .toBeGreaterThan(2_000_000_000)
+
+    await picker.getByLabel(':tada:').click()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__topicActionRequests.some(
+            (request: any) =>
+              request.url.endsWith(
+                '/discourse-reactions/posts/4202/custom-reactions/tada/toggle.json'
+              ) && request.method === 'PUT'
+          )
+        )
+      )
+      .toBe(true)
+    await expect(otherPost.getByLabel(/:tada: 共 3 次/)).toHaveClass(/active/)
+  })
+
+  test('edits a permitted topic title without reloading the topic', async ({ page }) => {
+    await openTopic(page)
+    const before = await page.evaluate(
+      () =>
+        (globalThis as any).__topicActionRequests.filter((request: any) =>
+          request.url.endsWith('/t/42.json')
+        ).length
+    )
+
+    await page.getByRole('button', { name: '编辑话题标题' }).click()
+    const input = page.getByRole('textbox', { name: '话题标题' })
+    await input.fill('修改后的标题')
+    await page.getByRole('button', { name: '保存', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '修改后的标题' })).toBeVisible()
+
+    const update = await page.evaluate(() =>
+      (globalThis as any).__topicActionRequests.find(
+        (request: any) => request.url.endsWith('/t/42') && request.method === 'PUT'
+      )
+    )
+    expect(JSON.parse(update.body)).toEqual({
+      title: '修改后的标题',
+      original_title: '私信与反应测试'
+    })
+    expect(
+      await page.evaluate(
+        () =>
+          (globalThis as any).__topicActionRequests.filter((request: any) =>
+            request.url.endsWith('/t/42.json')
+          ).length
+      )
+    ).toBe(before)
+  })
+
+  test('updates Boosts in place, confirms delete, and submits a selected flag reason', async ({
+    page
+  }) => {
+    await openTopic(page)
+    const topicFetchCount = () =>
+      page.evaluate(
+        () =>
+          (globalThis as any).__topicActionRequests.filter((request: any) =>
+            request.url.endsWith('/t/42.json')
+          ).length
+      )
+    const before = await topicFetchCount()
+    const secondPost = page.locator('[data-post-number="2"]')
+
+    await secondPost.getByRole('button', { name: '添加 Boost' }).click()
+    await secondPost.getByRole('textbox', { name: 'Boost 内容' }).fill('后台更新 Boost')
+    await secondPost.getByRole('button', { name: '发送 Boost' }).click()
+    await expect(secondPost.getByText('后台更新 Boost')).toBeVisible()
+    expect(await topicFetchCount()).toBe(before)
+
+    page.once('dialog', dialog => void dialog.accept())
+    await secondPost.getByRole('button', { name: '删除 Boost' }).first().click()
+    await expect(secondPost.getByText('自己的 Boost')).toHaveCount(0)
+    expect(await topicFetchCount()).toBe(before)
+
+    await secondPost.getByRole('button', { name: '举报 Boost' }).click()
+    const flagDialog = page.getByRole('dialog', { name: '举报 Boost' })
+    await expect(flagDialog.getByText('垃圾广告', { exact: true })).toBeVisible()
+    await flagDialog.getByLabel('举报补充说明').fill('这是一条测试举报')
+    await flagDialog.getByRole('button', { name: '提交举报' }).click()
+
+    const flagRequest = await page.evaluate(() =>
+      (globalThis as any).__topicActionRequests.find((request: any) =>
+        request.url.endsWith('/discourse-boosts/boosts/802/flags')
+      )
+    )
+    const payload = new URLSearchParams(flagRequest.body)
+    expect(payload.get('flag_type_id')).toBe('3')
+    expect(payload.get('message')).toBe('这是一条测试举报')
+    expect(payload.get('take_action')).toBe('false')
+    expect(payload.get('queue_for_review')).toBe('false')
+    expect(await topicFetchCount()).toBe(before)
+  })
+
+  test('opens an official-style user card and prefills a private message target', async ({
+    page
+  }) => {
+    await openTopic(page)
+    await page.locator('[data-post-number="2"] .post-author-avatar-button').click()
+
+    const card = page.getByRole('dialog', { name: 'alice 的用户卡片' })
+    await expect(card.getByText('Alice 的简介')).toBeVisible()
+    await expect(card.getByRole('button', { name: '私信' })).toBeVisible()
+    await expect(card.getByRole('button', { name: '聊天' })).toBeVisible()
+    await expect(card.getByRole('button', { name: '关注', exact: true })).toBeVisible()
+
+    await card.getByRole('button', { name: '关注', exact: true }).click()
+    await expect(card.getByRole('button', { name: '已关注' })).toBeVisible()
+    await card.getByRole('button', { name: '私信' }).click()
+    await expect(page.getByText('新建私信', { exact: true })).toBeVisible()
+    await expect(page.getByPlaceholder('例如：user1, user2')).toHaveValue('alice')
+  })
+
+  test('keeps private-message, chat, and follow actions on another user profile', async ({
+    page
+  }) => {
+    await openTopic(page)
+    await page.locator('[data-post-number="2"] .post-author-avatar-button').click()
+    const card = page.getByRole('dialog', { name: 'alice 的用户卡片' })
+    await card.getByRole('button', { name: '主页', exact: true }).click()
+
+    const profile = page.locator('.user-profile')
+    await expect(profile.getByRole('button', { name: '私信' })).toBeVisible()
+    await expect(profile.getByRole('button', { name: '聊天' })).toBeVisible()
+    await expect(profile.getByRole('button', { name: '关注', exact: true })).toBeVisible()
+    await expect(profile.locator('.user-profile-header')).toHaveCSS(
+      'background-image',
+      /cdn3\.ldstatic\.com\/original\/4X\/alice-profile-background\.png/
+    )
   })
 
   test('uses the official Post assignment payload and shares the canonical topic URL', async ({
