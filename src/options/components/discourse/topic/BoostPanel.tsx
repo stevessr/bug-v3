@@ -1,11 +1,12 @@
 import DOMPurify from 'dompurify'
-import { computed, defineComponent, nextTick, ref } from 'vue'
+import { computed, defineComponent, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 import type { Boost, DiscourseFlagType, DiscoursePost } from '../types'
-import { createBoost, deleteBoost, fetchFlagTypes, flagBoost } from '../actions'
+import { deleteBoost, fetchFlagTypes, flagBoost } from '../actions'
 import { getAvatarUrl } from '../utils'
-import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
+import { replaceEmojiShortcodesInHtml } from '../bbcode'
 import '../css/BoostPanel.css'
 
 const sanitizeBoostHtml = (html: string) =>
@@ -28,12 +29,8 @@ export default defineComponent({
     currentUsername: { type: String, default: '' }
   },
   setup(props) {
-    const showInput = ref(false)
-    const showEmojiPicker = ref(false)
-    const boostText = ref('')
-    const inputRef = ref<HTMLTextAreaElement | null>(null)
-    const emojiButtonRef = ref<HTMLButtonElement | null>(null)
-    const submitting = ref(false)
+    const emojiReadyToken = ref(0)
+    const selectedBoostId = ref<number | null>(null)
     const deletingIds = ref(new Set<number>())
     const flagTargetBoost = ref<Boost | null>(null)
     const flagMessage = ref('')
@@ -44,7 +41,6 @@ export default defineComponent({
     const flagModalOpen = ref(false)
 
     const boosts = computed(() => props.post.boosts || [])
-    const canBoost = computed(() => props.post.can_boost ?? false)
     const hasBoosts = computed(() => boosts.value.length > 0)
     const selectedFlagType = computed(
       () => flagTypes.value.find(type => type.id === selectedFlagTypeId.value) || null
@@ -54,73 +50,35 @@ export default defineComponent({
       props.post.boosts = next
     }
 
-    const handleAddBoost = () => {
-      showInput.value = !showInput.value
-      showEmojiPicker.value = false
-      if (!showInput.value) boostText.value = ''
-      if (showInput.value) void nextTick(() => inputRef.value?.focus())
+    const isOwnBoost = (boost: Boost) =>
+      !!props.currentUsername &&
+      boost.user.username.toLowerCase() === props.currentUsername.toLowerCase()
+
+    const renderBoostHtml = (cooked: string) => {
+      const safe = sanitizeBoostHtml(cooked)
+      if (!emojiReadyToken.value) return safe
+      // boost 中的表情短码自动渲染为站点表情
+      return sanitizeBoostHtml(replaceEmojiShortcodesInHtml(safe))
     }
 
-    const handleCancelBoost = () => {
-      showInput.value = false
-      showEmojiPicker.value = false
-      boostText.value = ''
-    }
-
-    const handleSubmitBoost = async () => {
-      if (submitting.value) return
-      const text = boostText.value.trim()
-      if (!text) return
-      submitting.value = true
-      try {
-        const created = await createBoost(props.baseUrl, props.post.id, text)
-        if (created?.id) replaceBoosts([...boosts.value, created as Boost])
-        props.post.can_boost = false
-        handleCancelBoost()
-        message.success('Boost 已添加')
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : '添加 Boost 失败')
-      } finally {
-        submitting.value = false
-      }
-    }
-
-    const insertShortcode = (shortcode: string) => {
-      const input = inputRef.value
-      const current = boostText.value
-      const start = input?.selectionStart ?? current.length
-      const end = input?.selectionEnd ?? start
-      const needsLeadingSpace = start > 0 && !/\s$/.test(current.slice(0, start))
-      const needsTrailingSpace = end < current.length && !/^\s/.test(current.slice(end))
-      const insertion = `${needsLeadingSpace ? ' ' : ''}${shortcode}${needsTrailingSpace ? ' ' : ''}`
-      boostText.value = `${current.slice(0, start)}${insertion}${current.slice(end)}`
-      showEmojiPicker.value = false
-      void nextTick(() => {
-        const nextCursor = start + insertion.length
-        inputRef.value?.focus()
-        inputRef.value?.setSelectionRange(nextCursor, nextCursor)
-      })
+    const toggleSelect = (boost: Boost) => {
+      selectedBoostId.value = selectedBoostId.value === boost.id ? null : boost.id
     }
 
     const handleDeleteBoost = async (boost: Boost) => {
       if (!boost.can_delete || deletingIds.value.has(boost.id)) return
-      const isOwnBoost =
-        !!props.currentUsername &&
-        boost.user.username.toLowerCase() === props.currentUsername.toLowerCase()
+      const own = isOwnBoost(boost)
       // eslint-disable-next-line no-alert
       const confirmed = window.confirm(
-        isOwnBoost
-          ? '确定删除自己的 Boost 吗？此操作无法撤销。'
-          : '确定删除此 Boost 吗？此操作无法撤销。'
+        own ? '确定删除自己的 Boost 吗？此操作无法撤销。' : '确定删除此 Boost 吗？此操作无法撤销。'
       )
-      if (!confirmed) {
-        return
-      }
+      if (!confirmed) return
       deletingIds.value.add(boost.id)
       try {
         await deleteBoost(props.baseUrl, boost.id)
         replaceBoosts(boosts.value.filter(item => item.id !== boost.id))
-        if (isOwnBoost) props.post.can_boost = true
+        if (own) props.post.can_boost = true
+        if (selectedBoostId.value === boost.id) selectedBoostId.value = null
         message.success('Boost 已删除')
       } catch (error) {
         message.error(error instanceof Error ? error.message : '删除 Boost 失败')
@@ -130,7 +88,7 @@ export default defineComponent({
     }
 
     const handleFlagBoost = async (boost: Boost) => {
-      if (!boost.can_flag) return
+      if (!boost.can_flag || isOwnBoost(boost)) return
       flagTargetBoost.value = boost
       flagMessage.value = ''
       flagTypes.value = []
@@ -190,130 +148,87 @@ export default defineComponent({
       selectedFlagTypeId.value = null
     }
 
+    onMounted(() => {
+      void ensureEmojiShortcodesLoaded(props.baseUrl).then(count => {
+        if (count > 0) emojiReadyToken.value++
+      })
+    })
+
+    watch(
+      () => props.baseUrl,
+      async value => {
+        if (!value) return
+        const count = await ensureEmojiShortcodesLoaded(value)
+        if (count > 0) emojiReadyToken.value++
+      }
+    )
+
     return () => (
       <div class="boost-panel">
         {hasBoosts.value && (
           <div class="boost-panel__list" aria-label="Boost 列表">
-            {boosts.value.map(boost => (
-              <div key={boost.id} class="boost-panel__item">
-                <img
-                  src={getAvatarUrl(boost.user.avatar_template, props.baseUrl, 24)}
-                  alt={boost.user.username}
-                  class="boost-panel__avatar"
-                  title={boost.user.username}
-                  data-user-card={boost.user.username}
-                />
-                <span class="boost-panel__cooked" innerHTML={sanitizeBoostHtml(boost.cooked)} />
-                {boost.can_flag && (
-                  <button
-                    type="button"
-                    class="boost-panel__action boost-panel__action--flag"
-                    title="举报 Boost"
-                    aria-label="举报 Boost"
-                    onClick={() => void handleFlagBoost(boost)}
-                  >
-                    ⚑
-                  </button>
-                )}
-                {boost.can_delete && (
-                  <button
-                    type="button"
-                    class="boost-panel__action boost-panel__action--delete"
-                    title="删除 Boost"
-                    aria-label="删除 Boost"
-                    disabled={deletingIds.value.has(boost.id)}
-                    onClick={() => void handleDeleteBoost(boost)}
-                  >
-                    🗑
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div class="boost-panel__actions">
-          {canBoost.value && !showInput.value && (
-            <button
-              type="button"
-              class="boost-panel__add-btn boost-panel__icon-btn"
-              title="添加 Boost"
-              aria-label="添加 Boost"
-              onClick={handleAddBoost}
-            >
-              ⬆
-            </button>
-          )}
-
-          {showInput.value && (
-            <div class="boost-panel__composer">
-              <div class="boost-panel__input-wrap">
-                <textarea
-                  ref={inputRef}
-                  class="boost-panel__textarea"
-                  value={boostText.value}
-                  maxlength="1000"
-                  rows="2"
-                  placeholder="写一点 Boost 内容…"
-                  aria-label="Boost 内容"
-                  onInput={(event: Event) => {
-                    boostText.value = (event.target as HTMLTextAreaElement).value
-                  }}
+            {boosts.value.map(boost => {
+              const selected = selectedBoostId.value === boost.id
+              const showFlag = selected && boost.can_flag && !isOwnBoost(boost)
+              const showDelete = selected && boost.can_delete
+              return (
+                <div
+                  key={boost.id}
+                  class={['boost-panel__item', selected ? 'is-selected' : '']}
+                  onClick={() => toggleSelect(boost)}
+                  role="button"
+                  tabindex={0}
+                  aria-pressed={selected}
+                  title={selected ? '收起操作' : '展开操作'}
                   onKeydown={(event: KeyboardEvent) => {
-                    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      void handleSubmitBoost()
+                      toggleSelect(boost)
                     }
                   }}
-                />
-                <button
-                  ref={emojiButtonRef}
-                  type="button"
-                  class="boost-panel__emoji-btn discourse-emoji-picker-trigger"
-                  aria-label="插入站点表情短码"
-                  title="插入站点表情短码"
-                  aria-expanded={showEmojiPicker.value}
-                  onPointerdown={(event: PointerEvent) => event.stopPropagation()}
-                  onClick={() => (showEmojiPicker.value = !showEmojiPicker.value)}
                 >
-                  ☺
-                </button>
-                <DiscourseEmojiPicker
-                  visible={showEmojiPicker.value}
-                  baseUrl={props.baseUrl}
-                  mode="shortcode"
-                  anchorEl={emojiButtonRef.value}
-                  onSelect={insertShortcode}
-                  onClose={() => (showEmojiPicker.value = false)}
-                />
-              </div>
-              <div class="boost-panel__composer-footer">
-                <span class="boost-panel__helper">Ctrl/⌘ + Enter 发送</span>
-                <div class="boost-panel__composer-actions">
-                  <button
-                    type="button"
-                    class="boost-panel__cancel-btn boost-panel__icon-btn"
-                    title="取消"
-                    aria-label="取消"
-                    onClick={handleCancelBoost}
-                  >
-                    ×
-                  </button>
-                  <button
-                    type="button"
-                    class="boost-panel__send-btn boost-panel__icon-btn"
-                    title={submitting.value ? '发送中' : '发送 Boost'}
-                    aria-label={submitting.value ? '发送中' : '发送 Boost'}
-                    disabled={submitting.value || !boostText.value.trim()}
-                    onClick={() => void handleSubmitBoost()}
-                  >
-                    {submitting.value ? '…' : '✓'}
-                  </button>
+                  <img
+                    src={getAvatarUrl(boost.user.avatar_template, props.baseUrl, 24)}
+                    alt={boost.user.username}
+                    class="boost-panel__avatar"
+                    title={boost.user.username}
+                    data-user-card={boost.user.username}
+                  />
+                  <span class="boost-panel__cooked" innerHTML={renderBoostHtml(boost.cooked)} />
+                  {showFlag && (
+                    <button
+                      type="button"
+                      class="boost-panel__action boost-panel__action--flag"
+                      title="举报 Boost"
+                      aria-label="举报 Boost"
+                      onClick={(event: MouseEvent) => {
+                        event.stopPropagation()
+                        void handleFlagBoost(boost)
+                      }}
+                    >
+                      ⚑
+                    </button>
+                  )}
+                  {showDelete && (
+                    <button
+                      type="button"
+                      class="boost-panel__action boost-panel__action--delete"
+                      title="删除 Boost"
+                      aria-label="删除 Boost"
+                      disabled={deletingIds.value.has(boost.id)}
+                      onClick={(event: MouseEvent) => {
+                        event.stopPropagation()
+                        void handleDeleteBoost(boost)
+                      }}
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
+              )
+            })}
+          </div>
+        )}
 
         {flagModalOpen.value && (
           <div class="boost-panel__modal" role="dialog" aria-modal="true" aria-label="举报 Boost">
@@ -333,7 +248,7 @@ export default defineComponent({
               <p class="boost-panel__modal-copy">请选择举报理由，举报将交由站点审核。</p>
               {flagTargetBoost.value && (
                 <div class="boost-panel__flag-preview">
-                  <div innerHTML={sanitizeBoostHtml(flagTargetBoost.value.cooked)} />
+                  <div innerHTML={renderBoostHtml(flagTargetBoost.value.cooked)} />
                   <div class="boost-panel__flag-user">@{flagTargetBoost.value.user.username}</div>
                 </div>
               )}

@@ -6,6 +6,7 @@ import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import { resolveDiscourseHttpUrl } from '../navigation'
 import { setUserFollowed } from '../actions'
+import { getDiscourseIconHref } from '../layout/iconSprite'
 
 import UserTabs from './UserTabs'
 import '../css/UserView.css'
@@ -80,6 +81,7 @@ export default defineComponent({
     'openFollowers',
     'composeMessage',
     'startChat',
+    'openCategory',
     'switchMainTab'
   ],
   setup(props, { emit }) {
@@ -195,6 +197,24 @@ export default defineComponent({
                       {props.user.website_name || props.user.website}
                     </a>
                   )}
+                  {Number(props.user.total_following) > 0 && (
+                    <button
+                      type="button"
+                      class="user-profile-header__follow-count"
+                      onClick={() => emit('openFollowing', props.user.username)}
+                    >
+                      关注 {props.user.total_following}
+                    </button>
+                  )}
+                  {Number(props.user.total_followers) > 0 && (
+                    <button
+                      type="button"
+                      class="user-profile-header__follow-count"
+                      onClick={() => emit('openFollowers', props.user.username)}
+                    >
+                      粉丝 {props.user.total_followers}
+                    </button>
+                  )}
                 </div>
 
                 <div class="user-profile-header__hint">用户概览</div>
@@ -292,12 +312,12 @@ export default defineComponent({
               </div>
               <div class="user-profile-stat-card__label">浏览话题</div>
             </div>
-            {props.user._summary.solved_count && (
+            {props.user._summary.solved_count !== undefined && (
               <div class="user-profile-stat-card">
                 <div class="user-profile-stat-card__value is-emerald">
-                  {props.user._summary.solved_count}
+                  {props.user._summary.solved_count || 0}
                 </div>
-                <div class="user-profile-stat-card__label">解决问题</div>
+                <div class="user-profile-stat-card__label">已解决</div>
               </div>
             )}
           </section>
@@ -325,11 +345,17 @@ export default defineComponent({
         )}
 
         {props.user._summary?.top_categories && props.user._summary.top_categories.length > 0 && (
-          <section class="user-profile-card">
+          <section class="user-profile-card user-profile-card--narrow">
             <h3 class="user-profile-card__title">活跃分类</h3>
             <div class="user-profile-category-list">
               {props.user._summary.top_categories.slice(0, 5).map(cat => (
-                <div key={cat.id} class="user-profile-category-row">
+                <button
+                  key={cat.id}
+                  type="button"
+                  class="user-profile-category-row"
+                  data-discourse-url={`${props.baseUrl}/c/${cat.slug}/${cat.id}`}
+                  onClick={() => emit('openCategory', cat)}
+                >
                   <div class="user-profile-category-row__left">
                     <div
                       class="user-profile-category-row__dot"
@@ -340,14 +366,14 @@ export default defineComponent({
                   <div class="user-profile-category-row__meta">
                     {cat.topic_count} 话题 · {cat.post_count} 帖子
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
         )}
 
         {props.user._topics && props.user._topics.length > 0 && (
-          <section class="user-profile-card">
+          <section class="user-profile-card user-profile-card--narrow">
             <h3 class="user-profile-card__title">热门话题</h3>
             <div class="user-profile-topic-list">
               {props.user._topics.slice(0, 6).map(topic => (
@@ -371,7 +397,50 @@ export default defineComponent({
           </section>
         )}
 
-        <section class="user-profile-card">
+        {props.user._badges && props.user._badges.length > 0 && (
+          <section class="user-profile-card">
+            <div class="user-profile-card__title-row">
+              <h3 class="user-profile-card__title">徽章</h3>
+              <button
+                type="button"
+                class="user-profile-card__more-btn"
+                onClick={() => emit('openBadges', props.user.username)}
+              >
+                查看全部
+              </button>
+            </div>
+            <div class="user-profile-badge-grid">
+              {props.user._badges.slice(0, 8).map(badge => (
+                <div
+                  key={badge.id}
+                  class="user-profile-badge-item"
+                  title={badge.description || badge.name}
+                >
+                  {badge.image_url ? (
+                    <img
+                      src={
+                        badge.image_url.startsWith('http')
+                          ? badge.image_url
+                          : `${props.baseUrl}${badge.image_url}`
+                      }
+                      alt={badge.name}
+                      class="user-profile-badge-item__image"
+                    />
+                  ) : badge.icon ? (
+                    <svg class="user-profile-badge-item__icon" aria-hidden="true">
+                      <use href={getDiscourseIconHref(badge.icon)} />
+                    </svg>
+                  ) : (
+                    <div class="user-profile-badge-item__placeholder" />
+                  )}
+                  <div class="user-profile-badge-item__name">{badge.name}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section class="user-profile-card user-profile-card--narrow">
           <h3 class="user-profile-card__title">账户信息</h3>
           <div class="user-profile-account-grid">
             <div class="user-profile-account-grid__label">注册时间</div>

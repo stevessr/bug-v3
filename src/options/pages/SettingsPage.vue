@@ -66,6 +66,7 @@ const {
   updateUseDiscourseNativeUpload,
   updateEnableDiscourseRouterRefresh,
   updateDiscourseRouterRefreshInterval,
+  updateForumUploadConcurrency,
   updateEnableLinuxDoSeeking,
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
@@ -173,6 +174,7 @@ onMounted(async () => {
               @update:imageCacheStrategy="updateImageCacheStrategy"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:useDiscourseNativeUpload="updateUseDiscourseNativeUpload"
+              @update:forumUploadConcurrency="updateForumUploadConcurrency"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
               @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"

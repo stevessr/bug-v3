@@ -4,13 +4,26 @@ import type { ChatChannel } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
 import '../css/chat/ChatChannelList.css'
 
+export type ChatChannelListFilter = 'all' | 'public' | 'direct' | 'starred'
+
+const isDirectChannel = (channel: ChatChannel) =>
+  channel.channelType === 'direct' ||
+  channel.chatable_type === 'DirectMessage' ||
+  !!channel.chatable?.users?.length
+
+const getChannelEmoji = (channel: ChatChannel) => {
+  const raw = channel.emoji || channel.chatable?.emoji || ''
+  return raw && /\p{Emoji_Presentation}/u.test(raw) ? raw : ''
+}
+
 export default defineComponent({
   name: 'ChatChannelList',
   props: {
     channels: { type: Array as () => ChatChannel[], required: true },
     activeChannelId: { type: Number as () => number | null, default: null },
     baseUrl: { type: String, required: true },
-    loading: { type: Boolean, default: false }
+    loading: { type: Boolean, default: false },
+    filter: { type: String as () => ChatChannelListFilter, default: 'all' }
   },
   emits: ['select'],
   setup(props, { emit }) {
@@ -33,10 +46,7 @@ export default defineComponent({
 
       props.channels.forEach(channel => {
         const isStarred = !!channel.current_user_membership?.starred
-        const isDirect =
-          channel.channelType === 'direct' ||
-          channel.chatable_type === 'DirectMessage' ||
-          !!channel.chatable?.users?.length
+        const isDirect = isDirectChannel(channel)
 
         if (isStarred) {
           starred.push(channel)
@@ -47,10 +57,36 @@ export default defineComponent({
         }
       })
 
-      return {
-        starred: sortChannels(starred),
-        public: sortChannels(publicChannels),
-        direct: sortChannels(directChannels)
+      const { starred: starredPublic, direct: starredDirect } = {
+        starred: starred.filter(channel => !isDirectChannel(channel)),
+        direct: starred.filter(isDirectChannel)
+      }
+
+      switch (props.filter) {
+        case 'public':
+          return {
+            starred: sortChannels(starredPublic),
+            public: sortChannels(publicChannels),
+            direct: []
+          }
+        case 'direct':
+          return {
+            starred: sortChannels(starredDirect),
+            public: [],
+            direct: sortChannels(directChannels)
+          }
+        case 'starred':
+          return {
+            starred: sortChannels(starred),
+            public: [],
+            direct: []
+          }
+        default:
+          return {
+            starred: sortChannels(starred),
+            public: sortChannels(publicChannels),
+            direct: sortChannels(directChannels)
+          }
       }
     })
 
@@ -113,36 +149,43 @@ export default defineComponent({
       }
     )
 
-    const renderChannel = (channel: ChatChannel, keyPrefix: string) => (
-      <button
-        type="button"
-        key={`${keyPrefix}-${channel.id}`}
-        class={['chat-channel-item', channel.id === props.activeChannelId ? 'active' : '']}
-        data-discourse-url={getChannelUrl(channel)}
-        onClick={() => emit('select', channel)}
-      >
-        <div class="chat-channel-avatar">
-          {getChannelAvatar(channel) ? (
-            <img
-              src={getChannelAvatar(channel)}
-              alt={getChannelTitle(channel)}
-              data-user-card={getChannelUser(channel)?.username}
-            />
-          ) : (
-            <span>#</span>
-          )}
-        </div>
-        <div class="chat-channel-info">
-          <div class="chat-channel-title">{getChannelTitle(channel)}</div>
-          <div class="chat-channel-meta">
-            <span>{getChannelTimeLabel(channel)}</span>
+    const renderChannel = (channel: ChatChannel, keyPrefix: string) => {
+      const channelEmoji = getChannelEmoji(channel)
+      return (
+        <button
+          type="button"
+          key={`${keyPrefix}-${channel.id}`}
+          class={['chat-channel-item', channel.id === props.activeChannelId ? 'active' : '']}
+          data-discourse-url={getChannelUrl(channel)}
+          onClick={() => emit('select', channel)}
+        >
+          <div class="chat-channel-avatar">
+            {channelEmoji ? (
+              <span class="chat-channel-emoji" role="img" aria-label={getChannelTitle(channel)}>
+                {channelEmoji}
+              </span>
+            ) : getChannelAvatar(channel) ? (
+              <img
+                src={getChannelAvatar(channel)}
+                alt={getChannelTitle(channel)}
+                data-user-card={getChannelUser(channel)?.username}
+              />
+            ) : (
+              <span>#</span>
+            )}
           </div>
-        </div>
-        {getUnreadCount(channel) > 0 && (
-          <div class="chat-channel-unread">{getUnreadCount(channel)}</div>
-        )}
-      </button>
-    )
+          <div class="chat-channel-info">
+            <div class="chat-channel-title">{getChannelTitle(channel)}</div>
+            <div class="chat-channel-meta">
+              <span>{getChannelTimeLabel(channel)}</span>
+            </div>
+          </div>
+          {getUnreadCount(channel) > 0 && (
+            <div class="chat-channel-unread">{getUnreadCount(channel)}</div>
+          )}
+        </button>
+      )
+    }
 
     const renderSection = (id: SectionId, label: string, channels: ChatChannel[]) => {
       if (channels.length === 0) return null
@@ -173,6 +216,23 @@ export default defineComponent({
       )
     }
 
+    const hasAny = computed(
+      () =>
+        groupedChannels.value.starred.length > 0 ||
+        groupedChannels.value.public.length > 0 ||
+        groupedChannels.value.direct.length > 0
+    )
+    const filterEmptyText = computed(() => {
+      switch (props.filter) {
+        case 'direct':
+          return '暂无私信，点击右上角发起聊天'
+        case 'starred':
+          return '暂无收藏，在频道菜单中可收藏频道'
+        default:
+          return '暂无公开频道，试试发现频道'
+      }
+    })
+
     return () => (
       <div class="chat-channel-list">
         {props.loading && <div class="chat-channel-loading">加载频道中...</div>}
@@ -180,6 +240,9 @@ export default defineComponent({
         {renderSection('starred', '收藏', groupedChannels.value.starred)}
         {renderSection('public', '频道', groupedChannels.value.public)}
         {renderSection('direct', '直接消息', groupedChannels.value.direct)}
+        {!props.loading && !hasAny.value && (
+          <div class="chat-channel-empty">{filterEmptyText.value}</div>
+        )}
       </div>
     )
   }

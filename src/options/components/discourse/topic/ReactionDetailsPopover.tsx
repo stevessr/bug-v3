@@ -1,0 +1,189 @@
+import { computed, defineComponent, nextTick, ref, watch } from 'vue'
+import { Spin } from 'ant-design-vue'
+
+import type { DiscoursePost, DiscourseReactionUser } from '../types'
+import { extractData, getAvatarUrl, pageFetch } from '../utils'
+
+import '../css/ReactionDetailsPopover.css'
+
+const PAGE_SIZE = 50
+const MAX_VISIBLE_USERS = 10
+
+export default defineComponent({
+  name: 'ReactionDetailsPopover',
+  props: {
+    open: { type: Boolean, required: true },
+    post: { type: Object as () => DiscoursePost | null, default: null },
+    reaction: { type: String as () => string | null, default: null },
+    baseUrl: { type: String, required: true },
+    anchorEl: { type: Object as () => HTMLElement | null, default: null },
+    reactionEmojiMap: {
+      type: Object as () => Record<string, { url?: string; unicode?: string }>,
+      default: () => ({})
+    }
+  },
+  emits: ['close', 'openUser', 'keepOpen'],
+  setup(props, { emit }) {
+    const users = ref<DiscourseReactionUser[]>([])
+    const total = ref(0)
+    const loading = ref(false)
+    const errorMessage = ref('')
+    const panelRef = ref<HTMLDivElement | null>(null)
+    const panelStyle = ref<Record<string, string>>({})
+    let loadSequence = 0
+
+    const title = computed(() => (props.reaction ? `:${props.reaction}:` : '全部反应'))
+    const visibleUsers = computed(() => users.value.slice(0, MAX_VISIBLE_USERS))
+    const hasMoreHidden = computed(() => users.value.length > MAX_VISIBLE_USERS)
+
+    const load = async () => {
+      if (!props.post || loading.value) return
+      const sequence = ++loadSequence
+      loading.value = true
+      errorMessage.value = ''
+      try {
+        const params = new URLSearchParams({ page: '0', limit: String(PAGE_SIZE) })
+        if (props.reaction) params.set('reaction_value', props.reaction)
+        const result = await pageFetch<any>(
+          `${props.baseUrl}/discourse-reactions/posts/${props.post.id}/reactions-users-list.json?${params}`
+        )
+        const data = extractData(result)
+        if (!result.ok) {
+          throw new Error(data?.errors?.join(', ') || data?.error || '获取反应详情失败')
+        }
+        if (sequence !== loadSequence) return
+        const incoming = Array.isArray(data?.users) ? data.users : []
+        const byKey = new Map<string, DiscourseReactionUser>()
+        incoming.forEach((user: any) => {
+          if (!user?.username) return
+          byKey.set(`${user.id || user.username}:${user.reaction || ''}`, user)
+        })
+        users.value = [...byKey.values()]
+        total.value = Number(data?.total_rows ?? users.value.length) || users.value.length
+      } catch (error) {
+        if (sequence !== loadSequence) return
+        errorMessage.value = error instanceof Error ? error.message : '获取反应详情失败'
+      } finally {
+        if (sequence === loadSequence) loading.value = false
+      }
+    }
+
+    const updatePosition = () => {
+      if (typeof window === 'undefined') return
+      const padding = 12
+      const gap = 8
+      const width = Math.min(340, Math.max(260, window.innerWidth - padding * 2))
+      const anchor = props.anchorEl?.getBoundingClientRect()
+
+      let left = padding
+      let top = padding
+      if (anchor) {
+        left = Math.max(padding, Math.min(anchor.left, window.innerWidth - width - padding))
+        const roomAbove = anchor.top - padding - gap
+        const roomBelow = window.innerHeight - anchor.bottom - padding - gap
+        if (roomAbove >= 220 || roomAbove >= roomBelow) {
+          top = Math.max(padding, anchor.top - 220 - gap)
+        } else {
+          top = Math.min(window.innerHeight - 220 - padding, anchor.bottom + gap)
+        }
+      }
+      panelStyle.value = {
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(top)}px`,
+        width: `${Math.round(width)}px`
+      }
+    }
+
+    watch(
+      () => [props.open, props.post?.id, props.reaction, props.anchorEl] as const,
+      ([open]) => {
+        if (open) {
+          users.value = []
+          total.value = 0
+          void load()
+          void nextTick(updatePosition)
+        }
+      }
+    )
+
+    if (!props.open) return null
+
+    const renderReactionEmoji = (reaction: string | null) => {
+      const id = String(reaction || props.reaction || '')
+        .replace(/^:([^:]+):$/, '$1')
+        .trim()
+      const emoji = id ? props.reactionEmojiMap[id] : undefined
+      if (emoji?.url) {
+        return (
+          <img class="reaction-details-popover__emoji" src={emoji.url} alt={id} loading="lazy" />
+        )
+      }
+      if (emoji?.unicode) {
+        return <span class="reaction-details-popover__emoji">{emoji.unicode}</span>
+      }
+      return id ? <code>:{id}:</code> : null
+    }
+
+    return (
+      <div
+        ref={panelRef}
+        class="reaction-details-popover"
+        style={panelStyle.value}
+        role="dialog"
+        aria-label={title.value}
+        onMouseenter={() => emit('keepOpen')}
+        onMouseleave={() => emit('close')}
+      >
+        <div class="reaction-details-popover__summary">
+          <strong>{title.value}</strong>
+          <span>共 {total.value || users.value.length} 人次</span>
+        </div>
+
+        {loading.value && (
+          <div class="reaction-details-popover__state" role="status">
+            <Spin size="small" /> 正在加载…
+          </div>
+        )}
+        {!loading.value && errorMessage.value && (
+          <div class="reaction-details-popover__state is-error" role="alert">
+            {errorMessage.value}
+          </div>
+        )}
+        {!loading.value && !errorMessage.value && visibleUsers.value.length === 0 && (
+          <div class="reaction-details-popover__state">暂无可显示的反应用户</div>
+        )}
+
+        {visibleUsers.value.length > 0 && (
+          <div class="reaction-details-popover__list">
+            {visibleUsers.value.map(user => (
+              <button
+                type="button"
+                key={`${user.id}-${user.reaction || ''}`}
+                class="reaction-details-popover__user"
+                data-user-card={user.username}
+                data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
+                onClick={() => emit('openUser', user.username)}
+              >
+                <img
+                  src={getAvatarUrl(user.avatar_template, props.baseUrl, 40)}
+                  alt=""
+                  loading="lazy"
+                />
+                <span class="reaction-details-popover__identity">@{user.username}</span>
+                <span class="reaction-details-popover__reaction">
+                  {renderReactionEmoji(user.reaction || null)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {hasMoreHidden.value && (
+          <div class="reaction-details-popover__more">
+            还有 {total.value - MAX_VISIBLE_USERS} 人次…
+          </div>
+        )}
+      </div>
+    )
+  }
+})

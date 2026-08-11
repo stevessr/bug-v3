@@ -16,12 +16,28 @@ export interface ReplyPayload {
   replyToPostNumber?: number | null
 }
 
+export interface UpdateTopicOptions {
+  categoryId?: number | null
+  tags?: string[]
+}
+
 export async function updateTopicTitle(
   baseUrl: string,
   topicId: number,
   title: string,
-  originalTitle: string
+  originalTitle: string,
+  options?: UpdateTopicOptions
 ) {
+  const body: Record<string, unknown> = {
+    title,
+    original_title: originalTitle
+  }
+  if (options?.categoryId !== undefined) {
+    body.category_id = options.categoryId
+  }
+  if (options?.tags !== undefined) {
+    body.tags = options.tags
+  }
   const result = await pageFetch<any>(`${baseUrl}/t/${topicId}`, {
     method: 'PUT',
     headers: {
@@ -29,11 +45,11 @@ export async function updateTopicTitle(
       'Content-Type': 'application/json',
       'Discourse-Logged-In': 'true'
     },
-    body: JSON.stringify({ title, original_title: originalTitle })
+    body: JSON.stringify(body)
   })
   const data = extractData(result)
   if (result.ok === false) {
-    throw new Error(data?.errors?.join(', ') || data?.error || '修改话题标题失败')
+    throw new Error(data?.errors?.join(', ') || data?.error || '修改话题失败')
   }
   return data
 }

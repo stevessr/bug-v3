@@ -395,3 +395,40 @@
     justify-self: end;
   }
 }
+
+.user-extras-badge-item__icon {
+  width: 32px;
+  height: 32px;
+  color: var(--primary, var(--theme-primary));
+  fill: currentColor;
+}
+
+/* 浏览器本地设置（SettingsLocalSection） */
+.user-settings-local-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-settings-local-save {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--primary, var(--theme-primary));
+  color: var(--on-primary, var(--theme-on-primary));
+  font-size: 12px;
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.user-settings-local-save:hover {
+  filter: brightness(1.06);
+}
+
+.user-settings-local-hint {
+  grid-column: 1 / -1;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  line-height: 1.6;
+}

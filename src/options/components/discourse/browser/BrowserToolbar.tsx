@@ -5,7 +5,7 @@ import {
   ReloadOutlined,
   HomeOutlined,
   MenuOutlined,
-  LinkOutlined,
+  SendOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
 
@@ -112,7 +112,7 @@ export default defineComponent({
             onInput={handleInput}
           />
           <button type="submit" class="toolbar-go-button" aria-label="打开地址">
-            <LinkOutlined />
+            <SendOutlined />
             <span>前往</span>
           </button>
         </form>

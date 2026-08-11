@@ -25,7 +25,7 @@ import type {
   ReviewStatus,
   ReviewPerformResult
 } from './types'
-import { generateId, pageFetch, extractData } from './utils'
+import { generateId, pageFetch, extractData, setPageFetchMaxConcurrency } from './utils'
 import {
   loadHome as loadHomeRoute,
   loadCategories as loadCategoriesRoute,
@@ -120,7 +120,10 @@ import {
   leaveChatChannel as leaveChatChannelRoute,
   updateChatChannelStatus as updateChatChannelStatusRoute,
   updateMembershipSettings as updateMembershipSettingsRoute,
-  searchChatables as searchChatablesRoute
+  searchChatables as searchChatablesRoute,
+  loadDiscoverableChannels as loadDiscoverableChannelsRoute,
+  joinChatChannel as joinChatChannelRoute,
+  addUsersToDirectMessageChannel as addUsersToDirectMessageChannelRoute
 } from './routes/chat'
 import { sendReadTimings } from './utils/readTimings'
 
@@ -142,6 +145,17 @@ type ShortLivedCacheEntry = {
 }
 
 export function useDiscourseBrowser() {
+  // 启动时恢复设置页保存的单论坛页面抓取并发数
+  try {
+    const stored = window.localStorage.getItem('discourse-browser:page-fetch-concurrency')
+    const parsed = stored ? Number(stored) : NaN
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 8) {
+      setPageFetchMaxConcurrency(Math.floor(parsed))
+    }
+  } catch {
+    // 存储不可用时使用默认并发数
+  }
+
   const UPDATE_CACHE_MAX_ENTRIES = 80
   const TOPIC_LIST_UPDATE_CACHE_TTL_MS = 2500
   const TOPIC_STREAM_UPDATE_CACHE_TTL_MS = 1200
@@ -536,7 +550,7 @@ export function useDiscourseBrowser() {
   }
 
   // Navigate to URL
-  async function navigateTo(url: string, addToHistory = true) {
+  async function navigateTo(url: string, addToHistory = true, options: { silent?: boolean } = {}) {
     const tab = activeTab.value
     if (!tab) return
 
@@ -546,7 +560,10 @@ export function useDiscourseBrowser() {
     const targetOrigin = new URL(normalizedUrl).origin
     if (targetOrigin !== baseUrl.value) baseUrl.value = targetOrigin
 
-    tab.loading = true
+    // silent：子 tab 切换时不清空整个视图，只让局部区域显示加载动画
+    if (!options.silent) {
+      tab.loading = true
+    }
     tab.url = normalizedUrl
     tab.scrollTop = addToHistory
       ? 0
@@ -822,6 +839,24 @@ export function useDiscourseBrowser() {
         await loadInvites(tab, filter)
         tab.title = '邀请'
         tab.viewType = 'invites'
+      } else if (pathname.startsWith('/badges/')) {
+        // /badges/{id}/-?username=stevessr —— 带 username 查询参数时定位到该用户的徽章页
+        const badgeUsername = urlObj.searchParams.get('username')
+        await ensureSessionUser()
+        const targetUser = badgeUsername || currentUsername.value
+        if (!targetUser) throw new Error('无法确定徽章页所属用户')
+        await loadUser(tab, targetUser)
+        tab.title = `${targetUser} - 徽章`
+        tab.viewType = 'badges'
+      } else if (pathname.startsWith('/g/') || pathname.startsWith('/groups/')) {
+        // 分组兼容：https://linux.do/g/{name} 与 /groups/{name} 都打开分组详情页
+        await ensureSessionUser()
+        const prefix = pathname.startsWith('/g/') ? '/g/' : '/groups/'
+        const groupName = decodeURIComponent(pathname.slice(prefix.length).replace(/\.json$/i, ''))
+        if (!groupName) throw new Error('无效的分组地址')
+        tab.title = `分组：${groupName}`
+        tab.groupName = groupName
+        tab.viewType = 'group'
       } else {
         tab.topicListType = 'latest'
         tab.topicListPeriod = null
@@ -1738,7 +1773,8 @@ export function useDiscourseBrowser() {
     const target = subPath
       ? `${baseUrl.value}/u/${username}/activity/${pathSegment}`
       : `${baseUrl.value}/u/${username}/activity`
-    navigateTo(target)
+    // silent：切子 tab 只重渲染列表区域，避免整页载入动画
+    navigateTo(target, true, { silent: true })
   }
 
   // Load more activity items
@@ -2355,19 +2391,19 @@ export function useDiscourseBrowser() {
   }
 
   function openUserBadges(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/badges`)
+    navigateTo(`${baseUrl.value}/u/${username}/badges`, true, { silent: true })
   }
 
   function openUserFollowFeed(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/follow/feed`)
+    navigateTo(`${baseUrl.value}/u/${username}/follow/feed`, true, { silent: true })
   }
 
   function openUserFollowing(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/follow/following`)
+    navigateTo(`${baseUrl.value}/u/${username}/follow/following`, true, { silent: true })
   }
 
   function openUserFollowers(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/follow/followers`)
+    navigateTo(`${baseUrl.value}/u/${username}/follow/followers`, true, { silent: true })
   }
 
   // Change topic list type (latest, new, unread, etc.)
@@ -2567,6 +2603,31 @@ export function useDiscourseBrowser() {
     return await removeMemberFromChannelRoute(tab, baseUrl, channelId, userId)
   }
 
+  async function loadDiscoverableChannels() {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    return await loadDiscoverableChannelsRoute(tab, baseUrl)
+  }
+
+  async function joinChatChannel(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return null
+    const joined = await joinChatChannelRoute(tab, baseUrl, channelId)
+    if (joined) {
+      await selectChatChannel(channelId)
+      if (!tab.chatState.messagesByChannel[channelId]) {
+        await loadChatMessages(tab, baseUrl, users, channelId, true)
+      }
+    }
+    return joined
+  }
+
+  async function addUsersToDirectMessageChannel(channelId: number, usernames: string[]) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await addUsersToDirectMessageChannelRoute(tab, baseUrl, channelId, usernames)
+  }
+
   async function followChatChannel(channelId: number) {
     const tab = activeTab.value
     if (!tab?.chatState) return false
@@ -2729,6 +2790,9 @@ export function useDiscourseBrowser() {
     removeChatMember,
     followChatChannel,
     unfollowChatChannel,
+    loadDiscoverableChannels,
+    joinChatChannel,
+    addUsersToDirectMessageChannel,
     deleteChatChannel,
     leaveChatChannel,
     updateChatStatus,

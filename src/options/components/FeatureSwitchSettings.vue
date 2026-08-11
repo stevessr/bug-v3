@@ -20,6 +20,7 @@ const emit = defineEmits([
   'update:useDiscourseNativeUpload',
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
+  'update:forumUploadConcurrency',
   'update:enableLinuxDoLikeCounter',
   'update:enableTenorSearch',
   'update:tenorApiKey',
@@ -155,6 +156,35 @@ const saveRouterRefreshInterval = async () => {
     await new Promise(resolve => setTimeout(resolve, 300))
   } finally {
     isRouterRefreshIntervalSaving.value = false
+  }
+}
+
+// 论坛上传并发数的本地状态
+const localForumUploadConcurrency = ref<number>(getSetting('forumUploadConcurrency', 3) as number)
+const isForumUploadConcurrencySaving = ref(false)
+
+// 监听 settings 变化，同步到本地状态
+watch(
+  () => getSetting('forumUploadConcurrency', 3),
+  val => {
+    localForumUploadConcurrency.value = val as number
+  }
+)
+
+// 保存论坛上传并发数
+const saveForumUploadConcurrency = async () => {
+  isForumUploadConcurrencySaving.value = true
+  try {
+    // 限制在 1-20 范围内
+    const safeValue = Math.min(
+      20,
+      Math.max(1, Math.floor(Number(localForumUploadConcurrency.value) || 3))
+    )
+    localForumUploadConcurrency.value = safeValue
+    emit('update:forumUploadConcurrency', safeValue)
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } finally {
+    isForumUploadConcurrencySaving.value = false
   }
 }
 
@@ -304,6 +334,34 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
         label="使用 Discourse 原生上传器"
         description="用于注入的帖子批量上传。关闭后跳过 Discourse 原生上传函数，直接使用扩展内建 API；聊天附件仍保留原生流程"
       />
+
+      <!-- 论坛上传并发数配置 -->
+      <div class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <div class="flex items-start justify-between">
+          <div>
+            <label class="text-sm font-medium dark:text-white">论坛上传并发数</label>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              同时上传到论坛的文件数量（1-20，默认 3）。数值越大上传越快，但可能触发论坛限流
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a-input-number
+              v-model:value="localForumUploadConcurrency"
+              :min="1"
+              :max="20"
+              :step="1"
+              class="w-24"
+            />
+            <a-button
+              type="primary"
+              :loading="isForumUploadConcurrencySaving"
+              @click="saveForumUploadConcurrency"
+            >
+              保存
+            </a-button>
+          </div>
+        </div>
+      </div>
 
       <!-- LinuxDo 点赞计数器（仅在启用试验性特性时显示） -->
       <SettingSwitch

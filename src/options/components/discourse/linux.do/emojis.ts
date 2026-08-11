@@ -1,5 +1,5 @@
 import { addEmojisToMap, clearEmojiMap, type EmojiShortcode } from '../bbcode'
-import { pageFetch, extractData } from '../utils'
+import { pageFetch, extractData, rewriteEmojiUrlForCdn } from '../utils'
 
 let currentOrigin: string | null = null
 let loadingPromise: Promise<number> | null = null
@@ -97,7 +97,8 @@ const writePersistentEmojiGroups = (origin: string, value: StoredEmojiGroups) =>
 const normalizeEmojiUrl = (origin: string, url?: string | null) => {
   if (!url) return ''
   try {
-    return new URL(url, origin).toString()
+    // linux.do 站点表情改走 CDN，减少对主站请求
+    return rewriteEmojiUrlForCdn(new URL(url, origin).toString())
   } catch {
     return url
   }

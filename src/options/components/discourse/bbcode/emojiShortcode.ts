@@ -102,6 +102,38 @@ export function parseEmojiShortcodeToHTML(text: string, imageScale: number = 30)
 }
 
 /**
+ * 把 HTML 文本节点中的 `:短码:` 替换为站点表情 <img>（仅文本节点，
+ * 不触碰已有标签属性）。帖子正文与 Boost 内容共用此入口。
+ */
+export function replaceEmojiShortcodesInHtml(html: string): string {
+  if (!html || !html.includes(':')) return html
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html')
+  const root = doc.body
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text
+    if (node.nodeValue && node.nodeValue.includes(':')) {
+      textNodes.push(node)
+    }
+  }
+
+  textNodes.forEach(node => {
+    const text = node.nodeValue || ''
+    const converted = parseEmojiShortcodeToHTML(text, 100)
+    if (converted === text) return
+    const wrapper = doc.createElement('span')
+    wrapper.innerHTML = converted
+    node.replaceWith(...Array.from(wrapper.childNodes))
+  })
+
+  return root.innerHTML
+}
+
+/**
  * 从 BBCode 转换回表情短码（可选功能）
  * @param text BBCode 文本
  * @returns 包含表情短码的文本

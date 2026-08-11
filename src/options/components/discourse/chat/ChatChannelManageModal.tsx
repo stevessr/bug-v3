@@ -61,7 +61,8 @@ export default defineComponent({
     'updateStatus',
     'leaveChannel',
     'deleteChannel',
-    'search'
+    'search',
+    'addDirectUsers'
   ],
   setup(props, { emit }) {
     const channel = computed(() => props.channel)
@@ -156,10 +157,21 @@ export default defineComponent({
 
     const handleAdd = (user: DiscourseUser) => {
       if (!channel.value || props.members.some(member => member.user.id === user.id)) return
-      emit('addMembers', { channelId: channel.value.id, usernames: [user.username] })
+      if (isDirect.value) {
+        emit('addDirectUsers', { channelId: channel.value.id, usernames: [user.username] })
+      } else {
+        emit('addMembers', { channelId: channel.value.id, usernames: [user.username] })
+      }
       showAddForm.value = false
       query.value = ''
     }
+
+    const canAddUsers = computed(() => {
+      if (isDirect.value) return true
+      return canManageMembers.value
+    })
+
+    const addLabel = computed(() => (isDirect.value ? '添加用户' : '添加成员'))
 
     const handleRemove = (member: ChatMember) => {
       if (!channel.value || removingId.value !== null) return
@@ -179,23 +191,23 @@ export default defineComponent({
               已显示 {displayMembers.value.length} / {memberCount.value} 人
             </div>
           </div>
-          {canManageMembers.value && !isDirect.value && (
+          {canAddUsers.value && (
             <button
               type="button"
               class="chat-manage-modal__add-btn"
-              aria-label="添加成员"
+              aria-label={addLabel.value}
               onClick={() => (showAddForm.value = !showAddForm.value)}
             >
-              <UserAddOutlined /> 添加成员
+              <UserAddOutlined /> {addLabel.value}
             </button>
           )}
         </div>
 
-        {showAddForm.value && canManageMembers.value && !isDirect.value && (
+        {showAddForm.value && canAddUsers.value && (
           <div class="chat-manage-modal__add-form">
             <Input
               value={query.value}
-              placeholder="搜索用户添加…"
+              placeholder={isDirect.value ? '搜索用户加入私聊…' : '搜索用户添加…'}
               prefix={<SearchOutlined />}
               allowClear
               onUpdate:value={handleSearchInput}

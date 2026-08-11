@@ -348,7 +348,7 @@ export default defineComponent({
               <div>
                 <strong>{title}</strong>
                 <span class="discourse-emoji-picker__hint">
-                  {props.mode === 'shortcode' ? '点击后插入 :name:' : '表情来自当前站点'}
+                  {props.mode === 'shortcode' ? '点击后插入表情' : '表情来自当前站点'}
                 </span>
               </div>
               <button
@@ -444,9 +444,6 @@ export default defineComponent({
                               <span class="discourse-emoji-picker__unicode">
                                 {entry.unicode || entry.name}
                               </span>
-                            )}
-                            {props.mode === 'shortcode' && (
-                              <span class="discourse-emoji-picker__item-name">:{entry.name}:</span>
                             )}
                           </button>
                         ))}

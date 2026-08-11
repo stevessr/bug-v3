@@ -623,3 +623,29 @@
     flex: 1 1 auto;
   }
 }
+
+/* 过期时间选择器（InviteExpireDropdown） */
+.invites-form__expiry-wrap {
+  position: relative;
+  display: block;
+}
+
+.invites-form__expiry-btn {
+  display: inline-flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-sm, 10px);
+  background: transparent;
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.invites-form__expiry-btn:hover {
+  border-color: var(--primary, var(--theme-primary));
+}

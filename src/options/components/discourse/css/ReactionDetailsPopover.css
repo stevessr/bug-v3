@@ -1,0 +1,114 @@
+.reaction-details-popover {
+  position: fixed;
+  z-index: 2147483300;
+  display: flex;
+  max-height: min(300px, 55vh);
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+}
+
+.reaction-details-popover__summary {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.reaction-details-popover__summary strong {
+  font-size: 13px;
+}
+
+.reaction-details-popover__summary span {
+  opacity: 0.78;
+}
+
+.reaction-details-popover__list {
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.reaction-details-popover__user {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--d-shape-md, 12px);
+  background: transparent;
+  color: var(--d-text, var(--theme-on-surface));
+  cursor: pointer;
+  text-align: left;
+}
+
+.reaction-details-popover__user:hover {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+}
+
+.reaction-details-popover__user img {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.reaction-details-popover__identity {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reaction-details-popover__reaction {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.reaction-details-popover__emoji {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.reaction-details-popover__reaction code {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+  font-size: 11px;
+}
+
+.reaction-details-popover__state {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.reaction-details-popover__state.is-error {
+  color: var(--danger, var(--theme-error));
+}
+
+.reaction-details-popover__more {
+  padding: 2px 10px 0;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 11px;
+  text-align: center;
+}

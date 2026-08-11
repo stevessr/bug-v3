@@ -32,7 +32,7 @@ export default defineComponent({
       { key: 'badges', label: '徽章' },
       { key: 'portfolio', label: '作品集' },
       { key: 'follow', label: '关注' },
-      { key: 'solved', label: '结算' },
+      { key: 'solved', label: '已解决' },
       { key: 'groups', label: '用户组', visible: () => props.showGroups },
       { key: 'settings', label: '偏好设置', visible: () => props.showSettings }
     ]

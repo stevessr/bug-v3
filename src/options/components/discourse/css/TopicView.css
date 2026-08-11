@@ -95,6 +95,90 @@
   box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 16%, transparent);
 }
 
+/* 话题编辑表单（标题 + 分区 + 标签） */
+.topic-header__edit-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px 0 4px;
+}
+
+.topic-header__field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.topic-header__field-label {
+  font-size: 12px;
+  font-weight: 680;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+  text-transform: uppercase;
+}
+
+.topic-header__field input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in oklab, currentColor 24%, transparent);
+  border-radius: var(--d-shape-md, 12px);
+  outline: 0;
+  background: color-mix(in oklab, var(--d-surface-0, #fff) 92%, transparent);
+  color: var(--d-text, #1f1f1f);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.topic-header__field input:focus {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 16%, transparent);
+}
+
+.topic-header__field .ant-select,
+.topic-header__field .ant-select-selector,
+.topic-header__field .ant-tree-select {
+  width: 100%;
+}
+
+.topic-header__edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.topic-header__edit-actions button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.topic-header__edit-actions button[type='submit'] {
+  background: var(--primary, var(--theme-primary));
+  color: var(--on-primary, var(--theme-on-primary));
+}
+
+.topic-header__edit-actions button:hover:not(:disabled) {
+  background: color-mix(in oklab, currentColor 18%, transparent);
+}
+
+.topic-header__edit-actions button[type='submit']:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 88%, #000);
+}
+
+.topic-header__edit-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .topic-header__meta {
   display: flex;
   align-items: center;

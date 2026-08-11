@@ -64,6 +64,7 @@ export interface AppSettings {
   enableDiscourseRouterRefresh?: boolean // 启用 Discourse 周期性路由刷新
   discourseRouterRefreshInterval?: number // 刷新间隔（毫秒），默认 30000
   useDiscourseNativeUpload?: boolean // 帖子上传是否使用 Discourse 原生上传器；false 时走扩展内建 API
+  forumUploadConcurrency?: number // 论坛上传并发数（1-20，默认 3）
   // Telegram sticker local/backend AVIF conversion
   telegramWebmToAvifEnabled?: boolean
   telegramWebmToAvifBackend?: string

@@ -56,6 +56,7 @@ export const defaultSettings: AppSettings = {
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
   discourseRouterRefreshInterval: 30000, // 默认 30 秒刷新一次
   useDiscourseNativeUpload: true, // 默认保持 Discourse 原生上传路由，可关闭后改走内建 API
+  forumUploadConcurrency: 3, // 默认论坛上传并发数（1-20）
   // LinuxDo Credit 积分显示
   enableLinuxDoCredit: false, // 默认禁用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器

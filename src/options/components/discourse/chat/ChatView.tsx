@@ -1,6 +1,7 @@
 import { computed, defineComponent, ref, watch } from 'vue'
 import {
   CommentOutlined,
+  CompassOutlined,
   PlusOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -20,7 +21,9 @@ import type {
   DiscourseUser
 } from '../types'
 
-import ChatChannelList from './ChatChannelList'
+import ChatChannelList, { type ChatChannelListFilter } from './ChatChannelList'
+import ChatSubTabs, { type ChatSidebarTab } from './ChatSubTabs'
+import ChatDiscoverPanel from './ChatDiscoverPanel'
 import ChatThreadList from './ChatThreadList'
 import ChatMessageList from './ChatMessageList'
 import ChatComposer from './ChatComposer'
@@ -52,7 +55,11 @@ export default defineComponent({
     savingStatus: { type: Boolean, default: false },
     savingFollow: { type: Boolean, default: false },
     leavingChannel: { type: Boolean, default: false },
-    deletingChannel: { type: Boolean, default: false }
+    deletingChannel: { type: Boolean, default: false },
+    discoverChannels: { type: Array as () => ChatChannel[], default: () => [] },
+    discoverLoading: { type: Boolean, default: false },
+    discoverErrorMessage: { type: String, default: '' },
+    joiningChannelIds: { type: Object as () => Record<number, boolean>, default: () => ({}) }
   },
   emits: [
     'selectChannel',
@@ -99,7 +106,10 @@ export default defineComponent({
     'updateStatus',
     'leaveChannel',
     'deleteChannel',
-    'manageSearch'
+    'manageSearch',
+    'discoverChannels',
+    'joinChannel',
+    'addDirectUsers'
   ],
   setup(props, { emit }) {
     const showCreateGroup = ref(false)
@@ -107,7 +117,61 @@ export default defineComponent({
     const showManage = ref(false)
     const showChannelThreads = ref(false)
     const showSearch = ref(false)
+    const showDiscover = ref(false)
+    const sidebarTab = ref<ChatSidebarTab>('public')
     const searchInitialChannelId = ref<number | null>(null)
+
+    const channelListFilter = computed<ChatChannelListFilter>(() => {
+      if (sidebarTab.value === 'public') return 'public'
+      if (sidebarTab.value === 'direct') return 'direct'
+      if (sidebarTab.value === 'starred') return 'starred'
+      return 'all'
+    })
+
+    const isDirectChannel = (channel: ChatChannel) =>
+      channel.channelType === 'direct' ||
+      channel.chatable_type === 'DirectMessage' ||
+      !!channel.chatable?.users?.length
+
+    const getChannelUnread = (channel: ChatChannel) => {
+      const count = Number(channel.current_user_membership?.unread_count || 0)
+      const mention = Number(channel.current_user_membership?.mention_count || 0)
+      return Math.max(count, mention)
+    }
+
+    const sidebarUnreadPublic = computed(() =>
+      props.chatState.channels.reduce(
+        (total, channel) => (isDirectChannel(channel) ? total : total + getChannelUnread(channel)),
+        0
+      )
+    )
+
+    const sidebarUnreadDirect = computed(() =>
+      props.chatState.channels.reduce(
+        (total, channel) => (isDirectChannel(channel) ? total + getChannelUnread(channel) : total),
+        0
+      )
+    )
+
+    const sidebarUnreadStarred = computed(() =>
+      props.chatState.channels.reduce(
+        (total, channel) =>
+          channel.current_user_membership?.starred ? total + getChannelUnread(channel) : total,
+        0
+      )
+    )
+
+    const sidebarUnreadThreads = computed(() =>
+      props.chatState.myThreads.reduce(
+        (total, thread) =>
+          total +
+          Math.max(
+            Number(thread.tracking?.unread_count || 0),
+            Number(thread.tracking?.watched_threads_unread_count || 0)
+          ),
+        0
+      )
+    )
 
     const activeChannel = computed(
       () =>
@@ -124,6 +188,7 @@ export default defineComponent({
         if (previousChannelId && channelId !== previousChannelId) {
           showChannelThreads.value = false
           showSearch.value = false
+          showDiscover.value = false
         }
         if (channelId && channelId !== previousChannelId) {
           showCreateGroup.value = false
@@ -138,6 +203,7 @@ export default defineComponent({
         if (threadId) {
           showChannelThreads.value = false
           showSearch.value = false
+          showDiscover.value = false
         }
       }
     )
@@ -328,6 +394,28 @@ export default defineComponent({
       emit('createChannel', payload)
     }
 
+    const handleSelectSidebarTab = (tab: ChatSidebarTab) => {
+      sidebarTab.value = tab
+      if (tab === 'threads') {
+        showDiscover.value = false
+      }
+    }
+
+    const handleOpenDiscover = () => {
+      showDiscover.value = true
+      showSearch.value = false
+      showChannelThreads.value = false
+      emit('discoverChannels')
+    }
+
+    const handleJoinChannel = (channelId: number) => {
+      emit('joinChannel', channelId)
+    }
+
+    const handleAddDirectUsers = (payload: { channelId: number; usernames: string[] }) => {
+      emit('addDirectUsers', payload)
+    }
+
     const openSearch = (initialChannelId: number | null) => {
       searchInitialChannelId.value = initialChannelId
       showChannelThreads.value = false
@@ -349,6 +437,17 @@ export default defineComponent({
                   onClick={() => openSearch(null)}
                 >
                   <SearchOutlined />
+                </button>
+              )}
+              {props.chatState.capabilities.chatEnabled && (
+                <button
+                  type="button"
+                  class="chat-sidebar-header__create"
+                  aria-label="发现频道"
+                  title="发现频道"
+                  onClick={handleOpenDiscover}
+                >
+                  <CompassOutlined />
                 </button>
               )}
               {props.chatState.capabilities.canDirectMessage && (
@@ -379,32 +478,62 @@ export default defineComponent({
             <div class="chat-error">{props.chatState.errorMessage}</div>
           )}
           <div class="chat-sidebar__scroll">
-            <ChatThreadList
-              threads={props.chatState.myThreads}
-              activeThreadId={props.chatState.activeThread?.id || null}
-              baseUrl={props.baseUrl}
-              loaded={props.chatState.myThreadsLoaded}
-              loading={props.chatState.loadingMyThreads}
-              loadingMore={props.chatState.loadingMoreMyThreads}
-              loadMoreUrl={props.chatState.myThreadsLoadMoreUrl}
-              errorMessage={props.chatState.myThreadsErrorMessage}
-              onLoad={() => emit('loadMyThreads')}
-              onLoadMore={() => emit('loadMoreMyThreads')}
-              onSelect={(thread: ChatThread) => emit('selectThread', thread)}
+            <ChatSubTabs
+              active={sidebarTab.value}
+              unreadPublic={sidebarUnreadPublic.value}
+              unreadDirect={sidebarUnreadDirect.value}
+              unreadStarred={sidebarUnreadStarred.value}
+              unreadThreads={sidebarUnreadThreads.value}
+              onSelect={handleSelectSidebarTab}
             />
-            <ChatChannelList
-              channels={props.chatState.channels}
-              activeChannelId={props.chatState.activeChannelId}
-              baseUrl={props.baseUrl}
-              loading={props.chatState.loadingChannels}
-              onSelect={handleSelectChannel}
-            />
+            {sidebarTab.value !== 'threads' && (
+              <ChatChannelList
+                channels={props.chatState.channels}
+                activeChannelId={props.chatState.activeChannelId}
+                baseUrl={props.baseUrl}
+                loading={props.chatState.loadingChannels}
+                filter={channelListFilter.value}
+                onSelect={handleSelectChannel}
+              />
+            )}
+            {sidebarTab.value === 'threads' && (
+              <ChatThreadList
+                threads={props.chatState.myThreads}
+                activeThreadId={props.chatState.activeThread?.id || null}
+                baseUrl={props.baseUrl}
+                loaded={props.chatState.myThreadsLoaded}
+                loading={props.chatState.loadingMyThreads}
+                loadingMore={props.chatState.loadingMoreMyThreads}
+                loadMoreUrl={props.chatState.myThreadsLoadMoreUrl}
+                errorMessage={props.chatState.myThreadsErrorMessage}
+                onLoad={() => emit('loadMyThreads')}
+                onLoadMore={() => emit('loadMoreMyThreads')}
+                onSelect={(thread: ChatThread) => emit('selectThread', thread)}
+              />
+            )}
           </div>
         </div>
 
         <div class="chat-main">
           <div class="chat-main-header">
-            <div class="chat-main-title">{activeChannelTitle.value}</div>
+            <div class="chat-main-title">
+              {(() => {
+                const channel = activeChannel.value
+                if (!channel) return '聊天'
+                const rawEmoji = channel.emoji || channel.chatable?.emoji || ''
+                const emoji = rawEmoji && /\p{Emoji_Presentation}/u.test(rawEmoji) ? rawEmoji : ''
+                return (
+                  <>
+                    {emoji && (
+                      <span class="chat-main-title__emoji" aria-hidden="true">
+                        {emoji}
+                      </span>
+                    )}
+                    <span class="chat-main-title__text">{activeChannelTitle.value}</span>
+                  </>
+                )
+              })()}
+            </div>
             <div class="chat-main-actions">
               {activeChannel.value && (
                 <button
@@ -454,6 +583,19 @@ export default defineComponent({
               )}
             </div>
           </div>
+
+          {showDiscover.value && (
+            <ChatDiscoverPanel
+              channels={props.discoverChannels}
+              loading={props.discoverLoading}
+              errorMessage={props.discoverErrorMessage}
+              joiningChannelIds={props.joiningChannelIds}
+              baseUrl={props.baseUrl}
+              onClose={() => (showDiscover.value = false)}
+              onLoad={() => emit('discoverChannels')}
+              onJoin={handleJoinChannel}
+            />
+          )}
 
           {showSearch.value && (
             <ChatSearchPanel
@@ -665,6 +807,7 @@ export default defineComponent({
           onLeaveChannel={(channelId: number) => emit('leaveChannel', channelId)}
           onDeleteChannel={(channelId: number) => emit('deleteChannel', channelId)}
           onSearch={(query: string) => emit('manageSearch', query)}
+          onAddDirectUsers={handleAddDirectUsers}
         />
       </div>
     )

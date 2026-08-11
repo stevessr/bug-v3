@@ -2,7 +2,7 @@ import { defineComponent, ref, onMounted, onUnmounted, nextTick, watch, createAp
 import { Image } from 'ant-design-vue'
 
 import type { ParsedContent, LightboxImage, DiscoursePoll } from '../types'
-import { parseEmojiShortcodeToHTML } from '../bbcode'
+import { replaceEmojiShortcodesInHtml } from '../bbcode'
 import { resolveDiscourseHttpUrl } from '../navigation'
 import { parsePostContent } from '../parser/parsePostContent'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
@@ -51,39 +51,15 @@ export default defineComponent({
       return true
     }
 
-    const replaceEmojiShortcodesInHtml = (html: string) => {
+    const replaceEmojiInCookedHtml = (html: string) => {
       if (!html || !emojiReadyToken.value) return html
-      if (!html.includes(':')) return html
-
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html')
-      const root = doc.body
-      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-      const textNodes: Text[] = []
-
-      while (walker.nextNode()) {
-        const node = walker.currentNode as Text
-        if (node.nodeValue && node.nodeValue.includes(':')) {
-          textNodes.push(node)
-        }
-      }
-
-      textNodes.forEach(node => {
-        const text = node.nodeValue || ''
-        const converted = parseEmojiShortcodeToHTML(text, 100)
-        if (converted === text) return
-        const wrapper = doc.createElement('span')
-        wrapper.innerHTML = converted
-        node.replaceWith(...Array.from(wrapper.childNodes))
-      })
-
-      return root.innerHTML
+      return replaceEmojiShortcodesInHtml(html)
     }
 
     const processHtmlContent = (html: string) => {
       // Access token to trigger reactivity
       emojiReadyToken.value
-      return sanitizeDiscourseHtml(replaceEmojiShortcodesInHtml(sanitizeDiscourseHtml(html)))
+      return sanitizeDiscourseHtml(replaceEmojiInCookedHtml(sanitizeDiscourseHtml(html)))
     }
 
     const getImageGridColumnsCount = (segment: ImageGridSegment) => {

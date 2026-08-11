@@ -13,6 +13,7 @@ export {
   parseEmojiShortcodeToBBCode,
   parseEmojiShortcodeToMarkdown,
   parseEmojiShortcodeToHTML,
+  replaceEmojiShortcodesInHtml,
   convertBBCodeToEmojiShortcode,
   convertMarkdownToEmojiShortcode,
   getAllEmojiNames,

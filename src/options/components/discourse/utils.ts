@@ -11,10 +11,28 @@ type PageFetchResponse<T> = {
   error?: string
 }
 
-const PAGE_FETCH_MAX_CONCURRENCY = 2
+let PAGE_FETCH_MAX_CONCURRENCY = 2
 const PAGE_FETCH_TIMEOUT_MS = 30000
 const pageFetchQueue: Array<() => void> = []
 let pageFetchInFlight = 0
+
+/**
+ * 运行时调整单一论坛的页面抓取并发数（设置页可调，持久化由调用方负责）。
+ * 取值范围 1..8，非法值回退当前值。
+ */
+export function setPageFetchMaxConcurrency(value: number): number {
+  const parsed = Math.floor(Number(value))
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return PAGE_FETCH_MAX_CONCURRENCY
+  }
+  PAGE_FETCH_MAX_CONCURRENCY = Math.min(8, parsed)
+  drainPageFetchQueue()
+  return PAGE_FETCH_MAX_CONCURRENCY
+}
+
+export function getPageFetchMaxConcurrency(): number {
+  return PAGE_FETCH_MAX_CONCURRENCY
+}
 
 export interface PageFetchActivity {
   active: number
@@ -230,6 +248,46 @@ export function rewriteAvatarUrlForCdn(url: string): string {
       segments[4] = String(Math.max(sizeInUrl, LINUXDO_AVATAR_CDN_MIN_SIZE))
       parsed.pathname = segments.join('/')
     }
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
+// ── linux.do 表情特判 ──────────────────────────────────────────────
+// linux.do 站点表情（/images/emoji/...）直接改走 CDN，减少对主站请求。
+// 个别表情在 CDN 侧使用不同的文件名（站点自定义命名 → CDN 命名）。
+const LINUXDO_EMOJI_CDN_HOST = 'cdn.ldstatic.com'
+const LINUXDO_EMOJI_CDN_NAME_MAP: Record<string, string> = {
+  smiling_face_with_three_hearts: 'heart'
+}
+
+/**
+ * linux.do 表情特判：把主站 /images/emoji/ 表情 URL 直接改写为 CDN URL，
+ * 例如 https://linux.do/images/emoji/twemoji/smiling_face_with_three_hearts.png?v=15
+ *   → https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15
+ * 不匹配特判条件的 URL 原样返回（其他站点/其他路径不受影响）。
+ */
+export function rewriteEmojiUrlForCdn(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname !== 'linux.do') return url
+    const segments = parsed.pathname.split('/')
+    // ['', 'images', 'emoji', '<set>', '<name>.png']
+    if (segments.length < 5 || segments[1] !== 'images' || segments[2] !== 'emoji') {
+      return url
+    }
+    const fileName = segments[segments.length - 1] || ''
+    const dotIndex = fileName.lastIndexOf('.')
+    if (dotIndex > 0) {
+      const baseName = fileName.slice(0, dotIndex)
+      const mappedName = LINUXDO_EMOJI_CDN_NAME_MAP[baseName]
+      if (mappedName) {
+        segments[segments.length - 1] = `${mappedName}${fileName.slice(dotIndex)}`
+      }
+    }
+    parsed.hostname = LINUXDO_EMOJI_CDN_HOST
+    parsed.pathname = segments.join('/')
     return parsed.toString()
   } catch {
     return url

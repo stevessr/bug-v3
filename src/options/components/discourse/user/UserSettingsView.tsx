@@ -21,6 +21,7 @@ import SettingsTrackingSection from './settings/SettingsTrackingSection'
 import SettingsCategorySection from './settings/SettingsCategorySection'
 import SettingsTagSection from './settings/SettingsTagSection'
 import SettingsInterfaceSection from './settings/SettingsInterfaceSection'
+import SettingsLocalSection from './settings/SettingsLocalSection'
 import SettingsEmojiSection from './settings/SettingsEmojiSection'
 import SettingsPrivacySection from './settings/SettingsPrivacySection'
 import SettingsSaveActions from './settings/SettingsSaveActions'
@@ -443,6 +444,7 @@ export default defineComponent({
                 textSizeOptions={textSizeOptions}
                 homepageOptions={homepageOptions}
               />
+              <SettingsLocalSection />
               <SettingsEmojiSection
                 form={form}
                 reactionTypeOptions={chatQuickReactionTypeOptions}

@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed } from 'vue'
+import { defineComponent, ref, computed, onBeforeUnmount } from 'vue'
 import { Dropdown, Menu, MenuItem, message } from 'ant-design-vue'
 
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
@@ -7,7 +7,8 @@ import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 import PostContent from './PostContent'
 import BoostPanel from './BoostPanel'
-import ReactionDetailsModal from './ReactionDetailsModal'
+import BoostComposer from './BoostComposer'
+import ReactionDetailsPopover from './ReactionDetailsPopover'
 import '../css/PostItem.css'
 
 export default defineComponent({
@@ -60,8 +61,12 @@ export default defineComponent({
     const isCopyLinkClicked = ref(false)
     const showReactionPicker = ref(false)
     const reactionPickerAnchorRef = ref<HTMLElement | null>(null)
-    const reactionDetailsOpen = ref(false)
-    const reactionDetailsValue = ref<string | null>(null)
+    const boostComposerOpen = ref(false)
+    const boostRocketRef = ref<HTMLButtonElement | null>(null)
+    const reactionPopoverOpen = ref(false)
+    const reactionPopoverValue = ref<string | null>(null)
+    const reactionPopoverAnchor = ref<HTMLElement | null>(null)
+    let reactionPopoverTimer: number | undefined
 
     const isOwnPost = computed(() => {
       if (props.currentUser && props.post.user_id === props.currentUser.id) return true
@@ -147,14 +152,47 @@ export default defineComponent({
       showReactionPicker.value = false
     }
 
+    const openReactionPopover = (el: HTMLElement, reaction: string | null) => {
+      reactionPopoverAnchor.value = el
+      reactionPopoverValue.value = reaction
+      reactionPopoverOpen.value = true
+    }
+
+    const scheduleReactionPopover = (el: HTMLElement, reaction: string | null) => {
+      window.clearTimeout(reactionPopoverTimer)
+      reactionPopoverTimer = window.setTimeout(() => openReactionPopover(el, reaction), 220)
+    }
+
+    const scheduleReactionPopoverClose = () => {
+      window.clearTimeout(reactionPopoverTimer)
+      reactionPopoverTimer = window.setTimeout(() => {
+        reactionPopoverOpen.value = false
+      }, 160)
+    }
+
+    const cancelReactionPopoverClose = () => {
+      window.clearTimeout(reactionPopoverTimer)
+    }
+
+    const toggleReactionPopover = (el: HTMLElement, reaction: string | null) => {
+      if (reactionPopoverOpen.value && reactionPopoverValue.value === reaction) {
+        reactionPopoverOpen.value = false
+        return
+      }
+      openReactionPopover(el, reaction)
+    }
+
+    onBeforeUnmount(() => {
+      window.clearTimeout(reactionPopoverTimer)
+    })
+
+    const handleToggleBoostComposer = () => {
+      boostComposerOpen.value = !boostComposerOpen.value
+    }
+
     const handleToggleReactionPicker = () => {
       if (!canAddReaction.value) return
       showReactionPicker.value = !showReactionPicker.value
-    }
-
-    const openReactionDetails = (reaction: string | null) => {
-      reactionDetailsValue.value = reaction
-      reactionDetailsOpen.value = true
     }
 
     const handleToggleReplies = () => {
@@ -279,7 +317,9 @@ export default defineComponent({
         <footer class="post-actions">
           <div class="post-actions__layout">
             <div class="post-actions__primary-row">
-              {(visibleReactions.value.length > 0 || canAddReaction.value) && (
+              {(visibleReactions.value.length > 0 ||
+                canAddReaction.value ||
+                props.post.can_boost) && (
                 <div class="reactions-list" aria-label="帖子反应">
                   {visibleReactions.value.map(item => {
                     const emoji = props.reactionEmojiMap[item.id]
@@ -292,7 +332,16 @@ export default defineComponent({
                           props.isPostLiked(props.post, item.id) ? 'active' : ''
                         ]}
                         aria-label={`:${item.id}: 共 ${item.count} 次，查看详情`}
-                        onClick={() => openReactionDetails(item.id)}
+                        aria-expanded={
+                          reactionPopoverOpen.value && reactionPopoverValue.value === item.id
+                        }
+                        onMouseenter={(event: MouseEvent) =>
+                          scheduleReactionPopover(event.currentTarget as HTMLElement, item.id)
+                        }
+                        onMouseleave={scheduleReactionPopoverClose}
+                        onClick={(event: MouseEvent) =>
+                          toggleReactionPopover(event.currentTarget as HTMLElement, item.id)
+                        }
                         title={`:${item.id}: · 查看反应详情`}
                       >
                         {emoji?.url ? (
@@ -312,7 +361,16 @@ export default defineComponent({
                     <button
                       type="button"
                       class="reaction-item reaction-item--total"
-                      onClick={() => openReactionDetails(null)}
+                      aria-expanded={
+                        reactionPopoverOpen.value && reactionPopoverValue.value === null
+                      }
+                      onMouseenter={(event: MouseEvent) =>
+                        scheduleReactionPopover(event.currentTarget as HTMLElement, null)
+                      }
+                      onMouseleave={scheduleReactionPopoverClose}
+                      onClick={(event: MouseEvent) =>
+                        toggleReactionPopover(event.currentTarget as HTMLElement, null)
+                      }
                       aria-label={`查看全部 ${reactionUsersTotal.value} 人次反应`}
                       title="查看全部反应统计"
                     >
@@ -344,6 +402,22 @@ export default defineComponent({
                         onClose={() => (showReactionPicker.value = false)}
                       />
                     </span>
+                  )}
+                  {props.post.can_boost && (
+                    <button
+                      ref={boostRocketRef}
+                      type="button"
+                      class={[
+                        'reaction-item reaction-item--boost',
+                        boostComposerOpen.value ? 'active' : ''
+                      ]}
+                      aria-label="添加 Boost"
+                      aria-expanded={boostComposerOpen.value}
+                      title="添加 Boost"
+                      onClick={handleToggleBoostComposer}
+                    >
+                      🚀
+                    </button>
                   )}
                 </div>
               )}
@@ -494,12 +568,22 @@ export default defineComponent({
             </div>
           </div>
         </footer>
-        <ReactionDetailsModal
-          open={reactionDetailsOpen.value}
+        <BoostComposer
           post={props.post}
-          reaction={reactionDetailsValue.value}
           baseUrl={props.baseUrl}
-          onClose={() => (reactionDetailsOpen.value = false)}
+          open={boostComposerOpen.value}
+          anchorEl={boostRocketRef.value}
+          onClose={() => (boostComposerOpen.value = false)}
+        />
+        <ReactionDetailsPopover
+          open={reactionPopoverOpen.value}
+          post={props.post}
+          reaction={reactionPopoverValue.value}
+          baseUrl={props.baseUrl}
+          anchorEl={reactionPopoverAnchor.value}
+          reactionEmojiMap={props.reactionEmojiMap}
+          onKeepOpen={cancelReactionPopoverClose}
+          onClose={scheduleReactionPopoverClose}
           onOpenUser={handleUserClick}
         />
       </article>

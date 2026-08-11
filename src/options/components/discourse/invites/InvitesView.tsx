@@ -1,16 +1,18 @@
-import { defineComponent, ref, computed } from 'vue'
-import { Spin, Empty, Input, message } from 'ant-design-vue'
+import { defineComponent, ref, computed, onMounted } from 'vue'
+import { Spin, Empty, Input, Select, message } from 'ant-design-vue'
 import {
   CopyOutlined,
   DeleteOutlined,
   SendOutlined,
   LinkOutlined,
   PlusOutlined,
-  UserOutlined
+  UserOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons-vue'
 
 import type { DiscourseUserProfile, Invite, InvitesState } from '../types'
-import { formatTime, getAvatarUrl } from '../utils'
+import { formatTime, getAvatarUrl, extractData, pageFetch } from '../utils'
+import InviteExpireDropdown from '../../InviteExpireDropdown'
 import '../css/InvitesView.css'
 
 type InviteFilter = 'pending' | 'redeemed' | 'expired'
@@ -32,9 +34,12 @@ export default defineComponent({
   setup(props, { emit }) {
     const showCreateForm = ref(false)
     const email = ref('')
-    const groupNames = ref('')
+    const groupNames = ref<string[]>([])
+    const groupOptions = ref<Array<{ label: string; value: string }>>([])
+    const groupsLoading = ref(false)
     const maxRedemptions = ref('')
     const expiresAt = ref('')
+    const expirePickerOpen = ref(false)
     const customMessage = ref('')
     const description = ref('')
     const skipEmail = ref(false)
@@ -56,11 +61,8 @@ export default defineComponent({
     const handleCreate = () => {
       const payload: Record<string, any> = {}
       if (email.value.trim()) payload.email = email.value.trim()
-      if (groupNames.value.trim()) {
-        payload.groupNames = groupNames.value
-          .split(/[,，\s]+/)
-          .map(g => g.trim())
-          .filter(Boolean)
+      if (groupNames.value.length) {
+        payload.groupNames = groupNames.value.map(g => g.trim()).filter(Boolean)
       }
       if (maxRedemptions.value.trim()) {
         const parsed = Number(maxRedemptions.value.trim())
@@ -68,7 +70,7 @@ export default defineComponent({
           payload.maxRedemptionsAllowed = parsed
         }
       }
-      if (expiresAt.value) payload.expiresAt = new Date(expiresAt.value).toISOString()
+      if (expiresAt.value) payload.expiresAt = expiresAt.value
       if (customMessage.value.trim()) payload.customMessage = customMessage.value.trim()
       if (description.value.trim()) payload.description = description.value.trim()
       if (skipEmail.value) payload.skipEmail = true
@@ -76,13 +78,38 @@ export default defineComponent({
       emit('create', payload)
       showCreateForm.value = false
       email.value = ''
-      groupNames.value = ''
+      groupNames.value = []
       maxRedemptions.value = ''
       expiresAt.value = ''
+      expirePickerOpen.value = false
       customMessage.value = ''
       description.value = ''
       skipEmail.value = false
     }
+
+    // 自动获取可用用户组（/groups.json），供创建邀请时选择；
+    // 失败时保留可自由输入（Select mode="tags" 支持自建）。
+    const loadGroups = async () => {
+      if (groupsLoading.value) return
+      groupsLoading.value = true
+      try {
+        const result = await pageFetch<any>(`${props.baseUrl}/groups.json`)
+        const data = extractData(result)
+        const raw = Array.isArray(data?.groups) ? data.groups : []
+        groupOptions.value = raw
+          .filter((group: any) => group && typeof group.name === 'string')
+          .map((group: any) => ({
+            label: group.full_name || group.display_name || group.name,
+            value: group.name
+          }))
+      } catch {
+        // 静默失败：回退为自由输入
+      } finally {
+        groupsLoading.value = false
+      }
+    }
+
+    onMounted(loadGroups)
 
     const handleCopyLink = async (invite: Invite) => {
       const link = inviteLink(invite)
@@ -227,11 +254,17 @@ export default defineComponent({
                 />
               </label>
               <label class="invites-form__field">
-                <span>用户组（逗号分隔）</span>
-                <Input
+                <span>用户组（可搜索选择，也可直接输入）</span>
+                <Select
+                  mode="tags"
                   value={groupNames.value}
-                  placeholder="trust_level_1, 新用户"
-                  onUpdate:value={(v: string) => (groupNames.value = v)}
+                  options={groupOptions.value}
+                  loading={groupsLoading.value}
+                  placeholder="选择或输入用户组名"
+                  maxTagCount="responsive"
+                  onChange={(value: unknown) => {
+                    groupNames.value = Array.isArray(value) ? value.map(item => String(item)) : []
+                  }}
                 />
               </label>
               <label class="invites-form__field">
@@ -245,11 +278,25 @@ export default defineComponent({
               </label>
               <label class="invites-form__field">
                 <span>过期时间</span>
-                <Input
-                  type="datetime-local"
-                  value={expiresAt.value}
-                  onUpdate:value={(v: string) => (expiresAt.value = v)}
-                />
+                <div class="invites-form__expiry-wrap">
+                  <button
+                    type="button"
+                    class="invites-form__expiry-btn"
+                    aria-expanded={expirePickerOpen.value}
+                    onClick={() => (expirePickerOpen.value = !expirePickerOpen.value)}
+                  >
+                    <ClockCircleOutlined />
+                    <span>
+                      {expiresAt.value ? formatTime(expiresAt.value) : '选择过期日期与时间'}
+                    </span>
+                  </button>
+                  <InviteExpireDropdown
+                    open={expirePickerOpen.value}
+                    value={expiresAt.value}
+                    onUpdate:open={(open: boolean) => (expirePickerOpen.value = open)}
+                    onUpdate:value={(value: string) => (expiresAt.value = value)}
+                  />
+                </div>
               </label>
             </div>
             <label class="invites-form__field">

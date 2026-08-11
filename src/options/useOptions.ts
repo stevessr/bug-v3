@@ -284,6 +284,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ discourseRouterRefreshInterval: interval })
   }
 
+  const updateForumUploadConcurrency = (value: number) => {
+    emojiStore.updateSettings({ forumUploadConcurrency: value })
+  }
+
   // Theme management is now provided by themeManager composable
   // Use themeManager.updateTheme(), themeManager.updateMd3ColorScheme(), etc.
 
@@ -849,6 +853,7 @@ export default function useOptions() {
     updateUseDiscourseNativeUpload,
     updateEnableDiscourseRouterRefresh,
     updateDiscourseRouterRefreshInterval,
+    updateForumUploadConcurrency,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

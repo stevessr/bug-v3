@@ -1,0 +1,113 @@
+.boost-composer {
+  position: fixed;
+  z-index: 2147483200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.boost-composer__input-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.boost-composer__textarea {
+  min-width: 0;
+  min-height: 76px;
+  flex: 1;
+  resize: vertical;
+  padding: 8px 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-md, 12px);
+  outline: 0;
+  background: var(--d-surface-0, var(--theme-surface));
+  color: var(--d-text, var(--theme-on-surface));
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.boost-composer__textarea:focus {
+  border-color: var(--primary, var(--theme-primary));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary, var(--theme-primary)) 16%, transparent);
+}
+
+.boost-composer__emoji-btn {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.boost-composer__emoji-btn:hover {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+}
+
+.boost-composer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.boost-composer__helper {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.boost-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boost-composer__cancel-btn,
+.boost-composer__send-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1;
+}
+
+.boost-composer__cancel-btn {
+  background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+  color: var(--d-text, var(--theme-on-surface));
+}
+
+.boost-composer__send-btn {
+  background: var(--primary, var(--theme-primary));
+  color: var(--on-primary, var(--theme-on-primary));
+}
+
+.boost-composer__cancel-btn:hover:not(:disabled),
+.boost-composer__send-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.boost-composer__cancel-btn:disabled,
+.boost-composer__send-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

@@ -79,7 +79,10 @@ const CHAT_INTERACTION_ENDPOINTS = (channelId: number, messageId: number) => [
   `/chat/api/channels/${channelId}/messages/${messageId}/interactions`
 ]
 
-const CHAT_CHANNEL_UPDATE_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}`]
+const CHAT_CHANNEL_UPDATE_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}`,
+  `/chat/api/direct-message-channels/${channelId}`
+]
 
 const CHAT_CHANNEL_CREATE_ENDPOINTS = ['/chat/api/channels']
 
@@ -90,6 +93,12 @@ const CHAT_DIRECT_MESSAGE_CREATE_ENDPOINTS = [
 ]
 
 const CHAT_DIRECT_MESSAGE_LOOKUP_ENDPOINTS = ['/chat/direct_messages.json', '/chat/direct_messages']
+
+const CHAT_DIRECT_MESSAGE_UPDATE_ENDPOINTS = (channelId: number) => [
+  `/chat/api/direct-message-channels/${channelId}`,
+  `/chat/direct-message-channels/${channelId}.json`,
+  `/chat/direct-message-channels/${channelId}`
+]
 
 const CHAT_MEMBERSHIPS_ENDPOINTS = (channelId: number) => [
   `/chat/api/channels/${channelId}/memberships`
@@ -402,6 +411,10 @@ const ensureChatState = (tab: BrowserTab) => {
       membersByChannel: {},
       membersTotalByChannel: {},
       membersLoadingByChannel: {},
+      discoverableChannels: [],
+      discoverLoading: false,
+      discoverErrorMessage: '',
+      joiningChannelIds: {},
       capabilities: {
         loaded: false,
         chatEnabled: false,
@@ -461,6 +474,10 @@ const ensureChatState = (tab: BrowserTab) => {
   tab.chatState.threadErrorMessage ??= ''
   tab.chatState.threadReplyToMessage ??= null
   tab.chatState.threadEditingMessage ??= null
+  tab.chatState.discoverableChannels ??= []
+  tab.chatState.discoverLoading ??= false
+  tab.chatState.discoverErrorMessage ??= ''
+  tab.chatState.joiningChannelIds ??= {}
 }
 
 const registerMessageUsers = (users: Ref<Map<number, DiscourseUser>>, messages: ChatMessage[]) => {
@@ -3172,4 +3189,217 @@ export async function searchChatables(
     throw new Error(lastError)
   }
   return null
+}
+
+// ==================== Channel discovery (browse public channels) ====================
+
+/**
+ * Fetch public channels the current user can browse & join via the official
+ * Chatables contract. The endpoint returns `channels` where every entry is
+ * either a bare channel payload or `{ channel, can_join }` — handle both.
+ */
+export async function fetchDiscoverableChannels(
+  baseUrl: Ref<string>,
+  limit = 100
+): Promise<ChatChannel[]> {
+  const resultLimit = Math.max(1, Math.floor(limit))
+  let lastError: string | null = null
+
+  for (const path of CHAT_CHATABLES_ENDPOINTS) {
+    try {
+      const params = new URLSearchParams({
+        include_users: 'false',
+        include_groups: 'false',
+        include_category_channels: 'true',
+        include_direct_message_channels: 'false'
+      })
+      const result = await pageFetch<any>(`${baseUrl.value}${path}?${params.toString()}`)
+      const data = extractData(result)
+      if (result.ok) {
+        const raw = Array.isArray(data?.channels) ? data.channels : []
+        const channels: ChatChannel[] = raw
+          .map((entry: any) => {
+            const payload =
+              entry?.channel && typeof entry.channel === 'object' ? entry.channel : entry
+            if (!payload || typeof payload.id !== 'number') return null
+            const channel = normalizeSingleChannel(payload, 'public')
+            if (entry && typeof entry === 'object' && 'can_join' in entry) {
+              channel.meta = {
+                ...(channel.meta || {}),
+                can_join_chat_channel: Boolean(entry.can_join)
+              }
+            }
+            return channel
+          })
+          .filter((channel: ChatChannel | null): channel is ChatChannel => !!channel)
+          .slice(0, resultLimit)
+        return channels
+      }
+      lastError = parseErrorMessage(data, '加载可发现频道失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  if (lastError) {
+    throw new Error(lastError)
+  }
+  return []
+}
+
+export async function loadDiscoverableChannels(
+  tab: BrowserTab,
+  baseUrl: Ref<string>
+): Promise<ChatChannel[]> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  if (state.discoverLoading) return state.discoverableChannels
+
+  state.discoverLoading = true
+  state.discoverErrorMessage = ''
+  try {
+    const channels = await fetchDiscoverableChannels(baseUrl)
+    // Keep already-joined channels out of the discovery list.
+    const joinedIds = new Set(state.channels.map(channel => channel.id))
+    state.discoverableChannels = channels.filter(channel => !joinedIds.has(channel.id))
+    return state.discoverableChannels
+  } catch (error) {
+    state.discoverErrorMessage = error instanceof Error ? error.message : String(error)
+    return state.discoverableChannels
+  } finally {
+    state.discoverLoading = false
+  }
+}
+
+export async function joinChatChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number
+): Promise<ChatChannel | null> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return null
+  if (!Number.isFinite(channelId) || channelId <= 0) return null
+  if (state.joiningChannelIds[channelId]) return null
+  state.errorMessage = ''
+  state.joiningChannelIds[channelId] = true
+
+  try {
+    let joined = false
+    let lastError: string | null = null
+
+    // Joining a public channel = creating a membership for the current user.
+    for (const path of CHAT_MEMBERSHIP_ME_ENDPOINTS(channelId)) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, { method: 'POST' })
+        const data = extractData(result)
+        if (result.ok) {
+          joined = true
+          break
+        }
+        lastError = parseErrorMessage(data, '加入频道失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    if (!joined) {
+      state.errorMessage = lastError || '加入频道失败'
+      return null
+    }
+
+    let channel: ChatChannel | undefined = state.channels.find(item => item.id === channelId)
+    if (!channel) {
+      channel = (await fetchChatChannel(baseUrl.value, channelId)) || undefined
+    }
+    if (!channel) {
+      channel = state.discoverableChannels.find(item => item.id === channelId) || undefined
+    }
+    if (channel) {
+      channel = {
+        ...channel,
+        current_user_membership: {
+          ...(channel.current_user_membership || {}),
+          chat_channel_id: channelId,
+          following: true,
+          unread_count: 0
+        }
+      }
+      if (!state.channels.some(item => item.id === channelId)) {
+        state.channels = [channel, ...state.channels]
+      } else {
+        state.channels = state.channels.map(item =>
+          item.id === channelId ? { ...item, ...channel } : item
+        )
+      }
+      state.discoverableChannels = state.discoverableChannels.filter(item => item.id !== channelId)
+      return channel
+    }
+
+    // Server accepted the join but we have no channel payload — refresh the
+    // joined channel list so the new channel appears.
+    state.channels = await fetchChatChannels(baseUrl.value)
+    state.discoverableChannels = state.discoverableChannels.filter(item => item.id !== channelId)
+    return state.channels.find(item => item.id === channelId) || null
+  } finally {
+    state.joiningChannelIds[channelId] = false
+  }
+}
+
+// ==================== Add users to direct message channels ====================
+
+export async function addUsersToDirectMessageChannel(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  channelId: number,
+  usernames: string[]
+): Promise<boolean> {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  state.errorMessage = ''
+
+  const unique = Array.from(new Set(usernames.map(u => u.trim()).filter(Boolean)))
+  if (unique.length === 0) return false
+
+  const body: Record<string, any> = { target_usernames: unique }
+  const jsonPayload = JSON.stringify(body)
+  const formParams = new URLSearchParams()
+  unique.forEach(username => formParams.append('target_usernames[]', username))
+  const formPayload = formParams.toString()
+
+  let lastError: string | null = null
+
+  for (const path of CHAT_DIRECT_MESSAGE_UPDATE_ENDPOINTS(channelId)) {
+    for (const request of [
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonPayload
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: formPayload
+      }
+    ]) {
+      try {
+        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+          method: 'PUT',
+          headers: request.headers,
+          body: request.body
+        })
+        const data = extractData(result)
+        if (result.ok) {
+          await loadChannelMembers(tab, baseUrl, channelId, true)
+          return true
+        }
+        lastError = parseErrorMessage(data, '添加用户失败')
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+
+  state.errorMessage = lastError || '添加用户失败'
+  return false
 }

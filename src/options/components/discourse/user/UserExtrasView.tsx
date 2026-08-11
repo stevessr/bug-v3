@@ -3,6 +3,7 @@ import { defineComponent } from 'vue'
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
+import { getDiscourseIconHref } from '../layout/iconSprite'
 
 import UserTabs from './UserTabs'
 import type { UserMainTab } from './UserTabs'
@@ -42,6 +43,7 @@ export default defineComponent({
     tab: { type: String as () => ExtrasTab, required: true },
     isLoadingMore: { type: Boolean, default: false },
     hasMore: { type: Boolean, default: false },
+    loading: { type: Boolean, default: false },
     showSettings: { type: Boolean, default: false },
     showGroups: { type: Boolean, default: true }
   },
@@ -58,12 +60,6 @@ export default defineComponent({
 
         <div class="user-extras-toolbar">
           <div class="user-extras-subtabs">
-            <button
-              class={['user-extras-subtabs__item', props.tab === 'badges' ? 'is-active' : '']}
-              onClick={() => emit('switchTab', 'badges')}
-            >
-              徽章
-            </button>
             <button
               class={['user-extras-subtabs__item', props.tab === 'followFeed' ? 'is-active' : '']}
               onClick={() => emit('switchTab', 'followFeed')}
@@ -88,7 +84,9 @@ export default defineComponent({
           </button>
         </div>
 
-        {props.tab === 'badges' && (
+        {props.loading && <div class="user-extras-state-loading">加载中...</div>}
+
+        {!props.loading && props.tab === 'badges' && (
           <section class="user-extras-card">
             {!props.user._badges || props.user._badges.length === 0 ? (
               <div class="user-extras-empty">暂无徽章</div>
@@ -110,6 +108,10 @@ export default defineComponent({
                         alt={badge.name}
                         class="user-extras-badge-item__image"
                       />
+                    ) : badge.icon ? (
+                      <svg class="user-extras-badge-item__icon" aria-hidden="true">
+                        <use href={getDiscourseIconHref(badge.icon)} />
+                      </svg>
                     ) : (
                       <div class="user-extras-badge-item__placeholder" />
                     )}
@@ -121,7 +123,7 @@ export default defineComponent({
           </section>
         )}
 
-        {props.tab === 'followFeed' && (
+        {!props.loading && props.tab === 'followFeed' && (
           <section class="user-extras-card">
             {!props.user._follow_feed || props.user._follow_feed.length === 0 ? (
               <div class="user-extras-empty">暂无关注动态</div>
@@ -138,13 +140,18 @@ export default defineComponent({
                       innerHTML={sanitizeDiscourseHtml(post.topic.fancy_title || post.topic.title)}
                       onClick={() => emit('openTopic', post.topic)}
                     />
-                    <div class="user-extras-feed-item__excerpt">{post.excerpt}</div>
+                    <div
+                      class="user-extras-feed-item__excerpt"
+                      innerHTML={sanitizeDiscourseHtml(post.cooked || post.excerpt || '')}
+                    />
                   </div>
                 ))}
                 {props.isLoadingMore && (
                   <div class="user-extras-state-loading">加载更多动态...</div>
                 )}
-                {props.hasMore === false && <div class="user-extras-state-end">已加载全部动态</div>}
+                {props.hasMore === false && props.user._follow_feed.length > 0 && (
+                  <div class="user-extras-state-end">已加载全部动态</div>
+                )}
               </div>
             )}
           </section>

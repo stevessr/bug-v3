@@ -69,6 +69,7 @@ const TopicView = defineAsyncComponent(() => import('./discourse/topic/TopicView
 const UserView = defineAsyncComponent(() => import('./discourse/user/UserView'))
 const UserExtrasView = defineAsyncComponent(() => import('./discourse/user/UserExtrasView'))
 const UserGroupsView = defineAsyncComponent(() => import('./discourse/user/UserGroupsView'))
+const GroupDetailView = defineAsyncComponent(() => import('./discourse/group/GroupDetailView'))
 const UserSettingsView = defineAsyncComponent(() => import('./discourse/user/UserSettingsView'))
 const UserCard = defineAsyncComponent(() => import('./discourse/user/UserCard'))
 const ActivityView = defineAsyncComponent(() => import('./discourse/user/ActivityView'))
@@ -204,14 +205,17 @@ const {
   leaveChatChannel,
   updateChatStatus,
   updateChatMembership,
-  searchChatables
+  searchChatables,
+  loadDiscoverableChannels,
+  joinChatChannel,
+  addUsersToDirectMessageChannel
 } = useDiscourseBrowser()
 
 const contentAreaRef = ref<HTMLElement | null>(null)
 const userExtrasTab = computed(
   () =>
     (activeTab.value?.viewType as
-      'badges' | 'followFeed' | 'following' | 'followers' | undefined) || 'badges'
+      'badges' | 'followFeed' | 'following' | 'followers' | undefined) || 'followFeed'
 )
 const isViewingSelf = computed(
   () =>
@@ -279,6 +283,25 @@ const floatingState = ref({
   top: null as number | null,
   width: 420,
   height: 520,
+  dragging: false,
+  resizing: false,
+  startX: 0,
+  startY: 0,
+  startLeft: 0,
+  startTop: 0,
+  startWidth: 0,
+  startHeight: 0
+})
+// Floating chat window keeps its own geometry so it can be dragged and
+// resized independently from the floating composer. Defaults to the
+// bottom-right corner (left/top null) and to the CSS width/height until
+// the user actually drags or resizes the window.
+const floatingChatState = ref({
+  left: null as number | null,
+  top: null as number | null,
+  width: 820,
+  height: 680,
+  resized: false,
   dragging: false,
   resizing: false,
   startX: 0,
@@ -941,6 +964,31 @@ const handleGoToProfile = () => {
   if (activeTab.value?.currentUser) {
     openUser(activeTab.value.currentUser.username)
   }
+}
+
+// 分组详情页返回：导航到论坛首页
+const handleGroupBack = () => {
+  navigateTo(`${baseUrl.value}/`)
+}
+
+// 分组详情页快捷邀请：复用邀请创建流程（先确保 invitesState 存在）
+const handleGroupInviteCreate = async (payload: Record<string, any>) => {
+  const tab = activeTab.value
+  if (!tab) return
+  if (!tab.invitesState) {
+    tab.invitesState = {
+      filter: 'pending',
+      invites: [],
+      offset: 0,
+      hasMore: true,
+      loading: false,
+      creating: false,
+      errorMessage: '',
+      counts: { pending: 0, redeemed: 0, expired: 0 },
+      canSeeInviteDetails: false
+    }
+  }
+  await handleInvitesCreate(payload)
 }
 
 // Handle open user activity
@@ -1729,6 +1777,28 @@ const handleManageSearch = (query: string) => {
   void handleChatSearch(query, manageSearchResults, manageSearching)
 }
 
+const handleDiscoverChatChannels = () => {
+  void loadDiscoverableChannels()
+}
+
+const handleJoinChatChannel = async (channelId: number) => {
+  const joined = await joinChatChannel(channelId)
+  if (joined) {
+    message.success(`已加入「${joined.title || joined.chatable?.name || channelId}」`)
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '加入频道失败')
+  }
+}
+
+const handleAddChatDirectUsers = async (payload: { channelId: number; usernames: string[] }) => {
+  const ok = await addUsersToDirectMessageChannel(payload.channelId, payload.usernames)
+  if (ok) {
+    message.success('用户已添加到私聊')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '添加用户失败')
+  }
+}
+
 const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: string }) => {
   if (chatDirectCreating.value) return
   chatDirectCreating.value = true
@@ -2269,6 +2339,25 @@ const floatingStyle = computed(() => {
   return style
 })
 
+const floatingChatStyle = computed(() => {
+  const state = floatingChatState.value
+  const style: Record<string, string> = {}
+  const positioned = state.left !== null && state.top !== null
+  if (positioned) {
+    style.left = `${state.left}px`
+    style.top = `${state.top}px`
+    style.right = 'auto'
+    style.bottom = 'auto'
+  }
+  // Only pin width/height once the user moved or resized the window, and
+  // never while minimized (the .is-minimized styles must keep control).
+  if (!floatingChatMinimized.value && (positioned || state.resized)) {
+    style.width = `${state.width}px`
+    style.height = `${state.height}px`
+  }
+  return style
+})
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
 const normalizeImageUrl = (img: HTMLImageElement) => {
@@ -2435,11 +2524,48 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
   }
 }
 
+const startChatDrag = (event: MouseEvent | TouchEvent) => {
+  // Window action buttons (minimize / expand / close) must keep working.
+  if ((event.target as HTMLElement | null)?.closest('.floating-chat__window-actions')) return
+  const point = 'touches' in event ? event.touches[0] : event
+  if (!point) return
+  const state = floatingChatState.value
+  const rect = (event.currentTarget as HTMLElement | null)
+    ?.closest('.floating-chat')
+    ?.getBoundingClientRect()
+  if (!rect) return
+  state.dragging = true
+  state.startX = point.clientX
+  state.startY = point.clientY
+  state.startLeft = rect.left
+  state.startTop = rect.top
+  // Clamp against the rect actually being dragged, and only remember the
+  // size when expanded so a minimized drag never shrinks the window.
+  state.startWidth = Math.round(rect.width)
+  state.startHeight = Math.round(rect.height)
+  if (!floatingChatMinimized.value) {
+    state.width = Math.round(rect.width)
+    state.height = Math.round(rect.height)
+  }
+}
+
 const startResize = (event: MouseEvent | TouchEvent) => {
   const point = 'touches' in event ? event.touches[0] : event
   if (!point) return
   const state = floatingState.value
   state.resizing = true
+  state.startX = point.clientX
+  state.startY = point.clientY
+  state.startWidth = state.width
+  state.startHeight = state.height
+}
+
+const startChatResize = (event: MouseEvent | TouchEvent) => {
+  const point = 'touches' in event ? event.touches[0] : event
+  if (!point) return
+  const state = floatingChatState.value
+  state.resizing = true
+  state.resized = true
   state.startX = point.clientX
   state.startY = point.clientY
   state.startWidth = state.width
@@ -2466,12 +2592,32 @@ const handlePointerMove = (event: MouseEvent | TouchEvent) => {
     state.width = clamp(state.startWidth + dw, 320, window.innerWidth - 24)
     state.height = clamp(state.startHeight + dh, 320, window.innerHeight - 24)
   }
+  const chatState = floatingChatState.value
+  if (chatState.dragging) {
+    const dx = point.clientX - chatState.startX
+    const dy = point.clientY - chatState.startY
+    const nextLeft = chatState.startLeft + dx
+    const nextTop = chatState.startTop + dy
+    const maxLeft = window.innerWidth - chatState.startWidth - 8
+    const maxTop = window.innerHeight - chatState.startHeight - 8
+    chatState.left = clamp(nextLeft, 8, Math.max(8, maxLeft))
+    chatState.top = clamp(nextTop, 8, Math.max(8, maxTop))
+  }
+  if (chatState.resizing) {
+    const dw = point.clientX - chatState.startX
+    const dh = point.clientY - chatState.startY
+    chatState.width = clamp(chatState.startWidth + dw, 360, window.innerWidth - 24)
+    chatState.height = clamp(chatState.startHeight + dh, 420, window.innerHeight - 24)
+  }
 }
 
 const stopPointer = () => {
   const state = floatingState.value
   state.dragging = false
   state.resizing = false
+  const chatState = floatingChatState.value
+  chatState.dragging = false
+  chatState.resizing = false
 }
 
 // Handle messages tab switch
@@ -3247,6 +3393,13 @@ onUnmounted(() => {
         @leaveChannel="handleLeaveChatChannel"
         @deleteChannel="handleDeleteChatChannel"
         @manageSearch="handleManageSearch"
+        :discoverChannels="activeTab.chatState.discoverableChannels"
+        :discoverLoading="activeTab.chatState.discoverLoading"
+        :discoverErrorMessage="activeTab.chatState.discoverErrorMessage"
+        :joiningChannelIds="activeTab.chatState.joiningChannelIds"
+        @discoverChannels="handleDiscoverChatChannels"
+        @joinChannel="handleJoinChatChannel"
+        @addDirectUsers="handleAddChatDirectUsers"
       />
 
       <!-- Topic detail view -->
@@ -3287,6 +3440,7 @@ onUnmounted(() => {
         @openFollowers="handleOpenUserFollowers"
         @composeMessage="handleMessagesCompose"
         @startChat="handleStartUserChat"
+        @openCategory="handleCategoryClick"
         @switchMainTab="handleUserMainTabSwitch"
       />
 
@@ -3303,6 +3457,7 @@ onUnmounted(() => {
         :tab="userExtrasTab"
         :isLoadingMore="isLoadingMore"
         :hasMore="activeTab.followFeedHasMore"
+        :loading="activeTab.userExtrasLoading"
         :showSettings="isViewingSelf"
         showGroups
         @switchTab="handleUserExtrasTabSwitch"
@@ -3396,6 +3551,15 @@ onUnmounted(() => {
         @switchMainTab="handleUserMainTabSwitch"
       />
 
+      <GroupDetailView
+        v-else-if="activeTab?.viewType === 'group' && activeTab.groupName"
+        :groupName="activeTab.groupName"
+        :baseUrl="baseUrl"
+        @goToProfile="handleGroupBack"
+        @openUser="handleUserClick"
+        @createInvite="handleGroupInviteCreate"
+      />
+
       <UserSettingsView
         v-else-if="activeTab?.viewType === 'preferences' && activeTab.currentUser"
         :user="activeTab.currentUser"
@@ -3445,11 +3609,19 @@ onUnmounted(() => {
   <section
     v-if="floatingChatOpen"
     class="floating-chat"
-    :class="{ 'is-minimized': floatingChatMinimized }"
+    :class="{
+      'is-minimized': floatingChatMinimized,
+      'is-dragging': floatingChatState.dragging || floatingChatState.resizing
+    }"
+    :style="floatingChatStyle"
     aria-label="Discourse 聊天悬浮窗"
     @contextmenu="handleBrowserContextMenu"
   >
-    <header class="floating-chat__header">
+    <header
+      class="floating-chat__header"
+      @mousedown="startChatDrag"
+      @touchstart.prevent="startChatDrag"
+    >
       <div class="floating-chat__identity">
         <span class="floating-chat__logo" aria-hidden="true"><MessageOutlined /></span>
         <span>
@@ -3549,12 +3721,26 @@ onUnmounted(() => {
         @leaveChannel="handleLeaveChatChannel"
         @deleteChannel="handleDeleteChatChannel"
         @manageSearch="handleManageSearch"
+        :discoverChannels="activeTab.chatState.discoverableChannels"
+        :discoverLoading="activeTab.chatState.discoverLoading"
+        :discoverErrorMessage="activeTab.chatState.discoverErrorMessage"
+        :joiningChannelIds="activeTab.chatState.joiningChannelIds"
+        @discoverChannels="handleDiscoverChatChannels"
+        @joinChannel="handleJoinChatChannel"
+        @addDirectUsers="handleAddChatDirectUsers"
       />
       <div v-else class="floating-chat__loading">
         <span>聊天暂时不可用</span>
         <button type="button" @click="openFloatingChat">重试</button>
       </div>
     </div>
+    <div
+      v-show="!floatingChatMinimized"
+      class="floating-chat__resize"
+      aria-hidden="true"
+      @mousedown="startChatResize"
+      @touchstart.prevent="startChatResize"
+    />
   </section>
 
   <FloatingComposer
@@ -3826,6 +4012,9 @@ onUnmounted(() => {
   padding: 8px 10px 8px 16px;
   background: var(--primary-container, var(--theme-primary-container));
   color: var(--on-primary-container, var(--theme-on-primary-container));
+  cursor: move;
+  touch-action: none;
+  user-select: none;
 }
 
 .floating-chat__identity {
@@ -3864,10 +4053,16 @@ onUnmounted(() => {
   font-size: 18px;
 }
 
+.floating-chat__header.is-dragging,
+.floating-chat.is-dragging .floating-chat__body {
+  cursor: grabbing;
+}
+
 .floating-chat__window-actions {
   display: flex;
   flex: 0 0 auto;
   gap: 2px;
+  cursor: default;
 }
 
 .floating-chat__window-actions button {
@@ -3885,6 +4080,23 @@ onUnmounted(() => {
 
 .floating-chat__window-actions button:hover {
   background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.floating-chat__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  cursor: se-resize;
+  touch-action: none;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    color-mix(in srgb, var(--d-outline, var(--theme-outline)) 75%, transparent) 50%
+  );
+  border-bottom-right-radius: inherit;
 }
 
 .floating-chat__body {

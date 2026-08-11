@@ -58,7 +58,24 @@ export default defineComponent({
     const canModerate = computed(() =>
       Boolean(props.channel.meta?.can_moderate || props.channel.meta?.can_manage)
     )
-    const canEditChannel = computed(() => canModerate.value && !isDirect.value)
+    // 群聊（多人直接消息）在 Discourse 中允许参与者编辑频道表情/名称/描述，
+    // 此前按 isDirect 一刀切只读，导致权限判断出错。1:1 私聊仍保持只读。
+    const isGroupDm = computed(
+      () =>
+        isDirect.value &&
+        (props.channel.chatable?.users?.length || props.channel.direct_message_users?.length || 0) >
+          1
+    )
+    const canEditDirectChannel = computed(
+      () =>
+        isGroupDm.value &&
+        props.channel.meta?.can_edit_direct_channel !== false &&
+        Boolean(props.channel.meta?.can_edit_direct_channel || props.channel.meta?.can_manage)
+    )
+    const canEditChannel = computed(
+      () =>
+        (canModerate.value || canEditDirectChannel.value) && !(isDirect.value && !isGroupDm.value)
+    )
     const canEditCategorySettings = computed(() => canEditChannel.value && isCategory.value)
     const membership = computed(() => props.channel.current_user_membership)
     const hasMembership = computed(() => !!membership.value)

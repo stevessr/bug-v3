@@ -102,15 +102,20 @@ defineEmits([
           v-if="!activeTab.hasMoreTopics && !isLoadingMore"
           class="discourse-list-view__end text-center text-sm"
         >
-          已加载全部话题
+          已加载全部 {{ activeTab.topics.length }} 个话题
         </div>
       </div>
-      <div v-else class="discourse-list-view__empty">暂无话题</div>
+      <div v-else class="discourse-list-view__empty">
+        <div class="discourse-list-view__empty-title">暂无话题</div>
+        <div class="discourse-list-view__empty-hint">
+          当前列表下还没有话题，试试切换其他列表或分类。
+        </div>
+      </div>
     </div>
 
     <div class="discourse-list-view__side">
       <Sidebar
-        :categories="[]"
+        :categories="activeTab.categories"
         :users="activeTab.activeUsers"
         :baseUrl="baseUrl"
         :topicListType="activeTab.topicListType"
@@ -166,16 +171,31 @@ defineEmits([
 }
 
 .discourse-list-view__empty {
+  display: grid;
   min-height: 200px;
+  place-items: center;
+  gap: 6px;
   padding: 64px 24px;
   border-radius: var(--d-shape-xl, 28px);
   background: var(--d-surface-1, var(--theme-surface-container-low));
   text-align: center;
 }
 
+.discourse-list-view__empty-title {
+  font-size: 15px;
+  font-weight: 680;
+}
+
+.discourse-list-view__empty-hint {
+  max-width: 320px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .discourse-list-view__side {
-  width: 256px;
-  flex-shrink: 0;
+  width: clamp(256px, 24vw, 320px);
+  flex: 0 0 auto;
   display: none;
 }
 
@@ -192,12 +212,19 @@ defineEmits([
 .home-nav-links {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .home-nav-link {
   min-height: 40px;
+  flex: 0 0 auto;
   padding: 0 16px;
   border: 0;
   border-radius: var(--d-shape-full, 999px);
@@ -254,20 +281,6 @@ defineEmits([
     align-items: stretch;
     flex-direction: column;
     border-radius: var(--d-shape-lg, 16px);
-  }
-
-  .home-nav-links {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .home-nav-links::-webkit-scrollbar {
-    display: none;
-  }
-
-  .home-nav-link {
-    flex: 0 0 auto;
   }
 
   .home-nav-actions {

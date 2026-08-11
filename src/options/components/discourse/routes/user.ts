@@ -16,6 +16,7 @@ export async function loadUser(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
+  tab.userExtrasLoading = true
   const [
     userResult,
     summaryResult,
@@ -65,8 +66,10 @@ export async function loadUser(
     tab.followFeedPage = 0
     tab.followFeedHasMore = !!followFeedData?.extras?.has_more
     tab.title = `${userData.user.username} - 用户主页`
+    tab.userExtrasLoading = false
   } else {
     tab.currentUser = null
+    tab.userExtrasLoading = false
     throw new Error('用户不存在')
   }
 }
@@ -92,7 +95,8 @@ export async function loadUserActivity(
     reactions: [],
     solvedPosts: [],
     offset: 0,
-    hasMore: true
+    hasMore: true,
+    loading: true
   }
 
   await loadActivityData(tab, username, activityTab, baseUrl, true)
@@ -110,6 +114,7 @@ export async function loadActivityData(
   if (reset) {
     tab.activityState.offset = 0
     tab.activityState.hasMore = true
+    tab.activityState.loading = true
     if (
       activityTab === 'topics' ||
       activityTab === 'assigned' ||
@@ -238,6 +243,10 @@ export async function loadActivityData(
   } catch (e) {
     console.error('[DiscourseBrowser] loadActivityData error:', e)
     tab.activityState.hasMore = false
+  } finally {
+    if (reset) {
+      tab.activityState.loading = false
+    }
   }
 }
 
@@ -308,33 +317,85 @@ export async function loadMessagesData(
   const page = tab.messagesState.page
 
   try {
-    let endpoint: string
+    let endpoints: string[]
 
     switch (messagesTab) {
       case 'all':
-        endpoint = `${baseUrl.value}/topics/messages/${username}.json`
+        endpoints = [
+          `${baseUrl.value}/topics/messages/${username}.json`,
+          `${baseUrl.value}/topics/private-messages/${username}.json`,
+          `${baseUrl.value}/u/${username}/messages.json`
+        ]
         break
       case 'sent':
-        endpoint = `${baseUrl.value}/topics/messages-sent/${username}.json`
+        endpoints = [
+          `${baseUrl.value}/topics/messages-sent/${username}.json`,
+          `${baseUrl.value}/topics/private-messages-sent/${username}.json`
+        ]
         break
       case 'new':
-        endpoint = `${baseUrl.value}/topics/messages-group/${username}.json`
+        endpoints = [
+          `${baseUrl.value}/topics/messages-group/${username}.json`,
+          `${baseUrl.value}/topics/private-messages-group/${username}.json`
+        ]
         break
       case 'unread':
-        endpoint = `${baseUrl.value}/topics/messages-unread/${username}.json`
+        endpoints = [
+          `${baseUrl.value}/topics/messages-unread/${username}.json`,
+          `${baseUrl.value}/topics/private-messages-unread/${username}.json`
+        ]
         break
       case 'archive':
-        endpoint = `${baseUrl.value}/topics/messages-archive/${username}.json`
+        endpoints = [
+          `${baseUrl.value}/topics/messages-archive/${username}.json`,
+          `${baseUrl.value}/topics/private-messages-archive/${username}.json`
+        ]
         break
       default:
         return
     }
 
-    const url = page > 0 ? `${endpoint}?page=${page}` : endpoint
-    const result = await pageFetch<any>(url)
-    const data = extractData(result)
+    const pageSuffix = page > 0 ? `?page=${page}` : ''
+    const queried = endpoints.map(endpoint => `${endpoint}${pageSuffix}`)
 
-    const topics = data?.topic_list?.topics || []
+    let result: any = null
+    let data: any = null
+    for (const url of queried) {
+      try {
+        const candidate = await pageFetch<any>(url)
+        const candidateData = extractData(candidate)
+        const topics = Array.isArray(candidateData?.topic_list?.topics)
+          ? candidateData.topic_list.topics
+          : Array.isArray(candidateData?.private_messages)
+            ? candidateData.private_messages
+            : Array.isArray(candidateData?.topics)
+              ? candidateData.topics
+              : []
+        if (candidate.ok && topics.length > 0) {
+          result = candidate
+          data = candidateData
+          break
+        }
+        if (candidate.ok && !data) {
+          // 保留第一个成功的空结果（避免误判失败）
+          result = candidate
+          data = candidateData
+        }
+      } catch {
+        // 尝试下一个端点
+      }
+    }
+
+    if (!result || !data) {
+      throw new Error('消息列表加载失败')
+    }
+
+    const topics =
+      (Array.isArray(data?.topic_list?.topics) ? data.topic_list.topics : null) ||
+      (Array.isArray(data?.private_messages) ? data.private_messages : null) ||
+      (Array.isArray(data?.topics) ? data.topics : []) ||
+      []
+
     if (reset) {
       tab.messagesState.topics = topics
     } else {

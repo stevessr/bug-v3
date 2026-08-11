@@ -1,7 +1,8 @@
-import { defineComponent, computed } from 'vue'
+import { computed, defineComponent, onMounted, ref } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseUserProfile, UserActivityState, ActivityTabType } from '../types'
+import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 
@@ -36,7 +37,6 @@ export default defineComponent({
       { key: 'solved', label: '已解决' },
       { key: 'assigned', label: '已指定' },
       { key: 'votes', label: '投票' },
-      { key: 'portfolio', label: '作品集' },
       { key: 'read', label: '已读' }
     ]
 
@@ -76,6 +76,36 @@ export default defineComponent({
         13: '收到消息'
       }
       return types[actionType] || '活动'
+    }
+
+    const emojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
+
+    // 加载站点表情组，把反应短码渲染为表情图片
+    const loadEmojiMap = async () => {
+      try {
+        const groups = await fetchDiscourseEmojiGroups(props.baseUrl)
+        const map: Record<string, { url?: string; unicode?: string }> = {}
+        groups.forEach(group => {
+          group.emojis.forEach(emoji => {
+            const value = { url: emoji.url || undefined, unicode: emoji.unicode }
+            map[emoji.name] = value
+            map[emoji.id] = value
+          })
+        })
+        emojiMap.value = map
+      } catch {
+        // 表情加载失败时回退为文本短码展示
+      }
+    }
+
+    onMounted(loadEmojiMap)
+
+    const resolveReactionEmoji = (raw: string) => {
+      const shortcode = String(raw || '').replace(/^:+|:+$/g, '')
+      if (!shortcode) return null
+      return (
+        emojiMap.value[shortcode] || emojiMap.value[shortcode === '+1' ? 'thumbsup' : ''] || null
+      )
     }
 
     return () => (
@@ -150,6 +180,13 @@ export default defineComponent({
         </div>
 
         <div class="activity-content">
+          {props.activityState.loading && (
+            <div class="activity-state-loading">
+              <Spin />
+              <span>加载中...</span>
+            </div>
+          )}
+
           {['all', 'replies', 'likes'].includes(props.activityState.activeTab) && (
             <div class="activity-list">
               {props.activityState.actions.map(action => (
@@ -287,9 +324,21 @@ export default defineComponent({
                     >
                       <div class="activity-item__meta">
                         <span class="activity-item__reaction-emoji">
-                          {reaction.reaction.reaction_value === '+1'
-                            ? '👍'
-                            : reaction.reaction.reaction_value}
+                          {(() => {
+                            const raw = String(reaction.reaction.reaction_value || '')
+                            const entry = resolveReactionEmoji(raw)
+                            if (entry?.url) {
+                              return (
+                                <img
+                                  src={entry.url}
+                                  class="activity-item__reaction-img"
+                                  alt={raw}
+                                  loading="lazy"
+                                />
+                              )
+                            }
+                            return entry?.unicode || (raw === '+1' ? '👍' : raw)
+                          })()}
                         </span>
                         <span>反应于</span>
                         <span class="activity-item__actor">
@@ -372,9 +421,14 @@ export default defineComponent({
             </div>
           )}
 
-          {!props.activityState.hasMore && !props.isLoadingMore && (
-            <div class="activity-state-end">已加载全部</div>
-          )}
+          {!props.activityState.hasMore &&
+            !props.isLoadingMore &&
+            !(
+              props.activityState.actions.length === 0 &&
+              props.activityState.topics.length === 0 &&
+              props.activityState.reactions.length === 0 &&
+              props.activityState.solvedPosts.length === 0
+            ) && <div class="activity-state-end">已加载全部</div>}
         </div>
       </div>
     )

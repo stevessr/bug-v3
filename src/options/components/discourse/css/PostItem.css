@@ -243,6 +243,16 @@
   font-weight: 400;
 }
 
+.reactions-list .reaction-item--boost {
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.reactions-list .reaction-item--boost:hover {
+  transform: translateY(-1px);
+}
+
 .reactions-list .reaction-item--total {
   border-style: dotted;
   font-size: 10px;

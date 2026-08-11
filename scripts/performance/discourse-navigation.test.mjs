@@ -228,6 +228,61 @@ test('rewriteAvatarUrlForCdn handles the special case directly', () => {
   )
 })
 
+test('linux.do emoji URLs are rewritten to the CDN to offload the main site', () => {
+  // 用户示例：主机换 CDN + 文件名特判映射
+  assert.equal(
+    discourseUtils.rewriteEmojiUrlForCdn(
+      'https://linux.do/images/emoji/twemoji/smiling_face_with_three_hearts.png?v=15'
+    ),
+    'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+  )
+  // 普通表情：仅主机换 CDN，查询串保留
+  assert.equal(
+    discourseUtils.rewriteEmojiUrlForCdn('https://linux.do/images/emoji/twemoji/heart.png?v=15'),
+    'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+  )
+  // 非 linux.do 主机的表情不改写
+  assert.equal(
+    discourseUtils.rewriteEmojiUrlForCdn(
+      'https://meta.discourse.org/images/emoji/twemoji/heart.png?v=15'
+    ),
+    'https://meta.discourse.org/images/emoji/twemoji/heart.png?v=15'
+  )
+  // 已是 CDN 地址不改写
+  assert.equal(
+    discourseUtils.rewriteEmojiUrlForCdn(
+      'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+    ),
+    'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+  )
+  // 非表情路径（上传/优化图）不改写
+  assert.equal(
+    discourseUtils.rewriteEmojiUrlForCdn('https://linux.do/uploads/default/original/1x/abc.png'),
+    'https://linux.do/uploads/default/original/1x/abc.png'
+  )
+})
+
+test('page-fetch concurrency can be adjusted at runtime and clamps to 1..8', () => {
+  const original = discourseUtils.getPageFetchMaxConcurrency()
+  try {
+    assert.ok(original >= 1)
+    // 设置 3 后生效
+    const updated = discourseUtils.setPageFetchMaxConcurrency(3)
+    assert.equal(discourseUtils.getPageFetchMaxConcurrency(), 3)
+    assert.equal(updated, 3)
+    // 超过上限向下钳制到 8
+    assert.equal(discourseUtils.setPageFetchMaxConcurrency(99), 8)
+    // 非法值（0/负数/NaN）保持当前值不变
+    const before = discourseUtils.getPageFetchMaxConcurrency()
+    assert.equal(discourseUtils.setPageFetchMaxConcurrency(0), before)
+    assert.equal(discourseUtils.setPageFetchMaxConcurrency(Number.NaN), before)
+    // 恢复
+    assert.equal(discourseUtils.setPageFetchMaxConcurrency(1), 1)
+  } finally {
+    discourseUtils.setPageFetchMaxConcurrency(original)
+  }
+})
+
 test('quoted avatars preserve CDN formats instead of manufacturing a gif URL', () => {
   const tree = {
     type: 'root',

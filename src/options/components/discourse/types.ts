@@ -23,6 +23,8 @@ export interface BrowserTab {
   tags: DiscourseTag[]
   tagGroups: DiscourseTagGroup[]
   errorMessage: string
+  groupName?: string
+  userExtrasLoading?: boolean
   notifications: DiscourseNotification[]
   notificationsFilter: DiscourseNotificationFilter
   unreadNotificationsCount: number
@@ -83,6 +85,7 @@ export type ViewType =
   | 'following'
   | 'followers'
   | 'groups'
+  | 'group'
   | 'preferences'
   | 'search'
   | 'review'
@@ -353,6 +356,15 @@ export interface DiscourseTopicDetail {
   title: string
   fancy_title: string
   posts_count: number
+  category_id?: number | null
+  category?: {
+    id: number
+    name?: string
+    slug?: string
+    color?: string | null
+    text_color?: string | null
+  } | null
+  tags?: string[]
   highest_post_number?: number
   views: number
   like_count: number
@@ -721,6 +733,11 @@ export interface ChatState {
   membersByChannel: Record<number, ChatMember[]>
   membersTotalByChannel: Record<number, number>
   membersLoadingByChannel: Record<number, boolean>
+  // Channel discovery (browse public channels not yet joined)
+  discoverableChannels: ChatChannel[]
+  discoverLoading: boolean
+  discoverErrorMessage: string
+  joiningChannelIds: Record<number, boolean>
   capabilities: ChatCapabilities
 }
 
@@ -970,6 +987,7 @@ export interface DiscourseBadge {
 export interface DiscourseFollowPost {
   id: number
   excerpt: string
+  cooked?: string
   created_at: string
   post_number: number
   topic_id: number
@@ -1094,6 +1112,7 @@ export interface UserActivityState {
   solvedPosts: DiscourseSolvedPost[]
   offset: number
   hasMore: boolean
+  loading: boolean
 }
 
 // Messages types

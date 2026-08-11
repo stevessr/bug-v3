@@ -175,3 +175,18 @@
   font-size: 10px;
   font-weight: 700;
 }
+
+.chat-channel-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.chat-channel-empty {
+  margin: 4px;
+  padding: 20px 16px;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--d-surface-2, var(--theme-surface-container));
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  text-align: center;
+}

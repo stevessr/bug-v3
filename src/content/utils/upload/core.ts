@@ -77,13 +77,15 @@ export type UploadStatusListener = (update: UploadStatusUpdate) => void
 export type NativeUploadPreferenceReader = () => boolean
 
 const DEFAULT_RATE_LIMIT_WAIT_SECONDS = 5
+const DEFAULT_UPLOAD_CONCURRENCY = 3
+const MAX_UPLOAD_CONCURRENCY = 20
 
 export class ImageUploader {
   private waitingQueue: UploadQueueItem[] = []
   private uploadingQueue: UploadQueueItem[] = []
   private failedQueue: UploadQueueItem[] = []
   private successQueue: UploadQueueItem[] = []
-  private isProcessing = false
+  private activeUploads = 0
   private maxRetries = 2 // Two automatic retries after the initial attempt
   private rateLimitUntil = 0
   private rateLimitTimer: ReturnType<typeof setTimeout> | null = null
@@ -179,8 +181,19 @@ export class ImageUploader {
     }
   }
 
+  /**
+   * 论坛上传并发数：优先读取用户设置（forumUploadConcurrency，1-20），
+   * 非法值时回退默认值。运行时可动态生效，无需重建队列。
+   */
+  private getConcurrency(): number {
+    const raw = cachedState.settings?.forumUploadConcurrency
+    const value = Number(raw)
+    if (!Number.isFinite(value) || value <= 0) return DEFAULT_UPLOAD_CONCURRENCY
+    return Math.min(MAX_UPLOAD_CONCURRENCY, Math.floor(value))
+  }
+
   private processQueue(): void {
-    if (this.isProcessing || this.waitingQueue.length === 0) {
+    if (this.waitingQueue.length === 0) {
       return
     }
 
@@ -193,12 +206,15 @@ export class ImageUploader {
     this.clearRateLimitTimer()
     this.rateLimitUntil = 0
 
-    const item = this.waitingQueue.shift()
-    if (!item) return
+    const concurrency = this.getConcurrency()
+    while (this.activeUploads < concurrency && this.waitingQueue.length > 0) {
+      const item = this.waitingQueue.shift()
+      if (!item) return
 
-    this.isProcessing = true
-    this.moveToQueue(item, 'uploading')
-    void this.uploadItem(item)
+      this.activeUploads++
+      this.moveToQueue(item, 'uploading')
+      void this.uploadItem(item)
+    }
   }
 
   private async uploadItem(item: UploadQueueItem): Promise<void> {
@@ -254,7 +270,7 @@ export class ImageUploader {
       this.moveToQueue(item, 'failed')
       item.reject(_error)
     } finally {
-      this.isProcessing = false
+      this.activeUploads = Math.max(0, this.activeUploads - 1)
       this.processQueue()
     }
   }
