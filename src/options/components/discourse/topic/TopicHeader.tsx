@@ -8,6 +8,7 @@ import TagPill from '../layout/TagPill'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories,
+  getPreloadedCategory,
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
 import { resolveDiscourseHttpUrl } from '../navigation'
@@ -148,7 +149,8 @@ export default defineComponent({
     topic: { type: Object as () => DiscourseTopicDetail, required: true },
     baseUrl: { type: String, required: true }
   },
-  setup(props) {
+  emits: ['navigate'],
+  setup(props, { emit }) {
     const editing = ref(false)
     const draftTitle = ref(props.topic.title)
     const draftCategoryId = ref<number | null>(props.topic.category_id ?? null)
@@ -171,7 +173,17 @@ export default defineComponent({
       const rawCategory = normalizeRawCategory(props.topic.category)
       const categoryId = props.topic.category_id ?? rawCategory?.id ?? null
       if (!categoryId) return rawCategory
-      return categories.value.find(category => category.id === categoryId) || rawCategory
+      const loadedCategory = categories.value.find(category => category.id === categoryId)
+      if (loadedCategory) return loadedCategory
+
+      // Linux.do topic payloads commonly only include category_id. Resolve the
+      // packaged live-definition fallback synchronously so the major board
+      // logo/icon does not wait for the background category request.
+      if (isLinuxDoUrl(props.baseUrl)) {
+        const fallback = normalizeRawCategory(getPreloadedCategory(categoryId, rawCategory?.slug))
+        if (fallback) return fallback
+      }
+      return rawCategory
     })
 
     const loadCategories = async () => {
@@ -424,6 +436,15 @@ export default defineComponent({
       )
     }
 
+    const getCategoryUrl = (category: DiscourseCategory) => {
+      const origin = props.baseUrl.replace(/\/+$/, '')
+      const slug = category.slug?.trim() || 'uncategorized'
+      return `${origin}/c/${encodeURIComponent(slug)}/${category.id}`
+    }
+
+    const getTagUrl = (tag: TopicTag) =>
+      `${props.baseUrl.replace(/\/+$/, '')}/tag/${encodeURIComponent(tag.name)}`
+
     return () => {
       const category = displayedCategory.value
       const tags = topicTags.value
@@ -433,28 +454,42 @@ export default defineComponent({
           {!editing.value && (category || tags.length > 0) && (
             <div class="topic-header__context" aria-label="话题分区与标签">
               {category && (
-                <span
+                <button
+                  type="button"
                   class="topic-header__context-category"
                   data-category-color={categoryColor(category.color)}
+                  data-discourse-url={getCategoryUrl(category)}
                   style={{
                     color: categoryColor(category.color),
                     borderColor: categoryColor(category.color)
                   }}
-                  title={category.name}
+                  aria-label={`查看分类：${category.name}`}
+                  title={`查看分类：${category.name}`}
+                  onClick={() => emit('navigate', getCategoryUrl(category))}
                 >
                   {renderCategoryIcon(category)}
                   <span>{category.name}</span>
-                </span>
+                </button>
               )}
               {tags.map(tag => (
-                <TagPill
+                <button
                   key={tag.name}
-                  name={tag.name}
-                  text={tag.text}
-                  description={tag.description || undefined}
-                  compact
-                  truncate
-                />
+                  type="button"
+                  class="topic-header__context-tag"
+                  data-discourse-url={getTagUrl(tag)}
+                  aria-label={`查看标签：${tag.text || tag.name}`}
+                  title={`查看标签：${tag.text || tag.name}`}
+                  onClick={() => emit('navigate', getTagUrl(tag))}
+                >
+                  <TagPill
+                    name={tag.name}
+                    text={tag.text}
+                    description={tag.description || undefined}
+                    clickable
+                    compact
+                    truncate
+                  />
+                </button>
               ))}
             </div>
           )}

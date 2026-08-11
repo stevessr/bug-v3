@@ -59,15 +59,17 @@
   border-radius: var(--d-shape-md, 12px);
 }
 
-/* 时间显示在消息异侧（对面）：他人消息在右侧，自己的消息经 row-reverse 在左侧 */
+/* 时间在最终一条消息的下方右侧。ChatMessageList 会在一分钟以内的连续消息
+ * 中只给组尾传递该节点，因此不会为每一条消息重复占位。 */
 .chat-message-time-side {
   display: flex;
-  min-width: 44px;
-  align-self: flex-end;
-  flex-direction: column;
+  width: 100%;
+  min-height: 14px;
   align-items: flex-end;
+  justify-content: flex-end;
+  flex-direction: column;
   gap: 2px;
-  padding: 0 4px 8px;
+  padding: 3px 2px 0;
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 10px;
   line-height: 1.4;
@@ -85,7 +87,7 @@
   min-width: 0;
   max-width: min(76%, 760px);
   flex: 0 1 auto;
-  /* Reserve horizontal space between the bubble and the timestamp only. */
+  /* Reserve horizontal space for hover controls beside the bubble. */
   margin-right: 68px;
 }
 

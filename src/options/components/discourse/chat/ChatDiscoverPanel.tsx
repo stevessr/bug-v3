@@ -6,11 +6,6 @@ import type { ChatChannel } from '../types'
 
 import '../css/chat/ChatDiscoverPanel.css'
 
-const getChannelEmoji = (channel: ChatChannel) => {
-  const raw = channel.emoji || channel.chatable?.emoji || ''
-  return raw && /\p{Emoji_Presentation}/u.test(raw) ? raw : ''
-}
-
 export default defineComponent({
   name: 'ChatDiscoverPanel',
   props: {
@@ -40,8 +35,7 @@ export default defineComponent({
           ''
         ).toLowerCase()
         const description = (channel.description || '').toLowerCase()
-        const emoji = getChannelEmoji(channel)
-        return title.includes(trimmed) || description.includes(trimmed) || emoji.includes(trimmed)
+        return title.includes(trimmed) || description.includes(trimmed)
       })
     })
 
@@ -70,7 +64,6 @@ export default defineComponent({
     onMounted(handleOpen)
 
     const renderChannel = (channel: ChatChannel) => {
-      const emoji = getChannelEmoji(channel)
       const members = channel.memberships_count
       const joined = !!channel.current_user_membership?.following
       const joining = !!props.joiningChannelIds[channel.id]
@@ -80,9 +73,6 @@ export default defineComponent({
 
       return (
         <div key={channel.id} class="chat-discover-item">
-          <div class="chat-discover-item__avatar" aria-hidden="true">
-            {emoji ? <span class="chat-discover-item__emoji">{emoji}</span> : <span>#</span>}
-          </div>
           <div class="chat-discover-item__info">
             <div class="chat-discover-item__title">
               <span class="chat-discover-item__name">{title}</span>

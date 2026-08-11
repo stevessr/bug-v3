@@ -4,7 +4,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   FlagOutlined,
-  ForwardOutlined,
+  RollbackOutlined,
   CommentOutlined
 } from '@ant-design/icons-vue'
 
@@ -28,7 +28,8 @@ export default defineComponent({
     threadingEnabled: { type: Boolean, default: false },
     inThread: { type: Boolean, default: false },
     groupFirst: { type: Boolean, default: true },
-    groupLast: { type: Boolean, default: true }
+    groupLast: { type: Boolean, default: true },
+    showTimestamp: { type: Boolean, default: true }
   },
   emits: ['navigate', 'react', 'interact', 'reply', 'openThread', 'edit', 'delete', 'flag'],
   setup(props, { emit }) {
@@ -255,13 +256,17 @@ export default defineComponent({
             src={getAvatarUrl(getAvatarTemplate(), props.baseUrl, 32)}
             alt={getDisplayName()}
           />
-          <div class="chat-message-content">
-            <div class="chat-message-meta">
-              {props.groupFirst && <span class="chat-message-name">{getDisplayName()}</span>}
+          <div class="chat-message-bubble-wrap">
+            <div class="chat-message-content">
+              <div class="chat-message-meta">
+                {props.groupFirst && <span class="chat-message-name">{getDisplayName()}</span>}
+              </div>
+              <div class="chat-message-deleted-text">该消息已被删除</div>
             </div>
-            <div class="chat-message-deleted-text">该消息已被删除</div>
+            {props.showTimestamp && (
+              <span class="chat-message-time-side">{formatTime(props.message.created_at)}</span>
+            )}
           </div>
-          <span class="chat-message-time-side">{formatTime(props.message.created_at)}</span>
         </div>
       )
     }
@@ -398,7 +403,7 @@ export default defineComponent({
                     role="menuitem"
                     onClick={handleReply}
                   >
-                    {hasThreadAction.value ? <CommentOutlined /> : <ForwardOutlined />}
+                    {hasThreadAction.value ? <CommentOutlined /> : <RollbackOutlined />}
                     {hasThreadAction.value
                       ? threadId.value
                         ? '打开消息串'
@@ -479,11 +484,13 @@ export default defineComponent({
               )}
             </a>
           )}
+          {props.showTimestamp && (
+            <span class="chat-message-time-side">
+              {props.message.edited && <span class="chat-message-edited">已编辑</span>}
+              {formatTime(props.message.created_at)}
+            </span>
+          )}
         </div>
-        <span class="chat-message-time-side">
-          {props.message.edited && <span class="chat-message-edited">已编辑</span>}
-          {formatTime(props.message.created_at)}
-        </span>
       </div>
     )
   }

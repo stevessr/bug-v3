@@ -2179,15 +2179,15 @@ export function useDiscourseBrowser() {
     })
   }
 
-  function openChatChannel(channel: { id: number; slug?: string }) {
+  function openChatChannel(channel: { id: number; slug?: string }, syncLocation = true) {
     const tab = activeTab.value
     // The channel list, creation flow, and chat management all operate inside
     // an already-loaded chat view. Avoid reloading the full channel payload
     // (which can briefly discard a newly created direct channel) while still
     // recording the canonical address in this browser's history.
-    if (tab?.chatState && tab.viewType === 'chat') {
+    if (tab?.chatState && (tab.viewType === 'chat' || !syncLocation)) {
       void selectChatChannel(channel.id).then(() => {
-        syncChatLocation(channel, { historyMode: 'push' })
+        if (syncLocation) syncChatLocation(channel, { historyMode: 'push' })
       })
       return
     }
@@ -2234,19 +2234,19 @@ export function useDiscourseBrowser() {
     tab.chatState.replyToMessage = null
   }
 
-  async function openChatMessageThread(message: ChatMessage) {
+  async function openChatMessageThread(message: ChatMessage, syncLocation = true) {
     const tab = activeTab.value
     const channelId = tab?.chatState?.activeChannelId || message.chat_channel_id
     if (!tab?.chatState || !channelId) return null
     const opened = await openChatThreadRoute(tab, baseUrl, users, channelId, message)
     const channel = tab.chatState.channels.find(item => item.id === channelId)
-    if (opened && channel) {
+    if (syncLocation && opened && channel) {
       syncChatLocation(channel, { threadId: opened.id, historyMode: 'push' })
     }
     return opened
   }
 
-  async function openChatThreadFromList(thread: ChatThread) {
+  async function openChatThreadFromList(thread: ChatThread, syncLocation = true) {
     const tab = activeTab.value
     const channelId = Number(thread.channel_id || thread.channel?.id || 0)
     if (!tab?.chatState || !Number.isFinite(channelId) || channelId <= 0) return null
@@ -2258,7 +2258,7 @@ export function useDiscourseBrowser() {
       await selectChatChannel(channelId)
     }
     const opened = await openChatThreadByIdRoute(tab, baseUrl, users, channelId, thread.id)
-    if (opened) {
+    if (syncLocation && opened) {
       syncChatLocation(thread.channel || { id: channelId }, {
         threadId: thread.id,
         historyMode: 'push'
@@ -2267,12 +2267,12 @@ export function useDiscourseBrowser() {
     return opened
   }
 
-  function closeActiveChatThread() {
+  function closeActiveChatThread(syncLocation = true) {
     const tab = activeTab.value
     if (!tab?.chatState) return
     closeChatThreadRoute(tab)
     const channel = tab.chatState.channels.find(item => item.id === tab.chatState?.activeChannelId)
-    if (channel) syncChatLocation(channel, { historyMode: 'replace' })
+    if (syncLocation && channel) syncChatLocation(channel, { historyMode: 'replace' })
   }
 
   async function loadMoreChatThreadMessagesForActive(threadId: number) {
@@ -2352,11 +2352,15 @@ export function useDiscourseBrowser() {
     return await toggleChatMessageReaction(tab, baseUrl, channelId, messageId, emoji, reacted)
   }
 
-  async function updateChatChannel(channelId: number, payload: ChatChannelUpdatePayload) {
+  async function updateChatChannel(
+    channelId: number,
+    payload: ChatChannelUpdatePayload,
+    syncLocation = true
+  ) {
     const tab = activeTab.value
     if (!tab?.chatState) return null
     const channel = await updateChatChannelRoute(tab, baseUrl, channelId, payload)
-    if (channel) syncActiveChatChannelLocation(channel)
+    if (syncLocation && channel) syncActiveChatChannelLocation(channel)
     return channel
   }
 
@@ -2768,6 +2772,10 @@ export function useDiscourseBrowser() {
     return await loadChannelMembersRoute(tab, baseUrl, channelId, reset)
   }
 
+  async function loadMoreChatMembers(channelId: number) {
+    return await loadChatMembers(channelId, false)
+  }
+
   async function addChatMembers(channelId: number, usernames: string[], groups: string[] = []) {
     const tab = activeTab.value
     if (!tab?.chatState) return false
@@ -2963,6 +2971,7 @@ export function useDiscourseBrowser() {
     createDirectMessageChannel,
     getDmChannelForUsernames,
     loadChatMembers,
+    loadMoreChatMembers,
     addChatMembers,
     removeChatMember,
     followChatChannel,

@@ -81,7 +81,13 @@ export default defineComponent({
     } | null>(null)
     const likeStats = ref<number | null>(null)
     const likeDetails = ref<
-      Array<{ postNumber: number; likeCount: number; username: string; blurb?: string }>
+      Array<{
+        postNumber: number
+        likeCount: number
+        username: string
+        avatarTemplate?: string
+        blurb?: string
+      }>
     >([])
     const reactionsEnabled = ref(false)
     const allowedReactionNames = ref<string[]>([])
@@ -141,12 +147,22 @@ export default defineComponent({
           const value = Number(post?.like_count ?? post?.likeCount ?? 0)
           return total + (Number.isNaN(value) ? 0 : value)
         }, 0)
+        const toExcerpt = (value: unknown, limit = 80) => {
+          const plain = String(value ?? '')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+          if (!plain) return ''
+          return plain.length > limit ? `${plain.slice(0, limit).trimEnd()}…` : plain
+        }
+
         likeStats.value = totalLikes || null
         likeDetails.value = posts.slice(0, 8).map(post => ({
           postNumber: Number(post?.post_number ?? post?.postNumber ?? 0),
           likeCount: Number(post?.like_count ?? post?.likeCount ?? 0),
           username: String(post?.username ?? post?.user?.username ?? ''),
-          blurb: post?.blurb ?? post?.excerpt ?? ''
+          avatarTemplate: String(post?.avatar_template ?? post?.user?.avatar_template ?? ''),
+          blurb: toExcerpt(post?.blurb ?? post?.excerpt ?? post?.cooked ?? post?.raw)
         }))
       } catch (error) {
         console.warn('[DiscourseBrowser] load like stats failed:', error)
@@ -491,7 +507,11 @@ export default defineComponent({
     return () => (
       <div class="topic-view">
         <main class="topic-main">
-          <TopicHeader topic={activeTopic.value} baseUrl={props.baseUrl} />
+          <TopicHeader
+            topic={activeTopic.value}
+            baseUrl={props.baseUrl}
+            onNavigate={handleContentNavigation}
+          />
 
           {/* Posts list */}
           {activeTopic.value.post_stream?.posts ? (
@@ -555,15 +575,6 @@ export default defineComponent({
               <span>加载更多帖子...</span>
             </div>
           )}
-
-          {/* End of posts indicator */}
-          {!summaryMode.value &&
-            !props.hasMorePosts &&
-            activeTopic.value.post_stream?.posts?.length && (
-              <div class="topic-view__state topic-view__state--end" role="status">
-                已加载全部 {activeTopic.value.post_stream.posts.length} 条帖子
-              </div>
-            )}
 
           <TopicFooter
             notificationLevel={

@@ -553,7 +553,7 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(card.getByRole('button', { name: '已关注' })).toBeVisible()
     await card.getByRole('button', { name: '私信' }).click()
     await expect(page.getByText('新建私信', { exact: true })).toBeVisible()
-    await expect(page.getByPlaceholder('例如：user1, user2')).toHaveValue('alice')
+    await expect(page.locator('.composer-recipient-chip')).toHaveText(/@alice/)
   })
 
   test('keeps private-message, chat, and follow actions on another user profile', async ({
@@ -626,6 +626,11 @@ test.describe('Discourse topic actions and private messages', () => {
       panel.locator('xpath=ancestor::aside[contains(@class, "topic-aside")]')
     ).toHaveCount(1)
 
+    await expect(panel.getByRole('button', { name: /参与者 2 人/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+    await panel.getByRole('button', { name: /参与者 2 人/ }).click()
     await panel.getByLabel('新参与者用户名').fill('bob')
     await panel.getByRole('button', { name: '添加', exact: true }).click()
     await expect(panel.getByText('3 人')).toBeVisible()
@@ -637,6 +642,13 @@ test.describe('Discourse topic actions and private messages', () => {
     expect(invite.method).toBe('POST')
     expect(new URLSearchParams(invite.body).get('user')).toBe('bob')
 
+    // The topic refresh after inviting reinstates the compact, collapsed
+    // participant list; reopen it before operating on the new member.
+    await expect(panel.getByRole('button', { name: /参与者 3 人/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+    await panel.getByRole('button', { name: /参与者 3 人/ }).click()
     page.once('dialog', dialog => void dialog.accept())
     await panel.getByRole('button', { name: '移除 @bob' }).click()
     await expect

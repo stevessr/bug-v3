@@ -398,11 +398,19 @@ export async function loadMessagesData(
       (Array.isArray(data?.topics) ? data.topics : []) ||
       []
 
+    // The archive endpoints do not consistently include `message_archived`
+    // in topic-list payloads.  Preserve the tab semantics locally so an
+    // archived thread always exposes the "移回收件箱" action.
+    const normalizedTopics = topics.map((topic: DiscourseTopic) => ({
+      ...topic,
+      ...(messagesTab === 'archive' ? { message_archived: true } : {})
+    }))
+
     if (reset) {
-      tab.messagesState.topics = topics
+      tab.messagesState.topics = normalizedTopics
     } else {
       const existingIds = new Set(tab.messagesState.topics.map((t: DiscourseTopic) => t.id))
-      const newTopics = topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
+      const newTopics = normalizedTopics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
       tab.messagesState.topics = [...tab.messagesState.topics, ...newTopics]
     }
     tab.messagesState.hasMore = !!data?.topic_list?.more_topics_url

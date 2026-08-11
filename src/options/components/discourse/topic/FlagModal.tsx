@@ -37,6 +37,17 @@ export default defineComponent({
       return true
     })
 
+    const formatDescription = (description: string) => {
+      const username = props.post?.username?.trim()
+      if (!username) return description
+      // Discourse's flag type copy uses this interpolation marker.  The
+      // browser renders the supplied HTML itself, so perform the same small
+      // substitution before sanitising it.
+      return description
+        .replace(/@%\{username\}/g, () => `@${username}`)
+        .replace(/%\{username\}/g, () => username)
+    }
+
     watch(
       () => props.open,
       open => {
@@ -103,7 +114,9 @@ export default defineComponent({
                           {flagType.description && (
                             <div
                               class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                              innerHTML={sanitizeDiscourseHtml(flagType.description)}
+                              innerHTML={sanitizeDiscourseHtml(
+                                formatDescription(flagType.description)
+                              )}
                             />
                           )}
                         </div>

@@ -157,8 +157,11 @@ export async function loadNotifications(
   unreadPrivateMessages: number
 }> {
   const params = new URLSearchParams()
-  if (filter === 'unread') {
-    params.set('filter', 'unread')
+  // Keep each notification category on its own server request.  Reusing the
+  // `all` response and filtering it locally makes the dropdown diverge from
+  // the main site (and can hide older matching notifications).
+  if (filter !== 'all') {
+    params.set('filter', filter)
   }
   const query = params.toString() ? `?${params.toString()}` : ''
   const result = await pageFetch<any>(`${baseUrl.value}/notifications.json${query}`)

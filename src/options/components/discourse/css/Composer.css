@@ -141,6 +141,152 @@
   min-height: 100%;
 }
 
+.composer-private-message-fields {
+  display: grid;
+  gap: 12px;
+  padding: 16px 16px 0;
+}
+
+.composer-recipient-field {
+  display: grid;
+  gap: 6px;
+}
+
+.composer-recipient-field > label {
+  color: var(--composer-muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.composer-recipient-control {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--composer-outline);
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--composer-surface);
+}
+
+.composer-recipient-control:focus-within {
+  border-color: var(--composer-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--composer-primary) 16%, transparent);
+}
+
+.composer-recipient-control .ant-input {
+  min-width: 140px;
+  flex: 1 1 160px;
+  color: var(--composer-text);
+}
+
+.composer-recipient-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px 0 9px;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-secondary-container, var(--theme-secondary-container));
+  color: var(--d-on-secondary-container, var(--theme-on-secondary-container));
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.composer-recipient-chip button {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.composer-recipient-chip button:hover {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.composer-recipient-results {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--composer-container);
+}
+
+.composer-recipient-result {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--composer-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.composer-recipient-result:hover,
+.composer-recipient-result:focus-visible {
+  background: color-mix(in srgb, var(--composer-primary) 12%, transparent);
+  outline: 0;
+}
+
+.composer-recipient-result img,
+.composer-recipient-result__fallback {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: var(--d-shape-full, 999px);
+  object-fit: cover;
+}
+
+.composer-recipient-result__fallback {
+  display: inline-grid;
+  place-items: center;
+  background: var(--d-primary-container, var(--theme-primary-container));
+  color: var(--d-on-primary-container, var(--theme-on-primary-container));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.composer-recipient-result > span {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.composer-recipient-result strong,
+.composer-recipient-result small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-recipient-result strong {
+  font-size: 12px;
+}
+
+.composer-recipient-result small,
+.composer-recipient-hint,
+.composer-recipient-help {
+  color: var(--composer-muted);
+  font-size: 11px;
+}
+
+.composer-recipient-hint {
+  min-height: 38px;
+  padding: 11px;
+}
+
 .bbcode-toolbar .ant-btn {
   min-width: 28px;
   height: 28px;

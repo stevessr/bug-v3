@@ -1,7 +1,9 @@
-import { defineComponent, computed, ref } from 'vue'
+import { defineComponent, computed, onMounted, ref, watch } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
+import { replaceEmojiShortcodesInHtml } from '../bbcode'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { getAvatarUrl, formatTime } from '../utils'
 import '../css/NotificationsView.css'
@@ -186,6 +188,12 @@ export default defineComponent({
   },
   emits: ['changeFilter', 'open'],
   setup(props, { emit }) {
+    // Notification titles are supplied as small pieces of cooked HTML.  They
+    // can still contain site-specific `:shortcode:` values though, unlike a
+    // post body which goes through PostContent.  Load the same per-origin
+    // shortcode table used by posts, then re-render the title once it is ready.
+    const emojiReadyToken = ref(0)
+
     const typeLabelMap: Record<number, DiscourseNotificationFilter> = {
       1: 'mentions',
       2: 'replies',
@@ -216,6 +224,14 @@ export default defineComponent({
     const formatTitle = (n: DiscourseNotification) =>
       n.fancy_title || n.data?.topic_title || n.data?.title || ''
 
+    const renderTitle = (title: string) => {
+      // Read the token in render so changing it invalidates already-rendered
+      // notification titles without having to refetch the notification list.
+      emojiReadyToken.value
+      const sanitized = sanitizeDiscourseHtml(title)
+      return sanitizeDiscourseHtml(replaceEmojiShortcodesInHtml(sanitized))
+    }
+
     const formatActor = (n: DiscourseNotification) =>
       n.data?.display_username || n.data?.username || n.data?.original_username || ''
 
@@ -231,6 +247,15 @@ export default defineComponent({
         return `/badges/${badgeId}/${encodeURIComponent(String(slug))}`
       }
 
+      const topicId = n.topic_id || n.data?.topic_id || n.data?.topicId
+      const slug = n.slug || n.data?.slug || n.data?.topic_slug || 'topic'
+      const postNumber = n.post_number || n.data?.post_number || n.data?.postNumber
+      if (topicId && postNumber) return `/t/${slug}/${topicId}/${postNumber}`
+      if (topicId) return `/t/${slug}/${topicId}`
+
+      // A private-message notification normally includes its topic/post ids.
+      // Only use the inbox as a fallback, otherwise clicking it loses the
+      // exact message the server notified us about.
       const username = props.currentUsername.trim()
       if (username) {
         if (n.notification_type === 24) {
@@ -240,12 +265,6 @@ export default defineComponent({
           return `/u/${encodeURIComponent(username)}/user-menu-private-messages`
         }
       }
-
-      const topicId = n.topic_id || n.data?.topic_id
-      const slug = n.slug || n.data?.slug || 'topic'
-      const postNumber = n.post_number || n.data?.post_number
-      if (topicId && postNumber) return `/t/${slug}/${topicId}/${postNumber}`
-      if (topicId) return `/t/${slug}/${topicId}`
       return ''
     }
 
@@ -313,6 +332,28 @@ export default defineComponent({
         .trim()
       return [!n.read ? '未读' : '', actor, formatTypeText(n), title].filter(Boolean).join('，')
     }
+
+    const loadEmojiShortcodes = async (origin: string) => {
+      if (!origin) return
+      try {
+        const count = await ensureEmojiShortcodesLoaded(origin)
+        if (count > 0) emojiReadyToken.value++
+      } catch {
+        // A failed emoji map request must not make notification navigation or
+        // rendering unavailable.  The original title remains visible.
+      }
+    }
+
+    onMounted(() => {
+      void loadEmojiShortcodes(props.baseUrl)
+    })
+
+    watch(
+      () => props.baseUrl,
+      value => {
+        void loadEmojiShortcodes(value)
+      }
+    )
 
     return () => (
       <section class="ntf-root" aria-label="通知列表">
@@ -396,7 +437,7 @@ export default defineComponent({
                         )}
                       </div>
                     ) : title ? (
-                      <div class="ntf-title" innerHTML={sanitizeDiscourseHtml(title)} />
+                      <div class="ntf-title" innerHTML={renderTitle(title)} />
                     ) : null}
                     <span class="ntf-time">{formatTime(item.created_at)}</span>
                   </div>

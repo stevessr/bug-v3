@@ -16,7 +16,9 @@ export default defineComponent({
   },
   emits: ['openUser', 'refresh'],
   setup(props, { emit }) {
-    const expanded = ref(true)
+    // Participant management is useful but can be large for group PMs; keep
+    // the reading surface compact until the user explicitly opens it.
+    const expanded = ref(false)
     const usernameInput = ref('')
     const saving = ref(false)
     const searching = ref(false)

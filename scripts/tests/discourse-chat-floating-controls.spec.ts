@@ -10,6 +10,7 @@ test.describe('Discourse chat floating controls', () => {
             title: '设计讨论',
             slug: 'design',
             chatable_type: 'Category',
+            threading_enabled: true,
             current_user_membership: {
               chat_channel_id: 7,
               unread_count: 0,
@@ -38,10 +39,28 @@ test.describe('Discourse chat floating controls', () => {
               avatar_template: '/letter_avatar_proxy/v4/letter/a/8491ac/{size}.png'
             },
             reactions: [],
-            blocks: []
+            blocks: [],
+            thread: {
+              id: 501,
+              title: '悬浮消息串',
+              reply_count: 1,
+              preview: {
+                reply_count: 1,
+                last_reply_excerpt: '保持主页面不变'
+              }
+            }
           }
         ],
         meta: { can_load_more_past: false }
+      }
+
+      const thread = {
+        id: 501,
+        title: '悬浮消息串',
+        channel_id: 7,
+        reply_count: 1,
+        original_message: messages.messages[0],
+        current_user_membership: { notification_level: 2 }
       }
 
       const runtime = {
@@ -56,6 +75,26 @@ test.describe('Discourse chat floating controls', () => {
           let data: any = {}
           if (url.includes('/chat/api/me/channels')) {
             data = channels
+          } else if (url.includes('/chat/api/channels/7/threads/501/messages')) {
+            data = {
+              messages: [
+                {
+                  id: 102,
+                  cooked: '<p>保持主页面不变</p>',
+                  created_at: '2026-08-09T07:59:00Z',
+                  chat_channel_id: 7,
+                  thread_id: 501,
+                  user_id: 1,
+                  username: 'steve',
+                  user: { id: 1, username: 'steve', name: 'Steve' },
+                  reactions: [],
+                  blocks: []
+                }
+              ],
+              meta: { can_load_more_past: false }
+            }
+          } else if (url.includes('/chat/api/channels/7/threads/501')) {
+            data = { thread }
           } else if (url.includes('/chat/api/channels/7/messages')) {
             data = messages
           } else if (url.includes('/latest')) {
@@ -121,5 +160,26 @@ test.describe('Discourse chat floating controls', () => {
     await expect(menu).toBeVisible()
     await message.dispatchEvent('mouseleave')
     await expect(menu).toHaveCount(0)
+  })
+
+  test('keeps the active browser tab and URL unchanged when a floating chat opens a thread', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    const address = page.locator('.toolbar-address input')
+    await address.fill('https://linux.do/latest')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const tabs = page.getByRole('tablist', { name: '已打开页面' })
+    await expect(tabs.getByRole('tab')).toHaveCount(1)
+    await page.getByRole('button', { name: '打开聊天悬浮窗' }).click()
+
+    const floatingChat = page.locator('.floating-chat')
+    await expect(floatingChat).toBeVisible()
+    await floatingChat.getByRole('link', { name: '打开消息串，共 1 条回复' }).click()
+    await expect(floatingChat.getByRole('region', { name: '消息串：悬浮消息串' })).toBeVisible()
+
+    await expect(address).toHaveValue('https://linux.do/latest')
+    await expect(tabs.getByRole('tab')).toHaveCount(1)
   })
 })

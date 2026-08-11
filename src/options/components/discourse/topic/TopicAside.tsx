@@ -12,6 +12,7 @@ type LikeDetailItem = {
   postNumber: number
   likeCount: number
   username: string
+  avatarTemplate?: string
   blurb?: string
 }
 
@@ -45,7 +46,20 @@ export default defineComponent({
       { key: 'users' as const, label: '用户', value: props.userCount }
     ])
 
-    const viewItems = computed(() => props.viewDetails?.views || [])
+    const viewItems = computed(() => {
+      const items = props.viewDetails?.views || []
+      return [...items].sort((left, right) => {
+        const leftTime = Date.parse(
+          String(left?.date ?? left?.to ?? left?.from ?? left?.start ?? '')
+        )
+        const rightTime = Date.parse(
+          String(right?.date ?? right?.to ?? right?.from ?? right?.start ?? '')
+        )
+        return (
+          (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0)
+        )
+      })
+    })
     const userItems = computed(() => props.participants || [])
     const likeItems = computed(() => props.likeDetails || [])
 
@@ -115,12 +129,13 @@ export default defineComponent({
               <div class="topic-aside__detail">
                 {activeDetail.value === 'views' && (
                   <div class="topic-aside__detail-list">
+                    <div class="topic-aside__detail-heading">最近浏览量（日期）</div>
                     {viewItems.value.length ? (
                       viewItems.value.map((item, index) => (
                         <div key={`${formatRange(item)}-${index}`} class="topic-aside__detail-row">
                           <span class="topic-aside__detail-label">{formatRange(item)}</span>
                           <span class="topic-aside__detail-value">
-                            {formatNumber(getCount(item))}
+                            {formatNumber(getCount(item))} 次
                           </span>
                         </div>
                       ))
@@ -139,11 +154,28 @@ export default defineComponent({
                           class="topic-aside__detail-row topic-aside__detail-link"
                           onClick={() => handleJump(item.postNumber)}
                         >
-                          <span class="topic-aside__detail-label">
-                            #{item.postNumber} {item.username}
+                          {item.avatarTemplate ? (
+                            <img
+                              class="topic-aside__like-avatar"
+                              src={getAvatarUrl(item.avatarTemplate, props.baseUrl, 32)}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span class="topic-aside__like-avatar topic-aside__like-avatar--fallback">
+                              {(item.username || '?')[0].toUpperCase()}
+                            </span>
+                          )}
+                          <span class="topic-aside__like-copy">
+                            <span class="topic-aside__detail-label">
+                              #{item.postNumber} @{item.username || '未知用户'}
+                            </span>
+                            {item.blurb && (
+                              <span class="topic-aside__like-excerpt">{item.blurb}</span>
+                            )}
                           </span>
                           <span class="topic-aside__detail-value">
-                            {formatNumber(item.likeCount)}
+                            {formatNumber(item.likeCount)} 赞
                           </span>
                         </button>
                       ))

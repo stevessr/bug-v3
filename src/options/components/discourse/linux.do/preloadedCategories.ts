@@ -1,3 +1,5 @@
+import bundledCategoryDefinitions from './preloaded-categories.json'
+
 type UploadedLogo = { url: string } | null
 
 type PreloadedCategory = {
@@ -14,13 +16,17 @@ type PreloadedCategory = {
   uploaded_logo_dark?: UploadedLogo
 }
 
-const preloadedCategoriesUrl = new URL('./preloaded-categories.json', import.meta.url).href
+// Keep the packaged forum definitions available synchronously. Category payloads
+// returned for topics are often intentionally compact (id/name/color only), so
+// waiting for the lazy asset fetch used to leave major Linux.do sections with a
+// plain color dot instead of their board icon/logo on the topic header.
+const bundledCategories: PreloadedCategory[] = Array.isArray(bundledCategoryDefinitions)
+  ? (bundledCategoryDefinitions as PreloadedCategory[])
+  : []
 
 const byId = new Map<number, PreloadedCategory>()
 const bySlug = new Map<string, PreloadedCategory>()
 let all: PreloadedCategory[] = []
-let loaded = false
-let loadingPromise: Promise<PreloadedCategory[]> | null = null
 
 function hydrateCategories(list: PreloadedCategory[]) {
   all = list
@@ -37,33 +43,10 @@ function hydrateCategories(list: PreloadedCategory[]) {
   })
 }
 
+hydrateCategories(bundledCategories)
+
 export async function ensurePreloadedCategoriesLoaded() {
-  if (loaded) return all
-  if (loadingPromise) return loadingPromise
-
-  loadingPromise = fetch(preloadedCategoriesUrl, { credentials: 'same-origin' })
-    .then(async response => {
-      if (!response.ok) {
-        throw new Error(`Failed to load preloaded categories: ${response.status}`)
-      }
-
-      const data = await response.json()
-      const list = Array.isArray(data) ? (data as PreloadedCategory[]) : []
-      hydrateCategories(list)
-      loaded = true
-      return all
-    })
-    .catch(error => {
-      console.warn('[DiscourseBrowser] preloaded categories load failed:', error)
-      hydrateCategories([])
-      loaded = true
-      return all
-    })
-    .finally(() => {
-      loadingPromise = null
-    })
-
-  return loadingPromise
+  return all
 }
 
 export function isLinuxDoUrl(url?: string | null) {
@@ -78,6 +61,3 @@ export const getPreloadedCategory = (id?: number | null, slug?: string | null) =
 }
 
 export const getAllPreloadedCategories = () => all
-
-// Start async loading early to avoid waiting for first category render.
-void ensurePreloadedCategoriesLoaded()

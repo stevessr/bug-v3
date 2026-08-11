@@ -220,6 +220,10 @@ export default defineComponent({
       emit('search', localQuery.value.trim(), { ...localFilters.value })
     }
 
+    const setSearchScope = (inMessages: boolean) => {
+      localFilters.value.inMessages = inMessages
+    }
+
     const buildPath = (post: DiscourseSearchPost) => {
       const topic = topicMap.value.get(post.topic_id)
       const slug = post.topic_slug || topic?.slug || 'topic'
@@ -277,15 +281,43 @@ export default defineComponent({
             <Button
               type="primary"
               htmlType="submit"
-              class="search-query__button"
+              class="search-query__button search-query__button--icon"
               loading={props.state.loading}
+              aria-label="搜索"
+              title="搜索"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />
               </svg>
-              搜索
+              <span class="search-query__button-tooltip" aria-hidden="true">
+                搜索
+              </span>
             </Button>
           </form>
+
+          <div class="search-scope" role="radiogroup" aria-label="搜索范围">
+            <span class="search-scope__label">范围</span>
+            <div class="search-scope__segments">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!localFilters.value.inMessages}
+                class={['search-scope__segment', !localFilters.value.inMessages && 'is-selected']}
+                onClick={() => setSearchScope(false)}
+              >
+                论坛内容
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={Boolean(localFilters.value.inMessages)}
+                class={['search-scope__segment', localFilters.value.inMessages && 'is-selected']}
+                onClick={() => setSearchScope(true)}
+              >
+                私信
+              </button>
+            </div>
+          </div>
 
           {/* Basic filters row */}
           <div class="search-filter-grid search-filter-grid--basic">
@@ -486,16 +518,6 @@ export default defineComponent({
                     }}
                   />
                   <span>Wiki</span>
-                </div>
-                <div class="search-toggle">
-                  <Switch
-                    checked={localFilters.value.inMessages}
-                    aria-label="搜索私信"
-                    onChange={checked => {
-                      localFilters.value.inMessages = Boolean(checked)
-                    }}
-                  />
-                  <span>私信</span>
                 </div>
               </div>
 

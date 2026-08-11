@@ -1,6 +1,6 @@
 import { computed, defineComponent } from 'vue'
 import { Badge, Button, Dropdown } from 'ant-design-vue'
-import { BellOutlined } from '@ant-design/icons-vue'
+import { BellOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
 
@@ -25,6 +25,10 @@ export default defineComponent({
     open: {
       type: Boolean,
       required: true
+    },
+    loading: {
+      type: Boolean,
+      default: false
     },
     baseUrl: {
       type: String,
@@ -60,6 +64,8 @@ export default defineComponent({
                   <Button
                     size="small"
                     class="notifications-dropdown__action"
+                    loading={props.loading}
+                    aria-label="刷新通知"
                     onClick={() => emit('refresh')}
                   >
                     刷新
@@ -77,6 +83,7 @@ export default defineComponent({
                 <NotificationsView
                   notifications={preview.value}
                   filter={props.filter}
+                  loading={props.loading}
                   baseUrl={props.baseUrl}
                   currentUsername={props.currentUsername}
                   onChangeFilter={(filter: DiscourseNotificationFilter) =>
@@ -90,8 +97,14 @@ export default defineComponent({
         }}
       >
         <Badge count={props.unreadCount} overflowCount={99}>
-          <Button size="small" class="notifications-trigger" title="通知">
-            <BellOutlined />
+          <Button
+            size="small"
+            class={['notifications-trigger', { 'is-loading': props.loading }]}
+            title={props.loading ? '正在加载通知' : '通知'}
+            aria-label={props.loading ? '正在加载通知' : '通知'}
+            aria-busy={props.loading}
+          >
+            {props.loading ? <LoadingOutlined spin /> : <BellOutlined />}
           </Button>
         </Badge>
       </Dropdown>

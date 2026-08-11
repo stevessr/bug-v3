@@ -760,6 +760,8 @@ export interface ChatState {
   membersByChannel: Record<number, ChatMember[]>
   membersTotalByChannel: Record<number, number>
   membersLoadingByChannel: Record<number, boolean>
+  membersOffsetByChannel: Record<number, number>
+  membersHasMoreByChannel: Record<number, boolean>
   // Channel discovery (browse public channels not yet joined)
   discoverableChannels: ChatChannel[]
   discoverLoading: boolean

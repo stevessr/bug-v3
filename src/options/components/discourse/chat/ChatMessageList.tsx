@@ -110,9 +110,6 @@ export default defineComponent({
     const renderEmptyState = () => {
       const users = emptyStateUsers.value
       const participants = channelUsers.value
-      const channel = props.channel
-      const icon = channel?.emoji || channel?.chatable?.emoji || channel?.chatable?.icon || '#'
-      const isUnicodeEmoji = /\p{Emoji_Presentation}/u.test(icon)
       if (isDirectChannel.value && !isGroupChannel.value) {
         const user = users[0] || channelUsers.value[0]
         const userLabel = user
@@ -145,7 +142,7 @@ export default defineComponent({
       return (
         <div class="chat-message-list-empty chat-message-list-empty--welcome">
           <div class="chat-message-list-empty__logo" aria-hidden="true">
-            {isUnicodeEmoji ? icon : isPublic ? '👥' : '💬'}
+            {isPublic ? '👥' : '💬'}
           </div>
           <strong>
             {isGroup ? `你是 #${title} 群聊 中的第一个用户` : `${title} 中还没有消息`}
@@ -170,12 +167,14 @@ export default defineComponent({
       )
     }
 
-    // 连续同人消息分组（≤5 分钟视为同一段）：组首保留头像/昵称，组内其余折叠
+    // 连续同人消息分组（≤5 分钟视为同一段）：组首保留头像/昵称，组内其余折叠。
+    // 时间戳的分组更紧凑：相邻同人消息相隔不超过一分钟时，只在这段的最后一条展示。
     const GROUP_WINDOW_MS = 5 * 60 * 1000
+    const TIMESTAMP_WINDOW_MS = 60 * 1000
     const getSenderId = (message: ChatMessage) => message.user?.id ?? message.user_id ?? null
 
     const groupFlags = computed(() => {
-      const flags = new Map<number, { first: boolean; last: boolean }>()
+      const flags = new Map<number, { first: boolean; last: boolean; showTimestamp: boolean }>()
       const list = orderedMessages.value
       const timeGap = (a: ChatMessage, b: ChatMessage) => {
         const aTime = new Date(a.created_at).getTime()
@@ -185,14 +184,19 @@ export default defineComponent({
       list.forEach((message, index) => {
         const prev = list[index - 1]
         const next = list[index + 1]
-        const sameSender = (a: ChatMessage | undefined, b: ChatMessage | undefined) => {
+        const sameSenderWithin = (
+          a: ChatMessage | undefined,
+          b: ChatMessage | undefined,
+          windowMs: number
+        ) => {
           if (!a || !b) return false
           const aId = getSenderId(a)
-          return aId !== null && aId === getSenderId(b) && timeGap(a, b) <= GROUP_WINDOW_MS
+          return aId !== null && aId === getSenderId(b) && timeGap(a, b) <= windowMs
         }
         flags.set(message.id, {
-          first: !sameSender(prev, message),
-          last: !sameSender(message, next)
+          first: !sameSenderWithin(prev, message, GROUP_WINDOW_MS),
+          last: !sameSenderWithin(message, next, GROUP_WINDOW_MS),
+          showTimestamp: !sameSenderWithin(message, next, TIMESTAMP_WINDOW_MS)
         })
       })
       return flags
@@ -391,7 +395,11 @@ export default defineComponent({
             </div>
           ))}
         {orderedMessages.value.map(message => {
-          const flag = groupFlags.value.get(message.id) || { first: true, last: true }
+          const flag = groupFlags.value.get(message.id) || {
+            first: true,
+            last: true,
+            showTimestamp: true
+          }
           return (
             <ChatMessageItem
               key={message.id}
@@ -405,6 +413,7 @@ export default defineComponent({
               inThread={props.inThread}
               groupFirst={flag.first}
               groupLast={flag.last}
+              showTimestamp={flag.showTimestamp}
               onNavigate={handleNavigate}
               onReact={handleReact}
               onInteract={handleInteract}

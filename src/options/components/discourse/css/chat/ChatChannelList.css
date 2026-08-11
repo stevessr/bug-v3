@@ -176,33 +176,6 @@
   font-weight: 700;
 }
 
-.chat-channel-emoji {
-  font-size: 20px;
-  line-height: 1;
-}
-
-/* 短码表情图标：图片形式 */
-.chat-channel-emoji-image {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-/* 多人频道无自定义表情时显示人数 */
-.chat-channel-member-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.chat-channel-member-count .anticon {
-  font-size: 13px;
-}
-
 .chat-channel-empty {
   margin: 4px;
   padding: 20px 16px;

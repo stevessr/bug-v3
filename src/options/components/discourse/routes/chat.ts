@@ -411,6 +411,8 @@ const ensureChatState = (tab: BrowserTab) => {
       membersByChannel: {},
       membersTotalByChannel: {},
       membersLoadingByChannel: {},
+      membersOffsetByChannel: {},
+      membersHasMoreByChannel: {},
       discoverableChannels: [],
       discoverLoading: false,
       discoverErrorMessage: '',
@@ -474,6 +476,11 @@ const ensureChatState = (tab: BrowserTab) => {
   tab.chatState.threadErrorMessage ??= ''
   tab.chatState.threadReplyToMessage ??= null
   tab.chatState.threadEditingMessage ??= null
+  tab.chatState.membersByChannel ??= {}
+  tab.chatState.membersTotalByChannel ??= {}
+  tab.chatState.membersLoadingByChannel ??= {}
+  tab.chatState.membersOffsetByChannel ??= {}
+  tab.chatState.membersHasMoreByChannel ??= {}
   tab.chatState.discoverableChannels ??= []
   tab.chatState.discoverLoading ??= false
   tab.chatState.discoverErrorMessage ??= ''
@@ -2640,18 +2647,25 @@ export async function loadChannelMembers(
   const state = tab.chatState
   if (!state) return []
   if (state.membersLoadingByChannel[channelId]) return state.membersByChannel[channelId] || []
+  if (!reset && state.membersHasMoreByChannel[channelId] === false) {
+    return state.membersByChannel[channelId] || []
+  }
 
   state.membersLoadingByChannel[channelId] = true
   state.errorMessage = ''
 
   try {
     let lastError: string | null = null
+    const pageSize = 50
+    const currentMembers = state.membersByChannel[channelId] || []
+    const offset = reset ? 0 : (state.membersOffsetByChannel[channelId] ?? currentMembers.length)
     let members: ChatMember[] = []
-    let total = 0
+    let total: number | null = null
 
     for (const path of CHAT_MEMBERSHIPS_ENDPOINTS(channelId)) {
       try {
-        const result = await pageFetch<any>(`${baseUrl.value}${path}?offset=0&limit=50`)
+        const params = new URLSearchParams({ offset: String(offset), limit: String(pageSize) })
+        const result = await pageFetch<any>(`${baseUrl.value}${path}?${params.toString()}`)
         const data = extractData(result)
         if (result.ok) {
           members = (data?.memberships || []).map((item: any) => {
@@ -2670,7 +2684,8 @@ export async function loadChannelMembers(
               notification_level: item.notification_level
             }
           })
-          total = Number(data?.meta?.total_rows ?? members.length)
+          const receivedTotal = Number(data?.meta?.total_rows ?? data?.total_rows)
+          total = Number.isFinite(receivedTotal) && receivedTotal >= 0 ? receivedTotal : null
           break
         }
         lastError = parseErrorMessage(data, '加载频道成员失败')
@@ -2690,7 +2705,11 @@ export async function loadChannelMembers(
       const fresh = members.filter(m => !existingIds.has(m.id))
       state.membersByChannel[channelId] = [...(state.membersByChannel[channelId] || []), ...fresh]
     }
-    state.membersTotalByChannel[channelId] = total
+    const mergedMembers = state.membersByChannel[channelId] || []
+    state.membersOffsetByChannel[channelId] = mergedMembers.length
+    state.membersTotalByChannel[channelId] = total ?? mergedMembers.length
+    state.membersHasMoreByChannel[channelId] =
+      total !== null ? mergedMembers.length < total : members.length >= pageSize
     return state.membersByChannel[channelId] || []
   } catch (error) {
     state.errorMessage = error instanceof Error ? error.message : String(error)
@@ -2786,6 +2805,7 @@ export async function removeMemberFromChannel(
           0,
           (state.membersTotalByChannel[channelId] || 0) - 1
         )
+        state.membersOffsetByChannel[channelId] = state.membersByChannel[channelId].length
         return true
       }
       lastError = parseErrorMessage(data, '移除成员失败')
@@ -3062,6 +3082,8 @@ export async function leaveChatChannel(
         delete state.membersByChannel[channelId]
         delete state.membersTotalByChannel[channelId]
         delete state.membersLoadingByChannel[channelId]
+        delete state.membersOffsetByChannel[channelId]
+        delete state.membersHasMoreByChannel[channelId]
         if (state.activeChannelId === channelId) {
           state.activeChannelId = state.channels[0]?.id || null
         }
@@ -3103,6 +3125,8 @@ export async function deleteChatChannel(
         delete state.membersByChannel[channelId]
         delete state.membersTotalByChannel[channelId]
         delete state.membersLoadingByChannel[channelId]
+        delete state.membersOffsetByChannel[channelId]
+        delete state.membersHasMoreByChannel[channelId]
         if (state.activeChannelId === channelId) {
           state.activeChannelId = state.channels[0]?.id || null
         }

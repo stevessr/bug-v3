@@ -100,6 +100,7 @@ export default defineComponent({
     'createChannel',
     'createGroupSearch',
     'loadMembers',
+    'loadMoreMembers',
     'addMembers',
     'removeMember',
     'followChannel',
@@ -325,6 +326,12 @@ export default defineComponent({
       return !!props.chatState.membersLoadingByChannel[channelId]
     })
 
+    const activeMembersHasMore = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return false
+      return props.chatState.membersHasMoreByChannel[channelId] === true
+    })
+
     const handleSelectChannel = (channel: ChatChannel) => {
       emit('selectChannel', channel)
     }
@@ -495,6 +502,7 @@ export default defineComponent({
                 channels={props.chatState.channels}
                 activeChannelId={props.chatState.activeChannelId}
                 baseUrl={props.baseUrl}
+                currentUsername={props.currentUsername}
                 loading={props.chatState.loadingChannels}
                 filter={channelListFilter.value}
                 onSelect={handleSelectChannel}
@@ -521,22 +529,7 @@ export default defineComponent({
         <div class="chat-main">
           <div class="chat-main-header">
             <div class="chat-main-title">
-              {(() => {
-                const channel = activeChannel.value
-                if (!channel) return '聊天'
-                const rawEmoji = channel.emoji || channel.chatable?.emoji || ''
-                const emoji = rawEmoji && /\p{Emoji_Presentation}/u.test(rawEmoji) ? rawEmoji : ''
-                return (
-                  <>
-                    {emoji && (
-                      <span class="chat-main-title__emoji" aria-hidden="true">
-                        {emoji}
-                      </span>
-                    )}
-                    <span class="chat-main-title__text">{activeChannelTitle.value}</span>
-                  </>
-                )
-              })()}
+              <span class="chat-main-title__text">{activeChannelTitle.value}</span>
             </div>
             <div class="chat-main-actions">
               {activeChannel.value && (
@@ -780,6 +773,7 @@ export default defineComponent({
           members={activeMembers.value}
           membersTotal={activeMembersTotal.value}
           membersLoading={activeMembersLoading.value}
+          membersHasMore={activeMembersHasMore.value}
           baseUrl={props.baseUrl}
           currentUsername={props.currentUsername}
           searching={props.manageSearching}
@@ -792,6 +786,7 @@ export default defineComponent({
           deletingChannel={props.deletingChannel}
           onClose={() => (showManage.value = false)}
           onLoadMembers={(channelId: number) => emit('loadMembers', channelId)}
+          onLoadMoreMembers={(channelId: number) => emit('loadMoreMembers', channelId)}
           onAddMembers={(payload: { channelId: number; usernames: string[] }) =>
             emit('addMembers', payload)
           }

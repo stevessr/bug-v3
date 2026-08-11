@@ -1,11 +1,11 @@
-import { computed, ref, watch, defineComponent, onMounted, nextTick } from 'vue'
+import { computed, ref, watch, defineComponent, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
 import hljs from 'highlight.js'
 import { Input, Button, Select, TreeSelect } from 'ant-design-vue'
 
-import type { DiscourseCategory } from '../types'
+import type { DiscourseCategory, DiscourseUser } from '../types'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories,
@@ -19,6 +19,7 @@ import { resolveDiscourseHttpUrl } from '../navigation'
 import TagPill from '../layout/TagPill'
 import { getDiscourseIconHref } from '../layout/iconSprite'
 import ProseMirrorEditor from '../ProseMirrorEditor'
+import { extractData, getAvatarUrl, pageFetch } from '../utils'
 
 import { WysiwygEditor } from '@/components/editor/wysiwyg'
 import '../css/Composer.css'
@@ -26,7 +27,7 @@ import '../css/highlight.css'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-type ComposerMode = 'topic' | 'reply' | 'edit'
+type ComposerMode = 'topic' | 'reply' | 'edit' | 'privateMessage'
 
 export default defineComponent({
   name: 'Composer',
@@ -41,9 +42,11 @@ export default defineComponent({
     replyToUsername: { type: String, default: undefined },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     currentCategory: { type: Object as () => DiscourseCategory | null, default: null },
-    defaultCategoryId: { type: Number, default: undefined }
+    defaultCategoryId: { type: Number, default: undefined },
+    initialTargetUsernames: { type: Array as () => string[], default: () => [] },
+    showClose: { type: Boolean, default: false }
   },
-  emits: ['posted', 'clearReply'],
+  emits: ['posted', 'clearReply', 'close'],
   setup(props, { emit }) {
     const title = ref('')
     const raw = ref('')
@@ -58,9 +61,28 @@ export default defineComponent({
     const errorMessage = ref('')
     const successMessage = ref('')
     let tagSearchTimer: number | null = null
+    let recipientSearchTimer: ReturnType<typeof setTimeout> | null = null
     const preloadedCategoriesReadyToken = ref(0)
     const emojiReadyToken = ref(0)
     const previewContentRef = ref<HTMLElement | null>(null)
+    const targetUsernames = ref<string[]>([])
+    const recipientQuery = ref('')
+    const recipientResults = ref<DiscourseUser[]>([])
+    const recipientSearching = ref(false)
+
+    const normalizeUsername = (value: string) => value.trim().replace(/^@+/, '')
+
+    const setInitialRecipients = (value: string[] | undefined) => {
+      const seen = new Set<string>()
+      targetUsernames.value = (value || []).reduce<string[]>((result, entry) => {
+        const username = normalizeUsername(String(entry || ''))
+        const key = username.toLowerCase()
+        if (!username || seen.has(key)) return result
+        seen.add(key)
+        result.push(username)
+        return result
+      }, [])
+    }
 
     watch(
       () => props.defaultCategoryId,
@@ -95,14 +117,31 @@ export default defineComponent({
       applyHighlighting()
     })
 
+    onBeforeUnmount(() => {
+      if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
+      if (recipientSearchTimer) clearTimeout(recipientSearchTimer)
+    })
+
     watch(
-      () => [props.mode, props.postId, props.initialRaw] as const,
+      () =>
+        [
+          props.mode,
+          props.postId,
+          props.initialRaw,
+          props.initialTargetUsernames.join(',')
+        ] as const,
       ([mode, _postId, initialRaw]) => {
         if (mode === 'edit') {
           raw.value = initialRaw || ''
           editReason.value = ''
         } else if (mode === 'reply') {
           raw.value = ''
+        } else if (mode === 'privateMessage') {
+          raw.value = ''
+          title.value = ''
+          recipientQuery.value = ''
+          recipientResults.value = []
+          setInitialRecipients(props.initialTargetUsernames)
         }
       },
       { immediate: true }
@@ -256,6 +295,11 @@ export default defineComponent({
       return node?.dataRef ?? node
     }
 
+    // `previewHtml` is evaluated immediately by the watcher below, so keep its
+    // renderer initialized before creating the computed ref.  Otherwise a
+    // newly mounted composer can hit the temporal-dead-zone for this constant.
+    const renderMarkdown = renderDiscourseMarkdown
+
     const previewHtml = computed(() => {
       emojiReadyToken.value
       if (previewFormat.value === 'html') {
@@ -345,8 +389,6 @@ export default defineComponent({
         ]
       })
     }
-
-    const renderMarkdown = renderDiscourseMarkdown
 
     function renderHtml(input: string) {
       if (!input) return ''
@@ -464,6 +506,74 @@ export default defineComponent({
       return found
     }
 
+    const addRecipient = (value: string) => {
+      const username = normalizeUsername(value)
+      if (!username) return
+      if (
+        targetUsernames.value.some(existing => existing.toLowerCase() === username.toLowerCase())
+      ) {
+        recipientQuery.value = ''
+        return
+      }
+      targetUsernames.value = [...targetUsernames.value, username]
+      recipientQuery.value = ''
+      recipientResults.value = []
+    }
+
+    const removeRecipient = (username: string) => {
+      targetUsernames.value = targetUsernames.value.filter(
+        value => value.toLowerCase() !== username.toLowerCase()
+      )
+    }
+
+    const searchRecipients = async (query: string) => {
+      const term = normalizeUsername(query)
+      if (!term) {
+        recipientResults.value = []
+        return
+      }
+      recipientSearching.value = true
+      try {
+        const result = await pageFetch<any>(
+          `${props.baseUrl}/u/search.json?term=${encodeURIComponent(term)}&limit=8`
+        )
+        const data = extractData(result)
+        const users = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : []
+        recipientResults.value = users.filter(
+          (user: DiscourseUser) =>
+            user?.username &&
+            !targetUsernames.value.some(
+              selected => selected.toLowerCase() === user.username.toLowerCase()
+            )
+        )
+      } catch {
+        recipientResults.value = []
+      } finally {
+        recipientSearching.value = false
+      }
+    }
+
+    const handleRecipientInput = (value: string) => {
+      recipientQuery.value = value
+      if (recipientSearchTimer) clearTimeout(recipientSearchTimer)
+      if (!value.trim()) {
+        recipientResults.value = []
+        return
+      }
+      recipientSearchTimer = setTimeout(() => void searchRecipients(value), 220)
+    }
+
+    const handleRecipientKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && recipientQuery.value.trim()) {
+        event.preventDefault()
+        const first = recipientResults.value[0]
+        addRecipient(first?.username || recipientQuery.value)
+      }
+      if (event.key === 'Backspace' && !recipientQuery.value && targetUsernames.value.length) {
+        targetUsernames.value = targetUsernames.value.slice(0, -1)
+      }
+    }
+
     async function handleSubmit() {
       if (!raw.value.trim()) {
         errorMessage.value = '请输入内容'
@@ -471,6 +581,10 @@ export default defineComponent({
       }
       if (props.mode === 'topic' && !title.value.trim()) {
         errorMessage.value = '请输入标题'
+        return
+      }
+      if (props.mode === 'privateMessage' && targetUsernames.value.length === 0) {
+        errorMessage.value = '请至少选择一位收件人'
         return
       }
       if (props.mode === 'reply' && !props.topicId) {
@@ -496,6 +610,14 @@ export default defineComponent({
           })
           title.value = ''
           selectedTags.value = []
+        } else if (props.mode === 'privateMessage') {
+          result = await createTopic(props.baseUrl, {
+            title: title.value.trim() || `私信给 ${targetUsernames.value.join(', ')}`,
+            raw: raw.value.trim(),
+            targetUsernames: targetUsernames.value
+          })
+          title.value = ''
+          targetUsernames.value = []
         } else if (props.mode === 'reply') {
           const topicId = props.topicId as number
           result = await replyToTopic(props.baseUrl, {
@@ -515,7 +637,12 @@ export default defineComponent({
           })
         }
         raw.value = ''
-        successMessage.value = props.mode === 'edit' ? '编辑成功' : '发布成功'
+        successMessage.value =
+          props.mode === 'edit'
+            ? '编辑成功'
+            : props.mode === 'privateMessage'
+              ? '私信已发送'
+              : '发布成功'
         emit('posted', result)
       } catch (error) {
         errorMessage.value = (error as Error).message || '请求失败'
@@ -568,6 +695,8 @@ export default defineComponent({
           <div class="text-sm font-medium dark:text-white">
             {props.mode === 'topic' ? (
               '发帖子'
+            ) : props.mode === 'privateMessage' ? (
+              '新建私信'
             ) : props.mode === 'edit' ? (
               '编辑帖子'
             ) : (
@@ -620,10 +749,91 @@ export default defineComponent({
                 取消引用
               </Button>
             ) : null}
+            {props.showClose ? (
+              <Button size="small" type="text" onClick={() => emit('close')}>
+                关闭
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        {props.mode === 'topic' ? (
+        {props.mode === 'privateMessage' ? (
+          <div class="composer-private-message-fields">
+            <div class="composer-recipient-field">
+              <label for="composer-private-message-recipient">收件人</label>
+              <div class="composer-recipient-control">
+                {targetUsernames.value.map(username => (
+                  <span key={username} class="composer-recipient-chip">
+                    @{username}
+                    <button
+                      type="button"
+                      aria-label={`移除收件人 ${username}`}
+                      title={`移除 @${username}`}
+                      onClick={() => removeRecipient(username)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <Input
+                  id="composer-private-message-recipient"
+                  value={recipientQuery.value}
+                  bordered={false}
+                  placeholder={
+                    targetUsernames.value.length ? '继续搜索收件人' : '搜索用户名并选择收件人'
+                  }
+                  aria-label="搜索收件人"
+                  onUpdate:value={handleRecipientInput}
+                  onKeydown={handleRecipientKeydown}
+                />
+              </div>
+              <div class="composer-recipient-results" aria-live="polite">
+                {recipientSearching.value && (
+                  <div class="composer-recipient-hint">正在搜索用户…</div>
+                )}
+                {!recipientSearching.value &&
+                  recipientResults.value.map(user => (
+                    <button
+                      key={user.id || user.username}
+                      type="button"
+                      class="composer-recipient-result"
+                      onClick={() => addRecipient(user.username)}
+                    >
+                      {user.avatar_template ? (
+                        <img
+                          src={getAvatarUrl(user.avatar_template, props.baseUrl, 28)}
+                          alt=""
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span class="composer-recipient-result__fallback" aria-hidden="true">
+                          {user.username[0]?.toUpperCase() || '?'}
+                        </span>
+                      )}
+                      <span>
+                        <strong>{user.name || user.username}</strong>
+                        <small>@{user.username}</small>
+                      </span>
+                    </button>
+                  ))}
+                {!recipientSearching.value &&
+                  recipientQuery.value.trim() &&
+                  recipientResults.value.length === 0 && (
+                    <div class="composer-recipient-hint">
+                      没有匹配用户，按 Enter 可按用户名添加。
+                    </div>
+                  )}
+              </div>
+              <small class="composer-recipient-help">可选择多位收件人；会创建群组私信。</small>
+            </div>
+            <Input
+              value={title.value}
+              placeholder="私信标题（可选）"
+              aria-label="私信标题"
+              onUpdate:value={v => (title.value = v)}
+            />
+          </div>
+        ) : props.mode === 'topic' ? (
           <div class="px-4 pt-4 space-y-3">
             <Input value={title.value} placeholder="标题" onUpdate:value={v => (title.value = v)} />
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -780,7 +990,13 @@ export default defineComponent({
           ) : null}
           <div class="flex items-center justify-end gap-2">
             <Button loading={isSubmitting.value} type="primary" onClick={handleSubmit}>
-              {props.mode === 'topic' ? '发布' : props.mode === 'edit' ? '保存' : '回复'}
+              {props.mode === 'topic'
+                ? '发布'
+                : props.mode === 'privateMessage'
+                  ? '发送私信'
+                  : props.mode === 'edit'
+                    ? '保存'
+                    : '回复'}
             </Button>
           </div>
         </div>

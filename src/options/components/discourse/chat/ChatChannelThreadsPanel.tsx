@@ -1,4 +1,4 @@
-import { computed, defineComponent, onMounted } from 'vue'
+import { computed, defineComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CloseOutlined, CommentOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 
 import type { ChatChannel, ChatThread } from '../types'
@@ -24,6 +24,8 @@ export default defineComponent({
   },
   emits: ['close', 'load', 'loadMore', 'select'],
   setup(props, { emit }) {
+    const bodyRef = ref<HTMLElement | null>(null)
+    const loadMoreRequested = ref(false)
     const channelTitle = computed(
       () =>
         props.channel.title ||
@@ -38,7 +40,41 @@ export default defineComponent({
 
     onMounted(() => {
       if (!props.loaded && !props.loading) emit('load', props.channel.id)
+      bodyRef.value?.addEventListener('scroll', handleScroll, { passive: true })
     })
+
+    onUnmounted(() => {
+      bodyRef.value?.removeEventListener('scroll', handleScroll)
+    })
+
+    const requestLoadMore = () => {
+      if (!props.loadMoreUrl || props.loading || props.loadingMore || loadMoreRequested.value) {
+        return
+      }
+      loadMoreRequested.value = true
+      emit('loadMore', props.channel.id)
+    }
+
+    const handleScroll = () => {
+      const element = bodyRef.value
+      if (!element) return
+      const isNearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 72
+      if (isNearBottom) requestLoadMore()
+    }
+
+    watch(
+      () => props.loadingMore,
+      loading => {
+        if (!loading) loadMoreRequested.value = false
+      }
+    )
+
+    watch(
+      () => props.loadMoreUrl,
+      url => {
+        if (!url) loadMoreRequested.value = false
+      }
+    )
 
     return () => (
       <aside
@@ -78,7 +114,7 @@ export default defineComponent({
           </div>
         </header>
 
-        <div class="chat-channel-threads-panel__body">
+        <div ref={bodyRef} class="chat-channel-threads-panel__body">
           {props.loading && props.threads.length === 0 && (
             <div class="chat-channel-threads-panel__state" role="status">
               正在加载频道消息串…
@@ -111,10 +147,10 @@ export default defineComponent({
             <button
               type="button"
               class="chat-channel-threads-panel__load-more"
-              disabled={props.loadingMore}
-              onClick={() => emit('loadMore', props.channel.id)}
+              disabled={props.loadingMore || loadMoreRequested.value}
+              onClick={requestLoadMore}
             >
-              {props.loadingMore ? '正在加载…' : '加载更多频道消息串'}
+              {props.loadingMore || loadMoreRequested.value ? '正在加载…' : '加载更多频道消息串'}
             </button>
           )}
         </div>

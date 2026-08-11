@@ -38,6 +38,7 @@ export default defineComponent({
     members: { type: Array as () => ChatMember[], default: () => [] },
     membersTotal: { type: Number, default: 0 },
     membersLoading: { type: Boolean, default: false },
+    membersHasMore: { type: Boolean, default: false },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
     searchResults: { type: Array as () => DiscourseUser[], default: () => [] },
@@ -52,6 +53,7 @@ export default defineComponent({
   emits: [
     'close',
     'loadMembers',
+    'loadMoreMembers',
     'addMembers',
     'removeMember',
     'follow',
@@ -71,6 +73,8 @@ export default defineComponent({
     const showAddForm = ref(false)
     const removingId = ref<number | null>(null)
     const panelRef = ref<HTMLElement | null>(null)
+    const memberListRef = ref<HTMLElement | null>(null)
+    const memberLoadMoreRequested = ref(false)
 
     const canModerate = computed(() => {
       const meta = channel.value?.meta
@@ -112,6 +116,7 @@ export default defineComponent({
       query.value = ''
       showAddForm.value = false
       removingId.value = null
+      memberLoadMoreRequested.value = false
     }
 
     watch(
@@ -132,6 +137,20 @@ export default defineComponent({
         if (!props.open || !channelId) return
         resetModal()
         emit('loadMembers', channelId)
+      }
+    )
+
+    watch(
+      () => props.membersLoading,
+      loading => {
+        if (!loading) memberLoadMoreRequested.value = false
+      }
+    )
+
+    watch(
+      () => props.membersHasMore,
+      hasMore => {
+        if (!hasMore) memberLoadMoreRequested.value = false
       }
     )
 
@@ -180,6 +199,27 @@ export default defineComponent({
       removingId.value = null
     }
 
+    const requestMoreMembers = () => {
+      if (
+        !channel.value?.id ||
+        !props.membersHasMore ||
+        props.membersLoading ||
+        memberLoadMoreRequested.value
+      ) {
+        return
+      }
+      memberLoadMoreRequested.value = true
+      emit('loadMoreMembers', channel.value.id)
+    }
+
+    const handleMemberListScroll = () => {
+      const element = memberListRef.value
+      if (!element) return
+      if (element.scrollTop + element.clientHeight >= element.scrollHeight - 64) {
+        requestMoreMembers()
+      }
+    }
+
     const renderMembers = () => (
       <section class="chat-manage-members" aria-labelledby="chat-members-title">
         <div class="chat-manage-modal__section-heading">
@@ -194,7 +234,12 @@ export default defineComponent({
         </div>
 
         <div class="chat-manage-members__layout">
-          <div class="chat-manage-modal__member-list">
+          <div
+            ref={memberListRef}
+            class="chat-manage-modal__member-list"
+            aria-busy={props.membersLoading}
+            onScroll={handleMemberListScroll}
+          >
             {props.membersLoading && displayMembers.value.length === 0 && (
               <div class="chat-manage-modal__loading">
                 <Spin size="small" />
@@ -236,6 +281,18 @@ export default defineComponent({
                   )}
               </div>
             ))}
+            {props.membersHasMore && (
+              <button
+                type="button"
+                class="chat-manage-modal__load-more"
+                disabled={props.membersLoading || memberLoadMoreRequested.value}
+                onClick={requestMoreMembers}
+              >
+                {props.membersLoading || memberLoadMoreRequested.value
+                  ? '正在加载更多成员…'
+                  : '加载更多成员'}
+              </button>
+            )}
           </div>
 
           {(canAddUsers.value || hasMembership.value) && (
@@ -460,14 +517,6 @@ export default defineComponent({
         activeChannel.unicode_title ||
         activeChannel.chatable?.name ||
         `频道 ${activeChannel.id}`
-      const rawChannelEmoji = activeChannel.emoji || activeChannel.chatable?.emoji || ''
-      const channelIcon =
-        rawChannelEmoji && /\p{Emoji_Presentation}/u.test(rawChannelEmoji)
-          ? rawChannelEmoji
-          : isDirect.value
-            ? '💬'
-            : '#'
-
       const tabs: Array<{ id: ManageTab; label: string; icon: any }> = [
         { id: 'settings', label: '设置', icon: <SettingOutlined /> },
         { id: 'members', label: `成员 ${memberCount.value}`, icon: <TeamOutlined /> },
@@ -487,9 +536,6 @@ export default defineComponent({
           >
             <header class="chat-manage-modal__header">
               <div class="chat-manage-modal__title-wrap">
-                <div class="chat-manage-modal__channel-icon" aria-hidden="true">
-                  {channelIcon}
-                </div>
                 <div>
                   <div id="chat-manage-modal-title" class="chat-manage-modal__title">
                     {title}

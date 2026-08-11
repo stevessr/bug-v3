@@ -535,6 +535,24 @@
   overflow-y: auto;
 }
 
+.chat-manage-modal__load-more {
+  width: calc(100% - 8px);
+  min-height: 36px;
+  margin: 6px 4px 2px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-secondary-container, var(--theme-secondary-container));
+  color: var(--d-on-secondary-container, var(--theme-on-secondary-container));
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.chat-manage-modal__load-more:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
 .chat-manage-modal__loading,
 .chat-manage-modal__empty,
 .chat-manage-modal__hint {

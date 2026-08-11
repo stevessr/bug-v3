@@ -10,16 +10,18 @@ export default defineComponent({
     maxPostNumber: { type: Number, required: true },
     currentPostNumber: { type: Number, required: true }
   },
-  emits: ['jump'],
+  emits: ['jump', 'preview'],
   setup(props, { emit }) {
     const localValue = ref(props.currentPostNumber)
     const trackRef = ref<HTMLElement | null>(null)
     const dragging = ref(false)
+    const ignoreNextTrackClick = ref(false)
+    let clearIgnoreClickTimer: ReturnType<typeof setTimeout> | null = null
 
     watch(
       () => props.currentPostNumber,
       value => {
-        if (Number.isFinite(value)) {
+        if (!dragging.value && Number.isFinite(value)) {
           localValue.value = value
         }
       }
@@ -57,10 +59,14 @@ export default defineComponent({
       return 1 + ratio * range
     }
 
-    const updateValue = (clientY: number) => {
+    const updateValue = (clientY: number, shouldJump = false) => {
       const value = getValueFromClientY(clientY)
       localValue.value = value
-      emit('jump', roundedValue.value)
+      if (shouldJump) {
+        emit('jump', roundedValue.value)
+      } else {
+        emit('preview', roundedValue.value)
+      }
     }
 
     const setValue = (value: number) => {
@@ -110,6 +116,17 @@ export default defineComponent({
       dragging.value = false
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      // Navigating to a not-yet-loaded floor can trigger a network fetch.
+      // Do that only after the user has chosen the destination, not on every
+      // drag frame across the timeline.
+      emit('jump', roundedValue.value)
+      // The thumb click bubbles to the track after mouseup.  It is already
+      // committed above, so ignore that one duplicate jump/fetch.
+      ignoreNextTrackClick.value = true
+      if (clearIgnoreClickTimer) clearTimeout(clearIgnoreClickTimer)
+      clearIgnoreClickTimer = setTimeout(() => {
+        ignoreNextTrackClick.value = false
+      }, 0)
     }
 
     const handleMouseDown = (event: MouseEvent) => {
@@ -122,6 +139,7 @@ export default defineComponent({
     onUnmounted(() => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      if (clearIgnoreClickTimer) clearTimeout(clearIgnoreClickTimer)
     })
 
     const handleTop = computed(() => {
@@ -130,6 +148,10 @@ export default defineComponent({
       const ratio = (localValue.value - 1) / range
       return clamp(ratio * 100, 0, 100)
     })
+
+    const targetLoaded = computed(() =>
+      props.posts.some(post => post.post_number === roundedValue.value)
+    )
 
     return () => (
       <section class="topic-timeline" aria-label="话题时间线">
@@ -149,7 +171,13 @@ export default defineComponent({
           aria-valuemax={props.maxPostNumber || 1}
           aria-valuenow={roundedValue.value}
           aria-valuetext={`第 ${roundedValue.value} 条，共 ${props.maxPostNumber} 条`}
-          onClick={(event: MouseEvent) => updateValue(event.clientY)}
+          onClick={(event: MouseEvent) => {
+            if (ignoreNextTrackClick.value) {
+              ignoreNextTrackClick.value = false
+              return
+            }
+            updateValue(event.clientY, true)
+          }}
           onKeydown={handleKeydown}
         >
           <div class="topic-timeline__line" />
@@ -167,6 +195,9 @@ export default defineComponent({
             <div class="topic-timeline__current-time">
               {formatTime(currentPost.value.created_at)}
             </div>
+          )}
+          {dragging.value && !targetLoaded.value && (
+            <div class="topic-timeline__pending-load">松开后加载该楼层</div>
           )}
         </div>
         <div class="topic-timeline__label topic-timeline__label--bottom">{maxLabel.value}</div>

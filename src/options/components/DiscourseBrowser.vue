@@ -2,7 +2,6 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import {
-  EditOutlined,
   CloseOutlined,
   WarningOutlined,
   MessageOutlined,
@@ -77,6 +76,7 @@ const MessagesView = defineAsyncComponent(() => import('./discourse/user/Message
 const FloatingComposer = defineAsyncComponent(
   () => import('./discourse/browser/FloatingComposer.vue')
 )
+const PrivateMessageComposer = defineAsyncComponent(() => import('./discourse/composer/Composer'))
 const CategoriesView = defineAsyncComponent(
   () => import('./discourse/browser/views/CategoriesView.vue')
 )
@@ -200,6 +200,7 @@ const {
   createChatChannel,
   createDirectMessageChannel,
   loadChatMembers,
+  loadMoreChatMembers,
   addChatMembers,
   removeChatMember,
   followChatChannel,
@@ -386,6 +387,7 @@ const shouldSubscribeListChannel = (channel: '/latest' | '/new' | '/unread') => 
   return tab.viewType === 'home' ? tab.topicListType === 'unread' : true
 }
 const notificationsOpen = ref(false)
+const notificationsLoading = ref(false)
 const notificationSnapshots = new Map<
   string,
   { notifications: DiscourseNotification[]; unreadCount: number }
@@ -434,10 +436,7 @@ const floatingChatTitle = computed(() => {
 
 // Private message composer state
 const pmComposerOpen = ref(false)
-const pmComposerTargets = ref('')
-const pmComposerTitle = ref('')
-const pmComposerRaw = ref('')
-const pmComposerSending = ref(false)
+const pmComposerTargets = ref<string[]>([])
 
 const pageRequestProgress = computed(() => {
   const activity = pageFetchActivity.value
@@ -776,6 +775,7 @@ const handleNotificationsOpenChange = async (open: boolean) => {
   }
   const tab = activeTab.value
   if (!tab) return
+  notificationsLoading.value = true
   try {
     await loadNotifications(tab, tab.notificationsFilter, true)
     const key = `${tab.id}:${tab.notificationsFilter}`
@@ -786,12 +786,15 @@ const handleNotificationsOpenChange = async (open: boolean) => {
     notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications load failed:', error)
+  } finally {
+    notificationsLoading.value = false
   }
 }
 
 const handleRefreshNotifications = async () => {
   const tab = activeTab.value
   if (!tab) return
+  notificationsLoading.value = true
   try {
     await loadNotifications(tab, tab.notificationsFilter, true)
     const key = `${tab.id}:${tab.notificationsFilter}`
@@ -802,6 +805,8 @@ const handleRefreshNotifications = async () => {
     if (notificationsOpen.value) notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications refresh failed:', error)
+  } finally {
+    notificationsLoading.value = false
   }
 }
 
@@ -829,6 +834,7 @@ const handleNotificationFilterChange = async (filter: DiscourseNotificationFilte
       return
     }
   }
+  notificationsLoading.value = true
   try {
     await loadNotifications(tab, filter, true)
     notificationSnapshots.set(key, {
@@ -838,6 +844,8 @@ const handleNotificationFilterChange = async (filter: DiscourseNotificationFilte
     if (notificationsOpen.value) notificationFiltersFetchedThisOpen.add(key)
   } catch (error) {
     console.warn('[DiscourseBrowser] notifications load failed:', error)
+  } finally {
+    notificationsLoading.value = false
   }
 }
 
@@ -1146,6 +1154,30 @@ const sanitizeStringArray = (value: unknown): string[] => {
   return value.map(item => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
 }
 
+const uniqueNumbers = (...values: Array<number[] | undefined>) =>
+  Array.from(new Set(values.flatMap(value => value || [])))
+
+const uniqueStrings = (...values: Array<string[] | undefined>) => {
+  const seen = new Set<string>()
+  return values
+    .flatMap(value => value || [])
+    .filter(item => {
+      const key = item.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+const uniqueSidebarItems = (items: QuickSidebarItem[]) => {
+  const seen = new Set<string>()
+  return items.filter(item => {
+    if (seen.has(item.id)) return false
+    seen.add(item.id)
+    return true
+  })
+}
+
 const normalizeNotificationPreferences = (raw: any): DiscourseUserPreferences => {
   const input = raw || {}
   return {
@@ -1153,10 +1185,20 @@ const normalizeNotificationPreferences = (raw: any): DiscourseUserPreferences =>
     tracked_category_ids: sanitizeNumberArray(input.tracked_category_ids),
     watched_first_post_category_ids: sanitizeNumberArray(input.watched_first_post_category_ids),
     muted_category_ids: sanitizeNumberArray(input.muted_category_ids),
+    regular_category_ids: sanitizeNumberArray(input.regular_category_ids),
+    default_categories_watching: sanitizeNumberArray(input.default_categories_watching),
+    default_categories_tracking: sanitizeNumberArray(input.default_categories_tracking),
+    default_categories_watching_first_post: sanitizeNumberArray(
+      input.default_categories_watching_first_post
+    ),
+    default_categories_muted: sanitizeNumberArray(input.default_categories_muted),
     watched_tags: sanitizeStringArray(input.watched_tags),
     tracked_tags: sanitizeStringArray(input.tracked_tags),
     watching_first_post_tags: sanitizeStringArray(input.watching_first_post_tags),
-    muted_tags: sanitizeStringArray(input.muted_tags)
+    muted_tags: sanitizeStringArray(input.muted_tags),
+    default_tags_watching: sanitizeStringArray(input.default_tags_watching),
+    default_tags_tracking: sanitizeStringArray(input.default_tags_tracking),
+    default_tags_muted: sanitizeStringArray(input.default_tags_muted)
   }
 }
 
@@ -1521,46 +1563,67 @@ const loadQuickSidebar = async (force = false) => {
     const sections: QuickSidebarSection[] = [shortcutSection]
 
     const watchedCategoryItems = buildCategoryItems(
-      normalizedPrefs.watched_category_ids,
+      uniqueNumbers(
+        normalizedPrefs.watched_category_ids,
+        normalizedPrefs.default_categories_watching
+      ),
       categoryMap
     )
     const trackedCategoryItems = buildCategoryItems(
-      normalizedPrefs.tracked_category_ids,
+      uniqueNumbers(
+        normalizedPrefs.tracked_category_ids,
+        normalizedPrefs.default_categories_tracking
+      ),
       categoryMap
     )
     const watchedFirstPostCategoryItems = buildCategoryItems(
-      normalizedPrefs.watched_first_post_category_ids,
+      uniqueNumbers(
+        normalizedPrefs.watched_first_post_category_ids,
+        normalizedPrefs.default_categories_watching_first_post
+      ),
       categoryMap
     )
     const mutedCategoryItems = buildCategoryItems(
-      normalizedPrefs.muted_category_ids,
+      uniqueNumbers(normalizedPrefs.muted_category_ids, normalizedPrefs.default_categories_muted),
       categoryMap,
       true
     )
+    const regularCategoryItems = buildCategoryItems(
+      normalizedPrefs.regular_category_ids,
+      categoryMap
+    )
 
-    const categoryNotificationItems: QuickSidebarItem[] = [
+    const categoryNotificationItems = uniqueSidebarItems([
+      ...mutedCategoryItems,
       ...watchedCategoryItems,
       ...trackedCategoryItems,
       ...watchedFirstPostCategoryItems,
-      ...mutedCategoryItems
-    ]
+      ...regularCategoryItems
+    ])
     if (categoryNotificationItems.length) {
-      sections.push({ title: '分类通知', items: categoryNotificationItems })
+      sections.push({ title: '我的分类设置', items: categoryNotificationItems })
     }
 
-    const watchedTags = buildTagItems(normalizedPrefs.watched_tags)
-    const trackedTags = buildTagItems(normalizedPrefs.tracked_tags)
+    const watchedTags = buildTagItems(
+      uniqueStrings(normalizedPrefs.watched_tags, normalizedPrefs.default_tags_watching)
+    )
+    const trackedTags = buildTagItems(
+      uniqueStrings(normalizedPrefs.tracked_tags, normalizedPrefs.default_tags_tracking)
+    )
     const watchingFirstPostTags = buildTagItems(normalizedPrefs.watching_first_post_tags)
-    const mutedTags = buildTagItems(normalizedPrefs.muted_tags, true)
+    const mutedTags = buildTagItems(
+      uniqueStrings(normalizedPrefs.muted_tags, normalizedPrefs.default_tags_muted),
+      true
+    )
 
-    const tagNotificationItems: QuickSidebarItem[] = [
+    const tagNotificationItems = uniqueSidebarItems([
+      ...mutedTags,
       ...watchedTags,
       ...trackedTags,
-      ...watchingFirstPostTags,
-      ...mutedTags
-    ]
+      ...watchingFirstPostTags
+    ])
     if (tagNotificationItems.length) {
-      sections.push({ title: '标签通知', items: tagNotificationItems })
+      sections.push({ title: '我的标签设置', items: tagNotificationItems })
     }
 
     quickSidebarSections.value = sections
@@ -1572,8 +1635,8 @@ const loadQuickSidebar = async (force = false) => {
   }
 }
 
-const handleSelectChatChannel = (channel: { id: number; slug?: string }) => {
-  openChatChannel(channel)
+const handleSelectChatChannel = (channel: { id: number; slug?: string }, syncLocation = true) => {
+  openChatChannel(channel, syncLocation)
 }
 
 const handleLoadMoreChatMessages = (channelId: number) => {
@@ -1594,8 +1657,8 @@ const handleLoadMoreChatSearch = () => {
   void searchChatMessages(search.query, search.channelId, search.sort, false)
 }
 
-const handleOpenChatThread = async (chatMessage: ChatMessage) => {
-  const thread = await openChatMessageThread(chatMessage)
+const handleOpenChatThread = async (chatMessage: ChatMessage, syncLocation = true) => {
+  const thread = await openChatMessageThread(chatMessage, syncLocation)
   if (!thread) {
     message.error(activeTab.value?.chatState?.threadErrorMessage || '无法打开消息串')
   }
@@ -1617,15 +1680,15 @@ const handleLoadMoreChatChannelThreads = (channelId: number) => {
   void loadMoreThreadsForChatChannel(channelId)
 }
 
-const handleSelectChatThread = async (thread: ChatThread) => {
-  const opened = await openChatThreadFromList(thread)
+const handleSelectChatThread = async (thread: ChatThread, syncLocation = true) => {
+  const opened = await openChatThreadFromList(thread, syncLocation)
   if (!opened) {
     message.error(activeTab.value?.chatState?.threadErrorMessage || '无法打开消息串')
   }
 }
 
-const handleCloseChatThread = () => {
-  closeActiveChatThread()
+const handleCloseChatThread = (syncLocation = true) => {
+  closeActiveChatThread(syncLocation)
 }
 
 const handleLoadMoreChatThreadMessages = (threadId: number) => {
@@ -1681,14 +1744,17 @@ const handleReactChatMessage = async (payload: {
   }
 }
 
-const handleEditChatChannel = async (payload: {
-  channelId: number
-  updates: ChatChannelUpdatePayload
-}) => {
+const handleEditChatChannel = async (
+  payload: {
+    channelId: number
+    updates: ChatChannelUpdatePayload
+  },
+  syncLocation = true
+) => {
   if (chatChannelSaving.value) return
   chatChannelSaving.value = true
   try {
-    const channel = await updateChatChannel(payload.channelId, payload.updates)
+    const channel = await updateChatChannel(payload.channelId, payload.updates, syncLocation)
     if (channel) {
       message.success('频道设置已保存')
     } else {
@@ -1835,10 +1901,10 @@ const handleChatSidebarTabChange = (tab: 'threads' | 'starred' | 'public' | 'dir
   }
 }
 
-const handleJoinChatChannel = async (channelId: number) => {
+const handleJoinChatChannel = async (channelId: number, syncLocation = true) => {
   const joined = await joinChatChannel(channelId)
   if (joined) {
-    openChatChannel(joined)
+    openChatChannel(joined, syncLocation)
     message.success(`已加入「${joined.title || joined.chatable?.name || channelId}」`)
   } else {
     message.error(activeTab.value?.chatState?.errorMessage || '加入频道失败')
@@ -1854,7 +1920,10 @@ const handleAddChatDirectUsers = async (payload: { channelId: number; usernames:
   }
 }
 
-const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: string }) => {
+const handleCreateGroup = async (
+  payload: { targetUsernames: string[]; name?: string },
+  syncLocation = true
+) => {
   if (chatDirectCreating.value) return
   chatDirectCreating.value = true
   try {
@@ -1865,7 +1934,7 @@ const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: st
     })
     if (channel) {
       message.success(payload.targetUsernames.length > 1 ? '群聊已创建' : '聊天已创建')
-      openChatChannel(channel)
+      openChatChannel(channel, syncLocation)
     } else {
       message.error(activeTab.value?.chatState?.errorMessage || '创建聊天频道失败')
     }
@@ -1874,14 +1943,14 @@ const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: st
   }
 }
 
-const handleCreateChatChannel = async (payload: ChatCreateChannelPayload) => {
+const handleCreateChatChannel = async (payload: ChatCreateChannelPayload, syncLocation = true) => {
   if (chatPublicCreating.value) return
   chatPublicCreating.value = true
   try {
     const channel = await createChatChannel(payload)
     if (channel) {
       message.success('公开频道已创建')
-      openChatChannel(channel)
+      openChatChannel(channel, syncLocation)
     } else {
       message.error(activeTab.value?.chatState?.errorMessage || '创建公开频道失败')
     }
@@ -1892,6 +1961,10 @@ const handleCreateChatChannel = async (payload: ChatCreateChannelPayload) => {
 
 const handleLoadChatMembers = async (channelId: number) => {
   await loadChatMembers(channelId, true)
+}
+
+const handleLoadMoreChatMembers = async (channelId: number) => {
+  await loadMoreChatMembers(channelId)
 }
 
 const handleAddChatMembers = async (payload: { channelId: number; usernames: string[] }) => {
@@ -2122,9 +2195,7 @@ const handleInvitesLoadMore = () => {
 // Private message management handlers
 const handleMessagesCompose = (targetUsername = '') => {
   pmComposerOpen.value = true
-  pmComposerTargets.value = targetUsername
-  pmComposerTitle.value = ''
-  pmComposerRaw.value = ''
+  pmComposerTargets.value = targetUsername ? [targetUsername] : []
 }
 
 const handleMessagesMarkAllRead = async (topicIds: number[]) => {
@@ -2154,40 +2225,14 @@ const handleMessagesMoveToInbox = async (topicId: number) => {
   }
 }
 
-const handlePmComposerSend = async () => {
-  const targets = pmComposerTargets.value
-    .split(/[,，\s]+/)
-    .map(t => t.trim())
-    .filter(Boolean)
-  const title = pmComposerTitle.value.trim()
-  const raw = pmComposerRaw.value.trim()
-  if (targets.length === 0) {
-    message.warning('请输入至少一个收件人用户名')
-    return
-  }
-  if (!raw) {
-    message.warning('请输入私信内容')
-    return
-  }
-  pmComposerSending.value = true
-  try {
-    const { createTopic } = await import('./discourse/actions/topic')
-    const data = await createTopic(baseUrl.value, {
-      title: title || `私信给 ${targets.join(', ')}`,
-      raw,
-      targetUsernames: targets
-    })
-    pmComposerOpen.value = false
-    message.success('私信已发送')
-    const topicId = Number(data?.topic_id || data?.id)
-    if (Number.isFinite(topicId) && topicId > 0) {
-      navigateTo(`/t/${topicId}`)
-    }
-  } catch (e) {
-    message.error(e instanceof Error ? e.message : '发送私信失败')
-  } finally {
-    pmComposerSending.value = false
-  }
+const handlePrivateMessagePosted = (data: any) => {
+  pmComposerOpen.value = false
+  message.success('私信已发送')
+  const topicId = Number(data?.topic_id || data?.id || data?.topic?.id)
+  if (!Number.isFinite(topicId) || topicId <= 0) return
+  const slug = String(data?.topic_slug || data?.slug || data?.topic?.slug || 'private-message')
+  const postNumber = Number(data?.post_number || data?.topic?.post_number || 0)
+  navigateTo(`/t/${encodeURIComponent(slug)}/${topicId}${postNumber > 0 ? `/${postNumber}` : ''}`)
 }
 
 const handleChangeTopicListType = (type: TopicListType) => {
@@ -2250,7 +2295,9 @@ const handleStartUserChat = async (username?: string) => {
     message.error(activeTab.value?.chatState?.errorMessage || '无法创建私聊')
     return
   }
-  openChatChannel(channel)
+  // This entry point opens the floating chat from a user card. Keep the
+  // currently viewed browser tab and its history untouched.
+  openChatChannel(channel, false)
 }
 
 const handleOpenUserBadges = (username: string) => {
@@ -3187,6 +3234,7 @@ onUnmounted(() => {
           :filter="activeTab?.notificationsFilter || 'all'"
           :unreadCount="unreadNotificationsCount"
           :open="notificationsOpen"
+          :loading="notificationsLoading"
           :baseUrl="baseUrl"
           :currentUsername="currentUsername || ''"
           @openChange="handleNotificationsOpenChange"
@@ -3457,6 +3505,7 @@ onUnmounted(() => {
         @createChannel="handleCreateChatChannel"
         @createGroupSearch="handleCreateGroupSearch"
         @loadMembers="handleLoadChatMembers"
+        @loadMoreMembers="handleLoadMoreChatMembers"
         @addMembers="handleAddChatMembers"
         @removeMember="handleRemoveChatMember"
         @followChannel="handleFollowChatChannel"
@@ -3756,11 +3805,11 @@ onUnmounted(() => {
         :savingFollow="chatFollowSaving"
         :leavingChannel="chatLeavingChannel"
         :deletingChannel="chatDeletingChannel"
-        @selectChannel="handleSelectChatChannel"
+        @selectChannel="channel => handleSelectChatChannel(channel, false)"
         @loadMore="handleLoadMoreChatMessages"
-        @openThread="handleOpenChatThread"
-        @selectThread="handleSelectChatThread"
-        @closeThread="handleCloseChatThread"
+        @openThread="chatMessage => handleOpenChatThread(chatMessage, false)"
+        @selectThread="thread => handleSelectChatThread(thread, false)"
+        @closeThread="() => handleCloseChatThread(false)"
         @loadMoreThread="handleLoadMoreChatThreadMessages"
         @loadMyThreads="handleLoadMyChatThreads"
         @loadMoreMyThreads="handleLoadMoreMyChatThreads"
@@ -3773,7 +3822,7 @@ onUnmounted(() => {
         @sendMessage="handleSendChatMessage"
         @sendThreadMessage="handleSendChatThreadMessage"
         @react="handleReactChatMessage"
-        @editChannel="handleEditChatChannel"
+        @editChannel="payload => handleEditChatChannel(payload, false)"
         @interact="handleChatMessageInteraction"
         @navigate="handleContentNavigation"
         @replyToMessage="handleReplyToMessage"
@@ -3786,10 +3835,11 @@ onUnmounted(() => {
         @cancelThreadEdit="cancelChatThreadEdit"
         @deleteMessage="handleDeleteMessage"
         @flagMessage="handleFlagMessage"
-        @createGroup="handleCreateGroup"
-        @createChannel="handleCreateChatChannel"
+        @createGroup="payload => handleCreateGroup(payload, false)"
+        @createChannel="payload => handleCreateChatChannel(payload, false)"
         @createGroupSearch="handleCreateGroupSearch"
         @loadMembers="handleLoadChatMembers"
+        @loadMoreMembers="handleLoadMoreChatMembers"
         @addMembers="handleAddChatMembers"
         @removeMember="handleRemoveChatMember"
         @followChannel="handleFollowChatChannel"
@@ -3804,7 +3854,7 @@ onUnmounted(() => {
         :discoverErrorMessage="activeTab.chatState.discoverErrorMessage"
         :joiningChannelIds="activeTab.chatState.joiningChannelIds"
         @discoverChannels="handleDiscoverChatChannels"
-        @joinChannel="handleJoinChatChannel"
+        @joinChannel="channelId => handleJoinChatChannel(channelId, false)"
         @addDirectUsers="handleAddChatDirectUsers"
         @sidebarTab="handleChatSidebarTabChange"
       />
@@ -3848,59 +3898,14 @@ onUnmounted(() => {
   <!-- Private message composer -->
   <div v-if="pmComposerOpen" class="pm-composer-mask">
     <div class="pm-composer">
-      <div class="pm-composer__header">
-        <div class="pm-composer__title">
-          <EditOutlined />
-          新建私信
-        </div>
-        <a-button type="text" size="small" @click="pmComposerOpen = false" aria-label="关闭">
-          <CloseOutlined />
-        </a-button>
-      </div>
-      <div class="pm-composer__body">
-        <div class="pm-composer__field">
-          <label>收件人（用户名，逗号分隔）</label>
-          <a-input
-            v-model:value="pmComposerTargets"
-            placeholder="例如：user1, user2"
-            :disabled="pmComposerSending"
-          />
-        </div>
-        <div class="pm-composer__field">
-          <label>标题</label>
-          <a-input
-            v-model:value="pmComposerTitle"
-            placeholder="私信标题（可选）"
-            :disabled="pmComposerSending"
-          />
-        </div>
-        <div class="pm-composer__field">
-          <label>内容</label>
-          <a-textarea
-            v-model:value="pmComposerRaw"
-            :rows="8"
-            placeholder="输入私信内容..."
-            :disabled="pmComposerSending"
-          />
-        </div>
-      </div>
-      <div class="pm-composer__footer">
-        <a-button
-          class="pm-composer__button"
-          @click="pmComposerOpen = false"
-          :disabled="pmComposerSending"
-        >
-          取消
-        </a-button>
-        <a-button
-          type="primary"
-          class="pm-composer__button"
-          :loading="pmComposerSending"
-          @click="handlePmComposerSend"
-        >
-          发送
-        </a-button>
-      </div>
+      <PrivateMessageComposer
+        mode="privateMessage"
+        :baseUrl="baseUrl"
+        :initialTargetUsernames="pmComposerTargets"
+        showClose
+        @posted="handlePrivateMessagePosted"
+        @close="pmComposerOpen = false"
+      />
     </div>
   </div>
 </template>
@@ -4254,6 +4259,7 @@ onUnmounted(() => {
 }
 
 .pm-composer {
+  position: relative;
   width: min(600px, 100%);
   max-height: min(760px, calc(100vh - 40px));
   display: flex;
@@ -4262,6 +4268,13 @@ onUnmounted(() => {
   border-radius: var(--d-shape-xl, 28px);
   box-shadow: var(--d-elevation-3);
   overflow: hidden;
+}
+
+.pm-composer :deep(.composer) {
+  max-height: min(760px, calc(100vh - 40px));
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
 }
 
 .pm-composer__header {

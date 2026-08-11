@@ -4,6 +4,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   CommentOutlined,
+  DownOutlined,
   EditOutlined,
   LockOutlined
 } from '@ant-design/icons-vue'
@@ -210,16 +211,19 @@ export default defineComponent({
               title="设置此消息串的通知级别"
             >
               <BellOutlined aria-hidden="true" />
-              <select
-                aria-label="消息串通知级别"
-                value={notificationLevel.value}
-                disabled={props.notificationSaving}
-                onChange={handleNotificationLevelChange}
-              >
-                <option value={3}>关注：所有新回复</option>
-                <option value={2}>跟踪：显示未读</option>
-                <option value={1}>常规：仅提及</option>
-              </select>
+              <span class="chat-thread-panel__tracking-select-wrap">
+                <select
+                  aria-label="消息串通知级别"
+                  value={notificationLevel.value}
+                  disabled={props.notificationSaving}
+                  onChange={handleNotificationLevelChange}
+                >
+                  <option value={3}>关注：所有新回复</option>
+                  <option value={2}>跟踪：显示未读</option>
+                  <option value={1}>常规：仅提及</option>
+                </select>
+                <DownOutlined aria-hidden="true" />
+              </span>
             </label>
             <button
               type="button"

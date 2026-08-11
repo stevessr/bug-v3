@@ -113,7 +113,7 @@ test.describe('Discourse browser navigation and content safety', () => {
                   created_at: '2026-08-09T09:00:00Z',
                   topic_id: 1,
                   post_number: 1,
-                  data: { username: 'alice', topic_title: '最新点赞' }
+                  data: { username: 'alice', topic_title: '最新点赞 :party_blob:' }
                 },
                 {
                   id: requests.length + 1,
@@ -123,10 +123,32 @@ test.describe('Discourse browser navigation and content safety', () => {
                   topic_id: 2,
                   post_number: 2,
                   data: { username: 'bob', topic_title: '最新回复' }
+                },
+                {
+                  id: requests.length + 2,
+                  notification_type: 6,
+                  read: false,
+                  created_at: '2026-08-09T07:00:00Z',
+                  topic_id: 77,
+                  post_number: 4,
+                  slug: 'private-message-77',
+                  data: { username: 'carol', topic_title: '定位私信消息' }
                 }
               ],
               users: [],
               unread_notifications: 1
+            }
+          } else if (parsed.pathname === '/emojis.json') {
+            data = {
+              emojis: {
+                custom: [
+                  {
+                    id: 'party_blob',
+                    name: 'party_blob',
+                    url: 'https://cdn.ldstatic.com/images/emoji/party_blob.png'
+                  }
+                ]
+              }
             }
           } else if (parsed.pathname === '/c/parent/child/42.json') {
             data = {
@@ -487,8 +509,30 @@ test.describe('Discourse browser navigation and content safety', () => {
 
     await dropdown.getByRole('button', { name: '点赞' }).click()
     await expect.poll(notificationRequestCount).toBe(before + 2)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__discourseRequests.some(
+            (url: string) =>
+              new URL(url).pathname === '/notifications.json' &&
+              new URL(url).searchParams.get('filter') === 'likes'
+          )
+        )
+      )
+      .toBe(true)
     await dropdown.getByRole('button', { name: '回复' }).click()
     await expect.poll(notificationRequestCount).toBe(before + 3)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__discourseRequests.some(
+            (url: string) =>
+              new URL(url).pathname === '/notifications.json' &&
+              new URL(url).searchParams.get('filter') === 'replies'
+          )
+        )
+      )
+      .toBe(true)
 
     // Returning to a filter fetched in this same opening restores its snapshot.
     await dropdown.getByRole('button', { name: '点赞' }).click()
@@ -500,6 +544,21 @@ test.describe('Discourse browser navigation and content safety', () => {
     await trigger.click()
     await expect(dropdown).toBeVisible()
     await expect.poll(notificationRequestCount).toBe(before + 4)
+  })
+
+  test('renders notification shortcodes and opens a private-message notification at its post', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    await page.locator('.notifications-trigger').click()
+    const dropdown = page.locator('.notifications-dropdown')
+    await expect(dropdown).toBeVisible()
+    await expect(dropdown.locator('.ntf-title img[alt="party_blob"]')).toBeVisible()
+
+    await dropdown.locator('.ntf-item').filter({ hasText: '定位私信消息' }).click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/t/private-message-77/77/4'
+    )
   })
 
   test('opens the quick sidebar with complete static navigation shortcuts', async ({ page }) => {

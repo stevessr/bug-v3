@@ -35,7 +35,7 @@ test.describe('Discourse topic metadata and public poll voters', () => {
         highest_post_number: 1,
         views: 12,
         like_count: 0,
-        category_id: 8,
+        category_id: (globalThis as any).__topicMetadataLinuxMajorCategory ? 4 : 8,
         tags: [
           { name: 'ux', text: '用户体验', description: '体验相关讨论' },
           { slug: 'release', text: '发布' }
@@ -120,6 +120,14 @@ test.describe('Discourse topic metadata and public poll voters', () => {
           let ok = true
           if (parsed.pathname === '/latest.json') {
             data = { topic_list: { topics: [] }, users: [] }
+          } else if (parsed.pathname === '/tag/ux.json') {
+            data = { topic_list: { topics: [] }, users: [] }
+          } else if (parsed.pathname === '/c/product-design/8.json') {
+            data = {
+              category: { id: 8, name: '产品设计', slug: 'product-design' },
+              topic_list: { topics: [] },
+              users: []
+            }
           } else if (parsed.pathname === '/categories.json') {
             data = {
               category_list: {
@@ -212,6 +220,25 @@ test.describe('Discourse topic metadata and public poll voters', () => {
     await expect(header.getByText('用户体验', { exact: true })).toBeVisible()
     await expect(header.getByText('发布', { exact: true })).toBeVisible()
 
+    await header.getByRole('button', { name: '查看标签：用户体验' }).click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://forum.example.test/tag/ux'
+    )
+    await expect(page.getByRole('heading', { name: 'ux' })).toBeVisible()
+
+    await page.getByRole('button', { name: '后退' }).click()
+    await expect(
+      page.getByRole('heading', { name: '带有分区、标签和公开投票的话题' })
+    ).toBeVisible()
+    await page.locator('.topic-header').getByRole('button', { name: '查看分类：产品设计' }).click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://forum.example.test/c/product-design/8'
+    )
+    await page.getByRole('button', { name: '后退' }).click()
+    await expect(
+      page.getByRole('heading', { name: '带有分区、标签和公开投票的话题' })
+    ).toBeVisible()
+
     const poll = page.locator('.poll-tsx')
     await expect(poll.getByText('是否支持这个功能？')).toBeVisible()
     await expect(poll.getByLabel('投票人 Alice (@alice)')).toBeVisible()
@@ -273,5 +300,23 @@ test.describe('Discourse topic metadata and public poll voters', () => {
       original_title: '带有分区、标签和公开投票的话题',
       tags: ['ux', 'release', 'docs']
     })
+  })
+
+  test('uses packaged Linux.do definitions to retain a major category board icon', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    await page.evaluate(() => {
+      ;(globalThis as any).__topicMetadataLinuxMajorCategory = true
+    })
+    await page.locator('.toolbar-address input').fill('https://linux.do/t/public-poll-metadata/77')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const categoryBadge = page.locator('.topic-header__context-category')
+    await expect(categoryBadge).toContainText('开发调优')
+    await expect(categoryBadge.locator('.topic-category-icon img')).toHaveAttribute(
+      'src',
+      /linux\.do\/uploads\/default\//
+    )
   })
 })

@@ -211,6 +211,17 @@ test.describe('Discourse user profile area', () => {
             }
           } else if (url.includes('/topics/messages/steve.json')) {
             data = messagesData
+          } else if (url.includes('/u/search.json')) {
+            data = {
+              users: [
+                {
+                  id: 2,
+                  username: 'alice',
+                  name: 'Alice',
+                  avatar_template: '/letter_avatar_proxy/v4/letter/a/8491ac/{size}.png'
+                }
+              ]
+            }
           } else if (url.includes('/user_actions.json')) {
             data = {
               user_actions: [
@@ -407,5 +418,24 @@ test.describe('Discourse user profile area', () => {
     await page.getByRole('button', { name: '归档此私信' }).click()
     await expect(page.getByText('已归档')).toBeVisible()
     await expect(page.getByRole('button', { name: '移回收件箱' })).toBeVisible()
+  })
+
+  test('creates a private message with the shared rich composer and recipient search', async ({
+    page
+  }) => {
+    await openAddress(page, 'https://linux.do/u/steve')
+    await page.getByRole('tab', { name: '消息' }).click()
+    await page.getByRole('button', { name: '新建私信' }).click()
+
+    const composer = page.locator('.pm-composer')
+    await expect(composer.getByText('新建私信', { exact: true })).toBeVisible()
+    await expect(composer.locator('.prosemirror-toolbar')).toBeVisible()
+
+    const recipientInput = composer.getByLabel('搜索收件人')
+    await recipientInput.fill('alice')
+    await expect(composer.getByRole('button', { name: /Alice.*@alice/ })).toBeVisible()
+    await composer.getByRole('button', { name: /Alice.*@alice/ }).click()
+    await expect(composer.locator('.composer-recipient-chip')).toHaveText(/@alice/)
+    await expect(composer.getByRole('button', { name: '发送私信' })).toBeVisible()
   })
 })

@@ -155,9 +155,10 @@
   min-height: 40px;
   align-items: center;
   gap: 5px;
-  padding: 0 7px 0 10px;
-  border-radius: var(--d-shape-full, 999px);
-  background: var(--d-surface-3, var(--theme-surface-container-high));
+  padding: 0 8px 0 11px;
+  border: 1px solid var(--d-outline-variant, var(--theme-outline-variant));
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--d-surface-2, var(--theme-surface-container));
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 12px;
   transition: opacity var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
@@ -168,15 +169,37 @@
 }
 
 .chat-thread-panel__tracking select {
-  max-width: 138px;
+  width: 100%;
+  max-width: 150px;
   min-height: 30px;
+  padding: 0 22px 0 0;
   border: 0;
+  appearance: none;
   outline: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
   font-weight: 620;
+}
+
+.chat-thread-panel__tracking-select-wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.chat-thread-panel__tracking-select-wrap > .anticon {
+  position: absolute;
+  right: 1px;
+  pointer-events: none;
+  font-size: 10px;
+}
+
+.chat-thread-panel__tracking:focus-within {
+  border-color: var(--d-primary, var(--theme-primary));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--d-primary, var(--theme-primary)) 18%, transparent);
 }
 
 .chat-thread-panel__tracking select:disabled {
