@@ -374,65 +374,103 @@
   display: none;
 }
 
+/* ============ MD3 对话框（插入链接 / 插入图片） ============
+ * 遵循 Material Design 3 规范：
+ * - 容器: surface-container-high, 28px 圆角 (extra-large), 24px 内边距, 22px 标题
+ * - 文本字段: filled 样式 (surface-container-highest 底、顶部 4px 圆角、底部指示条)
+ * - 按钮: text button（取消）/ filled button（插入），全圆角 20px
+ * - 配色全部使用 --md3-* 变量，跟随设置中的主题与配色方案（明/暗自动切换）
+ */
 .editor-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: color-mix(in srgb, var(--md3-scrim, #000000) 32%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 16px;
+  padding: 24px;
 }
 
 .editor-modal-card {
-  width: min(420px, 100%);
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.24);
+  width: min(400px, 100%);
+  background: var(--md3-surface-container-high, #ece6f0);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgb(31 27 36 / 20%);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+  color: var(--md3-on-surface, #1d1b20);
 }
 
 .editor-modal-header {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+  color: var(--md3-on-surface, #1d1b20);
 }
 
-.editor-modal-row {
+/* MD3 filled 文本字段 */
+.editor-modal-field {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  background: var(--md3-surface-container-highest, #e6e0e9);
+  border-radius: 4px 4px 0 0;
+  padding: 8px 16px 0;
 }
 
-.editor-modal-label {
+.editor-modal-field__label {
   font-size: 12px;
-  color: #6b7280;
+  line-height: 16px;
+  color: var(--md3-on-surface-variant, #49454f);
+  user-select: none;
 }
 
-.editor-modal-input {
+.editor-modal-field__input {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
+  box-sizing: border-box;
+  border: none;
   outline: none;
+  background: transparent;
+  padding: 4px 0 9px;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--md3-on-surface, #1d1b20);
+  font-family: inherit;
 }
 
-.editor-modal-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+.editor-modal-field__input::placeholder {
+  color: var(--md3-on-surface-variant, #49454f);
+  opacity: 1;
+}
+
+/* 底部指示条：常态 1px on-surface-variant，聚焦 2px primary */
+.editor-modal-field::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--md3-on-surface-variant, #49454f);
+  transition: height 0.15s ease;
+}
+
+.editor-modal-field:focus-within::after {
+  height: 2px;
+  background: var(--md3-primary, #6750a4);
 }
 
 .editor-modal-preview {
-  font-size: 12px;
-  color: #6b7280;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--md3-on-surface-variant, #49454f);
+  min-height: 24px;
 }
 
 .editor-modal-preview-label {
@@ -440,56 +478,74 @@
 }
 
 .editor-modal-preview-link {
-  color: #2563eb;
+  color: var(--md3-primary, #6750a4);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-modal-preview-link:hover {
   text-decoration: underline;
 }
 
 .editor-modal-preview-placeholder {
-  color: #9ca3af;
+  color: var(--md3-on-surface-variant, #49454f);
+  opacity: 0.7;
 }
 
 .editor-modal-preview-image {
-  max-height: 120px;
-  max-width: 220px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  max-height: 140px;
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  background: var(--md3-surface-container-lowest, #ffffff);
+  object-fit: contain;
 }
 
 .editor-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  margin-top: 4px;
 }
 
+/* MD3 text button（取消） */
 .editor-modal-btn {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
+  border: none;
+  background: transparent;
+  border-radius: 20px;
+  padding: 10px 24px;
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
   cursor: pointer;
-  color: #374151;
-  transition: all 0.2s;
+  color: var(--md3-primary, #6750a4);
+  font-family: inherit;
+  transition: background 0.15s ease;
 }
 
-.editor-modal-btn:hover {
-  background: #f3f4f6;
+.editor-modal-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 8%, transparent);
 }
 
+/* MD3 filled button（插入） */
 .editor-modal-btn.primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
+  background: var(--md3-primary, #6750a4);
+  color: var(--md3-on-primary, #ffffff);
 }
 
-.editor-modal-btn.primary:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+.editor-modal-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 92%, #000000);
 }
 
-.editor-modal-btn:disabled,
-.editor-modal-btn.primary:disabled {
-  opacity: 0.5;
+/* MD3 disabled 状态 */
+.editor-modal-btn:disabled {
+  background: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 12%, transparent);
+  color: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 38%, transparent);
+  box-shadow: none;
   cursor: not-allowed;
 }
 

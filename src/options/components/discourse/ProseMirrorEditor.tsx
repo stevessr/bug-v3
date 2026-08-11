@@ -645,10 +645,10 @@ export default defineComponent({
                 <div class="editor-modal-header">
                   <span>插入链接</span>
                 </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">链接地址</label>
+                <div class="editor-modal-field">
+                  <span class="editor-modal-field__label">链接地址</span>
                   <input
-                    class="editor-modal-input"
+                    class="editor-modal-field__input"
                     value={linkUrl.value}
                     onInput={event => {
                       linkUrl.value = (event.target as HTMLInputElement).value
@@ -656,10 +656,10 @@ export default defineComponent({
                     placeholder="https://"
                   />
                 </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">显示文本（可选）</label>
+                <div class="editor-modal-field">
+                  <span class="editor-modal-field__label">显示文本（可选）</span>
                   <input
-                    class="editor-modal-input"
+                    class="editor-modal-field__input"
                     value={linkText.value}
                     onInput={event => {
                       linkText.value = (event.target as HTMLInputElement).value
@@ -704,10 +704,10 @@ export default defineComponent({
                 <div class="editor-modal-header">
                   <span>插入图片</span>
                 </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">图片地址</label>
+                <div class="editor-modal-field">
+                  <span class="editor-modal-field__label">图片地址</span>
                   <input
-                    class="editor-modal-input"
+                    class="editor-modal-field__input"
                     value={imageUrl.value}
                     onInput={event => {
                       imageUrl.value = (event.target as HTMLInputElement).value
@@ -715,10 +715,10 @@ export default defineComponent({
                     placeholder="https://"
                   />
                 </div>
-                <div class="editor-modal-row">
-                  <label class="editor-modal-label">描述（可选）</label>
+                <div class="editor-modal-field">
+                  <span class="editor-modal-field__label">描述（可选）</span>
                   <input
-                    class="editor-modal-input"
+                    class="editor-modal-field__input"
                     value={imageAlt.value}
                     onInput={event => {
                       imageAlt.value = (event.target as HTMLInputElement).value
