@@ -54,6 +54,206 @@
   background: #e5e7eb;
 }
 
+/* Inline Discourse composer menus.  They intentionally stay in the toolbar
+ * flow (rather than using a second popup window) so the editor feels like the
+ * surrounding topic UI and remains usable on narrow screens. */
+.editor-toolbar-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.editor-toolbar-menu--emoji {
+  z-index: 12;
+}
+
+.toolbar-btn.is-active {
+  border-color: var(--d-primary, #6750a4);
+  background: color-mix(in srgb, var(--d-primary, #6750a4) 14%, transparent);
+  color: var(--d-primary, #6750a4);
+}
+
+.toolbar-btn--advanced {
+  width: auto;
+  gap: 3px;
+  padding: 0 8px;
+}
+
+.forum-emoji-menu,
+.advanced-syntax-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  border: 1px solid var(--d-outline, #c7c1d0);
+  border-radius: 16px;
+  background: var(--d-surface-container, #f8f7fc);
+  box-shadow: var(--d-elevation-3, 0 12px 30px rgb(31 27 36 / 20%));
+  color: var(--d-text, #1d1b20);
+}
+
+.forum-emoji-menu {
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px;
+}
+
+.forum-emoji-menu__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forum-emoji-menu__header > input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 36px;
+  border: 1px solid var(--d-outline, #c7c1d0);
+  border-radius: 999px;
+  padding: 0 12px;
+  outline: none;
+  background: var(--d-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.forum-emoji-menu__header > input:focus {
+  border-color: var(--d-primary, #6750a4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--d-primary, #6750a4) 18%, transparent);
+}
+
+.forum-emoji-menu__sources,
+.forum-emoji-menu__groups {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.forum-emoji-menu__sources button,
+.forum-emoji-menu__groups button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--d-text-muted, #625b71);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.forum-emoji-menu__sources button {
+  min-height: 28px;
+  padding: 0 12px;
+}
+
+.forum-emoji-menu__groups {
+  margin-top: 8px;
+  padding-bottom: 2px;
+}
+
+.forum-emoji-menu__groups button {
+  width: 30px;
+  height: 30px;
+  padding: 3px;
+}
+
+.forum-emoji-menu__sources button:hover,
+.forum-emoji-menu__sources button.is-active,
+.forum-emoji-menu__groups button:hover,
+.forum-emoji-menu__groups button.is-active {
+  background: color-mix(in srgb, var(--d-primary, #6750a4) 14%, transparent);
+  color: var(--d-primary, #6750a4);
+}
+
+.forum-emoji-menu__groups img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.forum-emoji-menu__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 4px;
+  max-height: 240px;
+  margin-top: 8px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.forum-emoji-menu__grid button {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 21px;
+}
+
+.forum-emoji-menu__grid button:hover,
+.forum-emoji-menu__grid button:focus-visible {
+  outline: 0;
+  background: color-mix(in srgb, var(--d-primary, #6750a4) 12%, transparent);
+}
+
+.forum-emoji-menu__grid img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.forum-emoji-menu__state {
+  grid-column: 1 / -1;
+  padding: 24px 8px;
+  color: var(--d-text-muted, #625b71);
+  font-size: 12px;
+  text-align: center;
+}
+
+.advanced-syntax-menu {
+  width: 190px;
+  padding: 6px;
+}
+
+.advanced-syntax-menu button {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.advanced-syntax-menu button:hover,
+.advanced-syntax-menu button:focus-visible {
+  outline: 0;
+  background: color-mix(in srgb, var(--d-primary, #6750a4) 12%, transparent);
+}
+
+.advanced-syntax-menu .anticon,
+.advanced-syntax-menu .syntax-menu-icon {
+  width: 18px;
+  color: var(--d-primary, #6750a4);
+  text-align: center;
+}
+
+.syntax-menu-icon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .prosemirror-editor {
   min-height: 200px;
   padding: 0.75rem;

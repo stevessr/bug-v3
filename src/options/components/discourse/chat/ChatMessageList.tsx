@@ -1,7 +1,8 @@
 import { computed, defineComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import type { ChatMessage, ParsedContent } from '../types'
+import type { ChatChannel, ChatMessage, DiscourseUser, ParsedContent } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
+import { getAvatarUrl } from '../utils'
 
 import ChatMessageItem from './ChatMessageItem'
 import '../css/chat/ChatMessageList.css'
@@ -10,6 +11,7 @@ export default defineComponent({
   name: 'ChatMessageList',
   props: {
     messages: { type: Array as () => ChatMessage[], required: true },
+    channel: { type: Object as () => ChatChannel | null, default: null },
     channelId: { type: Number, default: null },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
@@ -57,6 +59,116 @@ export default defineComponent({
     }
 
     const orderedMessages = computed(() => [...props.messages].sort((a, b) => a.id - b.id))
+
+    const channelUsers = computed<DiscourseUser[]>(() => {
+      const source = [
+        ...(props.channel?.direct_message_users || []),
+        ...(props.channel?.chatable?.users || [])
+      ]
+      const unique = new Map<string, DiscourseUser>()
+      source.forEach(user => {
+        if (!user?.username) return
+        unique.set(user.username.toLowerCase(), user)
+      })
+      return [...unique.values()]
+    })
+
+    const isDirectChannel = computed(() => {
+      const channel = props.channel
+      return Boolean(
+        channel?.channelType === 'direct' ||
+        channel?.chatable_type === 'DirectMessage' ||
+        channel?.chatable?.users?.length
+      )
+    })
+
+    const isGroupChannel = computed(() => {
+      const channel = props.channel
+      return Boolean(
+        isDirectChannel.value &&
+        (channel?.chatable?.group ||
+          channelUsers.value.length > 1 ||
+          Number(channel?.memberships_count || 0) > 2)
+      )
+    })
+
+    const emptyChannelTitle = computed(() => {
+      const channel = props.channel
+      return (
+        channel?.title ||
+        channel?.unicode_title ||
+        channel?.chatable?.name ||
+        (channel?.id ? `频道 #${channel.id}` : '聊天')
+      )
+    })
+
+    const emptyStateUsers = computed(() => {
+      const current = (props.currentUsername || '').toLowerCase()
+      return channelUsers.value.filter(user => user.username.toLowerCase() !== current)
+    })
+
+    const renderEmptyState = () => {
+      const users = emptyStateUsers.value
+      const participants = channelUsers.value
+      const channel = props.channel
+      const icon = channel?.emoji || channel?.chatable?.emoji || channel?.chatable?.icon || '#'
+      const isUnicodeEmoji = /\p{Emoji_Presentation}/u.test(icon)
+      if (isDirectChannel.value && !isGroupChannel.value) {
+        const user = users[0] || channelUsers.value[0]
+        const userLabel = user
+          ? user.name && user.username
+            ? `${user.name}＠${user.username}`
+            : user.name || user.username
+          : emptyChannelTitle.value
+        return (
+          <div class="chat-message-list-empty chat-message-list-empty--welcome">
+            {user?.avatar_template ? (
+              <img
+                class="chat-message-list-empty__avatar"
+                src={getAvatarUrl(user.avatar_template, props.baseUrl, 72)}
+                alt={user.name || user.username}
+              />
+            ) : (
+              <div class="chat-message-list-empty__logo" aria-hidden="true">
+                💬
+              </div>
+            )}
+            <strong>与 {userLabel} 开始对话</strong>
+            <span>发送第一条消息，开始聊天。</span>
+          </div>
+        )
+      }
+
+      const isPublic = !isDirectChannel.value
+      const isGroup = isPublic || isGroupChannel.value
+      const title = emptyChannelTitle.value.replace(/^#+\s*/, '')
+      return (
+        <div class="chat-message-list-empty chat-message-list-empty--welcome">
+          <div class="chat-message-list-empty__logo" aria-hidden="true">
+            {isUnicodeEmoji ? icon : isPublic ? '👥' : '💬'}
+          </div>
+          <strong>
+            {isGroup ? `你是 #${title} 群聊 中的第一个用户` : `${title} 中还没有消息`}
+          </strong>
+          <span>{isGroup ? '抢先发帖，开启讨论。' : '发送第一条消息，开始讨论。'}</span>
+          {participants.length > 0 && (
+            <div class="chat-message-list-empty__participants" aria-label="参加了的用户">
+              <div class="chat-message-list-empty__avatars">
+                {participants.slice(0, 8).map(user => (
+                  <img
+                    key={user.id || user.username}
+                    src={getAvatarUrl(user.avatar_template, props.baseUrl, 32)}
+                    alt={user.name || user.username}
+                    data-user-card={user.username}
+                  />
+                ))}
+              </div>
+              <span>{participants.length}个用户在这里</span>
+            </div>
+          )}
+        </div>
+      )
+    }
 
     // 连续同人消息分组（≤5 分钟视为同一段）：组首保留头像/昵称，组内其余折叠
     const GROUP_WINDOW_MS = 5 * 60 * 1000
@@ -269,11 +381,15 @@ export default defineComponent({
             {props.loading ? '加载中...' : '加载更早消息'}
           </button>
         )}
-        {orderedMessages.value.length === 0 && !props.loading && (
-          <div class="chat-message-list-empty">
-            {props.inThread ? '暂无消息串回复' : '暂无消息，发送第一条消息吧'}
-          </div>
-        )}
+        {orderedMessages.value.length === 0 &&
+          !props.loading &&
+          (props.channel ? (
+            renderEmptyState()
+          ) : (
+            <div class="chat-message-list-empty">
+              {props.inThread ? '暂无消息串回复' : '暂无消息，发送第一条消息吧'}
+            </div>
+          ))}
         {orderedMessages.value.map(message => {
           const flag = groupFlags.value.get(message.id) || { first: true, last: true }
           return (

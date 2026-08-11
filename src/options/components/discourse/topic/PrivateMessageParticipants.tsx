@@ -1,4 +1,4 @@
-import { computed, defineComponent, ref } from 'vue'
+import { computed, defineComponent, onBeforeUnmount, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 import type { DiscourseTopicDetail, DiscourseUser } from '../types'
@@ -19,6 +19,9 @@ export default defineComponent({
     const expanded = ref(true)
     const usernameInput = ref('')
     const saving = ref(false)
+    const searching = ref(false)
+    const searchResults = ref<DiscourseUser[]>([])
+    let searchTimer: ReturnType<typeof setTimeout> | null = null
 
     const participants = computed(() => {
       const values: DiscourseUser[] = []
@@ -41,9 +44,57 @@ export default defineComponent({
     const groups = computed(() => props.topic.details?.allowed_groups || [])
     const canInvite = computed(() => props.topic.details?.can_invite_to === true)
     const canRemove = computed(() => props.topic.details?.can_remove_allowed_users === true)
+    const canLeave = computed(
+      () =>
+        Boolean(props.currentUsername) &&
+        participants.value.some(
+          user => user.username.toLowerCase() === props.currentUsername.toLowerCase()
+        )
+    )
 
-    const addParticipant = async () => {
-      const username = usernameInput.value.trim().replace(/^@/, '')
+    const searchUsers = async (query: string) => {
+      const term = query.trim().replace(/^@/, '')
+      if (!term) {
+        searchResults.value = []
+        return
+      }
+      searching.value = true
+      try {
+        const result = await pageFetch<any>(
+          `${props.baseUrl}/u/search.json?term=${encodeURIComponent(term)}&limit=8`
+        )
+        const data = extractData(result)
+        const users = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : []
+        searchResults.value = users.filter(
+          (user: DiscourseUser) =>
+            user?.username &&
+            !participants.value.some(
+              member => member.username.toLowerCase() === user.username.toLowerCase()
+            )
+        )
+      } catch {
+        searchResults.value = []
+      } finally {
+        searching.value = false
+      }
+    }
+
+    watch(usernameInput, value => {
+      if (searchTimer) clearTimeout(searchTimer)
+      const term = value.trim()
+      if (!term) {
+        searchResults.value = []
+        return
+      }
+      searchTimer = setTimeout(() => void searchUsers(term), 220)
+    })
+
+    onBeforeUnmount(() => {
+      if (searchTimer) clearTimeout(searchTimer)
+    })
+
+    const addParticipant = async (selectedUsername?: string) => {
+      const username = (selectedUsername || usernameInput.value).trim().replace(/^@/, '')
       if (!username || saving.value) return
       if (participants.value.some(user => user.username.toLowerCase() === username.toLowerCase())) {
         message.info('@' + username + ' 已在私信中')
@@ -63,10 +114,27 @@ export default defineComponent({
         if (!props.topic.details.allowed_users) props.topic.details.allowed_users = []
         props.topic.details.allowed_users.push(user)
         usernameInput.value = ''
+        searchResults.value = []
         message.success(`已添加 @${user.username}`)
         emit('refresh')
       } catch (error) {
         message.error(error instanceof Error ? error.message : '添加参与者失败')
+      } finally {
+        saving.value = false
+      }
+    }
+
+    const leavePrivateMessage = async () => {
+      if (!canLeave.value || saving.value || !props.currentUsername) return
+      // eslint-disable-next-line no-alert
+      if (!window.confirm('确定退出这个私信吗？退出后需要再次被邀请才能回来。')) return
+      saving.value = true
+      try {
+        await removeUserFromPrivateMessage(props.baseUrl, props.topic.id, props.currentUsername)
+        message.success('已退出私信')
+        emit('refresh')
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '退出私信失败')
       } finally {
         saving.value = false
       }
@@ -157,27 +225,69 @@ export default defineComponent({
               ))}
             </div>
 
-            {canInvite.value && (
-              <form
-                class="pm-participants__add"
-                onSubmit={(event: Event) => {
-                  event.preventDefault()
-                  void addParticipant()
-                }}
-              >
-                <input
-                  value={usernameInput.value}
-                  disabled={saving.value}
-                  placeholder="输入用户名添加到私信"
-                  aria-label="新参与者用户名"
-                  onInput={(event: Event) =>
-                    (usernameInput.value = (event.target as HTMLInputElement).value)
-                  }
-                />
-                <button type="submit" disabled={saving.value || !usernameInput.value.trim()}>
-                  {saving.value ? '处理中…' : '添加'}
-                </button>
-              </form>
+            {(canInvite.value || canLeave.value) && (
+              <aside class="pm-participants__editor" aria-label="编辑私信参与者">
+                {canInvite.value && (
+                  <form
+                    class="pm-participants__add"
+                    onSubmit={(event: Event) => {
+                      event.preventDefault()
+                      void addParticipant()
+                    }}
+                  >
+                    <label for="pm-participant-username">添加参与者</label>
+                    <div class="pm-participants__add-row">
+                      <input
+                        id="pm-participant-username"
+                        value={usernameInput.value}
+                        disabled={saving.value}
+                        placeholder="输入用户名查找"
+                        aria-label="新参与者用户名"
+                        autocomplete="off"
+                        onInput={(event: Event) =>
+                          (usernameInput.value = (event.target as HTMLInputElement).value)
+                        }
+                      />
+                      <button type="submit" disabled={saving.value || !usernameInput.value.trim()}>
+                        {saving.value ? '处理中…' : '添加'}
+                      </button>
+                    </div>
+                    {(searching.value || searchResults.value.length > 0) && (
+                      <div class="pm-participants__suggestions" role="listbox">
+                        {searching.value && <span>正在查找…</span>}
+                        {!searching.value &&
+                          searchResults.value.map(user => (
+                            <button
+                              key={user.id || user.username}
+                              type="button"
+                              role="option"
+                              onClick={() => void addParticipant(user.username)}
+                            >
+                              <img
+                                src={getAvatarUrl(user.avatar_template, props.baseUrl, 28)}
+                                alt=""
+                              />
+                              <span>
+                                <strong>{user.name || user.username}</strong>
+                                <small>@{user.username}</small>
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </form>
+                )}
+                {canLeave.value && (
+                  <button
+                    type="button"
+                    class="pm-participants__leave"
+                    disabled={saving.value}
+                    onClick={() => void leavePrivateMessage()}
+                  >
+                    {saving.value ? '处理中…' : '退出私信'}
+                  </button>
+                )}
+              </aside>
             )}
           </div>
         )}

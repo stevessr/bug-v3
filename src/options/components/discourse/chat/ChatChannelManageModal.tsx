@@ -191,104 +191,128 @@ export default defineComponent({
               已显示 {displayMembers.value.length} / {memberCount.value} 人
             </div>
           </div>
-          {canAddUsers.value && (
-            <button
-              type="button"
-              class="chat-manage-modal__add-btn"
-              aria-label={addLabel.value}
-              onClick={() => (showAddForm.value = !showAddForm.value)}
-            >
-              <UserAddOutlined /> {addLabel.value}
-            </button>
-          )}
         </div>
 
-        {showAddForm.value && canAddUsers.value && (
-          <div class="chat-manage-modal__add-form">
-            <Input
-              value={query.value}
-              placeholder={isDirect.value ? '搜索用户加入私聊…' : '搜索用户添加…'}
-              prefix={<SearchOutlined />}
-              allowClear
-              onUpdate:value={handleSearchInput}
-            />
-            <div class="chat-manage-modal__add-results">
-              {props.searching && (
-                <div class="chat-manage-modal__loading">
-                  <Spin size="small" />
-                </div>
-              )}
-              {!props.searching &&
-                props.searchResults
-                  .filter(user => !props.members.some(member => member.user.id === user.id))
-                  .map(user => (
-                    <button
-                      key={user.id}
-                      type="button"
-                      class="chat-manage-modal__add-result"
-                      onClick={() => handleAdd(user)}
-                    >
-                      <img
-                        src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)}
-                        alt=""
-                        data-user-card={user.username}
-                      />
-                      <span>
-                        <strong>{user.name || user.username}</strong>
-                        <small>@{user.username}</small>
-                      </span>
-                      <UserAddOutlined />
-                    </button>
-                  ))}
-              {!props.searching && query.value.trim() && props.searchResults.length === 0 && (
-                <div class="chat-manage-modal__hint">未找到匹配的用户</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div class="chat-manage-modal__member-list">
-          {props.membersLoading && displayMembers.value.length === 0 && (
-            <div class="chat-manage-modal__loading">
-              <Spin size="small" />
-            </div>
-          )}
-          {!props.membersLoading && displayMembers.value.length === 0 && (
-            <div class="chat-manage-modal__empty">暂无可显示的成员</div>
-          )}
-          {displayMembers.value.map(member => (
-            <div key={member.user.id} class="chat-manage-modal__member">
-              <img
-                src={getAvatarUrl(member.user.avatar_template, props.baseUrl, 40)}
-                alt=""
-                class="chat-manage-modal__member-avatar"
-                data-user-card={member.user.username}
-              />
-              <div class="chat-manage-modal__member-info">
-                <span class="chat-manage-modal__member-name">
-                  {member.user.name || member.user.username}
-                  {member.user.username === props.currentUsername && (
-                    <span class="chat-manage-modal__you">（我）</span>
-                  )}
-                </span>
-                <span class="chat-manage-modal__member-username">@{member.user.username}</span>
+        <div class="chat-manage-members__layout">
+          <div class="chat-manage-modal__member-list">
+            {props.membersLoading && displayMembers.value.length === 0 && (
+              <div class="chat-manage-modal__loading">
+                <Spin size="small" />
               </div>
-              {canManageMembers.value &&
-                member.user.username !== props.currentUsername &&
-                !isDirect.value && (
+            )}
+            {!props.membersLoading && displayMembers.value.length === 0 && (
+              <div class="chat-manage-modal__empty">暂无可显示的成员</div>
+            )}
+            {displayMembers.value.map(member => (
+              <div key={member.user.id} class="chat-manage-modal__member">
+                <img
+                  src={getAvatarUrl(member.user.avatar_template, props.baseUrl, 40)}
+                  alt=""
+                  class="chat-manage-modal__member-avatar"
+                  data-user-card={member.user.username}
+                />
+                <div class="chat-manage-modal__member-info">
+                  <span class="chat-manage-modal__member-name">
+                    {member.user.name || member.user.username}
+                    {member.user.username === props.currentUsername && (
+                      <span class="chat-manage-modal__you">（我）</span>
+                    )}
+                  </span>
+                  <span class="chat-manage-modal__member-username">@{member.user.username}</span>
+                </div>
+                {canManageMembers.value &&
+                  member.user.username !== props.currentUsername &&
+                  !isDirect.value && (
+                    <button
+                      type="button"
+                      class="chat-manage-modal__remove"
+                      aria-label={`移除 ${member.user.username}`}
+                      title="移除成员"
+                      disabled={removingId.value === member.user.id}
+                      onClick={() => handleRemove(member)}
+                    >
+                      <UserDeleteOutlined />
+                    </button>
+                  )}
+              </div>
+            ))}
+          </div>
+
+          {(canAddUsers.value || hasMembership.value) && (
+            <aside class="chat-manage-members__editor" aria-label="编辑私信参与者">
+              {canAddUsers.value && (
+                <>
                   <button
                     type="button"
-                    class="chat-manage-modal__remove"
-                    aria-label={`移除 ${member.user.username}`}
-                    title="移除成员"
-                    disabled={removingId.value === member.user.id}
-                    onClick={() => handleRemove(member)}
+                    class="chat-manage-modal__add-btn"
+                    aria-label={addLabel.value}
+                    aria-expanded={showAddForm.value}
+                    onClick={() => (showAddForm.value = !showAddForm.value)}
                   >
-                    <UserDeleteOutlined />
+                    <UserAddOutlined /> {addLabel.value}
                   </button>
-                )}
-            </div>
-          ))}
+                  {showAddForm.value && (
+                    <div class="chat-manage-modal__add-form">
+                      <Input
+                        value={query.value}
+                        placeholder={isDirect.value ? '搜索用户加入私聊…' : '搜索用户添加…'}
+                        prefix={<SearchOutlined />}
+                        allowClear
+                        onUpdate:value={handleSearchInput}
+                      />
+                      <div class="chat-manage-modal__add-results">
+                        {props.searching && (
+                          <div class="chat-manage-modal__loading">
+                            <Spin size="small" />
+                          </div>
+                        )}
+                        {!props.searching &&
+                          props.searchResults
+                            .filter(
+                              user => !props.members.some(member => member.user.id === user.id)
+                            )
+                            .map(user => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                class="chat-manage-modal__add-result"
+                                onClick={() => handleAdd(user)}
+                              >
+                                <img
+                                  src={getAvatarUrl(user.avatar_template, props.baseUrl, 24)}
+                                  alt=""
+                                  data-user-card={user.username}
+                                />
+                                <span>
+                                  <strong>{user.name || user.username}</strong>
+                                  <small>@{user.username}</small>
+                                </span>
+                                <UserAddOutlined />
+                              </button>
+                            ))}
+                        {!props.searching &&
+                          query.value.trim() &&
+                          props.searchResults.length === 0 && (
+                            <div class="chat-manage-modal__hint">未找到匹配的用户</div>
+                          )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              {hasMembership.value && (
+                <button
+                  type="button"
+                  class="chat-settings-button is-danger chat-manage-members__leave"
+                  aria-label="退出私信"
+                  disabled={props.leavingChannel}
+                  onClick={() => channel.value?.id && emit('leaveChannel', channel.value.id)}
+                >
+                  <LogoutOutlined /> {props.leavingChannel ? '退出中…' : '退出私信'}
+                </button>
+              )}
+            </aside>
+          )}
         </div>
       </section>
     )

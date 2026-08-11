@@ -407,16 +407,22 @@ export default defineComponent({
                     <button
                       ref={boostRocketRef}
                       type="button"
-                      class={[
-                        'reaction-item reaction-item--boost',
-                        boostComposerOpen.value ? 'active' : ''
-                      ]}
+                      class={['reaction-item--boost', boostComposerOpen.value ? 'active' : '']}
                       aria-label="添加 Boost"
                       aria-expanded={boostComposerOpen.value}
                       title="添加 Boost"
                       onClick={handleToggleBoostComposer}
                     >
-                      🚀
+                      <svg
+                        class="fa d-icon d-icon-rocket svg-icon"
+                        width="1em"
+                        height="1em"
+                        aria-hidden="true"
+                        focusable="false"
+                        viewBox="0 0 24 24"
+                      >
+                        <use href="#rocket" />
+                      </svg>
                     </button>
                   )}
                 </div>

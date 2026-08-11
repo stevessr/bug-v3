@@ -621,6 +621,7 @@ export default defineComponent({
           {activeChannel.value ? (
             <ChatMessageList
               messages={activeMessages.value}
+              channel={activeChannel.value}
               channelId={props.chatState.activeChannelId ?? undefined}
               baseUrl={props.baseUrl}
               currentUsername={props.currentUsername}

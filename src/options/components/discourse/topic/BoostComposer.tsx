@@ -147,82 +147,81 @@ export default defineComponent({
       })
     }
 
-    if (!props.open) return null
-
-    return (
-      <div
-        ref={panelRef}
-        class="boost-composer"
-        style={panelStyle.value}
-        role="dialog"
-        aria-label="添加 Boost"
-      >
-        <div class="boost-composer__input-wrap">
-          <textarea
-            ref={textareaRef}
-            class="boost-composer__textarea"
-            value={boostText.value}
-            maxlength="1000"
-            rows="3"
-            placeholder="写一点 Boost 内容…"
-            aria-label="Boost 内容"
-            onInput={(event: Event) => {
-              boostText.value = (event.target as HTMLTextAreaElement).value
-            }}
-            onKeydown={(event: KeyboardEvent) => {
-              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                event.preventDefault()
-                void handleSubmit()
-              }
-            }}
-          />
-          <button
-            ref={emojiButtonRef}
-            type="button"
-            class="boost-composer__emoji-btn discourse-emoji-picker-trigger"
-            aria-label="插入站点表情短码"
-            title="插入站点表情短码"
-            aria-expanded={showEmojiPicker.value}
-            onPointerdown={(event: PointerEvent) => event.stopPropagation()}
-            onClick={() => (showEmojiPicker.value = !showEmojiPicker.value)}
-          >
-            ☺
-          </button>
-          <DiscourseEmojiPicker
-            visible={showEmojiPicker.value}
-            baseUrl={props.baseUrl}
-            mode="shortcode"
-            anchorEl={emojiButtonRef.value}
-            onSelect={insertShortcode}
-            onClose={() => (showEmojiPicker.value = false)}
-          />
-        </div>
-        <div class="boost-composer__footer">
-          <span class="boost-composer__helper">Ctrl/⌘ + Enter 发送</span>
-          <div class="boost-composer__actions">
+    return () =>
+      props.open ? (
+        <div
+          ref={panelRef}
+          class="boost-composer"
+          style={panelStyle.value}
+          role="dialog"
+          aria-label="添加 Boost"
+        >
+          <div class="boost-composer__input-wrap">
+            <textarea
+              ref={textareaRef}
+              class="boost-composer__textarea"
+              value={boostText.value}
+              maxlength="1000"
+              rows="3"
+              placeholder="写一点 Boost 内容…"
+              aria-label="Boost 内容"
+              onInput={(event: Event) => {
+                boostText.value = (event.target as HTMLTextAreaElement).value
+              }}
+              onKeydown={(event: KeyboardEvent) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                  event.preventDefault()
+                  void handleSubmit()
+                }
+              }}
+            />
             <button
+              ref={emojiButtonRef}
               type="button"
-              class="boost-composer__cancel-btn"
-              title="取消"
-              aria-label="取消"
-              disabled={submitting.value}
-              onClick={handleCancel}
+              class="boost-composer__emoji-btn discourse-emoji-picker-trigger"
+              aria-label="插入站点表情短码"
+              title="插入站点表情短码"
+              aria-expanded={showEmojiPicker.value}
+              onPointerdown={(event: PointerEvent) => event.stopPropagation()}
+              onClick={() => (showEmojiPicker.value = !showEmojiPicker.value)}
             >
-              ×
+              ☺
             </button>
-            <button
-              type="button"
-              class="boost-composer__send-btn"
-              title={submitting.value ? '发送中' : '发送 Boost'}
-              aria-label={submitting.value ? '发送中' : '发送 Boost'}
-              disabled={submitting.value || !boostText.value.trim()}
-              onClick={() => void handleSubmit()}
-            >
-              {submitting.value ? '…' : '✓'}
-            </button>
+            <DiscourseEmojiPicker
+              visible={showEmojiPicker.value}
+              baseUrl={props.baseUrl}
+              mode="shortcode"
+              anchorEl={emojiButtonRef.value}
+              onSelect={insertShortcode}
+              onClose={() => (showEmojiPicker.value = false)}
+            />
+          </div>
+          <div class="boost-composer__footer">
+            <span class="boost-composer__helper">Ctrl/⌘ + Enter 发送</span>
+            <div class="boost-composer__actions">
+              <button
+                type="button"
+                class="boost-composer__cancel-btn"
+                title="取消"
+                aria-label="取消"
+                disabled={submitting.value}
+                onClick={handleCancel}
+              >
+                ×
+              </button>
+              <button
+                type="button"
+                class="boost-composer__send-btn"
+                title={submitting.value ? '发送中' : '发送 Boost'}
+                aria-label={submitting.value ? '发送中' : '发送 Boost'}
+                disabled={submitting.value || !boostText.value.trim()}
+                onClick={() => void handleSubmit()}
+              >
+                {submitting.value ? '…' : '✓'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )
+      ) : null
   }
 })

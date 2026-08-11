@@ -433,6 +433,14 @@ export default defineComponent({
         Array.isArray(activeTopic.value.details?.allowed_users)
     )
 
+    // AI summaries are a forum-topic feature.  Private messages should never
+    // expose or accidentally call the summary endpoint unless the user opens
+    // a non-PM topic.
+    const handleTopicAiSummary = () => {
+      if (isPrivateMessage.value) return
+      void handleAiSummary()
+    }
+
     const handleChangeNotificationLevel = async (level: number) => {
       try {
         await setTopicNotificationLevel(props.baseUrl, props.topic.id, level)
@@ -579,7 +587,7 @@ export default defineComponent({
               activeTopic.value.details?.can_assign === true ||
               (!!props.currentUser && (props.currentUser.admin || props.currentUser.moderator))
             }
-            aiAvailable={aiAvailable.value}
+            aiAvailable={!isPrivateMessage.value && aiAvailable.value}
             aiLoading={aiLoading.value}
             onChangeLevel={handleChangeNotificationLevel}
             onBookmark={handleTopicBookmark}
@@ -587,7 +595,7 @@ export default defineComponent({
             onAssign={handleTopicAssign}
             onShare={handleTopicShare}
             onReply={handleTopicReply}
-            onAiSummary={handleAiSummary}
+            onAiSummary={handleTopicAiSummary}
           />
 
           <TopicExtras
@@ -616,7 +624,7 @@ export default defineComponent({
         />
 
         <AiSummaryModal
-          open={showAiSummaryModal.value}
+          open={showAiSummaryModal.value && !isPrivateMessage.value}
           summary={aiSummary.value || ''}
           loading={aiLoading.value}
           errorMessage={aiErrorMessage.value || undefined}

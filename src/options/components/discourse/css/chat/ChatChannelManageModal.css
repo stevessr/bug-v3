@@ -197,6 +197,32 @@
   line-height: 1.55;
 }
 
+.chat-manage-members__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  align-items: start;
+  gap: 16px;
+}
+
+.chat-manage-members__editor {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant, #e5e7eb));
+  border-radius: 14px;
+  background: var(--d-surface-2, var(--theme-surface-container, #f1f3f4));
+}
+
+.chat-manage-members__editor .chat-manage-modal__add-btn {
+  justify-content: center;
+}
+
+.chat-manage-members__leave {
+  width: 100%;
+}
+
 .chat-settings-card__permission {
   flex: 0 0 auto;
   padding: 4px 9px;
@@ -674,7 +700,8 @@
   }
 
   .chat-settings-field-grid,
-  .chat-channel-info__grid {
+  .chat-channel-info__grid,
+  .chat-manage-members__layout {
     grid-template-columns: 1fr;
   }
 

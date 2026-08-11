@@ -1,11 +1,17 @@
 .post-masonry-tsx {
+  --masonry-min-column: 168px;
+  display: grid;
+  grid-template-columns: repeat(var(--masonry-columns, 2), minmax(var(--masonry-min-column), 1fr));
   column-gap: 0.75rem;
+  row-gap: 0.75rem;
   margin: 0.5rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
 }
 
 .post-masonry-item-tsx {
-  break-inside: avoid;
-  margin-bottom: 0.75rem;
+  min-width: 0;
 }
 
 .post-masonry-link-tsx {
@@ -22,9 +28,17 @@
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
+  cursor: zoom-in;
 }
 
-.post-masonry-link-tsx:hover .post-masonry-frame-tsx {
+.post-masonry-image-wrapper-tsx,
+.post-masonry-image-wrapper-tsx .ant-image-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.post-masonry-frame-tsx:hover {
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 }
@@ -33,7 +47,7 @@
   border-color: rgba(100, 116, 139, 0.4);
 }
 
-.dark .post-masonry-link-tsx:hover .post-masonry-frame-tsx {
+.dark .post-masonry-frame-tsx:hover {
   border-color: rgba(96, 165, 250, 0.5);
   box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
 }

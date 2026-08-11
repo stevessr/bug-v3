@@ -23,6 +23,12 @@
   white-space: nowrap;
 }
 
+.discourse-context-menu__selection {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
 .discourse-context-menu button {
   display: flex;
   min-height: 42px;

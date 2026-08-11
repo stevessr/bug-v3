@@ -7,9 +7,16 @@
 }
 
 .composer {
+  --composer-surface: var(--d-surface, var(--theme-surface, #fff));
+  --composer-container: var(--d-surface-container, var(--theme-surface-container, #f7f2fa));
+  --composer-outline: var(--d-outline, var(--theme-outline-variant, #cac4d0));
+  --composer-primary: var(--d-primary, var(--theme-primary, #6750a4));
+  --composer-text: var(--d-text, var(--theme-on-surface, #1d1b20));
+  --composer-muted: var(--d-text-muted, var(--theme-on-surface-variant, #625b71));
   display: flex;
   flex-direction: column;
   height: 100%;
+  color: var(--composer-text);
 }
 
 .composer-body {
@@ -31,11 +38,103 @@
 .composer .prosemirror-editor-wrapper {
   flex: 1 1 auto;
   min-height: 0;
+  gap: 0;
 }
 
 .composer .prosemirror-editor {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+/* Keep the reply/topic editor visually attached to the topic surface. */
+.composer .prosemirror-toolbar {
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--composer-outline);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--composer-container);
+}
+
+.composer .toolbar-divider {
+  height: 26px;
+  margin: 0 3px;
+  background: var(--composer-outline);
+}
+
+.composer .toolbar-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--composer-muted);
+}
+
+.composer .toolbar-btn:hover,
+.composer .toolbar-btn:focus-visible {
+  border-color: transparent;
+  outline: 0;
+  background: color-mix(in srgb, var(--composer-primary) 12%, transparent);
+  color: var(--composer-primary);
+}
+
+.composer .toolbar-btn:active,
+.composer .toolbar-btn.is-active {
+  background: color-mix(in srgb, var(--composer-primary) 18%, transparent);
+  color: var(--composer-primary);
+}
+
+.composer .toolbar-btn--advanced {
+  width: auto;
+  padding: 0 10px;
+}
+
+.composer .prosemirror-editor-textarea {
+  min-height: 220px;
+  border: 1px solid var(--composer-outline);
+  border-radius: 0 0 18px 18px;
+  padding: 16px;
+  background: var(--composer-surface);
+  color: var(--composer-text);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.composer .prosemirror-editor-textarea:focus {
+  border-color: var(--composer-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--composer-primary) 16%, transparent);
+  outline: none;
+}
+
+.composer .forum-emoji-menu,
+.composer .advanced-syntax-menu {
+  border-color: var(--composer-outline);
+  background: var(--composer-surface);
+  color: var(--composer-text);
+}
+
+.composer .forum-emoji-menu__header > input {
+  border-color: var(--composer-outline);
+  background: var(--composer-container);
+  color: var(--composer-text);
+}
+
+.composer .forum-emoji-menu__sources button,
+.composer .forum-emoji-menu__groups button {
+  color: var(--composer-muted);
+}
+
+.composer .forum-emoji-menu__sources button:hover,
+.composer .forum-emoji-menu__sources button.is-active,
+.composer .forum-emoji-menu__groups button:hover,
+.composer .forum-emoji-menu__groups button.is-active,
+.composer .forum-emoji-menu__grid button:hover,
+.composer .forum-emoji-menu__grid button:focus-visible,
+.composer .advanced-syntax-menu button:hover,
+.composer .advanced-syntax-menu button:focus-visible {
+  background: color-mix(in srgb, var(--composer-primary) 13%, transparent);
+  color: var(--composer-primary);
 }
 
 .composer .prosemirror-editor .ProseMirror {

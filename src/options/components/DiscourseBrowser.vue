@@ -91,6 +91,9 @@ const CategoryTopicsView = defineAsyncComponent(
   () => import('./discourse/browser/views/CategoryTopicsView.vue')
 )
 const ChatView = defineAsyncComponent(() => import('./discourse/chat/ChatView'))
+const AiBotConversationsView = defineAsyncComponent(
+  () => import('./discourse/ai/AiBotConversationsView')
+)
 const SearchView = defineAsyncComponent(() => import('./discourse/search/SearchView'))
 const ReviewView = defineAsyncComponent(() => import('./discourse/review/ReviewView'))
 const InvitesView = defineAsyncComponent(() => import('./discourse/invites/InvitesView'))
@@ -256,7 +259,14 @@ const pageFetchBaseline = ref({
   completed: initialPageFetchActivity.completed
 })
 let unsubscribePageFetchActivity: (() => void) | null = null
-const contextMenu = ref({ open: false, x: 0, y: 0, url: '' })
+const contextMenu = ref({
+  open: false,
+  x: 0,
+  y: 0,
+  url: '',
+  selectedText: '',
+  targetType: 'link' as 'link' | 'image' | 'text'
+})
 const userCard = ref<{
   open: boolean
   username: string
@@ -905,14 +915,32 @@ const handleBrowserContextMenu = (event: MouseEvent) => {
   const target = event.target
   if (!(target instanceof Element)) return
 
-  const clickable = target.closest<HTMLElement>('[data-discourse-url], a[href]')
-  if (!clickable) return
-  const rawUrl =
-    clickable.dataset.discourseUrl ||
-    (clickable instanceof HTMLAnchorElement ? clickable.getAttribute('href') : '') ||
+  const image = target.closest<HTMLImageElement>('img')
+  const imageContainer = image?.closest<HTMLElement>('[data-image-url]')
+  const anchor = target.closest<HTMLAnchorElement>('a[href]')
+  const dataLink = target.closest<HTMLElement>('[data-discourse-url]')
+  const selection = window.getSelection()?.toString().trim() || ''
+  const imageRawUrl =
+    image?.dataset.imageUrl ||
+    image?.dataset.discourseUrl ||
+    imageContainer?.dataset.imageUrl ||
+    image?.getAttribute('src') ||
     ''
-  const resolved = resolveDiscourseHttpUrl(rawUrl, baseUrl.value)
-  if (!resolved) return
+  const rawUrl =
+    imageRawUrl ||
+    // A selected paragraph can live inside a post/article or link that carries
+    // a navigation data attribute.  Prefer the text menu whenever the user
+    // selected text; only an actual image keeps the image action menu.
+    (!selection && (anchor?.getAttribute('href') || dataLink?.dataset.discourseUrl)) ||
+    ''
+  const resolved = rawUrl ? resolveDiscourseHttpUrl(rawUrl, baseUrl.value) : null
+  const isTextTarget = !resolved && selection.length > 0
+  // Do not replace the native editing-menu on inputs/textareas unless the
+  // selected text is part of a rendered forum message.
+  if (!resolved && !isTextTarget) return
+  if (!resolved && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+    return
+  }
 
   event.preventDefault()
   event.stopPropagation()
@@ -920,7 +948,9 @@ const handleBrowserContextMenu = (event: MouseEvent) => {
     open: true,
     x: event.clientX,
     y: event.clientY,
-    url: resolved
+    url: resolved || '',
+    selectedText: selection,
+    targetType: imageRawUrl && resolved ? 'image' : resolved ? 'link' : 'text'
   }
 }
 
@@ -947,6 +977,24 @@ const copyContextUrl = async () => {
     input.remove()
   }
   message.success('链接已复制')
+}
+
+const copyContextSelection = async () => {
+  const target = contextMenu.value.selectedText
+  if (!target) return
+  try {
+    await navigator.clipboard.writeText(target)
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = target
+    input.style.position = 'fixed'
+    input.style.opacity = '0'
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    input.remove()
+  }
+  message.success('选中文字已复制')
 }
 
 // Handle topic click from user view
@@ -3335,6 +3383,13 @@ onUnmounted(() => {
         @navigate="handleNavigate"
       />
 
+      <!-- Discourse AI Bot conversations -->
+      <AiBotConversationsView
+        v-else-if="activeTab?.viewType === 'ai-bot' && activeTab"
+        :baseUrl="baseUrl"
+        @navigate="handleNavigate"
+      />
+
       <!-- Chat view -->
       <ChatView
         v-else-if="activeTab?.viewType === 'chat' && activeTab.chatState"
@@ -3594,11 +3649,15 @@ onUnmounted(() => {
     :x="contextMenu.x"
     :y="contextMenu.y"
     :url="contextMenu.url"
+    :selectedText="contextMenu.selectedText"
+    :targetType="contextMenu.targetType"
     @close="closeContextMenu"
     @openCurrent="handleContentNavigation(contextMenu.url)"
     @openForumTab="openInNewTab(contextMenu.url)"
     @openBrowserTab="openContextUrlInBrowserTab"
     @copy="copyContextUrl"
+    @copyImage="copyContextUrl"
+    @copyText="copyContextSelection"
   />
 
   <UserCard

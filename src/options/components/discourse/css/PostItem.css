@@ -182,7 +182,8 @@
 }
 
 .post-action-btn:disabled,
-.reactions-list .reaction-item:disabled {
+.reactions-list .reaction-item:disabled,
+.reactions-list .reaction-item--boost:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -200,7 +201,8 @@
   display: inline-flex;
 }
 
-.reactions-list .reaction-item {
+.reactions-list .reaction-item,
+.reactions-list .reaction-item--boost {
   display: flex;
   align-items: center;
   min-height: 32px;
@@ -218,17 +220,20 @@
     transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
-.reactions-list .reaction-item:hover {
+.reactions-list .reaction-item:hover,
+.reactions-list .reaction-item--boost:hover {
   border-color: var(--primary, var(--theme-primary));
   background: var(--primary-low, color-mix(in oklab, var(--primary) 10%, transparent));
   color: var(--primary, var(--theme-primary));
 }
 
-.reactions-list .reaction-item:active {
+.reactions-list .reaction-item:active,
+.reactions-list .reaction-item--boost:active {
   transform: scale(0.96);
 }
 
-.reactions-list .reaction-item.active {
+.reactions-list .reaction-item.active,
+.reactions-list .reaction-item--boost.active {
   border-color: transparent;
   background: var(--primary-container, var(--theme-primary-container));
   color: var(--on-primary-container, var(--theme-on-primary-container));
@@ -247,6 +252,12 @@
   justify-content: center;
   font-size: 15px;
   line-height: 1;
+}
+
+.reactions-list .reaction-item--boost .d-icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
 }
 
 .reactions-list .reaction-item--boost:hover {

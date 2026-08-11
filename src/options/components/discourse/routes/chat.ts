@@ -522,6 +522,23 @@ export const updateChannelLastMessage = (
   if (!message) return
   const channel = channels.find(item => item.id === channelId)
   if (!channel) return
+
+  // Loading an older page or receiving a delayed thread event must not make a
+  // channel look newer than its real latest message.  Compare timestamps first
+  // and use the message id only as a stable tie breaker.
+  const currentTime = channel.last_message?.created_at || channel.last_message_sent_at || ''
+  const currentMs = currentTime ? new Date(currentTime).getTime() : 0
+  const nextMs = message.created_at ? new Date(message.created_at).getTime() : 0
+  const currentId = Number(channel.last_message_id || channel.last_message?.id || 0)
+  const nextId = Number(message.id || 0)
+  if (
+    currentTime &&
+    Number.isFinite(currentMs) &&
+    Number.isFinite(nextMs) &&
+    (nextMs < currentMs || (nextMs === currentMs && nextId <= currentId))
+  ) {
+    return
+  }
   channel.last_message_id = message.id
   channel.last_message_sent_at = message.created_at
   channel.last_message = {

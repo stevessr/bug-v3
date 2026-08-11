@@ -37,10 +37,18 @@ export default defineComponent({
     type SectionId = 'starred' | 'public' | 'direct'
     const collapsedSections = ref<Set<SectionId>>(new Set())
 
+    /**
+     * Chat channel payloads contain a handful of timestamps.  `last_viewed_at`
+     * (and, on some Discourse versions, a pending/typing timestamp) is not
+     * activity and must never move a channel to the top of the list.  Only use
+     * timestamps that describe an actual message.  Prefer the timestamp on
+     * `last_message` itself: some deployments expose a sent/pending timestamp
+     * while a message is still being delivered, which must not reorder chats.
+     */
     const getChannelLastTime = (channel: ChatChannel) => {
-      const fallback = channel.last_message?.created_at
-      const raw = channel.last_message_sent_at || fallback
-      return raw ? new Date(raw).getTime() : 0
+      const value = channel.last_message?.created_at || channel.last_message_sent_at
+      const timestamp = value ? new Date(value).getTime() : 0
+      return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0
     }
 
     const sortChannels = (channels: ChatChannel[]) =>
@@ -150,7 +158,7 @@ export default defineComponent({
     onMounted(loadShortcodeEmojiUrls)
 
     const getChannelTimeLabel = (channel: ChatChannel) => {
-      const raw = channel.last_message_sent_at || channel.last_message?.created_at
+      const raw = channel.last_message?.created_at || channel.last_message_sent_at
       return raw ? formatTime(raw) : '暂无消息'
     }
 

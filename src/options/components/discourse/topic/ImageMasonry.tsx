@@ -1,4 +1,5 @@
 import { defineComponent, computed } from 'vue'
+import { Image } from 'ant-design-vue'
 
 import type { LightboxImage } from '../types'
 import '../css/ImageMasonry.css'
@@ -38,7 +39,7 @@ export default defineComponent({
       <div
         class="post-masonry-tsx"
         data-columns={columns.value}
-        style={{ columnCount: String(columns.value) }}
+        style={{ '--masonry-columns': String(columns.value) }}
       >
         {items.value.map(image => {
           const ratio = getAspectRatio(image)
@@ -50,28 +51,31 @@ export default defineComponent({
             : undefined
           return (
             <div class="post-masonry-item-tsx" key={image.base62Sha1 || image.href}>
-              <a
-                class="post-masonry-link-tsx"
-                href={image.href}
+              <div
+                class="post-masonry-frame-tsx"
+                style={frameStyle}
+                data-discourse-url={image.href}
+                data-image-url={image.href}
                 title={image.title || image.alt || undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-no-router="true"
               >
-                <div class="post-masonry-frame-tsx" style={frameStyle}>
-                  <img
-                    class="post-masonry-image-tsx"
-                    src={getImageSrc(image)}
-                    alt={image.alt || ''}
-                    width={image.width}
-                    height={image.height}
-                    srcset={image.srcset}
-                    data-base62-sha1={image.base62Sha1}
-                    data-dominant-color={image.dominantColor}
-                    loading={(image.loading as 'eager' | 'lazy' | undefined) || 'lazy'}
-                  />
-                </div>
-              </a>
+                <Image
+                  class="post-masonry-image-tsx"
+                  wrapperClassName="post-masonry-image-wrapper-tsx"
+                  src={getImageSrc(image)}
+                  preview={{ src: image.href }}
+                  width={image.width}
+                  height={image.height}
+                  // @ts-ignore Ant Image accepts srcset/loading even though the
+                  // current type definition omits these HTML attributes.
+                  srcset={image.srcset}
+                  loading={(image.loading as 'eager' | 'lazy' | undefined) || 'lazy'}
+                  // Keep the original metadata available to the browser context
+                  // menu and image proxy without putting an anchor in front of
+                  // Ant Design's preview trigger.
+                  data-base62-sha1={image.base62Sha1}
+                  data-dominant-color={image.dominantColor}
+                />
+              </div>
             </div>
           )
         })}

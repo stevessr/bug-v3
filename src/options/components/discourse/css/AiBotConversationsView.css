@@ -1,0 +1,285 @@
+.ai-bot-conversations {
+  --ai-surface: var(--d-surface, var(--theme-base, #fff));
+  --ai-surface-container: var(
+    --d-surface-container,
+    color-mix(in srgb, var(--ai-surface) 92%, #64748b)
+  );
+  --ai-outline: var(--d-outline, color-mix(in srgb, #64748b 38%, transparent));
+  --ai-primary: var(--d-primary, var(--theme-primary, #6750a4));
+  --ai-on-surface: var(--d-text, var(--theme-text, #1d1b20));
+  --ai-muted: var(--d-text-muted, var(--theme-on-surface-variant, #625b71));
+  color: var(--ai-on-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+  padding: clamp(16px, 3vw, 32px);
+  background: var(--ai-surface);
+}
+
+.ai-bot-conversations__header,
+.ai-bot-conversations__title,
+.ai-bot-conversations__layout,
+.ai-bot-conversations__composer-heading {
+  display: flex;
+}
+
+.ai-bot-conversations__header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-bot-conversations__title {
+  align-items: center;
+  gap: 14px;
+}
+
+.ai-bot-conversations__icon {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ai-primary) 14%, transparent);
+  color: var(--ai-primary);
+  font-size: 24px;
+}
+
+.ai-bot-conversations h1 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.2;
+}
+
+.ai-bot-conversations p {
+  margin: 5px 0 0;
+  color: var(--ai-muted);
+  font-size: 13px;
+}
+
+.ai-bot-conversations__refresh,
+.ai-bot-conversations__load-more {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ai-outline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ai-on-surface);
+  cursor: pointer;
+}
+
+.ai-bot-conversations__refresh:hover,
+.ai-bot-conversations__load-more:hover {
+  background: color-mix(in srgb, var(--ai-primary) 10%, transparent);
+}
+
+.ai-bot-conversations__refresh:disabled,
+.ai-bot-conversations__load-more:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.ai-bot-conversations__layout {
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.ai-bot-conversations__list-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-bot-conversations__list,
+.ai-bot-conversations__composer {
+  border: 1px solid var(--ai-outline);
+  border-radius: 20px;
+  background: var(--ai-surface-container);
+}
+
+.ai-bot-conversations__list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-bot-conversation-card {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 15px 18px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ai-outline) 55%, transparent);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-bot-conversation-card:last-child {
+  border-bottom: 0;
+}
+
+.ai-bot-conversation-card:hover,
+.ai-bot-conversation-card:focus-visible {
+  background: color-mix(in srgb, var(--ai-primary) 8%, transparent);
+  outline: none;
+}
+
+.ai-bot-conversation-card__avatar {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ai-primary) 16%, transparent);
+  color: var(--ai-primary);
+}
+
+.ai-bot-conversation-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ai-bot-conversation-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-bot-conversation-card__body strong,
+.ai-bot-conversation-card__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-bot-conversation-card__body span,
+.ai-bot-conversation-card__body small {
+  color: var(--ai-muted);
+  font-size: 12px;
+}
+
+.ai-bot-conversations__composer {
+  flex: 0 0 min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.ai-bot-conversations__composer-heading {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-bot-conversations__composer-heading span {
+  color: var(--ai-muted);
+  font-size: 12px;
+}
+
+.ai-bot-conversations__composer label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ai-muted);
+  font-size: 12px;
+}
+
+.ai-bot-conversations__composer input,
+.ai-bot-conversations__composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--ai-outline);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--ai-surface);
+  color: var(--ai-on-surface);
+  font: inherit;
+  outline: none;
+  resize: vertical;
+}
+
+.ai-bot-conversations__composer input:focus,
+.ai-bot-conversations__composer textarea:focus {
+  border-color: var(--ai-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ai-primary) 18%, transparent);
+}
+
+.ai-bot-conversations__send {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ai-primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-bot-conversations__send:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ai-bot-conversations__state {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px dashed var(--ai-outline);
+  border-radius: 20px;
+  color: var(--ai-muted);
+  text-align: center;
+}
+
+.ai-bot-conversations__state--empty svg {
+  font-size: 30px;
+  color: var(--ai-primary);
+}
+
+.ai-bot-conversations__error {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #ba1a1a 10%, transparent);
+  color: #ba1a1a;
+  font-size: 13px;
+}
+
+.ai-bot-conversations__load-more {
+  align-self: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .ai-bot-conversations__layout {
+    flex-direction: column;
+  }
+
+  .ai-bot-conversations__composer {
+    width: 100%;
+    flex-basis: auto;
+    box-sizing: border-box;
+  }
+}

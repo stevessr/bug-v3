@@ -623,6 +623,13 @@ export function useDiscourseBrowser() {
         await loadCategory(tab, categoryRoute.slug, categoryRoute.categoryId)
         tab.title = `分类：${tab.currentCategoryName || categoryRoute.slug}`
         tab.viewType = 'category'
+      } else if (
+        pathname === '/discourse-ai/ai-bot/conversations' ||
+        pathname === '/discourse-ai/ai-bot/conversations/'
+      ) {
+        await ensureSessionUser()
+        tab.title = 'AI Bot 对话'
+        tab.viewType = 'ai-bot'
       } else if (pathname.startsWith('/t/')) {
         isTopicNavigation = true
         const parts = pathname.replace('/t/', '').split('/').filter(Boolean)
@@ -652,8 +659,11 @@ export function useDiscourseBrowser() {
         if (!topicId) {
           throw new Error('Invalid topic URL')
         }
-        tab.targetPostNumber = postNumber
-        await loadTopic(tab, topicId, postNumber)
+        // AI Bot links commonly use `/0` to denote the first post.  Treat it
+        // as the topic root instead of trying to load an impossible post 0.
+        const normalizedPostNumber = postNumber && postNumber > 0 ? postNumber : null
+        tab.targetPostNumber = normalizedPostNumber
+        await loadTopic(tab, topicId, normalizedPostNumber)
         tab.viewType = 'topic'
       } else if (pathname.startsWith('/chat')) {
         await ensureSessionUser()
@@ -1524,6 +1534,28 @@ export function useDiscourseBrowser() {
     if (!hasChannelMeta) return false
 
     let changed = false
+    const incomingLastMessage = isRecordObject(channelPayload.last_message)
+      ? (channelPayload.last_message as Record<string, any>)
+      : null
+    const currentLastMessage = channel.last_message as Record<string, any> | undefined
+    const currentLastCreatedAt = String(
+      currentLastMessage?.created_at || channel.last_message_sent_at || ''
+    )
+    const incomingLastCreatedAt = String(
+      incomingLastMessage?.created_at || channelPayload.last_message_sent_at || ''
+    )
+    const currentLastMs = currentLastCreatedAt ? new Date(currentLastCreatedAt).getTime() : 0
+    const incomingLastMs = incomingLastCreatedAt ? new Date(incomingLastCreatedAt).getTime() : 0
+    const currentLastId = Number(channel.last_message_id || currentLastMessage?.id || 0)
+    const incomingLastId = Number(channelPayload.last_message_id || incomingLastMessage?.id || 0)
+    const hasCurrentLastMs = Number.isFinite(currentLastMs) && currentLastMs > 0
+    const hasIncomingLastMs = Number.isFinite(incomingLastMs) && incomingLastMs > 0
+    const applyIncomingLastMessage = hasCurrentLastMs
+      ? hasIncomingLastMs
+        ? incomingLastMs > currentLastMs ||
+          (incomingLastMs === currentLastMs && incomingLastId >= currentLastId)
+        : incomingLastId > currentLastId
+      : hasIncomingLastMs || incomingLastId >= currentLastId
 
     const nextTitle =
       typeof channelPayload.title === 'string' && channelPayload.title.trim()
@@ -1583,20 +1615,20 @@ export function useDiscourseBrowser() {
       changed = true
     }
 
-    if (typeof channelPayload.last_message_id === 'number') {
+    if (applyIncomingLastMessage && typeof channelPayload.last_message_id === 'number') {
       channel.last_message_id = channelPayload.last_message_id
       changed = true
     }
 
-    if (isRecordObject(channelPayload.last_message)) {
+    if (applyIncomingLastMessage && incomingLastMessage) {
       channel.last_message = {
         ...(channel.last_message || {}),
-        ...(channelPayload.last_message as Record<string, any>)
+        ...incomingLastMessage
       }
       changed = true
     }
 
-    if (typeof channelPayload.last_message_sent_at === 'string') {
+    if (applyIncomingLastMessage && typeof channelPayload.last_message_sent_at === 'string') {
       channel.last_message_sent_at = channelPayload.last_message_sent_at
       changed = true
     }

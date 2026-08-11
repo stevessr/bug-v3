@@ -76,6 +76,7 @@ export type ViewType =
   | 'category'
   | 'topic'
   | 'chat'
+  | 'ai-bot'
   | 'user'
   | 'activity'
   | 'messages'

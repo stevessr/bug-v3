@@ -37,7 +37,7 @@ export default defineComponent({
     const hasMoreHidden = computed(() => users.value.length > MAX_VISIBLE_USERS)
 
     const load = async () => {
-      if (!props.post || loading.value) return
+      if (!props.post) return
       const sequence = ++loadSequence
       loading.value = true
       errorMessage.value = ''
@@ -103,10 +103,9 @@ export default defineComponent({
           void load()
           void nextTick(updatePosition)
         }
-      }
+      },
+      { immediate: true }
     )
-
-    if (!props.open) return null
 
     const renderReactionEmoji = (reaction: string | null) => {
       const id = String(reaction || props.reaction || '')
@@ -124,66 +123,76 @@ export default defineComponent({
       return id ? <code>:{id}:</code> : null
     }
 
-    return (
-      <div
-        ref={panelRef}
-        class="reaction-details-popover"
-        style={panelStyle.value}
-        role="dialog"
-        aria-label={title.value}
-        onMouseenter={() => emit('keepOpen')}
-        onMouseleave={() => emit('close')}
-      >
-        <div class="reaction-details-popover__summary">
-          <strong>{title.value}</strong>
-          <span>共 {total.value || users.value.length} 人次</span>
+    return () =>
+      props.open ? (
+        <div
+          ref={panelRef}
+          class="reaction-details-popover reaction-details-modal-wrap"
+          style={panelStyle.value}
+          role="dialog"
+          aria-label={`${title.value} 反应详情`}
+          onMouseenter={() => emit('keepOpen')}
+          onMouseleave={() => emit('close')}
+        >
+          <button
+            type="button"
+            class="ant-modal-close"
+            aria-label="关闭"
+            title="关闭"
+            onClick={() => emit('close')}
+          >
+            ×
+          </button>
+          <div class="reaction-details-popover__summary">
+            <strong>{title.value}</strong>
+            <span>共 {total.value || users.value.length} 人次</span>
+          </div>
+
+          {loading.value && (
+            <div class="reaction-details-popover__state" role="status">
+              <Spin size="small" /> 正在加载…
+            </div>
+          )}
+          {!loading.value && errorMessage.value && (
+            <div class="reaction-details-popover__state is-error" role="alert">
+              {errorMessage.value}
+            </div>
+          )}
+          {!loading.value && !errorMessage.value && visibleUsers.value.length === 0 && (
+            <div class="reaction-details-popover__state">暂无可显示的反应用户</div>
+          )}
+
+          {visibleUsers.value.length > 0 && (
+            <div class="reaction-details-popover__list">
+              {visibleUsers.value.map(user => (
+                <button
+                  type="button"
+                  key={`${user.id}-${user.reaction || ''}`}
+                  class="reaction-details-popover__user"
+                  data-user-card={user.username}
+                  data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
+                  onClick={() => emit('openUser', user.username)}
+                >
+                  <img
+                    src={getAvatarUrl(user.avatar_template, props.baseUrl, 40)}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <span class="reaction-details-popover__identity">@{user.username}</span>
+                  <span class="reaction-details-popover__reaction">
+                    {renderReactionEmoji(user.reaction || null)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {hasMoreHidden.value && (
+            <div class="reaction-details-popover__more">
+              还有 {total.value - MAX_VISIBLE_USERS} 人次…
+            </div>
+          )}
         </div>
-
-        {loading.value && (
-          <div class="reaction-details-popover__state" role="status">
-            <Spin size="small" /> 正在加载…
-          </div>
-        )}
-        {!loading.value && errorMessage.value && (
-          <div class="reaction-details-popover__state is-error" role="alert">
-            {errorMessage.value}
-          </div>
-        )}
-        {!loading.value && !errorMessage.value && visibleUsers.value.length === 0 && (
-          <div class="reaction-details-popover__state">暂无可显示的反应用户</div>
-        )}
-
-        {visibleUsers.value.length > 0 && (
-          <div class="reaction-details-popover__list">
-            {visibleUsers.value.map(user => (
-              <button
-                type="button"
-                key={`${user.id}-${user.reaction || ''}`}
-                class="reaction-details-popover__user"
-                data-user-card={user.username}
-                data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
-                onClick={() => emit('openUser', user.username)}
-              >
-                <img
-                  src={getAvatarUrl(user.avatar_template, props.baseUrl, 40)}
-                  alt=""
-                  loading="lazy"
-                />
-                <span class="reaction-details-popover__identity">@{user.username}</span>
-                <span class="reaction-details-popover__reaction">
-                  {renderReactionEmoji(user.reaction || null)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {hasMoreHidden.value && (
-          <div class="reaction-details-popover__more">
-            还有 {total.value - MAX_VISIBLE_USERS} 人次…
-          </div>
-        )}
-      </div>
-    )
+      ) : null
   }
 })

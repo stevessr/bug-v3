@@ -45,8 +45,8 @@
 }
 
 .pm-participants__content {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
   gap: 12px;
   padding: 4px 12px 14px;
 }
@@ -131,7 +131,96 @@
 
 .pm-participants__add {
   display: flex;
+  flex-direction: column;
   gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-2, var(--theme-surface-container));
+}
+
+.pm-participants__editor {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  align-self: start;
+}
+
+.pm-participants__add label {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pm-participants__add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pm-participants__suggestions {
+  display: flex;
+  max-height: 180px;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  padding-top: 2px;
+}
+
+.pm-participants__suggestions > span {
+  padding: 8px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 11px;
+}
+
+.pm-participants__suggestions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pm-participants__suggestions button:hover {
+  background: var(--d-state-hover, rgb(127 127 127 / 12%));
+}
+
+.pm-participants__suggestions img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pm-participants__suggestions button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.pm-participants__suggestions small {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+}
+
+.pm-participants__leave {
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, var(--danger, var(--theme-error)) 45%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: var(--danger, var(--theme-error));
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pm-participants__leave:hover {
+  background: var(--danger-container, var(--theme-error-container));
 }
 
 .pm-participants__add input {
@@ -163,7 +252,14 @@
 }
 
 .pm-participants__add button:disabled,
-.pm-participants__remove:disabled {
+.pm-participants__remove:disabled,
+.pm-participants__leave:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+@media (max-width: 640px) {
+  .pm-participants__content {
+    grid-template-columns: 1fr;
+  }
 }

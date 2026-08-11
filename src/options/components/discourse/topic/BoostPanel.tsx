@@ -54,6 +54,12 @@ export default defineComponent({
       !!props.currentUsername &&
       boost.user.username.toLowerCase() === props.currentUsername.toLowerCase()
 
+    // Older Discourse AI/Boost responses omit can_delete for the author's own
+    // row.  Treat that omission as deletable in the UI; the server remains the
+    // final permission check and an explicit false still wins.
+    const canDeleteBoost = (boost: Boost) =>
+      boost.can_delete === true || (boost.can_delete === undefined && isOwnBoost(boost))
+
     const renderBoostHtml = (cooked: string) => {
       const safe = sanitizeBoostHtml(cooked)
       if (!emojiReadyToken.value) return safe
@@ -66,7 +72,7 @@ export default defineComponent({
     }
 
     const handleDeleteBoost = async (boost: Boost) => {
-      if (!boost.can_delete || deletingIds.value.has(boost.id)) return
+      if (!canDeleteBoost(boost) || deletingIds.value.has(boost.id)) return
       const own = isOwnBoost(boost)
       // eslint-disable-next-line no-alert
       const confirmed = window.confirm(
@@ -76,9 +82,13 @@ export default defineComponent({
       deletingIds.value.add(boost.id)
       try {
         await deleteBoost(props.baseUrl, boost.id)
-        replaceBoosts(boosts.value.filter(item => item.id !== boost.id))
+        const remaining = boosts.value.filter(item => item.id !== boost.id)
+        replaceBoosts(remaining)
         if (own) props.post.can_boost = true
-        if (selectedBoostId.value === boost.id) selectedBoostId.value = null
+        if (selectedBoostId.value === boost.id) {
+          const next = remaining.find(item => canDeleteBoost(item) || item.can_flag)
+          selectedBoostId.value = next?.id ?? null
+        }
         message.success('Boost 已删除')
       } catch (error) {
         message.error(error instanceof Error ? error.message : '删除 Boost 失败')
@@ -163,6 +173,24 @@ export default defineComponent({
       }
     )
 
+    // Keep an actionable row selected when the server hydrates the panel or a
+    // Boost is removed.  This keeps delete/report actions available without
+    // requiring a second click, while preserving the server's row ordering.
+    watch(
+      () => boosts.value,
+      value => {
+        if (
+          selectedBoostId.value !== null &&
+          value.some(item => item.id === selectedBoostId.value)
+        ) {
+          return
+        }
+        const next = value.find(item => canDeleteBoost(item) || item.can_flag)
+        selectedBoostId.value = next?.id ?? null
+      },
+      { immediate: true }
+    )
+
     return () => (
       <div class="boost-panel">
         {hasBoosts.value && (
@@ -170,15 +198,15 @@ export default defineComponent({
             {boosts.value.map(boost => {
               const selected = selectedBoostId.value === boost.id
               const showFlag = selected && boost.can_flag && !isOwnBoost(boost)
-              const showDelete = selected && boost.can_delete
+              const showDelete = selected && canDeleteBoost(boost)
               return (
                 <div
                   key={boost.id}
                   class={['boost-panel__item', selected ? 'is-selected' : '']}
                   onClick={() => toggleSelect(boost)}
-                  role="button"
+                  role="group"
+                  aria-label={`${boost.user.username} Boost`}
                   tabindex={0}
-                  aria-pressed={selected}
                   title={selected ? '收起操作' : '展开操作'}
                   onKeydown={(event: KeyboardEvent) => {
                     if (event.key === 'Enter' || event.key === ' ') {
