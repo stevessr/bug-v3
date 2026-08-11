@@ -66,6 +66,34 @@ const assertHttpUrl = (url: URL) => {
   return url
 }
 
+const FAVICON_PROXY_PATH_RE = /^\/favicon\/proxied\/?$/i
+
+/**
+ * Discourse wraps remote favicons in `/favicon/proxied?{encoded-url}`.  The
+ * browser extension can request an already-public favicon directly, avoiding
+ * the extra proxy hop.  Only unwrap that exact endpoint and keep the usual
+ * HTTP(S)-only URL validation for the decoded target.
+ */
+export function unwrapDiscourseFaviconProxyUrl(input: string, baseUrl?: string): string {
+  const value = (input || '').trim()
+  if (!value) return ''
+
+  try {
+    const proxyUrl = baseUrl ? new URL(value, `${baseUrl.replace(/\/+$/, '')}/`) : new URL(value)
+    if (!FAVICON_PROXY_PATH_RE.test(proxyUrl.pathname)) return proxyUrl.toString()
+
+    const queryTarget = proxyUrl.searchParams.get('url') || proxyUrl.search.slice(1)
+    if (!queryTarget) return proxyUrl.toString()
+
+    const decodedTarget = decodeURIComponent(queryTarget)
+    return assertHttpUrl(new URL(decodedTarget)).toString()
+  } catch {
+    // Preserve the original value when it is malformed or points to a
+    // non-HTTP target; callers can apply their normal fallback behavior.
+    return value
+  }
+}
+
 export type DiscourseAddressResolution = {
   url: string
   origin: string
@@ -78,7 +106,8 @@ export function resolveDiscourseHttpUrl(input: string, baseUrl: string): string 
 
   try {
     const base = assertHttpUrl(new URL(baseUrl))
-    return assertHttpUrl(new URL(value, `${base.origin}/`)).toString()
+    const resolved = assertHttpUrl(new URL(value, `${base.origin}/`)).toString()
+    return unwrapDiscourseFaviconProxyUrl(resolved)
   } catch {
     return null
   }

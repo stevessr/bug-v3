@@ -45,14 +45,48 @@ export default defineComponent({
      * `last_message` itself: some deployments expose a sent/pending timestamp
      * while a message is still being delivered, which must not reorder chats.
      */
-    const getChannelLastTime = (channel: ChatChannel) => {
-      const value = channel.last_message?.created_at || channel.last_message_sent_at
-      const timestamp = value ? new Date(value).getTime() : 0
-      return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0
+    const getChannelActivity = (channel: ChatChannel) => {
+      const lastMessage = channel.last_message
+      const lastMessageId = Number(channel.last_message_id || lastMessage?.id || 0)
+      const messagePayloadExists = Boolean(
+        lastMessage &&
+        (lastMessageId > 0 || lastMessage.created_at || lastMessage.message || lastMessage.cooked)
+      )
+      const rawTime = lastMessage?.created_at || channel.last_message_sent_at
+      const timestamp = rawTime ? new Date(rawTime).getTime() : 0
+      const hasValidMessageTime = Number.isFinite(timestamp) && timestamp > 0
+
+      // A valid `last_message_sent_at` is the compact form sent by some
+      // Discourse versions, where the full `last_message` serializer is not
+      // included. It is still real message activity. Never use membership,
+      // viewed, typing, or waiting timestamps as a substitute.
+      return {
+        hasMessage: messagePayloadExists || hasValidMessageTime,
+        timestamp: hasValidMessageTime ? timestamp : 0,
+        messageId: Number.isFinite(lastMessageId) && lastMessageId > 0 ? lastMessageId : 0
+      }
     }
 
     const sortChannels = (channels: ChatChannel[]) =>
-      [...channels].sort((a, b) => getChannelLastTime(b) - getChannelLastTime(a))
+      [...channels].sort((a, b) => {
+        const aActivity = getChannelActivity(a)
+        const bActivity = getChannelActivity(b)
+
+        // Empty channels must always be at the bottom of their current
+        // section. This is deliberately independent of unread/viewed/waiting
+        // state so opening a silent channel cannot make it jump above chats
+        // with messages.
+        if (aActivity.hasMessage !== bActivity.hasMessage) {
+          return aActivity.hasMessage ? -1 : 1
+        }
+        if (aActivity.timestamp !== bActivity.timestamp) {
+          return bActivity.timestamp - aActivity.timestamp
+        }
+        if (aActivity.messageId !== bActivity.messageId) {
+          return bActivity.messageId - aActivity.messageId
+        }
+        return 0
+      })
 
     const groupedChannels = computed(() => {
       const starred: ChatChannel[] = []

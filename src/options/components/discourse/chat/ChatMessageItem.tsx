@@ -36,7 +36,6 @@ export default defineComponent({
     const showEmojiPicker = ref(false)
     const floatingControlsRef = ref<HTMLDivElement | null>(null)
     const reactionButtonRef = ref<HTMLButtonElement | null>(null)
-    const actionsToggleRef = ref<HTMLButtonElement | null>(null)
 
     // 站点表情映射：把短码反应渲染为表情图片（任意表情反应）
     const emojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
@@ -81,6 +80,11 @@ export default defineComponent({
       Array.isArray(props.message.reactions) ? props.message.reactions : []
     )
 
+    const threadId = computed(() => {
+      const id = Number(props.message.thread?.id || props.message.thread_id || 0)
+      return Number.isFinite(id) && id > 0 ? id : null
+    })
+
     const threadReplyCount = computed(() =>
       Math.max(
         0,
@@ -95,8 +99,9 @@ export default defineComponent({
     const hasThreadAction = computed(
       () =>
         !props.inThread &&
-        Boolean(props.threadingEnabled || props.message.thread?.force || props.message.thread?.id)
+        Boolean(props.threadingEnabled || props.message.thread?.force || threadId.value)
     )
+    const hasThreadEntry = computed(() => !props.inThread && threadId.value !== null)
 
     const blockButtons = computed(() => {
       if (!Array.isArray(props.message.blocks)) return []
@@ -158,23 +163,18 @@ export default defineComponent({
       showEmojiPicker.value = false
     }
 
+    const isFloatingControlTarget = (target: EventTarget | null) => {
+      if (target instanceof Node && floatingControlsRef.value?.contains(target)) return true
+      return target instanceof Element && !!target.closest('.discourse-emoji-picker')
+    }
+
     const handleMouseleave = (event: MouseEvent) => {
-      const relatedTarget = event.relatedTarget
-      if (relatedTarget instanceof Node && floatingControlsRef.value?.contains(relatedTarget)) {
-        return
-      }
+      if (isFloatingControlTarget(event.relatedTarget)) return
       closeFloatingControls()
     }
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
-      const target = event.target
-      if (target instanceof Element && target.closest('.discourse-emoji-picker')) return
-      const insideControls =
-        target instanceof Node &&
-        !!(floatingControlsRef.value?.contains(target) || actionsToggleRef.value?.contains(target))
-      if (!insideControls) {
-        closeFloatingControls()
-      }
+      if (!isFloatingControlTarget(event.target)) closeFloatingControls()
     }
 
     const handleDocumentKeydown = (event: KeyboardEvent) => {
@@ -184,9 +184,7 @@ export default defineComponent({
     }
 
     const handleControlsFocusout = (event: FocusEvent) => {
-      const nextTarget = event.relatedTarget
-      if (nextTarget instanceof Node && floatingControlsRef.value?.contains(nextTarget)) return
-      if (nextTarget instanceof Node && actionsToggleRef.value?.contains(nextTarget)) return
+      if (isFloatingControlTarget(event.relatedTarget)) return
       closeFloatingControls()
     }
 
@@ -286,95 +284,83 @@ export default defineComponent({
           src={getAvatarUrl(getAvatarTemplate(), props.baseUrl, 32)}
           alt={getDisplayName()}
         />
-        <div class="chat-message-content">
-          {props.groupFirst && (
-            <div class="chat-message-meta">
-              <span class="chat-message-name">{getDisplayName()}</span>
-            </div>
-          )}
+        <div class="chat-message-bubble-wrap">
+          <div class="chat-message-bubble">
+            <div class="chat-message-content">
+              {props.groupFirst && (
+                <div class="chat-message-meta">
+                  <span class="chat-message-name">{getDisplayName()}</span>
+                </div>
+              )}
 
-          {props.message.cooked || props.message.message ? (
-            <PostContent
-              segments={props.parsed.segments}
-              baseUrl={props.baseUrl}
-              onNavigate={(url: string) => emit('navigate', url)}
-            />
-          ) : null}
+              {props.message.cooked || props.message.message ? (
+                <PostContent
+                  segments={props.parsed.segments}
+                  baseUrl={props.baseUrl}
+                  onNavigate={(url: string) => emit('navigate', url)}
+                />
+              ) : null}
 
-          {!props.inThread && props.message.thread?.id && threadReplyCount.value > 0 && (
-            <a
-              class="chat-message-thread-indicator"
-              href={`${props.baseUrl}/chat/c/-/${props.channelId || props.message.chat_channel_id}/t/${props.message.thread.id}`}
-              aria-label={`打开消息串，共 ${threadReplyCount.value} 条回复`}
-              title="打开消息串"
-              onClick={(event: MouseEvent) => {
-                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
-                event.preventDefault()
-                handleOpenThread()
-              }}
-            >
-              <span class="chat-message-thread-indicator__icon" aria-hidden="true">
-                <CommentOutlined />
-              </span>
-              {threadParticipants.value.length > 0 && (
-                <span class="chat-message-thread-indicator__participants" aria-hidden="true">
-                  {threadParticipants.value.map(user => (
-                    <img
-                      key={user.id}
-                      src={getAvatarUrl(user.avatar_template, props.baseUrl, 20)}
-                      alt=""
-                    />
+              {reactionItems.value.length > 0 && (
+                <div class="chat-message-footer">
+                  {reactionItems.value.map(reaction => {
+                    const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
+                    return (
+                      <button
+                        type="button"
+                        key={`${props.message.id}-${reaction.emoji}`}
+                        class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
+                        onClick={() => handleReact(reaction.emoji, reaction.reacted)}
+                        title={reaction.emoji}
+                      >
+                        <span class="chat-message-reaction-emoji">
+                          {resolvedEmoji?.url ? (
+                            <img
+                              class="chat-message-reaction-image"
+                              src={resolvedEmoji.url}
+                              alt={formatReactionLabel(reaction.emoji)}
+                              loading="lazy"
+                            />
+                          ) : resolvedEmoji?.unicode ? (
+                            resolvedEmoji.unicode
+                          ) : (
+                            formatReactionLabel(reaction.emoji)
+                          )}
+                        </span>
+                        <span class="chat-message-reaction-count">{reaction.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {blockButtons.value.length > 0 && (
+                <div class="chat-message-blocks">
+                  {blockButtons.value.map((button, index) => (
+                    <button
+                      type="button"
+                      key={`${button.actionId}-${index}`}
+                      class={[
+                        'chat-message-block-button',
+                        button.style ? `is-${button.style}` : ''
+                      ]}
+                      onClick={() => handleInteract(button.actionId)}
+                    >
+                      {button.label}
+                    </button>
                   ))}
-                </span>
+                </div>
               )}
-              <span class="chat-message-thread-indicator__count">
-                {threadReplyCount.value} 条回复
-              </span>
-              {props.message.thread.preview?.last_reply_excerpt && (
-                <span class="chat-message-thread-indicator__excerpt">
-                  {props.message.thread.preview.last_reply_excerpt.replace(/<[^>]*>/g, '')}
-                </span>
-              )}
-            </a>
-          )}
-
-          <div class="chat-message-footer">
-            {reactionItems.value.map(reaction => {
-              const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
-              return (
-                <button
-                  type="button"
-                  key={`${props.message.id}-${reaction.emoji}`}
-                  class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                  onClick={() => handleReact(reaction.emoji, reaction.reacted)}
-                  title={reaction.emoji}
-                >
-                  <span class="chat-message-reaction-emoji">
-                    {resolvedEmoji?.url ? (
-                      <img
-                        class="chat-message-reaction-image"
-                        src={resolvedEmoji.url}
-                        alt={formatReactionLabel(reaction.emoji)}
-                        loading="lazy"
-                      />
-                    ) : resolvedEmoji?.unicode ? (
-                      resolvedEmoji.unicode
-                    ) : (
-                      formatReactionLabel(reaction.emoji)
-                    )}
-                  </span>
-                  <span class="chat-message-reaction-count">{reaction.count}</span>
-                </button>
-              )
-            })}
+            </div>
+            {/* Absolutely positioned: it is beside the bubble without affecting row height. */}
             <div
               ref={floatingControlsRef}
-              class="chat-message-reaction-actions"
+              class="chat-message-hover-actions"
               onFocusout={handleControlsFocusout}
             >
               <button
-                ref={reactionButtonRef}
                 type="button"
+                ref={reactionButtonRef}
                 class="chat-message-reaction-add"
                 title="添加反应"
                 onClick={handleAddReaction}
@@ -393,6 +379,17 @@ export default defineComponent({
                   showEmojiPicker.value = false
                 }}
               />
+              <button
+                type="button"
+                class="chat-message-actions-toggle"
+                title="更多操作"
+                onClick={toggleActions}
+                aria-label="更多消息操作"
+                aria-haspopup="menu"
+                aria-expanded={showActions.value}
+              >
+                <MoreOutlined />
+              </button>
               {showActions.value && (
                 <div class="chat-message-actions-menu" role="menu" aria-label="消息操作">
                   <button
@@ -403,7 +400,7 @@ export default defineComponent({
                   >
                     {hasThreadAction.value ? <CommentOutlined /> : <ForwardOutlined />}
                     {hasThreadAction.value
-                      ? props.message.thread?.id
+                      ? threadId.value
                         ? '打开消息串'
                         : '在消息串中回复'
                       : '回复'}
@@ -442,34 +439,47 @@ export default defineComponent({
               )}
             </div>
           </div>
-
-          {blockButtons.value.length > 0 && (
-            <div class="chat-message-blocks">
-              {blockButtons.value.map((button, index) => (
-                <button
-                  type="button"
-                  key={`${button.actionId}-${index}`}
-                  class={['chat-message-block-button', button.style ? `is-${button.style}` : '']}
-                  onClick={() => handleInteract(button.actionId)}
-                >
-                  {button.label}
-                </button>
-              ))}
-            </div>
+          {hasThreadEntry.value && (
+            <a
+              class="chat-message-thread-indicator"
+              href={`${props.baseUrl}/chat/c/-/${props.channelId || props.message.chat_channel_id}/t/${threadId.value}`}
+              aria-label={
+                threadReplyCount.value > 0
+                  ? `打开消息串，共 ${threadReplyCount.value} 条回复`
+                  : '打开消息串'
+              }
+              title="打开消息串"
+              onClick={(event: MouseEvent) => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+                event.preventDefault()
+                handleOpenThread()
+              }}
+            >
+              <span class="chat-message-thread-indicator__icon" aria-hidden="true">
+                <CommentOutlined />
+              </span>
+              {threadParticipants.value.length > 0 && (
+                <span class="chat-message-thread-indicator__participants" aria-hidden="true">
+                  {threadParticipants.value.map(user => (
+                    <img
+                      key={user.id}
+                      src={getAvatarUrl(user.avatar_template, props.baseUrl, 20)}
+                      alt=""
+                    />
+                  ))}
+                </span>
+              )}
+              <span class="chat-message-thread-indicator__count">
+                {threadReplyCount.value > 0 ? `${threadReplyCount.value} 条回复` : '进入消息串'}
+              </span>
+              {props.message.thread?.preview?.last_reply_excerpt && (
+                <span class="chat-message-thread-indicator__excerpt">
+                  {props.message.thread.preview.last_reply_excerpt.replace(/<[^>]*>/g, '')}
+                </span>
+              )}
+            </a>
           )}
         </div>
-        <button
-          ref={actionsToggleRef}
-          type="button"
-          class="chat-message-actions-toggle"
-          title="更多操作"
-          onClick={toggleActions}
-          aria-label="更多消息操作"
-          aria-haspopup="menu"
-          aria-expanded={showActions.value}
-        >
-          <MoreOutlined />
-        </button>
         <span class="chat-message-time-side">
           {props.message.edited && <span class="chat-message-edited">已编辑</span>}
           {formatTime(props.message.created_at)}

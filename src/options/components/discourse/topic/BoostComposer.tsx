@@ -53,6 +53,10 @@ export default defineComponent({
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
       if (target instanceof Element && target.closest('.discourse-emoji-picker-trigger')) return
+      // The shared picker is teleported to document.body.  Treat its portal as
+      // part of this composer so choosing an emoji cannot trigger the
+      // composer's outside-click dismissal before the picker receives it.
+      if (target instanceof Element && target.closest('.discourse-emoji-picker')) return
       if (target instanceof Node && props.anchorEl?.contains(target)) return
       if (target instanceof Node && panelRef.value?.contains(target)) return
       if (target instanceof Node && !panelRef.value?.contains(target)) {

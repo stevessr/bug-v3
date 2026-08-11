@@ -55,8 +55,7 @@
 }
 
 /* 组内粘连气泡：非首条使用统一小圆角 */
-.chat-message-item.group-follow
-  .chat-message-content {
+.chat-message-item.group-follow .chat-message-content {
   border-radius: var(--d-shape-md, 12px);
 }
 
@@ -81,9 +80,28 @@
   font-style: italic;
 }
 
-.chat-message-content {
+.chat-message-bubble-wrap {
+  position: relative;
   min-width: 0;
   max-width: min(76%, 760px);
+  flex: 0 1 auto;
+  /* Reserve horizontal space between the bubble and the timestamp only. */
+  margin-right: 68px;
+}
+
+.chat-message-own .chat-message-bubble-wrap {
+  margin-right: 0;
+  margin-left: 68px;
+}
+
+.chat-message-bubble {
+  position: relative;
+  min-width: 0;
+}
+
+.chat-message-content {
+  min-width: 0;
+  max-width: 100%;
   padding: 9px 12px 8px;
   border-radius: 6px var(--d-shape-lg, 16px) var(--d-shape-lg, 16px) var(--d-shape-lg, 16px);
   background: var(--d-surface-0, var(--theme-surface-container-lowest));
@@ -290,26 +308,23 @@
   font-size: 14px;
 }
 
-/* 更多按钮：行级、紧挨消息气泡右侧（自己的消息经镜像在气泡左侧） */
-.chat-message-item > .chat-message-actions-toggle {
+/*
+ * Keep hover controls beside the bubble rather than in its footer.  A footer
+ * changes a message's height even when it has no reactions; this row keeps
+ * the controls on the message's trailing side without consuming vertical
+ * space.  `row-reverse` mirrors it for the current user's outgoing messages.
+ */
+.chat-message-hover-actions {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: calc(100% + 8px);
   display: inline-flex;
-  min-width: 28px;
-  height: 28px;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  align-self: center;
-  flex-shrink: 0;
-  border-radius: var(--d-shape-full, 999px);
-  background: color-mix(in oklab, var(--d-text) 7%, transparent);
-  color: var(--d-text-muted, var(--theme-on-surface-variant));
-  cursor: pointer;
-  font-size: 12px;
+  gap: 2px;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(2px) scale(0.96);
+  transform: translateY(calc(-50% + 2px)) scale(0.96);
   transition:
     opacity var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
     transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
@@ -317,26 +332,22 @@
     background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
-.chat-message-own > .chat-message-actions-toggle {
-  background: color-mix(in oklab, var(--on-primary-container) 9%, transparent);
-  color: var(--on-primary-container, var(--theme-on-primary-container));
+.chat-message-hover-actions .chat-message-actions-toggle {
+  width: 28px;
+  padding: 0;
 }
 
-.chat-message-item:hover > .chat-message-actions-toggle,
-.chat-message-item:focus-within > .chat-message-actions-toggle,
-.chat-message-item.has-floating-controls > .chat-message-actions-toggle {
+.chat-message-item:hover .chat-message-hover-actions,
+.chat-message-item:focus-within .chat-message-hover-actions,
+.chat-message-item.has-floating-controls .chat-message-hover-actions {
   opacity: 1;
   pointer-events: auto;
-  transform: none;
+  transform: translateY(-50%);
 }
 
-.chat-message-item > .chat-message-actions-toggle:hover {
-  background: color-mix(in oklab, var(--primary) 16%, transparent);
-  color: var(--primary, var(--theme-primary));
-}
-
-.chat-message-item > .chat-message-actions-toggle:active {
-  transform: scale(0.92);
+.chat-message-own .chat-message-hover-actions {
+  right: calc(100% + 8px);
+  left: auto;
 }
 
 .chat-message-reaction-emoji {
@@ -346,27 +357,6 @@
 .chat-message-reaction-count {
   font-size: 10px;
   font-weight: 700;
-}
-
-.chat-message-reaction-actions {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(2px) scale(0.96);
-  transition:
-    opacity var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
-    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
-}
-
-.chat-message-item:hover .chat-message-reaction-actions,
-.chat-message-item:focus-within .chat-message-reaction-actions,
-.chat-message-item.has-floating-controls .chat-message-reaction-actions {
-  opacity: 1;
-  pointer-events: auto;
-  transform: none;
 }
 
 .chat-message-actions-menu {
@@ -534,15 +524,15 @@
 }
 
 @media (hover: none) {
-  .chat-message-reaction-actions {
+  .chat-message-hover-actions {
     opacity: 1;
     pointer-events: auto;
-    transform: none;
+    transform: translateY(-50%);
   }
 }
 
 @media (max-width: 560px) {
-  .chat-message-content {
+  .chat-message-bubble-wrap {
     max-width: calc(100% - 42px);
   }
 

@@ -4,6 +4,7 @@ import rehypeStringify from 'rehype-stringify'
 import type { Root, Node } from 'hast'
 
 import type { ParsedContent } from '../types'
+import { unwrapDiscourseFaviconProxyUrl } from '../navigation'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { rewriteEmojiUrlForCdn } from '../utils'
 
@@ -19,10 +20,10 @@ import { transformQuotes } from './transformQuotes'
 import { renderSegmentsToHtml } from './renderSegmentsToHtml'
 
 /**
- * 遍历整个 hast 树，把站点表情 <img> 的 src 改走 CDN（linux.do 特判）。
- * 帖子正文/引用/脚注中的表情图片都在这里统一处理。
+ * 遍历整个 hast 树，先移除 Discourse favicon 代理层，再把站点表情 <img>
+ * 的 src 改走 CDN（linux.do 特判）。帖子正文/引用/脚注中的图片都在这里统一处理。
  */
-const rewriteEmojiImageSources = (node: unknown): void => {
+const rewriteImageSources = (node: unknown, baseUrl?: string): void => {
   if (!node || typeof node !== 'object') return
   const element = node as {
     tagName?: string
@@ -30,11 +31,12 @@ const rewriteEmojiImageSources = (node: unknown): void => {
     children?: unknown[]
   }
   if (element.tagName === 'img' && typeof element.properties?.src === 'string') {
-    element.properties.src = rewriteEmojiUrlForCdn(element.properties.src)
+    const source = unwrapDiscourseFaviconProxyUrl(element.properties.src, baseUrl)
+    element.properties.src = rewriteEmojiUrlForCdn(source)
   }
   if (Array.isArray(element.children)) {
     element.children.forEach(child => {
-      if (child && typeof child === 'object') rewriteEmojiImageSources(child)
+      if (child && typeof child === 'object') rewriteImageSources(child, baseUrl)
     })
   }
 }
@@ -58,6 +60,10 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   const tree = unified().use(rehypeParse, { fragment: true }).parse(sanitizedCooked) as Root
 
+  // Run before image extraction so rendered HTML, lightboxes, and image
+  // collections all share the direct source URL.
+  rewriteImageSources(tree, baseUrl)
+
   transformQuotes(tree as Node, ctx)
 
   const footnotes = extractFootnotes(tree, ctx)
@@ -69,8 +75,6 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
   extractLightboxWrappers(tree, ctx)
 
   extractStandaloneImages(tree, ctx)
-
-  rewriteEmojiImageSources(tree)
 
   cleanupMediaNodes(tree)
 

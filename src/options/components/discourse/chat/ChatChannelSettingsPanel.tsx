@@ -6,6 +6,7 @@ import {
   MessageOutlined,
   PushpinOutlined,
   SafetyCertificateOutlined,
+  SmileOutlined,
   StarOutlined,
   TeamOutlined
 } from '@ant-design/icons-vue'
@@ -16,6 +17,8 @@ import type {
   ChatChannelUpdatePayload,
   ChatMembershipUpdatePayload
 } from '../types'
+
+import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 type NotificationLevel = 'always' | 'mention' | 'never'
 
@@ -32,6 +35,7 @@ export default defineComponent({
   name: 'ChatChannelSettingsPanel',
   props: {
     channel: { type: Object as PropType<ChatChannel>, required: true },
+    baseUrl: { type: String, required: true },
     savingChannel: { type: Boolean, default: false },
     savingMembership: { type: Boolean, default: false },
     savingStatus: { type: Boolean, default: false },
@@ -43,6 +47,8 @@ export default defineComponent({
     const description = ref('')
     const slug = ref('')
     const emoji = ref('')
+    const emojiPickerOpen = ref(false)
+    const emojiPickerTrigger = ref<HTMLButtonElement | null>(null)
     const threadingEnabled = ref(false)
     const autoJoinUsers = ref(false)
     const allowChannelWideMentions = ref(false)
@@ -67,10 +73,7 @@ export default defineComponent({
           1
     )
     const canEditDirectChannel = computed(
-      () =>
-        isGroupDm.value &&
-        props.channel.meta?.can_edit_direct_channel !== false &&
-        Boolean(props.channel.meta?.can_edit_direct_channel || props.channel.meta?.can_manage)
+      () => isGroupDm.value && props.channel.meta?.can_edit_direct_channel !== false
     )
     const canEditChannel = computed(
       () =>
@@ -94,6 +97,7 @@ export default defineComponent({
       autoJoinUsers.value = !!props.channel.auto_join_users
       allowChannelWideMentions.value = !!props.channel.allow_channel_wide_mentions
       validationMessage.value = ''
+      emojiPickerOpen.value = false
     }
 
     watch(
@@ -168,10 +172,19 @@ export default defineComponent({
     }
 
     const fieldDisabledCaption = computed(() => {
+      if (isGroupDm.value && !canEditChannel.value) {
+        return '当前群聊不允许修改频道字段'
+      }
+      if (isGroupDm.value) return ''
       if (isDirect.value) return '直接消息的频道字段由 Discourse 管理'
       if (!canModerate.value) return '仅频道管理员可修改'
       return ''
     })
+
+    const selectChannelEmoji = (value: string) => {
+      emoji.value = value.trim().replace(/^:([^:]+):$/, '$1')
+      emojiPickerOpen.value = false
+    }
 
     const renderSwitchRow = (
       id: string,
@@ -338,12 +351,33 @@ export default defineComponent({
 
               <label class="chat-settings-field" for="chat-setting-emoji">
                 <span>频道表情</span>
-                <Input
-                  id="chat-setting-emoji"
-                  value={emoji.value}
-                  disabled={fieldsDisabled}
-                  placeholder="speech_balloon"
-                  onUpdate:value={value => (emoji.value = String(value))}
+                <div class="chat-settings-emoji-control">
+                  <Input
+                    id="chat-setting-emoji"
+                    value={emoji.value}
+                    disabled={fieldsDisabled}
+                    placeholder="speech_balloon"
+                    onUpdate:value={value => (emoji.value = String(value))}
+                  />
+                  <button
+                    ref={emojiPickerTrigger}
+                    type="button"
+                    class="chat-settings-emoji-picker-trigger discourse-emoji-picker-trigger"
+                    disabled={fieldsDisabled}
+                    aria-label="选择频道表情"
+                    aria-expanded={emojiPickerOpen.value}
+                    onClick={() => (emojiPickerOpen.value = !emojiPickerOpen.value)}
+                  >
+                    <SmileOutlined />
+                  </button>
+                </div>
+                <DiscourseEmojiPicker
+                  visible={emojiPickerOpen.value}
+                  baseUrl={props.baseUrl}
+                  mode="shortcode"
+                  anchorEl={emojiPickerTrigger.value}
+                  onSelect={selectChannelEmoji}
+                  onClose={() => (emojiPickerOpen.value = false)}
                 />
               </label>
             </div>

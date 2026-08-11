@@ -1,14 +1,16 @@
 import { computed, defineComponent, ref, watch } from 'vue'
 import { Input, Spin } from 'ant-design-vue'
-import { CloseOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import { CloseOutlined, PlusOutlined, SmileOutlined } from '@ant-design/icons-vue'
 
 import type { ChatCreateChannelPayload, DiscourseCategory } from '../types'
+import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 import '../css/chat/ChatCreateGroupModal.css'
 
 export default defineComponent({
   name: 'ChatCreateChannelModal',
   props: {
     open: { type: Boolean, required: true },
+    baseUrl: { type: String, required: true },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     creating: { type: Boolean, default: false },
     maxAutoJoinedUsers: { type: Number, default: 0 }
@@ -20,6 +22,8 @@ export default defineComponent({
     const slug = ref('')
     const description = ref('')
     const emoji = ref('')
+    const emojiPickerOpen = ref(false)
+    const emojiPickerTrigger = ref<HTMLButtonElement | null>(null)
     const threadingEnabled = ref(false)
     const autoJoinUsers = ref(false)
 
@@ -47,6 +51,7 @@ export default defineComponent({
         slug.value = ''
         description.value = ''
         emoji.value = ''
+        emojiPickerOpen.value = false
         threadingEnabled.value = false
         autoJoinUsers.value = false
       }
@@ -64,6 +69,11 @@ export default defineComponent({
         threadingEnabled: threadingEnabled.value
       }
       emit('create', payload)
+    }
+
+    const selectChannelEmoji = (value: string) => {
+      emoji.value = value.trim().replace(/^:([^:]+):$/, '$1')
+      emojiPickerOpen.value = false
     }
 
     return () => {
@@ -164,12 +174,33 @@ export default defineComponent({
                   <label class="chat-group-modal__label" for="chat-create-channel-emoji">
                     频道表情（可选）
                   </label>
-                  <Input
-                    id="chat-create-channel-emoji"
-                    value={emoji.value}
-                    placeholder="speech_balloon"
-                    disabled={props.creating}
-                    onUpdate:value={(value: string) => (emoji.value = value)}
+                  <div class="chat-group-modal__emoji-control">
+                    <Input
+                      id="chat-create-channel-emoji"
+                      value={emoji.value}
+                      placeholder="speech_balloon"
+                      disabled={props.creating}
+                      onUpdate:value={(value: string) => (emoji.value = value)}
+                    />
+                    <button
+                      ref={emojiPickerTrigger}
+                      type="button"
+                      class="chat-group-modal__emoji-picker-trigger discourse-emoji-picker-trigger"
+                      disabled={props.creating}
+                      aria-label="选择频道表情"
+                      aria-expanded={emojiPickerOpen.value}
+                      onClick={() => (emojiPickerOpen.value = !emojiPickerOpen.value)}
+                    >
+                      <SmileOutlined />
+                    </button>
+                  </div>
+                  <DiscourseEmojiPicker
+                    visible={emojiPickerOpen.value}
+                    baseUrl={props.baseUrl}
+                    mode="shortcode"
+                    anchorEl={emojiPickerTrigger.value}
+                    onSelect={selectChannelEmoji}
+                    onClose={() => (emojiPickerOpen.value = false)}
                   />
                 </div>
               </div>

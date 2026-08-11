@@ -538,6 +538,7 @@ export default defineComponent({
                 <>
                   <ChatChannelSettingsPanel
                     channel={activeChannel}
+                    baseUrl={props.baseUrl}
                     savingChannel={props.savingChannel}
                     savingMembership={props.savingMembership}
                     savingStatus={props.savingStatus}

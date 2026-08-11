@@ -133,6 +133,7 @@ const {
   openUserGroups,
   openUserPreferences,
   openChat,
+  openChatChannel,
   ensureChatLoaded,
   loadMyThreads,
   loadMoreMyThreads,
@@ -148,7 +149,6 @@ const {
   switchMessagesTab,
   loadMoreMessages,
   loadMoreFollowFeed,
-  selectChatChannel,
   loadMoreChatMessagesForChannel,
   openChatMessageThread,
   openChatThreadFromList,
@@ -1573,7 +1573,7 @@ const loadQuickSidebar = async (force = false) => {
 }
 
 const handleSelectChatChannel = (channel: { id: number; slug?: string }) => {
-  selectChatChannel(channel.id)
+  openChatChannel(channel)
 }
 
 const handleLoadMoreChatMessages = (channelId: number) => {
@@ -1838,6 +1838,7 @@ const handleChatSidebarTabChange = (tab: 'threads' | 'starred' | 'public' | 'dir
 const handleJoinChatChannel = async (channelId: number) => {
   const joined = await joinChatChannel(channelId)
   if (joined) {
+    openChatChannel(joined)
     message.success(`已加入「${joined.title || joined.chatable?.name || channelId}」`)
   } else {
     message.error(activeTab.value?.chatState?.errorMessage || '加入频道失败')
@@ -1864,7 +1865,7 @@ const handleCreateGroup = async (payload: { targetUsernames: string[]; name?: st
     })
     if (channel) {
       message.success(payload.targetUsernames.length > 1 ? '群聊已创建' : '聊天已创建')
-      selectChatChannel(channel.id)
+      openChatChannel(channel)
     } else {
       message.error(activeTab.value?.chatState?.errorMessage || '创建聊天频道失败')
     }
@@ -1880,7 +1881,7 @@ const handleCreateChatChannel = async (payload: ChatCreateChannelPayload) => {
     const channel = await createChatChannel(payload)
     if (channel) {
       message.success('公开频道已创建')
-      selectChatChannel(channel.id)
+      openChatChannel(channel)
     } else {
       message.error(activeTab.value?.chatState?.errorMessage || '创建公开频道失败')
     }
@@ -2249,7 +2250,7 @@ const handleStartUserChat = async (username?: string) => {
     message.error(activeTab.value?.chatState?.errorMessage || '无法创建私聊')
     return
   }
-  selectChatChannel(channel.id)
+  openChatChannel(channel)
 }
 
 const handleOpenUserBadges = (username: string) => {

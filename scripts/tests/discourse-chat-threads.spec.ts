@@ -265,6 +265,18 @@ test.describe('Discourse chat message threads', () => {
 
           if (url.includes('/chat/api/me/channels')) {
             data = { channels: [channel] }
+          } else if (url.includes('/emojis.json')) {
+            data = {
+              emojis: {
+                custom: [
+                  {
+                    id: 'party_blob',
+                    name: 'party_blob',
+                    url: 'https://cdn3.ldstatic.com/party_blob.png'
+                  }
+                ]
+              }
+            }
           } else if (new URL(url).pathname === '/chat/api/search' && method === 'GET') {
             const searchUrl = new URL(url)
             const query = searchUrl.searchParams.get('query') || ''
@@ -512,6 +524,50 @@ test.describe('Discourse chat message threads', () => {
     await expect(page.getByText('这个发布方案怎么样？', { exact: true })).toBeVisible()
   }
 
+  test('keeps arbitrary reaction controls beside a message without adding hover height', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    const targetMessage = page.locator('.chat-message-item').filter({
+      hasText: '还没有消息串的消息'
+    })
+    const content = targetMessage.locator('.chat-message-content')
+    const before = await targetMessage.boundingBox()
+    await targetMessage.hover()
+
+    const addReaction = targetMessage.getByRole('button', { name: '添加消息反应' })
+    await expect(addReaction).toBeVisible()
+    const [contentBox, reactionBox, after] = await Promise.all([
+      content.boundingBox(),
+      addReaction.boundingBox(),
+      targetMessage.boundingBox()
+    ])
+    expect(contentBox).not.toBeNull()
+    expect(reactionBox).not.toBeNull()
+    expect(before).not.toBeNull()
+    expect(after).not.toBeNull()
+    expect(reactionBox!.x).toBeGreaterThan(contentBox!.x + contentBox!.width)
+    expect(after!.height).toBe(before!.height)
+
+    await addReaction.click()
+    const picker = page.getByRole('dialog', { name: '选择反应' })
+    await expect(picker).toBeVisible()
+    await picker.getByRole('button', { name: ':party_blob:' }).click()
+    await expect(targetMessage.getByTitle('party_blob')).toBeVisible()
+
+    const reactionRequest = await page.evaluate(() =>
+      (globalThis as any).__chatThreadRequests.find(
+        (request: any) =>
+          request.method === 'PUT' &&
+          /\/chat\/7\/react\/110(?:\.json)?$/.test(request.url) &&
+          new URLSearchParams(request.body).get('emoji') === 'party_blob'
+      )
+    )
+    expect(reactionRequest).toBeTruthy()
+    expect(new URLSearchParams(reactionRequest.body).get('react_action')).toBe('add')
+  })
+
   test('opens, paginates and replies inside an official Discourse thread without refreshing', async ({
     page
   }) => {
@@ -519,7 +575,21 @@ test.describe('Discourse chat message threads', () => {
 
     const threadLink = page.getByRole('link', { name: '打开消息串，共 3 条回复' })
     await expect(threadLink).toHaveAttribute('href', 'https://linux.do/chat/c/-/7/t/501')
+    const sourceMessage = page.locator('[data-chat-message-id="100"]')
+    await expect(
+      sourceMessage.locator('.chat-message-bubble-wrap > .chat-message-thread-indicator')
+    ).toHaveCount(1)
+    const [sourceContentBox, threadEntryBox] = await Promise.all([
+      sourceMessage.locator('.chat-message-content').boundingBox(),
+      threadLink.boundingBox()
+    ])
+    expect(sourceContentBox).not.toBeNull()
+    expect(threadEntryBox).not.toBeNull()
+    expect(threadEntryBox!.y).toBeGreaterThanOrEqual(sourceContentBox!.y + sourceContentBox!.height)
     await threadLink.click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/product-chat/7/t/501'
+    )
     const panel = page.getByRole('region', { name: '消息串：发布方案讨论' })
     await expect(panel).toBeVisible()
     await expect(panel.getByText('可以先灰度发布', { exact: true })).toBeVisible()
@@ -594,6 +664,9 @@ test.describe('Discourse chat message threads', () => {
 
     await panel.getByRole('button', { name: '关闭消息串' }).click()
     await expect(panel).toHaveCount(0)
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/product-chat/7'
+    )
   })
 
   test('creates a thread on first reply and keeps a non-thread reply in_reply_to payload', async ({
@@ -656,6 +729,7 @@ test.describe('Discourse chat message threads', () => {
     page
   }) => {
     await openChat(page)
+    await page.getByRole('tab', { name: '我的消息串' }).click()
 
     const section = page.locator('[data-chat-sidebar-section="my-threads"]')
     await expect(section).toBeVisible()
@@ -775,6 +849,7 @@ test.describe('Discourse chat message threads', () => {
     )
     expect(successfulUpdate).toBeTruthy()
 
+    await page.getByRole('tab', { name: '我的消息串' }).click()
     await expect(
       page
         .locator('[data-chat-sidebar-section="my-threads"]')

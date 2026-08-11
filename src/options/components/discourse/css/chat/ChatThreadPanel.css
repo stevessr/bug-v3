@@ -188,7 +188,7 @@
   background: var(--d-surface-1, var(--theme-surface-container-low));
 }
 
-.chat-thread-panel .chat-message-content {
+.chat-thread-panel .chat-message-bubble-wrap {
   max-width: min(84%, 360px);
 }
 

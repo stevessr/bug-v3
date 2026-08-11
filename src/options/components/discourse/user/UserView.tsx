@@ -344,58 +344,92 @@ export default defineComponent({
           </section>
         )}
 
-        {props.user._summary?.top_categories && props.user._summary.top_categories.length > 0 && (
-          <section class="user-profile-card user-profile-card--narrow">
-            <h3 class="user-profile-card__title">活跃分类</h3>
-            <div class="user-profile-category-list">
-              {props.user._summary.top_categories.slice(0, 5).map(cat => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  class="user-profile-category-row"
-                  data-discourse-url={`${props.baseUrl}/c/${cat.slug}/${cat.id}`}
-                  onClick={() => emit('openCategory', cat)}
-                >
-                  <div class="user-profile-category-row__left">
-                    <div
-                      class="user-profile-category-row__dot"
-                      style={{ backgroundColor: `#${cat.color}` }}
-                    />
-                    <span>{cat.name}</span>
-                  </div>
-                  <div class="user-profile-category-row__meta">
-                    {cat.topic_count} 话题 · {cat.post_count} 帖子
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        <div class="user-profile-summary-columns" aria-label="用户概览详情">
+          {props.user._summary?.top_categories && props.user._summary.top_categories.length > 0 && (
+            <section class="user-profile-card">
+              <h3 class="user-profile-card__title">活跃分类</h3>
+              <div class="user-profile-category-list">
+                {props.user._summary.top_categories.slice(0, 5).map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    class="user-profile-category-row"
+                    data-discourse-url={`${props.baseUrl}/c/${cat.slug}/${cat.id}`}
+                    onClick={() => emit('openCategory', cat)}
+                  >
+                    <div class="user-profile-category-row__left">
+                      <div
+                        class="user-profile-category-row__dot"
+                        style={{ backgroundColor: `#${cat.color}` }}
+                      />
+                      <span>{cat.name}</span>
+                    </div>
+                    <div class="user-profile-category-row__meta">
+                      {cat.topic_count} 话题 · {cat.post_count} 帖子
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
-        {props.user._topics && props.user._topics.length > 0 && (
-          <section class="user-profile-card user-profile-card--narrow">
-            <h3 class="user-profile-card__title">热门话题</h3>
-            <div class="user-profile-topic-list">
-              {props.user._topics.slice(0, 6).map(topic => (
-                <button
-                  key={topic.id}
-                  type="button"
-                  class="user-profile-topic-item"
-                  data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(topic.slug)}/${topic.id}`}
-                  onClick={() => emit('openTopic', topic)}
-                >
-                  <div
-                    class="user-profile-topic-item__title"
-                    innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
-                  />
-                  <div class="user-profile-topic-item__meta">
-                    {topic.posts_count} 帖子 · {topic.like_count} 赞
-                  </div>
-                </button>
-              ))}
+          {props.user._topics && props.user._topics.length > 0 && (
+            <section class="user-profile-card">
+              <h3 class="user-profile-card__title">热门话题</h3>
+              <div class="user-profile-topic-list">
+                {props.user._topics.slice(0, 6).map(topic => (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    class="user-profile-topic-item"
+                    data-discourse-url={`${props.baseUrl}/t/${encodeURIComponent(topic.slug)}/${topic.id}`}
+                    onClick={() => emit('openTopic', topic)}
+                  >
+                    <div
+                      class="user-profile-topic-item__title"
+                      innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
+                    />
+                    <div class="user-profile-topic-item__meta">
+                      {topic.posts_count} 帖子 · {topic.like_count} 赞
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section class="user-profile-card">
+            <h3 class="user-profile-card__title">账户信息</h3>
+            <div class="user-profile-account-grid">
+              <div class="user-profile-account-grid__label">注册时间</div>
+              <div>{formatTime(props.user.created_at)}</div>
+              {props.user.last_seen_at && (
+                <>
+                  <div class="user-profile-account-grid__label">最后在线</div>
+                  <div>{formatTime(props.user.last_seen_at)}</div>
+                </>
+              )}
+              {props.user.last_posted_at && (
+                <>
+                  <div class="user-profile-account-grid__label">最后发帖</div>
+                  <div>{formatTime(props.user.last_posted_at)}</div>
+                </>
+              )}
+              {props.user.profile_view_count && (
+                <>
+                  <div class="user-profile-account-grid__label">主页浏览</div>
+                  <div>{props.user.profile_view_count} 次</div>
+                </>
+              )}
+              {props.user.badge_count && (
+                <>
+                  <div class="user-profile-account-grid__label">徽章数量</div>
+                  <div>{props.user.badge_count} 个</div>
+                </>
+              )}
             </div>
           </section>
-        )}
+        </div>
 
         {props.user._badges && props.user._badges.length > 0 && (
           <section class="user-profile-card">
@@ -439,38 +473,6 @@ export default defineComponent({
             </div>
           </section>
         )}
-
-        <section class="user-profile-card user-profile-card--narrow">
-          <h3 class="user-profile-card__title">账户信息</h3>
-          <div class="user-profile-account-grid">
-            <div class="user-profile-account-grid__label">注册时间</div>
-            <div>{formatTime(props.user.created_at)}</div>
-            {props.user.last_seen_at && (
-              <>
-                <div class="user-profile-account-grid__label">最后在线</div>
-                <div>{formatTime(props.user.last_seen_at)}</div>
-              </>
-            )}
-            {props.user.last_posted_at && (
-              <>
-                <div class="user-profile-account-grid__label">最后发帖</div>
-                <div>{formatTime(props.user.last_posted_at)}</div>
-              </>
-            )}
-            {props.user.profile_view_count && (
-              <>
-                <div class="user-profile-account-grid__label">主页浏览</div>
-                <div>{props.user.profile_view_count} 次</div>
-              </>
-            )}
-            {props.user.badge_count && (
-              <>
-                <div class="user-profile-account-grid__label">徽章数量</div>
-                <div>{props.user.badge_count} 个</div>
-              </>
-            )}
-          </div>
-        </section>
       </div>
     )
   }

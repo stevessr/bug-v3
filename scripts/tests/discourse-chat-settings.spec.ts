@@ -57,6 +57,43 @@ test.describe('Discourse chat channel settings', () => {
         }
       }
 
+      // `last_viewed_at` and unread state intentionally look newer than the
+      // real last message. They must not pull an empty channel above channels
+      // which actually have messages.
+      const olderChannel: Record<string, any> = {
+        ...channel,
+        id: 18,
+        title: '历史消息频道',
+        unicode_title: '历史消息频道',
+        slug: 'older-chat',
+        last_message_id: 88,
+        last_message_sent_at: '2026-08-08T08:00:00Z',
+        current_user_membership: {
+          ...membership,
+          id: 718,
+          chat_channel_id: 18,
+          unread_count: 0,
+          last_viewed_at: '2026-08-11T08:00:00Z'
+        }
+      }
+      const emptyChannel: Record<string, any> = {
+        ...channel,
+        id: 19,
+        title: '暂无消息频道',
+        unicode_title: '暂无消息频道',
+        slug: 'empty-chat',
+        last_message_id: null,
+        last_message_sent_at: null,
+        last_message: null,
+        current_user_membership: {
+          ...membership,
+          id: 719,
+          chat_channel_id: 19,
+          unread_count: 9,
+          last_viewed_at: '2026-08-11T12:00:00Z'
+        }
+      }
+
       const users = [
         {
           id: 1,
@@ -71,6 +108,34 @@ test.describe('Discourse chat channel settings', () => {
           avatar_template: '/letter_avatar_proxy/v4/letter/a/8491ac/{size}.png'
         }
       ]
+      const groupMembership = {
+        id: 801,
+        chat_channel_id: 8,
+        following: true,
+        muted: false,
+        notification_level: 'mention',
+        starred: false,
+        unread_count: 0
+      }
+      // No moderator flag is supplied: normal group-DM participants should
+      // still be able to edit the group fields unless the API explicitly
+      // denies it with can_edit_direct_channel: false.
+      const groupChannel: Record<string, any> = {
+        id: 8,
+        title: '项目群聊',
+        unicode_title: '项目群聊',
+        slug: 'project-group',
+        description: '多人协作讨论',
+        emoji: 'speech_balloon',
+        channelType: 'direct',
+        chatable_type: 'DirectMessage',
+        chatable: { id: 8, users, group: true },
+        direct_message_users: users,
+        status: 'open',
+        threading_enabled: false,
+        current_user_membership: groupMembership,
+        meta: {}
+      }
       const searchableUser = {
         id: 3,
         username: 'bob',
@@ -148,7 +213,22 @@ test.describe('Discourse chat channel settings', () => {
           let ok = true
 
           if (url.includes('/chat/api/me/channels')) {
-            data = { channels: [channel] }
+            data = {
+              channels: [channel, olderChannel, emptyChannel],
+              direct_message_channels: [groupChannel]
+            }
+          } else if (url.includes('/emojis.json')) {
+            data = {
+              emojis: {
+                custom: [
+                  {
+                    id: 'party_blob',
+                    name: 'party_blob',
+                    url: 'https://cdn3.ldstatic.com/party_blob.png'
+                  }
+                ]
+              }
+            }
           } else if (url.includes('/chat/api/channels/7/messages')) {
             data = {
               messages: [
@@ -166,6 +246,8 @@ test.describe('Discourse chat channel settings', () => {
               ],
               meta: { can_load_more_past: false }
             }
+          } else if (url.includes('/chat/api/channels/8/messages')) {
+            data = { messages: [], meta: { can_load_more_past: false } }
           } else if (url.includes('/chat/api/channels/7/memberships?') && method === 'GET') {
             data = {
               memberships: users.map((user, index) => ({
@@ -228,6 +310,20 @@ test.describe('Discourse chat channel settings', () => {
               channel.unicode_title = parsed.name
             }
             data = { channel: { ...channel } }
+          } else if (url.endsWith('/chat/api/channels/8') && method === 'PUT') {
+            // Group direct-message settings use their dedicated endpoint;
+            // make the caller exercise its documented fallback sequence.
+            ok = false
+            status = 404
+            data = { errors: ['频道不存在'] }
+          } else if (url.endsWith('/chat/api/direct-message-channels/8') && method === 'PUT') {
+            const parsed = body.startsWith('{') ? JSON.parse(body).channel : readChannelForm(body)
+            Object.assign(groupChannel, parsed)
+            if (parsed.name) {
+              groupChannel.title = parsed.name
+              groupChannel.unicode_title = parsed.name
+            }
+            data = { channel: { ...groupChannel } }
           } else if (url.endsWith('/chat/api/direct-message-channels') && method === 'POST') {
             const parsed = body.startsWith('{')
               ? JSON.parse(body)
@@ -337,6 +433,22 @@ test.describe('Discourse chat channel settings', () => {
     await expect(page.locator('.chat-main-title')).toHaveText('产品交流')
   }
 
+  test('keeps empty channels at the bottom and syncs the selected channel URL', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    await expect(page.locator('[data-chat-channel-group="public"] .chat-channel-title')).toHaveText(
+      ['产品交流', '历史消息频道', '暂无消息频道']
+    )
+
+    await page.getByRole('button', { name: '暂无消息频道' }).click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/empty-chat/19'
+    )
+    await expect(page.locator('.chat-main-title')).toHaveText('暂无消息频道')
+  })
+
   test('creates permission-aware direct and public chat channels without refreshing', async ({
     page
   }) => {
@@ -372,6 +484,7 @@ test.describe('Discourse chat channel settings', () => {
     await bob.click()
     await directDialog.getByRole('button', { name: /创建聊天.*1 人/ }).click()
     await expect(page.locator('.chat-main-title')).toHaveText('Bob')
+    await expect(page.locator('.toolbar-address input')).toHaveValue('https://linux.do/chat/c/-/9')
     await expect(directDialog).toHaveCount(0)
 
     const directRequest = await page.evaluate(() =>
@@ -397,6 +510,9 @@ test.describe('Discourse chat channel settings', () => {
     await publicDialog.getByRole('button', { name: '创建频道', exact: true }).click()
 
     await expect(page.locator('.chat-main-title')).toHaveText('设计协作')
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/design-chat/10'
+    )
     await expect(publicDialog).toHaveCount(0)
     const publicRequest = await page.evaluate(() =>
       (globalThis as any).__chatSettingsRequests.find(
@@ -455,7 +571,11 @@ test.describe('Discourse chat channel settings', () => {
     await page.locator('#chat-setting-name').fill('产品与设计')
     await page.locator('#chat-setting-description').fill('跟进产品和设计协作')
     await page.locator('#chat-setting-slug').fill('product-design')
-    await page.locator('#chat-setting-emoji').fill('recycle')
+    await page.getByRole('button', { name: '选择频道表情' }).click()
+    const emojiPicker = page.getByRole('dialog', { name: '插入站点表情短码' })
+    await expect(emojiPicker).toBeVisible()
+    await emojiPicker.getByRole('button', { name: ':party_blob:' }).click()
+    await expect(page.locator('#chat-setting-emoji')).toHaveValue('party_blob')
     await page.getByRole('switch', { name: '启用消息串' }).click()
     await page.getByRole('switch', { name: '用户自动加入' }).click()
     await page.getByRole('switch', { name: '允许全频道提及' }).click()
@@ -482,7 +602,7 @@ test.describe('Discourse chat channel settings', () => {
     expect(channelParams.get('channel[name]')).toBe('产品与设计')
     expect(channelParams.get('channel[description]')).toBe('跟进产品和设计协作')
     expect(channelParams.get('channel[slug]')).toBe('product-design')
-    expect(channelParams.get('channel[emoji]')).toBe('recycle')
+    expect(channelParams.get('channel[emoji]')).toBe('party_blob')
     expect(channelParams.get('channel[threading_enabled]')).toBe('true')
     expect(channelParams.get('channel[auto_join_users]')).toBe('true')
     expect(channelParams.get('channel[allow_channel_wide_mentions]')).toBe('false')
@@ -582,6 +702,65 @@ test.describe('Discourse chat channel settings', () => {
       )
     )
     expect(JSON.parse(statusRequest.body)).toEqual({ status: 'closed' })
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/product-design/7'
+    )
+  })
+
+  test('allows a group direct-message participant to edit every channel field', async ({
+    page
+  }) => {
+    await openChat(page)
+    await page.getByRole('tab', { name: /直接消息/ }).click()
+    await page.getByRole('button', { name: '项目群聊' }).click()
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/project-group/8'
+    )
+
+    await page.getByRole('button', { name: /管理/ }).click()
+    const dialog = page.getByRole('dialog', { name: '项目群聊' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('可编辑', { exact: true })).toBeVisible()
+    await expect(dialog.locator('#chat-setting-name')).toBeEnabled()
+    await expect(dialog.locator('#chat-setting-description')).toBeEnabled()
+    await expect(dialog.locator('#chat-setting-slug')).toBeEnabled()
+    await expect(dialog.locator('#chat-setting-emoji')).toBeEnabled()
+
+    await dialog.locator('#chat-setting-name').fill('项目计划群')
+    await dialog.locator('#chat-setting-description').fill('计划、设计和开发协作')
+    await dialog.locator('#chat-setting-slug').fill('project-planning')
+    await dialog.getByRole('button', { name: '选择频道表情' }).click()
+    const emojiPicker = page.getByRole('dialog', { name: '插入站点表情短码' })
+    await emojiPicker.getByRole('button', { name: ':party_blob:' }).click()
+    await dialog.getByRole('switch', { name: '启用消息串' }).click()
+    await dialog.getByRole('button', { name: '保存频道信息' }).click()
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          (globalThis as any).__chatSettingsRequests.some(
+            (request: any) =>
+              request.url.endsWith('/chat/api/direct-message-channels/8') &&
+              request.method === 'PUT'
+          )
+        )
+      )
+      .toBe(true)
+    const updateRequest = await page.evaluate(() =>
+      (globalThis as any).__chatSettingsRequests.find(
+        (request: any) =>
+          request.url.endsWith('/chat/api/direct-message-channels/8') && request.method === 'PUT'
+      )
+    )
+    const params = new URLSearchParams(updateRequest.body)
+    expect(params.get('channel[name]')).toBe('项目计划群')
+    expect(params.get('channel[description]')).toBe('计划、设计和开发协作')
+    expect(params.get('channel[slug]')).toBe('project-planning')
+    expect(params.get('channel[emoji]')).toBe('party_blob')
+    expect(params.get('channel[threading_enabled]')).toBe('true')
+    await expect(page.locator('.toolbar-address input')).toHaveValue(
+      'https://linux.do/chat/c/project-planning/8'
+    )
   })
 
   test('renders members, archive details, membership values, permissions, and raw JSON', async ({
@@ -693,7 +872,9 @@ test.describe('Discourse chat channel settings', () => {
     const floating = page.locator('.floating-chat')
     await expect(floating).toBeVisible()
     await expect(floating.getByText('Discourse Chat')).toBeVisible()
-    await expect(floating.locator('.chat-channel-item')).toContainText('产品交流')
+    await expect(
+      floating.locator('.chat-channel-item').filter({ hasText: '产品交流' })
+    ).toContainText('产品交流')
 
     const section = floating.locator('.chat-channel-section').filter({ hasText: '频道' })
     await expect(section).toHaveAttribute('aria-expanded', 'true')
@@ -708,7 +889,9 @@ test.describe('Discourse chat channel settings', () => {
     await expect(floating.locator('.chat-channel-item')).toHaveCount(0)
 
     await section.click()
-    await expect(floating.locator('.chat-channel-item')).toBeVisible()
+    await expect(
+      floating.locator('.chat-channel-item').filter({ hasText: '产品交流' })
+    ).toBeVisible()
 
     await floating.getByRole('button', { name: '最小化聊天' }).click()
     await expect(floating).toHaveClass(/is-minimized/)

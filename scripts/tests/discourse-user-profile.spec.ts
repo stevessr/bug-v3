@@ -284,6 +284,51 @@ test.describe('Discourse user profile area', () => {
     await expect(page.getByRole('button', { name: '查看全部' })).toBeVisible()
   })
 
+  test('places active categories, hot topics, and account information side by side responsively', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await openAddress(page, 'https://linux.do/u/steve')
+
+    const summaryColumns = page.locator('.user-profile-summary-columns')
+    const activeCategories = page.getByRole('heading', { name: '活跃分类' }).locator('..')
+    const hotTopics = page.getByRole('heading', { name: '热门话题' }).locator('..')
+    const accountInfo = page.getByRole('heading', { name: '账户信息' }).locator('..')
+
+    await expect(summaryColumns).toBeVisible()
+    await expect(activeCategories).toBeVisible()
+    await expect(hotTopics).toBeVisible()
+    await expect(accountInfo).toBeVisible()
+    await expect(summaryColumns).toHaveCSS('grid-template-columns', /.+ .+ .+/)
+
+    const [activeBox, topicsBox, accountBox] = await Promise.all([
+      activeCategories.boundingBox(),
+      hotTopics.boundingBox(),
+      accountInfo.boundingBox()
+    ])
+    expect(activeBox).not.toBeNull()
+    expect(topicsBox).not.toBeNull()
+    expect(accountBox).not.toBeNull()
+    expect(Math.abs(activeBox!.y - topicsBox!.y)).toBeLessThan(2)
+    expect(Math.abs(activeBox!.y - accountBox!.y)).toBeLessThan(2)
+    expect(activeBox!.x).toBeLessThan(topicsBox!.x)
+    expect(topicsBox!.x).toBeLessThan(accountBox!.x)
+
+    await page.setViewportSize({ width: 600, height: 1000 })
+    await expect(summaryColumns).toHaveCSS('grid-template-columns', /^(?!.* ).+$/)
+
+    const [mobileActiveBox, mobileTopicsBox, mobileAccountBox] = await Promise.all([
+      activeCategories.boundingBox(),
+      hotTopics.boundingBox(),
+      accountInfo.boundingBox()
+    ])
+    expect(mobileActiveBox).not.toBeNull()
+    expect(mobileTopicsBox).not.toBeNull()
+    expect(mobileAccountBox).not.toBeNull()
+    expect(mobileTopicsBox!.y).toBeGreaterThan(mobileActiveBox!.y)
+    expect(mobileAccountBox!.y).toBeGreaterThan(mobileTopicsBox!.y)
+  })
+
   test('switches between badges and follow tabs with follow feed, following and followers', async ({
     page
   }) => {
@@ -318,7 +363,7 @@ test.describe('Discourse user profile area', () => {
     await expect(page.getByText('反应于')).toBeVisible()
 
     // 作品集 subtab renders tagged topics
-    await activityTabs.getByRole('tab', { name: '作品集' }).click()
+    await page.getByRole('tab', { name: '作品集', exact: true }).click()
     await expect(page.getByText('我的作品集')).toBeVisible()
   })
 

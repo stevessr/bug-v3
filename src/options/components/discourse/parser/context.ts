@@ -1,4 +1,5 @@
 import type { LightboxImage } from '../types'
+import { unwrapDiscourseFaviconProxyUrl } from '../navigation'
 
 export interface ParseContext {
   baseUrl?: string
@@ -34,7 +35,7 @@ export const resolveUrl = (ctx: ParseContext, url?: string | null) => {
       ? new URL(value, `${ctx.baseUrl.replace(/\/+$/, '')}/`)
       : new URL(value)
     return resolved.protocol === 'http:' || resolved.protocol === 'https:'
-      ? resolved.toString()
+      ? unwrapDiscourseFaviconProxyUrl(resolved.toString())
       : ''
   } catch {
     return ''

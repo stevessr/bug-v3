@@ -316,6 +316,42 @@
   grid-column: 1 / -1;
 }
 
+.chat-settings-emoji-control {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.chat-settings-emoji-control .ant-input,
+.chat-settings-emoji-control .ant-input-affix-wrapper {
+  min-width: 0;
+  flex: 1;
+}
+
+.chat-settings-emoji-picker-trigger {
+  display: inline-flex;
+  width: 34px;
+  min-width: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--d-border, var(--theme-outline-variant, #d0d5dd));
+  border-radius: 9px;
+  background: var(--d-surface-1, var(--theme-surface-container-low, #fafafa));
+  color: var(--primary, var(--theme-primary, #1677ff));
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.chat-settings-emoji-picker-trigger:hover:not(:disabled) {
+  background: var(--d-state-hover, rgb(127 127 127 / 12%));
+}
+
+.chat-settings-emoji-picker-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .chat-settings-validation {
   margin-top: 12px;
   color: var(--d-danger, #d92d20);

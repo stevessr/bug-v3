@@ -86,8 +86,7 @@ export default defineComponent({
         replaceBoosts(remaining)
         if (own) props.post.can_boost = true
         if (selectedBoostId.value === boost.id) {
-          const next = remaining.find(item => canDeleteBoost(item) || item.can_flag)
-          selectedBoostId.value = next?.id ?? null
+          selectedBoostId.value = null
         }
         message.success('Boost 已删除')
       } catch (error) {
@@ -173,22 +172,18 @@ export default defineComponent({
       }
     )
 
-    // Keep an actionable row selected when the server hydrates the panel or a
-    // Boost is removed.  This keeps delete/report actions available without
-    // requiring a second click, while preserving the server's row ordering.
+    // A Boost action row is opt-in: hydrating the panel or deleting another
+    // Boost must not unexpectedly activate the first remaining Boost.
     watch(
       () => boosts.value,
       value => {
         if (
           selectedBoostId.value !== null &&
-          value.some(item => item.id === selectedBoostId.value)
+          !value.some(item => item.id === selectedBoostId.value)
         ) {
-          return
+          selectedBoostId.value = null
         }
-        const next = value.find(item => canDeleteBoost(item) || item.can_flag)
-        selectedBoostId.value = next?.id ?? null
-      },
-      { immediate: true }
+      }
     )
 
     return () => (

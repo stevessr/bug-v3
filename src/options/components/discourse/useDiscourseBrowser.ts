@@ -2064,9 +2064,71 @@ export function useDiscourseBrowser() {
     navigateTo(`${baseUrl.value}/chat`)
   }
 
+  const chatChannelUrl = (
+    channel: { id: number; slug?: string },
+    threadId?: number | null,
+    targetMessageId?: number | null
+  ) => {
+    const slug = channel.slug?.trim() ? encodeURIComponent(channel.slug) : '-'
+    const channelUrl = `${baseUrl.value.replace(/\/+$/, '')}/chat/c/${slug}/${channel.id}`
+    if (!threadId) return channelUrl
+    return `${channelUrl}/t/${threadId}${targetMessageId ? `/${targetMessageId}` : ''}`
+  }
+
+  /**
+   * Some chat transitions load data locally rather than going through
+   * `navigateTo`. Keep the browser toolbar/history in sync for those paths.
+   */
+  function syncChatLocation(
+    channel: { id: number; slug?: string },
+    options: {
+      threadId?: number | null
+      targetMessageId?: number | null
+      historyMode?: 'push' | 'replace'
+    } = {}
+  ) {
+    const tab = activeTab.value
+    if (!tab) return
+
+    const url = chatChannelUrl(channel, options.threadId, options.targetMessageId)
+    if (tab.url === url) return
+
+    tab.url = url
+    urlInput.value = url
+    if (options.historyMode === 'push') {
+      tab.history = tab.history.slice(0, tab.historyIndex + 1)
+      tab.historyScrollPositions = (tab.historyScrollPositions || []).slice(0, tab.historyIndex + 1)
+      tab.history.push(url)
+      tab.historyScrollPositions.push(0)
+      tab.historyIndex = tab.history.length - 1
+    } else if (options.historyMode === 'replace' && tab.history[tab.historyIndex]) {
+      tab.history[tab.historyIndex] = url
+    }
+  }
+
+  function syncActiveChatChannelLocation(channel: { id: number; slug?: string }) {
+    const tab = activeTab.value
+    const state = tab?.chatState
+    if (!state || state.activeChannelId !== channel.id) return
+    syncChatLocation(channel, {
+      threadId: state.activeThread?.id,
+      historyMode: 'replace'
+    })
+  }
+
   function openChatChannel(channel: { id: number; slug?: string }) {
-    const slug = channel.slug ? encodeURIComponent(channel.slug) : '-'
-    navigateTo(`${baseUrl.value}/chat/c/${slug}/${channel.id}`)
+    const tab = activeTab.value
+    // The channel list, creation flow, and chat management all operate inside
+    // an already-loaded chat view. Avoid reloading the full channel payload
+    // (which can briefly discard a newly created direct channel) while still
+    // recording the canonical address in this browser's history.
+    if (tab?.chatState && tab.viewType === 'chat') {
+      void selectChatChannel(channel.id).then(() => {
+        syncChatLocation(channel, { historyMode: 'push' })
+      })
+      return
+    }
+    navigateTo(chatChannelUrl(channel))
   }
 
   async function selectChatChannel(channelId: number) {
@@ -2113,7 +2175,12 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     const channelId = tab?.chatState?.activeChannelId || message.chat_channel_id
     if (!tab?.chatState || !channelId) return null
-    return await openChatThreadRoute(tab, baseUrl, users, channelId, message)
+    const opened = await openChatThreadRoute(tab, baseUrl, users, channelId, message)
+    const channel = tab.chatState.channels.find(item => item.id === channelId)
+    if (opened && channel) {
+      syncChatLocation(channel, { threadId: opened.id, historyMode: 'push' })
+    }
+    return opened
   }
 
   async function openChatThreadFromList(thread: ChatThread) {
@@ -2129,11 +2196,10 @@ export function useDiscourseBrowser() {
     }
     const opened = await openChatThreadByIdRoute(tab, baseUrl, users, channelId, thread.id)
     if (opened) {
-      // 同步地址栏到消息串 URL：/chat/c/{slug}/{channelId}/t/{threadId}
-      const slug = thread.channel?.slug ? encodeURIComponent(thread.channel.slug) : '-'
-      const url = `${baseUrl.value.replace(/\/+$/, '')}/chat/c/${slug}/${channelId}/t/${thread.id}`
-      tab.url = url
-      urlInput.value = url
+      syncChatLocation(thread.channel || { id: channelId }, {
+        threadId: thread.id,
+        historyMode: 'push'
+      })
     }
     return opened
   }
@@ -2142,6 +2208,8 @@ export function useDiscourseBrowser() {
     const tab = activeTab.value
     if (!tab?.chatState) return
     closeChatThreadRoute(tab)
+    const channel = tab.chatState.channels.find(item => item.id === tab.chatState?.activeChannelId)
+    if (channel) syncChatLocation(channel, { historyMode: 'replace' })
   }
 
   async function loadMoreChatThreadMessagesForActive(threadId: number) {
@@ -2224,7 +2292,9 @@ export function useDiscourseBrowser() {
   async function updateChatChannel(channelId: number, payload: ChatChannelUpdatePayload) {
     const tab = activeTab.value
     if (!tab?.chatState) return null
-    return await updateChatChannelRoute(tab, baseUrl, channelId, payload)
+    const channel = await updateChatChannelRoute(tab, baseUrl, channelId, payload)
+    if (channel) syncActiveChatChannelLocation(channel)
+    return channel
   }
 
   async function replyChatInteraction(channelId: number, messageId: number, actionId: string) {

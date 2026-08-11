@@ -766,6 +766,7 @@ export default defineComponent({
 
         <ChatCreateChannelModal
           open={showCreateChannel.value}
+          baseUrl={props.baseUrl}
           categories={props.categories}
           creating={props.creatingChannel}
           maxAutoJoinedUsers={props.chatState.capabilities.maxAutoJoinedUsers}

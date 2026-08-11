@@ -210,6 +210,19 @@
   background: var(--d-surface-0, var(--theme-surface-container-lowest));
 }
 
+/* Keep the summary cards together on wide profile pages without sacrificing
+ * the single-column reading order on compact extension windows. */
+.user-profile-summary-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.user-profile-summary-columns > .user-profile-card {
+  min-width: 0;
+}
+
 .user-profile-card__title {
   margin: 0 0 12px;
   color: var(--d-text, var(--theme-on-surface));
@@ -622,6 +635,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .user-profile-summary-columns {
+    grid-template-columns: 1fr;
+  }
+
   .user-profile-featured-topic {
     align-items: flex-start;
     flex-direction: column;
@@ -645,14 +662,15 @@
   }
 }
 
+@media (min-width: 641px) and (max-width: 1040px) {
+  .user-profile-summary-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .user-profile-badge-item__icon {
   width: 36px;
   height: 36px;
   color: var(--primary, var(--theme-primary));
   fill: currentColor;
-}
-
-/* 活跃分类 / 热门话题 / 账户信息：不要太宽 */
-.user-profile-card--narrow {
-  max-width: 560px;
 }

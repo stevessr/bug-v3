@@ -29,7 +29,9 @@ function loadTypeScriptModule(relativePath, dependencies = {}) {
 }
 
 const navigation = loadTypeScriptModule('src/options/components/discourse/navigation.ts')
-const parserContext = loadTypeScriptModule('src/options/components/discourse/parser/context.ts')
+const parserContext = loadTypeScriptModule('src/options/components/discourse/parser/context.ts', {
+  '../navigation': navigation
+})
 const discourseUtils = loadTypeScriptModule('src/options/components/discourse/utils.ts')
 const astUtils = loadTypeScriptModule('src/options/components/discourse/parser/astUtils.ts')
 const traverse = loadTypeScriptModule('src/options/components/discourse/parser/traverse.ts', {
@@ -109,6 +111,29 @@ test('content navigation resolves only credential-free HTTP links', () => {
   assert.equal(
     navigation.resolveDiscourseHttpUrl('https://user:secret@linux.do', 'https://linux.do'),
     null
+  )
+})
+
+test('Discourse favicon proxy URLs use their direct HTTP(S) source', () => {
+  const proxied =
+    'https://linux.do/favicon/proxied?https%3A%2F%2Fcdn3.ldstatic.com%2Foptimized%2F4X%2Fc%2Fc%2Fd%2Fccd8c210609d498cbeb3d5201d4c259348447562_2_32x32.png'
+  const direct =
+    'https://cdn3.ldstatic.com/optimized/4X/c/c/d/ccd8c210609d498cbeb3d5201d4c259348447562_2_32x32.png'
+
+  assert.equal(navigation.unwrapDiscourseFaviconProxyUrl(proxied), direct)
+  assert.equal(navigation.resolveDiscourseHttpUrl(proxied, 'https://linux.do'), direct)
+  assert.equal(
+    parserContext.resolveUrl(
+      parserContext.createParseContext('https://linux.do', () => ''),
+      '/favicon/proxied?https%3A%2F%2Fcdn3.ldstatic.com%2Foptimized%2F4X%2Fc%2Fc%2Fd%2Fccd8c210609d498cbeb3d5201d4c259348447562_2_32x32.png'
+    ),
+    direct
+  )
+  assert.equal(
+    navigation.unwrapDiscourseFaviconProxyUrl(
+      'https://linux.do/favicon/proxied?javascript%3Aalert(1)'
+    ),
+    'https://linux.do/favicon/proxied?javascript%3Aalert(1)'
   )
 })
 
