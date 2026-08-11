@@ -178,11 +178,17 @@ test.describe('Discourse topic actions and private messages', () => {
           } else if (parsed.pathname === '/emojis.json') {
             data = {
               'smileys_&_emotion': [
-                { id: 'heart', name: 'heart', url: '/images/emoji/twitter/heart.png' },
-                { id: 'laughing', name: 'laughing', url: '/images/emoji/twitter/laughing.png' }
+                { id: 'heart', name: 'heart', url: '/images/emoji/twemoji/heart.png?v=15' },
+                {
+                  id: 'laughing',
+                  name: 'laughing',
+                  url: '/images/emoji/twemoji/laughing.png?v=15'
+                }
               ],
-              activities: [{ id: 'tada', name: 'tada', url: '/images/emoji/twitter/tada.png' }],
-              extras: [{ id: 'eyes', name: 'eyes', url: '/images/emoji/twitter/eyes.png' }]
+              activities: [
+                { id: 'tada', name: 'tada', url: '/images/emoji/twemoji/tada.png?v=15' }
+              ],
+              extras: [{ id: 'eyes', name: 'eyes', url: '/images/emoji/twemoji/eyes.png?v=15' }]
             }
           } else if (parsed.pathname === '/emojis/search-aliases.json') {
             data = { heart: ['love'], laughing: ['happy'], tada: ['party'] }
@@ -297,14 +303,17 @@ test.describe('Discourse topic actions and private messages', () => {
           } else if (
             parsed.pathname === '/discourse-reactions/posts/4202/reactions-users-list.json'
           ) {
+            const requestedReaction = parsed.searchParams.get('reaction_value')
             data = {
-              users: [
-                {
-                  ...bob,
-                  reaction: parsed.searchParams.get('reaction_value') || 'heart'
-                }
-              ],
-              total_rows: 1
+              users: requestedReaction
+                ? [{ ...bob, reaction: requestedReaction }]
+                : [
+                    { ...bob, reaction: 'heart' },
+                    { ...steve, reaction: 'laughing' },
+                    { ...alice, reaction: 'tada' },
+                    { ...bob, reaction: 'eyes' }
+                  ],
+              total_rows: requestedReaction ? 1 : 10
             }
           } else if (parsed.pathname === '/topics/timings' && method === 'POST') {
             data = { success: 'OK' }
@@ -333,7 +342,7 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(page.getByRole('heading', { name: '私信与反应测试' })).toBeVisible()
   }
 
-  test('limits reactions, blocks own-post reactions, and opens detailed statistics', async ({
+  test('groups every reaction, blocks own-post reactions, and opens detailed statistics', async ({
     page
   }) => {
     await openTopic(page)
@@ -343,13 +352,17 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(ownPost.locator('.reaction-item--add')).toHaveCount(0)
     await expect(
       otherPost.locator('.reaction-item:not(.reaction-item--total):not(.reaction-item--add)')
-    ).toHaveCount(3)
+    ).toHaveCount(4)
     await expect(otherPost.locator('.reaction-item--total')).toHaveText('共 10')
-    await expect(otherPost.getByLabel(/:eyes:/)).toHaveCount(0)
+    await expect(otherPost.getByLabel(/:eyes: 共 1 次/)).toHaveCount(1)
 
     await otherPost.getByLabel(/:heart: 共 4 次/).click()
     const details = page.getByRole('dialog', { name: ':heart: 反应详情' })
     await expect(details.getByText('@bob')).toBeVisible()
+    await expect(details.locator('.reaction-details-popover__summary-title img')).toHaveAttribute(
+      'src',
+      'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+    )
     await expect
       .poll(() =>
         page.evaluate(() =>
@@ -363,6 +376,16 @@ test.describe('Discourse topic actions and private messages', () => {
       .toBe(true)
     await page.locator('.reaction-details-modal-wrap .ant-modal-close').click()
     await expect(details).toBeHidden()
+
+    await otherPost.getByLabel('查看全部 10 人次反应').click()
+    const groupedDetails = page.getByRole('dialog', { name: '全部反应 反应详情' })
+    await expect(groupedDetails.locator('.reaction-details-popover__group')).toHaveCount(4)
+    await expect(groupedDetails.getByText(':heart:', { exact: true })).toBeVisible()
+    await expect(groupedDetails.getByText(':laughing:', { exact: true })).toBeVisible()
+    await expect(groupedDetails.getByText(':tada:', { exact: true })).toBeVisible()
+    await expect(groupedDetails.getByText(':eyes:', { exact: true })).toBeVisible()
+    await expect(groupedDetails.getByText('@steve')).toBeVisible()
+    await groupedDetails.getByRole('button', { name: '关闭' }).click()
 
     await otherPost.getByLabel('从站点表情中选择反应').click()
     const picker = page.getByRole('dialog', { name: '选择反应' })
@@ -565,6 +588,7 @@ test.describe('Discourse topic actions and private messages', () => {
     await openTopic(page)
     const panel = page.getByRole('region', { name: '私信参与者' })
     await expect(panel.getByText('2 人')).toBeVisible()
+    await expect(panel.locator('xpath=ancestor::aside[contains(@class, "topic-aside")]')).toHaveCount(1)
 
     await panel.getByLabel('新参与者用户名').fill('bob')
     await panel.getByRole('button', { name: '添加', exact: true }).click()
@@ -589,6 +613,28 @@ test.describe('Discourse topic actions and private messages', () => {
         )
       )
       .toBe(true)
+  })
+
+  test('shows detailed official-style topic notification choices', async ({ page }) => {
+    await openTopic(page)
+    await page.getByRole('button', { name: '话题通知等级' }).click()
+
+    const menu = page.locator('.topic-notification-menu')
+    await expect(menu).toBeVisible()
+    for (const [label, description] of [
+      ['忽略', '完全静音，不再收到此话题的提醒。'],
+      ['常规', '仅在被提及或直接回复时通知。'],
+      ['追踪', '显示未读数量，不为每条回复推送提醒。'],
+      ['关注', '每条新回复都会通知你。'],
+      ['仅关注首帖', '仅在新增首帖内容时通知。']
+    ]) {
+      const item = menu.locator('.topic-notification-menu__item').filter({ hasText: label })
+      await expect(item).toContainText(description)
+      await expect(item.locator('.topic-notification-menu__icon .anticon')).toHaveCount(1)
+    }
+
+    await menu.getByText('关注', { exact: true }).click()
+    await expect(page.getByRole('button', { name: '话题通知等级' })).toContainText('关注')
   })
 
   test('opens the custom right-click menu with current and new-tab actions', async ({ page }) => {

@@ -292,7 +292,8 @@ export async function loadMessages(
     activeTab: messagesTab,
     topics: [],
     page: 0,
-    hasMore: true
+    hasMore: true,
+    loading: true
   }
 
   await loadMessagesData(tab, username, messagesTab, baseUrl, users, true)
@@ -312,6 +313,7 @@ export async function loadMessagesData(
     tab.messagesState.page = 0
     tab.messagesState.hasMore = true
     tab.messagesState.topics = []
+    tab.messagesState.loading = true
   }
 
   const page = tab.messagesState.page
@@ -412,6 +414,10 @@ export async function loadMessagesData(
   } catch (e) {
     console.error('[DiscourseBrowser] loadMessagesData error:', e)
     tab.messagesState.hasMore = false
+  } finally {
+    if (reset && tab.messagesState) {
+      tab.messagesState.loading = false
+    }
   }
 }
 

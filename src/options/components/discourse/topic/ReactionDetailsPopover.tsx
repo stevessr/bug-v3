@@ -7,7 +7,6 @@ import { extractData, getAvatarUrl, pageFetch } from '../utils'
 import '../css/ReactionDetailsPopover.css'
 
 const PAGE_SIZE = 50
-const MAX_VISIBLE_USERS = 10
 
 export default defineComponent({
   name: 'ReactionDetailsPopover',
@@ -32,9 +31,34 @@ export default defineComponent({
     const panelStyle = ref<Record<string, string>>({})
     let loadSequence = 0
 
-    const title = computed(() => (props.reaction ? `:${props.reaction}:` : '全部反应'))
-    const visibleUsers = computed(() => users.value.slice(0, MAX_VISIBLE_USERS))
-    const hasMoreHidden = computed(() => users.value.length > MAX_VISIBLE_USERS)
+    const normalizeReaction = (reaction?: string | null) =>
+      String(reaction || props.reaction || '')
+        .replace(/^:([^:]+):$/, '$1')
+        .trim()
+
+    const title = computed(() =>
+      props.reaction ? `:${normalizeReaction(props.reaction)}:` : '全部反应'
+    )
+    const groupedUsers = computed(() => {
+      const groups = new Map<string, DiscourseReactionUser[]>()
+      users.value.forEach(user => {
+        const reaction = normalizeReaction(user.reaction)
+        const group = groups.get(reaction) || []
+        group.push(user)
+        groups.set(reaction, group)
+      })
+
+      return [...groups.entries()]
+        .map(([reaction, reactionUsers]) => ({ reaction, users: reactionUsers }))
+        .sort((left, right) => {
+          if (props.reaction) return 0
+          return (
+            right.users.length - left.users.length || left.reaction.localeCompare(right.reaction)
+          )
+        })
+    })
+    const loadedUsersCount = computed(() => users.value.length)
+    const hasMoreResults = computed(() => total.value > loadedUsersCount.value)
 
     const load = async () => {
       if (!props.post) return
@@ -108,9 +132,7 @@ export default defineComponent({
     )
 
     const renderReactionEmoji = (reaction: string | null) => {
-      const id = String(reaction || props.reaction || '')
-        .replace(/^:([^:]+):$/, '$1')
-        .trim()
+      const id = normalizeReaction(reaction)
       const emoji = id ? props.reactionEmojiMap[id] : undefined
       if (emoji?.url) {
         return (
@@ -136,7 +158,7 @@ export default defineComponent({
         >
           <button
             type="button"
-            class="ant-modal-close"
+            class="reaction-details-popover__close ant-modal-close"
             aria-label="关闭"
             title="关闭"
             onClick={() => emit('close')}
@@ -144,7 +166,10 @@ export default defineComponent({
             ×
           </button>
           <div class="reaction-details-popover__summary">
-            <strong>{title.value}</strong>
+            <div class="reaction-details-popover__summary-title">
+              {props.reaction && renderReactionEmoji(props.reaction)}
+              <strong>{title.value}</strong>
+            </div>
             <span>共 {total.value || users.value.length} 人次</span>
           </div>
 
@@ -158,38 +183,53 @@ export default defineComponent({
               {errorMessage.value}
             </div>
           )}
-          {!loading.value && !errorMessage.value && visibleUsers.value.length === 0 && (
+          {!loading.value && !errorMessage.value && groupedUsers.value.length === 0 && (
             <div class="reaction-details-popover__state">暂无可显示的反应用户</div>
           )}
 
-          {visibleUsers.value.length > 0 && (
+          {groupedUsers.value.length > 0 && (
             <div class="reaction-details-popover__list">
-              {visibleUsers.value.map(user => (
-                <button
-                  type="button"
-                  key={`${user.id}-${user.reaction || ''}`}
-                  class="reaction-details-popover__user"
-                  data-user-card={user.username}
-                  data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
-                  onClick={() => emit('openUser', user.username)}
+              {groupedUsers.value.map(group => (
+                <section
+                  key={group.reaction || 'unknown'}
+                  class="reaction-details-popover__group"
+                  aria-label={`${group.reaction ? `:${group.reaction}:` : '其他反应'}：${group.users.length} 人`}
                 >
-                  <img
-                    src={getAvatarUrl(user.avatar_template, props.baseUrl, 40)}
-                    alt=""
-                    loading="lazy"
-                  />
-                  <span class="reaction-details-popover__identity">@{user.username}</span>
-                  <span class="reaction-details-popover__reaction">
-                    {renderReactionEmoji(user.reaction || null)}
-                  </span>
-                </button>
+                  <header class="reaction-details-popover__group-heading">
+                    <span class="reaction-details-popover__group-emoji">
+                      {renderReactionEmoji(group.reaction || null)}
+                    </span>
+                    <strong>{group.reaction ? `:${group.reaction}:` : '其他反应'}</strong>
+                    <span>{group.users.length} 人</span>
+                  </header>
+                  <div class="reaction-details-popover__group-users">
+                    {group.users.map(user => (
+                      <button
+                        type="button"
+                        key={`${user.id}-${user.reaction || group.reaction || ''}`}
+                        class="reaction-details-popover__user"
+                        data-user-card={user.username}
+                        data-discourse-url={`${props.baseUrl}/u/${encodeURIComponent(user.username)}`}
+                        onClick={() => emit('openUser', user.username)}
+                      >
+                        <img
+                          src={getAvatarUrl(user.avatar_template, props.baseUrl, 40)}
+                          alt=""
+                          loading="lazy"
+                        />
+                        <span class="reaction-details-popover__identity">@{user.username}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}
 
-          {hasMoreHidden.value && (
+          {hasMoreResults.value && (
             <div class="reaction-details-popover__more">
-              还有 {total.value - MAX_VISIBLE_USERS} 人次…
+              已显示前 {loadedUsersCount.value} 人，另有 {total.value - loadedUsersCount.value}{' '}
+              人次…
             </div>
           )}
         </div>

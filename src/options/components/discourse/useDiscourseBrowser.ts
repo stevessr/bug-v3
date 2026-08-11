@@ -386,6 +386,7 @@ export function useDiscourseBrowser() {
   const currentSessionUser = ref<DiscourseSessionUser | null>(null)
   const currentUserStaff = computed(() => currentSessionUser.value?.staff === true)
   let sessionUserPromise: Promise<string | null> | null = null
+  let navigationSequence = 0
 
   // Sync URL input with active tab's URL
   watch(
@@ -553,6 +554,7 @@ export function useDiscourseBrowser() {
   async function navigateTo(url: string, addToHistory = true, options: { silent?: boolean } = {}) {
     const tab = activeTab.value
     if (!tab) return
+    const navigationId = ++navigationSequence
 
     const rawUrl = (url || '').trim()
     const base = baseUrl.value.replace(/\/+$/, '')
@@ -563,6 +565,7 @@ export function useDiscourseBrowser() {
     // silent：子 tab 切换时不清空整个视图，只让局部区域显示加载动画
     if (!options.silent) {
       tab.loading = true
+      tab.userSectionLoading = false
     }
     tab.url = normalizedUrl
     tab.scrollTop = addToHistory
@@ -574,6 +577,15 @@ export function useDiscourseBrowser() {
     tab.tagGroups = []
     tab.currentTagName = ''
     let isTopicNavigation = false
+    let isUserSectionNavigation = false
+
+    const beginUserSectionTransition = (viewType: BrowserTab['viewType'], title: string) => {
+      if (!options.silent) return
+      isUserSectionNavigation = true
+      tab.viewType = viewType
+      tab.title = title
+      tab.userSectionLoading = true
+    }
 
     try {
       const urlObj = new URL(normalizedUrl)
@@ -720,12 +732,20 @@ export function useDiscourseBrowser() {
         await ensureSessionUser()
         const pathParts = pathname.replace('/u/', '').split('/').filter(Boolean)
         const username = pathParts[0]
+        const isCachedUser = () =>
+          tab.currentUser?.username?.toLowerCase() === username.toLowerCase()
         if (!pathParts[1]) {
-          await navigateTo(`${baseUrl.value}/u/${username}/summary`, addToHistory)
+          await navigateTo(`${baseUrl.value}/u/${username}/summary`, addToHistory, options)
           return
         }
         if (pathParts[1] === 'summary') {
-          await loadUser(tab, username)
+          beginUserSectionTransition('user', `${username} - 概览`)
+          // Summary data is already available when the user returns from one
+          // of their sub-tabs. Reuse it instead of refetching the entire
+          // profile (and its seven auxiliary endpoints) on every click.
+          if (!options.silent || !isCachedUser()) {
+            await loadUser(tab, username)
+          }
           tab.viewType = 'user'
           tab.title = `${username} - 概览`
         } else if (pathParts[1] === 'activity') {
@@ -742,15 +762,18 @@ export function useDiscourseBrowser() {
             all: 'all'
           }
           const activityTab = activityMap[activityKey] || 'all'
+          beginUserSectionTransition('activity', `${username} - 动态`)
           await loadUserActivity(tab, username, activityTab)
           tab.title = `${username} - 动态`
           tab.viewType = 'activity'
         } else if (pathParts[1] === 'messages' || pathParts[1] === 'private-messages') {
           const messagesTab = messagesTabFromPath(pathname)
+          beginUserSectionTransition('messages', `${username} - 私信`)
           await loadMessages(tab, username, messagesTab)
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
         } else if (pathParts[1] === 'user-menu-private-messages') {
+          beginUserSectionTransition('messages', `${username} - 私信`)
           await loadMessages(tab, username, 'all')
           tab.title = `${username} - 私信`
           tab.viewType = 'messages'
@@ -764,20 +787,28 @@ export function useDiscourseBrowser() {
           const notificationFilter = normalizeNotificationFilter(
             pathParts[2] || urlObj.searchParams.get('filter')
           )
+          beginUserSectionTransition('notifications', `${username} - 通知`)
           await loadNotifications(tab, notificationFilter)
           tab.title = `${username} - 通知`
           tab.viewType = 'notifications'
         } else if (pathParts[1] === 'preferences') {
+          beginUserSectionTransition('preferences', `${username} - 设置`)
           await loadUserPreferences(tab, username)
           tab.title = `${username} - 设置`
           tab.viewType = 'preferences'
         } else if (pathParts[1] === 'groups') {
-          await loadUser(tab, username)
+          beginUserSectionTransition('groups', `${username} - 用户组`)
+          if (!options.silent || !isCachedUser()) {
+            await loadUser(tab, username)
+          }
           tab.title = `${username} - 用户组`
           tab.viewType = 'groups'
         } else if (pathParts[1] === 'invited') {
           await ensureSessionUser()
-          await loadUser(tab, username)
+          beginUserSectionTransition('invites', `${username} - 邀请`)
+          if (!options.silent || !isCachedUser()) {
+            await loadUser(tab, username)
+          }
           const filterParam = urlObj.searchParams.get('filter')
           const filter: 'pending' | 'redeemed' | 'expired' =
             filterParam === 'redeemed' || filterParam === 'expired' ? filterParam : 'pending'
@@ -785,24 +816,43 @@ export function useDiscourseBrowser() {
           tab.title = `${username} - 邀请`
           tab.viewType = 'invites'
         } else if (pathParts[1] === 'badges') {
-          await loadUser(tab, username)
+          beginUserSectionTransition('badges', `${username} - 徽章`)
+          if (!options.silent || !isCachedUser()) {
+            await loadUser(tab, username)
+          }
           tab.title = `${username} - 徽章`
           tab.viewType = 'badges'
         } else if (pathParts[1] === 'follow') {
-          await loadUser(tab, username)
           if (pathParts[2] === 'feed') {
+            beginUserSectionTransition('followFeed', `${username} - 关注动态`)
+            if (!options.silent || !isCachedUser()) {
+              await loadUser(tab, username)
+            }
             tab.title = `${username} - 关注动态`
             tab.viewType = 'followFeed'
           } else if (pathParts[2] === 'following') {
+            beginUserSectionTransition('following', `${username} - 正在关注`)
+            if (!options.silent || !isCachedUser()) {
+              await loadUser(tab, username)
+            }
             tab.title = `${username} - 正在关注`
             tab.viewType = 'following'
           } else if (pathParts[2] === 'followers') {
+            beginUserSectionTransition('followers', `${username} - 关注者`)
+            if (!options.silent || !isCachedUser()) {
+              await loadUser(tab, username)
+            }
             tab.title = `${username} - 关注者`
             tab.viewType = 'followers'
           } else {
+            beginUserSectionTransition('user', `${username} - 概览`)
+            if (!options.silent || !isCachedUser()) {
+              await loadUser(tab, username)
+            }
             tab.viewType = 'user'
           }
         } else {
+          beginUserSectionTransition('user', `${username} - 概览`)
           await loadUser(tab, username)
           tab.viewType = 'user'
         }
@@ -906,6 +956,9 @@ export function useDiscourseBrowser() {
       tab.viewType = 'error'
       tab.title = '加载失败'
     } finally {
+      if (isUserSectionNavigation && navigationId === navigationSequence) {
+        tab.userSectionLoading = false
+      }
       tab.loading = false
     }
   }
@@ -1837,7 +1890,9 @@ export function useDiscourseBrowser() {
     if (!tab || !tab.currentUser || !tab.messagesState) return
     const suffix = messagesTab === 'all' ? '' : `/${messagesTab}`
     await navigateTo(
-      `${baseUrl.value}/u/${encodeURIComponent(tab.currentUser.username)}/messages${suffix}`
+      `${baseUrl.value}/u/${encodeURIComponent(tab.currentUser.username)}/messages${suffix}`,
+      true,
+      { silent: true }
     )
   }
 
@@ -2048,16 +2103,16 @@ export function useDiscourseBrowser() {
   }
 
   // Open user messages
-  function openUserMessages(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/messages`)
+  function openUserMessages(username: string, silent = false) {
+    navigateTo(`${baseUrl.value}/u/${username}/messages`, true, { silent })
   }
 
-  function openUserGroups(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/groups`)
+  function openUserGroups(username: string, silent = false) {
+    navigateTo(`${baseUrl.value}/u/${username}/groups`, true, { silent })
   }
 
-  function openUserPreferences(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/preferences`)
+  function openUserPreferences(username: string, silent = false) {
+    navigateTo(`${baseUrl.value}/u/${username}/preferences`, true, { silent })
   }
 
   function openChat() {
@@ -2495,13 +2550,13 @@ export function useDiscourseBrowser() {
   }
 
   // Open user profile
-  function openUser(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/summary`)
+  function openUser(username: string, silent = false) {
+    navigateTo(`${baseUrl.value}/u/${username}/summary`, true, { silent })
   }
 
   // Open user activity
-  function openUserActivity(username: string) {
-    navigateTo(`${baseUrl.value}/u/${username}/activity`)
+  function openUserActivity(username: string, silent = false) {
+    navigateTo(`${baseUrl.value}/u/${username}/activity`, true, { silent })
   }
 
   function openUserBadges(username: string) {

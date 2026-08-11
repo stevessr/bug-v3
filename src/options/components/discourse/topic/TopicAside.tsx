@@ -36,7 +36,7 @@ export default defineComponent({
     summaryLoading: { type: Boolean, default: false },
     onToggleSummary: { type: Function as PropType<() => void>, required: true }
   },
-  setup(props) {
+  setup(props, { slots }) {
     const activeDetail = ref<'views' | 'likes' | 'users' | null>(null)
 
     const stats = computed(() => [
@@ -80,6 +80,7 @@ export default defineComponent({
     return () => (
       <aside class="topic-aside" aria-label="话题导航与数据">
         <div class="topic-aside__inner">
+          {slots.default?.()}
           <div class="topic-aside__card">
             <div class="topic-aside__card-header">
               <span class="topic-aside__card-title">话题数据</span>

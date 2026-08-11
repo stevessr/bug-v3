@@ -104,6 +104,19 @@ const normalizeEmojiUrl = (origin: string, url?: string | null) => {
   }
 }
 
+// Older persistent picker caches may have been written before the CDN rewrite
+// was introduced. Normalize both in-memory and restored entries so every
+// emoji surface (pickers, reaction chips and reaction details) gets the same
+// direct CDN URL without waiting for the 30-day cache to expire.
+const normalizeCachedEmojiGroups = (origin: string, groups: DiscourseEmojiGroup[]) =>
+  groups.map(group => ({
+    ...group,
+    emojis: group.emojis.map(emoji => ({
+      ...emoji,
+      url: normalizeEmojiUrl(origin, emoji.url)
+    }))
+  }))
+
 const getOrigin = (baseUrl?: string | null) => {
   if (!baseUrl) return ''
   try {
@@ -254,13 +267,22 @@ export async function fetchDiscourseEmojiGroups(
   if (!origin) return []
 
   const cached = emojiGroupsCache.get(origin)
-  if (!force && cached && cached.expiresAt > Date.now()) return cached.groups
+  if (!force && cached && cached.expiresAt > Date.now()) {
+    const groups = normalizeCachedEmojiGroups(origin, cached.groups)
+    cached.groups = groups
+    return groups
+  }
 
   if (!force) {
     const persistent = readPersistentEmojiGroups(origin)
     if (persistent) {
-      emojiGroupsCache.set(origin, persistent)
-      return persistent.groups
+      const normalized = {
+        ...persistent,
+        groups: normalizeCachedEmojiGroups(origin, persistent.groups)
+      }
+      emojiGroupsCache.set(origin, normalized)
+      writePersistentEmojiGroups(origin, normalized)
+      return normalized.groups
     }
   }
 

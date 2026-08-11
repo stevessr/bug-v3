@@ -241,9 +241,9 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.actions.length === 0 && !props.isLoadingMore && (
-                <div class="activity-state-empty">暂无数据</div>
-              )}
+              {props.activityState.actions.length === 0 &&
+                !props.activityState.loading &&
+                !props.isLoadingMore && <div class="activity-state-empty">暂无数据</div>}
             </div>
           )}
 
@@ -278,9 +278,11 @@ export default defineComponent({
                 </button>
               ))}
 
-              {props.activityState.topics.length === 0 && !props.isLoadingMore && (
-                <div class="activity-state-empty">{emptyTopicsText.value}</div>
-              )}
+              {props.activityState.topics.length === 0 &&
+                !props.activityState.loading &&
+                !props.isLoadingMore && (
+                  <div class="activity-state-empty">{emptyTopicsText.value}</div>
+                )}
             </div>
           )}
 
@@ -361,9 +363,9 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.reactions.length === 0 && !props.isLoadingMore && (
-                <div class="activity-state-empty">暂无反应</div>
-              )}
+              {props.activityState.reactions.length === 0 &&
+                !props.activityState.loading &&
+                !props.isLoadingMore && <div class="activity-state-empty">暂无反应</div>}
             </div>
           )}
 
@@ -408,9 +410,9 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.solvedPosts.length === 0 && !props.isLoadingMore && (
-                <div class="activity-state-empty">暂无已解决问题</div>
-              )}
+              {props.activityState.solvedPosts.length === 0 &&
+                !props.activityState.loading &&
+                !props.isLoadingMore && <div class="activity-state-empty">暂无已解决问题</div>}
             </div>
           )}
 

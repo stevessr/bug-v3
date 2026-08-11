@@ -589,21 +589,103 @@
   font-weight: 640;
 }
 
-.topic-footer__select {
-  width: 132px;
-}
-
-.topic-footer__select .ant-select-selector {
-  min-height: 40px !important;
-  border: 0 !important;
-  border-radius: var(--d-shape-full, 999px) !important;
-  background: var(--d-surface-0, var(--theme-surface-container-lowest)) !important;
-  box-shadow: none !important;
-}
-
-.topic-footer__select .ant-select-selection-item {
-  display: flex;
+.topic-footer__notification-trigger.ant-btn {
+  display: inline-flex;
+  min-width: 132px;
+  min-height: 40px;
   align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-surface-0, var(--theme-surface-container-lowest));
+  box-shadow: none;
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.topic-footer__notification-trigger.ant-btn:hover,
+.topic-footer__notification-trigger.ant-btn:focus-visible {
+  border: 0;
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.topic-footer__notification-chevron {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+.topic-notification-menu.ant-dropdown {
+  min-width: min(336px, calc(100vw - 24px));
+}
+
+.topic-notification-menu .ant-dropdown-menu {
+  padding: 6px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-2, var(--theme-surface-container));
+  box-shadow: var(--d-elevation-3, 0 14px 34px rgba(0, 0, 0, 0.2));
+}
+
+.topic-notification-menu .topic-notification-menu__item.ant-dropdown-menu-item {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--d-shape-md, 12px);
+  color: var(--d-text, var(--theme-on-surface));
+  line-height: normal;
+}
+
+.topic-notification-menu .topic-notification-menu__item.ant-dropdown-menu-item:hover,
+.topic-notification-menu .topic-notification-menu__item.ant-dropdown-menu-item.is-selected {
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.topic-notification-menu__icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  font-size: 16px;
+}
+
+.topic-notification-menu__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topic-notification-menu__copy strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.topic-notification-menu__copy small {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.topic-notification-menu__item.is-selected .topic-notification-menu__copy small,
+.topic-notification-menu__item:hover .topic-notification-menu__copy small {
+  color: color-mix(in oklab, currentColor 76%, transparent);
+}
+
+.topic-notification-menu__selected {
+  flex: 0 0 auto;
+  font-size: 14px;
 }
 
 .topic-footer__right {
@@ -677,6 +759,25 @@
 
 @media (max-width: 1100px) {
   .topic-aside {
+    display: none;
+  }
+
+  /* Keep private-message participant management reachable when the normal
+   * desktop rail collapses. The rail's stats/timeline stay hidden. */
+  .topic-aside:has(.pm-participants) {
+    position: static;
+    display: block;
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .topic-aside:has(.pm-participants) .topic-aside__inner {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .topic-aside:has(.pm-participants) .topic-aside__card,
+  .topic-aside:has(.pm-participants) .topic-timeline {
     display: none;
   }
 }

@@ -103,6 +103,7 @@ export default defineComponent({
 
     const topics = computed(displayTopics)
     const searching = computed(() => props.messagesState.searching || false)
+    const loading = computed(() => props.messagesState.loading === true)
 
     const handleTopicKeydown = (event: KeyboardEvent, topic: MessagesState['topics'][number]) => {
       if (event.key !== 'Enter') return
@@ -217,7 +218,15 @@ export default defineComponent({
             </div>
           )}
 
+          {loading.value && !searching.value && (
+            <div class="messages-state-loading" role="status">
+              <Spin />
+              <span>正在刷新私信...</span>
+            </div>
+          )}
+
           {!searching.value &&
+            !loading.value &&
             topics.value.map(topic => (
               <article key={topic.id} class="messages-topic-item">
                 <div
@@ -322,19 +331,22 @@ export default defineComponent({
               </article>
             ))}
 
-          {!searching.value && topics.value.length === 0 && !props.isLoadingMore && (
-            <div class="messages-state-empty">
-              {props.messagesState.activeTab === 'all'
-                ? '暂无私信'
-                : props.messagesState.activeTab === 'sent'
-                  ? '暂无已发送私信'
-                  : props.messagesState.activeTab === 'new'
-                    ? '暂无新消息'
-                    : props.messagesState.activeTab === 'unread'
-                      ? '暂无未读消息'
-                      : '暂无归档消息'}
-            </div>
-          )}
+          {!searching.value &&
+            !loading.value &&
+            topics.value.length === 0 &&
+            !props.isLoadingMore && (
+              <div class="messages-state-empty">
+                {props.messagesState.activeTab === 'all'
+                  ? '暂无私信'
+                  : props.messagesState.activeTab === 'sent'
+                    ? '暂无已发送私信'
+                    : props.messagesState.activeTab === 'new'
+                      ? '暂无新消息'
+                      : props.messagesState.activeTab === 'unread'
+                        ? '暂无未读消息'
+                        : '暂无归档消息'}
+              </div>
+            )}
 
           {props.isLoadingMore && (
             <div class="messages-state-loading">
@@ -343,9 +355,10 @@ export default defineComponent({
             </div>
           )}
 
-          {!props.isLoadingMore && topics.value.length > 0 && !props.messagesState.hasMore && (
-            <div class="messages-state-end">已加载全部</div>
-          )}
+          {!loading.value &&
+            !props.isLoadingMore &&
+            topics.value.length > 0 &&
+            !props.messagesState.hasMore && <div class="messages-state-end">已加载全部</div>}
         </div>
       </div>
     )

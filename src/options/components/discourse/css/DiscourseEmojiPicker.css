@@ -137,6 +137,39 @@
   scrollbar-width: thin;
 }
 
+/* MD3-toned scrollbars keep long group rails discoverable without falling
+ * back to the host browser's unrelated platform colors. */
+.discourse-emoji-picker__nav,
+.discourse-emoji-picker__scrollable {
+  scrollbar-color: color-mix(in oklab, var(--primary, var(--theme-primary)) 68%, transparent)
+    transparent;
+}
+
+.discourse-emoji-picker__nav::-webkit-scrollbar,
+.discourse-emoji-picker__scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.discourse-emoji-picker__nav::-webkit-scrollbar-track,
+.discourse-emoji-picker__scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.discourse-emoji-picker__nav::-webkit-scrollbar-thumb,
+.discourse-emoji-picker__scrollable::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 55%, transparent);
+  background-clip: padding-box;
+}
+
+.discourse-emoji-picker__nav::-webkit-scrollbar-thumb:hover,
+.discourse-emoji-picker__scrollable::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 78%, transparent);
+  background-clip: padding-box;
+}
+
 .discourse-emoji-picker__section {
   padding-top: 6px;
 }

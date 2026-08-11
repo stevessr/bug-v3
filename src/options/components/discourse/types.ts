@@ -25,6 +25,8 @@ export interface BrowserTab {
   errorMessage: string
   groupName?: string
   userExtrasLoading?: boolean
+  /** True while a profile sub-tab refreshes without replacing the entire browser view. */
+  userSectionLoading?: boolean
   notifications: DiscourseNotification[]
   notificationsFilter: DiscourseNotificationFilter
   unreadNotificationsCount: number
@@ -1126,6 +1128,8 @@ export interface MessagesState {
   topics: DiscourseTopic[]
   page: number
   hasMore: boolean
+  /** Initial/sub-tab list request state, rendered inside the messages panel. */
+  loading?: boolean
   searchQuery?: string
   searchResults?: DiscourseTopic[]
   searching?: boolean

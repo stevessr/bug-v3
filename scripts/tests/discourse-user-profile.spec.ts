@@ -9,6 +9,8 @@ test.describe('Discourse user profile area', () => {
         name: 'Steve',
         avatar_template: '/letter_avatar_proxy/v4/letter/s/7c8e57/{size}.png'
       }
+      const requestLog: string[] = []
+      ;(globalThis as any).__userProfileRequestLog = requestLog
 
       const userData = {
         user: {
@@ -171,6 +173,7 @@ test.describe('Discourse user profile area', () => {
 
           const url = request?.options?.url || ''
           const method = request?.options?.method || 'GET'
+          if (request.type === 'PAGE_FETCH') requestLog.push(url)
           let data: any = {}
           if (url.includes('/u/steve.json')) {
             data = userData
@@ -234,7 +237,15 @@ test.describe('Discourse user profile area', () => {
             data = { topic_list: { topics: [] }, users: [] }
           }
 
-          queueMicrotask(() => callback({ success: true, data: { status: 200, ok: true, data } }))
+          const respond = () => callback({ success: true, data: { status: 200, ok: true, data } })
+          if (
+            url.includes('/user_actions.json') &&
+            (globalThis as any).__delayUserProfileActivityRequest
+          ) {
+            setTimeout(respond, 220)
+          } else {
+            queueMicrotask(respond)
+          }
         },
         onMessage: {
           addListener() {},
@@ -365,6 +376,23 @@ test.describe('Discourse user profile area', () => {
     // 作品集 subtab renders tagged topics
     await page.getByRole('tab', { name: '作品集', exact: true }).click()
     await expect(page.getByText('我的作品集')).toBeVisible()
+  })
+
+  test('refreshes only the profile sub-tab instead of replacing the entire browser view', async ({
+    page
+  }) => {
+    await openAddress(page, 'https://linux.do/u/steve')
+    await page.evaluate(() => {
+      ;(globalThis as any).__delayUserProfileActivityRequest = true
+    })
+
+    await page.getByRole('tab', { name: '活动' }).click()
+
+    await expect(page.locator('.browser-state--loading')).toHaveCount(0)
+    await expect(page.locator('.user-section-refresh')).toBeVisible()
+    await expect(page.locator('.activity-view')).toBeVisible()
+    await expect(page.locator('.activity-state-loading')).toBeVisible()
+    await expect(page.getByText('动作摘要')).toBeVisible()
   })
 
   test('lists private messages with archive action', async ({ page }) => {

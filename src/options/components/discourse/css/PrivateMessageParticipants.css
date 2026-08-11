@@ -6,6 +6,51 @@
   background: var(--d-surface-1, var(--theme-surface-container-low));
 }
 
+/* On a topic page this manager belongs to the sticky right rail. Keep its
+ * controls vertical there instead of borrowing width from the post stream. */
+.topic-aside .pm-participants {
+  margin: 0;
+  border-radius: 20px;
+}
+
+.topic-aside .pm-participants__heading {
+  min-height: 48px;
+  padding: 8px 12px;
+}
+
+.topic-aside .pm-participants__content {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 2px 10px 12px;
+}
+
+.topic-aside .pm-participants__list {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.topic-aside .pm-participants__person,
+.topic-aside .pm-participants__group {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.topic-aside .pm-participants__identity > span {
+  max-width: none;
+}
+
+.topic-aside .pm-participants__add {
+  padding: 10px;
+}
+
+.topic-aside .pm-participants__add-row {
+  flex-direction: column;
+}
+
+.topic-aside .pm-participants__add button {
+  min-height: 38px;
+}
+
 .pm-participants__heading {
   display: flex;
   width: 100%;

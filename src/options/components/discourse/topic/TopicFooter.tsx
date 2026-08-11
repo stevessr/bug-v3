@@ -1,31 +1,45 @@
 import { defineComponent, computed } from 'vue'
-import { Button, Select, Tooltip } from 'ant-design-vue'
+import { Button, Dropdown, Menu, MenuItem, Tooltip } from 'ant-design-vue'
+import {
+  BellOutlined,
+  CheckOutlined,
+  DownOutlined,
+  EyeOutlined,
+  NotificationOutlined,
+  ReadOutlined,
+  StopOutlined
+} from '@ant-design/icons-vue'
 
 const LEVEL_OPTIONS = [
   {
     value: 0,
     label: '忽略',
-    description: '完全静音，不再收到任何通知。'
+    description: '完全静音，不再收到此话题的提醒。',
+    icon: StopOutlined
   },
   {
     value: 1,
     label: '常规',
-    description: '仅在被提及时通知。'
+    description: '仅在被提及或直接回复时通知。',
+    icon: BellOutlined
   },
   {
     value: 2,
     label: '追踪',
-    description: '收到新回复数量提醒。'
+    description: '显示未读数量，不为每条回复推送提醒。',
+    icon: EyeOutlined
   },
   {
     value: 3,
     label: '关注',
-    description: '每条新回复都会通知。'
+    description: '每条新回复都会通知你。',
+    icon: NotificationOutlined
   },
   {
     value: 4,
     label: '仅关注首帖',
-    description: '仅在首帖有新回复时通知。'
+    description: '仅在新增首帖内容时通知。',
+    icon: ReadOutlined
   }
 ]
 
@@ -46,22 +60,57 @@ export default defineComponent({
       return LEVEL_OPTIONS.find(option => option.value === level) || LEVEL_OPTIONS[1]
     })
 
+    const renderLevelIcon = (option: (typeof LEVEL_OPTIONS)[number]) => {
+      const Icon = option.icon
+      return <Icon />
+    }
+
     return () => (
       <footer class="topic-footer">
         <div class="topic-footer__left">
           <div class="topic-footer__level">
             <span class="topic-footer__label">通知等级</span>
-            <Select
-              value={levelOption.value.value}
-              class="topic-footer__select"
-              aria-label="话题通知等级"
+            <Dropdown
+              trigger={['click']}
+              placement="topLeft"
               disabled={props.loading}
-              onChange={value => emit('changeLevel', value as number)}
-              options={LEVEL_OPTIONS.map(option => ({
-                value: option.value,
-                label: option.label
-              }))}
-            />
+              overlayClassName="topic-notification-menu"
+              v-slots={{
+                overlay: () => (
+                  <Menu selectedKeys={[String(levelOption.value.value)]}>
+                    {LEVEL_OPTIONS.map(option => (
+                      <MenuItem
+                        key={String(option.value)}
+                        class={[
+                          'topic-notification-menu__item',
+                          levelOption.value.value === option.value ? 'is-selected' : ''
+                        ]}
+                        onClick={() => emit('changeLevel', option.value)}
+                      >
+                        <span class="topic-notification-menu__icon">{renderLevelIcon(option)}</span>
+                        <span class="topic-notification-menu__copy">
+                          <strong>{option.label}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                        {levelOption.value.value === option.value && (
+                          <CheckOutlined class="topic-notification-menu__selected" />
+                        )}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                )
+              }}
+            >
+              <Button
+                class="topic-footer__notification-trigger"
+                aria-label="话题通知等级"
+                disabled={props.loading}
+              >
+                {renderLevelIcon(levelOption.value)}
+                <span>{levelOption.value.label}</span>
+                <DownOutlined class="topic-footer__notification-chevron" />
+              </Button>
+            </Dropdown>
           </div>
           <div class="topic-footer__analysis">
             <span class="topic-footer__analysis-title">等级说明：</span>

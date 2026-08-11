@@ -105,7 +105,10 @@ export default defineComponent({
         .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
     })
 
-    const visibleReactions = computed(() => normalizedReactions.value.slice(0, 3))
+    // Each reaction value is a meaningful group. Do not hide lower-count
+    // groups behind a truncated "more" state: its detail panel can then show
+    // the people for that exact reaction consistently.
+    const visibleReactions = computed(() => normalizedReactions.value)
     const reactionUsersTotal = computed(() => {
       const provided = Number(props.post.reaction_users_count)
       if (Number.isFinite(provided) && provided >= 0) return provided

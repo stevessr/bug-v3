@@ -381,7 +381,7 @@ export function getActionIcon(actionType: any): string {
       const fullUrl = iconPath.startsWith('http') ? iconPath : CONFIG.HOST + iconPath
       return `<img src="${fullUrl}" class="action-emoji" alt=":${actionType}:">`
     }
-    return `<img src="${CONFIG.HOST}/images/emoji/twemoji/${actionType}.png?v=15" class="action-emoji" alt=":${actionType}:">`
+    return `<img src="https://cdn.ldstatic.com/images/emoji/twemoji/${actionType}.png?v=15" class="action-emoji" alt=":${actionType}:">`
   }
   return ACTION_ICONS.reply
 }

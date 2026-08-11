@@ -493,16 +493,6 @@ export default defineComponent({
         <main class="topic-main">
           <TopicHeader topic={activeTopic.value} baseUrl={props.baseUrl} />
 
-          {isPrivateMessage.value && (
-            <PrivateMessageParticipants
-              topic={activeTopic.value}
-              baseUrl={props.baseUrl}
-              currentUsername={props.currentUsername || ''}
-              onOpenUser={handleUserClick}
-              onRefresh={() => emit('refresh')}
-            />
-          )}
-
           {/* Posts list */}
           {activeTopic.value.post_stream?.posts ? (
             <div ref={postsListRef} class="topic-posts-region">
@@ -621,7 +611,17 @@ export default defineComponent({
           summaryMode={summaryMode.value}
           summaryLoading={summaryLoading.value}
           onToggleSummary={handleToggleSummary}
-        />
+        >
+          {isPrivateMessage.value && (
+            <PrivateMessageParticipants
+              topic={activeTopic.value}
+              baseUrl={props.baseUrl}
+              currentUsername={props.currentUsername || ''}
+              onOpenUser={handleUserClick}
+              onRefresh={() => emit('refresh')}
+            />
+          )}
+        </TopicAside>
 
         <AiSummaryModal
           open={showAiSummaryModal.value && !isPrivateMessage.value}

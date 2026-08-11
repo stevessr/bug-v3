@@ -1,4 +1,13 @@
-import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  Teleport,
+  watch
+} from 'vue'
 import {
   RollbackOutlined,
   RedoOutlined,
@@ -53,6 +62,12 @@ export default defineComponent({
     const showAdvancedMenu = ref(false)
     const emojiMenuRef = ref<HTMLElement | null>(null)
     const advancedMenuRef = ref<HTMLElement | null>(null)
+    const emojiPopoverRef = ref<HTMLElement | null>(null)
+    const advancedPopoverRef = ref<HTMLElement | null>(null)
+    const emojiAnchorRef = ref<HTMLElement | null>(null)
+    const advancedAnchorRef = ref<HTMLElement | null>(null)
+    const emojiPopoverStyle = ref<Record<string, string>>({})
+    const advancedPopoverStyle = ref<Record<string, string>>({})
     const showLinkPanel = ref(false)
     const linkUrl = ref('https://')
     const linkText = ref('')
@@ -121,13 +136,39 @@ export default defineComponent({
       )
     })
 
-    const toggleEmojiMenu = () => {
-      showEmojiPicker.value = !showEmojiPicker.value
+    const openEmojiPicker = (source: 'discourse' | 'plugin', anchor: HTMLElement) => {
+      const isSamePicker = showEmojiPicker.value && emojiSource.value === source
+      emojiAnchorRef.value = anchor
+      if (isSamePicker) {
+        showEmojiPicker.value = false
+        return
+      }
+
+      emojiSource.value = source
+      activeEmojiGroup.value =
+        (source === 'discourse' ? discourseEmojiGroups.value : pluginEmojiGroups.value)[0]?.id || ''
+      emojiSearchQuery.value = ''
+      showEmojiPicker.value = true
       showAdvancedMenu.value = false
-      if (showEmojiPicker.value && discourseEmojiGroups.value.length === 0) {
+      if (source === 'discourse' && discourseEmojiGroups.value.length === 0) {
         void loadForumEmojiGroups()
+      } else if (source === 'plugin' && emojiStore.groups.length === 0) {
+        void emojiStore.loadData()
       }
     }
+
+    const emojiPickerTitle = computed(() =>
+      emojiSource.value === 'discourse' ? '论坛表情' : '插件表情'
+    )
+
+    watch(pluginEmojiGroups, groups => {
+      if (
+        emojiSource.value === 'plugin' &&
+        !groups.some(group => group.id === activeEmojiGroup.value)
+      ) {
+        activeEmojiGroup.value = groups[0]?.id || ''
+      }
+    })
 
     const selectForumEmoji = (
       emoji: DiscourseEmojiEntry | { name: string; url: string; short_url?: string }
@@ -254,10 +295,64 @@ export default defineComponent({
       onInsertText: insertTextAtCursor
     })
 
+    const updateFloatingMenuPosition = () => {
+      if (typeof window === 'undefined') return
+
+      const place = (
+        anchor: HTMLElement | null,
+        panel: HTMLElement | null,
+        fallbackWidth: number
+      ): Record<string, string> => {
+        if (!anchor) return {}
+        const viewportPadding = 12
+        const gap = 8
+        const anchorRect = anchor.getBoundingClientRect()
+        const panelWidth = Math.min(
+          panel?.offsetWidth || fallbackWidth,
+          window.innerWidth - viewportPadding * 2
+        )
+        const panelHeight = panel?.offsetHeight || 240
+        const roomBelow = window.innerHeight - anchorRect.bottom - viewportPadding - gap
+        const roomAbove = anchorRect.top - viewportPadding - gap
+        const top =
+          roomBelow >= panelHeight || roomBelow >= roomAbove
+            ? Math.max(
+                viewportPadding,
+                Math.min(
+                  window.innerHeight - panelHeight - viewportPadding,
+                  anchorRect.bottom + gap
+                )
+              )
+            : Math.max(viewportPadding, anchorRect.top - panelHeight - gap)
+        const left = Math.max(
+          viewportPadding,
+          Math.min(anchorRect.left, window.innerWidth - panelWidth - viewportPadding)
+        )
+        return {
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`
+        }
+      }
+
+      if (showEmojiPicker.value) {
+        emojiPopoverStyle.value = place(emojiAnchorRef.value, emojiPopoverRef.value, 360)
+      }
+      if (showAdvancedMenu.value) {
+        advancedPopoverStyle.value = place(advancedAnchorRef.value, advancedPopoverRef.value, 190)
+      }
+    }
+
     const handleDocumentPointerDown = (event: PointerEvent) => {
       const target = event.target
       if (!(target instanceof Node)) return
-      if (emojiMenuRef.value?.contains(target) || advancedMenuRef.value?.contains(target)) return
+      if (
+        emojiMenuRef.value?.contains(target) ||
+        emojiPopoverRef.value?.contains(target) ||
+        advancedMenuRef.value?.contains(target) ||
+        advancedPopoverRef.value?.contains(target)
+      ) {
+        return
+      }
       showEmojiPicker.value = false
       showAdvancedMenu.value = false
     }
@@ -272,13 +367,26 @@ export default defineComponent({
     onMounted(() => {
       document.addEventListener('pointerdown', handleDocumentPointerDown, true)
       document.addEventListener('keydown', handleDocumentKeydown)
+      window.addEventListener('resize', updateFloatingMenuPosition)
+      document.addEventListener('scroll', updateFloatingMenuPosition, true)
       void loadForumEmojiGroups()
     })
 
     onBeforeUnmount(() => {
       document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
       document.removeEventListener('keydown', handleDocumentKeydown)
+      window.removeEventListener('resize', updateFloatingMenuPosition)
+      document.removeEventListener('scroll', updateFloatingMenuPosition, true)
     })
+
+    watch(
+      () => [showEmojiPicker.value, showAdvancedMenu.value] as const,
+      ([emojiOpen, advancedOpen]) => {
+        if (emojiOpen || advancedOpen) {
+          void nextTick(updateFloatingMenuPosition)
+        }
+      }
+    )
 
     const updateAutocompleteForTextarea = () => {
       const el = textareaRef.value
@@ -420,91 +528,33 @@ export default defineComponent({
             <div class="toolbar-group">
               <div ref={emojiMenuRef} class="editor-toolbar-menu editor-toolbar-menu--emoji">
                 <button
-                  class={['toolbar-btn', showEmojiPicker.value ? 'is-active' : '']}
-                  onClick={toggleEmojiMenu}
-                  title="表情与插件表情"
-                  aria-label="表情与插件表情"
-                  aria-expanded={showEmojiPicker.value}
+                  class={[
+                    'toolbar-btn',
+                    showEmojiPicker.value && emojiSource.value === 'discourse' ? 'is-active' : ''
+                  ]}
+                  onClick={(event: MouseEvent) =>
+                    openEmojiPicker('discourse', event.currentTarget as HTMLElement)
+                  }
+                  title="论坛表情"
+                  aria-label="论坛表情"
+                  aria-expanded={showEmojiPicker.value && emojiSource.value === 'discourse'}
                 >
                   🙂
                 </button>
-                {showEmojiPicker.value && (
-                  <div class="forum-emoji-menu" role="dialog" aria-label="表情菜单">
-                    <div class="forum-emoji-menu__header">
-                      <input
-                        value={emojiSearchQuery.value}
-                        placeholder="搜索表情…"
-                        aria-label="搜索表情"
-                        onInput={event =>
-                          (emojiSearchQuery.value = (event.target as HTMLInputElement).value)
-                        }
-                      />
-                      <div class="forum-emoji-menu__sources" role="tablist" aria-label="表情来源">
-                        <button
-                          type="button"
-                          class={emojiSource.value === 'discourse' ? 'is-active' : ''}
-                          onClick={() => {
-                            emojiSource.value = 'discourse'
-                            activeEmojiGroup.value = discourseEmojiGroups.value[0]?.id || ''
-                          }}
-                        >
-                          论坛
-                        </button>
-                        <button
-                          type="button"
-                          class={emojiSource.value === 'plugin' ? 'is-active' : ''}
-                          onClick={() => {
-                            emojiSource.value = 'plugin'
-                            activeEmojiGroup.value = pluginEmojiGroups.value[0]?.id || ''
-                          }}
-                        >
-                          插件
-                        </button>
-                      </div>
-                    </div>
-                    {!emojiSearchQuery.value && (
-                      <div class="forum-emoji-menu__groups" role="tablist" aria-label="表情分组">
-                        {visibleEmojiGroups.value.map(group => (
-                          <button
-                            key={group.id}
-                            type="button"
-                            class={activeEmojiGroup.value === group.id ? 'is-active' : ''}
-                            title={group.name}
-                            onClick={() => (activeEmojiGroup.value = group.id)}
-                          >
-                            {group.emojis[0]?.url ? (
-                              <img src={group.emojis[0].url} alt="" />
-                            ) : (
-                              group.name.slice(0, 1) || '🙂'
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div class="forum-emoji-menu__grid">
-                      {emojiLoading.value ? (
-                        <span class="forum-emoji-menu__state">加载中…</span>
-                      ) : visibleEmojis.value.length === 0 ? (
-                        <span class="forum-emoji-menu__state">没有找到表情</span>
-                      ) : (
-                        visibleEmojis.value.map(emoji => (
-                          <button
-                            key={emoji.id}
-                            type="button"
-                            title={`:${emoji.name}:`}
-                            onClick={() => selectForumEmoji(emoji as any)}
-                          >
-                            {emoji.url ? (
-                              <img src={emoji.url} alt={emoji.name} loading="lazy" />
-                            ) : (
-                              <span>{(emoji as any).unicode || emoji.name}</span>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+                <button
+                  class={[
+                    'toolbar-btn toolbar-btn--plugin-emoji',
+                    showEmojiPicker.value && emojiSource.value === 'plugin' ? 'is-active' : ''
+                  ]}
+                  onClick={(event: MouseEvent) =>
+                    openEmojiPicker('plugin', event.currentTarget as HTMLElement)
+                  }
+                  title="插件表情"
+                  aria-label="插件表情"
+                  aria-expanded={showEmojiPicker.value && emojiSource.value === 'plugin'}
+                >
+                  🐟
+                </button>
               </div>
               <button class="toolbar-btn" onClick={handleUploadClick} title="上传文件">
                 <UploadOutlined />
@@ -521,7 +571,8 @@ export default defineComponent({
                     'toolbar-btn toolbar-btn--advanced',
                     showAdvancedMenu.value ? 'is-active' : ''
                   ]}
-                  onClick={() => {
+                  onClick={(event: MouseEvent) => {
+                    advancedAnchorRef.value = event.currentTarget as HTMLElement
                     showAdvancedMenu.value = !showAdvancedMenu.value
                     showEmojiPicker.value = false
                   }}
@@ -531,93 +582,6 @@ export default defineComponent({
                 >
                   <CodeOutlined /> <DownOutlined />
                 </button>
-                {showAdvancedMenu.value && (
-                  <div class="advanced-syntax-menu" role="menu" aria-label="高级语法">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertCode)}
-                      title="行内代码"
-                    >
-                      <CodeOutlined /> <span>行内代码</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertCodeBlock)}
-                      title="代码块"
-                    >
-                      <CodeOutlined /> <span>代码块</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertMathInline)}
-                      title="行内公式"
-                    >
-                      <FunctionOutlined /> <span>行内公式</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertMathBlock)}
-                      title="公式块"
-                    >
-                      <span class="syntax-menu-icon" aria-hidden="true">
-                        ∑
-                      </span>
-                      <span>公式块</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertBlockquote)}
-                      title="引用"
-                    >
-                      <BlockOutlined /> <span>引用</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertOrderedList)}
-                      title="有序列表"
-                    >
-                      <OrderedListOutlined /> <span>有序列表</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertUnorderedList)}
-                      title="无序列表"
-                    >
-                      <UnorderedListOutlined /> <span>无序列表</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertHeading)}
-                      title="标题"
-                    >
-                      <BgColorsOutlined /> <span>标题</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertTable)}
-                      title="表格"
-                    >
-                      <TableOutlined /> <span>表格</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseAdvancedSyntax(insertDetails)}
-                      title="折叠块"
-                    >
-                      <InfoCircleOutlined /> <span>折叠块</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -754,6 +718,167 @@ export default defineComponent({
               </div>
             </div>
           ) : null}
+        </div>
+        <Teleport to="body">
+          {showEmojiPicker.value && (
+            <div
+              ref={emojiPopoverRef}
+              class="forum-emoji-menu"
+              style={emojiPopoverStyle.value}
+              role="dialog"
+              aria-label={`${emojiPickerTitle.value}菜单`}
+            >
+              <div class="forum-emoji-menu__header">
+                <strong class="forum-emoji-menu__title">{emojiPickerTitle.value}</strong>
+                <input
+                  value={emojiSearchQuery.value}
+                  placeholder="搜索表情…"
+                  aria-label={`搜索${emojiPickerTitle.value}`}
+                  onInput={event =>
+                    (emojiSearchQuery.value = (event.target as HTMLInputElement).value)
+                  }
+                />
+              </div>
+              {!emojiSearchQuery.value && (
+                <div class="forum-emoji-menu__groups" role="tablist" aria-label="表情分组">
+                  {visibleEmojiGroups.value.map(group => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      class={activeEmojiGroup.value === group.id ? 'is-active' : ''}
+                      title={group.name}
+                      aria-label={group.name}
+                      onClick={() => (activeEmojiGroup.value = group.id)}
+                    >
+                      {group.emojis[0]?.url ? (
+                        <img src={group.emojis[0].url} alt="" />
+                      ) : (
+                        group.name.slice(0, 1) || '🙂'
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div class="forum-emoji-menu__grid">
+                {emojiLoading.value ? (
+                  <span class="forum-emoji-menu__state">加载中…</span>
+                ) : visibleEmojis.value.length === 0 ? (
+                  <span class="forum-emoji-menu__state">没有找到表情</span>
+                ) : (
+                  visibleEmojis.value.map(emoji => (
+                    <button
+                      key={emoji.id}
+                      type="button"
+                      title={`:${emoji.name}:`}
+                      aria-label={`:${emoji.name}:`}
+                      onClick={() => selectForumEmoji(emoji as any)}
+                    >
+                      {emoji.url ? (
+                        <img src={emoji.url} alt={emoji.name} loading="lazy" />
+                      ) : (
+                        <span>{(emoji as any).unicode || emoji.name}</span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {showAdvancedMenu.value && (
+            <div
+              ref={advancedPopoverRef}
+              class="advanced-syntax-menu"
+              style={advancedPopoverStyle.value}
+              role="menu"
+              aria-label="高级语法"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertCode)}
+                title="行内代码"
+              >
+                <CodeOutlined /> <span>行内代码</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertCodeBlock)}
+                title="代码块"
+              >
+                <CodeOutlined /> <span>代码块</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertMathInline)}
+                title="行内公式"
+              >
+                <FunctionOutlined /> <span>行内公式</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertMathBlock)}
+                title="公式块"
+              >
+                <span class="syntax-menu-icon" aria-hidden="true">
+                  ∑
+                </span>
+                <span>公式块</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertBlockquote)}
+                title="引用"
+              >
+                <BlockOutlined /> <span>引用</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertOrderedList)}
+                title="有序列表"
+              >
+                <OrderedListOutlined /> <span>有序列表</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertUnorderedList)}
+                title="无序列表"
+              >
+                <UnorderedListOutlined /> <span>无序列表</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertHeading)}
+                title="标题"
+              >
+                <BgColorsOutlined /> <span>标题</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertTable)}
+                title="表格"
+              >
+                <TableOutlined /> <span>表格</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseAdvancedSyntax(insertDetails)}
+                title="折叠块"
+              >
+                <InfoCircleOutlined /> <span>折叠块</span>
+              </button>
+            </div>
+          )}
+
           {showEmojiAutocomplete.value && emojiSuggestions.value.length ? (
             <div
               ref={emojiAutocompleteRef}
@@ -780,7 +905,7 @@ export default defineComponent({
               ))}
             </div>
           ) : null}
-        </div>
+        </Teleport>
       </>
     )
   }

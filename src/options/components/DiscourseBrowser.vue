@@ -2202,25 +2202,25 @@ const handleUserMainTabSwitch = (tab: UserMainTab) => {
   if (!activeTab.value?.currentUser) return
   const username = activeTab.value.currentUser.username
   if (tab === 'summary') {
-    openUser(username)
+    openUser(username, true)
   } else if (tab === 'activity') {
-    openUserActivity(username)
+    openUserActivity(username, true)
   } else if (tab === 'notifications') {
-    navigateTo(`/u/${encodeURIComponent(username)}/notifications`)
+    navigateTo(`/u/${encodeURIComponent(username)}/notifications`, true, { silent: true })
   } else if (tab === 'messages') {
-    openUserMessages(username)
+    openUserMessages(username, true)
   } else if (tab === 'invites') {
-    navigateTo(`/u/${encodeURIComponent(username)}/invited`)
+    navigateTo(`/u/${encodeURIComponent(username)}/invited`, true, { silent: true })
   } else if (tab === 'badges') {
     openUserBadges(username)
   } else if (tab === 'portfolio') {
-    navigateTo(`/u/${encodeURIComponent(username)}/activity/portfolio`)
+    navigateTo(`/u/${encodeURIComponent(username)}/activity/portfolio`, true, { silent: true })
   } else if (tab === 'solved') {
-    navigateTo(`/u/${encodeURIComponent(username)}/activity/solved`)
+    navigateTo(`/u/${encodeURIComponent(username)}/activity/solved`, true, { silent: true })
   } else if (tab === 'groups') {
-    openUserGroups(username)
+    openUserGroups(username, true)
   } else if (tab === 'settings') {
-    openUserPreferences(username)
+    openUserPreferences(username, true)
   } else {
     openUserFollowFeed(username)
   }
@@ -3221,7 +3221,7 @@ onUnmounted(() => {
     <div
       ref="contentAreaRef"
       class="content-area discourse-main flex-1 overflow-y-auto discourse-body"
-      :aria-busy="activeTab?.loading || isLoadingMore || undefined"
+      :aria-busy="activeTab?.loading || activeTab?.userSectionLoading || isLoadingMore || undefined"
     >
       <div
         v-if="isLoadingMore && !activeTab?.loading"
@@ -3241,6 +3241,17 @@ onUnmounted(() => {
         <div class="browser-load-more-progress__track" aria-hidden="true">
           <span :style="{ width: `${pageRequestProgress.percent}%` }" />
         </div>
+      </div>
+
+      <!-- Profile sub-tabs retain the surrounding shell and refresh only their content. -->
+      <div
+        v-if="activeTab?.userSectionLoading && !activeTab?.loading"
+        class="user-section-refresh"
+        role="status"
+        aria-live="polite"
+      >
+        <a-spin size="small" />
+        <span>正在刷新此栏目…</span>
       </div>
 
       <!-- Loading -->
@@ -3906,6 +3917,7 @@ onUnmounted(() => {
 }
 
 .discourse-body {
+  position: relative;
   background:
     radial-gradient(
       circle at 100% 0,
@@ -3914,6 +3926,26 @@ onUnmounted(() => {
     ),
     var(--d-background, var(--theme-background));
   padding: 16px 20px 24px;
+}
+
+.user-section-refresh {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 20;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklab, var(--primary, var(--theme-primary)) 28%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--secondary-container, var(--theme-secondary-container));
+  box-shadow: var(--d-elevation-1, 0 2px 7px rgba(0, 0, 0, 0.14));
+  color: var(--on-secondary-container, var(--theme-on-secondary-container));
+  font-size: 12px;
+  font-weight: 650;
+  pointer-events: none;
 }
 
 .tab-item {
