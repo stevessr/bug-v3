@@ -1,4 +1,4 @@
-import { computed, defineComponent, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   MoreOutlined,
   EditOutlined,
@@ -10,6 +10,7 @@ import {
 
 import type { ChatMessage, ParsedContent } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import PostContent from '../topic/PostContent'
 
 import ChatEmojiPicker from './ChatEmojiPicker'
@@ -25,7 +26,9 @@ export default defineComponent({
     isOwn: { type: Boolean, required: true },
     highlighted: { type: Boolean, default: false },
     threadingEnabled: { type: Boolean, default: false },
-    inThread: { type: Boolean, default: false }
+    inThread: { type: Boolean, default: false },
+    groupFirst: { type: Boolean, default: true },
+    groupLast: { type: Boolean, default: true }
   },
   emits: ['navigate', 'react', 'interact', 'reply', 'openThread', 'edit', 'delete', 'flag'],
   setup(props, { emit }) {
@@ -33,6 +36,33 @@ export default defineComponent({
     const showEmojiPicker = ref(false)
     const floatingControlsRef = ref<HTMLDivElement | null>(null)
     const reactionButtonRef = ref<HTMLButtonElement | null>(null)
+    const actionsToggleRef = ref<HTMLButtonElement | null>(null)
+
+    // 站点表情映射：把短码反应渲染为表情图片（任意表情反应）
+    const emojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
+    const loadEmojiMap = async () => {
+      try {
+        const groups = await fetchDiscourseEmojiGroups(props.baseUrl)
+        const map: Record<string, { url?: string; unicode?: string }> = {}
+        groups.forEach(group => {
+          group.emojis.forEach(emoji => {
+            const value = { url: emoji.url || undefined, unicode: emoji.unicode }
+            map[emoji.name] = value
+            map[emoji.id] = value
+          })
+        })
+        emojiMap.value = map
+      } catch {
+        // 表情加载失败时回退为文本短码展示
+      }
+    }
+    onMounted(loadEmojiMap)
+
+    const resolveReactionEmoji = (raw: string) => {
+      const shortcode = String(raw || '').replace(/^:+|:+$/g, '')
+      if (!shortcode) return null
+      return emojiMap.value[shortcode] || null
+    }
 
     const getDisplayName = () => {
       const user = props.message.user
@@ -139,7 +169,10 @@ export default defineComponent({
     const handleDocumentPointerDown = (event: PointerEvent) => {
       const target = event.target
       if (target instanceof Element && target.closest('.discourse-emoji-picker')) return
-      if (target instanceof Node && !floatingControlsRef.value?.contains(target)) {
+      const insideControls =
+        target instanceof Node &&
+        !!(floatingControlsRef.value?.contains(target) || actionsToggleRef.value?.contains(target))
+      if (!insideControls) {
         closeFloatingControls()
       }
     }
@@ -153,6 +186,7 @@ export default defineComponent({
     const handleControlsFocusout = (event: FocusEvent) => {
       const nextTarget = event.relatedTarget
       if (nextTarget instanceof Node && floatingControlsRef.value?.contains(nextTarget)) return
+      if (nextTarget instanceof Node && actionsToggleRef.value?.contains(nextTarget)) return
       closeFloatingControls()
     }
 
@@ -211,18 +245,25 @@ export default defineComponent({
           class={[
             'chat-message-item',
             props.isOwn ? 'chat-message-own' : '',
+            props.groupFirst ? '' : 'is-grouped-message group-follow',
             'is-deleted',
             props.highlighted ? 'is-search-target' : ''
           ]}
           data-chat-message-id={props.message.id}
         >
+          <img
+            class="chat-message-avatar"
+            data-user-card={getUsername() || undefined}
+            src={getAvatarUrl(getAvatarTemplate(), props.baseUrl, 32)}
+            alt={getDisplayName()}
+          />
           <div class="chat-message-content">
             <div class="chat-message-meta">
-              <span class="chat-message-name">{getDisplayName()}</span>
-              <span class="chat-message-time">{formatTime(props.message.created_at)}</span>
+              {props.groupFirst && <span class="chat-message-name">{getDisplayName()}</span>}
             </div>
             <div class="chat-message-deleted-text">该消息已被删除</div>
           </div>
+          <span class="chat-message-time-side">{formatTime(props.message.created_at)}</span>
         </div>
       )
     }
@@ -232,6 +273,7 @@ export default defineComponent({
         class={[
           'chat-message-item',
           props.isOwn ? 'chat-message-own' : '',
+          props.groupFirst ? '' : 'is-grouped-message group-follow',
           props.highlighted ? 'is-search-target' : '',
           showActions.value || showEmojiPicker.value ? 'has-floating-controls' : ''
         ]}
@@ -245,11 +287,11 @@ export default defineComponent({
           alt={getDisplayName()}
         />
         <div class="chat-message-content">
-          <div class="chat-message-meta">
-            <span class="chat-message-name">{getDisplayName()}</span>
-            <span class="chat-message-time">{formatTime(props.message.created_at)}</span>
-            {props.message.edited && <span class="chat-message-edited">已编辑</span>}
-          </div>
+          {props.groupFirst && (
+            <div class="chat-message-meta">
+              <span class="chat-message-name">{getDisplayName()}</span>
+            </div>
+          )}
 
           {props.message.cooked || props.message.message ? (
             <PostContent
@@ -297,20 +339,34 @@ export default defineComponent({
           )}
 
           <div class="chat-message-footer">
-            {reactionItems.value.map(reaction => (
-              <button
-                type="button"
-                key={`${props.message.id}-${reaction.emoji}`}
-                class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                onClick={() => handleReact(reaction.emoji, reaction.reacted)}
-                title={reaction.emoji}
-              >
-                <span class="chat-message-reaction-emoji">
-                  {formatReactionLabel(reaction.emoji)}
-                </span>
-                <span class="chat-message-reaction-count">{reaction.count}</span>
-              </button>
-            ))}
+            {reactionItems.value.map(reaction => {
+              const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
+              return (
+                <button
+                  type="button"
+                  key={`${props.message.id}-${reaction.emoji}`}
+                  class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
+                  onClick={() => handleReact(reaction.emoji, reaction.reacted)}
+                  title={reaction.emoji}
+                >
+                  <span class="chat-message-reaction-emoji">
+                    {resolvedEmoji?.url ? (
+                      <img
+                        class="chat-message-reaction-image"
+                        src={resolvedEmoji.url}
+                        alt={formatReactionLabel(reaction.emoji)}
+                        loading="lazy"
+                      />
+                    ) : resolvedEmoji?.unicode ? (
+                      resolvedEmoji.unicode
+                    ) : (
+                      formatReactionLabel(reaction.emoji)
+                    )}
+                  </span>
+                  <span class="chat-message-reaction-count">{reaction.count}</span>
+                </button>
+              )
+            })}
             <div
               ref={floatingControlsRef}
               class="chat-message-reaction-actions"
@@ -327,20 +383,10 @@ export default defineComponent({
               >
                 +
               </button>
-              <button
-                type="button"
-                class="chat-message-actions-toggle"
-                title="更多操作"
-                onClick={toggleActions}
-                aria-label="更多消息操作"
-                aria-haspopup="menu"
-                aria-expanded={showActions.value}
-              >
-                <MoreOutlined />
-              </button>
               <ChatEmojiPicker
                 visible={showEmojiPicker.value}
                 baseUrl={props.baseUrl}
+                allowAnyEmoji
                 anchorEl={reactionButtonRef.value}
                 onSelect={handleEmojiSelect}
                 onClose={() => {
@@ -412,6 +458,22 @@ export default defineComponent({
             </div>
           )}
         </div>
+        <button
+          ref={actionsToggleRef}
+          type="button"
+          class="chat-message-actions-toggle"
+          title="更多操作"
+          onClick={toggleActions}
+          aria-label="更多消息操作"
+          aria-haspopup="menu"
+          aria-expanded={showActions.value}
+        >
+          <MoreOutlined />
+        </button>
+        <span class="chat-message-time-side">
+          {props.message.edited && <span class="chat-message-edited">已编辑</span>}
+          {formatTime(props.message.created_at)}
+        </span>
       </div>
     )
   }

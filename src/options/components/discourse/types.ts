@@ -691,6 +691,8 @@ export interface MessageBusChatPayload {
 export interface ChatState {
   channels: ChatChannel[]
   activeChannelId: number | null
+  /** 聊天子 tab（我的消息串/收藏/频道/直接消息），用于 /chat/threads 等 URL 恢复 */
+  chatSidebarTab?: 'threads' | 'starred' | 'public' | 'direct'
   messagesByChannel: Record<number, ChatMessage[]>
   hasMoreByChannel: Record<number, boolean>
   beforeMessageIdByChannel: Record<number, number | null>

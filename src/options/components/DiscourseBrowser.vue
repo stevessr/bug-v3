@@ -1781,6 +1781,12 @@ const handleDiscoverChatChannels = () => {
   void loadDiscoverableChannels()
 }
 
+const handleChatSidebarTabChange = (tab: 'threads' | 'starred' | 'public' | 'direct') => {
+  if (activeTab.value?.chatState) {
+    activeTab.value.chatState.chatSidebarTab = tab
+  }
+}
+
 const handleJoinChatChannel = async (channelId: number) => {
   const joined = await joinChatChannel(channelId)
   if (joined) {
@@ -3400,6 +3406,7 @@ onUnmounted(() => {
         @discoverChannels="handleDiscoverChatChannels"
         @joinChannel="handleJoinChatChannel"
         @addDirectUsers="handleAddChatDirectUsers"
+        @sidebarTab="handleChatSidebarTabChange"
       />
 
       <!-- Topic detail view -->
@@ -3728,6 +3735,7 @@ onUnmounted(() => {
         @discoverChannels="handleDiscoverChatChannels"
         @joinChannel="handleJoinChatChannel"
         @addDirectUsers="handleAddChatDirectUsers"
+        @sidebarTab="handleChatSidebarTabChange"
       />
       <div v-else class="floating-chat__loading">
         <span>聊天暂时不可用</span>

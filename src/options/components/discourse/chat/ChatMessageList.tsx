@@ -58,6 +58,34 @@ export default defineComponent({
 
     const orderedMessages = computed(() => [...props.messages].sort((a, b) => a.id - b.id))
 
+    // 连续同人消息分组（≤5 分钟视为同一段）：组首保留头像/昵称，组内其余折叠
+    const GROUP_WINDOW_MS = 5 * 60 * 1000
+    const getSenderId = (message: ChatMessage) => message.user?.id ?? message.user_id ?? null
+
+    const groupFlags = computed(() => {
+      const flags = new Map<number, { first: boolean; last: boolean }>()
+      const list = orderedMessages.value
+      const timeGap = (a: ChatMessage, b: ChatMessage) => {
+        const aTime = new Date(a.created_at).getTime()
+        const bTime = new Date(b.created_at).getTime()
+        return Number.isFinite(aTime) && Number.isFinite(bTime) ? Math.abs(aTime - bTime) : Infinity
+      }
+      list.forEach((message, index) => {
+        const prev = list[index - 1]
+        const next = list[index + 1]
+        const sameSender = (a: ChatMessage | undefined, b: ChatMessage | undefined) => {
+          if (!a || !b) return false
+          const aId = getSenderId(a)
+          return aId !== null && aId === getSenderId(b) && timeGap(a, b) <= GROUP_WINDOW_MS
+        }
+        flags.set(message.id, {
+          first: !sameSender(prev, message),
+          last: !sameSender(message, next)
+        })
+      })
+      return flags
+    })
+
     const isNearBottom = (element: HTMLElement) =>
       element.scrollHeight - element.clientHeight - element.scrollTop <= 36
 
@@ -246,27 +274,32 @@ export default defineComponent({
             {props.inThread ? '暂无消息串回复' : '暂无消息，发送第一条消息吧'}
           </div>
         )}
-        {orderedMessages.value.map(message => (
-          <ChatMessageItem
-            key={message.id}
-            message={message}
-            parsed={getParsedMessage(message)}
-            baseUrl={props.baseUrl}
-            channelId={props.channelId ?? message.chat_channel_id}
-            isOwn={(message.user?.username || message.username) === props.currentUsername}
-            highlighted={message.id === props.targetMessageId}
-            threadingEnabled={props.threadingEnabled}
-            inThread={props.inThread}
-            onNavigate={handleNavigate}
-            onReact={handleReact}
-            onInteract={handleInteract}
-            onReply={handleReply}
-            onOpenThread={handleOpenThread}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onFlag={handleFlag}
-          />
-        ))}
+        {orderedMessages.value.map(message => {
+          const flag = groupFlags.value.get(message.id) || { first: true, last: true }
+          return (
+            <ChatMessageItem
+              key={message.id}
+              message={message}
+              parsed={getParsedMessage(message)}
+              baseUrl={props.baseUrl}
+              channelId={props.channelId ?? message.chat_channel_id}
+              isOwn={(message.user?.username || message.username) === props.currentUsername}
+              highlighted={message.id === props.targetMessageId}
+              threadingEnabled={props.threadingEnabled}
+              inThread={props.inThread}
+              groupFirst={flag.first}
+              groupLast={flag.last}
+              onNavigate={handleNavigate}
+              onReact={handleReact}
+              onInteract={handleInteract}
+              onReply={handleReply}
+              onOpenThread={handleOpenThread}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onFlag={handleFlag}
+            />
+          )
+        })}
       </div>
     )
   }

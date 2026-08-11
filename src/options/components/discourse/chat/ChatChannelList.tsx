@@ -1,7 +1,9 @@
-import { defineComponent, computed, ref, watch } from 'vue'
+import { computed, defineComponent, onMounted, ref, watch } from 'vue'
+import { TeamOutlined } from '@ant-design/icons-vue'
 
 import type { ChatChannel } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import '../css/chat/ChatChannelList.css'
 
 export type ChatChannelListFilter = 'all' | 'public' | 'direct' | 'starred'
@@ -11,9 +13,14 @@ const isDirectChannel = (channel: ChatChannel) =>
   channel.chatable_type === 'DirectMessage' ||
   !!channel.chatable?.users?.length
 
-const getChannelEmoji = (channel: ChatChannel) => {
+// 频道图标：多人/公开频道优先显示频道自带表情（短码或 unicode），否则显示人数
+const getChannelIconValue = (channel: ChatChannel) => {
   const raw = channel.emoji || channel.chatable?.emoji || ''
-  return raw && /\p{Emoji_Presentation}/u.test(raw) ? raw : ''
+  const trimmed = raw.replace(/^:+|:+$/g, '').trim()
+  if (!trimmed) return ''
+  if (/\p{Emoji_Presentation}/u.test(trimmed)) return trimmed
+  if (/^[a-zA-Z0-9_\-+]+$/.test(trimmed)) return trimmed
+  return ''
 }
 
 export default defineComponent({
@@ -112,6 +119,36 @@ export default defineComponent({
       return getAvatarUrl(user.avatar_template, props.baseUrl, 32)
     }
 
+    // 是否为单人私信（显示头像），否则为多人/公开频道
+    const getChannelMemberCount = (channel: ChatChannel) => {
+      const count = channel.memberships_count
+      if (typeof count === 'number' && count > 0) return count
+      const memberCount =
+        channel.chatable?.users?.length || channel.direct_message_users?.length || 0
+      return memberCount > 0 ? memberCount : 0
+    }
+
+    // 站点表情图：把频道短码图标渲染为表情图片
+    const shortcodeEmojiUrls = ref<Record<string, string>>({})
+    const loadShortcodeEmojiUrls = async () => {
+      try {
+        const groups = await fetchDiscourseEmojiGroups(props.baseUrl)
+        const map: Record<string, string> = {}
+        groups.forEach(group => {
+          group.emojis.forEach(emoji => {
+            if (emoji.url) {
+              map[emoji.name] = emoji.url
+              map[emoji.id] = emoji.url
+            }
+          })
+        })
+        shortcodeEmojiUrls.value = map
+      } catch {
+        // 表情加载失败时回退为短码文本
+      }
+    }
+    onMounted(loadShortcodeEmojiUrls)
+
     const getChannelTimeLabel = (channel: ChatChannel) => {
       const raw = channel.last_message_sent_at || channel.last_message?.created_at
       return raw ? formatTime(raw) : '暂无消息'
@@ -150,7 +187,11 @@ export default defineComponent({
     )
 
     const renderChannel = (channel: ChatChannel, keyPrefix: string) => {
-      const channelEmoji = getChannelEmoji(channel)
+      const iconValue = getChannelIconValue(channel)
+      const shortcodeImage = iconValue ? shortcodeEmojiUrls.value[iconValue] || '' : ''
+      const isUnicodeEmoji = iconValue && /\p{Emoji_Presentation}/u.test(iconValue)
+      const memberCount = getChannelMemberCount(channel)
+      const singleAvatar = isDirectChannel(channel) && !channel.chatable?.group && memberCount <= 1
       return (
         <button
           type="button"
@@ -160,16 +201,27 @@ export default defineComponent({
           onClick={() => emit('select', channel)}
         >
           <div class="chat-channel-avatar">
-            {channelEmoji ? (
-              <span class="chat-channel-emoji" role="img" aria-label={getChannelTitle(channel)}>
-                {channelEmoji}
-              </span>
-            ) : getChannelAvatar(channel) ? (
+            {singleAvatar && getChannelAvatar(channel) ? (
               <img
                 src={getChannelAvatar(channel)}
                 alt={getChannelTitle(channel)}
                 data-user-card={getChannelUser(channel)?.username}
               />
+            ) : shortcodeImage ? (
+              <img
+                class="chat-channel-emoji-image"
+                src={shortcodeImage}
+                alt={getChannelTitle(channel)}
+              />
+            ) : isUnicodeEmoji ? (
+              <span class="chat-channel-emoji" role="img" aria-label={getChannelTitle(channel)}>
+                {iconValue}
+              </span>
+            ) : memberCount > 0 ? (
+              <span class="chat-channel-member-count" title={`${memberCount} 人在此频道`}>
+                <TeamOutlined />
+                {memberCount}
+              </span>
             ) : (
               <span>#</span>
             )}

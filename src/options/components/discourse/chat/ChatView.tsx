@@ -59,7 +59,9 @@ export default defineComponent({
     discoverChannels: { type: Array as () => ChatChannel[], default: () => [] },
     discoverLoading: { type: Boolean, default: false },
     discoverErrorMessage: { type: String, default: '' },
-    joiningChannelIds: { type: Object as () => Record<number, boolean>, default: () => ({}) }
+    joiningChannelIds: { type: Object as () => Record<number, boolean>, default: () => ({}) },
+    /** 初始子 tab（用于 /chat/threads 等 URL 恢复） */
+    initialSidebarTab: { type: String as () => ChatSidebarTab, default: 'public' }
   },
   emits: [
     'selectChannel',
@@ -109,7 +111,8 @@ export default defineComponent({
     'manageSearch',
     'discoverChannels',
     'joinChannel',
-    'addDirectUsers'
+    'addDirectUsers',
+    'sidebarTab'
   ],
   setup(props, { emit }) {
     const showCreateGroup = ref(false)
@@ -118,7 +121,7 @@ export default defineComponent({
     const showChannelThreads = ref(false)
     const showSearch = ref(false)
     const showDiscover = ref(false)
-    const sidebarTab = ref<ChatSidebarTab>('public')
+    const sidebarTab = ref<ChatSidebarTab>(props.initialSidebarTab)
     const searchInitialChannelId = ref<number | null>(null)
 
     const channelListFilter = computed<ChatChannelListFilter>(() => {
@@ -396,6 +399,7 @@ export default defineComponent({
 
     const handleSelectSidebarTab = (tab: ChatSidebarTab) => {
       sidebarTab.value = tab
+      emit('sidebarTab', tab)
       if (tab === 'threads') {
         showDiscover.value = false
       }

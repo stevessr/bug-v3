@@ -687,6 +687,10 @@ export function useDiscourseBrowser() {
 
         await loadChat(tab, targetChannelId, targetThreadId ? null : targetMessageId)
         tab.viewType = 'chat'
+        // /chat/threads → 我的消息串子 tab；其余聊天 URL 回到频道列表
+        if (tab.chatState) {
+          tab.chatState.chatSidebarTab = parts[1] === 'threads' ? 'threads' : 'public'
+        }
         if (targetChannelId && targetThreadId) {
           const thread = await openChatThreadByIdRoute(
             tab,
@@ -2091,7 +2095,15 @@ export function useDiscourseBrowser() {
     if (tab.chatState.activeChannelId !== channelId) {
       await selectChatChannel(channelId)
     }
-    return await openChatThreadByIdRoute(tab, baseUrl, users, channelId, thread.id)
+    const opened = await openChatThreadByIdRoute(tab, baseUrl, users, channelId, thread.id)
+    if (opened) {
+      // 同步地址栏到消息串 URL：/chat/c/{slug}/{channelId}/t/{threadId}
+      const slug = thread.channel?.slug ? encodeURIComponent(thread.channel.slug) : '-'
+      const url = `${baseUrl.value.replace(/\/+$/, '')}/chat/c/${slug}/${channelId}/t/${thread.id}`
+      tab.url = url
+      urlInput.value = url
+    }
+    return opened
   }
 
   function closeActiveChatThread() {
