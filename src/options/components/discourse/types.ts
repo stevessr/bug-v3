@@ -642,6 +642,16 @@ export interface ChatMessage {
   deleted?: boolean
 }
 
+/** A channel pin returned by `/chat/api/channels/:channel_id/pins`. */
+export interface ChatPinnedMessage {
+  id: number
+  chat_message_id: number
+  pinned_at?: string
+  excerpt?: string
+  pinned_by?: DiscourseUser
+  message?: ChatMessage
+}
+
 export type ChatSearchSort = 'relevance' | 'latest'
 
 export interface ChatSearchState {
@@ -741,6 +751,10 @@ export interface ChatState {
   channelThreadsLoadingByChannel: Record<number, boolean>
   channelThreadsLoadingMoreByChannel: Record<number, boolean>
   channelThreadsErrorByChannel: Record<number, string>
+  pinnedMessagesByChannel: Record<number, ChatPinnedMessage[]>
+  pinsLoadingByChannel: Record<number, boolean>
+  pinsErrorByChannel: Record<number, string>
+  pinSavingByMessageId: Record<string, boolean>
   loadingChannels: boolean
   loadingMessages: boolean
   loadingThread: boolean

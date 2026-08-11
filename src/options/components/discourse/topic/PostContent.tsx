@@ -62,6 +62,89 @@ export default defineComponent({
       return sanitizeDiscourseHtml(replaceEmojiInCookedHtml(sanitizeDiscourseHtml(html)))
     }
 
+    const getQuoteTarget = (quote: HTMLElement) => {
+      const topicId = Number(quote.getAttribute('data-topic') || 0)
+      const postNumber = Number(quote.getAttribute('data-post') || 0)
+      if (!Number.isFinite(topicId) || topicId <= 0) return null
+      if (!Number.isFinite(postNumber) || postNumber <= 0) return null
+      return { topicId, postNumber }
+    }
+
+    const setQuoteExpandedState = (
+      quote: HTMLElement,
+      button: HTMLButtonElement,
+      expanded: boolean
+    ) => {
+      quote.setAttribute('data-expanded', expanded ? 'true' : 'false')
+      button.setAttribute('aria-expanded', String(expanded))
+      button.setAttribute('aria-label', expanded ? '收起完整引用' : '展开完整引用')
+      button.setAttribute('title', expanded ? '收起完整引用' : '展开完整引用')
+      button.classList.toggle('is-expanded', expanded)
+      const icon = button.querySelector<HTMLElement>('.quote-control-icon')
+      if (icon) icon.textContent = expanded ? '⌃' : '⌄'
+    }
+
+    const handleQuoteAction = (target: HTMLElement, event: MouseEvent) => {
+      const jumpButton = target.closest<HTMLButtonElement>('button.quote-jump')
+      if (jumpButton) {
+        const quote = jumpButton.closest<HTMLElement>('aside.quote')
+        const destination = quote ? getQuoteTarget(quote) : null
+        if (!destination) return false
+        event.preventDefault()
+        event.stopPropagation()
+        emit(
+          'navigate',
+          `${props.baseUrl.replace(/\/+$/, '')}/t/${destination.topicId}/${destination.postNumber}`
+        )
+        return true
+      }
+
+      const toggleButton = target.closest<HTMLButtonElement>('button.quote-toggle')
+      if (!toggleButton) return false
+      const quote = toggleButton.closest<HTMLElement>('aside.quote')
+      const destination = quote ? getQuoteTarget(quote) : null
+      const blockquote = quote?.querySelector<HTMLElement>('blockquote')
+      if (!quote || !destination || !blockquote) return false
+
+      event.preventDefault()
+      event.stopPropagation()
+      if (toggleButton.classList.contains('is-loading')) return true
+
+      const expanded = quote.getAttribute('data-expanded') === 'true'
+      const original = blockquote.getAttribute('data-original-html')
+      if (expanded) {
+        if (original !== null) blockquote.innerHTML = original
+        setQuoteExpandedState(quote, toggleButton, false)
+        return true
+      }
+
+      if (original === null) blockquote.setAttribute('data-original-html', blockquote.innerHTML)
+      toggleButton.classList.add('is-loading')
+      setQuoteExpandedState(quote, toggleButton, true)
+
+      void (async () => {
+        try {
+          const response = await pageFetch<any>(
+            `${props.baseUrl.replace(/\/+$/, '')}/posts/by_number/${destination.topicId}/${destination.postNumber}.json`
+          )
+          const data = extractData(response)
+          if (!response.ok || !data?.cooked) {
+            const detail = response.status ? ` (${response.status})` : ''
+            blockquote.innerHTML = `<div class="quote-error">引用内容加载失败${detail}</div>`
+            return
+          }
+          const parsed = parsePostContent(String(data.cooked), props.baseUrl)
+          blockquote.innerHTML = processHtmlContent(parsed.html)
+        } catch (error) {
+          console.warn('[DiscourseBrowser] expand quote failed:', error)
+          blockquote.innerHTML = '<div class="quote-error">引用内容加载失败</div>'
+        } finally {
+          toggleButton.classList.remove('is-loading')
+        }
+      })()
+      return true
+    }
+
     const getImageGridColumnsCount = (segment: ImageGridSegment) => {
       if (segment.columnsCount) return Math.max(segment.columnsCount, 1)
       if (segment.columns.length > 1) return segment.columns.length
@@ -70,6 +153,8 @@ export default defineComponent({
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement
+
+      if (target && handleQuoteAction(target, event)) return
 
       // Handle spoiler click
       const spoiler = target?.closest('.spoiled') as HTMLElement | null

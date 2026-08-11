@@ -92,8 +92,10 @@
 }
 
 .chat-message-own .chat-message-bubble-wrap {
-  margin-right: 0;
-  margin-left: 68px;
+  /* Keep a physical right-side gutter between an outgoing bubble and its
+   * avatar so reactions/hover actions remain on the message's right, too. */
+  margin-right: 68px;
+  margin-left: 0;
 }
 
 .chat-message-bubble {
@@ -239,15 +241,26 @@
   color: color-mix(in oklab, var(--on-primary-container) 72%, transparent);
 }
 
-.chat-message-footer {
+/* Reactions sit in a trailing rail, outside the message surface. This keeps
+ * the bubble height equal to the message content and matches Chat's compact
+ * side-by-side reaction layout. */
+.chat-message-reaction-rail {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: calc(100% + 8px);
   display: flex;
-  align-items: center;
+  max-width: 60px;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
-  margin-top: 6px;
+  transform: translateY(-50%);
 }
 
-.chat-message-own .chat-message-footer {
-  justify-content: flex-end;
+.chat-message-own .chat-message-reaction-rail {
+  right: auto;
+  left: calc(100% + 8px);
+  align-items: flex-start;
 }
 
 .chat-message-reaction,
@@ -313,8 +326,8 @@
 /*
  * Keep hover controls beside the bubble rather than in its footer.  A footer
  * changes a message's height even when it has no reactions; this row keeps
- * the controls on the message's trailing side without consuming vertical
- * space.  `row-reverse` mirrors it for the current user's outgoing messages.
+ * the controls on the message's physical right side without consuming vertical
+ * space. Outgoing messages reserve a right-side gutter before their avatar.
  */
 .chat-message-hover-actions {
   position: absolute;
@@ -348,8 +361,22 @@
 }
 
 .chat-message-own .chat-message-hover-actions {
-  right: calc(100% + 8px);
-  left: auto;
+  right: auto;
+  left: calc(100% + 8px);
+}
+
+/* A populated reaction rail owns the middle of the trailing side. Keep the
+ * transient action buttons just above the bubble rather than stacking into
+ * the rail, while still consuming no row height. */
+.chat-message-item.has-reactions .chat-message-hover-actions {
+  top: -4px;
+  transform: translateY(-100%) scale(0.96);
+}
+
+.chat-message-item.has-reactions:hover .chat-message-hover-actions,
+.chat-message-item.has-reactions:focus-within .chat-message-hover-actions,
+.chat-message-item.has-reactions.has-floating-controls .chat-message-hover-actions {
+  transform: translateY(-100%);
 }
 
 .chat-message-reaction-emoji {
@@ -407,6 +434,11 @@
 
 .chat-message-actions-item:hover {
   background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
+}
+
+.chat-message-actions-item:disabled {
+  cursor: progress;
+  opacity: 0.55;
 }
 
 .chat-message-actions-item.is-danger {
@@ -530,6 +562,10 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateY(-50%);
+  }
+
+  .chat-message-item.has-reactions .chat-message-hover-actions {
+    transform: translateY(-100%);
   }
 }
 

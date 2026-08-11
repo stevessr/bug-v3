@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, watch } from 'vue'
+import { Transition, computed, defineComponent, ref, watch } from 'vue'
 
 import type { SuggestedTopic } from '../types'
 
@@ -67,13 +67,17 @@ export default defineComponent({
               </button>
             ))}
           </div>
-          <div class="topic-extras__body" role="tabpanel">
-            <TopicList
-              topics={activeList.value}
-              baseUrl={props.baseUrl}
-              showHeader={false}
-              onClick={(topic: SuggestedTopic) => emit('open', topic)}
-            />
+          <div class="topic-extras__body" role="tabpanel" aria-live="polite">
+            <Transition name="topic-extras-switch" mode="out-in">
+              <div key={activeTab.value} class="topic-extras__panel">
+                <TopicList
+                  topics={activeList.value}
+                  baseUrl={props.baseUrl}
+                  showHeader={false}
+                  onClick={(topic: SuggestedTopic) => emit('open', topic)}
+                />
+              </div>
+            </Transition>
           </div>
         </section>
       )

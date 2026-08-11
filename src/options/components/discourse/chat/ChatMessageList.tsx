@@ -19,7 +19,10 @@ export default defineComponent({
     hasMore: { type: Boolean, required: true },
     targetMessageId: { type: Number, default: null },
     threadingEnabled: { type: Boolean, default: false },
-    inThread: { type: Boolean, default: false }
+    inThread: { type: Boolean, default: false },
+    canManagePins: { type: Boolean, default: false },
+    pinnedMessageIds: { type: Array as () => number[], default: () => [] },
+    pinSavingByMessageId: { type: Object as () => Record<number, boolean>, default: () => ({}) }
   },
   emits: [
     'loadMore',
@@ -30,7 +33,8 @@ export default defineComponent({
     'openThread',
     'edit',
     'delete',
-    'flag'
+    'flag',
+    'pin'
   ],
   setup(props, { emit }) {
     const listRef = ref<HTMLDivElement | null>(null)
@@ -59,6 +63,7 @@ export default defineComponent({
     }
 
     const orderedMessages = computed(() => [...props.messages].sort((a, b) => a.id - b.id))
+    const pinnedMessageIdSet = computed(() => new Set(props.pinnedMessageIds))
 
     const channelUsers = computed<DiscourseUser[]>(() => {
       const source = [
@@ -284,6 +289,10 @@ export default defineComponent({
       emit('flag', message)
     }
 
+    const handlePin = (payload: { messageId: number; pinned: boolean }) => {
+      emit('pin', payload)
+    }
+
     const handleScroll = () => {
       const el = listRef.value
       if (!el) return
@@ -414,6 +423,9 @@ export default defineComponent({
               groupFirst={flag.first}
               groupLast={flag.last}
               showTimestamp={flag.showTimestamp}
+              canManagePins={props.canManagePins}
+              isPinned={pinnedMessageIdSet.value.has(message.id)}
+              pinSaving={Boolean(props.pinSavingByMessageId[message.id])}
               onNavigate={handleNavigate}
               onReact={handleReact}
               onInteract={handleInteract}
@@ -422,6 +434,7 @@ export default defineComponent({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onFlag={handleFlag}
+              onPin={handlePin}
             />
           )
         })}

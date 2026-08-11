@@ -1,6 +1,7 @@
 import { defineComponent } from 'vue'
 
 import type { ChatThread, DiscourseUser } from '../types'
+import EmojiTitle from '../layout/EmojiTitle'
 import { stripHtml } from '../tagVisuals'
 import { formatTime, getAvatarUrl } from '../utils'
 import '../css/chat/ChatThreadList.css'
@@ -108,7 +109,9 @@ export default defineComponent({
           onClick={handleClick}
         >
           <div class="chat-thread-list__item-heading">
-            <strong>{getThreadTitle()}</strong>
+            <strong>
+              <EmojiTitle text={getThreadTitle()} baseUrl={props.baseUrl} />
+            </strong>
             {unreadCount > 0 && (
               <span class="chat-thread-list__item-unread" aria-label={`${unreadCount} 条未读`}>
                 {unreadCount}

@@ -192,7 +192,20 @@ export function useTopicNavigation(options: {
       return
     }
 
-    const titleLink = target?.closest('.quote-title__text-content, .quote-controls')
+    const jumpButton = target?.closest('button.quote-jump') as HTMLButtonElement | null
+    if (jumpButton) {
+      const aside = jumpButton.closest('aside.quote') as HTMLElement | null
+      if (!aside) return
+      const topicId = aside.getAttribute('data-topic')
+      const postNumber = aside.getAttribute('data-post')
+      if (!topicId || !postNumber) return
+      event.preventDefault()
+      event.stopPropagation()
+      options.emitOpenQuote({ topicId: parseInt(topicId), postNumber: parseInt(postNumber) })
+      return
+    }
+
+    const titleLink = target?.closest('.quote-title__text-content, .title > a')
     if (titleLink) {
       const aside = target?.closest('aside.quote') as HTMLElement | null
       if (!aside) return
@@ -226,6 +239,11 @@ export function useTopicNavigation(options: {
       }
       aside.setAttribute('data-expanded', 'false')
       button.setAttribute('aria-expanded', 'false')
+      button.setAttribute('aria-label', '展开完整引用')
+      button.setAttribute('title', '展开完整引用')
+      button.classList.remove('is-expanded')
+      const icon = button.querySelector<HTMLElement>('.quote-control-icon')
+      if (icon) icon.textContent = '⌄'
       return
     }
 
@@ -239,6 +257,11 @@ export function useTopicNavigation(options: {
 
     button.classList.add('is-loading')
     button.setAttribute('aria-expanded', 'true')
+    button.setAttribute('aria-label', '收起完整引用')
+    button.setAttribute('title', '收起完整引用')
+    button.classList.add('is-expanded')
+    const icon = button.querySelector<HTMLElement>('.quote-control-icon')
+    if (icon) icon.textContent = '⌃'
     aside.setAttribute('data-expanded', 'true')
 
     try {

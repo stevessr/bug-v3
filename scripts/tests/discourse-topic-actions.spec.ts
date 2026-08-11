@@ -29,95 +29,99 @@ test.describe('Discourse topic actions and private messages', () => {
       const interactionPermissions = { aliceCanChat: true }
       ;(globalThis as any).__interactionPermissions = interactionPermissions
 
-      const makeTopic = () => ({
-        id: 42,
-        slug: 'private-reactions',
-        archetype: 'private_message',
-        title: '私信与反应测试',
-        fancy_title: '私信与反应测试',
-        posts_count: 2,
-        highest_post_number: 2,
-        views: 12,
-        like_count: 9,
-        created_at: '2026-08-10T01:00:00Z',
-        can_assign: true,
-        valid_reactions: ['heart', 'laughing', 'tada'],
-        post_stream: {
-          stream: [4201, 4202],
-          posts: [
-            {
-              id: 4201,
-              topic_id: 42,
-              post_number: 1,
-              username: 'steve',
-              user_id: 1,
-              name: 'Steve',
-              avatar_template: steve.avatar_template,
-              created_at: '2026-08-10T01:00:00Z',
-              cooked: '<p>这是自己的帖子</p>',
-              reply_count: 0,
-              like_count: 1,
-              can_assign: true,
-              reactions: [{ id: 'heart', count: 1 }],
-              reaction_users_count: 1
-            },
-            {
-              id: 4202,
-              topic_id: 42,
-              post_number: 2,
-              username: 'alice',
-              user_id: 2,
-              name: 'Alice',
-              avatar_template: alice.avatar_template,
-              created_at: '2026-08-10T01:05:00Z',
-              cooked: '<p>这是可反应的帖子</p>',
-              reply_count: 0,
-              like_count: 4,
-              can_assign: true,
-              reactions: [
-                { id: 'heart', count: 4 },
-                { id: 'laughing', count: 3 },
-                { id: 'tada', count: 2 },
-                { id: 'eyes', count: 1 }
-              ],
-              reaction_users_count: 10,
-              can_boost: true,
-              boosts: [
-                {
-                  id: 801,
-                  cooked: '<p>自己的 Boost</p>',
-                  can_delete: true,
-                  can_flag: false,
-                  user_flag_status: null,
-                  user: steve
-                },
-                {
-                  id: 802,
-                  cooked: '<p>需要举报的 Boost</p>',
-                  can_delete: false,
-                  can_flag: true,
-                  user_flag_status: null,
-                  available_flags: ['spam', 'inappropriate'],
-                  user: alice
-                }
-              ]
-            }
-          ]
-        },
-        details: {
-          created_by: steve,
-          participants: allowedUsers.map(user => ({ user, post_count: 1 })),
-          allowed_users: [...allowedUsers],
-          allowed_groups: [],
-          can_invite_to: true,
-          can_remove_allowed_users: true,
-          can_edit: true,
+      const makeTopic = () => {
+        const title = String((globalThis as any).__topicActionTitle || '私信与反应测试')
+        return {
+          id: 42,
+          slug: 'private-reactions',
+          archetype: 'private_message',
+          title,
+          fancy_title: title,
+          posts_count: 2,
+          highest_post_number: 2,
+          views: 12,
+          like_count: 9,
+          created_at: '2026-08-10T01:00:00Z',
           can_assign: true,
-          notification_level: 1
-        },
-        suggested_topics: [],
-        related_topics: []
-      })
+          valid_reactions: ['heart', 'laughing', 'tada'],
+          post_stream: {
+            stream: [4201, 4202],
+            posts: [
+              {
+                id: 4201,
+                topic_id: 42,
+                post_number: 1,
+                username: 'steve',
+                user_id: 1,
+                name: 'Steve',
+                avatar_template: steve.avatar_template,
+                created_at: '2026-08-10T01:00:00Z',
+                cooked: '<p>这是自己的帖子</p>',
+                reply_count: 0,
+                like_count: 1,
+                can_assign: true,
+                reactions: [{ id: 'heart', count: 1 }],
+                reaction_users_count: 1
+              },
+              {
+                id: 4202,
+                topic_id: 42,
+                post_number: 2,
+                username: 'alice',
+                user_id: 2,
+                name: 'Alice',
+                avatar_template: alice.avatar_template,
+                created_at: '2026-08-10T01:05:00Z',
+                cooked:
+                  '<p>这是可反应的帖子</p><aside class="quote" data-post="1" data-topic="2561686"><div class="title">debug</div><blockquote><p>抱怀里就开始自动的响，不</p></blockquote></aside>',
+                reply_count: 0,
+                like_count: 4,
+                can_assign: true,
+                reactions: [
+                  { id: 'heart', count: 4 },
+                  { id: 'laughing', count: 3 },
+                  { id: 'tada', count: 2 },
+                  { id: 'eyes', count: 1 }
+                ],
+                reaction_users_count: 10,
+                can_boost: true,
+                boosts: [
+                  {
+                    id: 801,
+                    cooked: '<p>自己的 Boost</p>',
+                    can_delete: true,
+                    can_flag: false,
+                    user_flag_status: null,
+                    user: steve
+                  },
+                  {
+                    id: 802,
+                    cooked: '<p>需要举报的 Boost</p>',
+                    can_delete: false,
+                    can_flag: true,
+                    user_flag_status: null,
+                    available_flags: ['spam', 'inappropriate'],
+                    user: alice
+                  }
+                ]
+              }
+            ]
+          },
+          details: {
+            created_by: steve,
+            participants: allowedUsers.map(user => ({ user, post_count: 1 })),
+            allowed_users: [...allowedUsers],
+            allowed_groups: [],
+            can_invite_to: true,
+            can_remove_allowed_users: true,
+            can_edit: true,
+            can_assign: true,
+            notification_level: 1
+          },
+          suggested_topics: [],
+          related_topics: []
+        }
+      }
 
       Object.defineProperty(navigator, 'share', {
         configurable: true,
@@ -168,6 +172,47 @@ test.describe('Discourse topic actions and private messages', () => {
             data = { category_list: { categories: [] } }
           } else if (parsed.pathname === '/t/42.json') {
             data = makeTopic()
+          } else if (
+            parsed.pathname === '/t/2561686.json' ||
+            parsed.pathname === '/t/2561686/1.json'
+          ) {
+            data = {
+              id: 2561686,
+              slug: 'quoted-topic',
+              title: '被引用的主题',
+              fancy_title: '被引用的主题',
+              posts_count: 1,
+              highest_post_number: 1,
+              created_at: '2026-08-10T00:00:00Z',
+              post_stream: {
+                stream: [25616861],
+                posts: [
+                  {
+                    id: 25616861,
+                    topic_id: 2561686,
+                    post_number: 1,
+                    username: 'codeboom',
+                    user_id: 4,
+                    name: 'codeboom',
+                    avatar_template: bob.avatar_template,
+                    created_at: '2026-08-10T00:00:00Z',
+                    cooked: '<p>被引用的原楼层</p>',
+                    reply_count: 0,
+                    like_count: 0
+                  }
+                ]
+              },
+              details: { created_by: bob },
+              suggested_topics: [],
+              related_topics: []
+            }
+          } else if (parsed.pathname === '/posts/by_number/2561686/1.json') {
+            data = {
+              id: 25616861,
+              topic_id: 2561686,
+              post_number: 1,
+              cooked: '<p>这是被引用楼层的完整内容，含有更多上下文。</p>'
+            }
           } else if (parsed.pathname === '/t/42' && method === 'PUT') {
             const payload = JSON.parse(body)
             data = { id: 42, title: payload.title, fancy_title: payload.title }
@@ -341,6 +386,124 @@ test.describe('Discourse topic actions and private messages', () => {
     await page.getByRole('button', { name: '打开地址' }).click()
     await expect(page.getByRole('heading', { name: '私信与反应测试' })).toBeVisible()
   }
+
+  const selectPostText = async (page: import('@playwright/test').Page, text: string) => {
+    await page.locator('[data-post-number="2"] .post-content').evaluate((element, selectedText) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+      let node: Text | null = walker.nextNode() as Text | null
+      while (node) {
+        const start = node.data.indexOf(String(selectedText))
+        if (start >= 0) {
+          const range = document.createRange()
+          range.setStart(node, start)
+          range.setEnd(node, start + String(selectedText).length)
+          const selection = window.getSelection()
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+          return
+        }
+        node = walker.nextNode() as Text | null
+      }
+      throw new Error(`Could not select ${String(selectedText)}`)
+    }, text)
+  }
+
+  test('renders forum emoji shortcodes inline in topic titles', async ({ page }) => {
+    await page.goto('/discourse.html')
+    await page.evaluate(() => {
+      ;(globalThis as any).__topicActionTitle = ':heart: 标题内联表情'
+    })
+    await page.locator('.toolbar-address input').fill('https://linux.do/t/private-reactions/42')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const title = page.locator('.topic-header__title')
+    const emoji = title.locator('img.emoji-inline[alt="heart"]')
+    await expect(title).toContainText('标题内联表情')
+    await expect(emoji).toHaveAttribute(
+      'src',
+      'https://cdn.ldstatic.com/images/emoji/twemoji/heart.png?v=15'
+    )
+    await expect(emoji).toHaveCSS('display', 'inline-block')
+    await expect(title.locator('.discourse-emoji-title > div')).toHaveCount(0)
+  })
+
+  test('expands quoted posts, jumps to their topic, and quotes selected post text', async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            ;(globalThis as any).__copiedTopicQuote = value
+          }
+        }
+      })
+    })
+    await openTopic(page)
+
+    const post = page.locator('[data-post-number="2"]')
+    const quote = post.locator('aside.quote')
+    const expand = quote.locator('button.quote-toggle')
+    await expect(quote.getByRole('button', { name: '跳转到引用的第 1 楼' })).toBeVisible()
+    await expect(expand).toHaveText('⌄')
+
+    await expand.click()
+    await expect(quote).toHaveAttribute('data-expanded', 'true')
+    await expect(expand).toHaveAttribute('aria-label', '收起完整引用')
+    await expect(expand).toHaveText('⌃')
+    await expect(quote).toContainText('这是被引用楼层的完整内容，含有更多上下文。')
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__topicActionRequests.some((request: any) =>
+            request.url.endsWith('/posts/by_number/2561686/1.json')
+          )
+        )
+      )
+      .toBe(true)
+
+    await expand.click()
+    await expect(quote).toHaveAttribute('data-expanded', 'false')
+    await expect(expand).toHaveAttribute('aria-label', '展开完整引用')
+    await expect(quote).toContainText('抱怀里就开始自动的响，不')
+
+    await selectPostText(page, '这是可反应的帖子')
+    await post.locator('.post-content').dispatchEvent('contextmenu', {
+      button: 2,
+      clientX: 160,
+      clientY: 180
+    })
+    const selectionMenu = page.getByRole('menu', { name: '文字操作' })
+    await expect(selectionMenu.getByRole('menuitem', { name: '引用到回复' })).toBeVisible()
+    await expect(selectionMenu.getByRole('menuitem', { name: '复制引用' })).toBeVisible()
+    await selectionMenu.getByRole('menuitem', { name: '复制引用' }).click()
+    await expect
+      .poll(() => page.evaluate(() => (globalThis as any).__copiedTopicQuote || ''))
+      .toBe('[quote="alice, post:2, topic:42, username:alice"]\n这是可反应的帖子\n[/quote]')
+
+    await selectPostText(page, '这是可反应的帖子')
+    await post.locator('.post-content').dispatchEvent('contextmenu', {
+      button: 2,
+      clientX: 160,
+      clientY: 180
+    })
+    await page
+      .getByRole('menu', { name: '文字操作' })
+      .getByRole('menuitem', { name: '引用到回复' })
+      .click()
+    const composer = page.locator('.floating-composer')
+    await expect(composer).toBeVisible()
+    await expect(composer.locator('textarea')).toHaveValue(
+      '[quote="alice, post:2, topic:42, username:alice"]\n这是可反应的帖子\n[/quote]'
+    )
+
+    await composer.getByRole('button', { name: '关闭回复编辑器' }).click()
+    await expect(composer).toBeHidden()
+    await quote.getByRole('button', { name: '跳转到引用的第 1 楼' }).click()
+    await expect(page.getByRole('heading', { name: '被引用的主题' })).toBeVisible()
+    await expect(page.locator('.toolbar-address input')).toHaveValue('https://linux.do/t/2561686/1')
+  })
 
   test('groups every reaction, blocks own-post reactions, and opens detailed statistics', async ({
     page

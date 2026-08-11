@@ -1,0 +1,17 @@
+.discourse-emoji-title {
+  min-width: 0;
+  white-space: normal;
+}
+
+.discourse-emoji-title img.emoji,
+.discourse-emoji-title img.emoji-inline {
+  display: inline-block;
+  width: 1.2em;
+  min-width: 1.2em;
+  max-width: none;
+  height: 1.2em;
+  margin: 0 0.035em;
+  object-fit: contain;
+  vertical-align: -0.17em;
+  white-space: nowrap;
+}

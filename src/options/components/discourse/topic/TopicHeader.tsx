@@ -5,6 +5,7 @@ import type { DiscourseCategory, DiscourseTopicDetail } from '../types'
 import { searchTags, updateTopicTitle } from '../actions'
 import { getDiscourseIconHref } from '../layout/iconSprite'
 import TagPill from '../layout/TagPill'
+import EmojiTitle from '../layout/EmojiTitle'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories,
@@ -606,7 +607,13 @@ export default defineComponent({
             </form>
           ) : (
             <div class="topic-header__title-row">
-              <h1 class="topic-header__title">{props.topic.fancy_title || props.topic.title}</h1>
+              <h1 class="topic-header__title">
+                <EmojiTitle
+                  text={props.topic.fancy_title || props.topic.title}
+                  baseUrl={props.baseUrl}
+                  html={Boolean(props.topic.fancy_title)}
+                />
+              </h1>
               {props.topic.details?.can_edit && (
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 import { computed, defineComponent, ref, watch } from 'vue'
 
 import type { ChatChannel } from '../types'
+import EmojiTitle from '../layout/EmojiTitle'
 import { formatTime, getAvatarUrl } from '../utils'
 import '../css/chat/ChatChannelList.css'
 
@@ -239,7 +240,9 @@ export default defineComponent({
             </div>
           )}
           <div class="chat-channel-info">
-            <div class="chat-channel-title">{getChannelTitle(channel)}</div>
+            <div class="chat-channel-title">
+              <EmojiTitle text={getChannelTitle(channel)} baseUrl={props.baseUrl} />
+            </div>
             <div class="chat-channel-meta">
               <span>{getChannelTimeLabel(channel)}</span>
             </div>

@@ -186,8 +186,22 @@ test.describe('Discourse chat message threads', () => {
         [501, threadReplies],
         [601, secondThreadReplies]
       ])
+      const pinnedMessages = new Map<number, any>([
+        [
+          100,
+          {
+            id: 9901,
+            chat_message_id: 100,
+            pinned_at: '2026-08-10T02:00:00Z',
+            excerpt: '这个发布方案怎么样？',
+            pinned_by: steve,
+            message: { ...original }
+          }
+        ]
+      ])
       let nextMessageId = 300
       let nextThreadId = 502
+      let nextPinId = 9902
 
       const channel: Record<string, any> = {
         id: 7,
@@ -202,9 +216,16 @@ test.describe('Discourse chat message threads', () => {
         current_user_membership: {
           chat_channel_id: 7,
           unread_count: 0,
-          watched_threads_unread_count: 2
+          watched_threads_unread_count: 2,
+          has_unseen_pins: true
         },
-        meta: { can_moderate: true, can_flag: true, user_silenced: false }
+        pinned_messages_count: 1,
+        meta: {
+          can_moderate: true,
+          can_manage_pins: true,
+          can_flag: true,
+          user_silenced: false
+        }
       }
       ;(globalThis as any).__chatThreadFixture = { channel, mainMessages, threads, replies }
 
@@ -277,227 +298,265 @@ test.describe('Discourse chat message threads', () => {
                 ]
               }
             }
-          } else if (new URL(url).pathname === '/chat/api/search' && method === 'GET') {
-            const searchUrl = new URL(url)
-            const query = searchUrl.searchParams.get('query') || ''
-            const offset = Number(searchUrl.searchParams.get('offset') || 0)
-            const withChannel = (message: any) => ({ ...message, channel })
-            if (query === '灰度') {
-              data = {
-                messages: [withChannel(threadReplies[1])],
-                meta: { has_more: false, limit: 20, offset }
-              }
-            } else if (offset === 0) {
-              data = {
-                messages: [withChannel(plainMessage), withChannel(threadReplies[1])],
-                meta: { has_more: true, limit: 20, offset }
-              }
-            } else {
-              data = {
-                messages: [withChannel(legacyReplyMessage)],
-                meta: { has_more: false, limit: 20, offset }
-              }
+          } else if (new URL(url).pathname === '/chat/api/channels/7/pins' && method === 'GET') {
+            data = {
+              pinned_messages: [...pinnedMessages.values()],
+              membership: { ...channel.current_user_membership }
             }
-          } else if (url.includes('/chat/api/me/threads') && method === 'GET') {
-            const offset = Number(new URL(url).searchParams.get('offset') || 0)
-            if (offset === 0) {
-              data = {
-                threads: [{ ...thread501, channel }],
-                tracking: {
-                  501: {
-                    channel_id: 7,
-                    unread_count: 2,
-                    mention_count: 0,
-                    watched_threads_unread_count: 0
-                  }
-                },
-                meta: { load_more_url: '/chat/api/me/threads?limit=1&offset=1' }
+          } else if (
+            new URL(url).pathname === '/chat/api/channels/7/pins/read' &&
+            method === 'PUT'
+          ) {
+            channel.current_user_membership.has_unseen_pins = false
+            data = { membership: { ...channel.current_user_membership } }
+          } else {
+            const pinMatch = new URL(url).pathname.match(
+              /^\/chat\/api\/channels\/7\/messages\/(\d+)\/pin$/
+            )
+            if (pinMatch && (method === 'POST' || method === 'DELETE')) {
+              const messageId = Number(pinMatch[1])
+              if (method === 'POST') {
+                const message = mainMessages.find(item => item.id === messageId)
+                if (message && !pinnedMessages.has(messageId)) {
+                  pinnedMessages.set(messageId, {
+                    id: nextPinId++,
+                    chat_message_id: messageId,
+                    pinned_at: '2026-08-10T02:05:00Z',
+                    excerpt: message.message,
+                    pinned_by: steve,
+                    message: { ...message }
+                  })
+                }
+              } else {
+                pinnedMessages.delete(messageId)
               }
-            } else {
-              data = {
-                threads: [{ ...thread601, channel }],
-                tracking: {
-                  601: {
-                    channel_id: 7,
-                    unread_count: 0,
-                    mention_count: 0,
-                    watched_threads_unread_count: 0
-                  }
-                },
-                meta: { load_more_url: null }
-              }
-            }
-          } else if (new URL(url).pathname === '/chat/api/channels/7/threads' && method === 'GET') {
-            const offset = Number(new URL(url).searchParams.get('offset') || 0)
-            if (offset === 0) {
-              data = {
-                threads: [
-                  {
-                    ...thread501,
-                    channel,
-                    current_user_membership: {
-                      ...thread501.current_user_membership,
-                      notification_level: 3
-                    }
-                  }
-                ],
-                tracking: {
-                  501: {
-                    channel_id: 7,
-                    unread_count: 0,
-                    mention_count: 0,
-                    watched_threads_unread_count: 2
-                  }
-                },
-                meta: {
-                  channel_id: 7,
-                  load_more_url: '/chat/api/channels/7/threads?offset=1'
+              channel.pinned_messages_count = pinnedMessages.size
+              data = { success: 'OK' }
+            } else if (new URL(url).pathname === '/chat/api/search' && method === 'GET') {
+              const searchUrl = new URL(url)
+              const query = searchUrl.searchParams.get('query') || ''
+              const offset = Number(searchUrl.searchParams.get('offset') || 0)
+              const withChannel = (message: any) => ({ ...message, channel })
+              if (query === '灰度') {
+                data = {
+                  messages: [withChannel(threadReplies[1])],
+                  meta: { has_more: false, limit: 20, offset }
+                }
+              } else if (offset === 0) {
+                data = {
+                  messages: [withChannel(plainMessage), withChannel(threadReplies[1])],
+                  meta: { has_more: true, limit: 20, offset }
+                }
+              } else {
+                data = {
+                  messages: [withChannel(legacyReplyMessage)],
+                  meta: { has_more: false, limit: 20, offset }
                 }
               }
-            } else {
-              data = {
-                threads: [{ ...thread601, channel }],
-                tracking: {
-                  601: {
+            } else if (url.includes('/chat/api/me/threads') && method === 'GET') {
+              const offset = Number(new URL(url).searchParams.get('offset') || 0)
+              if (offset === 0) {
+                data = {
+                  threads: [{ ...thread501, channel }],
+                  tracking: {
+                    501: {
+                      channel_id: 7,
+                      unread_count: 2,
+                      mention_count: 0,
+                      watched_threads_unread_count: 0
+                    }
+                  },
+                  meta: { load_more_url: '/chat/api/me/threads?limit=1&offset=1' }
+                }
+              } else {
+                data = {
+                  threads: [{ ...thread601, channel }],
+                  tracking: {
+                    601: {
+                      channel_id: 7,
+                      unread_count: 0,
+                      mention_count: 0,
+                      watched_threads_unread_count: 0
+                    }
+                  },
+                  meta: { load_more_url: null }
+                }
+              }
+            } else if (
+              new URL(url).pathname === '/chat/api/channels/7/threads' &&
+              method === 'GET'
+            ) {
+              const offset = Number(new URL(url).searchParams.get('offset') || 0)
+              if (offset === 0) {
+                data = {
+                  threads: [
+                    {
+                      ...thread501,
+                      channel,
+                      current_user_membership: {
+                        ...thread501.current_user_membership,
+                        notification_level: 3
+                      }
+                    }
+                  ],
+                  tracking: {
+                    501: {
+                      channel_id: 7,
+                      unread_count: 0,
+                      mention_count: 0,
+                      watched_threads_unread_count: 2
+                    }
+                  },
+                  meta: {
                     channel_id: 7,
-                    unread_count: 0,
-                    mention_count: 0,
-                    watched_threads_unread_count: 0
+                    load_more_url: '/chat/api/channels/7/threads?offset=1'
                   }
-                },
-                meta: { channel_id: 7, load_more_url: null }
+                }
+              } else {
+                data = {
+                  threads: [{ ...thread601, channel }],
+                  tracking: {
+                    601: {
+                      channel_id: 7,
+                      unread_count: 0,
+                      mention_count: 0,
+                      watched_threads_unread_count: 0
+                    }
+                  },
+                  meta: { channel_id: 7, load_more_url: null }
+                }
               }
-            }
-          } else if (threadMessagesMatch && method === 'GET') {
-            const threadId = Number(threadMessagesMatch[1])
-            const messageUrl = new URL(url)
-            const targetId = Number(messageUrl.searchParams.get('target_message_id') || 0)
-            const direction = messageUrl.searchParams.get('direction')
-            const allReplies = replies.get(threadId) || []
-            if (threadId === 501 && !targetId) {
-              data = {
-                messages: allReplies.filter(message => message.id >= 202),
-                meta: { can_load_more_past: true }
+            } else if (threadMessagesMatch && method === 'GET') {
+              const threadId = Number(threadMessagesMatch[1])
+              const messageUrl = new URL(url)
+              const targetId = Number(messageUrl.searchParams.get('target_message_id') || 0)
+              const direction = messageUrl.searchParams.get('direction')
+              const allReplies = replies.get(threadId) || []
+              if (threadId === 501 && !targetId) {
+                data = {
+                  messages: allReplies.filter(message => message.id >= 202),
+                  meta: { can_load_more_past: true }
+                }
+              } else if (threadId === 501 && targetId === 202 && direction === 'past') {
+                data = {
+                  messages: allReplies.filter(message => message.id < 202),
+                  meta: { can_load_more_past: false }
+                }
+              } else if (threadId === 501 && targetId === 202) {
+                data = {
+                  messages: allReplies,
+                  meta: { can_load_more_past: false, can_load_more_future: false }
+                }
+              } else {
+                const thread = threads.get(threadId)
+                data = {
+                  messages: [thread?.original_message, ...allReplies].filter(Boolean),
+                  meta: { can_load_more_past: false }
+                }
               }
-            } else if (threadId === 501 && targetId === 202 && direction === 'past') {
-              data = {
-                messages: allReplies.filter(message => message.id < 202),
-                meta: { can_load_more_past: false }
-              }
-            } else if (threadId === 501 && targetId === 202) {
-              data = {
-                messages: allReplies,
-                meta: { can_load_more_past: false, can_load_more_future: false }
-              }
-            } else {
-              const thread = threads.get(threadId)
-              data = {
-                messages: [thread?.original_message, ...allReplies].filter(Boolean),
-                meta: { can_load_more_past: false }
-              }
-            }
-          } else if (threadReadMatch && method === 'PUT') {
-            data = { success: 'OK' }
-          } else if (threadNotificationMatch && method === 'PUT') {
-            const threadId = Number(threadNotificationMatch[1])
-            const parsed = parseBody(body)
-            const notificationLevel = Number(parsed.notification_level)
-            const thread = threads.get(threadId)
-            if (thread?.current_user_membership) {
-              thread.current_user_membership.notification_level = notificationLevel
-            }
-            data = {
-              membership: {
-                ...(thread?.current_user_membership || {}),
-                thread_id: threadId,
-                notification_level: notificationLevel
-              }
-            }
-          } else if (threadShowMatch && method === 'PUT') {
-            const threadId = Number(threadShowMatch[1])
-            const parsed = parseBody(body)
-            const thread = threads.get(threadId)
-            if (!(globalThis as any).__threadTitleUpdateAllowed) {
-              ok = false
-              status = 403
-              data = { errors: ['没有编辑消息串标题的权限'] }
-            } else if (!thread) {
-              ok = false
-              status = 404
-              data = { errors: ['消息串不存在'] }
-            } else if (String(parsed.title || '').length > 100) {
-              ok = false
-              status = 400
-              data = { errors: ['标题不能超过 100 个字符'] }
-            } else {
-              thread.title = String(parsed.title || '')
+            } else if (threadReadMatch && method === 'PUT') {
               data = { success: 'OK' }
+            } else if (threadNotificationMatch && method === 'PUT') {
+              const threadId = Number(threadNotificationMatch[1])
+              const parsed = parseBody(body)
+              const notificationLevel = Number(parsed.notification_level)
+              const thread = threads.get(threadId)
+              if (thread?.current_user_membership) {
+                thread.current_user_membership.notification_level = notificationLevel
+              }
+              data = {
+                membership: {
+                  ...(thread?.current_user_membership || {}),
+                  thread_id: threadId,
+                  notification_level: notificationLevel
+                }
+              }
+            } else if (threadShowMatch && method === 'PUT') {
+              const threadId = Number(threadShowMatch[1])
+              const parsed = parseBody(body)
+              const thread = threads.get(threadId)
+              if (!(globalThis as any).__threadTitleUpdateAllowed) {
+                ok = false
+                status = 403
+                data = { errors: ['没有编辑消息串标题的权限'] }
+              } else if (!thread) {
+                ok = false
+                status = 404
+                data = { errors: ['消息串不存在'] }
+              } else if (String(parsed.title || '').length > 100) {
+                ok = false
+                status = 400
+                data = { errors: ['标题不能超过 100 个字符'] }
+              } else {
+                thread.title = String(parsed.title || '')
+                data = { success: 'OK' }
+              }
+            } else if (threadShowMatch && method === 'GET') {
+              const thread = threads.get(Number(threadShowMatch[1]))
+              if (thread) {
+                data = { thread }
+              } else {
+                ok = false
+                status = 404
+                data = { errors: ['消息串不存在'] }
+              }
+            } else if (url.endsWith('/chat/api/channels/7/threads') && method === 'POST') {
+              const parsed = parseBody(body)
+              const originalMessageId = Number(parsed.original_message_id)
+              const originalMessage = mainMessages.find(message => message.id === originalMessageId)
+              const thread = {
+                id: nextThreadId++,
+                title: null,
+                status: 'open',
+                channel_id: 7,
+                reply_count: 0,
+                last_message_id: originalMessageId,
+                original_message: { ...originalMessage },
+                preview: { reply_count: 0, participant_users: [] }
+              }
+              threads.set(thread.id, thread)
+              replies.set(thread.id, [])
+              if (originalMessage) {
+                originalMessage.thread_id = thread.id
+                originalMessage.thread = thread
+              }
+              data = thread
+            } else if (/\/chat\/api\/channels\/7\/messages(?:\?|$)/.test(url)) {
+              data = { messages: mainMessages, meta: { can_load_more_past: false } }
+            } else if (/\/chat\/7(?:\.json)?$/.test(url) && method === 'POST') {
+              const parsed = parseBody(body)
+              const threadId = Number(parsed.thread_id || 0)
+              const created = {
+                id: nextMessageId++,
+                message: parsed.message,
+                cooked: `<p>${parsed.message}</p>`,
+                created_at: new Date().toISOString(),
+                chat_channel_id: 7,
+                ...(threadId ? { thread_id: threadId } : {}),
+                ...(parsed.in_reply_to_id
+                  ? {
+                      in_reply_to: [...mainMessages, ...(replies.get(threadId) || [])].find(
+                        message => message.id === Number(parsed.in_reply_to_id)
+                      )
+                    }
+                  : {}),
+                user: steve,
+                reactions: [],
+                blocks: []
+              }
+              if (threadId) {
+                replies.get(threadId)?.push(created)
+              } else {
+                mainMessages.push(created)
+              }
+              data = { chat_message: created, message_id: created.id }
+            } else if (/\/chat\/7\/react\/\d+(?:\.json)?$/.test(url) && method === 'PUT') {
+              data = { success: 'OK' }
+            } else if (url.includes('/latest')) {
+              data = { topic_list: { topics: [] } }
+            } else if (url.includes('/categories')) {
+              data = { category_list: { categories: [] } }
             }
-          } else if (threadShowMatch && method === 'GET') {
-            const thread = threads.get(Number(threadShowMatch[1]))
-            if (thread) {
-              data = { thread }
-            } else {
-              ok = false
-              status = 404
-              data = { errors: ['消息串不存在'] }
-            }
-          } else if (url.endsWith('/chat/api/channels/7/threads') && method === 'POST') {
-            const parsed = parseBody(body)
-            const originalMessageId = Number(parsed.original_message_id)
-            const originalMessage = mainMessages.find(message => message.id === originalMessageId)
-            const thread = {
-              id: nextThreadId++,
-              title: null,
-              status: 'open',
-              channel_id: 7,
-              reply_count: 0,
-              last_message_id: originalMessageId,
-              original_message: { ...originalMessage },
-              preview: { reply_count: 0, participant_users: [] }
-            }
-            threads.set(thread.id, thread)
-            replies.set(thread.id, [])
-            if (originalMessage) {
-              originalMessage.thread_id = thread.id
-              originalMessage.thread = thread
-            }
-            data = thread
-          } else if (/\/chat\/api\/channels\/7\/messages(?:\?|$)/.test(url)) {
-            data = { messages: mainMessages, meta: { can_load_more_past: false } }
-          } else if (/\/chat\/7(?:\.json)?$/.test(url) && method === 'POST') {
-            const parsed = parseBody(body)
-            const threadId = Number(parsed.thread_id || 0)
-            const created = {
-              id: nextMessageId++,
-              message: parsed.message,
-              cooked: `<p>${parsed.message}</p>`,
-              created_at: new Date().toISOString(),
-              chat_channel_id: 7,
-              ...(threadId ? { thread_id: threadId } : {}),
-              ...(parsed.in_reply_to_id
-                ? {
-                    in_reply_to: [...mainMessages, ...(replies.get(threadId) || [])].find(
-                      message => message.id === Number(parsed.in_reply_to_id)
-                    )
-                  }
-                : {}),
-              user: steve,
-              reactions: [],
-              blocks: []
-            }
-            if (threadId) {
-              replies.get(threadId)?.push(created)
-            } else {
-              mainMessages.push(created)
-            }
-            data = { chat_message: created, message_id: created.id }
-          } else if (/\/chat\/7\/react\/\d+(?:\.json)?$/.test(url) && method === 'PUT') {
-            data = { success: 'OK' }
-          } else if (url.includes('/latest')) {
-            data = { topic_list: { topics: [] }, users: [] }
-          } else if (url.includes('/categories')) {
-            data = { category_list: { categories: [] } }
           }
 
           queueMicrotask(() => callback({ success: true, data: { status, ok, data } }))
@@ -556,6 +615,15 @@ test.describe('Discourse chat message threads', () => {
     await picker.getByRole('button', { name: ':party_blob:' }).click()
     await expect(targetMessage.getByTitle('party_blob')).toBeVisible()
 
+    const [messageBox, persistedReactionBox] = await Promise.all([
+      targetMessage.boundingBox(),
+      targetMessage.locator('.chat-message-reaction').boundingBox()
+    ])
+    expect(messageBox).not.toBeNull()
+    expect(persistedReactionBox).not.toBeNull()
+    expect(persistedReactionBox!.x).toBeGreaterThan(contentBox!.x + contentBox!.width)
+    expect(messageBox!.height).toBe(before!.height)
+
     const reactionRequest = await page.evaluate(() =>
       (globalThis as any).__chatThreadRequests.find(
         (request: any) =>
@@ -566,6 +634,115 @@ test.describe('Discourse chat message threads', () => {
     )
     expect(reactionRequest).toBeTruthy()
     expect(new URLSearchParams(reactionRequest.body).get('react_action')).toBe('add')
+
+    await page.getByRole('textbox', { name: '输入消息，回车发送' }).fill('自己的右侧反应消息')
+    await page.getByRole('button', { name: '发送', exact: true }).click()
+    const ownMessage = page.locator('.chat-message-item.chat-message-own').filter({
+      hasText: '自己的右侧反应消息'
+    })
+    await expect(ownMessage).toBeVisible()
+    const ownContent = ownMessage.locator('.chat-message-content')
+    const ownBefore = await ownMessage.boundingBox()
+    await ownMessage.hover()
+    const ownAddReaction = ownMessage.getByRole('button', { name: '添加消息反应' })
+    await expect(ownAddReaction).toBeVisible()
+    const [ownContentBox, ownReactionBox, ownAfter] = await Promise.all([
+      ownContent.boundingBox(),
+      ownAddReaction.boundingBox(),
+      ownMessage.boundingBox()
+    ])
+    expect(ownContentBox).not.toBeNull()
+    expect(ownReactionBox).not.toBeNull()
+    expect(ownBefore).not.toBeNull()
+    expect(ownAfter).not.toBeNull()
+    expect(ownReactionBox!.x).toBeGreaterThan(ownContentBox!.x + ownContentBox!.width)
+    expect(ownAfter!.height).toBe(ownBefore!.height)
+  })
+
+  test('lists pins, jumps to a pin, and pins or unpins messages through official endpoints', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    await page.getByRole('button', { name: /查看置顶消息/ }).click()
+    const pinsPanel = page.getByRole('region', { name: '频道置顶消息：产品交流' })
+    await expect(pinsPanel).toBeVisible()
+    await expect(pinsPanel.getByText('这个发布方案怎么样？', { exact: true })).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some(
+            (request: any) =>
+              request.url.endsWith('/chat/api/channels/7/pins') && request.method === 'GET'
+          )
+        )
+      )
+      .toBe(true)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some(
+            (request: any) =>
+              request.url.endsWith('/chat/api/channels/7/pins/read') && request.method === 'PUT'
+          )
+        )
+      )
+      .toBe(true)
+
+    await pinsPanel.locator('.chat-pinned-messages-panel__item').first().click()
+    await expect(pinsPanel).toHaveCount(0)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some(
+            (request: any) =>
+              request.url.includes('/chat/api/channels/7/messages') &&
+              new URL(request.url).searchParams.get('target_message_id') === '100'
+          )
+        )
+      )
+      .toBe(true)
+
+    const targetMessage = page.locator('.chat-message-item').filter({
+      hasText: '还没有消息串的消息'
+    })
+    await targetMessage.hover()
+    await targetMessage.getByRole('button', { name: '更多消息操作' }).click()
+    const actions = page.getByRole('menu', { name: '消息操作' })
+    await actions.getByRole('menuitem', { name: '置顶消息' }).click()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some(
+            (request: any) =>
+              request.url.endsWith('/chat/api/channels/7/messages/110/pin') &&
+              request.method === 'POST'
+          )
+        )
+      )
+      .toBe(true)
+
+    await page.getByRole('button', { name: /查看置顶消息/ }).click()
+    await expect(pinsPanel.getByText('还没有消息串的消息', { exact: true })).toBeVisible()
+    await pinsPanel.getByRole('button', { name: '关闭置顶消息' }).click()
+
+    await targetMessage.hover()
+    await targetMessage.getByRole('button', { name: '更多消息操作' }).click()
+    await page
+      .getByRole('menu', { name: '消息操作' })
+      .getByRole('menuitem', { name: '取消置顶' })
+      .click()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some(
+            (request: any) =>
+              request.url.endsWith('/chat/api/channels/7/messages/110/pin') &&
+              request.method === 'DELETE'
+          )
+        )
+      )
+      .toBe(true)
   })
 
   test('opens, paginates and replies inside an official Discourse thread without refreshing', async ({

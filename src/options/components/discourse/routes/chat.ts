@@ -10,6 +10,7 @@ import type {
   ChatMember,
   ChatMembershipUpdatePayload,
   ChatMessage,
+  ChatPinnedMessage,
   ChatSearchSort,
   ChatThread,
   ChatThreadTracking,
@@ -137,6 +138,16 @@ const CHAT_MESSAGE_DELETE_ENDPOINTS = (channelId: number, messageId: number) => 
 ]
 
 const CHAT_MESSAGE_FLAG_ENDPOINTS = () => [`/chat/api/chat_messages/flags`]
+
+const CHAT_CHANNEL_PINS_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}/pins`]
+
+const CHAT_CHANNEL_PINS_READ_ENDPOINTS = (channelId: number) => [
+  `/chat/api/channels/${channelId}/pins/read`
+]
+
+const CHAT_MESSAGE_PIN_ENDPOINTS = (channelId: number, messageId: number) => [
+  `/chat/api/channels/${channelId}/messages/${messageId}/pin`
+]
 
 const buildUrlWithQuery = (baseUrl: string, path: string, params?: URLSearchParams) => {
   const query = params && params.toString() ? `?${params.toString()}` : ''
@@ -339,6 +350,38 @@ const extractChatMessages = (data: any): { messages: ChatMessage[]; hasMore: boo
   return { messages, hasMore }
 }
 
+const extractChatPinnedMessages = (
+  data: any
+): { pins: ChatPinnedMessage[]; membership: Record<string, any> } => {
+  const rawPins: any[] = Array.isArray(data?.pinned_messages)
+    ? data.pinned_messages
+    : Array.isArray(data?.pins)
+      ? data.pins
+      : []
+  const seen = new Set<number>()
+  const pins = rawPins.reduce((result: ChatPinnedMessage[], value: any) => {
+    const messagePayload = value?.message || value?.chat_message || null
+    const message =
+      messagePayload && typeof messagePayload.id === 'number'
+        ? normalizeSingleMessage(messagePayload)
+        : undefined
+    const messageId = Number(value?.chat_message_id || message?.id || 0)
+    if (!Number.isFinite(messageId) || messageId <= 0 || seen.has(messageId)) return result
+    seen.add(messageId)
+    result.push({
+      id: Number(value?.id || messageId),
+      chat_message_id: messageId,
+      pinned_at: typeof value?.pinned_at === 'string' ? value.pinned_at : undefined,
+      excerpt: typeof value?.excerpt === 'string' ? value.excerpt : undefined,
+      pinned_by:
+        value?.pinned_by && typeof value.pinned_by === 'object' ? value.pinned_by : undefined,
+      message
+    })
+    return result
+  }, [] as ChatPinnedMessage[])
+  return { pins, membership: extractMembershipPayload(data) }
+}
+
 export const dedupeMessagesById = (messages: ChatMessage[]): ChatMessage[] => {
   const byId = new Map<number, ChatMessage>()
   messages.forEach(message => {
@@ -396,6 +439,10 @@ const ensureChatState = (tab: BrowserTab) => {
       channelThreadsLoadingByChannel: {},
       channelThreadsLoadingMoreByChannel: {},
       channelThreadsErrorByChannel: {},
+      pinnedMessagesByChannel: {},
+      pinsLoadingByChannel: {},
+      pinsErrorByChannel: {},
+      pinSavingByMessageId: {},
       loadingChannels: false,
       loadingMessages: false,
       loadingThread: false,
@@ -471,6 +518,10 @@ const ensureChatState = (tab: BrowserTab) => {
   tab.chatState.channelThreadsLoadingByChannel ??= {}
   tab.chatState.channelThreadsLoadingMoreByChannel ??= {}
   tab.chatState.channelThreadsErrorByChannel ??= {}
+  tab.chatState.pinnedMessagesByChannel ??= {}
+  tab.chatState.pinsLoadingByChannel ??= {}
+  tab.chatState.pinsErrorByChannel ??= {}
+  tab.chatState.pinSavingByMessageId ??= {}
   tab.chatState.loadingThread ??= false
   tab.chatState.sendingThreadMessage ??= false
   tab.chatState.threadErrorMessage ??= ''
@@ -650,6 +701,58 @@ const fetchChatMessages = async (
   }
 
   throw new Error(lastError || '加载聊天消息失败')
+}
+
+const fetchChatChannelPins = async (baseUrl: string, channelId: number) => {
+  let lastError: string | null = null
+  for (const path of CHAT_CHANNEL_PINS_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`)
+      const data = extractData(result)
+      if (result.ok) return extractChatPinnedMessages(data)
+      lastError = parseErrorMessage(data, '加载置顶消息失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  throw new Error(lastError || '加载置顶消息失败')
+}
+
+const markChatChannelPinsRead = async (baseUrl: string, channelId: number) => {
+  let lastError: string | null = null
+  for (const path of CHAT_CHANNEL_PINS_READ_ENDPOINTS(channelId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`, { method: 'PUT' })
+      const data = extractData(result)
+      if (result.ok) return true
+      lastError = parseErrorMessage(data, '标记置顶消息已读失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  throw new Error(lastError || '标记置顶消息已读失败')
+}
+
+const updateChatMessagePin = async (
+  baseUrl: string,
+  channelId: number,
+  messageId: number,
+  pinned: boolean
+) => {
+  let lastError: string | null = null
+  for (const path of CHAT_MESSAGE_PIN_ENDPOINTS(channelId, messageId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl}${path}`, {
+        method: pinned ? 'POST' : 'DELETE'
+      })
+      const data = extractData(result)
+      if (result.ok) return true
+      lastError = parseErrorMessage(data, pinned ? '置顶消息失败' : '取消置顶消息失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+  }
+  throw new Error(lastError || (pinned ? '置顶消息失败' : '取消置顶消息失败'))
 }
 
 const fetchChatThread = async (baseUrl: string, channelId: number, threadId: number) => {
@@ -1556,6 +1659,118 @@ export async function loadChatMessages(
     state.errorMessage = error instanceof Error ? error.message : String(error)
   } finally {
     state.loadingMessages = false
+  }
+}
+
+export async function loadChatChannelPins(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  markRead = true
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return []
+  if (state.pinsLoadingByChannel[channelId]) return state.pinnedMessagesByChannel[channelId] || []
+
+  state.pinsLoadingByChannel[channelId] = true
+  state.pinsErrorByChannel[channelId] = ''
+  try {
+    const { pins, membership } = await fetchChatChannelPins(baseUrl.value, channelId)
+    state.pinnedMessagesByChannel[channelId] = pins
+    registerMessageUsers(
+      users,
+      pins.flatMap(pin => (pin.message ? [pin.message] : []))
+    )
+    pins.forEach(pin => {
+      if (pin.pinned_by?.id && pin.pinned_by.username) {
+        users.value.set(pin.pinned_by.id, pin.pinned_by)
+      }
+    })
+
+    const channel = state.channels.find(item => item.id === channelId)
+    if (channel) {
+      channel.pinned_messages_count = pins.length
+      if (Object.keys(membership).length > 0) {
+        channel.current_user_membership = {
+          ...(channel.current_user_membership || { chat_channel_id: channelId }),
+          ...membership
+        }
+      }
+    }
+
+    if (markRead) {
+      try {
+        await markChatChannelPinsRead(baseUrl.value, channelId)
+        if (channel?.current_user_membership) {
+          channel.current_user_membership.has_unseen_pins = false
+          channel.current_user_membership.last_viewed_pins_at = new Date().toISOString()
+        }
+      } catch (error) {
+        // The pins themselves remain usable when a legacy server lacks the
+        // optional read endpoint; do not turn a successful list into an error.
+        console.warn('[DiscourseBrowser] mark chat pins read failed:', error)
+      }
+    }
+    return pins
+  } catch (error) {
+    state.pinsErrorByChannel[channelId] = error instanceof Error ? error.message : String(error)
+    return state.pinnedMessagesByChannel[channelId] || []
+  } finally {
+    state.pinsLoadingByChannel[channelId] = false
+  }
+}
+
+export async function toggleChatMessagePin(
+  tab: BrowserTab,
+  baseUrl: Ref<string>,
+  users: Ref<Map<number, DiscourseUser>>,
+  channelId: number,
+  messageId: number,
+  pinned: boolean
+) {
+  ensureChatState(tab)
+  const state = tab.chatState
+  if (!state) return false
+  const savingKey = `${channelId}:${messageId}`
+  if (state.pinSavingByMessageId[savingKey]) return false
+
+  state.pinSavingByMessageId[savingKey] = true
+  state.errorMessage = ''
+  try {
+    await updateChatMessagePin(baseUrl.value, channelId, messageId, pinned)
+    const current = state.pinnedMessagesByChannel[channelId] || []
+    const targetMessage = [
+      ...(state.messagesByChannel[channelId] || []),
+      ...Object.values(state.threadMessagesById).flat()
+    ].find(message => message.id === messageId)
+    state.pinnedMessagesByChannel[channelId] = pinned
+      ? current.some(pin => pin.chat_message_id === messageId)
+        ? current
+        : [
+            ...current,
+            {
+              id: -messageId,
+              chat_message_id: messageId,
+              pinned_at: new Date().toISOString(),
+              message: targetMessage
+            }
+          ]
+      : current.filter(pin => pin.chat_message_id !== messageId)
+
+    const channel = state.channels.find(item => item.id === channelId)
+    if (channel) channel.pinned_messages_count = state.pinnedMessagesByChannel[channelId].length
+
+    // Refresh the optimistic entry so its authoritative pin id, actor and
+    // excerpt match the server response.
+    await loadChatChannelPins(tab, baseUrl, users, channelId, false)
+    return true
+  } catch (error) {
+    state.errorMessage = error instanceof Error ? error.message : String(error)
+    return false
+  } finally {
+    state.pinSavingByMessageId[savingKey] = false
   }
 }
 

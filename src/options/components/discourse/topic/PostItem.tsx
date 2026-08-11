@@ -241,6 +241,8 @@ export default defineComponent({
     return () => (
       <article
         data-post-number={props.post.post_number}
+        data-topic-id={props.topicId}
+        data-post-username={props.post.username}
         data-discourse-url={`${props.baseUrl}/t/${props.topicId}/${props.post.post_number}`}
         class={['post-item', props.isHighlighted ? 'post-item--highlighted' : '']}
       >

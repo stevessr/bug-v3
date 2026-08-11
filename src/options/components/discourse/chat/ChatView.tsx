@@ -3,6 +3,7 @@ import {
   CommentOutlined,
   CompassOutlined,
   PlusOutlined,
+  PushpinOutlined,
   SearchOutlined,
   SettingOutlined,
   UserAddOutlined
@@ -20,6 +21,7 @@ import type {
   DiscourseCategory,
   DiscourseUser
 } from '../types'
+import EmojiTitle from '../layout/EmojiTitle'
 
 import ChatChannelList, { type ChatChannelListFilter } from './ChatChannelList'
 import ChatSubTabs, { type ChatSidebarTab } from './ChatSubTabs'
@@ -32,6 +34,7 @@ import ChatCreateChannelModal from './ChatCreateChannelModal'
 import ChatChannelManageModal from './ChatChannelManageModal'
 import ChatThreadPanel from './ChatThreadPanel'
 import ChatChannelThreadsPanel from './ChatChannelThreadsPanel'
+import ChatPinnedMessagesPanel from './ChatPinnedMessagesPanel'
 import ChatSearchPanel from './ChatSearchPanel'
 import '../css/chat/ChatView.css'
 
@@ -74,6 +77,9 @@ export default defineComponent({
     'loadMoreMyThreads',
     'loadChannelThreads',
     'loadMoreChannelThreads',
+    'loadPins',
+    'pinMessage',
+    'openPinnedMessage',
     'searchMessages',
     'loadMoreSearch',
     'updateThreadNotification',
@@ -120,6 +126,7 @@ export default defineComponent({
     const showCreateChannel = ref(false)
     const showManage = ref(false)
     const showChannelThreads = ref(false)
+    const showPins = ref(false)
     const showSearch = ref(false)
     const showDiscover = ref(false)
     const sidebarTab = ref<ChatSidebarTab>(props.initialSidebarTab)
@@ -191,6 +198,7 @@ export default defineComponent({
         }
         if (previousChannelId && channelId !== previousChannelId) {
           showChannelThreads.value = false
+          showPins.value = false
           showSearch.value = false
           showDiscover.value = false
         }
@@ -206,6 +214,7 @@ export default defineComponent({
       threadId => {
         if (threadId) {
           showChannelThreads.value = false
+          showPins.value = false
           showSearch.value = false
           showDiscover.value = false
         }
@@ -291,6 +300,43 @@ export default defineComponent({
       )
     })
 
+    const activePinnedMessages = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      return channelId ? props.chatState.pinnedMessagesByChannel?.[channelId] || [] : []
+    })
+
+    const activePinnedMessageIds = computed(() =>
+      activePinnedMessages.value.map(pin => pin.chat_message_id)
+    )
+
+    const activePinSavingByMessageId = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return {}
+      const prefix = `${channelId}:`
+      return Object.entries(props.chatState.pinSavingByMessageId || {}).reduce<
+        Record<number, boolean>
+      >((result, [key, saving]) => {
+        if (!key.startsWith(prefix) || !saving) return result
+        const messageId = Number(key.slice(prefix.length))
+        if (Number.isFinite(messageId) && messageId > 0) result[messageId] = true
+        return result
+      }, {})
+    })
+
+    const canManageActivePins = computed(() =>
+      Boolean(activeChannel.value?.meta?.can_manage_pins || activeChannel.value?.meta?.can_moderate)
+    )
+
+    const activePinsLoading = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      return channelId ? Boolean(props.chatState.pinsLoadingByChannel?.[channelId]) : false
+    })
+
+    const activePinsError = computed(() => {
+      const channelId = props.chatState.activeChannelId
+      return channelId ? props.chatState.pinsErrorByChannel?.[channelId] || '' : ''
+    })
+
     const activeTypingUsers = computed(() => {
       const channelId = props.chatState.activeChannelId
       if (!channelId) return []
@@ -369,6 +415,23 @@ export default defineComponent({
     const handleOpenThread = (message: ChatMessage) => {
       showChannelThreads.value = false
       emit('openThread', message)
+    }
+
+    const handleOpenPins = () => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return
+      showChannelThreads.value = false
+      showSearch.value = false
+      showDiscover.value = false
+      emit('closeThread')
+      showPins.value = true
+      emit('loadPins', channelId)
+    }
+
+    const handlePinMessage = (payload: { messageId: number; pinned: boolean }) => {
+      const channelId = props.chatState.activeChannelId
+      if (!channelId) return
+      emit('pinMessage', { channelId, ...payload })
     }
 
     const handleSelectChannelThread = (thread: ChatThread) => {
@@ -529,7 +592,11 @@ export default defineComponent({
         <div class="chat-main">
           <div class="chat-main-header">
             <div class="chat-main-title">
-              <span class="chat-main-title__text">{activeChannelTitle.value}</span>
+              <EmojiTitle
+                className="chat-main-title__text"
+                text={activeChannelTitle.value}
+                baseUrl={props.baseUrl}
+              />
             </div>
             <div class="chat-main-actions">
               {activeChannel.value && (
@@ -564,6 +631,30 @@ export default defineComponent({
                   {activeChannelThreadUnreadCount.value > 0 && (
                     <span class="chat-main-action-btn__badge">
                       {activeChannelThreadUnreadCount.value}
+                    </span>
+                  )}
+                </button>
+              )}
+              {activeChannel.value && (
+                <button
+                  type="button"
+                  class={[
+                    'chat-main-action-btn',
+                    activeChannel.value.current_user_membership?.has_unseen_pins ? 'has-unread' : ''
+                  ]}
+                  aria-label={
+                    activeChannel.value.current_user_membership?.has_unseen_pins
+                      ? `查看置顶消息，有未读置顶`
+                      : '查看置顶消息'
+                  }
+                  title="查看置顶消息"
+                  onClick={handleOpenPins}
+                >
+                  <PushpinOutlined />
+                  <span>置顶</span>
+                  {Number(activeChannel.value.pinned_messages_count || 0) > 0 && (
+                    <span class="chat-main-action-btn__badge">
+                      {activeChannel.value.pinned_messages_count}
                     </span>
                   )}
                 </button>
@@ -622,6 +713,9 @@ export default defineComponent({
               hasMore={hasMore.value}
               targetMessageId={props.chatState.activeTargetMessageId ?? undefined}
               threadingEnabled={Boolean(activeChannel.value?.threading_enabled)}
+              canManagePins={canManageActivePins.value}
+              pinnedMessageIds={activePinnedMessageIds.value}
+              pinSavingByMessageId={activePinSavingByMessageId.value}
               onLoadMore={handleLoadMore}
               onNavigate={handleNavigate}
               onReact={handleReact}
@@ -631,6 +725,7 @@ export default defineComponent({
               onEdit={handleEditMessage}
               onDelete={handleDeleteMessage}
               onFlag={handleFlagMessage}
+              onPin={handlePinMessage}
             />
           ) : (
             <div class="chat-empty">请选择一个频道开始聊天</div>
@@ -688,6 +783,24 @@ export default defineComponent({
               onSelect={handleSelectChannelThread}
             />
           )}
+          {showPins.value && activeChannel.value && (
+            <ChatPinnedMessagesPanel
+              channel={activeChannel.value}
+              pins={activePinnedMessages.value}
+              loading={activePinsLoading.value}
+              errorMessage={activePinsError.value}
+              baseUrl={props.baseUrl}
+              onClose={() => (showPins.value = false)}
+              onLoad={(channelId: number) => emit('loadPins', channelId)}
+              onOpen={(messageId: number) => {
+                showPins.value = false
+                emit('openPinnedMessage', {
+                  channelId: activeChannel.value?.id,
+                  messageId
+                })
+              }}
+            />
+          )}
           {props.chatState.activeThread && activeChannel.value && (
             <ChatThreadPanel
               thread={props.chatState.activeThread}
@@ -709,6 +822,9 @@ export default defineComponent({
               titleSaving={Boolean(
                 props.chatState.threadTitleSavingById[props.chatState.activeThread.id]
               )}
+              canManagePins={canManageActivePins.value}
+              pinnedMessageIds={activePinnedMessageIds.value}
+              pinSavingByMessageId={activePinSavingByMessageId.value}
               onClose={() => emit('closeThread')}
               onLoadMore={(threadId: number) => emit('loadMoreThread', threadId)}
               onSend={(message: string) =>
@@ -739,6 +855,7 @@ export default defineComponent({
               }
               onDelete={handleDeleteMessage}
               onFlag={handleFlagMessage}
+              onPin={handlePinMessage}
               onUploadStart={() => emit('uploadStart')}
               onUploadEnd={() => emit('uploadEnd')}
             />

@@ -55,6 +55,82 @@ const createElement = (
   }
 }
 
+const hasQuoteControlClass = (node: Element) =>
+  hasClass(node, 'quote-controls') || hasClass(node, 'quote-jump') || hasClass(node, 'quote-toggle')
+
+const removeElement = (root: Parent, target: Element): boolean => {
+  for (let index = 0; index < root.children.length; index += 1) {
+    const child = root.children[index] as Node
+    if (child === target) {
+      root.children.splice(index, 1)
+      return true
+    }
+    if (isParent(child) && removeElement(child, target)) return true
+  }
+  return false
+}
+
+/**
+ * Discourse normally supplies these controls in cooked post HTML, but compact
+ * payloads and the local BBCode renderer can omit them. Normalize the markup
+ * here so every quote gets an explicit target jump and full-post expansion
+ * control. Event handling stays delegated in PostContent; no executable
+ * attributes are introduced into cooked HTML.
+ */
+const ensureQuoteControls = (quote: Element) => {
+  const topicId = getPropString(quote, 'data-topic')
+  const postNumber = getPropString(quote, 'data-post')
+  if (!topicId || !postNumber) return
+
+  let title = findFirst(quote, el => hasClass(el, 'title'))
+  const blockquote = findFirst(quote, el => el.tagName === 'blockquote')
+  if (!title) {
+    title = createElement('div', { className: ['title'] })
+    const targetIndex = blockquote ? quote.children.indexOf(blockquote) : quote.children.length
+    quote.children.splice(Math.max(0, targetIndex), 0, title)
+  }
+
+  const existingControls = findFirst(quote, hasQuoteControlClass)
+  if (existingControls) removeElement(quote, existingControls)
+
+  const controls = createElement('div', {
+    className: ['quote-controls'],
+    'data-quote-controls': 'true'
+  })
+  controls.children.push(
+    createElement(
+      'button',
+      {
+        type: 'button',
+        className: ['quote-jump'],
+        ariaLabel: `跳转到引用的第 ${postNumber} 楼`,
+        title: '跳转到引用楼层'
+      },
+      [
+        createElement('span', { className: ['quote-control-icon'], ariaHidden: 'true' }, [
+          { type: 'text', value: '↑' }
+        ])
+      ]
+    ),
+    createElement(
+      'button',
+      {
+        type: 'button',
+        className: ['quote-toggle'],
+        ariaLabel: '展开完整引用',
+        ariaExpanded: 'false',
+        title: '展开完整引用'
+      },
+      [
+        createElement('span', { className: ['quote-control-icon'], ariaHidden: 'true' }, [
+          { type: 'text', value: '⌄' }
+        ])
+      ]
+    )
+  )
+  title.children.push(controls)
+}
+
 const createImageElement = (image: ReturnType<typeof buildLightbox>, className: string) => {
   if (!image) return null
   const properties: Properties = {
@@ -253,6 +329,8 @@ export const transformQuotes = (root: Node, ctx: ParseContext) => {
   traverse(root, (node, _parent, _index, ancestors) => {
     if (!isElement(node)) return
     if (!hasClass(node, 'quote')) return
+
+    ensureQuoteControls(node)
 
     const title = findFirst(node, el => hasClass(el, 'title'))
     if (title) {

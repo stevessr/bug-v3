@@ -1,5 +1,6 @@
 import { Teleport, defineComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import {
+  CommentOutlined,
   CopyOutlined,
   ExportOutlined,
   LinkOutlined,
@@ -16,6 +17,7 @@ export default defineComponent({
     y: { type: Number, default: 0 },
     url: { type: String, default: '' },
     selectedText: { type: String, default: '' },
+    quoteText: { type: String, default: '' },
     targetType: { type: String as () => 'link' | 'image' | 'text', default: 'link' }
   },
   emits: [
@@ -25,7 +27,9 @@ export default defineComponent({
     'openBrowserTab',
     'copy',
     'copyText',
-    'copyImage'
+    'copyImage',
+    'quote',
+    'copyQuote'
   ],
   setup(props, { emit }) {
     const menuRef = ref<HTMLElement | null>(null)
@@ -78,7 +82,14 @@ export default defineComponent({
 
     const run = (
       eventName:
-        'openCurrent' | 'openForumTab' | 'openBrowserTab' | 'copy' | 'copyText' | 'copyImage'
+        | 'openCurrent'
+        | 'openForumTab'
+        | 'openBrowserTab'
+        | 'copy'
+        | 'copyText'
+        | 'copyImage'
+        | 'quote'
+        | 'copyQuote'
     ) => {
       emit(eventName)
       emit('close')
@@ -107,6 +118,18 @@ export default defineComponent({
                   <CopyOutlined />
                   <span>复制选中文字</span>
                 </button>
+                {props.quoteText ? (
+                  <>
+                    <button type="button" role="menuitem" onClick={() => run('quote')}>
+                      <CommentOutlined />
+                      <span>引用到回复</span>
+                    </button>
+                    <button type="button" role="menuitem" onClick={() => run('copyQuote')}>
+                      <CopyOutlined />
+                      <span>复制引用</span>
+                    </button>
+                  </>
+                ) : null}
               </>
             ) : null}
             {props.url ? (

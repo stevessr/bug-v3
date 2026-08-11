@@ -937,6 +937,39 @@
   font-weight: 680;
 }
 
+.topic-extras__body {
+  position: relative;
+  min-width: 0;
+}
+
+.topic-extras__panel {
+  min-width: 0;
+}
+
+.topic-extras-switch-enter-active,
+.topic-extras-switch-leave-active {
+  transition:
+    opacity var(--d-motion-medium, 220ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-medium, 220ms) var(--d-motion-standard, ease);
+}
+
+.topic-extras-switch-enter-from {
+  opacity: 0;
+  transform: translateX(10px) scale(0.99);
+}
+
+.topic-extras-switch-leave-to {
+  opacity: 0;
+  transform: translateX(-8px) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-extras-switch-enter-active,
+  .topic-extras-switch-leave-active {
+    transition: none;
+  }
+}
+
 @media (max-width: 1100px) {
   .topic-aside {
     display: none;

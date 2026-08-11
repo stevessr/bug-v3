@@ -332,10 +332,11 @@ function renderTag(tag: string, attr: string, content: string): string {
     }
 
     case 'quote': {
-      // [quote="作者, post:1, topic:2"] 或 [quote]
+      // [quote="作者, post:1, topic:2, username:foo"] 或 [quote]
       let author = ''
       let post = ''
       let topic = ''
+      let username = ''
       if (attr) {
         const clean = unquote(attr)
         const parts = clean.split(',').map(p => p.trim())
@@ -345,13 +346,22 @@ function renderTag(tag: string, attr: string, content: string): string {
           if (pm) post = pm[1]
           const tm = /^topic:(\d+)$/i.exec(p)
           if (tm) topic = tm[1]
+          const um = /^username:(.+)$/i.exec(p)
+          if (um) username = um[1].trim()
         }
       }
-      const dataAttrs = [post ? `data-post="${post}"` : '', topic ? `data-topic="${topic}"` : '']
+      const dataAttrs = [
+        post ? `data-post="${post}"` : '',
+        topic ? `data-topic="${topic}"` : '',
+        username ? `data-quote-username="${escapeAttr(username)}"` : ''
+      ]
         .filter(Boolean)
         .join(' ')
-      const title = author ? `<div class="title">${escapeHtml(author)}</div>` : ''
-      return `<aside class="quote"${dataAttrs ? ` ${dataAttrs}` : ''}><div class="quote-controls"></div>${title}<blockquote>${content}</blockquote></aside>`
+      const label = author || username
+      const title = label
+        ? `<div class="title"><span class="quote-title__text-content">${escapeHtml(label)}</span><div class="quote-controls"></div></div>`
+        : '<div class="title"><div class="quote-controls"></div></div>'
+      return `<aside class="quote"${dataAttrs ? ` ${dataAttrs}` : ''}>${title}<blockquote>${content}</blockquote></aside>`
     }
 
     case 'list': {

@@ -217,16 +217,25 @@
   background: rgba(15, 23, 42, 0.5);
 }
 
-.post-content .emoji {
+/* Emoji shortcodes are inline glyphs, not standalone media. Keeping them an
+ * atomic inline box prevents a text node and its adjacent emoji from being
+ * promoted into separate layout rows by generic image/prose rules. */
+.post-content .emoji,
+.post-content img.emoji-inline {
+  display: inline-block;
   width: 1.25em;
+  min-width: 1.25em;
+  max-width: none;
   height: 1.25em;
-  vertical-align: middle;
+  margin: 0 0.035em;
+  object-fit: contain;
+  vertical-align: -0.18em;
+  white-space: nowrap;
 }
 
-.post-content img.emoji-inline {
-  width: 1.25em;
-  height: 1.25em;
-  vertical-align: middle;
+.post-content :is(p, li, blockquote) {
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Quote styles */
@@ -238,7 +247,7 @@
 
 .post-content aside.quote .title {
   display: flex;
-  align-items: start;
+  align-items: center;
   gap: 0.5rem;
   color: var(--primary-high-or-secondary-low, #6b7280);
   padding: 0.8em 0.8em 0 0.8em;
@@ -322,28 +331,62 @@
 .post-content aside.quote .quote-controls {
   display: flex;
   align-items: center;
+  gap: 2px;
   margin-left: auto;
   order: 2;
   min-height: 24px;
-  cursor: pointer;
+  flex: 0 0 auto;
+  color: var(--primary-low-mid-or-secondary-high, #64748b);
   transition: opacity 0.15s ease;
-  color: var(--primary-low-mid-or-secondary-high, #94a3b8);
 }
 
 .post-content aside.quote .quote-controls:hover {
   opacity: 0.8;
 }
 
-.post-content aside.quote .quote-controls a {
-  margin-left: 0.3em;
+.post-content aside.quote .quote-jump,
+.post-content aside.quote .quote-toggle {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 15px;
+  transition:
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
-.post-content aside.quote .quote-toggle {
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 2px 4px;
+.post-content aside.quote .quote-jump:hover,
+.post-content aside.quote .quote-toggle:hover {
+  background: color-mix(in oklab, var(--primary, #3b82f6) 18%, transparent);
+  color: var(--primary, #2563eb);
+}
+
+.post-content aside.quote .quote-jump:focus-visible,
+.post-content aside.quote .quote-toggle:focus-visible {
+  outline: 2px solid var(--primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.post-content aside.quote .quote-jump:active,
+.post-content aside.quote .quote-toggle:active {
+  transform: scale(0.9);
+}
+
+.post-content aside.quote .quote-toggle.is-expanded .quote-control-icon {
+  transform: translateY(-1px);
+}
+
+.post-content aside.quote .quote-control-icon {
+  display: inline-block;
   line-height: 1;
 }
 

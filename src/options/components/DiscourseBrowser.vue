@@ -159,6 +159,9 @@ const {
   sendChat,
   sendChatThread,
   reactToChatMessage,
+  loadChatPins,
+  toggleChatPin,
+  openPinnedChatMessage,
   updateChatChannel,
   replyChatInteraction,
   changeTopicListType,
@@ -229,6 +232,8 @@ const isViewingSelf = computed(
 )
 const composerMode = ref<'reply' | 'topic' | 'edit' | null>(null)
 const replyTarget = ref<{ postNumber: number; username: string } | null>(null)
+const composerInsertion = ref<{ token: number; text: string } | null>(null)
+let composerInsertionToken = 0
 const editTarget = ref<DiscoursePost | null>(null)
 const editInitialRaw = ref('')
 const editOriginalRaw = ref('')
@@ -260,13 +265,29 @@ const pageFetchBaseline = ref({
   completed: initialPageFetchActivity.completed
 })
 let unsubscribePageFetchActivity: (() => void) | null = null
-const contextMenu = ref({
+type SelectedPostQuote = {
+  text: string
+  topicId: number
+  postNumber: number
+  username: string
+}
+type BrowserContextMenuState = {
+  open: boolean
+  x: number
+  y: number
+  url: string
+  selectedText: string
+  targetType: 'link' | 'image' | 'text'
+  quote: SelectedPostQuote | null
+}
+const contextMenu = ref<BrowserContextMenuState>({
   open: false,
   x: 0,
   y: 0,
   url: '',
   selectedText: '',
-  targetType: 'link' as 'link' | 'image' | 'text'
+  targetType: 'link',
+  quote: null
 })
 const userCard = ref<{
   open: boolean
@@ -919,6 +940,39 @@ const closeContextMenu = () => {
   contextMenu.value.open = false
 }
 
+const findSelectedPostQuote = (selection: Selection, fallbackTarget: Element) => {
+  const findSource = (node: Node | null) => {
+    const element = node instanceof Element ? node : node?.parentElement
+    const post = element?.closest<HTMLElement>('[data-post-number][data-topic-id]')
+    if (!post) return null
+    const topicId = Number(post.dataset.topicId || 0)
+    const postNumber = Number(post.dataset.postNumber || 0)
+    if (!Number.isFinite(topicId) || topicId <= 0) return null
+    if (!Number.isFinite(postNumber) || postNumber <= 0) return null
+    return {
+      topicId,
+      postNumber,
+      username: String(post.dataset.postUsername || '').trim()
+    }
+  }
+
+  const selected = selection
+    .toString()
+    .replace(/\u00a0/g, ' ')
+    .trim()
+  if (!selected) return null
+  const anchor = findSource(selection.anchorNode) || findSource(fallbackTarget)
+  const focus = findSource(selection.focusNode)
+  if (!anchor) return null
+  if (focus && (focus.topicId !== anchor.topicId || focus.postNumber !== anchor.postNumber)) {
+    return null
+  }
+  const username = anchor.username || 'unknown'
+  const quoteAuthor = username.replace(/["\\]/g, '\\$&')
+  const text = `[quote="${quoteAuthor}, post:${anchor.postNumber}, topic:${anchor.topicId}, username:${quoteAuthor}"]\n${selected}\n[/quote]`
+  return { text, topicId: anchor.topicId, postNumber: anchor.postNumber, username }
+}
+
 const handleBrowserContextMenu = (event: MouseEvent) => {
   const target = event.target
   if (!(target instanceof Element)) return
@@ -927,7 +981,9 @@ const handleBrowserContextMenu = (event: MouseEvent) => {
   const imageContainer = image?.closest<HTMLElement>('[data-image-url]')
   const anchor = target.closest<HTMLAnchorElement>('a[href]')
   const dataLink = target.closest<HTMLElement>('[data-discourse-url]')
-  const selection = window.getSelection()?.toString().trim() || ''
+  const browserSelection = window.getSelection()
+  const selection = browserSelection?.toString().trim() || ''
+  const quote = browserSelection ? findSelectedPostQuote(browserSelection, target) : null
   const imageRawUrl =
     image?.dataset.imageUrl ||
     image?.dataset.discourseUrl ||
@@ -958,7 +1014,23 @@ const handleBrowserContextMenu = (event: MouseEvent) => {
     y: event.clientY,
     url: resolved || '',
     selectedText: selection,
-    targetType: imageRawUrl && resolved ? 'image' : resolved ? 'link' : 'text'
+    targetType: imageRawUrl && resolved ? 'image' : resolved ? 'link' : 'text',
+    quote
+  }
+}
+
+const writeClipboardText = async (value: string) => {
+  try {
+    await navigator.clipboard.writeText(value)
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = value
+    input.style.position = 'fixed'
+    input.style.opacity = '0'
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    input.remove()
   }
 }
 
@@ -972,37 +1044,38 @@ const openContextUrlInBrowserTab = () => {
 const copyContextUrl = async () => {
   const target = contextMenu.value.url
   if (!target) return
-  try {
-    await navigator.clipboard.writeText(target)
-  } catch {
-    const input = document.createElement('textarea')
-    input.value = target
-    input.style.position = 'fixed'
-    input.style.opacity = '0'
-    document.body.appendChild(input)
-    input.select()
-    document.execCommand('copy')
-    input.remove()
-  }
+  await writeClipboardText(target)
   message.success('链接已复制')
 }
 
 const copyContextSelection = async () => {
   const target = contextMenu.value.selectedText
   if (!target) return
-  try {
-    await navigator.clipboard.writeText(target)
-  } catch {
-    const input = document.createElement('textarea')
-    input.value = target
-    input.style.position = 'fixed'
-    input.style.opacity = '0'
-    document.body.appendChild(input)
-    input.select()
-    document.execCommand('copy')
-    input.remove()
-  }
+  await writeClipboardText(target)
   message.success('选中文字已复制')
+}
+
+const copyContextQuote = async () => {
+  const quote = contextMenu.value.quote
+  if (!quote) return
+  await writeClipboardText(quote.text)
+  message.success('引用已复制')
+}
+
+const insertContextQuote = async () => {
+  const quote = contextMenu.value.quote
+  if (!quote) return
+  replyTarget.value = { postNumber: quote.postNumber, username: quote.username }
+  composerMode.value = 'reply'
+  // Wait for a just-opened composer to mount. The insertion token also works
+  // when the reply panel is already open, where it appends rather than drops
+  // the user's existing draft.
+  await nextTick()
+  composerInsertion.value = {
+    token: ++composerInsertionToken,
+    text: quote.text
+  }
+  message.success('引用已添加到回复面板')
 }
 
 // Handle topic click from user view
@@ -1744,6 +1817,28 @@ const handleReactChatMessage = async (payload: {
   }
 }
 
+const handleLoadChatPins = (channelId: number) => {
+  void loadChatPins(channelId)
+}
+
+const handleToggleChatPin = async (payload: {
+  channelId: number
+  messageId: number
+  pinned: boolean
+}) => {
+  const ok = await toggleChatPin(payload.channelId, payload.messageId, payload.pinned)
+  if (ok) {
+    message.success(payload.pinned ? '消息已置顶' : '已取消置顶消息')
+  } else {
+    message.error(activeTab.value?.chatState?.errorMessage || '更新置顶消息失败')
+  }
+}
+
+const handleOpenPinnedChatMessage = (payload: { channelId?: number; messageId: number }) => {
+  if (!payload.channelId) return
+  void openPinnedChatMessage(payload.channelId, payload.messageId)
+}
+
 const handleEditChatChannel = async (
   payload: {
     channelId: number
@@ -2345,11 +2440,17 @@ const handleUserExtrasTabSwitch = (tab: 'badges' | 'followFeed' | 'following' | 
 }
 
 const toggleTopicComposer = () => {
-  composerMode.value = composerMode.value === 'topic' ? null : 'topic'
+  if (composerMode.value === 'topic') {
+    composerMode.value = null
+    composerInsertion.value = null
+    return
+  }
+  composerMode.value = 'topic'
 }
 
 const handleTopicPosted = (payload: any) => {
   composerMode.value = null
+  composerInsertion.value = null
   const topicId = payload?.topic_id || payload?.topicId
   const slug = payload?.topic_slug || payload?.slug || 'topic'
   if (topicId) {
@@ -2372,6 +2473,7 @@ const handleToggleTopicSummaryMode = (isSummary: boolean) => {
 const handleReplyPosted = () => {
   composerMode.value = null
   replyTarget.value = null
+  composerInsertion.value = null
   refresh()
 }
 
@@ -2379,6 +2481,7 @@ const handleClearReply = () => {
   replyTarget.value = null
   if (composerMode.value === 'reply') {
     composerMode.value = null
+    composerInsertion.value = null
   }
 }
 
@@ -2412,6 +2515,7 @@ const handleEditPosted = (payload: any) => {
   editInitialRaw.value = ''
   editOriginalRaw.value = ''
   composerMode.value = null
+  composerInsertion.value = null
 }
 
 const handleComposerClose = () => {
@@ -2424,6 +2528,7 @@ const handleComposerClose = () => {
     editOriginalRaw.value = ''
   }
   composerMode.value = null
+  composerInsertion.value = null
 }
 
 const floatingStyle = computed(() => {
@@ -3481,6 +3586,9 @@ onUnmounted(() => {
         @loadMoreMyThreads="handleLoadMoreMyChatThreads"
         @loadChannelThreads="handleLoadChatChannelThreads"
         @loadMoreChannelThreads="handleLoadMoreChatChannelThreads"
+        @loadPins="handleLoadChatPins"
+        @pinMessage="handleToggleChatPin"
+        @openPinnedMessage="handleOpenPinnedChatMessage"
         @searchMessages="handleSearchChatMessages"
         @loadMoreSearch="handleLoadMoreChatSearch"
         @updateThreadNotification="handleUpdateChatThreadNotification"
@@ -3712,6 +3820,7 @@ onUnmounted(() => {
     :url="contextMenu.url"
     :selectedText="contextMenu.selectedText"
     :targetType="contextMenu.targetType"
+    :quoteText="contextMenu.quote?.text || ''"
     @close="closeContextMenu"
     @openCurrent="handleContentNavigation(contextMenu.url)"
     @openForumTab="openInNewTab(contextMenu.url)"
@@ -3719,6 +3828,8 @@ onUnmounted(() => {
     @copy="copyContextUrl"
     @copyImage="copyContextUrl"
     @copyText="copyContextSelection"
+    @quote="insertContextQuote"
+    @copyQuote="copyContextQuote"
   />
 
   <UserCard
@@ -3815,6 +3926,9 @@ onUnmounted(() => {
         @loadMoreMyThreads="handleLoadMoreMyChatThreads"
         @loadChannelThreads="handleLoadChatChannelThreads"
         @loadMoreChannelThreads="handleLoadMoreChatChannelThreads"
+        @loadPins="handleLoadChatPins"
+        @pinMessage="handleToggleChatPin"
+        @openPinnedMessage="handleOpenPinnedChatMessage"
         @searchMessages="handleSearchChatMessages"
         @loadMoreSearch="handleLoadMoreChatSearch"
         @updateThreadNotification="handleUpdateChatThreadNotification"
@@ -3883,6 +3997,8 @@ onUnmounted(() => {
     :originalRaw="composerOriginalRaw"
     :replyToPostNumber="composerReplyPostNumber"
     :replyToUsername="composerReplyUsername"
+    :insertText="composerInsertion?.text"
+    :insertToken="composerInsertion?.token"
     :categories="composerCategories"
     :defaultCategoryId="composerDefaultCategoryId"
     :currentCategory="composerCurrentCategory"

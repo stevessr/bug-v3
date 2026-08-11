@@ -12,6 +12,8 @@ type Props = {
   originalRaw?: string | null
   replyToPostNumber?: number | null
   replyToUsername?: string | null
+  insertText?: string | null
+  insertToken?: number | null
   categories: DiscourseCategory[]
   defaultCategoryId?: number | null
   currentCategory?: DiscourseCategory | null
@@ -47,7 +49,9 @@ defineEmits([
                 : '回复编辑器'
           }}
         </span>
-        <button class="floating-close" @click="$emit('close')">×</button>
+        <button class="floating-close" aria-label="关闭回复编辑器" @click="$emit('close')">
+          ×
+        </button>
       </div>
       <div class="floating-body">
         <Composer
@@ -59,6 +63,8 @@ defineEmits([
           :originalRaw="originalRaw ?? undefined"
           :replyToPostNumber="replyToPostNumber ?? undefined"
           :replyToUsername="replyToUsername ?? undefined"
+          :insertText="insertText ?? undefined"
+          :insertToken="insertToken ?? undefined"
           :categories="categories"
           :defaultCategoryId="defaultCategoryId ?? undefined"
           :currentCategory="currentCategory ?? undefined"

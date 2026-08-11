@@ -7,9 +7,9 @@ import type {
   DiscourseUser,
   DiscourseTopicTag
 } from '../types'
-import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import TagPill from '../layout/TagPill'
+import EmojiTitle from '../layout/EmojiTitle'
 import '../css/TopicList.css'
 
 export default defineComponent({
@@ -195,10 +195,13 @@ export default defineComponent({
           >
             <div class="topic-main">
               <div class="topic-title-row">
-                <div
-                  class="topic-title"
-                  innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
-                />
+                <div class="topic-title">
+                  <EmojiTitle
+                    text={topic.fancy_title || topic.title}
+                    baseUrl={props.baseUrl}
+                    html={Boolean(topic.fancy_title)}
+                  />
+                </div>
                 {getUnreadCount(topic) > 0 && (
                   <span class="topic-unread">未读 +{getUnreadCount(topic)}</span>
                 )}

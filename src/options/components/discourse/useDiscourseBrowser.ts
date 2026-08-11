@@ -98,6 +98,8 @@ import {
   updateChatThreadTitle as updateChatThreadTitleRoute,
   sendChatMessage,
   toggleChatMessageReaction,
+  loadChatChannelPins,
+  toggleChatMessagePin,
   updateChatChannel as updateChatChannelRoute,
   interactChatMessage,
   editChatMessage,
@@ -2352,6 +2354,28 @@ export function useDiscourseBrowser() {
     return await toggleChatMessageReaction(tab, baseUrl, channelId, messageId, emoji, reacted)
   }
 
+  async function loadChatPins(channelId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return []
+    return await loadChatChannelPins(tab, baseUrl, users, channelId)
+  }
+
+  async function toggleChatPin(channelId: number, messageId: number, pinned: boolean) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return false
+    return await toggleChatMessagePin(tab, baseUrl, users, channelId, messageId, pinned)
+  }
+
+  async function openPinnedChatMessage(channelId: number, messageId: number) {
+    const tab = activeTab.value
+    if (!tab?.chatState) return
+    if (tab.chatState.activeChannelId !== channelId) {
+      await selectChatChannel(channelId)
+    }
+    closeChatThreadRoute(tab)
+    await loadChatMessages(tab, baseUrl, users, channelId, true, messageId)
+  }
+
   async function updateChatChannel(
     channelId: number,
     payload: ChatChannelUpdatePayload,
@@ -2923,6 +2947,9 @@ export function useDiscourseBrowser() {
     sendChat,
     sendChatThread,
     reactToChatMessage,
+    loadChatPins,
+    toggleChatPin,
+    openPinnedChatMessage,
     updateChatChannel,
     replyChatInteraction,
     changeTopicListType,

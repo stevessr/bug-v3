@@ -40,6 +40,10 @@ export default defineComponent({
     originalRaw: { type: String, default: undefined },
     replyToPostNumber: { type: Number, default: undefined },
     replyToUsername: { type: String, default: undefined },
+    /** A monotonic insertion token lets external quote actions append safely
+     * without resetting an open reply draft. */
+    insertText: { type: String, default: undefined },
+    insertToken: { type: Number, default: undefined },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     currentCategory: { type: Object as () => DiscourseCategory | null, default: null },
     defaultCategoryId: { type: Number, default: undefined },
@@ -143,6 +147,20 @@ export default defineComponent({
           recipientResults.value = []
           setInitialRecipients(props.initialTargetUsernames)
         }
+      },
+      { immediate: true }
+    )
+
+    watch(
+      () => props.insertToken,
+      token => {
+        const text = String(props.insertText || '').trim()
+        if (!token || !text) return
+        const current = raw.value.trimEnd()
+        raw.value = current ? `${current}\n\n${text}` : text
+        errorMessage.value = ''
+        successMessage.value = ''
+        if (props.mode === 'reply') editMode.value = 'edit'
       },
       { immediate: true }
     )

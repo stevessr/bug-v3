@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons-vue'
 
 import type { ChatMessage, ChatThread } from '../types'
+import EmojiTitle from '../layout/EmojiTitle'
 
 import ChatComposer from './ChatComposer'
 import ChatMessageList from './ChatMessageList'
@@ -31,6 +32,9 @@ export default defineComponent({
     errorMessage: { type: String, default: '' },
     notificationSaving: { type: Boolean, default: false },
     titleSaving: { type: Boolean, default: false },
+    canManagePins: { type: Boolean, default: false },
+    pinnedMessageIds: { type: Array as () => number[], default: () => [] },
+    pinSavingByMessageId: { type: Object as () => Record<number, boolean>, default: () => ({}) },
     replyTo: { type: Object as () => ChatMessage | null, default: null },
     editingMessage: { type: Object as () => ChatMessage | null, default: null }
   },
@@ -49,6 +53,7 @@ export default defineComponent({
     'updateTitle',
     'delete',
     'flag',
+    'pin',
     'uploadStart',
     'uploadEnd'
   ],
@@ -190,7 +195,9 @@ export default defineComponent({
               </div>
             ) : (
               <div class="chat-thread-panel__title-row">
-                <strong>{title.value}</strong>
+                <strong>
+                  <EmojiTitle text={title.value} baseUrl={props.baseUrl} />
+                </strong>
                 {canEditTitle.value && (
                   <button
                     type="button"
@@ -252,6 +259,9 @@ export default defineComponent({
           hasMore={props.hasMore}
           targetMessageId={props.targetMessageId}
           inThread
+          canManagePins={props.canManagePins}
+          pinnedMessageIds={props.pinnedMessageIds}
+          pinSavingByMessageId={props.pinSavingByMessageId}
           onLoadMore={() => emit('loadMore', props.thread.id)}
           onNavigate={(url: string) => emit('navigate', url)}
           onReact={(payload: { messageId: number; emoji: string; reacted?: boolean }) =>
@@ -264,6 +274,7 @@ export default defineComponent({
           onEdit={(message: ChatMessage) => emit('edit', message)}
           onDelete={(message: ChatMessage) => emit('delete', message)}
           onFlag={(message: ChatMessage) => emit('flag', message)}
+          onPin={(payload: { messageId: number; pinned: boolean }) => emit('pin', payload)}
         />
 
         {isReadOnly.value ? (

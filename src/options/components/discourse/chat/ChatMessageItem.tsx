@@ -4,6 +4,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   FlagOutlined,
+  PushpinOutlined,
   RollbackOutlined,
   CommentOutlined
 } from '@ant-design/icons-vue'
@@ -29,9 +30,12 @@ export default defineComponent({
     inThread: { type: Boolean, default: false },
     groupFirst: { type: Boolean, default: true },
     groupLast: { type: Boolean, default: true },
-    showTimestamp: { type: Boolean, default: true }
+    showTimestamp: { type: Boolean, default: true },
+    canManagePins: { type: Boolean, default: false },
+    isPinned: { type: Boolean, default: false },
+    pinSaving: { type: Boolean, default: false }
   },
-  emits: ['navigate', 'react', 'interact', 'reply', 'openThread', 'edit', 'delete', 'flag'],
+  emits: ['navigate', 'react', 'interact', 'reply', 'openThread', 'edit', 'delete', 'flag', 'pin'],
   setup(props, { emit }) {
     const showActions = ref(false)
     const showEmojiPicker = ref(false)
@@ -237,6 +241,11 @@ export default defineComponent({
       showActions.value = false
     }
 
+    const handlePin = () => {
+      emit('pin', { messageId: props.message.id, pinned: !props.isPinned })
+      showActions.value = false
+    }
+
     // If deleted, render placeholder
     if (props.message.deleted) {
       return (
@@ -278,6 +287,7 @@ export default defineComponent({
           props.isOwn ? 'chat-message-own' : '',
           props.groupFirst ? '' : 'is-grouped-message group-follow',
           props.highlighted ? 'is-search-target' : '',
+          reactionItems.value.length > 0 ? 'has-reactions' : '',
           showActions.value || showEmojiPicker.value ? 'has-floating-controls' : ''
         ]}
         data-chat-message-id={props.message.id}
@@ -306,39 +316,6 @@ export default defineComponent({
                 />
               ) : null}
 
-              {reactionItems.value.length > 0 && (
-                <div class="chat-message-footer">
-                  {reactionItems.value.map(reaction => {
-                    const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
-                    return (
-                      <button
-                        type="button"
-                        key={`${props.message.id}-${reaction.emoji}`}
-                        class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                        onClick={() => handleReact(reaction.emoji, reaction.reacted)}
-                        title={reaction.emoji}
-                      >
-                        <span class="chat-message-reaction-emoji">
-                          {resolvedEmoji?.url ? (
-                            <img
-                              class="chat-message-reaction-image"
-                              src={resolvedEmoji.url}
-                              alt={formatReactionLabel(reaction.emoji)}
-                              loading="lazy"
-                            />
-                          ) : resolvedEmoji?.unicode ? (
-                            resolvedEmoji.unicode
-                          ) : (
-                            formatReactionLabel(reaction.emoji)
-                          )}
-                        </span>
-                        <span class="chat-message-reaction-count">{reaction.count}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
               {blockButtons.value.length > 0 && (
                 <div class="chat-message-blocks">
                   {blockButtons.value.map((button, index) => (
@@ -357,6 +334,38 @@ export default defineComponent({
                 </div>
               )}
             </div>
+            {reactionItems.value.length > 0 && (
+              <div class="chat-message-reaction-rail" aria-label="消息反应">
+                {reactionItems.value.map(reaction => {
+                  const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
+                  return (
+                    <button
+                      type="button"
+                      key={`${props.message.id}-${reaction.emoji}`}
+                      class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
+                      onClick={() => handleReact(reaction.emoji, reaction.reacted)}
+                      title={reaction.emoji}
+                    >
+                      <span class="chat-message-reaction-emoji">
+                        {resolvedEmoji?.url ? (
+                          <img
+                            class="chat-message-reaction-image"
+                            src={resolvedEmoji.url}
+                            alt={formatReactionLabel(reaction.emoji)}
+                            loading="lazy"
+                          />
+                        ) : resolvedEmoji?.unicode ? (
+                          resolvedEmoji.unicode
+                        ) : (
+                          formatReactionLabel(reaction.emoji)
+                        )}
+                      </span>
+                      <span class="chat-message-reaction-count">{reaction.count}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             {/* Absolutely positioned: it is beside the bubble without affecting row height. */}
             <div
               ref={floatingControlsRef}
@@ -428,6 +437,18 @@ export default defineComponent({
                       onClick={handleDelete}
                     >
                       <DeleteOutlined /> 删除
+                    </button>
+                  )}
+                  {props.canManagePins && (
+                    <button
+                      type="button"
+                      class="chat-message-actions-item"
+                      role="menuitem"
+                      disabled={props.pinSaving}
+                      onClick={handlePin}
+                    >
+                      <PushpinOutlined />
+                      {props.pinSaving ? '处理中…' : props.isPinned ? '取消置顶' : '置顶消息'}
                     </button>
                   )}
                   {!props.isOwn && (
