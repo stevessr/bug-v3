@@ -447,6 +447,40 @@ test.describe('Discourse topic actions and private messages', () => {
     ).toBe(before)
   })
 
+  test('portals reply composer menus without changing the editor layout', async ({ page }) => {
+    await openTopic(page)
+
+    const otherPost = page.locator('[data-post-number="2"]')
+    await otherPost.getByRole('button', { name: '回复 @alice 发布的帖子 #2' }).click()
+
+    const composer = page.locator('.floating-composer')
+    const editor = composer.locator('.prosemirror-editor-wrapper')
+    await expect(composer).toBeVisible()
+    await expect(editor).toBeVisible()
+    const heightBefore = (await editor.boundingBox())?.height
+
+    await composer.getByRole('button', { name: '论坛表情' }).click()
+    const forumPicker = page.getByRole('dialog', { name: '论坛表情菜单' })
+    await expect(forumPicker).toBeVisible()
+    await expect(page.locator('.floating-composer .forum-emoji-menu')).toHaveCount(0)
+    await expect(page.locator('body > .forum-emoji-menu')).toHaveCount(1)
+    expect(
+      Math.abs(((await editor.boundingBox())?.height || 0) - (heightBefore || 0))
+    ).toBeLessThan(1)
+
+    const pluginButton = composer.getByRole('button', { name: '插件表情' })
+    await expect(pluginButton).toHaveText('🐟')
+    await pluginButton.click()
+    await expect(page.getByRole('dialog', { name: '插件表情菜单' })).toBeVisible()
+    await expect(page.locator('.floating-composer .forum-emoji-menu')).toHaveCount(0)
+
+    await composer.getByRole('button', { name: '高级语法' }).click()
+    const advancedMenu = page.getByRole('menu', { name: '高级语法' })
+    await expect(advancedMenu).toBeVisible()
+    await expect(page.locator('.floating-composer .advanced-syntax-menu')).toHaveCount(0)
+    await expect(page.locator('body > .advanced-syntax-menu')).toHaveCount(1)
+  })
+
   test('updates Boosts in place, confirms delete, and submits a selected flag reason', async ({
     page
   }) => {
@@ -588,7 +622,9 @@ test.describe('Discourse topic actions and private messages', () => {
     await openTopic(page)
     const panel = page.getByRole('region', { name: '私信参与者' })
     await expect(panel.getByText('2 人')).toBeVisible()
-    await expect(panel.locator('xpath=ancestor::aside[contains(@class, "topic-aside")]')).toHaveCount(1)
+    await expect(
+      panel.locator('xpath=ancestor::aside[contains(@class, "topic-aside")]')
+    ).toHaveCount(1)
 
     await panel.getByLabel('新参与者用户名').fill('bob')
     await panel.getByRole('button', { name: '添加', exact: true }).click()
@@ -628,7 +664,9 @@ test.describe('Discourse topic actions and private messages', () => {
       ['关注', '每条新回复都会通知你。'],
       ['仅关注首帖', '仅在新增首帖内容时通知。']
     ]) {
-      const item = menu.locator('.topic-notification-menu__item').filter({ hasText: label })
+      const item = menu
+        .locator('.topic-notification-menu__item')
+        .filter({ has: page.getByText(label, { exact: true }) })
       await expect(item).toContainText(description)
       await expect(item.locator('.topic-notification-menu__icon .anticon')).toHaveCount(1)
     }

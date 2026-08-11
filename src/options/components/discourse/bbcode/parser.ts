@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify'
+
 import { findEmojiByName } from './emojiShortcode'
 
 /**
@@ -91,8 +92,7 @@ function escapeHtml(text: string): string {
 const escapeAttr = escapeHtml
 
 /** 去掉块级内容首尾的 <br> 噪音 */
-const cleanEdges = (html: string) =>
-  html.replace(/^(<br>)+/i, '').replace(/(<br>)+$/i, '')
+const cleanEdges = (html: string) => html.replace(/^(<br>)+/i, '').replace(/(<br>)+$/i, '')
 
 /** 去掉 [tag=...] 属性两侧的引号 */
 const unquote = (value: string) => value.replace(/^["']|["']$/g, '').trim()
@@ -110,15 +110,12 @@ function renderInline(text: string): string {
   html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>')
 
   // 图片 ![alt](url) / ![alt|WxH](url)
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g,
-    (_m, alt, url) => {
-      const sizeMatch = /^(.*?)\|(\d+)x(\d+)$/.exec(alt)
-      const altText = sizeMatch ? sizeMatch[1] : alt
-      const sizeAttr = sizeMatch ? ` width="${sizeMatch[2]}" height="${sizeMatch[3]}"` : ''
-      return `<img src="${url}" alt="${altText}"${sizeAttr} loading="lazy">`
-    }
-  )
+  html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (_m, alt, url) => {
+    const sizeMatch = /^(.*?)\|(\d+)x(\d+)$/.exec(alt)
+    const altText = sizeMatch ? sizeMatch[1] : alt
+    const sizeAttr = sizeMatch ? ` width="${sizeMatch[2]}" height="${sizeMatch[3]}"` : ''
+    return `<img src="${url}" alt="${altText}"${sizeAttr} loading="lazy">`
+  })
 
   // 链接 [text](url)
   html = html.replace(
@@ -149,13 +146,16 @@ function renderText(text: string): string {
   let html = escapeHtml(text)
 
   // 表情短码 :name: → <img class="emoji">
-  html = html.replace(/(^|[^\\]):([a-zA-Z0-9_\u4e00-\u9fa5]+):($|[^\\])/g, (match, before, name, after) => {
-    const emoji = findEmojiByName(name)
-    if (emoji) {
-      return `${before}<img class="emoji" alt=":${name}:" src="${escapeAttr(emoji.url)}" loading="lazy">${after}`
+  html = html.replace(
+    /(^|[^\\]):([a-zA-Z0-9_\u4e00-\u9fa5]+):($|[^\\])/g,
+    (match, before, name, after) => {
+      const emoji = findEmojiByName(name)
+      if (emoji) {
+        return `${before}<img class="emoji" alt=":${name}:" src="${escapeAttr(emoji.url)}" loading="lazy">${after}`
+      }
+      return match
     }
-    return match
-  })
+  )
 
   html = renderInline(html)
 
@@ -204,38 +204,41 @@ function parseBlocks(input: string): string {
       out += renderText(input.slice(i))
       break
     }
-    out += renderText(input.slice(i, open))
+    // 若 `[` 前是 `^`（行内脚注 ^[...]）或 `!`（markdown 图片 ![alt](url)），
+    // 前缀字符留给对应段落一起处理，避免重复/丢失
+    const prefixChar = open > 0 ? input[open - 1] : ''
+    const isPrefix = prefixChar === '^' || prefixChar === '!'
+    out += renderText(input.slice(i, isPrefix ? open - 1 : open))
 
     const m = TAG_RE.exec(input.slice(open))
-    if (!m || m[1] === '/') {
-      // 不是合法的开始标签：检查 markdown 链接 [text](url) 与行内脚注 ^[text]
+    const tag = m ? m[2].toLowerCase() : ''
+    const attr = m ? (m[3] ?? '') : ''
+    const isKnown = tag ? BLOCK_TAGS.has(tag) || INLINE_TAGS.has(tag) || RAW_TAGS.has(tag) : false
+
+    // 非已知标签（含 markdown 链接 [text](url) / 图片 ![alt](url) 与行内脚注 ^[text]）
+    if (!m || m[1] === '/' || !isKnown) {
       const rest = input.slice(open)
       const linkMatch = /^\[[^\]]*\]\([^)\s]+\)/.exec(rest)
-      const prevChar = open > 0 ? input[open - 1] : ''
-      const closeBracket = prevChar === '^' ? input.indexOf(']', open) : -1
-      // 文本段：若有 ^[ 脚注前缀，`^` 留给脚注段一起渲染
-      const textEnd = prevChar === '^' ? open - 1 : open
-      out += renderText(input.slice(i, textEnd))
       if (linkMatch) {
-        out += renderText(input.slice(open, open + linkMatch[0].length))
+        const start = prefixChar === '!' ? open - 1 : open
+        out += renderText(input.slice(start, open + linkMatch[0].length))
         i = open + linkMatch[0].length
         continue
       }
-      if (closeBracket !== -1) {
-        out += renderText(`^${input.slice(open, closeBracket + 1)}`)
-        i = closeBracket + 1
+      if (prefixChar === '^') {
+        const closeBracket = input.indexOf(']', open)
+        if (closeBracket !== -1) {
+          out += renderText(input.slice(open - 1, closeBracket + 1))
+          i = closeBracket + 1
+          continue
+        }
+        // ^[ 未闭合：补回 ^ 与 [
+        out += '^['
+        i = open + 1
         continue
       }
-      out += '['
-      i = open + 1
-      continue
-    }
-
-    const tag = m[2].toLowerCase()
-    const attr = m[3] ?? ''
-    const isKnown = BLOCK_TAGS.has(tag) || INLINE_TAGS.has(tag) || RAW_TAGS.has(tag)
-    if (!isKnown) {
-      out += '['
+      // 补回被前缀处理排除的字符
+      out += prefixChar === '!' ? '![' : '['
       i = open + 1
       continue
     }
@@ -244,12 +247,13 @@ function parseBlocks(input: string): string {
     if (closePos === -1) {
       // 自闭合标签（[video=url] / [emoji=x] / [mention=u] / [hr]）直接渲染
       if (SELF_CLOSING_TAGS.has(tag) && (attr !== '' || tag === 'hr')) {
+        out += isPrefix ? prefixChar : ''
         out += renderTag(tag, attr, '')
         i = open + m[0].length
         continue
       }
       // 未闭合：按文本输出
-      out += '['
+      out += isPrefix ? `${prefixChar}[` : '['
       i = open + 1
       continue
     }
@@ -268,6 +272,7 @@ function parseBlocks(input: string): string {
       content = parseBlocks(rawContent)
     }
 
+    out += isPrefix ? prefixChar : ''
     out += renderTag(tag, attr, content)
     i = closePos + endLen
   }
@@ -342,15 +347,10 @@ function renderTag(tag: string, attr: string, content: string): string {
           if (tm) topic = tm[1]
         }
       }
-      const dataAttrs = [
-        post ? `data-post="${post}"` : '',
-        topic ? `data-topic="${topic}"` : ''
-      ]
+      const dataAttrs = [post ? `data-post="${post}"` : '', topic ? `data-topic="${topic}"` : '']
         .filter(Boolean)
         .join(' ')
-      const title = author
-        ? `<div class="title">${escapeHtml(author)}</div>`
-        : ''
+      const title = author ? `<div class="title">${escapeHtml(author)}</div>` : ''
       return `<aside class="quote"${dataAttrs ? ` ${dataAttrs}` : ''}><div class="quote-controls"></div>${title}<blockquote>${content}</blockquote></aside>`
     }
 
@@ -381,8 +381,8 @@ function renderTag(tag: string, attr: string, content: string): string {
       const items = content
         .split(/<br>/i)
         .map(line => line.trim())
-        .filter(line => /^[*\-]/.test(line))
-        .map(line => `<li>${line.replace(/^[*\-]\s*/, '')}</li>`)
+        .filter(line => /^[-*]/.test(line))
+        .map(line => `<li>${line.replace(/^[-*]\s*/, '')}</li>`)
         .join('')
       return `<div class="poll"><ol>${items}</ol></div>`
     }
@@ -472,11 +472,16 @@ function splitListItems(content: string): string {
     parts = content
       .split(/<br>/i)
       .map(line => line.trim())
-      .filter(line => /^[*\-]/.test(line))
-      .map(line => line.replace(/^[*\-]\s*/, ''))
+      .filter(line => /^[-*]/.test(line))
+      .map(line => line.replace(/^[-*]\s*/, ''))
   }
   return parts
-    .map(item => item.replace(/^(<br>)+/i, '').replace(/(<br>)+$/i, '').trim())
+    .map(item =>
+      item
+        .replace(/^(<br>)+/i, '')
+        .replace(/(<br>)+$/i, '')
+        .trim()
+    )
     .filter(Boolean)
     .map(item => `<li>${item}</li>`)
     .join('')
@@ -515,7 +520,9 @@ function renderTable(content: string): string {
     `<tr>${cells.map(cell => `<${cellTag}>${cell}</${cellTag}>`).join('')}</tr>`
 
   const thead = header ? `<thead>${renderRow(header, 'th')}</thead>` : ''
-  const tbody = body.length ? `<tbody>${body.map(row => renderRow(row, 'td')).join('')}</tbody>` : ''
+  const tbody = body.length
+    ? `<tbody>${body.map(row => renderRow(row, 'td')).join('')}</tbody>`
+    : ''
 
   return `<table>${thead}${tbody}</table>`
 }
@@ -531,15 +538,20 @@ export function parseBBCode(bbcode: string): string {
 
   // 1. 保护 fenced code 块（```lang ... ```），内部原样保留（消费前导换行）
   const codeBlocks: string[] = []
-  let source = bbcode.replace(/\n?```([a-zA-Z0-9_+-]*)[^\n]*\n?([\s\S]*?)```/g, (_m, lang, code) => {
-    const id = codeBlocks.length
-    const langAttr = lang ? ` data-code-wrap="${escapeAttr(lang)}" class="lang-${escapeAttr(lang)}"` : ''
-    const langClass = lang ? ` class="lang-${escapeAttr(lang)}"` : ''
-    codeBlocks.push(
-      `<pre${langAttr}><code${langClass}>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`
-    )
-    return `\n@@CODE_${id}@@\n`
-  })
+  const source = bbcode.replace(
+    /\n?```([a-zA-Z0-9_+-]*)[^\n]*\n?([\s\S]*?)```/g,
+    (_m, lang, code) => {
+      const id = codeBlocks.length
+      const langAttr = lang
+        ? ` data-code-wrap="${escapeAttr(lang)}" class="lang-${escapeAttr(lang)}"`
+        : ''
+      const langClass = lang ? ` class="lang-${escapeAttr(lang)}"` : ''
+      codeBlocks.push(
+        `<pre${langAttr}><code${langClass}>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`
+      )
+      return `\n@@CODE_${id}@@\n`
+    }
+  )
 
   // 2. 递归解析
   let html = parseBlocks(source)

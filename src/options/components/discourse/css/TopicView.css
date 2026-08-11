@@ -28,6 +28,82 @@
   text-transform: uppercase;
 }
 
+.topic-header__context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.topic-header__context-category {
+  display: inline-flex;
+  min-width: 0;
+  max-width: min(100%, 280px);
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 6px;
+  border: 1px solid color-mix(in oklab, currentColor 24%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, currentColor 8%, transparent);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 680;
+  line-height: 1.2;
+}
+
+.topic-header__context-category > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-category-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: color-mix(in oklab, currentColor 13%, transparent);
+}
+
+.topic-category-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.topic-category-icon__emoji {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.topic-category-icon svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+.topic-category-icon__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.topic-category-tree-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.topic-category-tree-option .topic-category-icon {
+  width: 19px;
+  height: 19px;
+}
+
 .topic-header__title {
   margin: 0;
   font-size: clamp(22px, 3vw, 31px);
@@ -139,6 +215,35 @@
 .topic-header__field .ant-select-selector,
 .topic-header__field .ant-tree-select {
   width: 100%;
+}
+
+.topic-header__selected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  margin-inline-end: 2px;
+}
+
+.topic-header__selected-tag button {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--d-text-muted, #64748b);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.topic-header__selected-tag button:hover {
+  background: color-mix(in oklab, currentColor 12%, transparent);
 }
 
 .topic-header__edit-actions {

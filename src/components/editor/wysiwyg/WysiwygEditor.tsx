@@ -2,24 +2,17 @@
 import { defineComponent, ref, watch, computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import katex from 'katex'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
 import WysiwygEditorToolbar from './WysiwygEditorToolbar'
 import WysiwygEditorDialogs from './WysiwygEditorDialogs'
 
-import {
-  parseEmojiShortcodeToBBCode,
-  parseEmojiShortcodeToMarkdown,
-  renderBBCode
-} from '@/options/components/discourse/bbcode'
+import { renderDiscourseMarkdown } from '@/options/components/discourse/bbcode/renderDiscourse'
 import { useDiscourseUpload } from '@/options/components/discourse/composables/useDiscourseUpload'
 import './styles/EmojiPicker.css'
 import './styles/PluginEmojiPicker.css'
 import './styles/ProseMirrorEditor.css'
-
-marked.setOptions({ breaks: true, gfm: true })
 
 export default defineComponent({
   name: 'WysiwygEditor',
@@ -54,90 +47,7 @@ export default defineComponent({
       emit('update:modelValue', value)
     }
 
-    const renderBBCodeWithMath = (input: string) => {
-      if (!input) return ''
-      const withEmoji = parseEmojiShortcodeToBBCode(input)
-
-      const mathBlocks: Array<{ tex: string; display: boolean }> = []
-      let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
-        const id = mathBlocks.length
-        mathBlocks.push({ tex, display: true })
-        return `@@MATH_BLOCK_${id}@@`
-      })
-      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
-        const id = mathBlocks.length
-        mathBlocks.push({ tex, display: false })
-        return `${prefix}@@MATH_INLINE_${id}@@`
-      })
-
-      let html = renderBBCode(source)
-      html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
-        const item = mathBlocks[Number(index)]
-        if (!item) return ''
-        return katex.renderToString(item.tex, {
-          displayMode: kind === 'BLOCK',
-          throwOnError: false
-        })
-      })
-
-      return DOMPurify.sanitize(html, {
-        ADD_TAGS: [
-          'math',
-          'semantics',
-          'mrow',
-          'mi',
-          'mn',
-          'mo',
-          'annotation',
-          'annotation-xml',
-          'svg',
-          'path',
-          'img'
-        ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
-      })
-    }
-
-    const renderMarkdown = (input: string) => {
-      if (!input) return ''
-      const withEmoji = parseEmojiShortcodeToMarkdown(input)
-      const blocks: Array<{ tex: string; display: boolean }> = []
-      let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
-        const id = blocks.length
-        blocks.push({ tex, display: true })
-        return `@@MATH_BLOCK_${id}@@`
-      })
-      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
-        const id = blocks.length
-        blocks.push({ tex, display: false })
-        return `${prefix}@@MATH_INLINE_${id}@@`
-      })
-      let html = marked.parse(source) as string
-      html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
-        const item = blocks[Number(index)]
-        if (!item) return ''
-        return katex.renderToString(item.tex, {
-          displayMode: kind === 'BLOCK',
-          throwOnError: false
-        })
-      })
-      return DOMPurify.sanitize(html, {
-        ADD_TAGS: [
-          'math',
-          'semantics',
-          'mrow',
-          'mi',
-          'mn',
-          'mo',
-          'annotation',
-          'annotation-xml',
-          'svg',
-          'path',
-          'img'
-        ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
-      })
-    }
+    const renderMarkdown = renderDiscourseMarkdown
 
     const renderHtml = (input: string) => {
       if (!input) return ''
@@ -153,14 +63,44 @@ export default defineComponent({
           'annotation-xml',
           'svg',
           'path',
-          'img'
+          'img',
+          'details',
+          'summary',
+          'table',
+          'thead',
+          'tbody',
+          'tr',
+          'th',
+          'td',
+          'mark',
+          'ins',
+          'del',
+          'video',
+          'audio'
         ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+        ADD_ATTR: [
+          'class',
+          'style',
+          'src',
+          'alt',
+          'viewBox',
+          'width',
+          'height',
+          'rel',
+          'loading',
+          'controls',
+          'preload',
+          'data-code-wrap',
+          'data-post',
+          'data-topic'
+        ]
       })
     }
 
     const detectHtmlAst = (input: string) => {
-      if (!input || !input.includes('<')) return false
+      // 避免误判：只有出现真正的 HTML 标签（< 后跟字母 / / !）才走 HTML 渲染
+      // 例如 `a < b`、`$x<y$` 仍是纯文本/markdown
+      if (!input || !/<[a-zA-Z/!]/.test(input)) return false
       try {
         const parser = new DOMParser()
         const doc = parser.parseFromString(input, 'text/html')
@@ -193,6 +133,11 @@ export default defineComponent({
         'i',
         'u',
         's',
+        'ins',
+        'del',
+        'sub',
+        'sup',
+        'mark',
         'img',
         'url',
         'quote',
@@ -204,8 +149,22 @@ export default defineComponent({
         'center',
         'left',
         'right',
-        'sub',
-        'sup'
+        'details',
+        'wrap',
+        'poll',
+        'tabs',
+        'tab',
+        'table',
+        'video',
+        'audio',
+        'youtube',
+        'tip',
+        'note',
+        'warning',
+        'footnote',
+        'mention',
+        'emoji',
+        'hr'
       ])
       const stack: string[] = []
       const regex = /\[\/?([a-z0-9]+)(?:=[^\]]+)?\]/gi
@@ -230,8 +189,7 @@ export default defineComponent({
     const convertToHtml = (value: string) => {
       if (!value) return ''
       if (detectHtmlAst(value)) return renderHtml(value)
-      if (detectBbcodeAst(value)) return renderBBCodeWithMath(value)
-      if (detectMarkdownAst(value)) return renderMarkdown(value)
+      // 统一走增强 markdown 渲染：内置全部 Discourse BBCode 预处理（嵌套/多行/官方结构）
       return renderMarkdown(value)
     }
 

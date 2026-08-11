@@ -386,7 +386,10 @@ export function useDiscourseBrowser() {
   const currentSessionUser = ref<DiscourseSessionUser | null>(null)
   const currentUserStaff = computed(() => currentSessionUser.value?.staff === true)
   let sessionUserPromise: Promise<string | null> | null = null
-  let navigationSequence = 0
+  // Navigation can overlap (for example, when switching profile sub-tabs).
+  // Keep the ordering per browser tab so a request in another tab cannot leave
+  // this tab's local loading affordance stuck, or clear a newer loader early.
+  const navigationSequenceByTab = new Map<string, number>()
 
   // Sync URL input with active tab's URL
   watch(
@@ -531,6 +534,7 @@ export function useDiscourseBrowser() {
     const index = tabs.value.findIndex(t => t.id === id)
     if (index === -1) return
 
+    navigationSequenceByTab.delete(id)
     tabs.value.splice(index, 1)
 
     if (tabs.value.length === 0) {
@@ -554,7 +558,8 @@ export function useDiscourseBrowser() {
   async function navigateTo(url: string, addToHistory = true, options: { silent?: boolean } = {}) {
     const tab = activeTab.value
     if (!tab) return
-    const navigationId = ++navigationSequence
+    const navigationId = (navigationSequenceByTab.get(tab.id) || 0) + 1
+    navigationSequenceByTab.set(tab.id, navigationId)
 
     const rawUrl = (url || '').trim()
     const base = baseUrl.value.replace(/\/+$/, '')
@@ -709,7 +714,7 @@ export function useDiscourseBrowser() {
 
         await loadChat(tab, targetChannelId, targetThreadId ? null : targetMessageId)
         tab.viewType = 'chat'
-        // /chat/threads → 我的消息串子 tab；其余聊天 URL 回到频道列表
+        // /chat/threads → 消息串子 tab；其余聊天 URL 回到频道列表
         if (tab.chatState) {
           tab.chatState.chatSidebarTab = parts[1] === 'threads' ? 'threads' : 'public'
         }
@@ -956,10 +961,13 @@ export function useDiscourseBrowser() {
       tab.viewType = 'error'
       tab.title = '加载失败'
     } finally {
-      if (isUserSectionNavigation && navigationId === navigationSequence) {
+      const isLatestNavigation = navigationSequenceByTab.get(tab.id) === navigationId
+      if (isUserSectionNavigation && isLatestNavigation) {
         tab.userSectionLoading = false
       }
-      tab.loading = false
+      if (isLatestNavigation) {
+        tab.loading = false
+      }
     }
   }
 

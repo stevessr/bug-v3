@@ -1,8 +1,9 @@
 import { defineComponent, computed, ref, watch } from 'vue'
 import { Button, Checkbox, Radio, Select, Progress, message } from 'ant-design-vue'
 
-import type { DiscoursePoll } from '../types'
+import type { DiscoursePoll, DiscoursePollVoter } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
+import { extractData, getAvatarUrl, pageFetch } from '../utils'
 import '../css/PollView.css'
 
 type PollOption = {
@@ -15,6 +16,83 @@ type PollMeta = {
   max?: number
   results?: string
   voters?: number
+}
+
+type PollVoter = {
+  id?: number
+  username: string
+  name?: string
+  avatarTemplate?: string
+  rank?: number | string
+}
+
+type VoterSource = {
+  found: boolean
+  voters: PollVoter[]
+}
+
+const VOTERS_PAGE_SIZE = 25
+
+const normalizePollVoter = (value: unknown): PollVoter | null => {
+  if (!value || typeof value !== 'object') return null
+  const entry = value as DiscoursePollVoter
+  const user = entry.user && typeof entry.user === 'object' ? entry.user : entry
+  const username = typeof user.username === 'string' ? user.username.trim() : ''
+  if (!username) return null
+
+  return {
+    id: typeof user.id === 'number' ? user.id : undefined,
+    username,
+    name: typeof user.name === 'string' ? user.name : undefined,
+    avatarTemplate: typeof user.avatar_template === 'string' ? user.avatar_template : undefined,
+    rank: typeof entry.rank === 'number' || typeof entry.rank === 'string' ? entry.rank : undefined
+  }
+}
+
+const uniqueVoters = (values: PollVoter[]) => {
+  const seen = new Set<string>()
+  return values.filter(voter => {
+    const key = voter.username.toLocaleLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const normalizeVoterList = (value: unknown): PollVoter[] => {
+  const list = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object' && Array.isArray((value as { voters?: unknown }).voters)
+      ? (value as { voters: unknown[] }).voters
+      : value && typeof value === 'object' && Array.isArray((value as { users?: unknown }).users)
+        ? (value as { users: unknown[] }).users
+        : []
+  return uniqueVoters(
+    list.map(normalizePollVoter).filter((voter): voter is PollVoter => Boolean(voter))
+  )
+}
+
+/** Supports both public-poll preload data and the voters endpoint response shape. */
+const readVotersForOption = (value: unknown, optionId: string): VoterSource => {
+  if (Array.isArray(value)) return { found: true, voters: normalizeVoterList(value) }
+  if (!value || typeof value !== 'object') return { found: false, voters: [] }
+
+  const record = value as Record<string, unknown>
+  if (Object.prototype.hasOwnProperty.call(record, optionId)) {
+    return { found: true, voters: normalizeVoterList(record[optionId]) }
+  }
+  if (Array.isArray(record.voters) || Array.isArray(record.users)) {
+    return { found: true, voters: normalizeVoterList(record) }
+  }
+
+  const nestedVoters = record.voters
+  if (nestedVoters && typeof nestedVoters === 'object' && !Array.isArray(nestedVoters)) {
+    const nested = nestedVoters as Record<string, unknown>
+    if (Object.prototype.hasOwnProperty.call(nested, optionId)) {
+      return { found: true, voters: normalizeVoterList(nested[optionId]) }
+    }
+  }
+  return { found: false, voters: [] }
 }
 
 export default defineComponent({
@@ -46,9 +124,18 @@ export default defineComponent({
     const isSubmitting = ref(false)
     const pollState = ref<DiscoursePoll | null>(props.pollData || null)
     const voters = ref<number | undefined>(props.pollMeta.voters)
+    const votersByOption = ref<Record<string, PollVoter[]>>({})
+    const voterLoading = ref<Record<string, boolean>>({})
+    const voterUnavailable = ref<Record<string, boolean>>({})
+    const voterExhausted = ref<Record<string, boolean>>({})
+    let pollIdentity = ''
 
     const isRanked = computed(() => props.pollType === 'ranked_choice')
     const isMultiple = computed(() => props.pollType === 'multiple')
+    // Modern Discourse includes `public` on each poll. Older/custom hosts can
+    // omit it while still authorizing the endpoint, so only an explicit false
+    // suppresses the opt-in lookup; the server remains authoritative.
+    const canRequestVoters = computed(() => pollState.value?.public !== false)
 
     const maxRankOptions = computed(() => Math.max(1, props.options.length))
 
@@ -66,10 +153,55 @@ export default defineComponent({
       return list
     })
 
-    const applyPollResult = (poll: DiscoursePoll | null) => {
-      if (!poll) return
+    const mergeVotersForOption = (optionId: string, incoming: PollVoter[]) => {
+      const merged = uniqueVoters([...(votersByOption.value[optionId] || []), ...incoming])
+      const next = { ...votersByOption.value, [optionId]: merged }
+
+      // A regular poll permits one choice. When a server response reflects a
+      // changed vote, do not leave that voter rendered under an old option.
+      if (!isRanked.value && !isMultiple.value) {
+        const usernames = new Set(merged.map(voter => voter.username.toLocaleLowerCase()))
+        Object.keys(next).forEach(otherOptionId => {
+          if (otherOptionId === optionId) return
+          next[otherOptionId] = next[otherOptionId].filter(
+            voter => !usernames.has(voter.username.toLocaleLowerCase())
+          )
+        })
+      }
+
+      votersByOption.value = next
+      return merged
+    }
+
+    const hydratePreloadedVoters = (poll: DiscoursePoll, reset = false) => {
+      if (reset) votersByOption.value = {}
+      const preloaded = poll.preloaded_voters
+      if (!preloaded) return
+
+      props.options.forEach(option => {
+        const source = readVotersForOption(preloaded, option.id)
+        if (source.found) mergeVotersForOption(option.id, source.voters)
+      })
+    }
+
+    const applyPollResult = (poll: DiscoursePoll | null, forceVoterReset = false) => {
+      const nextIdentity = `${props.postId}:${props.pollName}:${poll?.id ?? ''}`
+      const resetVoters = forceVoterReset || nextIdentity !== pollIdentity
+      if (resetVoters) {
+        pollIdentity = nextIdentity
+        votersByOption.value = {}
+        voterLoading.value = {}
+        voterUnavailable.value = {}
+        voterExhausted.value = {}
+      }
+      if (!poll) {
+        pollState.value = null
+        return
+      }
+
       pollState.value = poll
-      voters.value = poll.voters
+      if (typeof poll.voters === 'number') voters.value = poll.voters
+      hydratePreloadedVoters(poll, resetVoters)
 
       if (isRanked.value) {
         const nextRanks: Record<string, number> = {}
@@ -97,10 +229,13 @@ export default defineComponent({
     }
 
     watch(
+      () => [props.postId, props.pollName] as const,
+      () => applyPollResult(props.pollData || null, true),
+      { immediate: true }
+    )
+    watch(
       () => props.pollData,
-      next => {
-        applyPollResult(next || null)
-      },
+      next => applyPollResult(next || null),
       { immediate: true }
     )
 
@@ -154,7 +289,7 @@ export default defineComponent({
         }
 
         const data = await props.requestPollVote('PUT', body)
-        applyPollResult(data.poll)
+        applyPollResult(data.poll, true)
         hasVoted.value = true
         message.success('投票成功')
       } catch (error) {
@@ -173,7 +308,7 @@ export default defineComponent({
         body.append('post_id', String(props.postId))
         body.append('poll_name', props.pollName)
         const data = await props.requestPollVote('DELETE', body)
-        applyPollResult(data.poll)
+        applyPollResult(data.poll, true)
         hasVoted.value = false
         message.success('已撤销投票')
       } catch (error) {
@@ -182,6 +317,127 @@ export default defineComponent({
       } finally {
         isSubmitting.value = false
       }
+    }
+
+    const loadVoters = async (option: PollOption, voteCount: number) => {
+      const optionId = option.id
+      if (
+        !canRequestVoters.value ||
+        voterLoading.value[optionId] ||
+        voterUnavailable.value[optionId] ||
+        voterExhausted.value[optionId]
+      ) {
+        return
+      }
+
+      voterLoading.value = { ...voterLoading.value, [optionId]: true }
+      try {
+        const existing = votersByOption.value[optionId] || []
+        const params = new URLSearchParams({
+          post_id: String(props.postId),
+          poll_name: props.pollName,
+          option_id: optionId,
+          page: String(Math.floor(existing.length / VOTERS_PAGE_SIZE) + 1),
+          limit: String(VOTERS_PAGE_SIZE)
+        })
+        const result = await pageFetch<any>(
+          `${props.baseUrl}/polls/voters.json?${params.toString()}`
+        )
+        if (!result.ok) throw new Error('poll voters unavailable')
+        const data = extractData(result)
+        const source = readVotersForOption(data?.voters, optionId)
+        if (!source.found) throw new Error('poll voters unavailable')
+
+        const merged = mergeVotersForOption(optionId, source.voters)
+        if (source.voters.length < VOTERS_PAGE_SIZE || merged.length >= voteCount) {
+          voterExhausted.value = { ...voterExhausted.value, [optionId]: true }
+        }
+      } catch {
+        // Public voter information is optional and sites can disable this
+        // endpoint. Hide the affordance instead of surfacing a misleading
+        // error for a permission-gated response.
+        voterUnavailable.value = { ...voterUnavailable.value, [optionId]: true }
+      } finally {
+        voterLoading.value = { ...voterLoading.value, [optionId]: false }
+      }
+    }
+
+    const renderVoterDetails = (option: PollOption, voteCount: number) => {
+      const people = votersByOption.value[option.id] || []
+      const publicOrReturned = canRequestVoters.value || people.length > 0
+      if (
+        !publicOrReturned ||
+        (voteCount <= 0 && people.length === 0) ||
+        (people.length === 0 &&
+          (voterUnavailable.value[option.id] || voterExhausted.value[option.id]))
+      ) {
+        return null
+      }
+
+      const isLoading = voterLoading.value[option.id] === true
+      const canLoad =
+        canRequestVoters.value &&
+        !voterUnavailable.value[option.id] &&
+        !voterExhausted.value[option.id] &&
+        people.length < voteCount
+      const showMore = people.length > 0
+      const actionLabel = showMore ? '显示更多投票人' : '显示投票人'
+
+      return (
+        <div class="poll-tsx-voters" aria-label={`${option.label} 的投票人`}>
+          {people.length > 0 && (
+            <div class="poll-tsx-voter-list" role="list">
+              {people.map(voter => {
+                const profileUrl = `${props.baseUrl.replace(/\/+$/, '')}/u/${encodeURIComponent(
+                  voter.username
+                )}`
+                const avatarUrl = voter.avatarTemplate
+                  ? getAvatarUrl(voter.avatarTemplate, props.baseUrl, 40)
+                  : ''
+                const displayName = voter.name
+                  ? `${voter.name} (@${voter.username})`
+                  : `@${voter.username}`
+                return (
+                  <a
+                    key={voter.username}
+                    class="poll-tsx-voter"
+                    href={profileUrl}
+                    data-user-card={voter.username}
+                    title={displayName}
+                    aria-label={`投票人 ${displayName}`}
+                    role="listitem"
+                  >
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" />
+                    ) : (
+                      <span class="poll-tsx-voter-fallback" aria-hidden="true">
+                        {voter.username.slice(0, 1).toLocaleUpperCase()}
+                      </span>
+                    )}
+                    {isRanked.value && voter.rank !== undefined && (
+                      <span class="poll-tsx-voter-rank" aria-label={`排序 ${voter.rank}`}>
+                        {voter.rank === 'Abstain' ? '弃' : voter.rank}
+                      </span>
+                    )}
+                  </a>
+                )
+              })}
+            </div>
+          )}
+          {canLoad && (
+            <Button
+              type="text"
+              size="small"
+              class="poll-tsx-voters-toggle"
+              loading={isLoading}
+              aria-label={`${actionLabel}：${option.label}`}
+              onClick={() => void loadVoters(option, voteCount)}
+            >
+              {actionLabel}
+            </Button>
+          )}
+        </div>
+      )
     }
 
     const renderVoteList = () => {
@@ -259,6 +515,16 @@ export default defineComponent({
       if (isRanked.value && pollState.value?.ranked_choice_outcome) {
         const outcome = pollState.value.ranked_choice_outcome as Record<string, any>
         const rounds = Array.isArray(outcome.round_activity) ? outcome.round_activity : []
+        const rankedVoterDetails = props.options
+          .map(option => {
+            const voteCount =
+              pollState.value?.options?.find(item => item.id === option.id)?.votes || 0
+            return {
+              option,
+              details: renderVoterDetails(option, voteCount)
+            }
+          })
+          .filter(item => Boolean(item.details))
 
         return (
           <div class="poll-tsx-results">
@@ -290,6 +556,16 @@ export default defineComponent({
                       .join('、')}`
                   : '结果：暂无'}
             </div>
+            {rankedVoterDetails.length > 0 && (
+              <div class="poll-tsx-ranked-voters">
+                {rankedVoterDetails.map(({ option, details }) => (
+                  <div key={option.id} class="poll-tsx-ranked-voter-option">
+                    <span class="poll-tsx-label">{option.label}</span>
+                    {details}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
       }
@@ -306,16 +582,19 @@ export default defineComponent({
               const barPercent = Math.round((voteCount / maxVotes.value) * 100)
 
               return (
-                <div key={option.id} class="poll-tsx-bar-row">
-                  <div class="poll-tsx-label">{option.label}</div>
-                  <div class="poll-tsx-bar">
-                    <Progress
-                      percent={barPercent}
-                      showInfo={false}
-                      strokeColor="rgba(59,130,246,0.7)"
-                    />
+                <div key={option.id} class="poll-tsx-result-option">
+                  <div class="poll-tsx-bar-row">
+                    <div class="poll-tsx-label">{option.label}</div>
+                    <div class="poll-tsx-bar">
+                      <Progress
+                        percent={barPercent}
+                        showInfo={false}
+                        strokeColor="rgba(59,130,246,0.7)"
+                      />
+                    </div>
+                    <div class="poll-tsx-percent">{percent}%</div>
                   </div>
-                  <div class="poll-tsx-percent">{percent}%</div>
+                  {renderVoterDetails(option, voteCount)}
                 </div>
               )
             })}

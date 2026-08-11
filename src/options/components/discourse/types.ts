@@ -320,6 +320,21 @@ export interface DiscoursePollOption {
   rank?: number[] | number
 }
 
+/** A voter returned for a public poll option. Ranked polls wrap this in `user`. */
+export interface DiscoursePollVoter {
+  id?: number
+  username?: string
+  name?: string
+  avatar_template?: string
+  rank?: number | string
+  user?: {
+    id?: number
+    username?: string
+    name?: string
+    avatar_template?: string
+  }
+}
+
 export interface DiscoursePoll {
   id: number
   name: string
@@ -329,8 +344,10 @@ export interface DiscoursePoll {
   min?: number
   max?: number
   dynamic?: boolean
+  public?: boolean
   options?: DiscoursePollOption[]
   voters?: number
+  preloaded_voters?: Record<string, DiscoursePollVoter[]>
   ranked_choice_outcome?: Record<string, any> | null
 }
 
@@ -366,8 +383,13 @@ export interface DiscourseTopicDetail {
     slug?: string
     color?: string | null
     text_color?: string | null
+    style_type?: string | null
+    icon?: string | null
+    emoji?: string | null
+    uploaded_logo?: { url: string } | null
+    uploaded_logo_dark?: { url: string } | null
   } | null
-  tags?: string[]
+  tags?: Array<string | DiscourseTopicTag>
   highest_post_number?: number
   views: number
   like_count: number
@@ -694,7 +716,7 @@ export interface MessageBusChatPayload {
 export interface ChatState {
   channels: ChatChannel[]
   activeChannelId: number | null
-  /** 聊天子 tab（我的消息串/收藏/频道/直接消息），用于 /chat/threads 等 URL 恢复 */
+  /** 聊天子 tab（消息串/收藏/频道/直接消息），用于 /chat/threads 等 URL 恢复 */
   chatSidebarTab?: 'threads' | 'starred' | 'public' | 'direct'
   messagesByChannel: Record<number, ChatMessage[]>
   hasMoreByChannel: Record<number, boolean>

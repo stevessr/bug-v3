@@ -18,7 +18,7 @@ export default defineComponent({
       label: string
       unread: number
     }> = [
-      { id: 'threads', label: '我的消息串', unread: props.unreadThreads },
+      { id: 'threads', label: '消息串', unread: props.unreadThreads },
       { id: 'starred', label: '收藏', unread: props.unreadStarred },
       { id: 'public', label: '频道', unread: props.unreadPublic },
       { id: 'direct', label: '直接消息', unread: props.unreadDirect }

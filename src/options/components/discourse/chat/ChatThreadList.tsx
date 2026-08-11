@@ -44,7 +44,7 @@ export default defineComponent({
             <span class="chat-thread-list__chevron" aria-hidden="true">
               {collapsed.value ? '▶' : '▼'}
             </span>
-            <span>我的消息串</span>
+            <span>消息串</span>
             {props.loaded && <span class="chat-thread-list__count">{props.threads.length}</span>}
             {totalUnread.value > 0 && (
               <span class="chat-thread-list__unread">{totalUnread.value}</span>
@@ -53,8 +53,8 @@ export default defineComponent({
           <button
             type="button"
             class="chat-thread-list__refresh"
-            aria-label="刷新我的消息串"
-            title="刷新我的消息串"
+            aria-label="刷新消息串"
+            title="刷新消息串"
             disabled={props.loading || props.loadingMore}
             onClick={() => emit('load')}
           >

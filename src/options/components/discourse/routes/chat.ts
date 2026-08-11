@@ -680,13 +680,13 @@ const fetchCurrentUserChatThreads = async (baseUrl: string, loadMoreUrl?: string
       const result = await pageFetch<any>(url)
       const data = extractData(result)
       if (result.ok) return extractChatThreadList(data)
-      lastError = parseErrorMessage(data, '加载我的消息串失败')
+      lastError = parseErrorMessage(data, '加载消息串失败')
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error)
     }
   }
 
-  throw new Error(lastError || '加载我的消息串失败')
+  throw new Error(lastError || '加载消息串失败')
 }
 
 const fetchChannelChatThreads = async (

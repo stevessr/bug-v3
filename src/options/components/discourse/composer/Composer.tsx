@@ -12,7 +12,8 @@ import {
   isLinuxDoUrl
 } from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
-import { parseEmojiShortcodeToBBCode, parseEmojiShortcodeToMarkdown, renderBBCode } from '../bbcode'
+import { parseEmojiShortcodeToBBCode, renderBBCode } from '../bbcode'
+import { renderDiscourseMarkdown } from '../bbcode/renderDiscourse'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 import { resolveDiscourseHttpUrl } from '../navigation'
 import TagPill from '../layout/TagPill'
@@ -282,7 +283,7 @@ export default defineComponent({
         mathBlocks.push({ tex, display: true })
         return `@@MATH_BLOCK_${id}@@`
       })
-      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
+      source = source.replace(/(^|[^\\])\$(?!\d)([^\s$][^$]*?)\$/g, (_match, prefix, tex) => {
         const id = mathBlocks.length
         mathBlocks.push({ tex, display: false })
         return `${prefix}@@MATH_INLINE_${id}@@`
@@ -311,52 +312,41 @@ export default defineComponent({
           'annotation-xml',
           'svg',
           'path',
-          'img'
+          'img',
+          'details',
+          'summary',
+          'table',
+          'thead',
+          'tbody',
+          'tr',
+          'th',
+          'td',
+          'mark',
+          'ins',
+          'del',
+          'video',
+          'audio'
         ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+        ADD_ATTR: [
+          'class',
+          'style',
+          'src',
+          'alt',
+          'viewBox',
+          'width',
+          'height',
+          'rel',
+          'loading',
+          'controls',
+          'preload',
+          'data-code-wrap',
+          'data-post',
+          'data-topic'
+        ]
       })
     }
 
-    function renderMarkdown(input: string) {
-      if (!input) return ''
-      const withEmoji = parseEmojiShortcodeToMarkdown(input)
-      const blocks: Array<{ tex: string; display: boolean }> = []
-      let source = withEmoji.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
-        const id = blocks.length
-        blocks.push({ tex, display: true })
-        return `@@MATH_BLOCK_${id}@@`
-      })
-      source = source.replace(/(^|[^\\])\$(.+?)\$/g, (_match, prefix, tex) => {
-        const id = blocks.length
-        blocks.push({ tex, display: false })
-        return `${prefix}@@MATH_INLINE_${id}@@`
-      })
-      let html = marked.parse(source) as string
-      html = html.replace(/@@MATH_(BLOCK|INLINE)_(\d+)@@/g, (_match, kind, index) => {
-        const item = blocks[Number(index)]
-        if (!item) return ''
-        return katex.renderToString(item.tex, {
-          displayMode: kind === 'BLOCK',
-          throwOnError: false
-        })
-      })
-      return DOMPurify.sanitize(html, {
-        ADD_TAGS: [
-          'math',
-          'semantics',
-          'mrow',
-          'mi',
-          'mn',
-          'mo',
-          'annotation',
-          'annotation-xml',
-          'svg',
-          'path',
-          'img'
-        ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
-      })
-    }
+    const renderMarkdown = renderDiscourseMarkdown
 
     function renderHtml(input: string) {
       if (!input) return ''
@@ -372,14 +362,42 @@ export default defineComponent({
           'annotation-xml',
           'svg',
           'path',
-          'img'
+          'img',
+          'details',
+          'summary',
+          'table',
+          'thead',
+          'tbody',
+          'tr',
+          'th',
+          'td',
+          'mark',
+          'ins',
+          'del',
+          'video',
+          'audio'
         ],
-        ADD_ATTR: ['class', 'style', 'src', 'alt', 'viewBox']
+        ADD_ATTR: [
+          'class',
+          'style',
+          'src',
+          'alt',
+          'viewBox',
+          'width',
+          'height',
+          'rel',
+          'loading',
+          'controls',
+          'preload',
+          'data-code-wrap',
+          'data-post',
+          'data-topic'
+        ]
       })
     }
 
     function detectHtmlAst(input: string) {
-      if (!input || !input.includes('<')) return false
+      if (!input || !/<[a-zA-Z/!]/.test(input)) return false
       try {
         const parser = new DOMParser()
         const doc = parser.parseFromString(input, 'text/html')

@@ -306,6 +306,278 @@
   content: '';
 }
 
+/* ============ Discourse 官方结构样式（对齐官方论坛渲染外观） ============ */
+
+/* 引用 [quote] → aside.quote */
+.wysiwyg-editor-content aside.quote {
+  margin: 0.75em 0;
+  border-left: 4px solid var(--md3-primary, #6750a4);
+  border-radius: 0 12px 12px 0;
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 8%, transparent);
+  padding: 0.5em 0.75em;
+}
+
+.wysiwyg-editor-content aside.quote .quote-controls {
+  display: none;
+}
+
+.wysiwyg-editor-content aside.quote .title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md3-primary, #6750a4);
+  margin-bottom: 0.25em;
+}
+
+.wysiwyg-editor-content aside.quote blockquote {
+  margin: 0;
+  padding: 0;
+  border-left: none;
+  background: transparent;
+  color: inherit;
+}
+
+/* 折叠块 [details] → details/summary */
+.wysiwyg-editor-content details {
+  margin: 0.75em 0;
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  border-radius: 12px;
+  padding: 0 0.75em;
+  background: var(--md3-surface-container-low, #f7f2f7);
+}
+
+.wysiwyg-editor-content details > summary {
+  cursor: pointer;
+  padding: 0.6em 0;
+  font-weight: 600;
+  color: var(--md3-on-surface, #1d1b20);
+  outline: none;
+}
+
+.wysiwyg-editor-content details[open] > summary {
+  border-bottom: 1px solid var(--md3-outline-variant, #cac4d0);
+  margin-bottom: 0.5em;
+}
+
+/* 剧透 [spoiler] → div.spoiler（模糊，悬停/聚焦时显示，对齐官方交互） */
+.wysiwyg-editor-content .spoiler {
+  position: relative;
+  margin: 0.75em 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 6%, transparent);
+  padding: 0.25em 0.75em;
+  cursor: pointer;
+}
+
+.wysiwyg-editor-content .spoiler > * {
+  filter: blur(6px);
+  user-select: none;
+  transition: filter 0.2s ease;
+}
+
+.wysiwyg-editor-content .spoiler:hover > *,
+.wysiwyg-editor-content .spoiler:focus-within > * {
+  filter: none;
+  user-select: auto;
+}
+
+.wysiwyg-editor-content .spoiler p {
+  margin: 0.5em 0;
+}
+
+/* 包装块 [wrap=xxx] → div.d-wrap-* */
+.wysiwyg-editor-content .d-wrap {
+  margin: 0.75em 0;
+}
+
+.wysiwyg-editor-content .d-wrap-scrollable {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  border-radius: 12px;
+  padding: 0.75em;
+  background: var(--md3-surface-container-low, #f7f2f7);
+}
+
+/* 投票 [poll] → div.poll */
+.wysiwyg-editor-content .poll {
+  margin: 0.75em 0;
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  border-radius: 12px;
+  padding: 0.75em 0.75em 0.75em 1.75em;
+  background: var(--md3-surface-container-low, #f7f2f7);
+}
+
+.wysiwyg-editor-content .poll ol {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.wysiwyg-editor-content .poll li {
+  margin: 0.25em 0;
+}
+
+/* 选项卡 [tabs]/[tab] → .tabs */
+.wysiwyg-editor-content .tabs {
+  margin: 0.75em 0;
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--md3-surface-container-low, #f7f2f7);
+}
+
+.wysiwyg-editor-content .tab-header {
+  display: flex;
+  gap: 2px;
+  padding: 0.375em 0.375em 0;
+  background: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 4%, transparent);
+}
+
+.wysiwyg-editor-content .tab-header .tab-button {
+  padding: 0.4em 0.9em;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--md3-on-surface-variant, #49454f);
+  cursor: pointer;
+}
+
+.wysiwyg-editor-content .tab-header .tab-button.active {
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 12%, transparent);
+  color: var(--md3-primary, #6750a4);
+}
+
+.wysiwyg-editor-content .tab-content {
+  padding: 0.75em;
+}
+
+/* 表格（markdown + bbcode）→ 对齐官方论坛表格 */
+.wysiwyg-editor-content table {
+  margin: 0.75em 0;
+  border-collapse: collapse;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.wysiwyg-editor-content th,
+.wysiwyg-editor-content td {
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  padding: 0.5em 0.75em;
+  font-size: 14px;
+}
+
+.wysiwyg-editor-content th {
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 10%, transparent);
+  color: var(--md3-on-surface, #1d1b20);
+  font-weight: 600;
+  text-align: left;
+}
+
+.wysiwyg-editor-content tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 3%, transparent);
+}
+
+/* 提示 [tip]/[note]/[warning] → div.alert（对齐官方 alert 配色） */
+.wysiwyg-editor-content .alert {
+  margin: 0.75em 0;
+  border-radius: 12px;
+  padding: 0.75em 1em;
+  border: 1px solid;
+  font-size: 14px;
+}
+
+.wysiwyg-editor-content .alert-info {
+  border-color: color-mix(in srgb, var(--md3-primary, #6750a4) 30%, transparent);
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 8%, transparent);
+  color: var(--md3-on-surface, #1d1b20);
+}
+
+.wysiwyg-editor-content .alert-success {
+  border-color: color-mix(in srgb, #2e7d32 35%, transparent);
+  background: color-mix(in srgb, #2e7d32 8%, transparent);
+  color: var(--md3-on-surface, #1d1b20);
+}
+
+.wysiwyg-editor-content .alert-warning {
+  border-color: color-mix(in srgb, #b26a00 35%, transparent);
+  background: color-mix(in srgb, #b26a00 8%, transparent);
+  color: var(--md3-on-surface, #1d1b20);
+}
+
+/* 行内脚注 ^[xxx] → span.footnote */
+.wysiwyg-editor-content .footnote {
+  font-size: 0.8em;
+  vertical-align: super;
+  color: var(--md3-primary, #6750a4);
+  cursor: pointer;
+}
+
+/* 高亮 [mark] → mark */
+.wysiwyg-editor-content mark {
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 25%, transparent);
+  color: var(--md3-on-surface, #1d1b20);
+  border-radius: 4px;
+  padding: 0 0.2em;
+}
+
+/* 提及 [mention] → .mention（对齐官方颜色） */
+.wysiwyg-editor-content .mention {
+  color: var(--md3-primary, #6750a4);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* 表情 */
+.wysiwyg-editor-content .emoji {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 20px;
+  max-height: 20px;
+}
+
+/* 视频/音频 [video]/[audio] */
+.wysiwyg-editor-content video,
+.wysiwyg-editor-content audio {
+  max-width: 100%;
+  border-radius: 12px;
+  margin: 0.5em 0;
+}
+
+/* 代码块（fenced + [code]） */
+.wysiwyg-editor-content pre {
+  border-radius: 12px;
+  background: var(--md3-surface-container-high, #ece6f0);
+  border: 1px solid var(--md3-outline-variant, #cac4d0);
+  padding: 0.9em 1em;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.wysiwyg-editor-content pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--md3-on-surface, #1d1b20);
+}
+
+.wysiwyg-editor-content p code {
+  background: color-mix(in srgb, var(--md3-on-surface, #1d1b20) 7%, transparent);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+
+/* 图片（markdown + bbcode） */
+.wysiwyg-editor-content img:not(.emoji) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+
 .prosemirror-editor-textarea {
   width: 100%;
   min-height: 220px;
