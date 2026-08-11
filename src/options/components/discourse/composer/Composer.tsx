@@ -963,9 +963,6 @@ export default defineComponent({
                 onUpdate:modelValue={value => (raw.value = value)}
                 class="composer-editor-input"
               />
-              <div class="text-xs text-gray-500">
-                <span>Markdown / BBCode / HTML 混合编排 · LaTeX: $...$ 行内 / $$...$$ 块级</span>
-              </div>
             </div>
           ) : null}
 
