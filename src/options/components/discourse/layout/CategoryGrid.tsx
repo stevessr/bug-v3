@@ -1,4 +1,5 @@
 import { defineComponent, computed } from 'vue'
+import { LockOutlined } from '@ant-design/icons-vue'
 
 import { resolveDiscourseHttpUrl } from '../navigation'
 import type { DiscourseCategory, DiscourseTopic } from '../types'
@@ -15,7 +16,8 @@ export default defineComponent({
     categories: { type: Array as () => DiscourseCategory[], required: true },
     title: { type: String, default: '分类' },
     baseUrl: { type: String, default: '' },
-    layout: { type: String as () => 'grid' | 'directory', default: 'grid' }
+    layout: { type: String as () => 'grid' | 'directory', default: 'grid' },
+    showTopicCount: { type: Boolean, default: true }
   },
   emits: ['click', 'topicClick'],
   setup(props, { emit }) {
@@ -75,6 +77,12 @@ export default defineComponent({
     const getTopicTitle = (topic: CategoryTopic) => {
       return topic.fancy_title || topic.title
     }
+
+    const getCategoryDescription = (category: DiscourseCategory) =>
+      category.description_excerpt || category.description || ''
+
+    const isRestrictedCategory = (category: DiscourseCategory) =>
+      Boolean(category.read_restricted) || Number(category.minimum_required_trust_level) > 0
 
     const getCategoryUrl = (category: DiscourseCategory) =>
       `${props.baseUrl}/c/${encodeURIComponent(category.slug)}/${category.id}`
@@ -142,7 +150,7 @@ export default defineComponent({
                         </span>
                       </span>
                       <span class="category-directory-description">
-                        {cat.description_excerpt || cat.description || ''}
+                        {getCategoryDescription(cat)}
                       </span>
                     </button>
                     {hasHierarchy.value &&
@@ -255,8 +263,20 @@ export default defineComponent({
                         )}
                       </span>
                       <span class="category-card__name">{cat.name}</span>
+                      {isRestrictedCategory(cat) && (
+                        <LockOutlined
+                          class="category-card__lock"
+                          aria-label="受限分类"
+                          title="受限分类"
+                        />
+                      )}
                     </span>
-                    <span class="category-card__count">{cat.topic_count} 话题</span>
+                    {getCategoryDescription(cat) && (
+                      <span class="category-card__description">{getCategoryDescription(cat)}</span>
+                    )}
+                    {props.showTopicCount && (
+                      <span class="category-card__count">{cat.topic_count} 话题</span>
+                    )}
                   </button>
                   {hasHierarchy.value && (childrenByParent.value.get(cat.id)?.length || 0) > 0 && (
                     <div class="category-card__children" aria-label={`${cat.name} 的子分类`}>

@@ -13,6 +13,7 @@ const TOPIC_LIST_TYPES = new Set<TopicListType>([
   'top',
   'hot',
   'posted',
+  'read',
   'bookmarks'
 ])
 
@@ -187,23 +188,37 @@ export function buildTopicListApiUrl(
   return target.toString()
 }
 
-export function categoryRouteFromPath(pathname: string): {
+export type CategoryRoute = {
   slug: string
   categoryId: number | null
-} | null {
+  listType: TopicListType
+}
+
+export function categoryRouteFromPath(pathname: string): CategoryRoute | null {
   const normalized = normalizePathname(pathname)
   if (!normalized.startsWith('/c/')) return null
 
   const segments = normalized.slice(3).split('/').filter(Boolean).map(decodePathSegment)
   if (segments.length === 0) return null
 
-  const idIndex = segments.findIndex(segment => /^\d+$/.test(segment) && Number(segment) > 0)
+  const listIndex = segments.findIndex(
+    (segment, index) => index > 0 && segment.toLocaleLowerCase() === 'l'
+  )
+  const categorySegments = listIndex >= 0 ? segments.slice(0, listIndex) : segments
+  const listTypeSegment = listIndex >= 0 ? segments[listIndex + 1]?.toLocaleLowerCase() : 'latest'
+  const listType = listTypeSegment as TopicListType
+
+  if (!listTypeSegment || !TOPIC_LIST_TYPES.has(listType)) return null
+
+  const idIndex = categorySegments.findIndex(
+    segment => /^\d+$/.test(segment) && Number(segment) > 0
+  )
   const categoryId = idIndex >= 0 ? Number(segments[idIndex]) : null
-  const slugSegments = idIndex >= 0 ? segments.slice(0, idIndex) : segments
+  const slugSegments = idIndex >= 0 ? categorySegments.slice(0, idIndex) : categorySegments
   const slug = slugSegments.join('/').trim()
   if (!slug) return null
 
-  return { slug, categoryId }
+  return { slug, categoryId, listType }
 }
 
 export function messagesTabFromPath(pathname: string): MessagesTabType {

@@ -345,6 +345,7 @@ const floatingChatState = ref({
 })
 const currentCategoryOption = computed(() => {
   const tab = activeTab.value
+  if (tab?.currentCategory) return tab.currentCategory
   if (!tab?.currentCategoryId || !tab.currentCategoryName) return null
   return {
     id: tab.currentCategoryId,
@@ -523,6 +524,7 @@ const homeNavItems: Array<{ key: string; label: string; type: 'path' | 'list'; v
   { key: 'top', label: '排行', type: 'list', value: 'top' },
   { key: 'hot', label: '热门', type: 'list', value: 'hot' },
   { key: 'posted', label: '我的帖子', type: 'list', value: 'posted' },
+  { key: 'read', label: '已读', type: 'list', value: 'read' },
   { key: 'bookmarks', label: '书签', type: 'list', value: 'bookmarks' },
   { key: 'review', label: '审核', type: 'path', value: '/review' },
   { key: 'invites', label: '邀请', type: 'path', value: '/invites' }

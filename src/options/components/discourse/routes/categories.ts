@@ -24,6 +24,18 @@ function getChildren(category: RawCategory): RawCategory[] {
   return []
 }
 
+function normalizeDescription(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const text = value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return text || undefined
+}
+
 function upsertCategory(
   byId: Map<number, DiscourseCategory>,
   list: DiscourseCategory[],
@@ -42,17 +54,35 @@ function upsertCategory(
   const textColorRaw = raw.text_color ?? preloaded?.text_color
   const topicCountRaw = raw.topic_count ?? raw.topicCount
   const topicCount = typeof topicCountRaw === 'number' ? topicCountRaw : Number(topicCountRaw) || 0
+  const description = normalizeDescription(
+    raw.description_text ?? raw.description ?? raw.description_excerpt
+  )
+  const descriptionExcerpt = normalizeDescription(
+    raw.description_excerpt ?? raw.description_text ?? raw.description
+  )
 
   const incoming: DiscourseCategory = {
     ...raw,
     id,
-    name: typeof raw.name === 'string' ? raw.name : `category-${id}`,
-    slug: typeof raw.slug === 'string' ? raw.slug : String(id),
+    name:
+      typeof raw.name === 'string'
+        ? raw.name
+        : typeof preloaded?.name === 'string'
+          ? preloaded.name
+          : `category-${id}`,
+    slug:
+      typeof raw.slug === 'string'
+        ? raw.slug
+        : typeof preloaded?.slug === 'string'
+          ? preloaded.slug
+          : String(id),
     color: typeof colorRaw === 'string' ? colorRaw : '0088CC',
     text_color: typeof textColorRaw === 'string' ? textColorRaw : 'FFFFFF',
     topic_count: topicCount,
     parent_category_id: parentId,
-    subcategory_ids: subcategoryIds
+    subcategory_ids: subcategoryIds,
+    ...(description ? { description } : {}),
+    ...(descriptionExcerpt ? { description_excerpt: descriptionExcerpt } : {})
   }
 
   if (preloaded) {

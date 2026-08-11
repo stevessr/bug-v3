@@ -1,73 +1,195 @@
 import type { ComputedRef, Ref } from 'vue'
 
-import type { BrowserTab, DiscourseTopic, DiscourseUser } from '../types'
+import type {
+  BrowserTab,
+  DiscourseCategory,
+  DiscourseTopic,
+  DiscourseUser,
+  TopicListType
+} from '../types'
 import { buildTopicListApiUrl } from '../navigation'
 import { pageFetch, extractData } from '../utils'
-import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories,
+  getPreloadedCategory,
+  isLinuxDoUrl
+} from '../linux.do/preloadedCategories'
 
 import { normalizeCategoriesFromResponse } from './categories'
+
+function resolveCategoryId(...values: unknown[]): number | null {
+  for (const value of values) {
+    const parsed = typeof value === 'number' ? value : Number(value)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+  return null
+}
+
+function encodeCategorySlug(slug: string) {
+  return slug
+    .split('/')
+    .filter(Boolean)
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+}
+
+/** Build the same category-list URL shape used by Discourse's `/c/.../l/...` routes. */
+export function buildCategoryTopicListApiUrl(
+  baseUrl: string,
+  slug: string,
+  categoryId: number | null,
+  listType: TopicListType = 'latest',
+  page?: number
+) {
+  const encodedSlug = encodeCategorySlug(slug)
+  const categoryPath = `/c/${encodedSlug}${categoryId ? `/${categoryId}` : ''}`
+  const listPath = listType === 'latest' ? categoryPath : `${categoryPath}/l/${listType}`
+  const url = new URL(`${listPath}.json`, baseUrl)
+  if (typeof page === 'number' && page > 0) {
+    url.searchParams.set('page', String(page))
+  }
+  return url.toString()
+}
+
+function mergeCategoryLists(...lists: DiscourseCategory[][]): DiscourseCategory[] {
+  const mergedById = new Map<number, DiscourseCategory>()
+
+  lists.flat().forEach(category => {
+    if (!category || !Number.isFinite(Number(category.id))) return
+
+    const existing = mergedById.get(category.id)
+    if (!existing) {
+      mergedById.set(category.id, { ...category })
+      return
+    }
+
+    const merged: DiscourseCategory = { ...existing }
+    ;(Object.keys(category) as Array<keyof DiscourseCategory>).forEach(key => {
+      const value = category[key]
+      if (value !== undefined && value !== null && value !== '') {
+        ;(merged as unknown as Record<string, unknown>)[key] = value
+      }
+    })
+
+    const childIds = new Set<number>([
+      ...(existing.subcategory_ids || []),
+      ...(category.subcategory_ids || [])
+    ])
+    merged.subcategory_ids = childIds.size > 0 ? Array.from(childIds) : null
+    mergedById.set(category.id, merged)
+  })
+
+  return Array.from(mergedById.values())
+}
+
+function directSubcategories(
+  categories: DiscourseCategory[],
+  categoryId: number,
+  currentCategory: DiscourseCategory | null
+) {
+  const childIds = new Set<number>(currentCategory?.subcategory_ids || [])
+  return categories.filter(
+    category =>
+      category.id !== categoryId &&
+      (category.parent_category_id === categoryId || childIds.has(category.id))
+  )
+}
 
 export async function loadCategory(
   tab: BrowserTab,
   slug: string,
   categoryId: number | null,
   baseUrl: Ref<string>,
-  users: Ref<Map<number, DiscourseUser>>
+  users: Ref<Map<number, DiscourseUser>>,
+  listType: TopicListType = 'latest'
 ) {
-  const url = categoryId
-    ? `${baseUrl.value}/c/${slug}/${categoryId}.json`
-    : `${baseUrl.value}/c/${slug}.json`
-
+  const url = buildCategoryTopicListApiUrl(baseUrl.value, slug, categoryId, listType)
   const result = await pageFetch<any>(url)
   const data = extractData(result)
+  const rawCategory = data?.category ?? data?.topic_list?.category ?? null
 
   if (data?.topic_list?.topics) {
     tab.topics = data.topic_list.topics
-    tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
+    tab.hasMoreTopics = Boolean(data.topic_list.more_topics_url)
   } else {
     tab.topics = []
     tab.hasMoreTopics = false
   }
 
-  tab.topicsPage = 0
-  tab.currentCategorySlug = slug
-  tab.currentCategoryId =
-    categoryId ??
-    data?.category?.id ??
-    data?.topic_list?.category?.id ??
-    data?.topic_list?.category_id ??
+  const resolvedCategoryId = resolveCategoryId(
+    categoryId,
+    rawCategory?.id,
+    data?.topic_list?.category_id
+  )
+
+  if (isLinuxDoUrl(baseUrl.value)) {
+    await ensurePreloadedCategoriesLoaded()
+  }
+
+  const responseCategories = rawCategory
+    ? normalizeCategoriesFromResponse({ categories: [rawCategory] })
+    : []
+  const preloadedCurrent = resolvedCategoryId
+    ? getPreloadedCategory(resolvedCategoryId, slug)
+    : getPreloadedCategory(null, slug)
+  const preloadedCurrentCategories = preloadedCurrent
+    ? normalizeCategoriesFromResponse({ categories: [preloadedCurrent] })
+    : []
+
+  let fetchedCategories: DiscourseCategory[] = []
+  if (resolvedCategoryId) {
+    try {
+      const subResult = await pageFetch<any>(
+        `${baseUrl.value}/categories.json?parent_category_id=${resolvedCategoryId}`
+      )
+      fetchedCategories = normalizeCategoriesFromResponse(extractData(subResult))
+    } catch (error) {
+      console.warn('[DiscourseBrowser] loadCategory subcategories error:', error)
+    }
+  }
+
+  const preloadedSubcategories =
+    resolvedCategoryId && isLinuxDoUrl(baseUrl.value)
+      ? normalizeCategoriesFromResponse({
+          categories: getAllPreloadedCategories().filter(
+            category => category.parent_category_id === resolvedCategoryId
+          )
+        })
+      : []
+
+  // Packaged Linux.do definitions are a baseline for compact category payloads;
+  // live category data wins so descriptions, permissions, and topic counts stay current.
+  const allCategories = mergeCategoryLists(
+    preloadedCurrentCategories,
+    preloadedSubcategories,
+    fetchedCategories,
+    responseCategories
+  )
+  const currentCategory =
+    allCategories.find(category => category.id === resolvedCategoryId) ||
+    responseCategories.find(category => category.id === resolvedCategoryId) ||
     null
-  tab.currentCategoryName =
-    data?.category?.name ??
-    data?.topic_list?.category?.name ??
-    data?.topic_list?.category_name ??
-    ''
+
+  tab.topicsPage = 0
+  tab.currentCategorySlug = currentCategory?.slug || slug
+  tab.currentCategoryId = resolvedCategoryId
+  tab.currentCategoryName = currentCategory?.name || rawCategory?.name || ''
+  tab.currentCategory = currentCategory
   tab.currentTagName = ''
+  tab.topicListType = listType
+  tab.topicListPeriod = null
   tab.pendingTopics = null
   tab.pendingTopicsCount = 0
+  tab.categories = resolvedCategoryId
+    ? directSubcategories(allCategories, resolvedCategoryId, currentCategory)
+    : []
 
   if (data?.users) {
     tab.activeUsers = data.users
-    data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+    data.users.forEach((user: DiscourseUser) => users.value.set(user.id, user))
   } else {
     tab.activeUsers = []
-  }
-
-  tab.categories = []
-  if (tab.currentCategoryId) {
-    try {
-      if (isLinuxDoUrl(baseUrl.value)) {
-        await ensurePreloadedCategoriesLoaded()
-      }
-      const subResult = await pageFetch<any>(
-        `${baseUrl.value}/categories.json?parent_category_id=${tab.currentCategoryId}`
-      )
-      const subData = extractData(subResult)
-      tab.categories = normalizeCategoriesFromResponse(subData)
-    } catch (e) {
-      console.warn('[DiscourseBrowser] loadCategory subcategories error:', e)
-      tab.categories = []
-    }
   }
 }
 
@@ -97,30 +219,34 @@ export async function loadMoreTopics(
       const encoded = encodeURIComponent(tab.currentTagName || '')
       url = `${baseUrl.value}/tag/${encoded}.json?page=${tab.topicsPage}`
     } else {
-      if (tab.currentCategoryId) {
-        url = `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json?page=${tab.topicsPage}`
-      } else {
-        url = `${baseUrl.value}/c/${tab.currentCategorySlug}.json?page=${tab.topicsPage}`
-      }
+      url = buildCategoryTopicListApiUrl(
+        baseUrl.value,
+        tab.currentCategorySlug,
+        tab.currentCategoryId,
+        tab.topicListType || 'latest',
+        tab.topicsPage
+      )
     }
 
     const result = await pageFetch<any>(url)
     const data = extractData(result)
 
     if (data?.topic_list?.topics && data.topic_list.topics.length > 0) {
-      const existingIds = new Set(tab.topics.map(t => t.id))
-      const newTopics = data.topic_list.topics.filter((t: DiscourseTopic) => !existingIds.has(t.id))
+      const existingIds = new Set(tab.topics.map(topic => topic.id))
+      const newTopics = data.topic_list.topics.filter(
+        (topic: DiscourseTopic) => !existingIds.has(topic.id)
+      )
       tab.topics = [...tab.topics, ...newTopics]
-      tab.hasMoreTopics = data.topic_list.more_topics_url ? true : false
+      tab.hasMoreTopics = Boolean(data.topic_list.more_topics_url)
     } else {
       tab.hasMoreTopics = false
     }
 
     if (data?.users) {
-      data.users.forEach((u: DiscourseUser) => users.value.set(u.id, u))
+      data.users.forEach((user: DiscourseUser) => users.value.set(user.id, user))
     }
-  } catch (e) {
-    console.error('[DiscourseBrowser] loadMoreTopics error:', e)
+  } catch (error) {
+    console.error('[DiscourseBrowser] loadMoreTopics error:', error)
     tab.hasMoreTopics = false
   } finally {
     isLoadingMore.value = false

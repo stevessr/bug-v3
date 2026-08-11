@@ -48,6 +48,7 @@ import {
 } from './routes/notifications'
 import { loadSearch as loadSearchRoute } from './routes/search'
 import {
+  buildCategoryTopicListApiUrl,
   loadCategory as loadCategoryRoute,
   loadMoreTopics as loadMoreTopicsRoute
 } from './routes/category'
@@ -471,6 +472,7 @@ export function useDiscourseBrowser() {
       currentCategorySlug: '',
       currentCategoryId: null,
       currentCategoryName: '',
+      currentCategory: null,
       currentTagName: '',
       topicListType: 'latest',
       topicListPeriod: null,
@@ -620,6 +622,7 @@ export function useDiscourseBrowser() {
           top: '排行',
           hot: '热门',
           posted: '我的帖子',
+          read: '已读',
           bookmarks: '书签'
         }
         tab.title = labels[topicListRoute.type]
@@ -639,7 +642,12 @@ export function useDiscourseBrowser() {
       } else if (pathname.startsWith('/c/')) {
         const categoryRoute = categoryRouteFromPath(pathname)
         if (!categoryRoute) throw new Error('无效的分类地址')
-        await loadCategory(tab, categoryRoute.slug, categoryRoute.categoryId)
+        await loadCategory(
+          tab,
+          categoryRoute.slug,
+          categoryRoute.categoryId,
+          categoryRoute.listType
+        )
         tab.title = `分类：${tab.currentCategoryName || categoryRoute.slug}`
         tab.viewType = 'category'
       } else if (
@@ -979,8 +987,13 @@ export function useDiscourseBrowser() {
   }
 
   // Load category
-  async function loadCategory(tab: BrowserTab, slug: string, categoryId: number | null = null) {
-    await loadCategoryRoute(tab, slug, categoryId, baseUrl, users)
+  async function loadCategory(
+    tab: BrowserTab,
+    slug: string,
+    categoryId: number | null = null,
+    listType: TopicListType = 'latest'
+  ) {
+    await loadCategoryRoute(tab, slug, categoryId, baseUrl, users, listType)
   }
 
   // Load categories page
@@ -1245,9 +1258,12 @@ export function useDiscourseBrowser() {
           tab.topicListPeriod
         )
       } else if (tab.viewType === 'category') {
-        url = tab.currentCategoryId
-          ? `${baseUrl.value}/c/${tab.currentCategorySlug}/${tab.currentCategoryId}.json`
-          : `${baseUrl.value}/c/${tab.currentCategorySlug}.json`
+        url = buildCategoryTopicListApiUrl(
+          baseUrl.value,
+          tab.currentCategorySlug,
+          tab.currentCategoryId,
+          tab.topicListType || 'latest'
+        )
       } else if (tab.viewType === 'tag') {
         const encoded = encodeURIComponent(tab.currentTagName || '')
         if (!encoded) return

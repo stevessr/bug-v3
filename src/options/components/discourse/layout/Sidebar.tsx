@@ -27,6 +27,7 @@ export default defineComponent({
       { value: 'top', label: '顶流' },
       { value: 'hot', label: '火热' },
       { value: 'posted', label: '我的帖子' },
+      { value: 'read', label: '已读' },
       { value: 'bookmarks', label: '书签' }
     ]
 

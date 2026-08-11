@@ -46,6 +46,7 @@ export async function loadHome(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = ''
   tab.tagGroups = []
   tab.pendingTopics = null
@@ -116,6 +117,7 @@ export async function loadCategories(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = ''
   tab.tagGroups = []
   tab.pendingTopics = null
@@ -146,6 +148,7 @@ export async function loadPosted(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = ''
   tab.tagGroups = []
   tab.pendingTopics = null
@@ -182,6 +185,7 @@ export async function loadBookmarks(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = ''
   tab.tagGroups = []
   tab.pendingTopics = null
@@ -227,6 +231,7 @@ export async function loadTags(tab: BrowserTab, baseUrl: Ref<string>) {
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = ''
 }
 
@@ -252,6 +257,7 @@ export async function loadTag(
   tab.currentCategorySlug = ''
   tab.currentCategoryId = null
   tab.currentCategoryName = ''
+  tab.currentCategory = null
   tab.currentTagName = tagName
   tab.tagGroups = []
   tab.pendingTopics = null

@@ -1,7 +1,7 @@
 // Discourse Browser Types
 
 export type TopicListType =
-  'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'bookmarks'
+  'latest' | 'new' | 'unread' | 'unseen' | 'top' | 'hot' | 'posted' | 'read' | 'bookmarks'
 export type TopicListPeriod = 'all' | 'yearly' | 'quarterly' | 'monthly' | 'weekly' | 'daily'
 
 export interface BrowserTab {
@@ -40,6 +40,8 @@ export interface BrowserTab {
   currentCategorySlug: string
   currentCategoryId: number | null
   currentCategoryName: string
+  /** Full category payload retained for the category browse header and composer. */
+  currentCategory: DiscourseCategory | null
   currentTagName: string
   // Topic list type for home view
   topicListType: TopicListType
@@ -151,6 +153,8 @@ export interface DiscourseCategory {
   style_type?: string | null
   icon?: string | null
   emoji?: string | null
+  read_restricted?: boolean
+  minimum_required_trust_level?: number | null
   uploaded_logo?: { url: string } | null
   uploaded_logo_dark?: { url: string } | null
   topics?: Array<{

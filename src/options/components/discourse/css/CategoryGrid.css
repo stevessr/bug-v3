@@ -325,11 +325,28 @@
 
 .category-card__name {
   overflow: hidden;
+  min-width: 0;
   color: var(--d-text, var(--theme-on-surface));
   font-size: 15px;
   font-weight: 660;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.category-card__lock {
+  flex: 0 0 auto;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 14px;
+}
+
+.category-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .category-card__children {
