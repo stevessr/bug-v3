@@ -335,7 +335,7 @@ pnpm release:all          # Complete release with all packaging
 - `marked@^16.4.2` - Markdown parser
 - `katex@^0.16.27` - LaTeX rendering
 - `prosemirror-*` - Rich text editor
-- `@anthropic-ai/sdk@^0.39.0` - AI SDK
+- `src/agent/browserAiClient.ts` - browser-native fetch/stream AI adapter
 - `zod@^4.3.5` - Schema validation
 
 ### Development Dependencies

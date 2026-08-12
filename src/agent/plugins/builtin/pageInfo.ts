@@ -1,5 +1,4 @@
-import { Type } from '@mariozechner/pi-ai'
-
+import { Type } from '../../aiTypes'
 import type { AgentPlugin } from '../index'
 
 /**

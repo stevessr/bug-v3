@@ -34,6 +34,7 @@ import {
 } from '@/agent/skills'
 import { SCRIPT_TEMPLATES, validateScript } from '@/agent/scriptRunner'
 import { useAgentSettings } from '@/agent/useAgentSettings'
+import { extractAssistantText, resolveActiveApiKey, runSimpleTextPrompt } from '@/agent/piSupport'
 import type { SkillChain, Skill, CustomSkill, SkillChainStep } from '@/agent/skills'
 
 // Agent 设置
@@ -335,7 +336,7 @@ const generateWithAi = async () => {
     return
   }
 
-  if (!agentSettings.value.apiKey) {
+  if (!resolveActiveApiKey(agentSettings.value)) {
     message.error('请先在 Agent 设置中配置 API Key')
     return
   }
@@ -344,13 +345,6 @@ const generateWithAi = async () => {
   originalCodeSnapshot.value = scriptContent.value
 
   try {
-    const { default: Anthropic } = await import('@anthropic-ai/sdk')
-    const client = new Anthropic({
-      apiKey: agentSettings.value.apiKey,
-      baseURL: agentSettings.value.baseUrl || undefined,
-      dangerouslyAllowBrowser: true
-    })
-
     const userMessage = scriptContent.value.trim()
       ? `当前脚本代码：
 \`\`\`javascript
@@ -364,20 +358,13 @@ ${scriptContent.value}
 
 请根据需求生成脚本代码。只返回代码。`
 
-    const response = await client.messages.create({
-      model: agentSettings.value.taskModel || 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: CODING_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }]
+    const response = await runSimpleTextPrompt({
+      prompt: userMessage,
+      systemPrompt: CODING_SYSTEM_PROMPT,
+      settings: agentSettings.value
     })
 
-    // 提取文本内容
-    let generatedCode = ''
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        generatedCode += block.text
-      }
-    }
+    let generatedCode = extractAssistantText(response)
 
     // 清理 markdown 代码块标记
     generatedCode = generatedCode

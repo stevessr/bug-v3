@@ -1,13 +1,12 @@
 /**
- * Pi Agent 可选插件
+ * AI Agent 可选插件
  *
  * 插件 = 一段可被启用 / 禁用的能力：可附加 system prompt 片段、注册额外的
- * pi-agent tools，或两者结合。所有内置插件在 `builtinPlugins.ts` 中实现，
+ * agent tools，或两者结合。所有内置插件在 `builtinPlugins.ts` 中实现，
  * 通过 `getEnabledPlugins(settings)` 在 runtime 中获取。
  */
 
-import type { AgentTool } from '@mariozechner/pi-agent-core'
-
+import type { AgentTool } from '../aiTypes'
 import type { AgentSettings, SubAgentConfig } from '../types'
 
 import { BUILTIN_PLUGINS, getBuiltinPluginById } from './builtin'
@@ -73,7 +72,7 @@ export interface AgentPlugin {
    */
   systemPrompt?: (ctx: PluginRuntimeContext) => string
   /**
-   * 可选的 tool 列表构造器。返回 pi-agent tool，会被合并进 runtime。
+   * 可选的 tool 列表构造器。返回 agent tool，会被合并进 runtime。
    * 异步以便插件按需从 chrome.* / network 拉资源。
    */
   buildTools?: (ctx: PluginRuntimeContext) => Promise<AgentTool<any, any>[]> | AgentTool<any, any>[]
@@ -126,7 +125,7 @@ export async function collectPluginTools(
       const produced = await plugin.buildTools(ctx)
       tools.push(...produced)
     } catch (err) {
-      console.warn(`[Pi Plugin] ${plugin.id} buildTools failed:`, err)
+      console.warn(`[Agent Plugin] ${plugin.id} buildTools failed:`, err)
     }
   }
   return tools

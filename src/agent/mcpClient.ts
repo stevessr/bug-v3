@@ -644,7 +644,7 @@ export async function discoverAllMcpTools(
 }
 
 /**
- * 将 MCP 工具转换为 Anthropic API 工具格式
+ * 将 MCP 工具转换为通用 JSON Schema 工具格式
  */
 export function mcpToolToAnthropicTool(
   serverId: string,

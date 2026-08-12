@@ -14,6 +14,16 @@ export {
 // Codex 风格线程 API
 export { AgentCodex, AgentThread } from './agentThread'
 
+// Browser-only AI VM
+export {
+  BrowserVmInstance,
+  WasmVm,
+  getBrowserVmInstance,
+  createBrowserVmTool,
+  browserVmToolSchema
+} from './browserVm'
+export type { BrowserVmOperation, BrowserVmRequest, BrowserVmResult } from './browserVm'
+
 // 上下文管理
 export {
   beginContext,

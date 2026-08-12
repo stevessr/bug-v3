@@ -17,7 +17,6 @@ import type {
   ChatChannelUpdatePayload,
   ChatMembershipUpdatePayload
 } from '../types'
-
 import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 type NotificationLevel = 'always' | 'mention' | 'never'

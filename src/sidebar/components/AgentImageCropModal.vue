@@ -138,7 +138,7 @@ const useSelection = () => {
     @cancel="emit('close')"
   >
     <p class="agent-image-crop-copy">
-      拖动框选需要 PI
+      拖动框选需要助手
       关注的区域，或直接使用整张可见页面截图。图片只发送给本次模型请求，不写入本地会话历史。
     </p>
     <div

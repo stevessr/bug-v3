@@ -1215,7 +1215,7 @@ const captureVisibleTab = async (): Promise<string> => {
 const handleCaptureVisualContext = async () => {
   if (!ensureImageCapacity()) return
   if (activeSubagent.value && !activeSubagent.value.permissions.screenshot) {
-    antMessage.warning('当前 PI 预设未启用截图权限')
+    antMessage.warning('当前 Agent 预设未启用截图权限')
     return
   }
   isPreparingImage.value = true
@@ -1253,7 +1253,7 @@ const confirmScreenshotCrop = async (payload: { dataUrl: string; cropped: boolea
 
 const handleStartWorkflowRecording = async () => {
   if (isSending.value || isExecutingActions.value || pendingActions.value.length > 0) {
-    antMessage.warning('请先完成当前 PI 任务或权限确认')
+    antMessage.warning('请先完成当前 Agent 任务或权限确认')
     return
   }
   try {
@@ -1314,11 +1314,11 @@ const handleRunWorkflow = async (workflow: AgentBrowserWorkflow) => {
     return
   }
   if (isSending.value || isExecutingActions.value || pendingActions.value.length > 0) {
-    antMessage.warning('请先完成当前 PI 任务或权限确认')
+    antMessage.warning('请先完成当前 Agent 任务或权限确认')
     return
   }
   if (!activeSubagent.value) {
-    antMessage.error('没有可用的 PI 子代理配置')
+    antMessage.error('没有可用的 Agent 子代理配置')
     return
   }
 
@@ -1661,7 +1661,7 @@ onUnmounted(() => {
         <div class="flex items-center gap-3">
           <div class="agent-avatar">P</div>
           <div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white">Pi Task Agent</div>
+            <div class="text-sm font-semibold text-gray-900 dark:text-white">Browser AI Agent</div>
             <div class="text-[11px] text-gray-400">
               {{ hasConnection ? '已连接' : '未连接' }} · {{ mcpSummary }}
             </div>
@@ -1763,7 +1763,7 @@ onUnmounted(() => {
 
     <div class="agent-body">
       <div v-if="messages.length === 0" class="agent-empty">
-        <div class="agent-empty-title">Pi Agent 已准备好</div>
+        <div class="agent-empty-title">AI Agent 已准备好</div>
         <div class="agent-empty-sub">
           描述你要自动化的任务，例如“打开当前页面的登录按钮并填写账号信息”。
         </div>
@@ -1791,7 +1791,7 @@ onUnmounted(() => {
 
       <div v-for="message in messages" :key="message.id" class="agent-message">
         <div class="agent-message-role" :data-role="message.role">
-          {{ message.role === 'user' ? '你' : 'Pi' }}
+          {{ message.role === 'user' ? '你' : 'Agent' }}
           <a-button
             v-if="message.role === 'user'"
             size="small"

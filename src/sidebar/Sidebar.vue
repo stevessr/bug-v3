@@ -5,7 +5,7 @@ import LazyEmojiGrid from '../popup/components/LazyEmojiGrid.vue'
 import { usePopup } from '../popup/usePopup'
 import { useEmojiImages } from '../composables/useEmojiImages'
 
-// Agent 面板异步加载：包含 @anthropic-ai/sdk / katex / marked / dompurify
+// Agent 面板异步加载：包含浏览器 AI runtime / katex / marked / dompurify
 // 等大型依赖，仅在用户切到 agent 视图时再下载
 const Agent = defineAsyncComponent(() => import('./Agent.vue'))
 
@@ -199,7 +199,7 @@ const handleSearch = () => {
       <div class="sidebar-header">
         <div class="flex items-center justify-between px-3 py-2">
           <div class="flex flex-col">
-            <span class="sidebar-title">Pi 助手</span>
+            <span class="sidebar-title">浏览器助手</span>
             <span class="sidebar-subtitle">自动化任务与网页操作</span>
           </div>
           <div class="sidebar-toggle">

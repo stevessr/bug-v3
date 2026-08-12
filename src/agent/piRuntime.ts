@@ -1,18 +1,14 @@
-import {
-  Agent,
-  type AgentTool,
-  type AgentToolResult,
-  type AgentMessage as PiAgentMessage
-} from '@mariozechner/pi-agent-core'
-import {
-  Type,
-  type AssistantMessage,
-  type ImageContent,
-  type Message,
-  type ToolResultMessage
-} from '@mariozechner/pi-ai'
 import { nanoid } from 'nanoid'
 
+import { completeBrowserAi } from './browserAiClient'
+import type {
+  AgentTool,
+  AgentToolResult,
+  AiMessage,
+  AiToolCallContent,
+  AssistantMessage,
+  ImageContent
+} from './aiTypes'
 import { beginContext, endContext } from './agentContext'
 import {
   mergeParsedPayloads,
@@ -22,13 +18,13 @@ import {
 } from './agentPayload'
 import { callMcpTool, discoverAllMcpTools, mcpToolToAnthropicTool } from './mcpClient'
 import {
+  buildPiCallOptions,
   buildPiModel,
   buildSystemPrompt,
   extractAssistantText,
   extractAssistantThinking,
   normalizePiUsage,
   resolveActiveApiKey,
-  resolveThinkingLevel,
   type AgentTabContextLike
 } from './piSupport'
 import {
@@ -44,12 +40,14 @@ import {
   collectPluginTools,
   type PluginRuntimeContext
 } from './plugins'
+import { createBrowserVmTool } from './browserVm'
 import type { AgentStreamUpdate } from './agentStreaming'
 import type { AgentUsage } from './agentUsage'
 import type {
   AgentAction,
   AgentActionResult,
   AgentMessage,
+  AgentPermissions,
   AgentSettings,
   SubAgentConfig
 } from './types'
@@ -69,45 +67,26 @@ export interface AgentRunResult {
   error?: string
 }
 
+type PendingBrowserTool = {
+  toolUseIds: string[]
+  toolInputs: AgentToolPayload[]
+}
+
+type StoredThreadState = {
+  messages: AiMessage[]
+  pendingTool?: PendingBrowserTool
+}
+
 type ThreadRuntime = {
   id: string
-  agent: Agent
+  messages: AiMessage[]
   settings: AgentSettings
   subagent?: SubAgentConfig
   context?: { tab?: AgentTabContextLike }
   pendingTool?: PendingBrowserTool
-}
-
-type PendingBrowserTool = {
-  toolUseIds: string[]
-  toolInputs: AgentToolPayload[]
-  resolve: (result: AgentToolResult<{ kind: 'browser_actions' }>) => void
-  reject: (error?: unknown) => void
-}
-
-type StoredThreadState = {
-  messages: Message[]
-  pendingTool?: {
-    toolUseIds: string[]
-    toolInputs: AgentToolPayload[]
-  }
-}
-
-type Deferred<T> = {
-  promise: Promise<T>
-  resolve: (value: T) => void
-  reject: (reason?: unknown) => void
-  settled: () => boolean
-}
-
-type RunEventState = {
-  lastAssistantMessage: AssistantMessage | null
-  lastAssistantText: string
-  lastReasoningText: string
-  lastPayload: AgentToolPayload | null
-  lastToolUseIds: string[]
-  lastToolInputs: AgentToolPayload[]
-  usage: AgentUsage
+  systemPrompt: string
+  model: ReturnType<typeof buildPiModel>
+  tools: AgentTool<any, any>[]
 }
 
 type RunOptions = {
@@ -120,31 +99,20 @@ type RunOptions = {
 const THREAD_STORAGE_PREFIX = 'pi-agent-thread-v2:'
 const runtimeRegistry = new Map<string, ThreadRuntime>()
 
-const createDeferred = <T>(): Deferred<T> => {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  let settled = false
-  const promise = new Promise<T>((res, rej) => {
-    resolve = value => {
-      if (settled) return
-      settled = true
-      res(value)
-    }
-    reject = reason => {
-      if (settled) return
-      settled = true
-      rej(reason)
-    }
-  })
-  return {
-    promise,
-    resolve,
-    reject,
-    settled: () => settled
-  }
+const DEFAULT_RUNTIME_PERMISSIONS: AgentPermissions = {
+  click: true,
+  scroll: true,
+  touch: false,
+  screenshot: true,
+  navigate: true,
+  tabs: true,
+  debugger: true,
+  clickDom: true,
+  input: true,
+  fileAccess: true
 }
 
-const cloneMessages = (messages: PiAgentMessage[]): Message[] =>
+const cloneMessages = (messages: AiMessage[]): AiMessage[] =>
   JSON.parse(
     JSON.stringify(
       messages.map(message => {
@@ -165,12 +133,40 @@ const cloneMessages = (messages: PiAgentMessage[]): Message[] =>
     )
   )
 
+const normalizeStoredMessages = (messages: unknown): AiMessage[] => {
+  if (!Array.isArray(messages)) return []
+  return messages
+    .filter(item => item && typeof item === 'object')
+    .map(item => {
+      const message = item as Record<string, unknown>
+      if (message.role === 'toolResult') {
+        return {
+          role: 'tool' as const,
+          content: Array.isArray(message.content)
+            ? message.content
+                .filter(block => (block as Record<string, unknown>)?.type === 'text')
+                .map(block => String((block as Record<string, unknown>).text || ''))
+                .join('')
+            : String(message.content || ''),
+          toolCallId: typeof message.toolCallId === 'string' ? message.toolCallId : undefined,
+          toolName: typeof message.toolName === 'string' ? message.toolName : undefined,
+          isError: message.isError === true
+        }
+      }
+      return message as unknown as AiMessage
+    })
+}
+
 const readStoredThreadState = (threadId: string): StoredThreadState | null => {
   if (typeof localStorage === 'undefined') return null
   const raw = localStorage.getItem(`${THREAD_STORAGE_PREFIX}${threadId}`)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as StoredThreadState
+    const parsed = JSON.parse(raw) as Partial<StoredThreadState>
+    return {
+      messages: normalizeStoredMessages(parsed.messages),
+      pendingTool: parsed.pendingTool
+    }
   } catch {
     return null
   }
@@ -184,10 +180,7 @@ const writeStoredThreadState = (threadId: string, state: StoredThreadState) => {
 const clearStoredPendingTool = (threadId: string) => {
   const stored = readStoredThreadState(threadId)
   if (!stored) return
-  writeStoredThreadState(threadId, {
-    messages: stored.messages,
-    pendingTool: undefined
-  })
+  writeStoredThreadState(threadId, { messages: stored.messages })
 }
 
 const normalizeActions = (actions: AgentToolPayload['actions'] | undefined): AgentAction[] =>
@@ -195,9 +188,7 @@ const normalizeActions = (actions: AgentToolPayload['actions'] | undefined): Age
 
 const normalizeToolPayload = (payload: AgentToolPayload | null): AgentToolPayload | null => {
   if (!payload) return null
-  if (payload.actions?.length) {
-    payload.actions = normalizeActions(payload.actions)
-  }
+  if (payload.actions?.length) payload.actions = normalizeActions(payload.actions)
   return payload
 }
 
@@ -211,27 +202,26 @@ const emitUpdate = (
 }
 
 const buildResultMessage = (
+  threadId: string,
   payload: AgentToolPayload | null,
   assistantText: string,
-  usage: AgentUsage
+  usage: AgentUsage,
+  toolUseIds: string[] = [],
+  toolInputs: AgentToolPayload[] = []
 ): AgentRunResult => {
   const content =
     payload?.message?.trim() ||
     assistantText.trim() ||
     payload?.steps?.[0]?.trim() ||
     '已完成任务。'
-
   return {
-    message: {
-      id: nanoid(),
-      role: 'assistant',
-      content
-    },
+    threadId,
+    message: { id: nanoid(), role: 'assistant', content },
     actions: normalizeActions(payload?.actions),
-    toolUseId: payload ? undefined : undefined,
-    toolInput: payload || undefined,
-    toolUseIds: undefined,
-    toolInputs: payload ? [payload] : undefined,
+    toolUseIds,
+    toolInputs,
+    toolUseId: toolUseIds[0],
+    toolInput: toolInputs[0],
     parallelActions: payload?.parallelActions,
     thoughts: payload?.thoughts,
     steps: payload?.steps,
@@ -239,70 +229,27 @@ const buildResultMessage = (
   }
 }
 
-const extractBrowserPayload = (message: AssistantMessage | null) => {
-  if (!message) {
-    return {
-      merged: null as AgentToolPayload | null,
-      toolUseIds: [] as string[],
-      toolInputs: [] as AgentToolPayload[]
-    }
-  }
-
+const extractBrowserPayload = (message: AssistantMessage) => {
   const browserToolCalls = message.content.filter(
-    (block): block is Extract<AssistantMessage['content'][number], { type: 'toolCall' }> =>
+    (block): block is AiToolCallContent =>
       block.type === 'toolCall' && block.name === toolSchema.name
   )
-
   const toolInputs = browserToolCalls
     .map(block => normalizeToolPayload(parseResponsePayload(block.arguments)))
     .filter((payload): payload is AgentToolPayload => Boolean(payload))
-  const toolUseIds = browserToolCalls.map(block => block.id)
-  const merged = normalizeToolPayload(mergeParsedPayloads(toolInputs))
-
   return {
-    merged,
-    toolUseIds,
+    merged: normalizeToolPayload(mergeParsedPayloads(toolInputs)),
+    toolUseIds: browserToolCalls.map(block => block.id),
     toolInputs
   }
 }
 
-const serializeToolResultContent = (
-  toolUses: { id: string; input: AgentToolPayload }[],
-  results: AgentActionResult[]
-): ToolResultMessage[] =>
-  toolUses.map(use => {
-    const actionIds = (use.input.actions || [])
-      .map(action => action.id)
-      .filter((id): id is string => typeof id === 'string')
-    const filteredResults = actionIds.length
-      ? results.filter(result => actionIds.includes(result.id))
-      : results
-
-    return {
-      role: 'toolResult',
-      toolCallId: use.id,
-      toolName: toolSchema.name,
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(filteredResults)
-        }
-      ],
-      details: { kind: 'browser_actions' as const, results: filteredResults },
-      isError: filteredResults.some(result => result.error),
-      timestamp: Date.now()
-    }
-  })
-
 const getScopedEnabledMcpServers = (settings: AgentSettings, subagent?: SubAgentConfig) => {
-  const builtinServers = getEnabledBuiltinMcpConfigs()
-  const allMcpServers = [...builtinServers, ...settings.mcpServers]
-
+  const allMcpServers = [...getEnabledBuiltinMcpConfigs(), ...(settings.mcpServers || [])]
   return allMcpServers.filter(server => {
     if (!server.enabled) return false
     const scope = subagent?.mcpServerIds
-    if (scope && scope.length > 0) return scope.includes(server.id)
-    return true
+    return !scope || scope.length === 0 || scope.includes(server.id)
   })
 }
 
@@ -317,25 +264,20 @@ const dedupeSkills = (skills: Skill[]): Skill[] => {
 
 const formatMcpToolName = (skill: Skill): string | null => {
   if (!skill.mcpServerId || !skill.mcpToolName) return null
-  const safeToolName = skill.mcpToolName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  return `mcp__${skill.mcpServerId}__${safeToolName}`
+  return `mcp__${skill.mcpServerId}__${skill.mcpToolName.replace(/[^a-zA-Z0-9_-]/g, '_')}`
 }
 
 const buildRuntimeSkillPromptSection = (skills: Skill[]): string => {
   if (!skills.length) return ''
-
   const lines = [
     '## 当前任务更适合优先考虑的 MCP tools',
-    '浏览器页面内操作仍优先使用 browser_actions；只有在需要搜索、文档查询、站外能力或外部自动化时，再直接调用下列 MCP tool。',
+    '浏览器页面内操作仍优先使用 browser_actions 或 browser_vm；只有在需要搜索、文档查询、站外能力或外部自动化时，再直接调用下列 MCP tool。',
     '如果能力匹配，请直接调用对应 tool，不要只在自然语言里描述“将要调用”。'
   ]
-
   for (const skill of skills) {
-    const toolName = formatMcpToolName(skill)
-    if (!toolName) continue
-    lines.push(`- ${skill.name}: ${skill.description}（tool=${toolName}）`)
+    const name = formatMcpToolName(skill)
+    if (name) lines.push(`- ${skill.name}: ${skill.description}（tool=${name}）`)
   }
-
   lines.push('仅在当前任务明确相关时调用，并确保传入参数与用户目标一致。')
   return lines.join('\n')
 }
@@ -347,53 +289,34 @@ const buildRuntimeSystemPrompt = async (
   context?: { tab?: AgentTabContextLike }
 ): Promise<string> => {
   const basePrompt = buildSystemPrompt(settings, subagent, context)
-
-  // 插件 prompt 片段：与 MCP 推荐分开拼接，保证插件能力即便禁用 MCP 也生效
-  const pluginCtx: PluginRuntimeContext = {
-    settings,
-    subagent,
-    tab: context?.tab
-  }
+  const pluginCtx: PluginRuntimeContext = { settings, subagent, tab: context?.tab }
   const pluginSection = buildPluginSystemPromptSection(pluginCtx)
-
-  const mergeWithPlugin = (mainPrompt: string) =>
-    pluginSection ? `${mainPrompt}\n\n${pluginSection}` : mainPrompt
-
-  if (!settings.enableMcp) return mergeWithPlugin(basePrompt)
-
-  const enabledServers = getScopedEnabledMcpServers(settings, subagent)
-  if (!enabledServers.length) return mergeWithPlugin(basePrompt)
-
+  const withPlugins = (prompt: string) => (pluginSection ? `${prompt}\n\n${pluginSection}` : prompt)
+  if (!settings.enableMcp) return withPlugins(basePrompt)
+  const servers = getScopedEnabledMcpServers(settings, subagent)
+  if (!servers.length) return withPlugins(basePrompt)
   try {
-    const allowedServerIds = new Set(enabledServers.map(server => server.id))
-    const allSkills = await discoverAllSkills(settings.mcpServers)
-    const callableSkills = allSkills.filter(
+    const allowed = new Set(servers.map(server => server.id))
+    const skills = (await discoverAllSkills(settings.mcpServers || [])).filter(
       skill =>
-        skill.enabled &&
-        skill.mcpServerId &&
-        skill.mcpToolName &&
-        allowedServerIds.has(skill.mcpServerId)
+        skill.enabled && skill.mcpServerId && skill.mcpToolName && allowed.has(skill.mcpServerId)
     )
-
-    if (!callableSkills.length) return mergeWithPlugin(basePrompt)
-
-    const suggestedSkills = getSuggestedSkills(input, callableSkills, 4)
-    const recommendedSkills = recommendSkills(
+    if (!skills.length) return withPlugins(basePrompt)
+    const suggested = getSuggestedSkills(input, skills, 4)
+    const recommended = recommendSkills(
       {
         currentUrl: context?.tab?.url,
         pageContent: [context?.tab?.title, input].filter(Boolean).join('\n')
       },
-      callableSkills
+      skills
     ).slice(0, 4)
-
-    const promptSkills = dedupeSkills([...suggestedSkills, ...recommendedSkills]).slice(0, 4)
-    const skillSection = buildRuntimeSkillPromptSection(promptSkills)
-
-    const merged = skillSection ? `${basePrompt}\n\n${skillSection}` : basePrompt
-    return mergeWithPlugin(merged)
+    const section = buildRuntimeSkillPromptSection(
+      dedupeSkills([...suggested, ...recommended]).slice(0, 4)
+    )
+    return withPlugins(section ? `${basePrompt}\n\n${section}` : basePrompt)
   } catch (error) {
-    console.warn('[Pi Runtime] Failed to build runtime skill prompt:', error)
-    return mergeWithPlugin(basePrompt)
+    console.warn('[Browser AI Runtime] Failed to build runtime skill prompt:', error)
+    return withPlugins(basePrompt)
   }
 }
 
@@ -401,38 +324,20 @@ const createThreadRuntime = (
   threadId: string,
   settings: AgentSettings,
   subagent: SubAgentConfig | undefined,
-  context: { tab?: AgentTabContextLike } | undefined,
-  input: string
-) => {
+  context: { tab?: AgentTabContextLike } | undefined
+): ThreadRuntime => {
   const stored = readStoredThreadState(threadId)
   const runtime: ThreadRuntime = {
     id: threadId,
+    messages: stored?.messages || [],
+    pendingTool: stored?.pendingTool,
     settings,
     subagent,
     context,
-    agent: new Agent({
-      initialState: {
-        systemPrompt: buildSystemPrompt(settings, subagent, context),
-        model: buildPiModel(settings, subagent, {
-          useReasoning: resolveThinkingLevel(settings, input) !== 'off'
-        }),
-        thinkingLevel: resolveThinkingLevel(settings, input),
-        messages: (stored?.messages || []) as any,
-        tools: []
-      },
-      getApiKey: async _provider => resolveActiveApiKey(runtime.settings) || undefined
-    })
+    systemPrompt: buildSystemPrompt(settings, subagent, context),
+    model: buildPiModel(settings, subagent),
+    tools: []
   }
-
-  if (stored?.pendingTool?.toolUseIds.length && stored.pendingTool.toolInputs.length) {
-    runtime.pendingTool = {
-      toolUseIds: stored.pendingTool.toolUseIds,
-      toolInputs: stored.pendingTool.toolInputs,
-      resolve: () => undefined,
-      reject: () => undefined
-    }
-  }
-
   runtimeRegistry.set(threadId, runtime)
   return runtime
 }
@@ -441,8 +346,7 @@ const getOrCreateThreadRuntime = (
   threadId: string,
   settings: AgentSettings,
   subagent: SubAgentConfig | undefined,
-  context: { tab?: AgentTabContextLike } | undefined,
-  input: string
+  context: { tab?: AgentTabContextLike } | undefined
 ) => {
   const existing = runtimeRegistry.get(threadId)
   if (existing) {
@@ -451,143 +355,62 @@ const getOrCreateThreadRuntime = (
     existing.context = context
     return existing
   }
-  return createThreadRuntime(threadId, settings, subagent, context, input)
+  return createThreadRuntime(threadId, settings, subagent, context)
 }
 
-const syncRuntimeConfig = async (
-  runtime: ThreadRuntime,
-  input: string,
-  suspendResult: Deferred<AgentRunResult | null>
-) => {
-  runtime.agent.state.systemPrompt = await buildRuntimeSystemPrompt(
-    input,
-    runtime.settings,
-    runtime.subagent,
-    runtime.context
-  )
-  runtime.agent.state.model = buildPiModel(runtime.settings, runtime.subagent, {
-    useReasoning: resolveThinkingLevel(runtime.settings, input) !== 'off'
-  })
-  runtime.agent.state.thinkingLevel = resolveThinkingLevel(runtime.settings, input)
-  runtime.agent.state.tools = await buildTools(runtime, suspendResult)
-}
+const getRuntimePermissions = (runtime: ThreadRuntime): AgentPermissions =>
+  runtime.subagent?.permissions || DEFAULT_RUNTIME_PERMISSIONS
 
-const buildTools = async (
-  runtime: ThreadRuntime,
-  suspendResult: Deferred<AgentRunResult | null>
-) => {
-  const browserActionsTool = {
-    name: toolSchema.name,
-    label: 'Browser Actions',
-    description: toolSchema.description,
-    parameters: Type.Unsafe<Record<string, unknown>>(
-      toolSchema.input_schema as Record<string, unknown>
-    ),
-    execute: async (toolCallId: string, params: unknown) => {
-      const parsed = normalizeToolPayload(parseResponsePayload(params as Record<string, unknown>))
-      const mergedPayload = parsed || runtime.pendingTool?.toolInputs[0] || null
-      const toolUseIds =
-        runtime.pendingTool?.toolUseIds.length && runtime.pendingTool.toolUseIds[0]
-          ? runtime.pendingTool.toolUseIds
-          : [toolCallId]
-      const toolInputs = parsed ? [parsed] : runtime.pendingTool?.toolInputs || []
-
-      if (mergedPayload?.memory) {
-        updateMemory(mergedPayload.memory)
-      }
-
-      writeStoredThreadState(runtime.id, {
-        messages: cloneMessages(runtime.agent.state.messages),
-        pendingTool:
-          toolUseIds.length > 0 && toolInputs.length > 0
-            ? {
-                toolUseIds,
-                toolInputs
-              }
-            : undefined
-      })
-
-      const livePromise = new Promise<AgentToolResult<{ kind: 'browser_actions' }>>(
-        (resolve, reject) => {
-          runtime.pendingTool = {
-            toolUseIds,
-            toolInputs,
-            resolve,
-            reject
-          }
-        }
-      )
-
-      const partialResult = buildResultMessage(
-        mergedPayload,
-        runtime.agent.state.streamingMessage && 'content' in runtime.agent.state.streamingMessage
-          ? extractAssistantText(runtime.agent.state.streamingMessage as AssistantMessage)
-          : '',
-        null
-      )
-
-      partialResult.toolUseId = toolCallId
-      partialResult.toolUseIds = toolUseIds
-      partialResult.toolInput = parsed || toolInputs[0]
-      partialResult.toolInputs = toolInputs
-
-      if (!suspendResult.settled()) {
-        suspendResult.resolve(partialResult)
-      }
-
-      return livePromise
-    }
-  }
-
-  const tools: AgentTool<any, any>[] = [browserActionsTool]
-
-  // 用户启用的插件 tools：早于 MCP 注入，独立于 enableMcp 开关
+const buildTools = async (runtime: ThreadRuntime): Promise<AgentTool<any, any>[]> => {
   const pluginCtx: PluginRuntimeContext = {
     settings: runtime.settings,
     subagent: runtime.subagent,
     tab: runtime.context?.tab
   }
-  const pluginTools = await collectPluginTools(pluginCtx)
-  tools.push(...pluginTools)
-
-  if (!runtime.settings.enableMcp) {
-    return tools
+  const browserActionsTool: AgentTool<any, any> = {
+    name: toolSchema.name,
+    label: 'Browser Actions',
+    description: toolSchema.description,
+    parameters: toolSchema.input_schema as Record<string, unknown>,
+    execute: async () => ({
+      content: [{ type: 'text', text: 'browser_actions 将由侧边栏批准后执行。' }]
+    })
   }
+  const browserVmTool = createBrowserVmTool({
+    permissions: getRuntimePermissions(runtime),
+    settings: runtime.settings,
+    targetTabId: runtime.context?.tab?.id
+  })
+  const tools: AgentTool<any, any>[] = [browserActionsTool, browserVmTool]
+  tools.push(...(await collectPluginTools(pluginCtx)))
 
-  const enabledServers = getScopedEnabledMcpServers(runtime.settings, runtime.subagent)
-
-  if (!enabledServers.length) return tools
-
-  const discoveredTools = await discoverAllMcpTools(enabledServers)
-  for (const discovered of discoveredTools) {
-    const proxyTool = mcpToolToAnthropicTool(
+  if (!runtime.settings.enableMcp) return tools
+  const servers = getScopedEnabledMcpServers(runtime.settings, runtime.subagent)
+  if (!servers.length) return tools
+  for (const discovered of await discoverAllMcpTools(servers)) {
+    const proxy = mcpToolToAnthropicTool(
       discovered.serverId,
       discovered.serverName,
       discovered.tool
     )
-    const server = enabledServers.find(item => item.id === discovered.serverId)
+    const server = servers.find(item => item.id === discovered.serverId)
     if (!server) continue
-
     tools.push({
-      name: proxyTool.name,
+      name: proxy.name,
       label: `${discovered.serverName}: ${discovered.tool.name}`,
-      description: proxyTool.description,
-      parameters: Type.Unsafe<Record<string, unknown>>(
-        proxyTool.input_schema as Record<string, unknown>
-      ),
-      execute: async (_toolCallId: string, params: unknown) => {
+      description: proxy.description,
+      parameters: proxy.input_schema as Record<string, unknown>,
+      execute: async (_toolCallId, params) => {
         const result = await callMcpTool(
           server,
           discovered.tool.name,
           params as Record<string, unknown>
         )
-        if (result.error) {
-          throw new Error(result.error)
-        }
+        if (result.error) throw new Error(result.error)
         return {
           content: [
             {
-              type: 'text' as const,
+              type: 'text',
               text:
                 typeof result.result === 'string'
                   ? result.result
@@ -604,126 +427,161 @@ const buildTools = async (
       }
     })
   }
-
   return tools
 }
 
-const createRunEventState = (): RunEventState => ({
-  lastAssistantMessage: null,
-  lastAssistantText: '',
-  lastReasoningText: '',
-  lastPayload: null,
-  lastToolUseIds: [],
-  lastToolInputs: [],
-  usage: null
+const syncRuntimeConfig = async (runtime: ThreadRuntime, input: string) => {
+  runtime.systemPrompt = await buildRuntimeSystemPrompt(
+    input,
+    runtime.settings,
+    runtime.subagent,
+    runtime.context
+  )
+  runtime.model = buildPiModel(runtime.settings, runtime.subagent, {
+    useReasoning: runtime.settings.enableThoughts && /深度思考|思考模式|think/i.test(input)
+  })
+  runtime.tools = await buildTools(runtime)
+}
+
+const toolResultText = (result: AgentToolResult) => {
+  const content = result.content
+    ?.map(item => item.text)
+    .join('\n')
+    .trim()
+  if (content) return content
+  return JSON.stringify(result.details ?? result)
+}
+
+const appendToolResult = (
+  runtime: ThreadRuntime,
+  call: AiToolCallContent,
+  result: AgentToolResult
+) => {
+  runtime.messages.push({
+    role: 'tool',
+    content: toolResultText(result),
+    toolCallId: call.id,
+    toolName: call.name,
+    isError: result.isError === true,
+    timestamp: Date.now()
+  })
+}
+
+const buildUserMessage = (input: string, images?: ImageContent[]): AiMessage => ({
+  role: 'user',
+  content: images?.length ? [{ type: 'text', text: input }, ...images] : input,
+  timestamp: Date.now()
 })
 
-const subscribeToRun = (
-  runtime: ThreadRuntime,
-  state: RunEventState,
-  onUpdate?: (update: AgentStreamUpdate) => void
-) =>
-  runtime.agent.subscribe(event => {
-    if (event.type === 'message_update' && event.message.role === 'assistant') {
-      state.lastAssistantMessage = event.message as AssistantMessage
-      state.lastAssistantText = extractAssistantText(state.lastAssistantMessage)
-      state.lastReasoningText = extractAssistantThinking(state.lastAssistantMessage)
+const persistRuntime = (runtime: ThreadRuntime) => {
+  writeStoredThreadState(runtime.id, {
+    messages: cloneMessages(runtime.messages),
+    pendingTool: runtime.pendingTool
+  })
+}
 
-      if (event.assistantMessageEvent.type === 'text_delta') {
-        emitUpdate(onUpdate, { message: state.lastAssistantText })
-      }
-      if (event.assistantMessageEvent.type === 'thinking_delta') {
-        emitUpdate(onUpdate, {
-          thoughts: state.lastReasoningText ? [state.lastReasoningText] : undefined
-        })
-      }
-      if (event.assistantMessageEvent.type === 'toolcall_delta') {
-        const toolCall =
-          state.lastAssistantMessage.content[event.assistantMessageEvent.contentIndex]
-        if (toolCall?.type === 'toolCall' && toolCall.name === toolSchema.name) {
-          const parsed = normalizeToolPayload(parseResponsePayload(toolCall.arguments))
-          if (parsed) {
-            emitUpdate(onUpdate, {
-              message: parsed.message || state.lastAssistantText || undefined,
-              thoughts:
-                parsed.thoughts?.length || state.lastReasoningText
-                  ? parsed.thoughts || [state.lastReasoningText]
-                  : undefined,
-              steps: parsed.steps,
-              actions: normalizeActions(parsed.actions),
-              parallelActions: parsed.parallelActions
-            })
+const finalizeAssistant = (
+  runtime: ThreadRuntime,
+  assistant: AssistantMessage,
+  usage: AgentUsage
+): AgentRunResult => {
+  const text = extractAssistantText(assistant)
+  const parsed = parseResponsePayload(text)
+  return buildResultMessage(runtime.id, parsed, text, usage)
+}
+
+const runModelLoop = async (
+  runtime: ThreadRuntime,
+  input: string,
+  onUpdate?: (update: AgentStreamUpdate) => void
+): Promise<AgentRunResult> => {
+  let latest: AssistantMessage | null = null
+  let usage: AgentUsage = null
+
+  for (let round = 0; round < 8; round += 1) {
+    let streamedText = ''
+    let streamedThinking = ''
+    const assistant = await completeBrowserAi({
+      model: runtime.model,
+      systemPrompt: runtime.systemPrompt,
+      messages: runtime.messages,
+      tools: runtime.tools,
+      options: {
+        ...buildPiCallOptions(runtime.settings, input),
+        onDelta: delta => {
+          if (delta.text) {
+            streamedText += delta.text
+            emitUpdate(onUpdate, { message: streamedText })
+          }
+          if (delta.thinking) {
+            streamedThinking += delta.thinking
+            emitUpdate(onUpdate, { thoughts: [streamedThinking] })
           }
         }
       }
-      return
+    })
+    latest = assistant
+    usage = normalizePiUsage(assistant.usage)
+    runtime.messages.push(assistant)
+
+    const browser = extractBrowserPayload(assistant)
+    if (browser.toolUseIds.length > 0 && browser.toolInputs.length > 0) {
+      if (browser.merged?.memory) updateMemory(browser.merged.memory)
+      runtime.pendingTool = { toolUseIds: browser.toolUseIds, toolInputs: browser.toolInputs }
+      persistRuntime(runtime)
+      const result = buildResultMessage(
+        runtime.id,
+        browser.merged,
+        extractAssistantText(assistant),
+        usage,
+        browser.toolUseIds,
+        browser.toolInputs
+      )
+      emitUpdate(onUpdate, {
+        message:
+          browser.merged?.message || extractAssistantText(assistant) || streamedText || undefined,
+        thoughts:
+          browser.merged?.thoughts ||
+          (extractAssistantThinking(assistant) ? [extractAssistantThinking(assistant)] : undefined),
+        steps: browser.merged?.steps,
+        actions: normalizeActions(browser.merged?.actions),
+        parallelActions: browser.merged?.parallelActions
+      })
+      return result
     }
 
-    if (event.type === 'message_end') {
-      if (event.message.role === 'assistant') {
-        state.lastAssistantMessage = event.message as AssistantMessage
-        state.lastAssistantText = extractAssistantText(state.lastAssistantMessage)
-        state.lastReasoningText = extractAssistantThinking(state.lastAssistantMessage)
-        state.usage = normalizePiUsage(state.lastAssistantMessage.usage)
+    const calls = assistant.content.filter(
+      (block): block is AiToolCallContent => block.type === 'toolCall'
+    )
+    if (!calls.length) {
+      persistRuntime(runtime)
+      return finalizeAssistant(runtime, assistant, usage)
+    }
 
-        const { merged, toolUseIds, toolInputs } = extractBrowserPayload(state.lastAssistantMessage)
-        state.lastPayload = merged
-        state.lastToolUseIds = toolUseIds
-        state.lastToolInputs = toolInputs
-
-        if (merged?.memory) {
-          updateMemory(merged.memory)
-        }
-
-        emitUpdate(onUpdate, {
-          message: merged?.message?.trim() || state.lastAssistantText || undefined,
-          thoughts:
-            merged?.thoughts?.length || state.lastReasoningText
-              ? merged?.thoughts || [state.lastReasoningText]
-              : undefined,
-          steps: merged?.steps,
-          actions: normalizeActions(merged?.actions),
-          parallelActions: merged?.parallelActions
+    for (const call of calls) {
+      const tool = runtime.tools.find(item => item.name === call.name)
+      if (!tool) {
+        appendToolResult(runtime, call, {
+          content: [{ type: 'text', text: `未知工具：${call.name}` }],
+          isError: true
+        })
+        continue
+      }
+      try {
+        const result = await tool.execute(call.id, call.arguments)
+        appendToolResult(runtime, call, result)
+      } catch (error) {
+        appendToolResult(runtime, call, {
+          content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+          isError: true
         })
       }
-
-      writeStoredThreadState(runtime.id, {
-        messages: cloneMessages(runtime.agent.state.messages),
-        pendingTool:
-          runtime.pendingTool?.toolUseIds.length && runtime.pendingTool.toolInputs.length
-            ? {
-                toolUseIds: runtime.pendingTool.toolUseIds,
-                toolInputs: runtime.pendingTool.toolInputs
-              }
-            : undefined
-      })
     }
-  })
-
-const finalizeResult = (threadId: string, state: RunEventState): AgentRunResult => {
-  const message =
-    state.lastPayload?.message?.trim() ||
-    state.lastAssistantText ||
-    state.lastPayload?.steps?.[0]?.trim() ||
-    '已完成任务。'
-
-  return {
-    threadId,
-    message: {
-      id: nanoid(),
-      role: 'assistant',
-      content: message
-    },
-    actions: normalizeActions(state.lastPayload?.actions),
-    toolUseIds: state.lastToolUseIds,
-    toolInputs: state.lastToolInputs,
-    toolUseId: state.lastToolUseIds[0],
-    toolInput: state.lastToolInputs[0],
-    parallelActions: state.lastPayload?.parallelActions,
-    thoughts: state.lastPayload?.thoughts,
-    steps: state.lastPayload?.steps,
-    usage: state.usage
+    persistRuntime(runtime)
   }
+
+  if (latest) return finalizeAssistant(runtime, latest, usage)
+  return buildResultMessage(runtime.id, null, '', null)
 }
 
 const withThreadId = (threadId: string, result: AgentRunResult): AgentRunResult => ({
@@ -736,11 +594,8 @@ const failWithContext = (
   executionContextId: string,
   error: unknown
 ): AgentRunResult => {
-  const message = error instanceof Error ? error.message : 'Pi Agent 请求失败。'
-  endContext(executionContextId, {
-    success: false,
-    error: message
-  })
+  const message = error instanceof Error ? error.message : '浏览器 AI Agent 请求失败。'
+  endContext(executionContextId, { success: false, error: message })
   return withThreadId(threadId, { error: message })
 }
 
@@ -753,56 +608,20 @@ export async function runPiAgentMessage(
 ): Promise<AgentRunResult> {
   const threadId = options?.sessionId || nanoid()
   if (!resolveActiveApiKey(settings)) {
-    return withThreadId(threadId, {
-      error: '请先在设置中填写可供 Pi Agent SDK 使用的 API Key。'
-    })
+    return withThreadId(threadId, { error: '请先在设置中填写 AI API Key。' })
   }
-
   const executionContextId = beginContext(subagent ? 'subagent' : 'master', input, {
     sessionId: threadId,
     agentId: subagent?.id,
     agentName: subagent?.name,
     isolated: options?.isolated ?? Boolean(subagent)
   })
-
   try {
-    const runtime = getOrCreateThreadRuntime(threadId, settings, subagent, context, input)
-    runtime.settings = settings
-    runtime.subagent = subagent
-    runtime.context = context
-
-    const suspendResult = createDeferred<AgentRunResult | null>()
-    await syncRuntimeConfig(runtime, input, suspendResult)
-
-    const runState = createRunEventState()
-    const unsubscribe = subscribeToRun(runtime, runState, options?.onUpdate)
-
-    const promptPromise = runtime.agent
-      .prompt(input, options?.images)
-      .then(() => null)
-      .catch(error => {
-        if (!suspendResult.settled()) throw error
-        return null
-      })
-
-    const suspended = await Promise.race([suspendResult.promise, promptPromise])
-    unsubscribe()
-
-    if (suspended) {
-      endContext(executionContextId, {
-        success: true,
-        output: suspended.message?.content || ''
-      })
-      return withThreadId(threadId, suspended)
-    }
-
-    runtime.pendingTool = undefined
-    clearStoredPendingTool(threadId)
-    const result = finalizeResult(threadId, runState)
-    endContext(executionContextId, {
-      success: true,
-      output: result.message?.content || ''
-    })
+    const runtime = getOrCreateThreadRuntime(threadId, settings, subagent, context)
+    await syncRuntimeConfig(runtime, input)
+    runtime.messages.push(buildUserMessage(input, options?.images))
+    const result = await runModelLoop(runtime, input, options?.onUpdate)
+    endContext(executionContextId, { success: true, output: result.message?.content || '' })
     return result
   } catch (error) {
     return failWithContext(threadId, executionContextId, error)
@@ -825,110 +644,37 @@ export async function runPiAgentFollowup(
     agentName: subagent?.name,
     isolated: options?.isolated ?? Boolean(subagent)
   })
-
   try {
-    const runtime = getOrCreateThreadRuntime(threadId, settings, subagent, context, input)
-    runtime.settings = settings
-    runtime.subagent = subagent
-    runtime.context = context
+    if (!resolveActiveApiKey(settings)) throw new Error('请先在设置中填写 AI API Key。')
+    const runtime = getOrCreateThreadRuntime(threadId, settings, subagent, context)
+    await syncRuntimeConfig(runtime, input)
+    const stored = runtime.pendingTool || readStoredThreadState(threadId)?.pendingTool
+    const effectiveUses = toolUses.length
+      ? toolUses
+      : (stored?.toolUseIds || [])
+          .map((id, index) => ({ id, input: stored?.toolInputs[index] }))
+          .filter((item): item is { id: string; input: AgentToolPayload } => Boolean(item.input))
+    if (!effectiveUses.length) throw new Error('工具调用信息缺失，无法继续。')
 
-    const suspendResult = createDeferred<AgentRunResult | null>()
-    const runState = createRunEventState()
-    const unsubscribe = subscribeToRun(runtime, runState, options?.onUpdate)
-
-    const storedPending = runtime.pendingTool
-    const livePending = Boolean(
-      storedPending?.toolUseIds.length && typeof storedPending.resolve === 'function'
-    )
-
-    if (livePending && storedPending) {
-      await syncRuntimeConfig(runtime, input, suspendResult)
-
-      const filteredToolUses = toolUses.length
-        ? toolUses
-        : storedPending.toolUseIds.map((id, index) => ({
-            id,
-            input: storedPending.toolInputs[index]
-          }))
-
-      const toolResults = serializeToolResultContent(filteredToolUses, toolResult)
-      clearStoredPendingTool(threadId)
-      runtime.pendingTool = undefined
-      storedPending?.resolve({
-        content: toolResults[0]?.content || [{ type: 'text', text: JSON.stringify(toolResult) }],
-        details: { kind: 'browser_actions' }
+    for (const use of effectiveUses) {
+      const actionIds = (use.input.actions || []).map(action => action.id).filter(Boolean)
+      const filtered = actionIds.length
+        ? toolResult.filter(result => actionIds.includes(result.id))
+        : toolResult
+      runtime.messages.push({
+        role: 'tool',
+        toolCallId: use.id,
+        toolName: toolSchema.name,
+        content: JSON.stringify(filtered),
+        isError: filtered.some(result => Boolean(result.error)),
+        timestamp: Date.now()
       })
-
-      const completionPromise = runtime.agent.waitForIdle().then(() => null)
-      const suspended = await Promise.race([suspendResult.promise, completionPromise])
-      unsubscribe()
-
-      if (suspended) {
-        endContext(executionContextId, {
-          success: true,
-          output: suspended.message?.content || ''
-        })
-        return withThreadId(threadId, suspended)
-      }
-
-      const result = finalizeResult(threadId, runState)
-      endContext(executionContextId, {
-        success: true,
-        output: result.message?.content || ''
-      })
-      return result
     }
-
-    const stored = readStoredThreadState(threadId)
-    const effectiveToolUses =
-      toolUses.length > 0
-        ? toolUses
-        : (stored?.pendingTool?.toolUseIds || []).map((id, index) => ({
-            id,
-            input: stored?.pendingTool?.toolInputs?.[index] as AgentToolPayload
-          }))
-
-    if (!effectiveToolUses.length) {
-      unsubscribe()
-      return failWithContext(
-        threadId,
-        executionContextId,
-        new Error('工具调用信息缺失，无法继续。')
-      )
-    }
-
-    await syncRuntimeConfig(runtime, input, suspendResult)
-
-    clearStoredPendingTool(threadId)
     runtime.pendingTool = undefined
-
-    const toolContent = serializeToolResultContent(effectiveToolUses, toolResult)
-    for (const item of toolContent) {
-      ;(runtime.agent as any).appendMessage?.(item)
-    }
-
-    writeStoredThreadState(threadId, {
-      messages: cloneMessages(runtime.agent.state.messages as Message[]),
-      pendingTool: undefined
-    })
-
-    const continuePromise = runtime.agent.continue().then(() => null)
-    const suspended = await Promise.race([suspendResult.promise, continuePromise])
-    unsubscribe()
-
-    if (suspended) {
-      endContext(executionContextId, {
-        success: true,
-        output: suspended.message?.content || ''
-      })
-      return withThreadId(threadId, suspended)
-    }
-
-    const result = finalizeResult(threadId, runState)
-    endContext(executionContextId, {
-      success: true,
-      output: result.message?.content || ''
-    })
+    clearStoredPendingTool(threadId)
+    persistRuntime(runtime)
+    const result = await runModelLoop(runtime, input, options?.onUpdate)
+    endContext(executionContextId, { success: true, output: result.message?.content || '' })
     return result
   } catch (error) {
     return failWithContext(threadId, executionContextId, error)

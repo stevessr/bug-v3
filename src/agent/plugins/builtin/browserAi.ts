@@ -1,5 +1,4 @@
-import { Type } from '@mariozechner/pi-ai'
-
+import { Type } from '../../aiTypes'
 import type { AgentPlugin, PluginAvailabilityResult, PluginCapabilityState } from '../index'
 
 import {
@@ -142,7 +141,7 @@ async function checkBrowserAiAvailability(): Promise<PluginAvailabilityResult> {
  * browser-ai 插件
  *
  * 把 Chromium 内核（Chrome 127+ / Edge 138+）的浏览器内置 on-device AI
- * 以 pi-agent tools 形式暴露给 agent。覆盖：
+ * 以 agent tools 形式暴露给 agent。覆盖：
  * - LanguageModel（通用补全，两家都支持）
  * - Summarizer（摘要，两家都支持）
  * - Writer / Rewriter（Edge 主导，需 edge://flags 启用对应 "API for Phi mini"）

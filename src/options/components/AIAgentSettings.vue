@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { nanoid } from 'nanoid'
-import { getProviders } from '@mariozechner/pi-ai'
 
 import SkillsSettings from './SkillsSettings.vue'
 
+import { SUPPORTED_PROVIDERS } from '@/agent/piSupport'
 import {
   getAgentFolderRootState,
   pickAgentFolderRoot,
@@ -144,13 +144,9 @@ const formatManagedPermissionTime = (timestamp: number) =>
   }).format(timestamp)
 
 // === 提供商切换 UI ===
-// pi-ai 的 KnownProvider 列表（运行时获取，避免硬编码漂移）
+// Browser AI runtime 的 provider 列表（不再依赖 Node-only provider SDK）
 const availableProviders = computed<string[]>(() => {
-  try {
-    return [...getProviders()].sort((a, b) => a.localeCompare(b))
-  } catch {
-    return []
-  }
+  return [...SUPPORTED_PROVIDERS].sort((a, b) => a.localeCompare(b))
 })
 
 // 当前 active profile 在下拉中的选项（由 settings 驱动；写入交给 setActiveProvider）
@@ -208,7 +204,7 @@ const removeCurrentProvider = () => {
   removeProviderProfile(provider)
 }
 
-// 推荐的 provider 默认 endpoint（仅作为说明文案，留空表示 pi-ai 内置默认即可）
+// 推荐的 provider 默认 endpoint（仅作为说明文案，留空使用 runtime 默认值）
 const PROVIDER_HINTS: Record<string, string> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com/v1',
@@ -898,10 +894,10 @@ watch(
     <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-base font-medium dark:text-white">Pi Agent 连接</h3>
+          <h3 class="text-base font-medium dark:text-white">AI Agent 连接</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            使用 Pi Agent SDK / pi-ai 驱动。模型支持 `provider/model` 写法，也可按 baseUrl
-            或模型名前缀自动推断 provider。
+            使用浏览器原生 fetch + WASM VM Agent 驱动。模型支持 `provider/model` 写法，也可按
+            baseUrl 或模型名前缀自动推断 provider。
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -1014,7 +1010,7 @@ watch(
         <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
           以上模型 id 会自动加上
           <code>{{ activeProviderProfile.provider }}/</code>
-          前缀传给 Pi runtime；subagent 仍可用完整
+          前缀传给浏览器 AI runtime；subagent 仍可用完整
           <code>provider/model</code>
           字符串覆盖。
         </p>
@@ -1057,7 +1053,7 @@ watch(
         <div>
           <h3 class="text-base font-medium dark:text-white">浏览器动作与站点权限</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            按站点控制 PI 可访问范围。受保护动作即使在“跳过批准”下也会单独询问。
+            按站点控制 Agent 可访问范围。受保护动作即使在“跳过批准”下也会单独询问。
           </p>
         </div>
         <a-select
@@ -1077,7 +1073,7 @@ watch(
           v-if="managedSitePermissions.length === 0"
           class="rounded-md border border-dashed border-gray-300 dark:border-gray-700 px-4 py-5 text-xs text-gray-500 dark:text-gray-400"
         >
-          尚未保存站点决策。在 PI 侧边栏选择“始终允许”或“阻止站点”后会显示在这里。
+          尚未保存站点决策。在 Agent 侧边栏选择“始终允许”或“阻止站点”后会显示在这里。
         </div>
         <div
           v-for="site in managedSitePermissions"
@@ -1313,7 +1309,7 @@ watch(
         <div>
           <h3 class="text-base font-medium dark:text-white">可选插件</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            扩展 Pi Agent 的能力。可单独启用或关闭；插件在 piRuntime 中按需加载 tools 或追加 system
+            扩展 AI Agent 的能力。可单独启用或关闭；插件在 runtime 中按需加载 tools 或追加 system
             prompt。徽章显示该插件在当前浏览器中的能力探测结果。
           </p>
         </div>
@@ -1639,7 +1635,7 @@ watch(
           <a-select
             v-model:value="newProviderId"
             :options="newProviderOptions"
-            placeholder="选择 pi-ai 支持的 provider"
+            placeholder="选择浏览器 AI 支持的 provider"
             show-search
             class="w-full"
           />

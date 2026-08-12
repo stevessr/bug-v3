@@ -6,6 +6,7 @@
 
 import type { McpServerConfig } from './types'
 import { callMcpTool } from './mcpClient'
+import { getBrowserVmInstance } from './browserVm'
 
 // ============ 类型定义 ============
 
@@ -18,6 +19,8 @@ export interface ScriptContext {
   userInput?: string
   /** 会话 ID */
   sessionId?: string
+  /** 可复用的 Browser VM 实例 ID。默认使用 sessionId。 */
+  vmInstanceId?: string
 }
 
 export interface ScriptApi {
@@ -41,6 +44,13 @@ export interface ScriptApi {
   parseJSON: (str: string) => unknown
   /** 格式化 JSON */
   formatJSON: (obj: unknown) => string
+  /** Browser VM 的 WASM-backed virtual filesystem。 */
+  vm: {
+    instanceId: string
+    readFile(path: string): { path: string; content: string; byteLength: number; offset: number }
+    writeFile(path: string, content: string): { path: string; byteLength: number; offset: number }
+    listFiles(path?: string, recursive?: boolean, maxEntries?: number): unknown[]
+  }
   /** 正则匹配 */
   match: (str: string, pattern: string, flags?: string) => RegExpMatchArray | null
   /** 字符串替换 */
@@ -84,6 +94,7 @@ export async function executeScript(
   mcpServers: McpServerConfig[] = []
 ): Promise<ScriptResult> {
   const logs: string[] = []
+  const vm = getBrowserVmInstance(context.vmInstanceId || context.sessionId)
 
   // 构建 API
   const api: ScriptApi = {
@@ -157,6 +168,13 @@ export async function executeScript(
 
     formatJSON: (obj: unknown) => JSON.stringify(obj, null, 2),
 
+    vm: {
+      instanceId: vm.id,
+      readFile: path => vm.readVirtualFile(path),
+      writeFile: (path, content) => vm.writeVirtualFile(path, content),
+      listFiles: (path, recursive, maxEntries) => vm.listVirtualFiles(path, recursive, maxEntries)
+    },
+
     match: (str: string, pattern: string, flags = 'g') => str.match(new RegExp(pattern, flags)),
 
     replace: (str: string, pattern: string, replacement: string, flags = 'g') =>
@@ -200,7 +218,7 @@ export async function executeScript(
       `
       "use strict";
       const { args, previousResult, userInput, sessionId } = context;
-      const { fetch, mcp, storage, log, delay, parseJSON, formatJSON, match, replace } = api;
+      const { fetch, mcp, storage, vm, log, delay, parseJSON, formatJSON, match, replace } = api;
       const { console, JSON, Math, Date, Array, Object, String, Number, Boolean, RegExp, Error, Promise, Map, Set, parseInt, parseFloat, isNaN, isFinite, encodeURIComponent, decodeURIComponent, encodeURI, decodeURI, atob, btoa } = globals;
 
       return (async () => {

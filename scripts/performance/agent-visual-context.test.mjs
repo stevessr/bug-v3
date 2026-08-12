@@ -81,11 +81,13 @@ test('AgentThread forwards mixed text and images to the PI runtime without flatt
   assert.equal(result.message.content, 'ok')
 })
 
-test('PI runtime sends images to the SDK but strips pixel data from persisted thread state', () => {
+test('browser AI runtime sends image blocks but strips pixel data from persisted thread state', () => {
   const runtimeSource = fs.readFileSync(path.join(repoRoot, 'src/agent/piRuntime.ts'), 'utf8')
   const sidebarSource = fs.readFileSync(path.join(repoRoot, 'src/sidebar/Agent.vue'), 'utf8')
-  assert.match(runtimeSource, /\.prompt\(input, options\?\.images\)/)
+  assert.match(runtimeSource, /completeBrowserAi/)
   assert.match(runtimeSource, /原始数据未持久化/)
+  assert.doesNotMatch(runtimeSource, new RegExp('@' + 'mariozechner'))
+  assert.doesNotMatch(runtimeSource, new RegExp('@' + 'anthropic-ai/sdk'))
   assert.match(sidebarSource, /summarizeAgentImageAttachment/)
   assert.match(sidebarSource, /AgentImageCropModal/)
 })

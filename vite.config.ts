@@ -452,11 +452,6 @@ export default defineConfig(({ mode }) => {
                       priority: 25
                     },
                     {
-                      name: 'vendor-ai',
-                      test: /[\\/]node_modules[\\/](?:@anthropic-ai|@mariozechner)[\\/]/,
-                      priority: 22
-                    },
-                    {
                       name: 'vendor-editor',
                       test: /[\\/]node_modules[\\/](?:prosemirror-[^\\/]+|@bbob|marked|rehype|rehype-parse|rehype-stringify|unified|unist-util-visit|dompurify|highlight\.js)[\\/]/,
                       priority: 18

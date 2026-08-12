@@ -1,9 +1,20 @@
-# PI Browser Agent
+# Browser AI Agent
 
-PI Browser Agent runs in the extension side panel and uses the `browser_actions`
-tool to inspect and operate Chrome tabs. The browser action contract is defined
-in `src/agent/agentPayload.ts`; execution and permission checks live under
-`src/agent/`.
+The Browser AI Agent runs entirely in the extension side panel. Provider calls
+use the browser `fetch`/`ReadableStream` adapter in
+`src/agent/browserAiClient.ts`; no Node provider SDK is bundled. The
+`browser_actions` contract is defined in `src/agent/agentPayload.ts` and the
+permission checks live under `src/agent/`.
+
+## Browser VM
+
+`browser_vm` exposes a reusable `BrowserVmInstance` backed by a
+`WebAssembly.Memory` linear-memory store. It provides `inspect`/`query`, tab and
+pointer operations, screenshots, and a virtual file API (`list-files`,
+`read-file`, `write-file`). VM files never reach the host filesystem, paths are
+normalized and traversal is rejected, and browser operations still go through
+the configured Agent permissions. The VM intentionally has no arbitrary script
+or host-module escape hatch.
 
 ## Approval modes
 
@@ -84,6 +95,7 @@ Supported capabilities include:
 - user-uploaded images and visible-tab screenshot regions as multimodal context;
 - Console, JavaScript exception, and Network diagnostics through
   `chrome.debugger`;
+- reusable `browser_vm` instances with WASM-backed virtual files;
 - folder access and configured MCP tools.
 
 For developer diagnostics, run `debug-start`, reproduce the issue, read evidence
@@ -92,16 +104,16 @@ URL query values are redacted before diagnostic entries reach the model.
 
 ## Visual context
 
-The PI composer accepts up to four PNG, JPEG, WebP, or GIF images. It can also
+The composer accepts up to four PNG, JPEG, WebP, or GIF images. It can also
 capture the active tab and lets the user drag a region before attaching it. A
 thumbnail tray supports review and removal before sending, and an image-only
 message receives a clear default analysis prompt.
 
 Images are validated, bounded to 12 MB input, resized to at most 2048 pixels on
-the longest edge, and capped at 6 MB after processing. The PI SDK receives them
-as native multimodal `ImageContent` blocks alongside the text prompt. Raw pixel
-data is deliberately excluded from the visible-message store, session store,
-and persisted PI thread transcript; only filename, dimensions, source, and size
+the longest edge, and capped at 6 MB after processing. The browser AI adapter
+receives them as native multimodal `ImageContent` blocks alongside the text
+prompt. Raw pixel data is deliberately excluded from the visible-message store,
+session store, and persisted thread transcript; only filename, dimensions, source, and size
 metadata remain. This means retrying an older image message requires attaching
 the image again.
 
@@ -114,11 +126,11 @@ so capture resumes after a full page navigation or service-worker restart.
 
 Stopping a recording opens a save dialog. Saved workflows provide:
 
-- a deterministic `/shortcut` in the PI composer;
+- a deterministic `/shortcut` in the Agent composer;
 - a searchable MD3 workflow library;
 - sequential replay through the same site/protected-action approval gate used
   for model-generated actions;
-- per-action results in the PI timeline;
+- per-action results in the Agent timeline;
 - optional recurring execution with `chrome.alarms`.
 
 Password, OTP, access-token, payment, identity/contact (for example email,
@@ -146,6 +158,7 @@ persisted, and Chrome sends a completion/failure notification.
 
 ```bash
 node --test scripts/performance/agent-permission-policy.test.mjs
+node --test scripts/performance/agent-browser-vm.test.mjs
 node --test scripts/performance/agent-multitab-actions.test.mjs
 node --test scripts/performance/agent-debugger.test.mjs
 node --test scripts/performance/agent-browser-workflows.test.mjs

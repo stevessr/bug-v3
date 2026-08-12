@@ -8,16 +8,16 @@ export type ApiFlavor = 'messages' | 'responses'
  * 设计：把 apiKey / baseUrl / 三个默认模型按 provider 分别保存，
  * 切换 provider 时不会覆盖前一个 provider 的设置。
  * model 字段都是不带 `provider/` 前缀的纯模型 id（例如 `claude-sonnet-4-20250514`），
- * 真正调用时由 piSupport 拼上 provider 前缀。
+ * 真正调用时由浏览器 AI runtime 拼上 provider 前缀。
  */
 export interface ProviderProfile {
-  /** provider id：pi-ai 已知 provider 或用户自定义字符串 */
+  /** provider id：浏览器 AI runtime 支持的 provider 或用户自定义字符串 */
   provider: string
   /** 用户显示名（可选；缺省时使用 provider 本身） */
   label?: string
   /** 该 provider 的 API Key（可空，表示尚未配置） */
   apiKey: string
-  /** 可选的自定义 endpoint，留空使用 pi-ai 内置默认 */
+  /** 可选的自定义 endpoint，留空使用 runtime 内置默认 */
   baseUrl?: string
   /** 该 provider 下的默认任务模型 id（不含 `provider/` 前缀） */
   taskModel?: string

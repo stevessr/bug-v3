@@ -1,13 +1,10 @@
-import {
-  completeSimple,
-  getModel,
-  getModels,
-  type AssistantMessage,
-  type ImageContent,
-  type Message,
-  type Model
-} from '@mariozechner/pi-ai'
-
+import { completeBrowserAi } from './browserAiClient'
+import type {
+  AiMessage,
+  AiModel,
+  AiImageContent as ImageContent,
+  AssistantMessage
+} from './aiTypes'
 import { memoryToPrompt } from './memory'
 import { getEnabledBuiltinMcpConfigs } from './skills'
 import type { AgentSettings, ProviderProfile, SubAgentConfig } from './types'
@@ -22,22 +19,7 @@ export type AgentTabContextLike = {
   windowId?: number
 }
 
-type SupportedProvider =
-  | 'anthropic'
-  | 'openai'
-  | 'google'
-  | 'mistral'
-  | 'openrouter'
-  | 'groq'
-  | 'xai'
-  | 'cerebras'
-  | 'zai'
-  | 'minimax'
-  | 'opencode'
-  | 'opencode-go'
-  | 'kimi-coding'
-
-const SUPPORTED_PROVIDER_SET = new Set<SupportedProvider>([
+export const SUPPORTED_PROVIDERS = [
   'anthropic',
   'openai',
   'google',
@@ -51,7 +33,9 @@ const SUPPORTED_PROVIDER_SET = new Set<SupportedProvider>([
   'opencode',
   'opencode-go',
   'kimi-coding'
-])
+] as const
+
+const SUPPORTED_PROVIDER_SET = new Set<string>(SUPPORTED_PROVIDERS)
 
 const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
 
@@ -81,13 +65,13 @@ export const getActiveProviderProfile = (settings: AgentSettings): ProviderProfi
  */
 const parseModelReference = (
   rawValue: string,
-  fallbackProvider: SupportedProvider
-): { provider: SupportedProvider; modelId: string } => {
+  fallbackProvider: string
+): { provider: string; modelId: string } => {
   const value = rawValue.trim()
   const slashIndex = value.indexOf('/')
 
   if (slashIndex > 0) {
-    const maybeProvider = value.slice(0, slashIndex).trim() as SupportedProvider
+    const maybeProvider = value.slice(0, slashIndex).trim()
     const modelId = value.slice(slashIndex + 1).trim()
     if (SUPPORTED_PROVIDER_SET.has(maybeProvider) && modelId) {
       return { provider: maybeProvider, modelId }
@@ -104,7 +88,7 @@ const parseModelReference = (
  * 旧版本无 providerProfiles 时使用：按 modelId / baseUrl 猜 provider。
  * 仅作为最后一道 fallback，runtime 路径上会先尝试 active profile。
  */
-const inferProvider = (modelId: string, baseUrl: string): SupportedProvider => {
+const inferProvider = (modelId: string, baseUrl: string): string => {
   const model = modelId.trim().toLowerCase()
   const url = baseUrl.trim().toLowerCase()
 
@@ -132,31 +116,15 @@ const inferProvider = (modelId: string, baseUrl: string): SupportedProvider => {
   return 'anthropic'
 }
 
-const createFallbackModel = (
-  provider: SupportedProvider,
+const resolveApiFamily = (
+  provider: string,
   modelId: string,
   baseUrl: string
-): Model<any> => {
-  let template: Model<any> | undefined
-
-  try {
-    const models = getModels(provider as any) as Model<any>[]
-    template = models[0]
-  } catch {
-    template = undefined
-  }
-
-  if (!template) {
-    template = getModel('anthropic', DEFAULT_ANTHROPIC_MODEL as any) as Model<any>
-  }
-
-  return {
-    ...template,
-    provider,
-    id: modelId,
-    name: modelId,
-    baseUrl: baseUrl || template.baseUrl
-  }
+): AiModel['apiFamily'] => {
+  const normalized = `${provider} ${modelId} ${baseUrl}`.toLowerCase()
+  if (provider === 'anthropic' || normalized.includes('anthropic')) return 'anthropic'
+  if (provider === 'google' || modelId.toLowerCase().startsWith('gemini')) return 'google'
+  return 'openai-compatible'
 }
 
 export const buildPiModel = (
@@ -166,7 +134,7 @@ export const buildPiModel = (
     useReasoning?: boolean
     purpose?: 'task' | 'image'
   }
-): Model<any> => {
+): AiModel => {
   const useReasoning = options?.useReasoning === true
   const purpose = options?.purpose || 'task'
   const profile = getActiveProviderProfile(settings)
@@ -191,32 +159,20 @@ export const buildPiModel = (
         : pickByPurpose(subagent?.taskModel, profile?.taskModel, settings.taskModel)
 
   // active profile 是 provider 推断的"权威"来源，否则退回 legacy 推断
-  const fallbackProvider =
-    (profile?.provider as SupportedProvider) || inferProvider(rawModel, settings.baseUrl)
+  const fallbackProvider = profile?.provider || inferProvider(rawModel, settings.baseUrl)
   const { provider, modelId } = parseModelReference(rawModel, fallbackProvider)
   const baseUrl = (profile?.baseUrl || settings.baseUrl || '').trim()
-
-  try {
-    const model = getModel(provider as any, modelId as any) as Model<any>
-    if (!model?.api || !model?.provider || !model?.id) {
-      throw new Error(`Unknown Pi model: ${provider}/${modelId}`)
-    }
-
-    const effectiveApi =
-      settings.apiFlavor === 'responses' &&
-      (provider === 'openai' || provider === 'openrouter' || provider === 'groq')
-        ? provider === 'openai'
-          ? 'openai-responses'
-          : model.api
-        : model.api
-
-    return {
-      ...model,
-      api: effectiveApi,
-      baseUrl: baseUrl || model.baseUrl
-    }
-  } catch {
-    return createFallbackModel(provider, modelId, baseUrl)
+  const apiFamily = resolveApiFamily(provider, modelId, baseUrl)
+  return {
+    provider,
+    id: modelId,
+    name: modelId,
+    baseUrl,
+    apiFamily,
+    apiFlavor:
+      settings.apiFlavor === 'responses' && apiFamily === 'openai-compatible'
+        ? 'responses'
+        : 'messages'
   }
 }
 
@@ -246,28 +202,22 @@ export const normalizePiUsage = (
   if (!usage) return null
   return {
     input_tokens: Number.isFinite(usage.input) ? usage.input : 0,
-    cached_input_tokens: Number.isFinite(usage.cacheRead) ? usage.cacheRead : 0,
+    cached_input_tokens: Number.isFinite(usage.cacheRead) ? Number(usage.cacheRead) : 0,
     output_tokens: Number.isFinite(usage.output) ? usage.output : 0
   }
 }
 
 export const extractAssistantText = (message: AssistantMessage | null | undefined) =>
   (message?.content || [])
-    .filter(
-      (block): block is Extract<AssistantMessage['content'][number], { type: 'text' }> =>
-        block.type === 'text'
-    )
-    .map(block => block.text)
+    .filter(block => block.type === 'text')
+    .map(block => (block.type === 'text' ? block.text : ''))
     .join('')
     .trim()
 
 export const extractAssistantThinking = (message: AssistantMessage | null | undefined) =>
   (message?.content || [])
-    .filter(
-      (block): block is Extract<AssistantMessage['content'][number], { type: 'thinking' }> =>
-        block.type === 'thinking'
-    )
-    .map(block => block.thinking)
+    .filter(block => block.type === 'thinking')
+    .map(block => (block.type === 'thinking' ? block.thinking : ''))
     .join('')
     .trim()
 
@@ -426,13 +376,13 @@ export const buildSystemPrompt = (
   return lines.join('\n')
 }
 
-const createUserTextMessage = (text: string): Message => ({
+const createUserTextMessage = (text: string): AiMessage => ({
   role: 'user',
   content: text,
   timestamp: Date.now()
 })
 
-const createUserImageMessage = (text: string, image: ImageContent): Message => ({
+const createUserImageMessage = (text: string, image: ImageContent): AiMessage => ({
   role: 'user',
   content: [{ type: 'text', text }, image],
   timestamp: Date.now()
@@ -450,14 +400,12 @@ export const runSimpleTextPrompt = async (options: {
     purpose: options.purpose || 'task'
   })
 
-  return completeSimple(
+  return completeBrowserAi({
     model,
-    {
-      systemPrompt: options.systemPrompt,
-      messages: [createUserTextMessage(options.prompt)]
-    },
-    buildPiCallOptions(options.settings, options.prompt)
-  )
+    systemPrompt: options.systemPrompt,
+    messages: [createUserTextMessage(options.prompt)],
+    options: buildPiCallOptions(options.settings, options.prompt)
+  })
 }
 
 export const runSimpleVisionPrompt = async (options: {
@@ -472,12 +420,10 @@ export const runSimpleVisionPrompt = async (options: {
     purpose: 'image'
   })
 
-  return completeSimple(
+  return completeBrowserAi({
     model,
-    {
-      systemPrompt: options.systemPrompt,
-      messages: [createUserImageMessage(options.prompt, options.image)]
-    },
-    buildPiCallOptions(options.settings, options.prompt)
-  )
+    systemPrompt: options.systemPrompt,
+    messages: [createUserImageMessage(options.prompt, options.image)],
+    options: buildPiCallOptions(options.settings, options.prompt)
+  })
 }
