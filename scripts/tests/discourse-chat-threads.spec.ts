@@ -39,7 +39,7 @@ test.describe('Discourse chat message threads', () => {
         chat_channel_id: 7,
         thread_id: 501,
         user: alice,
-        reactions: [],
+        reactions: [{ emoji: 'heart', count: 2, reacted: false, users: [alice, bob] }],
         blocks: []
       }
       const plainMessage = {
@@ -286,6 +286,41 @@ test.describe('Discourse chat message threads', () => {
 
           if (url.includes('/chat/api/me/channels')) {
             data = { channels: [channel] }
+          } else if (new URL(url).pathname === '/site.json' && method === 'GET') {
+            data = {
+              post_action_types: [
+                {
+                  id: 8,
+                  name_key: 'inappropriate',
+                  name: '不当内容',
+                  description: '请说明 @%{username} 的消息有什么问题。',
+                  is_flag: true,
+                  enabled: true,
+                  require_message: true,
+                  applies_to: ['ChatMessage']
+                },
+                {
+                  id: 9,
+                  name_key: 'spam',
+                  name: '垃圾广告',
+                  description: '这是一条垃圾广告消息。',
+                  is_flag: true,
+                  enabled: true,
+                  require_message: false,
+                  applies_to: ['Chat::Message']
+                },
+                {
+                  id: 10,
+                  name_key: 'post_only',
+                  name: '帖子专用理由',
+                  description: '',
+                  is_flag: true,
+                  enabled: true,
+                  require_message: false,
+                  applies_to: ['Post']
+                }
+              ]
+            }
           } else if (url.includes('/emojis.json')) {
             data = {
               emojis: {
@@ -298,6 +333,8 @@ test.describe('Discourse chat message threads', () => {
                 ]
               }
             }
+          } else if (new URL(url).pathname === '/chat/7/100/reactions-users' && method === 'GET') {
+            data = { users: [alice, bob], total_rows: 2 }
           } else if (new URL(url).pathname === '/chat/api/channels/7/pins' && method === 'GET') {
             data = {
               pinned_messages: [...pinnedMessages.values()],
@@ -313,7 +350,19 @@ test.describe('Discourse chat message threads', () => {
             const pinMatch = new URL(url).pathname.match(
               /^\/chat\/api\/channels\/7\/messages\/(\d+)\/pin$/
             )
-            if (pinMatch && (method === 'POST' || method === 'DELETE')) {
+            const flagMatch = new URL(url).pathname.match(
+              /^\/chat\/api\/channels\/7\/messages\/(\d+)\/flags$/
+            )
+            if (flagMatch && method === 'POST') {
+              const parsed = parseBody(body)
+              if (!parsed.flag_type_id) {
+                ok = false
+                status = 400
+                data = { errors: ['请选择举报类型'] }
+              } else {
+                data = { success: 'OK', chat_message_id: Number(flagMatch[1]) }
+              }
+            } else if (pinMatch && (method === 'POST' || method === 'DELETE')) {
               const messageId = Number(pinMatch[1])
               if (method === 'POST') {
                 const message = mainMessages.find(item => item.id === messageId)
@@ -657,6 +706,102 @@ test.describe('Discourse chat message threads', () => {
     expect(ownAfter).not.toBeNull()
     expect(ownReactionBox!.x).toBeGreaterThan(ownContentBox!.x + ownContentBox!.width)
     expect(ownAfter!.height).toBe(ownBefore!.height)
+  })
+
+  test('shows chat reaction people after a delayed hover without changing the message layout', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    const targetMessage = page.locator('[data-chat-message-id="100"]')
+    const reaction = targetMessage.locator('.chat-message-reaction').first()
+    const before = await targetMessage.boundingBox()
+    await reaction.hover()
+
+    const popover = page.getByRole('dialog', { name: ':heart: 反应详情' })
+    await expect(popover).toBeVisible({ timeout: 2000 })
+    await expect(popover.getByText('@alice', { exact: true })).toBeVisible()
+    await expect(popover.getByText('@bob', { exact: true })).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__chatThreadRequests.some((request: any) => {
+            const url = new URL(request.url)
+            return (
+              request.method === 'GET' &&
+              url.pathname === '/chat/7/100/reactions-users' &&
+              url.searchParams.get('emoji') === 'heart' &&
+              url.searchParams.get('page') === '0' &&
+              url.searchParams.get('limit') === '50'
+            )
+          })
+        )
+      )
+      .toBe(true)
+    await expect(targetMessage).toHaveJSProperty('offsetHeight', Math.round(before?.height || 0))
+  })
+
+  test('shows chat reaction people after a sustained touch hold without toggling the reaction', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    const reaction = page.locator('[data-chat-message-id="100"] .chat-message-reaction').first()
+    await reaction.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 11 })
+    await page.waitForTimeout(560)
+    await reaction.dispatchEvent('pointerup', { pointerType: 'touch', pointerId: 11 })
+
+    const popover = page.getByRole('dialog', { name: ':heart: 反应详情' })
+    await expect(popover).toBeVisible()
+    await expect(popover.getByText('@alice', { exact: true })).toBeVisible()
+    const reactRequests = await page.evaluate(() =>
+      (globalThis as any).__chatThreadRequests.filter(
+        (request: any) => request.method === 'PUT' && /\/chat\/7\/react\/100/.test(request.url)
+      )
+    )
+    expect(reactRequests).toHaveLength(0)
+  })
+
+  test('loads chat-specific flag reasons and posts the chosen reason to the official endpoint', async ({
+    page
+  }) => {
+    await openChat(page)
+
+    const targetMessage = page.locator('[data-chat-message-id="110"]')
+    await targetMessage.hover()
+    await targetMessage.getByRole('button', { name: '更多消息操作' }).click()
+    await page
+      .getByRole('menu', { name: '消息操作' })
+      .getByRole('menuitem', { name: '举报' })
+      .click()
+
+    const dialog = page.getByRole('dialog', { name: '举报聊天消息' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('不当内容', { exact: true })).toBeVisible()
+    await expect(dialog.getByText('帖子专用理由', { exact: true })).toHaveCount(0)
+    await dialog.getByText('不当内容', { exact: true }).click()
+    await dialog.getByRole('textbox', { name: '举报补充说明' }).fill('请协助处理这条不当消息。')
+    await dialog.getByRole('button', { name: '提交举报' }).click()
+    await expect(dialog).toHaveCount(0)
+
+    const flagRequest = await page.evaluate(() =>
+      (globalThis as any).__chatThreadRequests.find((request: any) => {
+        const url = new URL(request.url)
+        return (
+          request.method === 'POST' && url.pathname === '/chat/api/channels/7/messages/110/flags'
+        )
+      })
+    )
+    expect(flagRequest).toBeTruthy()
+    const payload = new URLSearchParams(flagRequest.body)
+    expect(payload.get('flag_type_id')).toBe('8')
+    expect(payload.get('message')).toBe('请协助处理这条不当消息。')
+    const usedLegacyEndpoint = await page.evaluate(() =>
+      (globalThis as any).__chatThreadRequests.some((request: any) =>
+        request.url.includes('/chat/api/chat_messages/flags')
+      )
+    )
+    expect(usedLegacyEndpoint).toBe(false)
   })
 
   test('lists pins, jumps to a pin, and pins or unpins messages through official endpoints', async ({

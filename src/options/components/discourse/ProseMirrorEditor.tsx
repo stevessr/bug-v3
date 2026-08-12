@@ -26,7 +26,8 @@ import {
   DownOutlined,
   FunctionOutlined,
   TableOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  FileTextOutlined
 } from '@ant-design/icons-vue'
 
 import {
@@ -37,6 +38,11 @@ import {
 } from './linux.do/emojis'
 import { searchEmojis } from './bbcode'
 import { useDiscourseUpload } from './composables/useDiscourseUpload'
+import {
+  loadForumTemplates,
+  markForumTemplateUsed,
+  type DiscourseForumTemplate
+} from './routes/templates'
 
 import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -60,14 +66,25 @@ export default defineComponent({
     const emojiLoading = ref(false)
     const emojiStore = useEmojiStore()
     const showAdvancedMenu = ref(false)
+    const showTemplatePicker = ref(false)
+    const templateSearchQuery = ref('')
+    const forumTemplates = ref<DiscourseForumTemplate[]>([])
+    const templateLoading = ref(false)
+    const templateError = ref('')
+    const templatesLoaded = ref(false)
+    const templateRequestSequence = ref(0)
     const emojiMenuRef = ref<HTMLElement | null>(null)
     const advancedMenuRef = ref<HTMLElement | null>(null)
     const emojiPopoverRef = ref<HTMLElement | null>(null)
     const advancedPopoverRef = ref<HTMLElement | null>(null)
+    const templatePopoverRef = ref<HTMLElement | null>(null)
     const emojiAnchorRef = ref<HTMLElement | null>(null)
     const advancedAnchorRef = ref<HTMLElement | null>(null)
+    const templateAnchorRef = ref<HTMLElement | null>(null)
     const emojiPopoverStyle = ref<Record<string, string>>({})
     const advancedPopoverStyle = ref<Record<string, string>>({})
+    const templatePopoverStyle = ref<Record<string, string>>({})
+    const templateSelection = ref<{ start: number; end: number } | null>(null)
     const showLinkPanel = ref(false)
     const linkUrl = ref('https://')
     const linkText = ref('')
@@ -136,6 +153,82 @@ export default defineComponent({
       )
     })
 
+    const visibleForumTemplates = computed(() => {
+      const query = templateSearchQuery.value.trim().toLowerCase()
+      if (!query) return forumTemplates.value
+
+      const terms = query.split(/\s+/).filter(Boolean)
+      return forumTemplates.value
+        .map(template => {
+          const searchable = [template.title, template.content, ...template.tags]
+            .join(' ')
+            .toLowerCase()
+          const title = template.title.toLowerCase()
+          const tags = template.tags.join(' ').toLowerCase()
+          const matches = terms.every(term => searchable.includes(term))
+          if (!matches) return { template, score: -1 }
+
+          const score = terms.reduce((total, term) => {
+            return total + (title.includes(term) ? 3 : tags.includes(term) ? 2 : 1)
+          }, 0)
+          return { template, score }
+        })
+        .filter(item => item.score >= 0)
+        .sort((a, b) => b.score - a.score || a.template.title.localeCompare(b.template.title))
+        .map(item => item.template)
+    })
+
+    const loadTemplates = async (force = false) => {
+      if (!props.baseUrl) {
+        templateError.value = '请先连接论坛后再使用模板'
+        return
+      }
+      if (templateLoading.value) return
+      if (templatesLoaded.value && !force) return
+
+      const requestId = templateRequestSequence.value + 1
+      templateRequestSequence.value = requestId
+      templateLoading.value = true
+      templateError.value = ''
+      try {
+        const templates = await loadForumTemplates(props.baseUrl)
+        if (templateRequestSequence.value !== requestId) return
+        forumTemplates.value = templates
+        templatesLoaded.value = true
+      } catch (error) {
+        if (templateRequestSequence.value !== requestId) return
+        templateError.value = error instanceof Error ? error.message : '加载论坛模板失败'
+      } finally {
+        if (templateRequestSequence.value === requestId) {
+          templateLoading.value = false
+        }
+      }
+    }
+
+    const captureTemplateSelection = () => {
+      const el = textareaRef.value
+      if (!el) {
+        templateSelection.value = null
+        return
+      }
+      templateSelection.value = {
+        start: el.selectionStart ?? el.value.length,
+        end: el.selectionEnd ?? el.value.length
+      }
+    }
+
+    const openTemplatePicker = (anchor?: HTMLElement | null) => {
+      captureTemplateSelection()
+      templateAnchorRef.value = anchor || advancedAnchorRef.value || textareaRef.value
+      showTemplatePicker.value = !showTemplatePicker.value
+      showEmojiPicker.value = false
+      showAdvancedMenu.value = false
+      if (showTemplatePicker.value) {
+        templateSearchQuery.value = ''
+        void loadTemplates()
+      }
+    }
+
     const openEmojiPicker = (source: 'discourse' | 'plugin', anchor: HTMLElement) => {
       const isSamePicker = showEmojiPicker.value && emojiSource.value === source
       emojiAnchorRef.value = anchor
@@ -188,17 +281,53 @@ export default defineComponent({
       emit('update:modelValue', value)
     }
 
-    const insertTextAtCursor = (text: string) => {
+    const insertTextAtRange = (text: string, start: number, end: number) => {
       const el = textareaRef.value
       if (!el) return
-      const start = el.selectionStart ?? el.value.length
-      const end = el.selectionEnd ?? el.value.length
       const next = `${el.value.slice(0, start)}${text}${el.value.slice(end)}`
       el.value = next
       const cursor = start + text.length
       el.setSelectionRange(cursor, cursor)
       syncValue(next)
       el.focus()
+    }
+
+    const insertTextAtCursor = (text: string) => {
+      const el = textareaRef.value
+      if (!el) return
+      insertTextAtRange(
+        text,
+        el.selectionStart ?? el.value.length,
+        el.selectionEnd ?? el.value.length
+      )
+    }
+
+    const insertForumTemplate = (template: DiscourseForumTemplate) => {
+      const el = textareaRef.value
+      if (!el) return
+
+      const selection = templateSelection.value || {
+        start: el.selectionStart ?? el.value.length,
+        end: el.selectionEnd ?? el.value.length
+      }
+      const start = Math.max(0, Math.min(selection.start, el.value.length))
+      const end = Math.max(start, Math.min(selection.end, el.value.length))
+      const before = el.value.slice(0, start)
+      const after = el.value.slice(end)
+      const content = template.content.trim()
+      if (!content) return
+
+      const leading = before && !before.endsWith('\n') ? '\n\n' : ''
+      const trailing = after && !after.startsWith('\n') ? '\n\n' : ''
+      const insertion = `${leading}${content}${trailing}`
+      insertTextAtRange(insertion, start, end)
+
+      showTemplatePicker.value = false
+      templateSearchQuery.value = ''
+      templateSelection.value = null
+      void markForumTemplateUsed(props.baseUrl || '', template.id).catch(() => {
+        // Usage telemetry must never prevent the template from being inserted.
+      })
     }
 
     const wrapSelection = (before: string, after: string) => {
@@ -340,6 +469,9 @@ export default defineComponent({
       if (showAdvancedMenu.value) {
         advancedPopoverStyle.value = place(advancedAnchorRef.value, advancedPopoverRef.value, 190)
       }
+      if (showTemplatePicker.value) {
+        templatePopoverStyle.value = place(templateAnchorRef.value, templatePopoverRef.value, 420)
+      }
     }
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
@@ -349,18 +481,21 @@ export default defineComponent({
         emojiMenuRef.value?.contains(target) ||
         emojiPopoverRef.value?.contains(target) ||
         advancedMenuRef.value?.contains(target) ||
-        advancedPopoverRef.value?.contains(target)
+        advancedPopoverRef.value?.contains(target) ||
+        templatePopoverRef.value?.contains(target)
       ) {
         return
       }
       showEmojiPicker.value = false
       showAdvancedMenu.value = false
+      showTemplatePicker.value = false
     }
 
     const handleDocumentKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         showEmojiPicker.value = false
         showAdvancedMenu.value = false
+        showTemplatePicker.value = false
       }
     }
 
@@ -380,9 +515,9 @@ export default defineComponent({
     })
 
     watch(
-      () => [showEmojiPicker.value, showAdvancedMenu.value] as const,
-      ([emojiOpen, advancedOpen]) => {
-        if (emojiOpen || advancedOpen) {
+      () => [showEmojiPicker.value, showAdvancedMenu.value, showTemplatePicker.value] as const,
+      ([emojiOpen, advancedOpen, templateOpen]) => {
+        if (emojiOpen || advancedOpen || templateOpen) {
           void nextTick(updateFloatingMenuPosition)
         }
       }
@@ -417,6 +552,11 @@ export default defineComponent({
     }
 
     const handleTextareaKeydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'i') {
+        event.preventDefault()
+        openTemplatePicker(advancedAnchorRef.value || textareaRef.value)
+        return
+      }
       if (!showEmojiAutocomplete.value || emojiSuggestions.value.length === 0) return
       if (event.key === 'ArrowDown') {
         event.preventDefault()
@@ -497,6 +637,14 @@ export default defineComponent({
       }
     )
 
+    const templateExcerpt = (content: string) =>
+      content
+        .replace(/\[\/?.*?\]/g, ' ')
+        .replace(/[*_`>#]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 150)
+
     return () => (
       <>
         <div class="prosemirror-editor-wrapper">
@@ -575,6 +723,7 @@ export default defineComponent({
                     advancedAnchorRef.value = event.currentTarget as HTMLElement
                     showAdvancedMenu.value = !showAdvancedMenu.value
                     showEmojiPicker.value = false
+                    showTemplatePicker.value = false
                   }}
                   title="高级语法"
                   aria-label="高级语法"
@@ -785,6 +934,93 @@ export default defineComponent({
             </div>
           )}
 
+          {showTemplatePicker.value && (
+            <div
+              ref={templatePopoverRef}
+              class="forum-template-picker"
+              style={templatePopoverStyle.value}
+              role="dialog"
+              aria-label="插入论坛模板"
+              aria-busy={templateLoading.value}
+            >
+              <div class="forum-template-picker__header">
+                <div>
+                  <strong class="forum-template-picker__title">插入论坛模板</strong>
+                  <span class="forum-template-picker__hint">从论坛模板中快速填充当前编辑器</span>
+                </div>
+                <button
+                  type="button"
+                  class="forum-template-picker__close"
+                  title="关闭"
+                  aria-label="关闭论坛模板"
+                  onClick={() => (showTemplatePicker.value = false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div class="forum-template-picker__search-wrap">
+                <input
+                  class="forum-template-picker__search"
+                  value={templateSearchQuery.value}
+                  placeholder="搜索标题、内容或标签"
+                  aria-label="搜索论坛模板"
+                  onInput={event =>
+                    (templateSearchQuery.value = (event.target as HTMLInputElement).value)
+                  }
+                />
+              </div>
+              <div class="forum-template-picker__body">
+                {templateLoading.value ? (
+                  <div class="forum-template-picker__state">加载论坛模板中…</div>
+                ) : templateError.value ? (
+                  <div class="forum-template-picker__state forum-template-picker__state--error">
+                    <span>{templateError.value}</span>
+                    <button type="button" onClick={() => void loadTemplates(true)}>
+                      重试
+                    </button>
+                  </div>
+                ) : visibleForumTemplates.value.length === 0 ? (
+                  <div class="forum-template-picker__state">
+                    {forumTemplates.value.length === 0 ? '暂无可用的论坛模板' : '没有匹配的模板'}
+                  </div>
+                ) : (
+                  visibleForumTemplates.value.map(template => (
+                    <details key={template.id} class="forum-template-item">
+                      <summary class="forum-template-item__summary">
+                        <span class="forum-template-item__title">{template.title}</span>
+                        <button
+                          type="button"
+                          class="forum-template-item__insert"
+                          title={`插入模板：${template.title}`}
+                          aria-label={`插入模板：${template.title}`}
+                          onClick={(event: MouseEvent) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            insertForumTemplate(template)
+                          }}
+                        >
+                          <FileTextOutlined />
+                        </button>
+                      </summary>
+                      <div class="forum-template-item__content">
+                        {template.tags.length > 0 ? (
+                          <div class="forum-template-item__tags">
+                            {template.tags.map(tag => (
+                              <span key={tag} class="forum-template-item__tag">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        <p>{templateExcerpt(template.content) || '（模板内容为空）'}</p>
+                      </div>
+                    </details>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           {showAdvancedMenu.value && (
             <div
               ref={advancedPopoverRef}
@@ -875,6 +1111,14 @@ export default defineComponent({
                 title="折叠块"
               >
                 <InfoCircleOutlined /> <span>折叠块</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => openTemplatePicker(advancedAnchorRef.value)}
+                title="插入论坛模板"
+              >
+                <FileTextOutlined /> <span>插入论坛模板</span>
               </button>
             </div>
           )}

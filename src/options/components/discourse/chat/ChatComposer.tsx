@@ -3,13 +3,17 @@ import {
   LoadingOutlined,
   PaperClipOutlined,
   CloseOutlined,
-  SmileOutlined
+  SmileOutlined,
+  FileTextOutlined
 } from '@ant-design/icons-vue'
 
 import type { ChatMessage } from '../types'
+import type { DiscourseForumTemplate } from '../routes/templates'
 import { useDiscourseUpload } from '../composables/useDiscourseUpload'
 import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 import '../css/chat/ChatComposer.css'
+
+import ForumTemplatePicker from '@/components/editor/wysiwyg/ForumTemplatePicker'
 
 export default defineComponent({
   name: 'ChatComposer',
@@ -25,7 +29,9 @@ export default defineComponent({
     const message = shallowRef('')
     const textareaRef = ref<HTMLTextAreaElement | null>(null)
     const emojiButtonRef = ref<HTMLButtonElement | null>(null)
+    const templateButtonRef = ref<HTMLButtonElement | null>(null)
     const showEmojiPicker = ref(false)
+    const showTemplatePicker = ref(false)
 
     // Upload integration
     const { handleUploadClick, handleUploadChange, fileInputRef, isUploading, uploadFile } =
@@ -90,10 +96,36 @@ export default defineComponent({
     }
 
     const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'i') {
+        event.preventDefault()
+        showEmojiPicker.value = false
+        showTemplatePicker.value = true
+        return
+      }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault()
         handleSend()
       }
+    }
+
+    const insertForumTemplate = (template: DiscourseForumTemplate) => {
+      const textarea = textareaRef.value
+      if (!textarea) return
+      const start = textarea.selectionStart ?? message.value.length
+      const end = textarea.selectionEnd ?? start
+      const content = template.content.trim()
+      if (!content) return
+      const before = message.value.slice(0, start)
+      const after = message.value.slice(end)
+      const leading = before && !before.endsWith('\n') ? '\n\n' : ''
+      const trailing = after && !after.startsWith('\n') ? '\n\n' : ''
+      const insertion = `${leading}${content}${trailing}`
+      message.value = `${before}${insertion}${after}`
+      requestAnimationFrame(() => {
+        const cursor = start + insertion.length
+        textareaRef.value?.focus()
+        textareaRef.value?.setSelectionRange(cursor, cursor)
+      })
     }
 
     const handlePaste = async (event: ClipboardEvent) => {
@@ -208,6 +240,21 @@ export default defineComponent({
               {isUploading.value ? <LoadingOutlined /> : <PaperClipOutlined />}
             </button>
             <button
+              ref={templateButtonRef}
+              type="button"
+              class="chat-composer-template-btn"
+              disabled={props.disabled}
+              onClick={() => {
+                showEmojiPicker.value = false
+                showTemplatePicker.value = !showTemplatePicker.value
+              }}
+              title="插入论坛模板"
+              aria-label="插入论坛模板"
+              aria-expanded={showTemplatePicker.value}
+            >
+              <FileTextOutlined />
+            </button>
+            <button
               type="button"
               class="chat-composer-send"
               disabled={props.disabled || !message.value.trim()}
@@ -223,6 +270,13 @@ export default defineComponent({
             anchorEl={emojiButtonRef.value}
             onSelect={insertEmojiShortcode}
             onClose={() => (showEmojiPicker.value = false)}
+          />
+          <ForumTemplatePicker
+            show={showTemplatePicker.value}
+            baseUrl={props.baseUrl}
+            anchorEl={templateButtonRef.value}
+            onSelect={insertForumTemplate}
+            onClose={() => (showTemplatePicker.value = false)}
           />
           <input
             ref={fileInputRef}

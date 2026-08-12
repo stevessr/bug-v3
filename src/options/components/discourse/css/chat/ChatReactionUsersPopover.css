@@ -1,0 +1,175 @@
+.chat-reaction-users-popover {
+  position: fixed;
+  z-index: 2147483300;
+  display: flex;
+  max-height: min(300px, 55vh);
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-lg, 16px);
+  background: var(--d-surface-1, var(--theme-surface-container-low));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 12px;
+}
+
+.chat-reaction-users-popover__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid
+    color-mix(
+      in oklab,
+      var(--on-primary-container, var(--theme-on-primary-container)) 22%,
+      transparent
+    );
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--tertiary-container, var(--theme-tertiary-container));
+  box-shadow: var(--d-elevation-1, 0 2px 7px rgb(0 0 0 / 14%));
+  color: var(--on-tertiary-container, var(--theme-on-tertiary-container));
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.chat-reaction-users-popover__close:hover,
+.chat-reaction-users-popover__close:focus-visible {
+  outline: 0;
+  filter: brightness(0.94);
+}
+
+.chat-reaction-users-popover__summary {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 46px 0 10px;
+  border-radius: var(--d-shape-md, 12px);
+  background: var(--primary-container, var(--theme-primary-container));
+  color: var(--on-primary-container, var(--theme-on-primary-container));
+}
+
+.chat-reaction-users-popover__title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-reaction-users-popover__title strong,
+.chat-reaction-users-popover__summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-reaction-users-popover__title strong {
+  font-size: 13px;
+}
+
+.chat-reaction-users-popover__summary > span {
+  opacity: 0.78;
+}
+
+.chat-reaction-users-popover__emoji {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  object-fit: contain;
+}
+
+.chat-reaction-users-popover__summary code {
+  padding: 1px 6px;
+  border-radius: var(--d-shape-full, 999px);
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  color: inherit;
+  font-size: 11px;
+}
+
+.chat-reaction-users-popover__list {
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.chat-reaction-users-popover__user {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--d-shape-md, 12px);
+  background: transparent;
+  color: var(--d-text, var(--theme-on-surface));
+  cursor: pointer;
+  text-align: left;
+}
+
+.chat-reaction-users-popover__user:hover,
+.chat-reaction-users-popover__user:focus-visible {
+  outline: 0;
+  background: var(--d-state-hover, rgb(0 0 0 / 8%));
+}
+
+.chat-reaction-users-popover__user img {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-surface-3, var(--theme-surface-container-high));
+  object-fit: cover;
+}
+
+.chat-reaction-users-popover__identity {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.chat-reaction-users-popover__identity strong,
+.chat-reaction-users-popover__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-reaction-users-popover__identity strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat-reaction-users-popover__identity small {
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 10px;
+}
+
+.chat-reaction-users-popover__state {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+}
+
+.chat-reaction-users-popover__state.is-error {
+  color: var(--danger, var(--theme-error));
+}
+
+.chat-reaction-users-popover__more {
+  padding: 2px 10px 0;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 11px;
+  text-align: center;
+}

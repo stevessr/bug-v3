@@ -44,7 +44,10 @@ export async function fetchFlagTypes(baseUrl: string): Promise<DiscourseFlagType
       is_custom_flag: t.is_custom_flag || false,
       require_message: t.require_message || false,
       enabled: t.enabled !== false,
-      applies_to: t.applies_to || ['Post'],
+      // An omitted scope means the reason is usable by every supported
+      // flaggable object.  Do not invent a Post-only scope here: Chat uses
+      // the same site-provided flag catalogue.
+      applies_to: Array.isArray(t.applies_to) ? t.applies_to : undefined,
       icon: t.icon || null
     }))
 

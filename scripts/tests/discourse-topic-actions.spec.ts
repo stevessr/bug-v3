@@ -239,6 +239,29 @@ test.describe('Discourse topic actions and private messages', () => {
             }
           } else if (parsed.pathname === '/emojis/search-aliases.json') {
             data = { heart: ['love'], laughing: ['happy'], tada: ['party'] }
+          } else if (parsed.pathname === '/discourse_templates' && method === 'GET') {
+            data = {
+              templates: [
+                {
+                  id: 900,
+                  title: '问题反馈模板',
+                  slug: 'issue-template',
+                  content: '[b]问题描述[/b]\n\n环境：',
+                  tags: ['反馈', 'bug'],
+                  usages: 4
+                },
+                {
+                  id: 901,
+                  title: '功能建议模板',
+                  slug: 'feature-template',
+                  content: '目标用户：\n期望行为：',
+                  tags: ['建议'],
+                  usages: 2
+                }
+              ]
+            }
+          } else if (parsed.pathname === '/discourse_templates/900/use' && method === 'POST') {
+            data = { id: 900, usages: 5 }
           } else if (parsed.pathname === '/site.json') {
             data = {
               post_action_types: [
@@ -664,6 +687,87 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(page.locator('body > .advanced-syntax-menu')).toHaveCount(1)
   })
 
+  test('loads, searches, and inserts a forum template without resizing the composer', async ({
+    page
+  }) => {
+    await openTopic(page)
+
+    const otherPost = page.locator('[data-post-number="2"]')
+    await otherPost.getByRole('button', { name: '回复 @alice 发布的帖子 #2' }).click()
+
+    const composer = page.locator('.floating-composer')
+    const editor = composer.locator('.prosemirror-editor-wrapper')
+    const textarea = composer.locator('textarea.prosemirror-editor-textarea')
+    await textarea.fill('已有草稿')
+    await textarea.focus()
+    await textarea.evaluate(element => {
+      const textareaElement = element as HTMLTextAreaElement
+      textareaElement.setSelectionRange(4, 4)
+    })
+    const heightBefore = (await editor.boundingBox())?.height || 0
+
+    await composer.getByRole('button', { name: '高级语法' }).click()
+    await expect(page.getByRole('menu', { name: '高级语法' })).toBeVisible()
+    await page
+      .getByRole('menu', { name: '高级语法' })
+      .getByRole('menuitem', { name: '插入论坛模板' })
+      .click()
+
+    const picker = page.getByRole('dialog', { name: '插入论坛模板' })
+    await expect(picker).toBeVisible()
+    await expect(picker.getByRole('textbox', { name: '搜索论坛模板' })).toBeVisible()
+    await expect(picker.getByText('问题反馈模板', { exact: true })).toBeVisible()
+    await expect(page.locator('.floating-composer .forum-template-picker')).toHaveCount(0)
+    expect(Math.abs(((await editor.boundingBox())?.height || 0) - heightBefore)).toBeLessThan(1)
+
+    await picker.getByRole('textbox', { name: '搜索论坛模板' }).fill('反馈')
+    await expect(picker.getByText('问题反馈模板', { exact: true })).toBeVisible()
+    await expect(picker.getByText('功能建议模板', { exact: true })).toHaveCount(0)
+    await picker.getByRole('button', { name: '插入模板：问题反馈模板' }).click()
+
+    await expect(textarea).toHaveValue('已有草稿\n\n[b]问题描述[/b]\n\n环境：')
+    await expect(picker).toBeHidden()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__topicActionRequests.some(
+            (request: any) =>
+              request.url.endsWith('/discourse_templates/900/use') && request.method === 'POST'
+          )
+        )
+      )
+      .toBe(true)
+
+    await textarea.focus()
+    await page.keyboard.press('Control+Shift+I')
+    await expect(page.getByRole('dialog', { name: '插入论坛模板' })).toBeVisible()
+  })
+
+  test('makes forum templates available from the WYSIWYG advanced menu', async ({ page }) => {
+    await openTopic(page)
+    await page
+      .locator('[data-post-number="2"]')
+      .getByRole('button', { name: '回复 @alice 发布的帖子 #2' })
+      .click()
+
+    const composer = page.locator('.floating-composer')
+    await composer.getByRole('button', { name: '所见即所得' }).click()
+    const wysiwyg = composer.locator('.wysiwyg-editor')
+    const content = wysiwyg.locator('.wysiwyg-editor-content')
+    await content.click()
+    await page.keyboard.type('当前草稿')
+
+    await composer.getByRole('button', { name: '高级功能' }).click()
+    const menu = page.getByRole('menu', { name: '高级功能' })
+    await menu.getByRole('menuitem', { name: /论坛模板.*插入论坛可复用模板/ }).click()
+
+    const picker = page.getByRole('dialog', { name: '插入论坛模板' })
+    await expect(picker).toBeVisible()
+    await picker.getByRole('button', { name: '插入模板：问题反馈模板' }).click()
+    await expect(content).toContainText('问题描述')
+    await expect(picker).toBeHidden()
+  })
+
   test('keeps WYSIWYG extras in portal menus and creates Discourse helper blocks', async ({
     page
   }) => {
@@ -676,7 +780,7 @@ test.describe('Discourse topic actions and private messages', () => {
     const composer = page.locator('.floating-composer')
     await composer.getByRole('button', { name: '所见即所得' }).click()
     const wysiwyg = composer.locator('.wysiwyg-editor')
-    const toolbar = wysiwyg.locator('.prosemirror-toolbar')
+    const toolbar = composer.locator('.prosemirror-toolbar')
     await expect(wysiwyg).toBeVisible()
     const heightBefore = (await wysiwyg.boundingBox())?.height || 0
 
@@ -738,7 +842,7 @@ test.describe('Discourse topic actions and private messages', () => {
     await formulaDialog.getByRole('button', { name: '插入公式' }).click()
     await expect(wysiwyg.locator('.discourse-formula-draft')).toHaveCount(1)
 
-    await composer.getByRole('button', { name: '回复', exact: true }).click()
+    await composer.getByRole('button', { name: /^回\s*复$/ }).click()
     const raw = await page.evaluate(() => {
       const request = (globalThis as any).__topicActionRequests.find(
         (item: any) => item.method === 'POST' && new URL(item.url).pathname === '/posts'

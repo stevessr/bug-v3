@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
+import ForumTemplatePicker from './ForumTemplatePicker'
 import WysiwygEditorToolbar from './WysiwygEditorToolbar'
 import WysiwygEditorDialogs from './WysiwygEditorDialogs'
 import { encodeDiscourseDraftSource } from './discourseDrafts'
@@ -46,6 +47,7 @@ export default defineComponent({
     const showFormulaAssistant = ref(false)
     const formula = ref('E = mc^2')
     const formulaDisplay = ref<'inline' | 'block'>('inline')
+    const showTemplatePicker = ref(false)
     let lastEmittedValue = ''
     let savedSelectionRange: Range | null = null
 
@@ -639,7 +641,27 @@ export default defineComponent({
       }
     }
 
+    const openTemplatePicker = () => {
+      captureEditorSelection()
+      closePanels()
+      closeAssistants()
+      showEmojiPicker.value = false
+      showPluginEmojiPicker.value = false
+      showTemplatePicker.value = true
+    }
+
+    const insertForumTemplate = (template: { content: string }) => {
+      const content = template.content.trim()
+      if (!content) return
+      insertText(content)
+    }
+
     const handleEditorKeydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'i') {
+        event.preventDefault()
+        openTemplatePicker()
+        return
+      }
       if (event.key === 'Tab') {
         event.preventDefault()
         insertText('  ')
@@ -719,6 +741,7 @@ export default defineComponent({
       openTableAssistant,
       insertDetails,
       insertSpoiler,
+      openTemplatePicker,
       openPollAssistant: () => {
         captureEditorSelection()
         closePanels()
@@ -824,6 +847,12 @@ export default defineComponent({
           onClose={() => {
             showPluginEmojiPicker.value = false
           }}
+        />
+        <ForumTemplatePicker
+          show={showTemplatePicker.value}
+          baseUrl={props.baseUrl}
+          onSelect={insertForumTemplate}
+          onClose={() => (showTemplatePicker.value = false)}
         />
       </>
     )

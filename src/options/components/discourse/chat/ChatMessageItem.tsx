@@ -16,6 +16,7 @@ import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import PostContent from '../topic/PostContent'
 
 import ChatEmojiPicker from './ChatEmojiPicker'
+import ChatReactionUsersPopover from './ChatReactionUsersPopover'
 import '../css/chat/ChatMessageItem.css'
 
 type ChatAttachmentImage = {
@@ -113,6 +114,12 @@ export default defineComponent({
     const showEmojiPicker = ref(false)
     const floatingControlsRef = ref<HTMLDivElement | null>(null)
     const reactionButtonRef = ref<HTMLButtonElement | null>(null)
+    const reactionUsersPopoverOpen = ref(false)
+    const reactionUsersPopoverAnchor = ref<HTMLElement | null>(null)
+    const reactionUsersPopoverValue = ref<string | null>(null)
+    let reactionUsersPopoverTimer: number | undefined
+    let reactionUsersHoldTimer: number | undefined
+    let suppressReactionClickUntil = 0
 
     // 站点表情映射：把短码反应渲染为表情图片（任意表情反应）
     const emojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
@@ -249,14 +256,85 @@ export default defineComponent({
 
     const normalizeReactionValue = (emoji: string) => emoji.trim().replace(/^:([^:]+):$/, '$1')
 
+    const clearReactionUsersPopoverTimer = () => {
+      if (reactionUsersPopoverTimer !== undefined) {
+        window.clearTimeout(reactionUsersPopoverTimer)
+        reactionUsersPopoverTimer = undefined
+      }
+    }
+
+    const clearReactionUsersHoldTimer = () => {
+      if (reactionUsersHoldTimer !== undefined) {
+        window.clearTimeout(reactionUsersHoldTimer)
+        reactionUsersHoldTimer = undefined
+      }
+    }
+
+    const closeReactionUsersPopover = () => {
+      clearReactionUsersPopoverTimer()
+      reactionUsersPopoverOpen.value = false
+    }
+
+    const openReactionUsersPopover = (anchor: HTMLElement, emoji: string) => {
+      clearReactionUsersPopoverTimer()
+      reactionUsersPopoverAnchor.value = anchor
+      reactionUsersPopoverValue.value = normalizeReactionValue(emoji)
+      reactionUsersPopoverOpen.value = true
+    }
+
+    const scheduleReactionUsersPopover = (anchor: HTMLElement, emoji: string) => {
+      clearReactionUsersPopoverTimer()
+      reactionUsersPopoverTimer = window.setTimeout(() => {
+        openReactionUsersPopover(anchor, emoji)
+      }, 480)
+    }
+
+    const scheduleReactionUsersPopoverClose = () => {
+      clearReactionUsersPopoverTimer()
+      reactionUsersPopoverTimer = window.setTimeout(() => {
+        reactionUsersPopoverOpen.value = false
+      }, 220)
+    }
+
+    const cancelReactionUsersPopoverClose = () => {
+      clearReactionUsersPopoverTimer()
+    }
+
+    const startReactionHold = (event: PointerEvent, emoji: string) => {
+      if (event.pointerType === 'mouse') return
+      clearReactionUsersHoldTimer()
+      const anchor = event.currentTarget as HTMLElement
+      reactionUsersHoldTimer = window.setTimeout(() => {
+        suppressReactionClickUntil = Date.now() + 800
+        openReactionUsersPopover(anchor, emoji)
+      }, 520)
+    }
+
+    const handleReactionClick = (event: MouseEvent, emoji: string, reacted?: boolean) => {
+      if (Date.now() < suppressReactionClickUntil) {
+        event.preventDefault()
+        event.stopPropagation()
+        suppressReactionClickUntil = 0
+        return
+      }
+      handleReact(emoji, reacted)
+    }
+
+    // A native touch context menu races the hold affordance on some mobile
+    // browsers. A reaction chip has no useful browser context action, so keep
+    // the sustained press reserved for its own people list.
+    const handleReactionContextMenu = (event: MouseEvent) => event.preventDefault()
+
     const handleReact = (emoji: string, reacted?: boolean) => {
       emit('react', { messageId: props.message.id, emoji, reacted })
       showEmojiPicker.value = false
+      closeReactionUsersPopover()
     }
 
     const handleAddReaction = () => {
       showEmojiPicker.value = !showEmojiPicker.value
       showActions.value = false
+      closeReactionUsersPopover()
     }
 
     const handleEmojiSelect = (emoji: string) => {
@@ -274,6 +352,7 @@ export default defineComponent({
     const toggleActions = () => {
       showActions.value = !showActions.value
       showEmojiPicker.value = false
+      closeReactionUsersPopover()
     }
 
     const closeFloatingControls = () => {
@@ -286,6 +365,11 @@ export default defineComponent({
       return target instanceof Element && !!target.closest('.discourse-emoji-picker')
     }
 
+    const isReactionUsersPopoverTarget = (target: EventTarget | null) => {
+      if (target instanceof Node && reactionUsersPopoverAnchor.value?.contains(target)) return true
+      return target instanceof Element && !!target.closest('.chat-reaction-users-popover')
+    }
+
     const handleMouseleave = (event: MouseEvent) => {
       if (isFloatingControlTarget(event.relatedTarget)) return
       closeFloatingControls()
@@ -293,11 +377,13 @@ export default defineComponent({
 
     const handleDocumentPointerDown = (event: PointerEvent) => {
       if (!isFloatingControlTarget(event.target)) closeFloatingControls()
+      if (!isReactionUsersPopoverTarget(event.target)) closeReactionUsersPopover()
     }
 
     const handleDocumentKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         closeFloatingControls()
+        closeReactionUsersPopover()
       }
     }
 
@@ -312,7 +398,7 @@ export default defineComponent({
     }
 
     watch(
-      () => showActions.value || showEmojiPicker.value,
+      () => showActions.value || showEmojiPicker.value || reactionUsersPopoverOpen.value,
       open => {
         removeDismissListeners()
         if (open) {
@@ -323,7 +409,11 @@ export default defineComponent({
       { flush: 'sync' }
     )
 
-    onBeforeUnmount(removeDismissListeners)
+    onBeforeUnmount(() => {
+      removeDismissListeners()
+      clearReactionUsersPopoverTimer()
+      clearReactionUsersHoldTimer()
+    })
 
     const handleReply = () => {
       if (hasThreadAction.value) {
@@ -481,9 +571,32 @@ export default defineComponent({
                         type="button"
                         key={`${props.message.id}-${reaction.emoji}`}
                         class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                        onClick={() => handleReact(reaction.emoji, reaction.reacted)}
-                        title={`${label} · ${reaction.count} 个反应`}
-                        aria-label={`${label} · ${reaction.count} 个反应`}
+                        onPointerenter={(event: PointerEvent) => {
+                          if (event.pointerType === 'touch') return
+                          scheduleReactionUsersPopover(
+                            event.currentTarget as HTMLElement,
+                            reaction.emoji
+                          )
+                        }}
+                        onPointerleave={(event: PointerEvent) => {
+                          clearReactionUsersHoldTimer()
+                          if (event.pointerType !== 'touch') scheduleReactionUsersPopoverClose()
+                        }}
+                        onPointerdown={(event: PointerEvent) =>
+                          startReactionHold(event, reaction.emoji)
+                        }
+                        onPointerup={clearReactionUsersHoldTimer}
+                        onPointercancel={clearReactionUsersHoldTimer}
+                        onContextmenu={handleReactionContextMenu}
+                        onClick={(event: MouseEvent) =>
+                          handleReactionClick(event, reaction.emoji, reaction.reacted)
+                        }
+                        title={`${label} · ${reaction.count} 个反应（悬浮或长按查看反应者）`}
+                        aria-label={`${label} · ${reaction.count} 个反应，悬浮或长按查看反应者`}
+                        aria-expanded={
+                          reactionUsersPopoverOpen.value &&
+                          reactionUsersPopoverValue.value === normalizeReactionValue(reaction.emoji)
+                        }
                       >
                         <span class="chat-message-reaction-emoji">
                           {resolvedEmoji?.url ? (
@@ -599,6 +712,18 @@ export default defineComponent({
                 )}
               </div>
             </div>
+            <ChatReactionUsersPopover
+              open={reactionUsersPopoverOpen.value}
+              message={props.message}
+              channelId={props.channelId || props.message.chat_channel_id}
+              reaction={reactionUsersPopoverValue.value}
+              baseUrl={props.baseUrl}
+              anchorEl={reactionUsersPopoverAnchor.value}
+              reactionEmojiMap={emojiMap.value}
+              onKeepOpen={cancelReactionUsersPopoverClose}
+              onClose={scheduleReactionUsersPopoverClose}
+              onNavigate={(url: string) => emit('navigate', url)}
+            />
           </div>
           {hasThreadEntry.value && (
             <a

@@ -50,6 +50,7 @@ export type ToolbarActions = {
   insertSpoiler: () => void
   openPollAssistant: () => void
   insertFootnote: () => void
+  openTemplatePicker: () => void
   openFormulaAssistant: () => void
   insertMermaid: () => void
   insertScrollable: () => void
@@ -161,6 +162,7 @@ export default defineComponent({
         ['剧透', '隐藏敏感内容', EyeInvisibleOutlined, props.actions.insertSpoiler],
         ['投票', '创建 Discourse 投票', BarChartOutlined, props.actions.openPollAssistant],
         ['公式', '行内或块级 LaTeX', FunctionOutlined, props.actions.openFormulaAssistant],
+        ['论坛模板', '插入论坛可复用模板', FileTextOutlined, props.actions.openTemplatePicker],
         ['脚注', '补充说明引用', FileTextOutlined, props.actions.insertFootnote],
         ['Mermaid 图表', '插入流程图代码块', ApartmentOutlined, props.actions.insertMermaid],
         [

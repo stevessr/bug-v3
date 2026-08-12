@@ -138,7 +138,12 @@ const CHAT_MESSAGE_DELETE_ENDPOINTS = (channelId: number, messageId: number) => 
   `/chat/api/channels/${channelId}/messages/${messageId}`
 ]
 
-const CHAT_MESSAGE_FLAG_ENDPOINTS = () => [`/chat/api/chat_messages/flags`]
+const CHAT_MESSAGE_FLAG_ENDPOINTS = (channelId: number, messageId: number) => [
+  `/chat/api/channels/${channelId}/messages/${messageId}/flags`
+]
+
+const CHAT_MESSAGE_REACTION_USERS_ENDPOINT = (channelId: number, messageId: number) =>
+  `/chat/${channelId}/${messageId}/reactions-users`
 
 const CHAT_CHANNEL_PINS_ENDPOINTS = (channelId: number) => [`/chat/api/channels/${channelId}/pins`]
 
@@ -2614,51 +2619,101 @@ export async function flagChatMessage(
   const state = tab.chatState
   if (!state) return null
   state.errorMessage = ''
-  void channelId
-
-  const jsonPayload = JSON.stringify({
-    chat_message_id: messageId,
-    flag_type_id: flagTypeId,
-    ...(message ? { message } : {})
-  })
   const formPayload = new URLSearchParams({
-    chat_message_id: String(messageId),
     flag_type_id: String(flagTypeId),
-    ...(message ? { message } : {})
+    ...(message?.trim() ? { message: message.trim() } : {})
   }).toString()
 
   let lastError: string | null = null
 
-  for (const path of CHAT_MESSAGE_FLAG_ENDPOINTS()) {
-    for (const request of [
-      {
-        headers: { 'Content-Type': 'application/json' },
-        body: jsonPayload
-      },
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+  for (const path of CHAT_MESSAGE_FLAG_ENDPOINTS(channelId, messageId)) {
+    try {
+      const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Discourse-Logged-In': 'true'
+        },
         body: formPayload
+      })
+      const data = extractData(result)
+      if (result.ok) {
+        return data || true
       }
-    ]) {
-      try {
-        const result = await pageFetch<any>(`${baseUrl.value}${path}`, {
-          method: 'POST',
-          headers: request.headers,
-          body: request.body
-        })
-        const data = extractData(result)
-        if (result.ok) {
-          return data || true
-        }
-        lastError = parseErrorMessage(data, '举报消息失败')
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : String(error)
-      }
+      lastError = parseErrorMessage(data, '举报消息失败')
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
     }
   }
 
   state.errorMessage = lastError || '举报消息失败'
   return null
+}
+
+export type ChatMessageReactionUsersResult = {
+  users: DiscourseUser[]
+  totalRows: number
+}
+
+/**
+ * Fetch the complete reaction-user list from Discourse Chat.  Chat reactions
+ * are intentionally not served by the topic reaction endpoint.
+ */
+export async function fetchChatMessageReactionUsers(
+  baseUrl: string,
+  channelId: number,
+  messageId: number,
+  emoji?: string | null,
+  page = 0,
+  limit = 50
+): Promise<ChatMessageReactionUsersResult> {
+  const normalizedEmoji = normalizeReactionEmoji(emoji || '')
+  const params = new URLSearchParams({
+    page: String(Math.max(0, page)),
+    limit: String(Math.max(1, limit))
+  })
+  if (normalizedEmoji) params.set('emoji', normalizedEmoji)
+
+  const result = await pageFetch<any>(
+    buildUrlWithQuery(baseUrl, CHAT_MESSAGE_REACTION_USERS_ENDPOINT(channelId, messageId), params),
+    {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Discourse-Logged-In': 'true'
+      }
+    }
+  )
+  const data = extractData(result)
+  if (!result.ok) {
+    throw new Error(parseErrorMessage(data, '获取聊天反应用户失败'))
+  }
+
+  const usersById = new Map<string, DiscourseUser>()
+  const incoming = Array.isArray(data?.users) ? data.users : []
+  incoming.forEach((user: any) => {
+    const username = String(user?.username || '').trim()
+    if (!username) return
+    const id = Number(user?.id)
+    const key = Number.isFinite(id) && id > 0 ? String(id) : username.toLowerCase()
+    usersById.set(key, {
+      id: Number.isFinite(id) && id > 0 ? id : 0,
+      username,
+      name: typeof user?.name === 'string' ? user.name : undefined,
+      avatar_template:
+        typeof user?.avatar_template === 'string' && user.avatar_template
+          ? user.avatar_template
+          : '/images/avatar.png'
+    })
+  })
+
+  const users = [...usersById.values()]
+  const totalRows = Number(data?.total_rows ?? data?.total ?? users.length)
+  return {
+    users,
+    totalRows: Number.isFinite(totalRows) && totalRows > users.length ? totalRows : users.length
+  }
 }
 
 // ==================== Chat channel creation & management ====================

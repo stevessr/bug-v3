@@ -2468,10 +2468,15 @@ export function useDiscourseBrowser() {
     return await deleteChatMessage(tab, baseUrl, channelId, messageId)
   }
 
-  async function flagChatMessageAction(channelId: number, messageId: number) {
+  async function flagChatMessageAction(
+    channelId: number,
+    messageId: number,
+    flagTypeId: number,
+    message?: string
+  ) {
     const tab = activeTab.value
     if (!tab?.chatState) return null
-    return await flagChatMessage(tab, baseUrl, channelId, messageId, 4)
+    return await flagChatMessage(tab, baseUrl, channelId, messageId, flagTypeId, message)
   }
 
   async function searchMessages(query: string) {

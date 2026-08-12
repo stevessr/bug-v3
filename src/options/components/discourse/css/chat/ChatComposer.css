@@ -126,6 +126,7 @@
 
 .chat-composer-emoji-btn,
 .chat-composer-upload-btn,
+.chat-composer-template-btn,
 .chat-composer-send {
   display: inline-flex;
   height: 44px;
@@ -142,7 +143,8 @@
 }
 
 .chat-composer-emoji-btn,
-.chat-composer-upload-btn {
+.chat-composer-upload-btn,
+.chat-composer-template-btn {
   width: 44px;
   flex: 0 0 44px;
   padding: 0;
@@ -152,7 +154,8 @@
 }
 
 .chat-composer-emoji-btn:hover:not(:disabled),
-.chat-composer-upload-btn:hover:not(:disabled) {
+.chat-composer-upload-btn:hover:not(:disabled),
+.chat-composer-template-btn:hover:not(:disabled) {
   background: var(--d-state-hover, rgba(0, 0, 0, 0.08));
   color: var(--d-text, var(--theme-on-surface));
 }
@@ -175,12 +178,14 @@
 
 .chat-composer-emoji-btn:active:not(:disabled),
 .chat-composer-upload-btn:active:not(:disabled),
+.chat-composer-template-btn:active:not(:disabled),
 .chat-composer-send:active:not(:disabled) {
   transform: scale(0.94);
 }
 
 .chat-composer-emoji-btn:disabled,
 .chat-composer-upload-btn:disabled,
+.chat-composer-template-btn:disabled,
 .chat-composer-send:disabled {
   box-shadow: none;
   cursor: not-allowed;

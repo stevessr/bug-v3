@@ -1,0 +1,99 @@
+.chat-flag-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.chat-flag-modal__target {
+  padding: 10px 12px;
+  border-radius: var(--d-shape-md, 12px);
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 8%, transparent);
+  color: var(--d-text, var(--theme-on-surface));
+}
+
+.chat-flag-modal__target > span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--primary, var(--theme-primary));
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chat-flag-modal__target > p {
+  margin: 0;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.chat-flag-modal__hint {
+  margin: 0;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chat-flag-modal__options {
+  display: grid;
+  width: 100%;
+  gap: 7px;
+}
+
+.chat-flag-modal__option {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-md, 12px);
+  cursor: pointer;
+  transition:
+    border-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
+}
+
+.chat-flag-modal__option:hover {
+  background: var(--d-state-hover, rgb(0 0 0 / 8%));
+}
+
+.chat-flag-modal__option.is-selected {
+  border-color: var(--primary, var(--theme-primary));
+  background: color-mix(in oklab, var(--primary, var(--theme-primary)) 10%, transparent);
+}
+
+.chat-flag-modal__option .ant-radio-wrapper {
+  align-items: flex-start;
+  margin-inline-end: 0;
+}
+
+.chat-flag-modal__option-name {
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.chat-flag-modal__option-description {
+  padding-left: 24px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.chat-flag-modal__details {
+  display: grid;
+  gap: 7px;
+}
+
+.chat-flag-modal__required {
+  margin: 0;
+  color: var(--danger, var(--theme-error));
+  font-size: 12px;
+}
+
+.chat-flag-modal__state {
+  display: flex;
+  min-height: 100px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--d-text-muted, var(--theme-on-surface-variant));
+  text-align: center;
+}

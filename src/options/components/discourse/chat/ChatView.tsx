@@ -456,7 +456,10 @@ export default defineComponent({
     }
 
     const handleFlagMessage = (message: ChatMessage) => {
-      emit('flagMessage', { channelId: props.chatState.activeChannelId, messageId: message.id })
+      emit('flagMessage', {
+        channelId: props.chatState.activeChannelId || message.chat_channel_id,
+        message
+      })
     }
 
     const handleCreateGroup = (payload: { targetUsernames: string[]; name?: string }) => {

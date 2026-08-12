@@ -34,7 +34,8 @@ import type {
   MessageBusNotificationPayload,
   MessageBusChatPayload,
   ReviewStatus,
-  DiscourseUser
+  DiscourseUser,
+  DiscourseFlagType
 } from './discourse/types'
 import { resolveDiscourseHttpUrl } from './discourse/navigation'
 import type { QuickSidebarItem, QuickSidebarSection } from './discourse/layout/QuickSidebarPanel'
@@ -54,6 +55,7 @@ import {
   subscribePageFetchActivity,
   type PageFetchActivity
 } from './discourse/utils'
+import { fetchFlagTypes } from './discourse/actions/post'
 import { normalizeCategoriesFromResponse } from './discourse/routes/categories'
 import {
   createDiscourseMessageBusClient,
@@ -91,6 +93,7 @@ const CategoryTopicsView = defineAsyncComponent(
   () => import('./discourse/browser/views/CategoryTopicsView.vue')
 )
 const ChatView = defineAsyncComponent(() => import('./discourse/chat/ChatView'))
+const ChatFlagModal = defineAsyncComponent(() => import('./discourse/chat/ChatFlagModal'))
 const AiBotConversationsView = defineAsyncComponent(
   () => import('./discourse/ai/AiBotConversationsView')
 )
@@ -438,6 +441,13 @@ const chatStatusSaving = ref(false)
 const chatFollowSaving = ref(false)
 const chatLeavingChannel = ref(false)
 const chatDeletingChannel = ref(false)
+type ChatFlagTarget = { channelId: number; message: ChatMessage }
+const chatFlagModalOpen = ref(false)
+const chatFlagTarget = ref<ChatFlagTarget | null>(null)
+const chatFlagTypes = ref<DiscourseFlagType[]>([])
+const chatFlagTypesLoading = ref(false)
+const chatFlagSubmitting = ref(false)
+let chatFlagLoadSequence = 0
 const floatingChatOpen = ref(false)
 const floatingChatMinimized = ref(false)
 const floatingChatLoading = ref(false)
@@ -1947,14 +1957,77 @@ const handleDeleteMessage = async (payload: { channelId?: number; messageId: num
   })
 }
 
-const handleFlagMessage = async (payload: { channelId?: number; messageId: number }) => {
-  const channelId = payload.channelId || activeTab.value?.chatState?.activeChannelId
-  if (!channelId) return
-  const result = await flagChatMessageAction(channelId, payload.messageId)
-  if (result) {
-    message.success('举报已发送，感谢你的反馈')
-  } else {
-    message.error(activeTab.value?.chatState?.errorMessage || '举报失败')
+const appliesToChatMessage = (flagType: DiscourseFlagType) => {
+  if (!flagType.applies_to?.length) return true
+  return flagType.applies_to.some(value => {
+    const normalized = String(value || '')
+      .toLowerCase()
+      .replace(/[\s:_-]/g, '')
+    return normalized === 'chatmessage'
+  })
+}
+
+const closeChatFlagModal = () => {
+  if (chatFlagSubmitting.value) return
+  chatFlagLoadSequence += 1
+  chatFlagModalOpen.value = false
+  chatFlagTarget.value = null
+  chatFlagTypes.value = []
+  chatFlagTypesLoading.value = false
+}
+
+const handleFlagMessage = async (payload: { channelId?: number; message: ChatMessage }) => {
+  const channelId =
+    payload.channelId ||
+    payload.message.chat_channel_id ||
+    activeTab.value?.chatState?.activeChannelId
+  if (!channelId || chatFlagSubmitting.value) return
+
+  const sequence = ++chatFlagLoadSequence
+  chatFlagTarget.value = { channelId, message: payload.message }
+  chatFlagTypes.value = []
+  chatFlagModalOpen.value = true
+  chatFlagTypesLoading.value = true
+
+  try {
+    const flagTypes = await fetchFlagTypes(baseUrl.value)
+    if (sequence !== chatFlagLoadSequence || !chatFlagModalOpen.value) return
+    chatFlagTypes.value = flagTypes.filter(appliesToChatMessage)
+    if (chatFlagTypes.value.length === 0) {
+      message.warning('站点没有提供可用于聊天消息的举报类型')
+    }
+  } catch (error) {
+    if (sequence !== chatFlagLoadSequence || !chatFlagModalOpen.value) return
+    message.error(error instanceof Error ? error.message : '获取举报类型失败')
+  } finally {
+    if (sequence === chatFlagLoadSequence) chatFlagTypesLoading.value = false
+  }
+}
+
+const handleChatFlagSubmit = async (flagTypeId: number, details: string) => {
+  const target = chatFlagTarget.value
+  if (!target || chatFlagSubmitting.value) return
+
+  chatFlagSubmitting.value = true
+  let succeeded = false
+  try {
+    const result = await flagChatMessageAction(
+      target.channelId,
+      target.message.id,
+      flagTypeId,
+      details
+    )
+    if (result) {
+      succeeded = true
+      message.success('举报已发送，感谢你的反馈')
+    } else {
+      message.error(activeTab.value?.chatState?.errorMessage || '举报失败')
+    }
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '举报失败')
+  } finally {
+    chatFlagSubmitting.value = false
+    if (succeeded) closeChatFlagModal()
   }
 }
 
@@ -3844,6 +3917,16 @@ onUnmounted(() => {
     @openProfile="handleUserCardProfile"
     @composeMessage="handleUserCardMessage"
     @startChat="handleStartUserChat"
+  />
+
+  <ChatFlagModal
+    :open="chatFlagModalOpen"
+    :message="chatFlagTarget?.message || null"
+    :flagTypes="chatFlagTypes"
+    :loading="chatFlagTypesLoading"
+    :submitting="chatFlagSubmitting"
+    @cancel="closeChatFlagModal"
+    @submit="handleChatFlagSubmit"
   />
 
   <section
