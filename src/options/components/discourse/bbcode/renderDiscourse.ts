@@ -66,7 +66,7 @@ const SANITIZE_ATTRS = [
 
 /** 全部 Discourse BBCode 标签（含闭合标签的预处理） */
 const DISCOURSE_TAG =
-  '(b|i|u|s|ins|del|sub|sup|mark|size|color|url|img|quote|code|list|spoiler|details|wrap|poll|tabs|table|video|audio|youtube|tip|note|warning|footnote|mention|emoji|center|left|right)'
+  '(b|i|u|s|ins|del|sub|sup|mark|size|color|url|img|quote|code|mermaid|list|spoiler|details|wrap|poll|tabs|table|video|audio|youtube|tip|note|warning|footnote|mention|emoji|center|left|right)'
 
 /** 自闭合标签（[img=url] / [video=url] / [emoji=x] / [mention=u] / [hr] 等） */
 const SELF_CLOSING_RE = /\[(video|audio|youtube|img|emoji|mention)(?:=([^\]]*?))?\]|\[hr\]/g

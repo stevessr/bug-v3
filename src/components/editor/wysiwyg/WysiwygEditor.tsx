@@ -2,13 +2,14 @@
 import { defineComponent, ref, watch, computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import katex from 'katex'
 
 import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
 import ForumTemplatePicker from './ForumTemplatePicker'
 import WysiwygEditorToolbar from './WysiwygEditorToolbar'
 import WysiwygEditorDialogs from './WysiwygEditorDialogs'
-import { encodeDiscourseDraftSource } from './discourseDrafts'
+import { decodeDiscourseDraftSource, encodeDiscourseDraftSource } from './discourseDrafts'
 
 import { renderDiscourseMarkdown } from '@/options/components/discourse/bbcode/renderDiscourse'
 import { useDiscourseUpload } from '@/options/components/discourse/composables/useDiscourseUpload'
@@ -39,6 +40,9 @@ export default defineComponent({
     const tableRows = ref(3)
     const tableColumns = ref(3)
     const tableHasHeader = ref(true)
+    const tableGrid = ref<string[][]>([])
+    const tableContextMenu = ref({ open: false, x: 0, y: 0, row: 0, column: 0 })
+    const tableClipboard = ref<{ axis: 'row' | 'column'; values: string[] } | null>(null)
     const showPollAssistant = ref(false)
     const pollQuestion = ref('')
     const pollOptions = ref('选项一\n选项二')
@@ -47,6 +51,10 @@ export default defineComponent({
     const showFormulaAssistant = ref(false)
     const formula = ref('E = mc^2')
     const formulaDisplay = ref<'inline' | 'block'>('inline')
+    const formulaWysiwyg = ref(true)
+    const showWrapAssistant = ref(false)
+    const wrapMode = ref<'scrollable' | 'app'>('scrollable')
+    const wrapContent = ref('在这里填写内容')
     const showTemplatePicker = ref(false)
     let lastEmittedValue = ''
     let savedSelectionRange: Range | null = null
@@ -108,7 +116,10 @@ export default defineComponent({
           'preload',
           'data-code-wrap',
           'data-post',
-          'data-topic'
+          'data-topic',
+          'data-discourse-draft',
+          'data-discourse-source',
+          'data-wrap-mode'
         ]
       })
     }
@@ -178,6 +189,7 @@ export default defineComponent({
         'note',
         'warning',
         'footnote',
+        'mermaid',
         'mention',
         'emoji',
         'hr'
@@ -260,11 +272,17 @@ export default defineComponent({
       return value
     }
 
-    const draftText = (element: HTMLElement) =>
-      (element.innerText || element.textContent || '')
+    const draftText = (element: HTMLElement) => {
+      const clone = element.cloneNode(true) as HTMLElement
+      clone.querySelectorAll<HTMLElement>('[data-discourse-source]').forEach(node => {
+        const source = decodeDiscourseDraftSource(node.dataset.discourseSource || null)
+        if (source) node.replaceWith(document.createTextNode(source))
+      })
+      return (clone.innerText || clone.textContent || '')
         .replace(/\u00a0/g, ' ')
         .replace(/\n{3,}/g, '\n\n')
         .trim()
+    }
 
     const refreshDiscourseDraftSources = () => {
       const editor = editorRef.value
@@ -309,6 +327,29 @@ export default defineComponent({
           element.dataset.discourseSource = encodeDiscourseDraftSource(
             `[table]\n${lines.join('\n')}\n[/table]`
           )
+          return
+        }
+
+        if (kind === 'wrap') {
+          const mode = element.dataset.wrapMode || 'scrollable'
+          element.dataset.discourseSource = encodeDiscourseDraftSource(
+            `[wrap=${mode}]\n${draftText(element)}\n[/wrap]`
+          )
+          return
+        }
+
+        if (kind === 'mermaid') {
+          const code = element.querySelector('code')?.textContent || element.textContent || ''
+          element.dataset.discourseSource = encodeDiscourseDraftSource(
+            `\`\`\`mermaid\n${code.replace(/\n+$/, '')}\n\`\`\``
+          )
+          return
+        }
+
+        if (kind === 'poll' || kind === 'formula') {
+          // These blocks retain their canonical Discourse syntax in the data
+          // attribute while the visible draft remains a presentation preview.
+          return
         }
       })
     }
@@ -324,7 +365,8 @@ export default defineComponent({
       refreshDiscourseDraftSources()
       const html = normalizeHtml(readEditorHtml())
       const plainText = editorRef.value?.innerText?.replace(/\u00a0/g, ' ') ?? ''
-      if (html && isPlainTextHtml(html)) {
+      const containsDraftBlock = Boolean(editorRef.value?.querySelector('[data-discourse-draft]'))
+      if (html && !containsDraftBlock && isPlainTextHtml(html)) {
         const trimmed = plainText.trim()
         if (trimmed && (detectBbcodeAst(trimmed) || detectMarkdownAst(trimmed))) {
           const converted = convertToHtml(trimmed)
@@ -422,29 +464,196 @@ export default defineComponent({
       return selection.toString().trim()
     }
 
+    const moveCaretAfterDraftBlock = () => {
+      const editor = editorRef.value
+      if (!editor) return
+      focusEditorAtSavedSelection()
+      const selection = window.getSelection()
+      const candidateNodes = [selection?.anchorNode, savedSelectionRange?.startContainer].filter(
+        Boolean
+      ) as Node[]
+      const block = candidateNodes
+        .map(anchor =>
+          (anchor.nodeType === Node.ELEMENT_NODE
+            ? (anchor as HTMLElement)
+            : anchor.parentElement
+          )?.closest<HTMLElement>(
+            '.wysiwyg-spoiler-draft, .wysiwyg-details-draft, .discourse-poll-draft, .discourse-formula-draft, .wysiwyg-wrap-draft, .wysiwyg-mermaid-draft'
+          )
+        )
+        .find(Boolean)
+      if (!block || !editor.contains(block) || !selection) return
+      const range = document.createRange()
+      range.setStartAfter(block)
+      range.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(range)
+      savedSelectionRange = range.cloneRange()
+    }
+
     const closeAssistants = () => {
       showTableAssistant.value = false
       showPollAssistant.value = false
       showFormulaAssistant.value = false
+      showWrapAssistant.value = false
     }
 
     const openTableAssistant = () => {
       captureEditorSelection()
       closePanels()
       closeAssistants()
+      tableGrid.value = Array.from(
+        { length: tableRows.value + (tableHasHeader.value ? 1 : 0) },
+        (_, rowIndex) =>
+          Array.from({ length: tableColumns.value }, (_, columnIndex) =>
+            rowIndex === 0 && tableHasHeader.value
+              ? `列 ${columnIndex + 1}`
+              : `内容 ${rowIndex + 1}-${columnIndex + 1}`
+          )
+      )
+      tableContextMenu.value.open = false
       showTableAssistant.value = true
+    }
+
+    const resizeTableGrid = (dataRows: number, columns: number) => {
+      const rows = dataRows + (tableHasHeader.value ? 1 : 0)
+      const next = Array.from({ length: rows }, (_, rowIndex) =>
+        Array.from(
+          { length: columns },
+          (_, columnIndex) =>
+            tableGrid.value[rowIndex]?.[columnIndex] ??
+            (rowIndex === 0 && tableHasHeader.value
+              ? `列 ${columnIndex + 1}`
+              : `内容 ${rowIndex + 1}-${columnIndex + 1}`)
+        )
+      )
+      tableGrid.value = next
+      tableRows.value = dataRows
+      tableColumns.value = columns
+    }
+
+    const onTableCellInput = (row: number, column: number, value: string) => {
+      if (!tableGrid.value[row] || tableGrid.value[row][column] === undefined) return
+      tableGrid.value[row][column] = value
+    }
+
+    const onTableContextMenu = (event: MouseEvent, row: number, column: number) => {
+      event.preventDefault()
+      const target = event.currentTarget as HTMLElement
+      const rect = target.getBoundingClientRect()
+      const maxX = Math.max(8, window.innerWidth - 250)
+      const maxY = Math.max(8, window.innerHeight - 380)
+      tableContextMenu.value = {
+        open: true,
+        x: Math.min(Math.max(8, event.clientX || rect.left), maxX),
+        y: Math.min(Math.max(8, event.clientY || rect.bottom), maxY),
+        row,
+        column
+      }
+    }
+
+    const closeTableContextMenu = () => {
+      tableContextMenu.value.open = false
+    }
+
+    const tableContextAction = (
+      action:
+        | 'insert-row-before'
+        | 'insert-row-after'
+        | 'delete-row'
+        | 'move-row-up'
+        | 'move-row-down'
+        | 'copy-row'
+        | 'paste-row'
+        | 'insert-column-before'
+        | 'insert-column-after'
+        | 'delete-column'
+        | 'move-column-left'
+        | 'move-column-right'
+        | 'copy-column'
+        | 'paste-column'
+    ) => {
+      const { row, column } = tableContextMenu.value
+      const grid = tableGrid.value.map(item => [...item])
+      if (!grid.length || !grid[0]?.length) return
+      const rowCount = grid.length
+      const columnCount = grid[0].length
+      const isRowAction = action.includes('row')
+      const clipboard = tableClipboard.value
+      if (isRowAction) {
+        if (action === 'copy-row') {
+          tableClipboard.value = { axis: 'row', values: [...grid[row]] }
+        } else if (action === 'paste-row' && clipboard?.axis === 'row') {
+          grid.splice(
+            row,
+            1,
+            Array.from({ length: columnCount }, (_, index) => clipboard.values[index] ?? '')
+          )
+        } else if (action === 'insert-row-before' || action === 'insert-row-after') {
+          const target = action.endsWith('before') ? row : row + 1
+          grid.splice(
+            target,
+            0,
+            Array.from({ length: columnCount }, (_, index) => `内容 ${target + 1}-${index + 1}`)
+          )
+        } else if (action === 'delete-row' && rowCount > 1) {
+          grid.splice(row, 1)
+        } else if (action === 'move-row-up' && row > 0) {
+          ;[grid[row - 1], grid[row]] = [grid[row], grid[row - 1]]
+        } else if (action === 'move-row-down' && row < rowCount - 1) {
+          ;[grid[row + 1], grid[row]] = [grid[row], grid[row + 1]]
+        }
+      } else {
+        if (action === 'copy-column') {
+          tableClipboard.value = { axis: 'column', values: grid.map(item => item[column] ?? '') }
+        } else if (action === 'paste-column' && clipboard?.axis === 'column') {
+          grid.forEach((item, index) => {
+            item[column] = clipboard.values[index] ?? ''
+          })
+        } else if (action === 'insert-column-before' || action === 'insert-column-after') {
+          const target = action.endsWith('before') ? column : column + 1
+          grid.forEach((item, index) => item.splice(target, 0, `内容 ${index + 1}-${target + 1}`))
+        } else if (action === 'delete-column' && columnCount > 1) {
+          grid.forEach(item => item.splice(column, 1))
+        } else if (action === 'move-column-left' && column > 0) {
+          grid.forEach(item => {
+            ;[item[column - 1], item[column]] = [item[column], item[column - 1]]
+          })
+        } else if (action === 'move-column-right' && column < columnCount - 1) {
+          grid.forEach(item => {
+            ;[item[column + 1], item[column]] = [item[column], item[column + 1]]
+          })
+        }
+      }
+      const nextRow = Math.min(row, Math.max(0, grid.length - 1))
+      const nextColumn = Math.min(column, Math.max(0, (grid[0]?.length || 1) - 1))
+      tableGrid.value = grid
+      tableRows.value = Math.max(1, grid.length - (tableHasHeader.value ? 1 : 0))
+      tableColumns.value = grid[0]?.length || 1
+      tableContextMenu.value = {
+        ...tableContextMenu.value,
+        open: false,
+        row: nextRow,
+        column: nextColumn
+      }
     }
 
     const insertTable = () => {
       const rows = Math.min(20, Math.max(1, Math.round(tableRows.value || 1)))
       const columns = Math.min(12, Math.max(1, Math.round(tableColumns.value || 1)))
-      const headers = Array.from({ length: columns }, (_, index) => `列 ${index + 1}`)
-      const bodyRows = Array.from({ length: rows }, (_, rowIndex) =>
-        Array.from(
-          { length: columns },
-          (_, columnIndex) => `内容 ${rowIndex + 1}-${columnIndex + 1}`
-        )
-      )
+      const expectedGridRows = rows + (tableHasHeader.value ? 1 : 0)
+      const grid =
+        tableGrid.value.length === expectedGridRows && tableGrid.value[0]?.length === columns
+          ? tableGrid.value
+          : Array.from({ length: expectedGridRows }, (_, rowIndex) =>
+              Array.from({ length: columns }, (_, columnIndex) =>
+                rowIndex === 0 && tableHasHeader.value
+                  ? `列 ${columnIndex + 1}`
+                  : `内容 ${rowIndex + 1}-${columnIndex + 1}`
+              )
+            )
+      const headers = tableHasHeader.value ? [...grid[0]] : []
+      const bodyRows = tableHasHeader.value ? grid.slice(1) : grid
       const sourceRows = tableHasHeader.value
         ? [headers, Array.from({ length: columns }, () => '---'), ...bodyRows]
         : bodyRows
@@ -486,6 +695,7 @@ export default defineComponent({
         .map(option => option.trim())
         .filter(Boolean)
       if (!question || (pollType.value !== 'number' && options.length < 2)) return
+      moveCaretAfterDraftBlock()
 
       const source =
         pollType.value === 'number'
@@ -510,7 +720,11 @@ export default defineComponent({
     }
 
     const insertFootnote = () => {
-      wrapSelection('^[', ']')
+      const selected = selectedEditorText() || '脚注内容'
+      const source = `^[${selected}]`
+      insertHtml(
+        `<span class="footnote wysiwyg-footnote-draft" contenteditable="false" title="${escapeAttr(selected)}" data-discourse-draft="footnote" data-discourse-source="${encodeDiscourseDraftSource(source)}">${escapeAttr(selected)}</span>&nbsp;`
+      )
     }
 
     const openFormulaAssistant = () => {
@@ -527,23 +741,51 @@ export default defineComponent({
       if (!value) return
       const source = formulaDisplay.value === 'block' ? `$$\n${value}\n$$` : `$${value}$`
       const displayClass = formulaDisplay.value === 'block' ? 'is-block' : 'is-inline'
+      moveCaretAfterDraftBlock()
+      const renderedFormula = formulaWysiwyg.value
+        ? katex.renderToString(value, {
+            displayMode: formulaDisplay.value === 'block',
+            throwOnError: false
+          })
+        : escapeAttr(value)
       insertHtml(
-        `<span class="discourse-formula-draft ${displayClass}" contenteditable="false" data-discourse-draft="formula" data-discourse-source="${encodeDiscourseDraftSource(source)}">${escapeAttr(value)}</span>${formulaDisplay.value === 'block' ? '<p><br></p>' : '&nbsp;'}`
+        `<span class="discourse-formula-draft ${displayClass} ${formulaWysiwyg.value ? 'is-wysiwyg' : 'is-source'}" contenteditable="false" data-discourse-draft="formula" data-discourse-source="${encodeDiscourseDraftSource(source)}">${renderedFormula}</span>${formulaDisplay.value === 'block' ? '<p><br></p>' : '&nbsp;'}`
       )
       closeAssistants()
     }
 
     const insertMermaid = () => {
-      insertText(`\n\`\`\`mermaid height=200\ngraph TD;\n  A --> B;\n\`\`\`\n`)
+      const source = '```mermaid\ngraph TD;\n  A --> B;\n```'
+      moveCaretAfterDraftBlock()
+      insertHtml(
+        `<pre class="wysiwyg-mermaid-draft" data-discourse-draft="mermaid" data-discourse-source="${encodeDiscourseDraftSource(source)}"><code class="lang-mermaid">graph TD;\n  A --&gt; B;</code></pre><p><br></p>`
+      )
     }
 
-    const insertScrollable = () => {
-      insertText(`\n[wrap=scrollable]\n在这里填写内容\n[/wrap]\n`)
+    const openWrapAssistant = (mode: 'scrollable' | 'app') => {
+      captureEditorSelection()
+      closePanels()
+      closeAssistants()
+      wrapMode.value = mode
+      wrapContent.value = selectedEditorText() || '在这里填写内容'
+      showWrapAssistant.value = true
     }
 
-    const insertAppWrap = () => {
-      insertText(`\n[wrap=app]\n在这里填写内容\n[/wrap]\n`)
+    const insertWrap = () => {
+      const content = wrapContent.value.trim()
+      if (!content) return
+      moveCaretAfterDraftBlock()
+      const source = `[wrap=${wrapMode.value}]\n${content}\n[/wrap]`
+      const visibleContent = escapeAttr(content).replace(/\r?\n/g, '<br>')
+      insertHtml(
+        `<div class="d-wrap d-wrap-${escapeAttr(wrapMode.value)} wysiwyg-wrap-draft" data-discourse-draft="wrap" data-wrap-mode="${escapeAttr(wrapMode.value)}" data-discourse-source="${encodeDiscourseDraftSource(source)}">${visibleContent}</div><p><br></p>`
+      )
+      closeAssistants()
     }
+
+    const insertScrollable = () => openWrapAssistant('scrollable')
+
+    const insertAppWrap = () => openWrapAssistant('app')
 
     const undoAction = () => execCommand('undo')
     const redoAction = () => execCommand('redo')
@@ -761,6 +1003,7 @@ export default defineComponent({
       showTableAssistant: showTableAssistant.value,
       showPollAssistant: showPollAssistant.value,
       showFormulaAssistant: showFormulaAssistant.value,
+      showWrapAssistant: showWrapAssistant.value,
       linkUrl: linkUrl.value,
       linkText: linkText.value,
       imageUrl: imageUrl.value,
@@ -768,12 +1011,23 @@ export default defineComponent({
       tableRows: tableRows.value,
       tableColumns: tableColumns.value,
       tableHasHeader: tableHasHeader.value,
+      tableGrid: tableGrid.value,
+      tableContextMenu: tableContextMenu.value,
       pollQuestion: pollQuestion.value,
       pollOptions: pollOptions.value,
       pollType: pollType.value,
       pollResults: pollResults.value,
       formula: formula.value,
-      formulaDisplay: formulaDisplay.value
+      formulaDisplay: formulaDisplay.value,
+      formulaWysiwyg: formulaWysiwyg.value,
+      formulaPreviewHtml: formulaWysiwyg.value
+        ? katex.renderToString(formula.value, {
+            displayMode: formulaDisplay.value === 'block',
+            throwOnError: false
+          })
+        : '',
+      wrapMode: wrapMode.value,
+      wrapContent: wrapContent.value
     }))
 
     const dialogActions = {
@@ -789,10 +1043,17 @@ export default defineComponent({
       closeTableAssistant: () => (showTableAssistant.value = false),
       insertTable,
       onTableRowsInput: (value: number) =>
-        (tableRows.value = Math.min(20, Math.max(1, Math.round(value || 1)))),
+        resizeTableGrid(Math.min(20, Math.max(1, Math.round(value || 1))), tableColumns.value),
       onTableColumnsInput: (value: number) =>
-        (tableColumns.value = Math.min(12, Math.max(1, Math.round(value || 1)))),
-      onTableHeaderChange: (value: boolean) => (tableHasHeader.value = value),
+        resizeTableGrid(tableRows.value, Math.min(12, Math.max(1, Math.round(value || 1)))),
+      onTableHeaderChange: (value: boolean) => {
+        tableHasHeader.value = value
+        resizeTableGrid(tableRows.value, tableColumns.value)
+      },
+      onTableCellInput,
+      onTableContextMenu,
+      closeTableContextMenu,
+      tableContextAction,
       closePollAssistant: () => (showPollAssistant.value = false),
       insertPoll,
       onPollQuestionInput: (value: string) => (pollQuestion.value = value),
@@ -802,7 +1063,14 @@ export default defineComponent({
       closeFormulaAssistant: () => (showFormulaAssistant.value = false),
       insertFormula,
       onFormulaInput: (value: string) => (formula.value = value),
-      onFormulaDisplayInput: (value: 'inline' | 'block') => (formulaDisplay.value = value)
+      onFormulaDisplayInput: (value: 'inline' | 'block') => (formulaDisplay.value = value),
+      onFormulaWysiwygInput: (value: boolean) => (formulaWysiwyg.value = value),
+      closeWrapAssistant: () => (showWrapAssistant.value = false),
+      insertWrap,
+      onWrapModeInput: (value: string) => {
+        if (value === 'app' || value === 'scrollable') wrapMode.value = value
+      },
+      onWrapContentInput: (value: string) => (wrapContent.value = value)
     }
 
     return () => (

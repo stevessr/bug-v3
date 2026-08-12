@@ -61,20 +61,43 @@ function resolveMessageBusRequestUrl(inputUrl: string): string {
     }
 
     const data = getDiscoursePreloadedData()
-    const messageBusBaseUrl =
-      typeof data?.messageBusBaseUrl === 'string'
-        ? data.messageBusBaseUrl
-        : typeof data?.['message_bus_base_url'] === 'string'
-          ? data['message_bus_base_url']
-          : ''
-    if (!messageBusBaseUrl.trim()) {
+    const siteData =
+      data?.site && typeof data.site === 'object' && !Array.isArray(data.site)
+        ? (data.site as Record<string, unknown>)
+        : null
+    const messageBusBaseUrl = [
+      data?.messageBusBaseUrl,
+      data?.['message_bus_base_url'],
+      siteData?.messageBusBaseUrl,
+      siteData?.['message_bus_base_url']
+    ].find(value => typeof value === 'string' && value.trim()) as string | undefined
+    if (!messageBusBaseUrl?.trim()) {
       return targetUrl.toString()
     }
 
     const busBase = new URL(messageBusBaseUrl, window.location.origin)
     const basePath = busBase.pathname.replace(/\/+$/, '')
     const targetPath = targetUrl.pathname.replace(/^\/+/, '')
-    const mergedPath = basePath && basePath !== '/' ? `${basePath}/${targetPath}` : `/${targetPath}`
+    const normalizedBasePath = basePath && basePath !== '/' ? basePath.replace(/^\/+/, '') : ''
+    // Current Discourse preloads `messageBusBaseUrl` as either the origin or
+    // the `/message-bus` mount itself. Avoid producing the invalid
+    // `/message-bus/message-bus/...` path when the requested URL already
+    // contains that mount (the old code made the browser silently miss every
+    // upstream update with a 404).
+    const alreadyMounted =
+      normalizedBasePath.length > 0 &&
+      (targetPath === normalizedBasePath || targetPath.startsWith(`${normalizedBasePath}/`))
+    const mountName = normalizedBasePath.split('/').pop() || ''
+    const targetIncludesMountName =
+      mountName.length > 0 && (targetPath === mountName || targetPath.startsWith(`${mountName}/`))
+    const targetSuffix = targetIncludesMountName
+      ? targetPath.slice(mountName.length).replace(/^\/+/, '')
+      : targetPath
+    const mergedPath = alreadyMounted
+      ? `/${targetPath}`
+      : normalizedBasePath
+        ? `/${normalizedBasePath}${targetIncludesMountName ? (targetSuffix ? `/${targetSuffix}` : '') : `/${targetPath}`}`
+        : `/${targetPath}`
 
     const rewrittenUrl = new URL(busBase.toString())
     rewrittenUrl.pathname = mergedPath.replace(/\/{2,}/g, '/')

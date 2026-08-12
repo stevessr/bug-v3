@@ -7,6 +7,7 @@ export type DialogState = {
   showTableAssistant: boolean
   showPollAssistant: boolean
   showFormulaAssistant: boolean
+  showWrapAssistant: boolean
   linkUrl: string
   linkText: string
   imageUrl: string
@@ -14,12 +15,18 @@ export type DialogState = {
   tableRows: number
   tableColumns: number
   tableHasHeader: boolean
+  tableGrid: string[][]
+  tableContextMenu: { open: boolean; x: number; y: number; row: number; column: number }
   pollQuestion: string
   pollOptions: string
   pollType: 'regular' | 'multiple' | 'number'
   pollResults: 'always' | 'on_close'
   formula: string
   formulaDisplay: 'inline' | 'block'
+  formulaWysiwyg: boolean
+  formulaPreviewHtml: string
+  wrapMode: string
+  wrapContent: string
 }
 
 export type DialogActions = {
@@ -37,6 +44,26 @@ export type DialogActions = {
   onTableRowsInput: (value: number) => void
   onTableColumnsInput: (value: number) => void
   onTableHeaderChange: (value: boolean) => void
+  onTableCellInput: (row: number, column: number, value: string) => void
+  onTableContextMenu: (event: MouseEvent, row: number, column: number) => void
+  closeTableContextMenu: () => void
+  tableContextAction: (
+    action:
+      | 'insert-row-before'
+      | 'insert-row-after'
+      | 'delete-row'
+      | 'move-row-up'
+      | 'move-row-down'
+      | 'copy-row'
+      | 'paste-row'
+      | 'insert-column-before'
+      | 'insert-column-after'
+      | 'delete-column'
+      | 'move-column-left'
+      | 'move-column-right'
+      | 'copy-column'
+      | 'paste-column'
+  ) => void
   closePollAssistant: () => void
   insertPoll: () => void
   onPollQuestionInput: (value: string) => void
@@ -47,6 +74,11 @@ export type DialogActions = {
   insertFormula: () => void
   onFormulaInput: (value: string) => void
   onFormulaDisplayInput: (value: 'inline' | 'block') => void
+  onFormulaWysiwygInput: (value: boolean) => void
+  closeWrapAssistant: () => void
+  insertWrap: () => void
+  onWrapModeInput: (value: string) => void
+  onWrapContentInput: (value: string) => void
 }
 
 export default defineComponent({
@@ -182,7 +214,9 @@ export default defineComponent({
               <div class="editor-modal-header">
                 <span>制表辅助</span>
               </div>
-              <p class="editor-modal-helper">选择行列与表头后插入可编辑的论坛表格。</p>
+              <p class="editor-modal-helper">
+                直接编辑单元格；在单元格上右键可移动、添加、插入、复制或粘贴行列。
+              </p>
               <div class="editor-modal-grid-fields">
                 <label class="editor-modal-field">
                   <span class="editor-modal-field__label">数据行</span>
@@ -225,6 +259,41 @@ export default defineComponent({
                 />
                 <span>首行作为表头</span>
               </label>
+              <div
+                class="wysiwyg-table-assistant-preview"
+                onContextmenu={event => event.preventDefault()}
+              >
+                <table class="wysiwyg-table-assistant-grid">
+                  <tbody>
+                    {props.state.tableGrid.map((row, rowIndex) => (
+                      <tr key={`table-row-${rowIndex}`}>
+                        {row.map((cell, columnIndex) => {
+                          const isHeader = props.state.tableHasHeader && rowIndex === 0
+                          return (
+                            <td key={`table-cell-${rowIndex}-${columnIndex}`}>
+                              <input
+                                class={isHeader ? 'is-header' : ''}
+                                value={cell}
+                                aria-label={`${isHeader ? '表头' : '单元格'} ${rowIndex + 1}-${columnIndex + 1}`}
+                                onInput={event =>
+                                  props.actions.onTableCellInput(
+                                    rowIndex,
+                                    columnIndex,
+                                    (event.target as HTMLInputElement).value
+                                  )
+                                }
+                                onContextmenu={event =>
+                                  props.actions.onTableContextMenu(event, rowIndex, columnIndex)
+                                }
+                              />
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <div class="editor-modal-preview editor-modal-assistant-preview">
                 <span class="editor-modal-preview-label">将插入：</span>
                 <span>
@@ -240,6 +309,111 @@ export default defineComponent({
                   插入表格
                 </button>
               </div>
+              {props.state.tableContextMenu.open ? (
+                <div
+                  class="wysiwyg-table-context-menu"
+                  style={{
+                    left: `${props.state.tableContextMenu.x}px`,
+                    top: `${props.state.tableContextMenu.y}px`
+                  }}
+                  role="menu"
+                  aria-label="表格行列操作"
+                  onContextmenu={event => event.preventDefault()}
+                >
+                  <div class="wysiwyg-table-context-menu__title">
+                    行 {props.state.tableContextMenu.row + 1} · 列{' '}
+                    {props.state.tableContextMenu.column + 1}
+                  </div>
+                  <div class="wysiwyg-table-context-menu__group">
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('insert-row-before')}
+                    >
+                      在上方插入行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('insert-row-after')}
+                    >
+                      在下方插入行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('delete-row')}
+                    >
+                      删除行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('move-row-up')}
+                    >
+                      上移行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('move-row-down')}
+                    >
+                      下移行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('copy-row')}
+                    >
+                      复制行
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('paste-row')}
+                    >
+                      粘贴行
+                    </button>
+                  </div>
+                  <div class="wysiwyg-table-context-menu__group">
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('insert-column-before')}
+                    >
+                      在左侧插入列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('insert-column-after')}
+                    >
+                      在右侧插入列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('delete-column')}
+                    >
+                      删除列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('move-column-left')}
+                    >
+                      左移列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('move-column-right')}
+                    >
+                      右移列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('copy-column')}
+                    >
+                      复制列
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.actions.tableContextAction('paste-column')}
+                    >
+                      粘贴列
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -368,6 +542,29 @@ export default defineComponent({
                   块级公式
                 </button>
               </div>
+              <div class="editor-modal-segmented" role="group" aria-label="公式编辑模式">
+                <button
+                  type="button"
+                  class={props.state.formulaWysiwyg ? 'is-selected' : ''}
+                  onClick={() => props.actions.onFormulaWysiwygInput(true)}
+                >
+                  所见即所得
+                </button>
+                <button
+                  type="button"
+                  class={!props.state.formulaWysiwyg ? 'is-selected' : ''}
+                  onClick={() => props.actions.onFormulaWysiwygInput(false)}
+                >
+                  LaTeX 源码
+                </button>
+              </div>
+              {props.state.formulaWysiwyg ? (
+                <div
+                  class="editor-modal-formula-preview"
+                  aria-label="公式所见即所得预览"
+                  innerHTML={props.state.formulaPreviewHtml || '<span>输入公式后显示预览</span>'}
+                />
+              ) : null}
               <div class="editor-modal-actions">
                 <button class="editor-modal-btn" onClick={props.actions.closeFormulaAssistant}>
                   取消
@@ -378,6 +575,57 @@ export default defineComponent({
                   disabled={!props.state.formula.trim()}
                 >
                   插入公式
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {props.state.showWrapAssistant ? (
+          <div class="editor-modal-backdrop" onClick={props.actions.closeWrapAssistant}>
+            <div
+              class="editor-modal-card editor-modal-card--assistant"
+              onClick={event => event.stopPropagation()}
+            >
+              <div class="editor-modal-header">
+                <span>Discourse 包装辅助</span>
+              </div>
+              <p class="editor-modal-helper">
+                选择包装类型并编辑内容；发布时会还原为官方 [wrap] 语法。
+              </p>
+              <label class="editor-modal-field">
+                <span class="editor-modal-field__label">包装类型</span>
+                <select
+                  class="editor-modal-field__input"
+                  value={props.state.wrapMode}
+                  onChange={event =>
+                    props.actions.onWrapModeInput((event.target as HTMLSelectElement).value)
+                  }
+                >
+                  <option value="scrollable">可滚动内容（scrollable）</option>
+                  <option value="app">应用容器（app）</option>
+                </select>
+              </label>
+              <label class="editor-modal-field">
+                <span class="editor-modal-field__label">包装内容</span>
+                <textarea
+                  class="editor-modal-field__input editor-modal-field__textarea"
+                  value={props.state.wrapContent}
+                  onInput={event =>
+                    props.actions.onWrapContentInput((event.target as HTMLTextAreaElement).value)
+                  }
+                  placeholder="在这里填写内容"
+                />
+              </label>
+              <div class="editor-modal-actions">
+                <button class="editor-modal-btn" onClick={props.actions.closeWrapAssistant}>
+                  取消
+                </button>
+                <button
+                  class="editor-modal-btn primary"
+                  onClick={props.actions.insertWrap}
+                  disabled={!props.state.wrapContent.trim()}
+                >
+                  插入包装
                 </button>
               </div>
             </div>

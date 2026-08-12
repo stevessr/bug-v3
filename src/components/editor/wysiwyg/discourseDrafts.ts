@@ -23,9 +23,27 @@ export function serializeWysiwygDiscourseDrafts(value: string): string {
 
   const container = document.createElement('div')
   container.innerHTML = value
-  container.querySelectorAll<HTMLElement>('[data-discourse-source]').forEach(node => {
-    const source = decodeDiscourseDraftSource(node.dataset.discourseSource || null)
+  const draftNodes = Array.from(
+    container.querySelectorAll<HTMLElement>('[data-discourse-source]')
+  ).sort(
+    (left, right) =>
+      right.querySelectorAll('[data-discourse-source]').length -
+      left.querySelectorAll('[data-discourse-source]').length
+  )
+  draftNodes.forEach(node => {
+    let source = decodeDiscourseDraftSource(node.dataset.discourseSource || null)
     if (!source) return
+    const nestedSources = Array.from(node.querySelectorAll<HTMLElement>('[data-discourse-source]'))
+      .map(child => decodeDiscourseDraftSource(child.dataset.discourseSource || null))
+      .filter(childSource => childSource && !source.includes(childSource))
+    if (nestedSources.length) {
+      const closingTag = source.match(/\n(\[\/[a-z]+\])\s*$/i)
+      if (closingTag && closingTag.index !== undefined) {
+        source = `${source.slice(0, closingTag.index)}\n${nestedSources.join('\n')}\n${source.slice(closingTag.index)}`
+      } else {
+        source = `${source}\n${nestedSources.join('\n')}`
+      }
+    }
     node.replaceWith(document.createTextNode(source))
   })
   return container.innerHTML

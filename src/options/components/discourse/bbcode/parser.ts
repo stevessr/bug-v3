@@ -41,7 +41,8 @@ const BLOCK_TAGS = new Set([
   'youtube',
   'tip',
   'note',
-  'warning'
+  'warning',
+  'mermaid'
 ])
 
 /** 行内标签 */
@@ -67,7 +68,7 @@ const INLINE_TAGS = new Set([
 ])
 
 /** code 块内容按原样输出（保留换行，不解析任何标签） */
-const RAW_TAGS = new Set(['code'])
+const RAW_TAGS = new Set(['code', 'mermaid'])
 
 /** 自闭合标签：无闭合标签时直接渲染（[video=url]、[emoji=x]、[mention=u]、[hr] 等） */
 const SELF_CLOSING_TAGS = new Set(['video', 'audio', 'youtube', 'img', 'emoji', 'mention', 'hr'])
@@ -317,6 +318,11 @@ function renderTag(tag: string, attr: string, content: string): string {
       const dataAttr = lang ? ` data-code-wrap="${escapeAttr(lang)}"` : ''
       const classAttr = lang ? ` class="lang-${escapeAttr(lang)}"` : ''
       return `<pre${dataAttr}><code${classAttr}>${code}</code></pre>`
+    }
+
+    case 'mermaid': {
+      const code = content.replace(/\n$/, '')
+      return `<pre data-code-wrap="mermaid" class="lang-mermaid"><code class="lang-mermaid">${code}</code></pre>`
     }
 
     case 'url': {

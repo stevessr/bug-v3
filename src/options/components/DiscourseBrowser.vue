@@ -3190,6 +3190,10 @@ const handleDocumentVisibilityChange = () => {
 }
 
 async function ensureMessageBusUserId() {
+  // Do not compete with the initial route bootstrap. The topic/list requests
+  // can subscribe immediately; the user-scoped notification channels are
+  // attached as soon as that first load settles below.
+  if (!activeTab.value || activeTab.value.loading) return
   const username = currentUsername.value?.trim() || ''
   if (!username) {
     messageBusUserId.value = null
@@ -3256,6 +3260,13 @@ watch(
     syncMessageBusSubscriptions()
   },
   { immediate: true }
+)
+
+watch(
+  () => activeTab.value?.loading,
+  loading => {
+    if (loading === false) void ensureMessageBusUserId()
+  }
 )
 
 watch(

@@ -15,6 +15,7 @@ export type MessageBusSubscriptionSpec = {
 type MessageBusPayload = {
   channel?: string
   message_id?: number
+  global_id?: number
   data?: unknown
 }
 
@@ -158,6 +159,34 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
     }
   }
 
+  /**
+   * Discourse's message-bus endpoint normally returns an array. Some reverse
+   * proxies and older Discourse builds wrap that array in `{messages: ...}`
+   * (and the extension page proxy can hand us a JSON string). Accept all of
+   * those wire-compatible forms so an upstream update is never silently
+   * discarded just because the response envelope changed.
+   */
+  const normalizePollMessages = (value: unknown): MessageBusPayload[] => {
+    const parsed = parseMaybeJsonPayload(value)
+    if (Array.isArray(parsed))
+      return parsed.filter(item => item && typeof item === 'object') as MessageBusPayload[]
+    if (!parsed || typeof parsed !== 'object') return []
+    const record = parsed as Record<string, unknown>
+    for (const key of ['messages', 'message_bus', 'data']) {
+      const nested = record[key]
+      if (Array.isArray(nested)) {
+        return nested.filter(item => item && typeof item === 'object') as MessageBusPayload[]
+      }
+      if (typeof nested === 'string') {
+        const decoded = parseMaybeJsonPayload(nested)
+        if (Array.isArray(decoded)) {
+          return decoded.filter(item => item && typeof item === 'object') as MessageBusPayload[]
+        }
+      }
+    }
+    return []
+  }
+
   const dispatchMessage = (message: MessageBusPayload) => {
     const channel = typeof message.channel === 'string' ? message.channel : ''
     if (!channel) return
@@ -204,7 +233,7 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
 
     messages.forEach(message => {
       if (message.channel === '/__status') {
-        syncStatusLastIds(message.data)
+        syncStatusLastIds(parseMaybeJsonPayload(message.data))
         return
       }
       dispatchMessage(message)
@@ -268,7 +297,7 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
 
     try {
       const payload = buildPayload()
-      const result = await pageFetch<unknown[]>(
+      const result = await pageFetch<unknown>(
         `${normalizeBaseUrl(options.getBaseUrl())}/message-bus/${clientId}/poll`,
         {
           method: 'POST',
@@ -290,7 +319,7 @@ export function createDiscourseMessageBusClient(options: MessageBusOptions) {
       }
 
       failCount = 0
-      const messages = Array.isArray(result.data) ? (result.data as MessageBusPayload[]) : []
+      const messages = normalizePollMessages(result.data)
       const gotData = processMessages(messages)
       state.value = 'connected'
       nextDelay = computeSuccessDelay(gotData, requestStartedAt)
