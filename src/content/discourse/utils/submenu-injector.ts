@@ -98,7 +98,7 @@ function closeSubmenuPicker() {
 /**
  * 在菜单附近显示 emoji picker
  */
-async function showEmojiPickerNearMenu(menuContainer: HTMLElement) {
+async function showEmojiPickerNearMenu(menuContainer: HTMLElement, isChat: boolean = false) {
   if (isSubmenuAnimating) return
 
   // 如果已经有 picker 打开，先关闭
@@ -107,7 +107,7 @@ async function showEmojiPickerNearMenu(menuContainer: HTMLElement) {
     return
   }
 
-  const picker = await createEmojiPicker(false)
+  const picker = await createEmojiPicker(false, isChat ? 'chat' : 'composer')
   currentSubmenuPicker = picker
   DOA(picker)
 
@@ -179,7 +179,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
     '表情包',
     '🐈‍⬛',
     () => {
-      showEmojiPickerNearMenu(menuContainer)
+      showEmojiPickerNearMenu(menuContainer, isChat)
     },
     isChat
   )
