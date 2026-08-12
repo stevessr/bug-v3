@@ -3,6 +3,7 @@ import { animateExit } from '../../utils/dom/animation'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import type { PickerContext } from './editor'
 import {
   createPickerImageObserver,
   getEmojiPickerImageUrl,
@@ -20,7 +21,9 @@ import { createTenorSection, isTenorEnabled } from './tenorPicker'
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
 
-export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
+export async function createDesktopEmojiPicker(
+  context: PickerContext = 'composer'
+): Promise<HTMLElement> {
   // Data is already loaded via loadDataFromStorage() in initializeEmojiFeature()
   const groupsToUse = cachedState.emojiGroups
 
@@ -221,6 +224,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     try {
       tenorHandle = createTenorSection({
         scrollableContent,
+        context,
         onAfterInsert: () => {
           cleanupPickerResources()
           animateExit(picker as HTMLElement, 'picker')
@@ -247,7 +251,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     const emoji = getEmojiFromTarget(event.target)
     if (!emoji) return
 
-    insertEmojiIntoEditor(emoji)
+    insertEmojiIntoEditor(emoji, context)
     cleanupPickerResources()
     animateExit(picker as HTMLElement, 'picker')
   })
@@ -259,7 +263,7 @@ export async function createDesktopEmojiPicker(): Promise<HTMLElement> {
     if (!emoji) return
 
     event.preventDefault()
-    insertEmojiIntoEditor(emoji)
+    insertEmojiIntoEditor(emoji, context)
     cleanupPickerResources()
     animateExit(picker as HTMLElement, 'picker')
   })

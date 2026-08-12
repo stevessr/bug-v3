@@ -9,6 +9,8 @@ import { createE } from '../../utils/dom/createEl'
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import type { PickerContext } from './editor'
+import { uploadThroughDiscourseRoute } from './nativeUpload'
 
 import { isLinuxDoDiscourseBase, uploadLinuxDoMultipart } from '@/utils/discourseUpload'
 import type { DiscourseUploadResponse } from '@/utils/discourseUpload'
@@ -28,6 +30,7 @@ interface TenorPickerHandle {
 
 export interface CreateTenorSectionOptions {
   scrollableContent: HTMLElement
+  context?: PickerContext
   onAfterInsert?: () => void
 }
 
@@ -112,6 +115,7 @@ async function uploadBlobToCurrentDiscourse(
 
 export function createTenorSection({
   scrollableContent,
+  context,
   onAfterInsert
 }: CreateTenorSectionOptions): TenorPickerHandle {
   const navButton = createE('button', {
@@ -254,9 +258,20 @@ export function createTenorSection({
         try {
           overlay.style.opacity = '1'
           const { blob, filename } = await fetchTenorMediaAsBlob(preview.full)
+
+          // 聊天编辑器：直接把文件交给 Discourse 原生聊天上传机制
+          if (context === 'chat') {
+            const file = new File([blob], filename, { type: blob.type })
+            const attempt = await uploadThroughDiscourseRoute(file, 'chat')
+            if (attempt.status === 'delegated' || attempt.status === 'uploaded') {
+              onAfterInsert?.()
+              return
+            }
+          }
+
           const uploaded = await uploadBlobToCurrentDiscourse(blob, filename)
           const emoji = buildEmojiFromUpload(result, uploaded)
-          insertEmojiIntoEditor(emoji)
+          insertEmojiIntoEditor(emoji, 'composer')
           onAfterInsert?.()
         } catch (e: any) {
           console.warn('[Tenor] insert failed', e)

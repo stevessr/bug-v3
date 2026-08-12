@@ -1,4 +1,5 @@
 import { createEmojiPicker } from '../discourse/utils/picker'
+import type { PickerContext } from '../discourse/utils/editor'
 import { cachedState } from '../data/state'
 import { autoReadAll, autoReadAllv2 } from '../discourse/utils/autoReadReplies'
 import { showImageUploadDialog } from '../discourse/utils/uploader'
@@ -107,11 +108,11 @@ function closeMobilePicker(onComplete?: () => void) {
   })
 }
 
-async function injectDesktopPicker(button: HTMLElement) {
+async function injectDesktopPicker(button: HTMLElement, context: PickerContext = 'composer') {
   // 防止动画期间重复创建
   if (isAnimating) return
 
-  currentPicker = await createEmojiPicker(false)
+  currentPicker = await createEmojiPicker(false, context)
   const buttonRect = button.getBoundingClientRect()
   const pickerElement = currentPicker
   if (pickerElement) DOA(pickerElement)
@@ -160,12 +161,12 @@ async function injectDesktopPicker(button: HTMLElement) {
   }, 100)
 }
 
-async function injectMobilePicker() {
+async function injectMobilePicker(context: PickerContext = 'composer') {
   // 防止动画期间重复创建
   if (isAnimating) return
 
   // picker is created with animation already set up in mobile.ts
-  const picker = await createEmojiPicker(true)
+  const picker = await createEmojiPicker(true, context)
 
   let modalContainer = DQS('.modal-container')
   if (!modalContainer) {
@@ -665,11 +666,12 @@ function createEmojiButton(isChatComposer: boolean, icon: string): HTMLButtonEle
 
     // Use cached settings instead of reading from storage directly
     const forceMobile = cachedState.settings.forceMobileMode || false
+    const context: PickerContext = isChatComposer ? 'chat' : 'composer'
 
     if (forceMobile) {
-      injectMobilePicker()
+      injectMobilePicker(context)
     } else {
-      injectDesktopPicker(emojiButton)
+      injectDesktopPicker(emojiButton, context)
     }
   })
 

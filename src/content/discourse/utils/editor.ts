@@ -3,7 +3,13 @@
 import { cachedState } from '../../data/state'
 import { DQS } from '../../utils/dom/createEl'
 
+import { uploadThroughDiscourseRoute } from './nativeUpload'
+
 import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
+import type { Emoji } from '@/types/type'
+import { fetchTenorMediaAsBlob } from '@/utils/tenor'
+
+export type PickerContext = 'chat' | 'composer'
 
 function getSafeEmojiSource(emoji: { url?: string; short_url?: string | null }) {
   const hostname = window.location.hostname
@@ -13,12 +19,58 @@ function getSafeEmojiSource(emoji: { url?: string; short_url?: string | null }) 
   }
 }
 
-export function insertEmojiIntoEditor(emoji: unknown) {
-  // avoid noisy console in lint; keep only minimal info in debug environments
-  // allow a local any here to bridge removed UI types; intentionally narrow in scope
+/**
+ * 判断当前是否处于 Discourse 聊天编辑器（chat composer）中。
+ */
+function isChatComposerActive(): boolean {
+  return Boolean(
+    DQS('.chat-composer:not([hidden])') ||
+    DQS('.chat-composer__inner-container:not([hidden])') ||
+    DQS('#channel-composer') ||
+    DQS('.chat-composer__input') ||
+    DQS('textarea.chat-composer__input')
+  )
+}
 
-  const em = emoji as any
-  void em
+function getEmojiFileExtension(url: string, contentType: string): string {
+  const match = url.match(/\.(png|jpe?g|gif|webp|avif|svg|apng|bmp)(?:$|[?#])/i)
+  if (match) return match[1].toLowerCase()
+  if (contentType.includes('png')) return 'png'
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) return 'jpg'
+  if (contentType.includes('gif')) return 'gif'
+  if (contentType.includes('webp')) return 'webp'
+  if (contentType.includes('svg')) return 'svg'
+  return 'png'
+}
+
+/**
+ * 聊天编辑器：把表情图片交给 Discourse 原生聊天上传机制
+ * （#channel-file-uploader -> Uppy chat-composer 上传，显示原生预览），
+ * 而不是往文本框里插入 markdown/HTML。
+ */
+async function insertEmojiIntoChat(emoji: Emoji): Promise<boolean> {
+  try {
+    const sourceUrl = emoji.url || emoji.displayUrl
+    if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl)) return false
+
+    const { blob, contentType } = await fetchTenorMediaAsBlob(sourceUrl)
+    if (!blob || blob.size === 0) return false
+
+    const safeName =
+      (emoji.name || 'emoji').replace(/[^\w\u4e00-\u9fa5-]+/g, '_').slice(0, 64) || 'emoji'
+    const filename = `${safeName}.${getEmojiFileExtension(sourceUrl, contentType)}`
+    const file = new File([blob], filename, { type: contentType })
+
+    const attempt = await uploadThroughDiscourseRoute(file, 'chat')
+    return attempt.status === 'delegated' || attempt.status === 'uploaded'
+  } catch (e) {
+    console.warn('[Emoji] 聊天原生图片上传失败，回退为文本插入', e)
+    return false
+  }
+}
+
+export async function insertEmojiIntoEditor(emoji: Emoji, context?: PickerContext) {
+  const em = emoji
 
   // Add emoji to favorites automatically
   try {
@@ -114,6 +166,14 @@ export function insertEmojiIntoEditor(emoji: unknown) {
     }
 
     return
+  }
+
+  // 聊天编辑器：优先走 Discourse 原生聊天图片上传机制
+  const resolvedContext = context ?? (isChatComposerActive() ? 'chat' : 'composer')
+  if (resolvedContext === 'chat' && em.url) {
+    const uploaded = await insertEmojiIntoChat(em)
+    if (uploaded) return
+    // 原生上传不可用时，回退为下面的文本插入
   }
 
   // Default behavior: use markdown/html format based on settings

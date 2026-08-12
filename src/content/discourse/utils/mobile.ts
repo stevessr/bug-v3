@@ -3,6 +3,7 @@ import { animateExit, ANIMATION_DURATION, injectAnimationStyles } from '../../ut
 
 import { cachedState } from './ensure'
 import { insertEmojiIntoEditor } from './editor'
+import type { PickerContext } from './editor'
 import {
   createPickerImageObserver,
   getEmojiPickerImageUrl,
@@ -19,7 +20,9 @@ import { createTenorSection, isTenorEnabled } from './tenorPicker'
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
 
-export async function createMobileEmojiPicker(): Promise<HTMLElement> {
+export async function createMobileEmojiPicker(
+  context: PickerContext = 'composer'
+): Promise<HTMLElement> {
   // Ensure animation styles are injected first
   injectAnimationStyles()
 
@@ -265,7 +268,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     const emoji = getEmojiFromTarget(event.target)
     if (!emoji) return
 
-    insertEmojiIntoEditor(emoji)
+    insertEmojiIntoEditor(emoji, context)
     closeModal()
   })
 
@@ -276,7 +279,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     if (!emoji) return
 
     event.preventDefault()
-    insertEmojiIntoEditor(emoji)
+    insertEmojiIntoEditor(emoji, context)
     closeModal()
   })
 
@@ -290,6 +293,7 @@ export async function createMobileEmojiPicker(): Promise<HTMLElement> {
     try {
       tenorHandle = createTenorSection({
         scrollableContent,
+        context,
         onAfterInsert: () => {
           closeModal()
         }
