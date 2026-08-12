@@ -99,10 +99,11 @@ const asAnthropicMessages = (messages: AiMessage[]): JsonRecord[] =>
               })
               return blocks
             }
-            if (block.type === 'thinking') {
-              blocks.push({ type: 'thinking', thinking: block.thinking })
-              return blocks
-            }
+            // Anthropic thinking blocks require the provider's signature when
+            // replayed. We only retain the human-readable summary locally, so
+            // omit it from the next request rather than sending an invalid
+            // unsigned thinking block.
+            if (block.type === 'thinking') return blocks
             if (block.type === 'text') blocks.push({ type: 'text', text: block.text })
             return blocks
           }, [])
