@@ -288,6 +288,7 @@ function openCategoryTags() {
           @middleClick="emit('topicMiddleClick', $event)"
           @openUser="emit('openUser', $event)"
           @openTag="emit('openTag', $event)"
+          @openCategory="emit('categoryClick', $event)"
         />
       </section>
 

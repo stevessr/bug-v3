@@ -19,7 +19,8 @@ test.describe('Discourse category browse page', () => {
         last_posted_at: '2026-08-11T09:00:00Z',
         bumped_at: '2026-08-11T09:00:00Z',
         posters: [],
-        tags: []
+        category_id: 11,
+        tags: ['模板']
       })
 
       const subcategories = [
@@ -78,6 +79,16 @@ test.describe('Discourse category browse page', () => {
       // compact. The browser must enrich their icon/logo from the same site
       // metadata Discourse has in data-preloaded (or `/site.json` fallback).
       const siteMetadataCategories = [
+        {
+          id: 11,
+          name: '搞七捻三',
+          slug: 'gossip',
+          color: '3AB54A',
+          text_color: '000000',
+          icon: 'droplet',
+          uploaded_logo: { url: '/uploads/default/original/gossip-logo.png' },
+          uploaded_logo_dark: null
+        },
         {
           id: 777,
           name: '预载 Logo 分类',
@@ -217,6 +228,12 @@ test.describe('Discourse category browse page', () => {
     await expect(page.getByText('此处为 2级用户 可见空间。')).toBeVisible()
     await expect(page.getByText('此处为 3级用户 可见空间。')).toBeVisible()
     await expect(page.locator('.category-page-tabs__item', { hasText: '已读' })).toBeVisible()
+    await expect(page.locator('.topic-category-badge', { hasText: '搞七捻三' })).toBeVisible()
+    await expect(page.locator('.topic-category-badge__icon img')).toHaveAttribute(
+      'src',
+      'https://linux.do/uploads/default/original/gossip-logo.png'
+    )
+    await expect(page.locator('.topic-meta-divider')).toBeVisible()
 
     await page.getByRole('button', { name: '新', exact: true }).click()
     await expect(address).toHaveValue('https://linux.do/c/gossip/11/l/new')

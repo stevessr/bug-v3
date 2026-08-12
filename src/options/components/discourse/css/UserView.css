@@ -522,6 +522,20 @@
   white-space: nowrap;
 }
 
+.user-profile-topic-item__category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-profile-topic-item__category-divider {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: var(--d-border, var(--theme-outline-variant));
+}
+
 .user-profile-topic-item__meta {
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 11px;

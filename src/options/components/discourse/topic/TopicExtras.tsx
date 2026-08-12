@@ -13,7 +13,7 @@ export default defineComponent({
     related: { type: Array as () => SuggestedTopic[], default: () => [] },
     baseUrl: { type: String, required: true }
   },
-  emits: ['open'],
+  emits: ['open', 'openCategory'],
   setup(props, { emit }) {
     const availableTabs = computed(() => {
       const tabs: Array<{ key: ExtrasTab; label: string; count: number }> = []
@@ -75,6 +75,7 @@ export default defineComponent({
                   baseUrl={props.baseUrl}
                   showHeader={false}
                   onClick={(topic: SuggestedTopic) => emit('open', topic)}
+                  onOpenCategory={(category: unknown) => emit('openCategory', category)}
                 />
               </div>
             </Transition>

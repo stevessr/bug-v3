@@ -1,12 +1,18 @@
-import { computed, defineComponent, ref } from 'vue'
+import { computed, defineComponent, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
-import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
+import type { DiscourseCategory, DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import { resolveDiscourseHttpUrl } from '../navigation'
 import { setUserFollowed } from '../actions'
 import { getDiscourseIconHref } from '../layout/iconSprite'
+import TopicCategoryBadge from '../layout/TopicCategoryBadge'
+import { normalizeCategoriesFromResponse } from '../routes/categories'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories
+} from '../linux.do/preloadedCategories'
 
 import UserTabs from './UserTabs'
 import '../css/UserView.css'
@@ -42,6 +48,8 @@ export default defineComponent({
           slug: string
           posts_count: number
           like_count: number
+          category_id?: number
+          category?: Partial<DiscourseCategory> | null
         }>
         _badges?: Array<{
           id: number
@@ -86,6 +94,7 @@ export default defineComponent({
   ],
   setup(props, { emit }) {
     const followSaving = ref(false)
+    const profileCategories = ref<DiscourseCategory[]>([])
     const isFollowed = computed(() => Boolean(props.user.is_followed))
     const profileBackground = computed(() => {
       const raw =
@@ -101,6 +110,73 @@ export default defineComponent({
     const canFollow = computed(
       () => !props.showSettings && Boolean(props.user.can_follow || props.user.is_followed)
     )
+
+    const loadProfileCategories = async (baseUrl: string) => {
+      if (!baseUrl) {
+        profileCategories.value = []
+        return
+      }
+      try {
+        await ensurePreloadedCategoriesLoaded(baseUrl)
+        profileCategories.value = normalizeCategoriesFromResponse(
+          { categories: getAllPreloadedCategories(baseUrl) },
+          baseUrl
+        )
+      } catch {
+        // The profile can still render its summary without category metadata.
+      }
+    }
+
+    watch(
+      () => props.baseUrl,
+      value => void loadProfileCategories(value),
+      { immediate: true }
+    )
+
+    const profileCategoryMap = computed(() => {
+      const map = new Map<number, DiscourseCategory>()
+      profileCategories.value.forEach(category => map.set(category.id, category))
+      props.user._summary?.top_categories?.forEach(category => {
+        const current = map.get(category.id)
+        map.set(category.id, {
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          color: category.color,
+          text_color: current?.text_color || 'FFFFFF',
+          topic_count: category.topic_count,
+          ...(current || {})
+        })
+      })
+      return map
+    })
+
+    const getProfileTopicCategory = (topic: {
+      category_id?: number
+      category?: Partial<DiscourseCategory> | null
+    }) => {
+      const inline = topic.category
+      const categoryId = Number(topic.category_id ?? inline?.id)
+      const existing = Number.isFinite(categoryId) ? profileCategoryMap.value.get(categoryId) : null
+      if (!inline || !Number.isFinite(categoryId)) return existing || null
+      return {
+        ...(existing || {
+          id: categoryId,
+          name: inline.name || `分类 ${categoryId}`,
+          slug: inline.slug || String(categoryId),
+          color: inline.color || '64748B',
+          text_color: inline.text_color || 'FFFFFF',
+          topic_count: 0
+        }),
+        ...inline,
+        id: categoryId,
+        name: inline.name || existing?.name || `分类 ${categoryId}`,
+        slug: inline.slug || existing?.slug || String(categoryId),
+        color: inline.color || existing?.color || '64748B',
+        text_color: inline.text_color || existing?.text_color || 'FFFFFF',
+        topic_count: existing?.topic_count || 0
+      } as DiscourseCategory
+    }
 
     const toggleFollow = async () => {
       if (followSaving.value) return
@@ -389,6 +465,23 @@ export default defineComponent({
                       class="user-profile-topic-item__title"
                       innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
                     />
+                    {(() => {
+                      const category = getProfileTopicCategory(topic)
+                      return category ? (
+                        <div class="user-profile-topic-item__category">
+                          <TopicCategoryBadge
+                            category={category}
+                            baseUrl={props.baseUrl}
+                            clickable
+                            onClick={(value: DiscourseCategory) => emit('openCategory', value)}
+                          />
+                          <span
+                            class="user-profile-topic-item__category-divider"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      ) : null
+                    })()}
                     <div class="user-profile-topic-item__meta">
                       {topic.posts_count} 帖子 · {topic.like_count} 赞
                     </div>

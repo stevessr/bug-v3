@@ -12,6 +12,7 @@ import { searchTags } from '../actions'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime } from '../utils'
 import TagPill from '../layout/TagPill'
+import TopicCategoryBadge from '../layout/TopicCategoryBadge'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories
@@ -736,6 +737,9 @@ export default defineComponent({
         >
           {props.state.posts.map(post => {
             const topic = topicMap.value.get(post.topic_id)
+            const category = topic?.category_id
+              ? mergedCategories.value.find(item => item.id === topic.category_id) || null
+              : null
             const path = buildPath(post)
             return (
               <article
@@ -758,9 +762,8 @@ export default defineComponent({
                 <div class="search-result__meta">
                   <span class="search-result__chip">#{post.post_number}</span>
                   {post.username && <span>@{post.username}</span>}
-                  {topic?.category_id && (
-                    <span class="search-result__chip">分类 {topic.category_id}</span>
-                  )}
+                  {category && <span class="search-result__meta-divider" aria-hidden="true" />}
+                  {category && <TopicCategoryBadge category={category} baseUrl={props.baseUrl} />}
                 </div>
                 {post.blurb && (
                   <div

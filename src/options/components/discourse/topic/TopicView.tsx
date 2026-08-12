@@ -306,6 +306,17 @@ export default defineComponent({
       emit('openSuggestedTopic', topic)
     }
 
+    const handleTopicCategoryClick = (category: { slug?: string; id?: number }) => {
+      const slug = String(category.slug || category.id || '')
+        .split('/')
+        .filter(Boolean)
+        .map(segment => encodeURIComponent(segment))
+        .join('/')
+      const id = Number(category.id)
+      if (!slug || !Number.isFinite(id) || id <= 0) return
+      emit('navigate', `${props.baseUrl.replace(/\/+$/, '')}/c/${slug}/${id}`)
+    }
+
     const handleUserClick = (username: string) => {
       emit('openUser', username)
     }
@@ -604,6 +615,7 @@ export default defineComponent({
             related={activeTopic.value.related_topics || []}
             baseUrl={props.baseUrl}
             onOpen={handleSuggestedClick}
+            onOpenCategory={handleTopicCategoryClick}
           />
         </main>
 

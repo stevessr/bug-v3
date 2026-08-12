@@ -434,6 +434,13 @@
   font-weight: 620;
 }
 
+.search-result__meta-divider {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: var(--d-border, var(--theme-outline-variant));
+}
+
 .search-result__excerpt {
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   font-size: 13px;

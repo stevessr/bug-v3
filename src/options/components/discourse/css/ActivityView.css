@@ -268,6 +268,20 @@
   font-size: 11px;
 }
 
+.activity-topic-item__category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.activity-topic-item__category-divider {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: var(--d-border, var(--theme-outline-variant));
+}
+
 .activity-topic-item__assignee {
   color: var(--primary, var(--theme-primary));
   font-weight: 620;

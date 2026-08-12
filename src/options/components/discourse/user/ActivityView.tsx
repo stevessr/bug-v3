@@ -1,10 +1,21 @@
-import { computed, defineComponent, onMounted, ref } from 'vue'
+import { computed, defineComponent, onMounted, ref, watch } from 'vue'
 import { Spin } from 'ant-design-vue'
 
-import type { DiscourseUserProfile, UserActivityState, ActivityTabType } from '../types'
+import type {
+  DiscourseCategory,
+  DiscourseUserProfile,
+  UserActivityState,
+  ActivityTabType
+} from '../types'
 import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
+import TopicCategoryBadge from '../layout/TopicCategoryBadge'
+import { normalizeCategoriesFromResponse } from '../routes/categories'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories
+} from '../linux.do/preloadedCategories'
 
 import UserTabs from './UserTabs'
 import '../css/ActivityView.css'
@@ -79,6 +90,29 @@ export default defineComponent({
     }
 
     const emojiMap = ref<Record<string, { url?: string; unicode?: string }>>({})
+    const activityCategories = ref<DiscourseCategory[]>([])
+
+    const loadActivityCategories = async (baseUrl: string) => {
+      if (!baseUrl) {
+        activityCategories.value = []
+        return
+      }
+      try {
+        await ensurePreloadedCategoriesLoaded(baseUrl)
+        activityCategories.value = normalizeCategoriesFromResponse(
+          { categories: getAllPreloadedCategories(baseUrl) },
+          baseUrl
+        )
+      } catch {
+        // Activity rows remain usable when category metadata is unavailable.
+      }
+    }
+
+    watch(
+      () => props.baseUrl,
+      value => void loadActivityCategories(value),
+      { immediate: true }
+    )
 
     // 加载站点表情组，把反应短码渲染为表情图片
     const loadEmojiMap = async () => {
@@ -106,6 +140,28 @@ export default defineComponent({
       return (
         emojiMap.value[shortcode] || emojiMap.value[shortcode === '+1' ? 'thumbsup' : ''] || null
       )
+    }
+
+    const getActivityTopicCategory = (topic: any) => {
+      const categoryId = Number(topic?.category_id ?? topic?.category?.id)
+      const existing = Number.isFinite(categoryId)
+        ? activityCategories.value.find(category => category.id === categoryId)
+        : null
+      const inline = topic?.category
+      if (!inline || !Number.isFinite(categoryId)) return existing || null
+      return {
+        ...(existing || {}),
+        id: categoryId,
+        name: inline.name || existing?.name || `分类 ${categoryId}`,
+        slug: inline.slug || existing?.slug || String(categoryId),
+        color: inline.color || existing?.color || '64748B',
+        text_color: inline.text_color || existing?.text_color || 'FFFFFF',
+        topic_count: existing?.topic_count || 0,
+        icon: inline.icon || existing?.icon || null,
+        emoji: inline.emoji || existing?.emoji || null,
+        uploaded_logo: inline.uploaded_logo || existing?.uploaded_logo || null,
+        uploaded_logo_dark: inline.uploaded_logo_dark || existing?.uploaded_logo_dark || null
+      } as DiscourseCategory
     }
 
     return () => (
@@ -263,6 +319,15 @@ export default defineComponent({
                     class="activity-topic-item__title"
                     innerHTML={sanitizeDiscourseHtml(topic.fancy_title || topic.title)}
                   />
+                  {(() => {
+                    const category = getActivityTopicCategory(topic)
+                    return category ? (
+                      <div class="activity-topic-item__category">
+                        <TopicCategoryBadge category={category} baseUrl={props.baseUrl} />
+                        <span class="activity-topic-item__category-divider" aria-hidden="true" />
+                      </div>
+                    ) : null
+                  })()}
                   <div class="activity-topic-item__meta">
                     <span>{topic.posts_count} 帖子</span>
                     <span>{topic.views} 浏览</span>

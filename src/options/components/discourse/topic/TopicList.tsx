@@ -1,4 +1,4 @@
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent, ref, watch, type PropType } from 'vue'
 
 import type {
   DiscourseTopic,
@@ -10,6 +10,12 @@ import type {
 import { formatTime, getAvatarUrl } from '../utils'
 import TagPill from '../layout/TagPill'
 import EmojiTitle from '../layout/EmojiTitle'
+import TopicCategoryBadge from '../layout/TopicCategoryBadge'
+import { normalizeCategoriesFromResponse } from '../routes/categories'
+import {
+  ensurePreloadedCategoriesLoaded,
+  getAllPreloadedCategories
+} from '../linux.do/preloadedCategories'
 import '../css/TopicList.css'
 
 export default defineComponent({
@@ -17,7 +23,7 @@ export default defineComponent({
   props: {
     topics: { type: Array as () => (DiscourseTopic | SuggestedTopic)[], required: true },
     baseUrl: { type: String, required: true },
-    categories: { type: Array as () => DiscourseCategory[], default: undefined },
+    categories: { type: Array as () => DiscourseCategory[], default: () => [] },
     users: { type: Array as () => DiscourseUser[], default: undefined },
     showHeader: { type: Boolean, default: true },
     sortKey: {
@@ -29,8 +35,36 @@ export default defineComponent({
       default: 'desc'
     }
   },
-  emits: ['click', 'middleClick', 'openUser', 'openTag', 'sort'],
+  emits: ['click', 'middleClick', 'openUser', 'openTag', 'openCategory', 'sort'],
   setup(props, { emit }) {
+    const preloadedCategories = ref<DiscourseCategory[]>([])
+    let categoryRequestId = 0
+
+    const loadCategoryMetadata = async (baseUrl: string) => {
+      const requestId = ++categoryRequestId
+      if (!baseUrl) {
+        preloadedCategories.value = []
+        return
+      }
+
+      try {
+        await ensurePreloadedCategoriesLoaded(baseUrl)
+        if (requestId !== categoryRequestId) return
+        preloadedCategories.value = normalizeCategoriesFromResponse(
+          { categories: getAllPreloadedCategories(baseUrl) },
+          baseUrl
+        )
+      } catch {
+        // The list can still use the categories supplied by its parent.
+      }
+    }
+
+    watch(
+      () => props.baseUrl,
+      value => void loadCategoryMetadata(value),
+      { immediate: true }
+    )
+
     const handleClick = (topic: DiscourseTopic | SuggestedTopic) => {
       emit('click', topic)
     }
@@ -70,25 +104,98 @@ export default defineComponent({
       handleClick(topic)
     }
 
-    const getCategory = (
-      topic: DiscourseTopic | SuggestedTopic,
-      categories?: DiscourseCategory[]
-    ) => {
-      const categoryId = (topic as DiscourseTopic).category_id
-      if (!categoryId || !categories) return null
-      return categories.find(c => c.id === categoryId) ?? null
+    const normalizeInlineCategory = (value: unknown): DiscourseCategory | null => {
+      if (!value || typeof value !== 'object') return null
+      const raw = value as Record<string, any>
+      const id = Number(raw.id ?? raw.category_id)
+      const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+      if (!Number.isFinite(id) || id <= 0 || !name) return null
+      return {
+        id,
+        name,
+        slug: typeof raw.slug === 'string' ? raw.slug : String(id),
+        color: typeof raw.color === 'string' ? raw.color : '',
+        text_color: typeof raw.text_color === 'string' ? raw.text_color : '',
+        topic_count: Number(raw.topic_count) || 0,
+        parent_category_id: raw.parent_category_id ?? null,
+        subcategory_ids: Array.isArray(raw.subcategory_ids) ? raw.subcategory_ids : null,
+        style_type: typeof raw.style_type === 'string' ? raw.style_type : null,
+        icon: typeof raw.icon === 'string' ? raw.icon : null,
+        emoji: typeof raw.emoji === 'string' ? raw.emoji : null,
+        uploaded_logo: raw.uploaded_logo?.url ? { url: String(raw.uploaded_logo.url) } : null,
+        uploaded_logo_dark: raw.uploaded_logo_dark?.url
+          ? { url: String(raw.uploaded_logo_dark.url) }
+          : null
+      }
+    }
+
+    const mergeCategory = (
+      base: DiscourseCategory | null,
+      inline: DiscourseCategory | null
+    ): DiscourseCategory | null => {
+      if (!base) return inline
+      if (!inline) return base
+      const merged = { ...base }
+      ;(Object.keys(inline) as Array<keyof DiscourseCategory>).forEach(key => {
+        const value = inline[key]
+        if (value !== undefined && value !== null && value !== '') {
+          ;(merged as unknown as Record<string, unknown>)[key] = value
+        }
+      })
+      return merged
+    }
+
+    const getCategory = (topic: DiscourseTopic | SuggestedTopic) => {
+      const rawTopic = topic as DiscourseTopic & { category?: unknown }
+      const categoryId = Number(rawTopic.category_id)
+      const inline = normalizeInlineCategory(rawTopic.category)
+      const sources = [...props.categories, ...preloadedCategories.value]
+      const fromId = Number.isFinite(categoryId)
+        ? sources.find(category => category.id === categoryId) || null
+        : null
+      return mergeCategory(fromId, inline)
     }
 
     const renderCategory = (topic: DiscourseTopic | SuggestedTopic) => {
-      const cat = getCategory(topic, props.categories)
+      const cat = getCategory(topic)
       if (!cat) return null
       return (
-        <span
-          class="topic-category"
-          style={{ backgroundColor: cat.color + '20', color: cat.text_color }}
-        >
-          {cat.name}
-        </span>
+        <TopicCategoryBadge
+          category={cat}
+          baseUrl={props.baseUrl}
+          clickable
+          onClick={(category: DiscourseCategory) => emit('openCategory', category)}
+        />
+      )
+    }
+
+    const renderTopicMeta = (topic: DiscourseTopic | SuggestedTopic) => {
+      const category = getCategory(topic)
+      const tags = (topic as DiscourseTopic).tags || []
+      return (
+        <div class="topic-meta">
+          {category && renderCategory(topic)}
+          {category && tags.length > 0 && <span class="topic-meta-divider" aria-hidden="true" />}
+          {tags.map(tag => (
+            <span
+              key={getTagKey(tag)}
+              class="topic-tag"
+              data-discourse-url={`${props.baseUrl}/tag/${encodeURIComponent(getTagLabel(tag))}`}
+              onClick={(e: Event) => {
+                e.stopPropagation()
+                handleTagClick(tag)
+              }}
+            >
+              <TagPill
+                name={getTagLabel(tag)}
+                text={getTagLabel(tag)}
+                description={typeof tag === 'string' ? undefined : tag.description || undefined}
+                compact
+                clickable
+              />
+            </span>
+          ))}
+        </div>
       )
     }
 
@@ -206,30 +313,7 @@ export default defineComponent({
                   <span class="topic-unread">未读 +{getUnreadCount(topic)}</span>
                 )}
               </div>
-              <div class="topic-meta">
-                {renderCategory(topic)}
-                {((topic as DiscourseTopic).tags || []).map(tag => (
-                  <span
-                    key={getTagKey(tag)}
-                    class="topic-tag"
-                    data-discourse-url={`${props.baseUrl}/tag/${encodeURIComponent(getTagLabel(tag))}`}
-                    onClick={(e: Event) => {
-                      e.stopPropagation()
-                      handleTagClick(tag)
-                    }}
-                  >
-                    <TagPill
-                      name={getTagLabel(tag)}
-                      text={getTagLabel(tag)}
-                      description={
-                        typeof tag === 'string' ? undefined : tag.description || undefined
-                      }
-                      compact
-                      clickable
-                    />
-                  </span>
-                ))}
-              </div>
+              {renderTopicMeta(topic)}
             </div>
             <div class="topic-right">
               {getPosters(topic, props.users).length > 0 && (
