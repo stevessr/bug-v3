@@ -311,7 +311,7 @@ export function insertIntoEditor(text: string) {
 }
 
 export function createQuickInsertMenu(): HTMLElement {
-  const forceMobileMode = (cachedState.settings as any)?.forceMobileMode || false
+  const forceMobileMode = cachedState.settings.forceMobileMode || false
 
   const menu = createE('div', {
     class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded',
@@ -664,7 +664,7 @@ function createEmojiButton(isChatComposer: boolean, icon: string): HTMLButtonEle
     }
 
     // Use cached settings instead of reading from storage directly
-    const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
+    const forceMobile = cachedState.settings.forceMobileMode || false
 
     if (forceMobile) {
       injectMobilePicker()
@@ -720,15 +720,8 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
   uploadButton.addEventListener('click', async event => {
     event.stopPropagation()
     // Show menu with upload options and mount it into #d-menu-portals or mobile modal container
-    const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
-    const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
-    const menu = createUploadMenu(isMobile, isChatComposer ? 'chat' : 'composer')
-
-    if (isChatComposer) {
-      uploadButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
-      uploadButton.setAttribute('aria-expanded', 'false')
-      uploadButton.setAttribute('data-trigger', '')
-    }
+    const isMobile = cachedState.settings.forceMobileMode
+    const menu = createUploadMenu(isMobile, 'composer')
 
     if (isMobile) {
       // Try to find existing modal container on the page and reuse it
@@ -829,15 +822,8 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
   quickInsertButton.addEventListener('click', event => {
     event.stopPropagation()
     // toggle menu
-    const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
-    const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
+    const isMobile = cachedState.settings.forceMobileMode
     const menu = createQuickInsertMenu()
-
-    if (isChatComposer) {
-      quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
-      quickInsertButton.setAttribute('aria-expanded', 'false')
-      quickInsertButton.setAttribute('data-trigger', '')
-    }
 
     if (isMobile) {
       // Inject into a shared modal container like the emoji picker does
@@ -909,24 +895,10 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
   })
 
   try {
-    if (isChatComposer) {
-      const emojiPickerBtn = toolbar.querySelector(
-        '.emoji-picker-trigger:not(.emoji-extension-button)'
-      )
-      if (emojiPickerBtn) {
-        toolbar.insertBefore(uploadButton, emojiPickerBtn)
-        toolbar.insertBefore(quickInsertButton, emojiPickerBtn)
-        toolbar.insertBefore(emojiButton, emojiPickerBtn)
-      } else {
-        toolbar.appendChild(uploadButton)
-        toolbar.appendChild(quickInsertButton)
-        toolbar.appendChild(emojiButton)
-      }
-    } else {
-      toolbar.appendChild(uploadButton)
-      toolbar.appendChild(quickInsertButton)
-      toolbar.appendChild(emojiButton)
-    }
+    // For standard toolbar, append at the end
+    toolbar.appendChild(uploadButton)
+    toolbar.appendChild(quickInsertButton)
+    toolbar.appendChild(emojiButton)
   } catch (error) {
     console.error('[Emoji Extension] Failed to inject buttons (module):', error)
   }
