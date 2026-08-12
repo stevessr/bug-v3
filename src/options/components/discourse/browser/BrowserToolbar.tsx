@@ -9,6 +9,7 @@ import {
   SearchOutlined
 } from '@ant-design/icons-vue'
 
+import { extractDiscourseTitleUrl } from '../navigation'
 import type { BrowserTab } from '../types'
 import '../css/BrowserToolbar.css'
 
@@ -30,6 +31,22 @@ export default defineComponent({
   setup(props, { emit, slots }) {
     const handleInput = (event: Event) => {
       emit('update:modelValue', (event.target as HTMLInputElement).value)
+    }
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const clipboard = event.clipboardData
+      if (!clipboard) return
+
+      // Native <input> controls discard line breaks.  Parse the clipboard
+      // before that happens so the common "title\\nURL" share format survives
+      // a paste into the one-line address bar.
+      const titleUrl =
+        extractDiscourseTitleUrl(clipboard.getData('text/plain')) ||
+        extractDiscourseTitleUrl(clipboard.getData('text/html'))
+      if (!titleUrl) return
+
+      event.preventDefault()
+      emit('update:modelValue', titleUrl)
     }
 
     const handleSubmit = (event: Event) => {
@@ -107,9 +124,11 @@ export default defineComponent({
             value={props.modelValue}
             class="toolbar-address-input"
             aria-label="论坛地址或搜索内容"
-            placeholder="输入论坛地址或搜索"
+            placeholder="输入地址、标题链接或搜索"
+            title="支持直接地址、标题与 URL 双行内容、Markdown 或 HTML 链接"
             spellcheck={false}
             onInput={handleInput}
+            onPaste={handlePaste}
           />
           <button type="submit" class="toolbar-go-button" aria-label="打开地址">
             <SendOutlined />

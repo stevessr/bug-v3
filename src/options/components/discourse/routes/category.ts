@@ -12,8 +12,7 @@ import { pageFetch, extractData } from '../utils'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories,
-  getPreloadedCategory,
-  isLinuxDoUrl
+  getPreloadedCategory
 } from '../linux.do/preloadedCategories'
 
 import { normalizeCategoriesFromResponse } from './categories'
@@ -105,7 +104,10 @@ export async function loadCategory(
   listType: TopicListType = 'latest'
 ) {
   const url = buildCategoryTopicListApiUrl(baseUrl.value, slug, categoryId, listType)
-  const result = await pageFetch<any>(url)
+  const [result] = await Promise.all([
+    pageFetch<any>(url),
+    ensurePreloadedCategoriesLoaded(baseUrl.value)
+  ])
   const data = extractData(result)
   const rawCategory = data?.category ?? data?.topic_list?.category ?? null
 
@@ -123,18 +125,14 @@ export async function loadCategory(
     data?.topic_list?.category_id
   )
 
-  if (isLinuxDoUrl(baseUrl.value)) {
-    await ensurePreloadedCategoriesLoaded()
-  }
-
   const responseCategories = rawCategory
-    ? normalizeCategoriesFromResponse({ categories: [rawCategory] })
+    ? normalizeCategoriesFromResponse({ categories: [rawCategory] }, baseUrl.value)
     : []
   const preloadedCurrent = resolvedCategoryId
-    ? getPreloadedCategory(resolvedCategoryId, slug)
-    : getPreloadedCategory(null, slug)
+    ? getPreloadedCategory(resolvedCategoryId, slug, baseUrl.value)
+    : getPreloadedCategory(null, slug, baseUrl.value)
   const preloadedCurrentCategories = preloadedCurrent
-    ? normalizeCategoriesFromResponse({ categories: [preloadedCurrent] })
+    ? normalizeCategoriesFromResponse({ categories: [preloadedCurrent] }, baseUrl.value)
     : []
 
   let fetchedCategories: DiscourseCategory[] = []
@@ -143,23 +141,25 @@ export async function loadCategory(
       const subResult = await pageFetch<any>(
         `${baseUrl.value}/categories.json?parent_category_id=${resolvedCategoryId}`
       )
-      fetchedCategories = normalizeCategoriesFromResponse(extractData(subResult))
+      fetchedCategories = normalizeCategoriesFromResponse(extractData(subResult), baseUrl.value)
     } catch (error) {
       console.warn('[DiscourseBrowser] loadCategory subcategories error:', error)
     }
   }
 
-  const preloadedSubcategories =
-    resolvedCategoryId && isLinuxDoUrl(baseUrl.value)
-      ? normalizeCategoriesFromResponse({
-          categories: getAllPreloadedCategories().filter(
+  const preloadedSubcategories = resolvedCategoryId
+    ? normalizeCategoriesFromResponse(
+        {
+          categories: getAllPreloadedCategories(baseUrl.value).filter(
             category => category.parent_category_id === resolvedCategoryId
           )
-        })
-      : []
+        },
+        baseUrl.value
+      )
+    : []
 
-  // Packaged Linux.do definitions are a baseline for compact category payloads;
-  // live category data wins so descriptions, permissions, and topic counts stay current.
+  // The live preload/site response enriches compact category payloads while
+  // category-route data remains authoritative for the current list state.
   const allCategories = mergeCategoryLists(
     preloadedCurrentCategories,
     preloadedSubcategories,

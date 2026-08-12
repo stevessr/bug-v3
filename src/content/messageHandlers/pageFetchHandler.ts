@@ -1,9 +1,10 @@
+import { getDiscoursePreloadedData, getDiscoursePreloadedValue } from '../discourse/preloaded'
+
 import type { MessageHandler } from './types'
 
 import type { MessageResponse } from '@/types/messages'
 
-let cachedPreloadedRaw = ''
-let cachedPreloadedData: Record<string, unknown> | null = null
+export { getDiscoursePreloadedData, getDiscoursePreloadedValue } from '../discourse/preloaded'
 
 // Get CSRF token from meta tag
 function getCsrfToken(): string | null {
@@ -11,37 +12,45 @@ function getCsrfToken(): string | null {
   return meta?.getAttribute('content') || null
 }
 
-export function getDiscoursePreloadedData(): Record<string, unknown> | null {
-  const preloaded = document.getElementById('data-preloaded') as HTMLElement | null
-  // Older Discourse builds exposed the bootstrap payload through a data
-  // attribute, while current builds use a JSON script tag. Support both so
-  // site settings (notably the reactions contract) remain discoverable.
-  const raw = preloaded?.dataset?.preloaded || preloaded?.textContent?.trim() || ''
-
-  if (!raw) {
-    cachedPreloadedRaw = ''
-    cachedPreloadedData = null
-    return null
-  }
-
-  if (raw === cachedPreloadedRaw) {
-    return cachedPreloadedData
-  }
-
-  cachedPreloadedRaw = raw
-  try {
-    const data = JSON.parse(raw)
-    cachedPreloadedData =
-      data && typeof data === 'object' ? (data as Record<string, unknown>) : null
-  } catch {
-    cachedPreloadedData = null
-  }
-
-  return cachedPreloadedData
-}
-
 function isMessageBusPath(pathname: string): boolean {
   return pathname === '/message-bus' || pathname.startsWith('/message-bus/')
+}
+
+const PRELOADED_JSON_ROUTE_KEYS: Record<string, string[]> = {
+  '/site.json': ['site'],
+  '/site/settings.json': ['siteSettings', 'site_settings'],
+  '/site/emoji.json': ['customEmoji', 'custom_emoji'],
+  '/site/custom_html.json': ['customHTML', 'custom_html'],
+  '/site/banner.json': ['banner']
+}
+
+/**
+ * Discourse's application shell serializes these endpoint responses in
+ * `data-preloaded`. Reuse the exact, already authenticated page snapshot when
+ * possible, but only for same-origin GET JSON requests. All other paths still
+ * go through fetch so request semantics stay unchanged.
+ */
+function getPreloadedJsonRouteData(
+  inputUrl: string,
+  method: string | undefined,
+  responseType: 'json' | 'text' | 'blob'
+): { found: boolean; data?: unknown } {
+  if (responseType !== 'json' || (method || 'GET').toUpperCase() !== 'GET') {
+    return { found: false }
+  }
+
+  try {
+    const target = new URL(inputUrl, window.location.href)
+    if (target.origin !== window.location.origin) return { found: false }
+
+    const keys = PRELOADED_JSON_ROUTE_KEYS[target.pathname]
+    if (!keys) return { found: false }
+
+    const data = getDiscoursePreloadedValue(...keys)
+    return data === undefined ? { found: false } : { found: true, data }
+  } catch {
+    return { found: false }
+  }
 }
 
 function resolveMessageBusRequestUrl(inputUrl: string): string {
@@ -103,6 +112,16 @@ export const pageFetchHandler: MessageHandler = (message, _sender, sendResponse)
 
   const responseType =
     opts.responseType === 'text' ? 'text' : opts.responseType === 'blob' ? 'blob' : 'json'
+
+  const preloadedRouteData = getPreloadedJsonRouteData(url, opts.method, responseType)
+  if (preloadedRouteData.found) {
+    const response: MessageResponse = {
+      success: true,
+      data: { status: 200, ok: true, data: preloadedRouteData.data }
+    }
+    sendResponse(response)
+    return true
+  }
 
   // Build headers with Discourse-specific ones for authenticated requests
   const defaultAccept =

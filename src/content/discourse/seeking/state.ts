@@ -1,3 +1,5 @@
+import { getDiscoursePreloadedRecord } from '../preloaded'
+
 // --- 状态管理 ---
 export interface UserProfile {
   last_posted_at: string
@@ -28,13 +30,8 @@ export interface State {
 
 export function getSelfUser(): string | null {
   try {
-    const preloaded = document.getElementById('data-preloaded')
-    if (preloaded) {
-      const data = JSON.parse((preloaded as HTMLElement).dataset.preloaded || '{}')
-      if (data.currentUser) {
-        return JSON.parse(data.currentUser).username
-      }
-    }
+    const user = getDiscoursePreloadedRecord('currentUser', 'current_user')
+    return typeof user?.username === 'string' ? user.username : null
   } catch (e) {
     // ignore
   }

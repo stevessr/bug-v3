@@ -259,6 +259,29 @@ function applyEmojiSearchAliases(groups: DiscourseEmojiGroup[], payload: unknown
   return groups
 }
 
+function mergeEmojiGroups(...sources: DiscourseEmojiGroup[][]): DiscourseEmojiGroup[] {
+  const groups = new Map<string, DiscourseEmojiGroup>()
+  const seen = new Set<string>()
+
+  sources.flat().forEach(source => {
+    const existing = groups.get(source.id)
+    const group = existing || {
+      ...source,
+      emojis: []
+    }
+    if (!existing) groups.set(source.id, group)
+
+    source.emojis.forEach(emoji => {
+      const key = `${source.id}|${emoji.name}|${emoji.url || emoji.unicode || emoji.id}`
+      if (seen.has(key)) return
+      seen.add(key)
+      group.emojis.push(emoji)
+    })
+  })
+
+  return Array.from(groups.values()).filter(group => group.emojis.length > 0)
+}
+
 export async function fetchDiscourseEmojiGroups(
   baseUrl?: string | null,
   force = false
@@ -290,39 +313,46 @@ export async function fetchDiscourseEmojiGroups(
   if (!force && inFlight) return inFlight
 
   const request = (async () => {
+    const requestOptions = {
+      headers: {
+        accept: 'application/json, text/javascript, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    }
+    let preloadedGroups: DiscourseEmojiGroup[] = []
     const endpoints = [`${origin}/emojis.json`, `${origin}/site.json`]
     let lastError: Error | null = null
 
+    // `customEmoji` is part of data-preloaded and has an official
+    // `/site/emoji.json` counterpart. Merge it with the grouped endpoint
+    // below instead of stopping early, because `/emojis.json` also provides
+    // the complete standard/site groups.
+    try {
+      const response = await pageFetch<any>(`${origin}/site/emoji.json`, requestOptions, 'json')
+      const data = extractData(response)
+      if (response.ok && data && typeof data === 'object') {
+        preloadedGroups = normalizeEmojiGroups(origin, data)
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
+
     for (const url of endpoints) {
       try {
-        const response = await pageFetch<any>(
-          url,
-          {
-            headers: {
-              accept: 'application/json, text/javascript, */*; q=0.01',
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          },
-          'json'
-        )
+        const response = await pageFetch<any>(url, requestOptions, 'json')
         const data = extractData(response)
         if (!response.ok || !data || typeof data !== 'object') {
           lastError = new Error(`Emoji endpoint returned HTTP ${response.status}`)
           continue
         }
 
-        let groups = normalizeEmojiGroups(origin, data)
+        let groups = mergeEmojiGroups(normalizeEmojiGroups(origin, data), preloadedGroups)
         if (groups.length > 0) {
           if (url.endsWith('/emojis.json')) {
             try {
               const aliasResponse = await pageFetch<any>(
                 `${origin}/emojis/search-aliases.json`,
-                {
-                  headers: {
-                    accept: 'application/json, text/javascript, */*; q=0.01',
-                    'X-Requested-With': 'XMLHttpRequest'
-                  }
-                },
+                requestOptions,
                 'json'
               )
               if (aliasResponse.ok) {
@@ -344,6 +374,16 @@ export async function fetchDiscourseEmojiGroups(
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
       }
+    }
+
+    if (preloadedGroups.length > 0) {
+      const cacheEntry = {
+        expiresAt: Date.now() + EMOJI_GROUP_CACHE_TTL,
+        groups: preloadedGroups
+      }
+      emojiGroupsCache.set(origin, cacheEntry)
+      writePersistentEmojiGroups(origin, cacheEntry)
+      return preloadedGroups
     }
 
     if (lastError) {

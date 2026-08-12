@@ -1,5 +1,6 @@
 import { loadSessionUserFromExtension } from './routes/session'
 import type { ChatCapabilities } from './types'
+import { extractData, pageFetch } from './utils'
 
 import type { DiscourseSiteSettingsResponse } from '@/types/messages'
 
@@ -154,6 +155,48 @@ const sendSettingsMessage = async (
 }
 
 /**
+ * `/site/settings.json` is the official counterpart of
+ * `data-preloaded.siteSettings`. Prefer the lightweight tab message, then use
+ * this request path when the content script was not available yet. PAGE_FETCH
+ * itself reuses the preloaded value when the forum tab has one.
+ */
+const fetchSettingsEndpoint = async (
+  origin: string,
+  keys: readonly string[]
+): Promise<DiscourseSiteSettingsResponse | null> => {
+  try {
+    const result = await pageFetch<Record<string, unknown>>(`${origin}/site/settings.json`)
+    const data = extractData(result)
+    if (!result.ok || !data || typeof data !== 'object') return null
+
+    const settings: Record<string, string | number | boolean | null> = {}
+    keys.forEach(key => {
+      const value = data[key]
+      if (
+        value === null ||
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        settings[key] = value
+      }
+    })
+    return { success: true, settings }
+  } catch {
+    return null
+  }
+}
+
+const loadSiteSettings = async (
+  origin: string,
+  keys: readonly string[]
+): Promise<DiscourseSiteSettingsResponse | null> => {
+  const preloaded = await sendSettingsMessage(origin, keys)
+  if (preloaded?.success && preloaded.settings) return preloaded
+  return fetchSettingsEndpoint(origin, keys)
+}
+
+/**
  * Loads the reaction contract from the active forum tab. We intentionally do
  * not fall back to a hard-coded emoji list: when the setting is unavailable,
  * existing reactions remain readable but adding a new reaction is disabled.
@@ -181,7 +224,7 @@ export async function fetchDiscourseReactionCapabilities(
   if (!force && pending) return pending
 
   const request = (async () => {
-    const response = await sendSettingsMessage(origin, REACTION_SETTING_KEYS)
+    const response = await loadSiteSettings(origin, REACTION_SETTING_KEYS)
     if (!response?.success || !response.settings) return unavailableCapabilities()
 
     const settings = response.settings
@@ -231,7 +274,7 @@ export async function fetchDiscourseChatCapabilities(
 
   const request = (async () => {
     const [settingsResponse, sessionUser] = await Promise.all([
-      sendSettingsMessage(origin, CHAT_SETTING_KEYS),
+      loadSiteSettings(origin, CHAT_SETTING_KEYS),
       loadSessionUserFromExtension(origin)
     ])
     const settings = settingsResponse?.success ? settingsResponse.settings || {} : {}

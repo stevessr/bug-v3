@@ -40,28 +40,46 @@ function upsertCategory(
   byId: Map<number, DiscourseCategory>,
   list: DiscourseCategory[],
   raw: RawCategory,
-  fallbackParentId: number | null
+  fallbackParentId: number | null,
+  baseUrl?: string | null
 ): DiscourseCategory | null {
   const id = toCategoryId(raw.id)
   if (id === null) return null
 
   const rawParentId = toCategoryId(raw.parent_category_id ?? raw.parentCategoryId)
-  const preloaded = getPreloadedCategory(id, typeof raw.slug === 'string' ? raw.slug : null)
+  const preloaded = getPreloadedCategory(
+    id,
+    typeof raw.slug === 'string' ? raw.slug : null,
+    baseUrl
+  )
   const preloadedParentId = toCategoryId(preloaded?.parent_category_id)
   const parentId = rawParentId ?? fallbackParentId ?? preloadedParentId
-  const subcategoryIds = normalizeIdList(raw.subcategory_ids ?? raw.subcategoryIds)
+  const subcategoryIds =
+    normalizeIdList(raw.subcategory_ids ?? raw.subcategoryIds) ??
+    normalizeIdList(preloaded?.subcategory_ids ?? preloaded?.subcategoryIds)
   const colorRaw = raw.color ?? preloaded?.color
   const textColorRaw = raw.text_color ?? preloaded?.text_color
-  const topicCountRaw = raw.topic_count ?? raw.topicCount
+  const topicCountRaw = raw.topic_count ?? raw.topicCount ?? preloaded?.topic_count
   const topicCount = typeof topicCountRaw === 'number' ? topicCountRaw : Number(topicCountRaw) || 0
   const description = normalizeDescription(
-    raw.description_text ?? raw.description ?? raw.description_excerpt
+    raw.description_text ??
+      raw.description ??
+      raw.description_excerpt ??
+      preloaded?.description_text ??
+      preloaded?.description ??
+      preloaded?.description_excerpt
   )
   const descriptionExcerpt = normalizeDescription(
-    raw.description_excerpt ?? raw.description_text ?? raw.description
+    raw.description_excerpt ??
+      raw.description_text ??
+      raw.description ??
+      preloaded?.description_excerpt ??
+      preloaded?.description_text ??
+      preloaded?.description
   )
 
   const incoming: DiscourseCategory = {
+    ...(preloaded ?? {}),
     ...raw,
     id,
     name:
@@ -113,7 +131,10 @@ function upsertCategory(
   return existing
 }
 
-export function normalizeCategoriesFromResponse(data: any): DiscourseCategory[] {
+export function normalizeCategoriesFromResponse(
+  data: any,
+  baseUrl?: string | null
+): DiscourseCategory[] {
   const rawCategories = data?.category_list?.categories ?? data?.categories
   if (!Array.isArray(rawCategories)) return []
 
@@ -128,7 +149,7 @@ export function normalizeCategoriesFromResponse(data: any): DiscourseCategory[] 
   }
 
   const visit = (raw: RawCategory, fallbackParentId: number | null = null) => {
-    const current = upsertCategory(byId, normalized, raw, fallbackParentId)
+    const current = upsertCategory(byId, normalized, raw, fallbackParentId, baseUrl)
     if (!current) return
 
     const explicitChildren = normalizeIdList(raw.subcategory_ids ?? raw.subcategoryIds)

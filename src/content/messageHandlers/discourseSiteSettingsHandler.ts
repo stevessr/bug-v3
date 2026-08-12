@@ -1,31 +1,16 @@
+import { getDiscoursePreloadedRecord } from '../discourse/preloaded'
+
 import type { MessageHandler } from './types'
-import { getDiscoursePreloadedData } from './pageFetchHandler'
 
 import type { DiscourseSiteSettingsResponse } from '@/types/messages'
 
 const SAFE_SETTING_KEY = /^[a-z][a-z0-9_]{0,95}$/i
 const MAX_SETTING_KEYS = 64
 
-const parseRecord = (value: unknown): Record<string, unknown> | null => {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-  if (typeof value !== 'string' || !value.trim()) return null
-  try {
-    const parsed = JSON.parse(value)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null
-  } catch {
-    return null
-  }
-}
-
 export const discourseSiteSettingsHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'GET_DISCOURSE_SITE_SETTINGS') return false
 
-  const bootstrap = getDiscoursePreloadedData()
-  const siteSettings = parseRecord(bootstrap?.siteSettings ?? bootstrap?.site_settings)
+  const siteSettings = getDiscoursePreloadedRecord('siteSettings', 'site_settings')
   if (!siteSettings) {
     const response: DiscourseSiteSettingsResponse = {
       success: false,

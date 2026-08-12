@@ -99,12 +99,15 @@
     try {
       const preloaded = document.getElementById('data-preloaded')
       if (preloaded) {
-        const data = JSON.parse(preloaded.dataset.preloaded)
-        if (data.currentUser) {
-          return JSON.parse(data.currentUser).username
-        }
+        const raw = preloaded.dataset.preloaded || preloaded.textContent || '{}'
+        const data = JSON.parse(raw)
+        const currentUser =
+          typeof data.currentUser === 'string' ? JSON.parse(data.currentUser) : data.currentUser
+        if (currentUser?.username) return currentUser.username
       }
-    } catch (e) {}
+    } catch {
+      // The forum may not have emitted its bootstrap payload yet.
+    }
     return null
   }
 
@@ -730,7 +733,7 @@
       hasUpdates = true
     } else if (latestId !== lastSavedId && !isInitial) {
       const diff = []
-      for (let act of actions) {
+      for (const act of actions) {
         if (getUniqueId(act) === lastSavedId) break
         diff.push(act)
       }
@@ -870,14 +873,18 @@
         !State.users.includes(msg.username) &&
         State.users.length < CONFIG.MAX_USERS
       ) {
-        fetchUser(msg.username, true).then(res => {
-          if (res && res !== 'SKIPPED') {
-            State.users.push(msg.username)
-            saveConfig()
-            renderSidebarRows()
-            tickAll()
-          }
-        })
+        fetchUser(msg.username, true)
+          .then(res => {
+            if (res && res !== 'SKIPPED') {
+              State.users.push(msg.username)
+              saveConfig()
+              renderSidebarRows()
+              tickAll()
+            }
+          })
+          .catch(error => {
+            log(`Unable to add ${msg.username}: ${error?.message || String(error)}`, 'error')
+          })
       } else if (State.users.length >= CONFIG.MAX_USERS) {
         log(`Max ${CONFIG.MAX_USERS} users reached.`, 'error')
       }
@@ -1230,7 +1237,7 @@
   function renderFeed() {
     if (!shadowRoot) return
     const div = shadowRoot.getElementById('sb-list')
-    let all = []
+    const all = []
     Object.entries(State.data).forEach(([user, arr]) => {
       if (!State.hiddenUsers.has(user)) all.push(...arr)
     })

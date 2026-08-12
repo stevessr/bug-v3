@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { pageFetch, extractData } from '../utils'
 import { fetchDiscourseChatCapabilities } from '../siteCapabilities'
+import { ensurePreloadedCategoriesLoaded } from '../linux.do/preloadedCategories'
 
 import { normalizeCategoriesFromResponse } from './categories'
 
@@ -1345,9 +1346,13 @@ export async function loadChat(
 
     if (capabilities.canCreatePublicChannel && tab.categories.length === 0) {
       try {
+        await ensurePreloadedCategoriesLoaded(baseUrl.value)
         const categoryResult = await pageFetch<any>(`${baseUrl.value}/categories.json`)
         if (categoryResult.ok) {
-          tab.categories = normalizeCategoriesFromResponse(extractData(categoryResult))
+          tab.categories = normalizeCategoriesFromResponse(
+            extractData(categoryResult),
+            baseUrl.value
+          )
         }
       } catch {
         // Existing chat remains usable when the category chooser cannot load.

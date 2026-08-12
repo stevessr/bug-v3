@@ -9,7 +9,7 @@ import type {
 } from '../types'
 import { buildTopicListApiUrl } from '../navigation'
 import { pageFetch, extractData } from '../utils'
-import { ensurePreloadedCategoriesLoaded, isLinuxDoUrl } from '../linux.do/preloadedCategories'
+import { ensurePreloadedCategoriesLoaded } from '../linux.do/preloadedCategories'
 
 import { normalizeCategoriesFromResponse } from './categories'
 
@@ -18,21 +18,18 @@ export async function loadHome(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
-  if (isLinuxDoUrl(baseUrl.value)) {
-    await ensurePreloadedCategoriesLoaded()
-  }
-
   const [catResult, topicResult] = await Promise.all([
     pageFetch<any>(`${baseUrl.value}/categories.json`),
     pageFetch<any>(
       buildTopicListApiUrl(baseUrl.value, tab.topicListType || 'latest', tab.topicListPeriod)
-    )
+    ),
+    ensurePreloadedCategoriesLoaded(baseUrl.value)
   ])
 
   const catData = extractData(catResult)
   const topicData = extractData(topicResult)
 
-  tab.categories = normalizeCategoriesFromResponse(catData)
+  tab.categories = normalizeCategoriesFromResponse(catData, baseUrl.value)
 
   if (topicData?.topic_list?.topics) {
     tab.topics = topicData.topic_list.topics
@@ -96,20 +93,22 @@ export async function loadCategories(
   baseUrl: Ref<string>,
   users: Ref<Map<number, DiscourseUser>>
 ) {
-  if (isLinuxDoUrl(baseUrl.value)) {
-    await ensurePreloadedCategoriesLoaded()
-  }
-
   let data: any = null
   try {
-    const result = await pageFetch<any>(`${baseUrl.value}/categories_and_latest.json`)
+    const [result] = await Promise.all([
+      pageFetch<any>(`${baseUrl.value}/categories_and_latest.json`),
+      ensurePreloadedCategoriesLoaded(baseUrl.value)
+    ])
     data = extractData(result)
   } catch {
-    const fallbackResult = await pageFetch<any>(`${baseUrl.value}/categories.json`)
+    const [fallbackResult] = await Promise.all([
+      pageFetch<any>(`${baseUrl.value}/categories.json`),
+      ensurePreloadedCategoriesLoaded(baseUrl.value)
+    ])
     data = extractData(fallbackResult)
   }
 
-  tab.categories = normalizeCategoriesFromResponse(data)
+  tab.categories = normalizeCategoriesFromResponse(data, baseUrl.value)
 
   tab.topics = []
   tab.hasMoreTopics = false

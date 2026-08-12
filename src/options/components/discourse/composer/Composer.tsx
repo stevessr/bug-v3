@@ -8,8 +8,7 @@ import { Input, Button, Select, TreeSelect } from 'ant-design-vue'
 import type { DiscourseCategory, DiscourseUser } from '../types'
 import {
   ensurePreloadedCategoriesLoaded,
-  getAllPreloadedCategories,
-  isLinuxDoUrl
+  getAllPreloadedCategories
 } from '../linux.do/preloadedCategories'
 import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
 import { parseEmojiShortcodeToBBCode, renderBBCode } from '../bbcode'
@@ -169,8 +168,7 @@ export default defineComponent({
     watch(
       () => props.baseUrl,
       async value => {
-        if (!isLinuxDoUrl(value)) return
-        await ensurePreloadedCategoriesLoaded()
+        await ensurePreloadedCategoriesLoaded(value)
         preloadedCategoriesReadyToken.value++
         await ensureEmojiShortcodesLoaded(value)
         emojiReadyToken.value++
@@ -198,10 +196,10 @@ export default defineComponent({
     const mergedCategories = computed(() => {
       const readyToken = preloadedCategoriesReadyToken.value
       const localMap = new Map<number, DiscourseCategory>()
-      const usingLinuxDo = isLinuxDoUrl(props.baseUrl) && readyToken >= 0
+      const hasSiteCategories = readyToken >= 0
 
-      if (usingLinuxDo) {
-        getAllPreloadedCategories().forEach(raw => {
+      if (hasSiteCategories) {
+        getAllPreloadedCategories(props.baseUrl).forEach(raw => {
           if (typeof raw.id !== 'number') return
           localMap.set(raw.id, {
             id: raw.id,

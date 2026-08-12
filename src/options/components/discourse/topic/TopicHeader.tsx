@@ -9,8 +9,7 @@ import EmojiTitle from '../layout/EmojiTitle'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories,
-  getPreloadedCategory,
-  isLinuxDoUrl
+  getPreloadedCategory
 } from '../linux.do/preloadedCategories'
 import { resolveDiscourseHttpUrl } from '../navigation'
 import { extractData, formatTime, pageFetch } from '../utils'
@@ -177,13 +176,13 @@ export default defineComponent({
       const loadedCategory = categories.value.find(category => category.id === categoryId)
       if (loadedCategory) return loadedCategory
 
-      // Linux.do topic payloads commonly only include category_id. Resolve the
-      // packaged live-definition fallback synchronously so the major board
-      // logo/icon does not wait for the background category request.
-      if (isLinuxDoUrl(props.baseUrl)) {
-        const fallback = normalizeRawCategory(getPreloadedCategory(categoryId, rawCategory?.slug))
-        if (fallback) return fallback
-      }
+      // Compact topic payloads often only include category_id. Use the
+      // same site metadata Discourse preloads so its logo/icon does not wait
+      // for a separate category-list response.
+      const fallback = normalizeRawCategory(
+        getPreloadedCategory(categoryId, rawCategory?.slug, props.baseUrl)
+      )
+      if (fallback) return fallback
       return rawCategory
     })
 
@@ -194,13 +193,12 @@ export default defineComponent({
       const sequence = ++categoryLoadSequence
       categoriesLoading.value = true
       try {
-        let list: DiscourseCategory[] = []
-        if (isLinuxDoUrl(props.baseUrl)) {
-          await ensurePreloadedCategoriesLoaded()
-          list = getAllPreloadedCategories()
-            .map(normalizeRawCategory)
-            .filter((category): category is DiscourseCategory => Boolean(category))
-        } else {
+        await ensurePreloadedCategoriesLoaded(origin)
+        let list = getAllPreloadedCategories(origin)
+          .map(normalizeRawCategory)
+          .filter((category): category is DiscourseCategory => Boolean(category))
+
+        if (list.length === 0) {
           const result = await pageFetch<any>(`${origin}/categories.json`)
           const data = extractData(result)
           const rawList: unknown[] = Array.isArray(data?.category_list?.categories)

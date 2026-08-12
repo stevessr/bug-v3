@@ -74,6 +74,41 @@ test.describe('Discourse category browse page', () => {
         subcategory_list: subcategories
       }
 
+      // `/categories_and_latest.json` can deliberately keep these rows
+      // compact. The browser must enrich their icon/logo from the same site
+      // metadata Discourse has in data-preloaded (or `/site.json` fallback).
+      const siteMetadataCategories = [
+        {
+          id: 777,
+          name: '预载 Logo 分类',
+          slug: 'preloaded-logo',
+          color: '4488CC',
+          text_color: 'FFFFFF',
+          icon: 'sparkles',
+          uploaded_logo: { url: '/uploads/default/original/preloaded-logo.png' },
+          uploaded_logo_dark: { url: '/uploads/default/original/preloaded-logo-dark.png' }
+        },
+        {
+          id: 778,
+          name: '预载图标分类',
+          slug: 'preloaded-icon',
+          color: '6B5BD6',
+          text_color: 'FFFFFF',
+          icon: 'preloaded-icon',
+          uploaded_logo: null,
+          uploaded_logo_dark: null
+        }
+      ]
+
+      const compactMetadataCategories = siteMetadataCategories.map(category => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        color: category.color,
+        text_color: category.text_color,
+        topic_count: 1
+      }))
+
       const runtime = {
         lastError: null,
         sendMessage(request: any, callback: (response: any) => void) {
@@ -104,6 +139,8 @@ test.describe('Discourse category browse page', () => {
 
           if (parsed.pathname === '/latest.json') {
             data = { topic_list: { topics: [topic(1, '首页话题')] }, users: [] }
+          } else if (parsed.pathname === '/site.json') {
+            data = { categories: siteMetadataCategories }
           } else if (parsed.pathname === '/categories.json') {
             data = {
               category_list: {
@@ -111,6 +148,12 @@ test.describe('Discourse category browse page', () => {
                   ? subcategories
                   : [gossipCategory]
               }
+            }
+          } else if (parsed.pathname === '/categories_and_latest.json') {
+            data = {
+              category_list: { categories: compactMetadataCategories },
+              topic_list: { topics: [] },
+              users: []
             }
           } else if (parsed.pathname === '/c/gossip/11.json') {
             data = {
@@ -215,6 +258,36 @@ test.describe('Discourse category browse page', () => {
           (globalThis as any).__categoryBrowseRequests.includes(
             'https://linux.do/c/gossip/11/l/new.json'
           )
+        )
+      )
+      .toBe(true)
+  })
+
+  test('enriches compact category rows with live preloaded site icons and logos', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    await expect(page.getByRole('link', { name: '打开话题：首页话题' })).toBeVisible()
+
+    const address = page.locator('.toolbar-address input')
+    await address.fill('https://linux.do/categories')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const logoCard = page.locator('.category-directory-row').filter({ hasText: '预载 Logo 分类' })
+    await expect(logoCard).toBeVisible()
+    await expect(logoCard.locator('.category-icon-img')).toHaveAttribute(
+      'src',
+      'https://linux.do/uploads/default/original/preloaded-logo.png'
+    )
+
+    const iconCard = page.locator('.category-directory-row').filter({ hasText: '预载图标分类' })
+    await expect(iconCard).toBeVisible()
+    await expect(iconCard.locator('use')).toHaveAttribute('href', '#preloaded-icon')
+
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__categoryBrowseRequests.includes('https://linux.do/site.json')
         )
       )
       .toBe(true)

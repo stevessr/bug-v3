@@ -1,22 +1,8 @@
+import { getDiscoursePreloadedRecord } from '../discourse/preloaded'
+
 import type { MessageHandler } from './types'
-import { getDiscoursePreloadedData } from './pageFetchHandler'
 
 import type { LinuxDoUserResponse } from '@/types/messages'
-
-const parseRecord = (value: unknown): Record<string, unknown> | null => {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-  if (typeof value !== 'string' || !value.trim()) return null
-  try {
-    const parsed = JSON.parse(value)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null
-  } catch {
-    return null
-  }
-}
 
 const optionalBoolean = (value: unknown): boolean | undefined =>
   typeof value === 'boolean' ? value : undefined
@@ -25,8 +11,7 @@ export const linuxDoUserHandler: MessageHandler = (message, _sender, sendRespons
   if (message.type !== 'GET_LINUX_DO_USER') return false
 
   try {
-    const bootstrap = getDiscoursePreloadedData()
-    const user = parseRecord(bootstrap?.currentUser ?? bootstrap?.current_user)
+    const user = getDiscoursePreloadedRecord('currentUser', 'current_user')
     if (user?.username) {
       const admin = optionalBoolean(user.admin)
       const moderator = optionalBoolean(user.moderator)

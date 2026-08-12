@@ -43,6 +43,10 @@ const EXPLICIT_SCHEME_RE = /^[a-z][a-z\d+.-]*:/i
 const UNSAFE_SCHEME_RE = /^(?:about|blob|chrome|chrome-extension|data|file|javascript|vbscript):/i
 const HOST_LIKE_RE =
   /^(?:localhost(?::\d+)?|(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?|(?:[a-z\d-]+\.)+[a-z\d-]{2,}(?::\d+)?)(?:[/?#].*)?$/i
+const HTTP_URL_RE = /^https?:\/\/\S+$/i
+const TITLE_URL_DELIMITER_RE = /(?:\t+|\s+[|—–-]\s+|[：:]\s*)$/
+const HTML_LINK_HREF_RE =
+  /^<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>[\s\S]*<\/a>$/i
 
 const decodePathSegment = (value: string) => {
   try {
@@ -101,6 +105,57 @@ export type DiscourseAddressResolution = {
   kind: 'navigation' | 'search'
 }
 
+const normalizeTitleUrlCandidate = (value: string): string | null => {
+  const trimmed = value.trim()
+  const unwrapped =
+    trimmed.startsWith('<') && trimmed.endsWith('>') ? trimmed.slice(1, -1).trim() : trimmed
+  return HTTP_URL_RE.test(unwrapped) ? unwrapped : null
+}
+
+/**
+ * Extract the URL from the compact title/link text emitted by some browsers,
+ * share sheets, and bookmark tools.  We intentionally only accept structured
+ * formats (a final standalone URL line, an exact Markdown/HTML link, or a
+ * title followed by a clear delimiter) so a normal search that merely
+ * mentions a URL remains a search.
+ */
+export function extractDiscourseTitleUrl(input: string): string | null {
+  const value = (input || '').trim()
+  if (!value) return null
+
+  const htmlLink = value.match(HTML_LINK_HREF_RE)
+  if (htmlLink) {
+    return normalizeTitleUrlCandidate(htmlLink[1] || htmlLink[2] || htmlLink[3] || '')
+  }
+
+  if (value.startsWith('[') && value.endsWith(')')) {
+    const separatorIndex = value.lastIndexOf('](')
+    if (separatorIndex > 1) {
+      const markdownUrl = value.slice(separatorIndex + 2, -1)
+      const candidate = normalizeTitleUrlCandidate(markdownUrl)
+      if (candidate) return candidate
+    }
+  }
+
+  const lines = value
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+  if (lines.length >= 2) {
+    const candidate = normalizeTitleUrlCandidate(lines[lines.length - 1])
+    if (candidate) return candidate
+  }
+
+  const lastWhitespaceIndex = value.search(/\shttps?:\/\//i)
+  if (lastWhitespaceIndex > 0) {
+    const titleAndDelimiter = value.slice(0, lastWhitespaceIndex + 1)
+    const candidate = normalizeTitleUrlCandidate(value.slice(lastWhitespaceIndex + 1))
+    if (candidate && TITLE_URL_DELIMITER_RE.test(titleAndDelimiter)) return candidate
+  }
+
+  return null
+}
+
 export function resolveDiscourseHttpUrl(input: string, baseUrl: string): string | null {
   const value = (input || '').trim()
   if (!value) return null
@@ -119,7 +174,8 @@ export function resolveDiscourseAddressInput(
   baseUrl: string
 ): DiscourseAddressResolution {
   const base = assertHttpUrl(new URL(baseUrl))
-  const value = (input || '').trim()
+  const rawValue = (input || '').trim()
+  const value = extractDiscourseTitleUrl(rawValue) || rawValue
 
   if (!value) {
     return { url: base.origin, origin: base.origin, kind: 'navigation' }

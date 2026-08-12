@@ -303,6 +303,65 @@ test.describe('Discourse browser navigation and content safety', () => {
       .toBe(true)
   })
 
+  test('resolves structured copied title URLs without hijacking regular searches', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    await expect(
+      page.getByRole('link', { name: '打开话题：最新话题 1', exact: true })
+    ).toBeVisible()
+
+    const address = page.locator('.toolbar-address input')
+
+    await address.evaluate(element => {
+      const clipboard = new DataTransfer()
+      clipboard.setData(
+        'text/plain',
+        '嵌套分类的话题列表\nhttps://linux.do/c/parent/child/42/l/latest'
+      )
+      element.dispatchEvent(
+        new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard })
+      )
+    })
+    await expect(address).toHaveValue('https://linux.do/c/parent/child/42/l/latest')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(address).toHaveValue('https://linux.do/c/parent/child/42/l/latest')
+    await expect(page.getByRole('heading', { name: '嵌套分类' })).toBeVisible()
+
+    await address.fill('[周排行](https://linux.do/top/weekly)')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(address).toHaveValue('https://linux.do/top/weekly')
+    await expect(page.getByRole('link', { name: '打开话题：周排行话题' })).toBeVisible()
+
+    await address.fill('周排行： https://linux.do/top/weekly')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(address).toHaveValue('https://linux.do/top/weekly')
+    await expect(page.getByRole('link', { name: '打开话题：周排行话题' })).toBeVisible()
+
+    await address.evaluate(element => {
+      const clipboard = new DataTransfer()
+      clipboard.setData('text/plain', '嵌套分类')
+      clipboard.setData(
+        'text/html',
+        '<a href="https://linux.do/c/parent/child/42/l/latest">嵌套分类</a>'
+      )
+      element.dispatchEvent(
+        new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: clipboard })
+      )
+    })
+    await expect(address).toHaveValue('https://linux.do/c/parent/child/42/l/latest')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(address).toHaveValue('https://linux.do/c/parent/child/42/l/latest')
+    await expect(page.getByRole('heading', { name: '嵌套分类' })).toBeVisible()
+
+    await address.fill('查找 https://linux.do/top/weekly')
+    await page.getByRole('button', { name: '打开地址' }).click()
+    await expect(address).toHaveValue(
+      'https://linux.do/search?q=%E6%9F%A5%E6%89%BE+https%3A%2F%2Flinux.do%2Ftop%2Fweekly'
+    )
+    await expect(page.getByRole('heading', { name: '搜索论坛' })).toBeVisible()
+  })
+
   test('keeps protocol-relative category logos on their CDN host', async ({ page }) => {
     await page.goto('/discourse.html')
     const address = page.locator('.toolbar-address input')
