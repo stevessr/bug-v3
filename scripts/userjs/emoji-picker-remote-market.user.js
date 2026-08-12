@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Market Emoji Picker for Linux.do
 // @namespace    https://linux.do/
-// @version      2.1.0
+// @version      2.1.1
 // @description  从云端市场加载表情包并允许用户组合分组，注入表情选择器到 Linux.do 论坛
 // @author       stevessr
 // @match        https://linux.do/*
@@ -18,6 +18,14 @@
 
 ;(function () {
   'use strict'
+
+  // 防止同一页面中脚本被重复执行，避免注册多个 Observer / 定时器
+  const INSTANCE_FLAG = '__marketEmojiPickerUserscriptLoaded__'
+  if (window[INSTANCE_FLAG]) {
+    console.warn('[Market Emoji] 检测到重复脚本实例，跳过初始化')
+    return
+  }
+  window[INSTANCE_FLAG] = true
 
   // ============== 配置 ==============
   const CONFIG = {
@@ -1431,7 +1439,7 @@
           console.log('[Market Emoji] 已上传到 Discourse:', imageUrl)
         }
       } catch (e) {
-        console.warn('[Market Emoji] 上传到 Discourse 失败，使用远程链接:', e)
+        console.warn('[Market Emoji] 上传到 Discourse 失败，使用远程链接：', e)
         // 继续使用原始 URL
       }
     }
@@ -1969,27 +1977,66 @@
   }
 
   // ============== 工具栏注入 ==============
-  function findToolbars() {
-    const selectors = [
-      '.d-editor-button-bar',
-      '.toolbar-visible',
-      '.chat-composer__wrapper .chat-composer__inner-container'
-    ]
+  const TOOLBAR_BUTTON_SELECTOR = '.market-emoji-toolbar-btn'
 
+  // 返回工具栏所属的 composer 根节点。普通 Discourse 编辑器以 #reply-control 为边界。
+  function getComposerRoot(toolbar) {
+    return toolbar.closest('#reply-control, .chat-composer__wrapper') || toolbar
+  }
+
+  function findToolbars() {
     const toolbars = []
-    for (const sel of selectors) {
-      document.querySelectorAll(sel).forEach(el => toolbars.push(el))
-    }
+
+    // 普通 Discourse composer：只选真正的按钮栏。
+    // 注意：不要再选择 .toolbar-visible，它是 .d-editor-button-bar 的祖先，
+    // 同时选择两者会让同一个 #reply-control 被注入两次。
+    document.querySelectorAll('#reply-control').forEach(composer => {
+      const toolbar = composer.querySelector('.d-editor-button-bar')
+      if (toolbar) toolbars.push(toolbar)
+    })
+
+    // 兼容可能存在于 #reply-control 之外的 d-editor。
+    document.querySelectorAll('.d-editor-button-bar').forEach(toolbar => {
+      if (!toolbar.closest('#reply-control') && !toolbars.includes(toolbar)) {
+        toolbars.push(toolbar)
+      }
+    })
+
+    // Discourse Chat。
+    document
+      .querySelectorAll('.chat-composer__wrapper .chat-composer__inner-container')
+      .forEach(toolbar => {
+        if (!toolbars.includes(toolbar)) toolbars.push(toolbar)
+      })
+
     return toolbars
   }
 
   function injectButton(toolbar) {
-    if (toolbar.querySelector('.market-emoji-toolbar-btn')) return
+    if (!toolbar?.isConnected) return false
+
+    const composerRoot = getComposerRoot(toolbar)
+    const existingButtons = Array.from(
+      composerRoot.querySelectorAll(TOOLBAR_BUTTON_SELECTOR)
+    )
+
+    // 正确工具栏里已经存在按钮：只保留这一枚，并清理同一 composer 内的历史重复项。
+    const correctButton = existingButtons.find(btn => btn.parentElement === toolbar)
+    if (correctButton) {
+      existingButtons.forEach(btn => {
+        if (btn !== correctButton) btn.remove()
+      })
+      return false
+    }
+
+    // 兼容旧版本已经把按钮注入到 .toolbar-visible / 其他错误位置的情况。
+    existingButtons.forEach(btn => btn.remove())
 
     const btn = document.createElement('button')
     btn.className = 'btn no-text btn-icon market-emoji-toolbar-btn'
     btn.title = '市场表情包'
     btn.type = 'button'
+    btn.dataset.marketEmojiInjected = 'true'
     btn.innerHTML =
       '<svg class="fa d-icon d-icon-far-face-smile svg-icon svg-string" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><use href="#far-face-smile"></use></svg>'
     btn.style.color = 'var(--tertiary)'
@@ -2000,12 +2047,18 @@
     }
 
     toolbar.appendChild(btn)
+    return true
   }
 
   function attemptInjection() {
     const toolbars = findToolbars()
-    toolbars.forEach(toolbar => injectButton(toolbar))
-    return toolbars.length
+    let injected = 0
+
+    toolbars.forEach(toolbar => {
+      if (injectButton(toolbar)) injected++
+    })
+
+    return { found: toolbars.length, injected }
   }
 
   // ============== 初始化 ==============
@@ -2022,10 +2075,15 @@
 
     function tryInject() {
       attempts++
-      const count = attemptInjection()
+      const result = attemptInjection()
 
-      if (count > 0) {
-        console.log('[Market Emoji] 注入成功，工具栏数量：', count)
+      if (result.found > 0) {
+        console.log(
+          '[Market Emoji] 工具栏检查完成，发现：',
+          result.found,
+          '新注入：',
+          result.injected
+        )
       } else if (attempts < maxAttempts) {
         setTimeout(tryInject, 1000)
       } else {
@@ -2042,10 +2100,19 @@
     // 定期检查新工具栏
     setInterval(attemptInjection, 30000)
 
-    // 监听 DOM 变化
-    const observer = new MutationObserver(() => {
-      attemptInjection()
-    })
+    // 监听 DOM 变化。Discourse/Ember 会频繁重绘 composer；合并同一帧内的变化，
+    // 避免脚本自身 appendChild 后触发 Observer 时立即进行无意义的重复扫描。
+    let injectionScheduled = false
+    const scheduleInjection = () => {
+      if (injectionScheduled) return
+      injectionScheduled = true
+      requestAnimationFrame(() => {
+        injectionScheduled = false
+        attemptInjection()
+      })
+    }
+
+    const observer = new MutationObserver(scheduleInjection)
     observer.observe(document.body, { childList: true, subtree: true })
   }
 
