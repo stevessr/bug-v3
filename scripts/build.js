@@ -1,22 +1,8 @@
 #!/usr/bin/env node
 // 跨平台构建脚本
-import { spawn, execSync } from 'child_process'
+import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-
-// This repository intentionally uses pnpm so lockfile and workspace policy are
-// identical locally and in CI.
-function requirePnpm() {
-  try {
-    execSync('pnpm --version', { stdio: 'ignore' })
-    return 'pnpm'
-  } catch {
-    throw new Error('pnpm is required. Enable it with Corepack before building.')
-  }
-}
-
-const PKG_MANAGER = requirePnpm()
-console.log(`📦 Using package manager: ${PKG_MANAGER}`)
 
 // 定义环境变量配置
 const configs = {
@@ -39,6 +25,14 @@ const configs = {
     ENABLE_LOGGING: 'false',
     NODE_ENV: 'production',
     BUILD_FAST: 'true'
+  },
+  // 本地迭代专用：保留全部入口，但关闭压缩、代码分割和 tree-shaking。
+  // 产物不可用于发布；发布请使用 build 或 build:prod。
+  'build:fast': {
+    ENABLE_LOGGING: 'false',
+    NODE_ENV: 'production',
+    BUILD_FAST: 'true',
+    BUILD_MINIFIED: 'false'
   },
   // 新增：仅编译、不混淆（调试用）
   'build:debug': {
@@ -106,6 +100,7 @@ Object.entries(buildEnv).forEach(([key, value]) => {
 
 // 检查命令行参数是否包含 --no-eslint
 const skipEslint = args.includes('--no-eslint')
+const watchBuild = args.includes('--watch')
 
 // Copy WASM files to public/wasm before build/dev starts
 // This ensures they are available for both dev server and production build
@@ -139,14 +134,30 @@ try {
   console.warn('⚠️ Failed to pre-copy WASM files:', e)
 }
 
-// 执行 vite（开发或构建）
-// 构建时传递给 `vite` 的参数数组。dev 模式不传额外参数（等价于 `pnpm exec vite`）。
-const viteArgs = buildType === 'dev' ? [] : ['build']
+// 执行 vite（开发或构建）。直接启动 Vite 的 Node CLI，避免每次构建都再
+// 启动一次 pnpm exec（在短迭代构建中可省掉约 0.3~0.5 秒）。依赖仍由
+// pnpm 管理，只有运行时的 CLI 调度改为直接调用。
+function resolveViteCli() {
+  const viteCli = path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js')
+  if (!fs.existsSync(viteCli)) {
+    throw new Error('Unable to find Vite CLI. Run `pnpm install` before building.')
+  }
+  return viteCli
+}
 
-const child = spawn(PKG_MANAGER, ['exec', 'vite', ...viteArgs], {
+const viteArgs = buildType === 'dev' ? [] : ['build', ...(watchBuild ? ['--watch'] : [])]
+const viteCli = resolveViteCli()
+console.log(`⚡ Vite CLI: ${viteCli}`)
+
+const child = spawn(process.execPath, [viteCli, ...viteArgs], {
   stdio: 'inherit',
   env: { ...process.env, SKIP_ESLINT: skipEslint ? 'true' : process.env.SKIP_ESLINT },
   shell: false
+})
+
+child.on('error', error => {
+  console.error('❌ Failed to start Vite:', error)
+  process.exit(1)
 })
 
 child.on('exit', code => {

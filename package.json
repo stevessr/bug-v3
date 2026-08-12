@@ -9,6 +9,7 @@
     "build": "node scripts/build.js build",
     "build:prod": "node scripts/build.js build:prod",
     "build:minimal": "node scripts/build.js build:minimal",
+    "build:fast": "node scripts/build.js build:fast",
     "build:debug": "node scripts/build.js build:debug",
     "build:perf": "node scripts/build.js build:perf",
     "perf": "node scripts/build.js build:perf && node scripts/performance/audit-extension.js --check",

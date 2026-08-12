@@ -125,6 +125,12 @@ npm run build:no-indexeddb
 
 # Minimal build (no logging, no IndexedDB - smallest bundle)
 npm run build:minimal
+
+# Fast local iteration build (all features, skips expensive optimizations)
+pnpm build:fast
+
+# Incremental build watcher
+pnpm watch
 ```
 
 ### Bundle Size Comparison
