@@ -621,28 +621,15 @@ function createUploadMenu(
   return menu
 }
 
-export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boolean = false) {
-  // 如果启用了子菜单注入，则跳过工具栏按钮注入
-  if (skipIfSubmenuInjectorEnabled) {
-    return
-  }
-
-  // Check if we already injected buttons in this toolbar
-  if (
-    toolbar.querySelector('.emoji-extension-button') ||
-    toolbar.querySelector('.image-upload-button')
-  ) {
-    return
-  }
-
-  const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
-
-  // Create emoji button
+/**
+ * Create the emoji picker button with its click handler.
+ */
+function createEmojiButton(isChatComposer: boolean, icon: string): HTMLButtonElement {
   const emojiButton = createE('button', {
     class: 'btn no-text btn-icon toolbar__button nacho-emoji-picker-button emoji-extension-button',
     ti: '表情包',
     type: 'button',
-    in: '🐈‍⬛'
+    in: icon
   }) as HTMLButtonElement
 
   // Add chat-specific classes if needed
@@ -686,6 +673,42 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     }
   })
 
+  return emojiButton
+}
+
+export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boolean = false) {
+  // 如果启用了子菜单注入，则跳过工具栏按钮注入
+  if (skipIfSubmenuInjectorEnabled) {
+    return
+  }
+
+  // Check if we already injected buttons in this toolbar
+  if (
+    toolbar.querySelector('.emoji-extension-button') ||
+    toolbar.querySelector('.image-upload-button')
+  ) {
+    return
+  }
+
+  const isChatComposer = toolbar.classList.contains('chat-composer__inner-container')
+
+  // Chat composer: only inject the emoji picker button (icon 🐟)
+  if (isChatComposer) {
+    const emojiButton = createEmojiButton(true, '🐟')
+    const emojiPickerBtn = toolbar.querySelector(
+      '.emoji-picker-trigger:not(.emoji-extension-button)'
+    )
+    if (emojiPickerBtn) {
+      toolbar.insertBefore(emojiButton, emojiPickerBtn)
+    } else {
+      toolbar.appendChild(emojiButton)
+    }
+    return
+  }
+
+  // Standard toolbar: emoji picker button
+  const emojiButton = createEmojiButton(false, '🐈‍⬛')
+
   // Create image upload button
   const uploadButton = createE('button', {
     class: 'btn no-text btn-icon toolbar__button image-upload-button',
@@ -694,19 +717,18 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     in: '📷'
   }) as HTMLButtonElement
 
-  // Add chat-specific classes if needed
-  if (isChatComposer) {
-    uploadButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
-    uploadButton.setAttribute('aria-expanded', 'false')
-    uploadButton.setAttribute('data-trigger', '')
-  }
-
   uploadButton.addEventListener('click', async event => {
     event.stopPropagation()
     // Show menu with upload options and mount it into #d-menu-portals or mobile modal container
     const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
     const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
     const menu = createUploadMenu(isMobile, isChatComposer ? 'chat' : 'composer')
+
+    if (isChatComposer) {
+      uploadButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+      uploadButton.setAttribute('aria-expanded', 'false')
+      uploadButton.setAttribute('data-trigger', '')
+    }
 
     if (isMobile) {
       // Try to find existing modal container on the page and reuse it
@@ -803,11 +825,6 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     type: 'button',
     in: '⎘'
   }) as HTMLButtonElement
-  if (isChatComposer) {
-    quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
-    quickInsertButton.setAttribute('aria-expanded', 'false')
-    quickInsertButton.setAttribute('data-trigger', '')
-  }
 
   quickInsertButton.addEventListener('click', event => {
     event.stopPropagation()
@@ -815,6 +832,12 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
     const isMobile = forceMobile || toolbar.classList.contains('chat-composer__inner-container')
     const menu = createQuickInsertMenu()
+
+    if (isChatComposer) {
+      quickInsertButton.classList.add('fk-d-menu__trigger', 'chat-composer-button', 'btn-transparent')
+      quickInsertButton.setAttribute('aria-expanded', 'false')
+      quickInsertButton.setAttribute('data-trigger', '')
+    }
 
     if (isMobile) {
       // Inject into a shared modal container like the emoji picker does
@@ -886,9 +909,7 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
   })
 
   try {
-    // Insert buttons at appropriate positions
     if (isChatComposer) {
-      // For chat composer, insert before the emoji picker button
       const emojiPickerBtn = toolbar.querySelector(
         '.emoji-picker-trigger:not(.emoji-extension-button)'
       )
@@ -902,7 +923,6 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
         toolbar.appendChild(emojiButton)
       }
     } else {
-      // For standard toolbar, append at the end
       toolbar.appendChild(uploadButton)
       toolbar.appendChild(quickInsertButton)
       toolbar.appendChild(emojiButton)
