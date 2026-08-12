@@ -10,6 +10,7 @@ import type {
   ChatMember,
   ChatMembershipUpdatePayload,
   ChatMessage,
+  ChatMessageReaction,
   ChatPinnedMessage,
   ChatSearchSort,
   ChatThread,
@@ -33,6 +34,60 @@ const normalizeReactionEmoji = (emoji: string) =>
   String(emoji || '')
     .trim()
     .replace(/^:([^:]+):$/, '$1')
+
+/**
+ * Chat serializers are not consistent about reaction counts.  The current
+ * Discourse endpoint normally returns `{ emoji, count, reacted }`, while
+ * older payloads may only include a user list or use `reaction_count`.
+ * Normalize those variants once so the message UI can always render a
+ * visible count instead of silently showing an empty reaction chip.
+ */
+const normalizeChatMessageReactions = (value: unknown): ChatMessageReaction[] => {
+  const rawReactions = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object'
+      ? Object.entries(value as Record<string, unknown>).map(([emoji, reaction]) => ({
+          ...(reaction && typeof reaction === 'object'
+            ? reaction
+            : typeof reaction === 'number' || typeof reaction === 'string'
+              ? { count: reaction }
+              : {}),
+          emoji
+        }))
+      : []
+
+  return rawReactions.reduce<ChatMessageReaction[]>((result, raw: any) => {
+    const emoji = String(raw?.emoji || raw?.reaction || raw?.id || '').trim()
+    if (!emoji) return result
+
+    const users = Array.isArray(raw?.users) ? raw.users : []
+    const countCandidates = [
+      raw?.count,
+      raw?.reaction_count,
+      raw?.user_count,
+      raw?.users_count,
+      users.length > 0 ? users.length : undefined
+    ]
+    const countCandidate = countCandidates
+      .map(candidate => Number(candidate))
+      .find(candidate => Number.isFinite(candidate) && candidate >= 0)
+    const count = Math.max(1, Math.floor(countCandidate ?? 1))
+    const reacted =
+      typeof raw?.reacted === 'boolean'
+        ? raw.reacted
+        : raw?.current_user_reaction === true ||
+          Boolean(raw?.current_user_reaction?.id || raw?.current_user_reaction?.emoji)
+
+    result.push({
+      ...raw,
+      emoji,
+      count,
+      reacted,
+      users
+    })
+    return result
+  }, [])
+}
 
 const CHAT_CHANNEL_ENDPOINTS = ['/chat/api/me/channels']
 
@@ -258,9 +313,7 @@ export const normalizeSingleMessage = (value: any): ChatMessage => {
     message.channel = normalizeSingleChannel(message.channel)
     message.chat_channel_id ||= message.channel.id
   }
-  if (!Array.isArray(message.reactions)) {
-    message.reactions = []
-  }
+  message.reactions = normalizeChatMessageReactions(message.reactions)
   if (!Array.isArray(message.blocks)) {
     message.blocks = []
   }

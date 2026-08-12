@@ -262,11 +262,54 @@
   align-items: center;
   gap: 6px;
   transform: translateY(-50%);
+  pointer-events: auto;
 }
 
 .chat-message-own .chat-message-side-controls {
   right: auto;
   left: calc(100% + 8px);
+}
+
+/* The more menu is kept in its own anchor so outgoing messages can expose it
+ * on the physical left of the bubble while their reaction rail remains on the
+ * right.  Keeping this layer absolute avoids changing message height. */
+.chat-message-controls-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chat-message-controls-layer > * {
+  pointer-events: auto;
+}
+
+.chat-message-more-controls {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: calc(100% + 8px);
+  display: inline-flex;
+  align-items: center;
+  transform: translateY(-50%) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
+    transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
+}
+
+.chat-message-own .chat-message-more-controls {
+  right: calc(100% + 8px);
+  left: auto;
+}
+
+.chat-message-item:hover .chat-message-more-controls,
+.chat-message-item:focus-within .chat-message-more-controls,
+.chat-message-item.has-floating-controls .chat-message-more-controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
 }
 
 .chat-message-reaction-rail {
@@ -275,6 +318,8 @@
   max-width: min(190px, 34vw);
   align-items: center;
   gap: 4px;
+  padding: 4px 5px;
+  margin: -4px -5px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
@@ -307,6 +352,20 @@
     transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
+/* Reactions are compact circular chips.  The count is a small badge rather
+ * than inline text so the emoji stays round and remains readable at a glance. */
+.chat-message-reaction {
+  position: relative;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--d-text) 12%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  flex-direction: column;
+  gap: 0;
+}
+
 .chat-message-own .chat-message-reaction,
 .chat-message-own .chat-message-reaction-add,
 .chat-message-own .chat-message-actions-toggle {
@@ -333,10 +392,9 @@
 }
 
 .chat-message-reaction-image {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
-  vertical-align: -3px;
 }
 
 .chat-message-reaction-add {
@@ -381,8 +439,22 @@
 }
 
 .chat-message-reaction-count {
-  font-size: 11px;
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--d-surface-0, var(--theme-surface-container-lowest));
+  border-radius: var(--d-shape-full, 999px);
+  background: var(--d-surface-3, var(--theme-surface-container-high));
+  color: var(--d-text, var(--theme-on-surface));
+  font-size: 10px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .chat-message-actions-menu {
@@ -405,7 +477,8 @@
   animation: chat-menu-enter var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
-.chat-message-item:not(.chat-message-own) .chat-message-actions-menu {
+.chat-message-item:not(.chat-message-own) .chat-message-actions-menu,
+.chat-message-own .chat-message-actions-menu {
   right: auto;
   left: 0;
   transform-origin: top left;
@@ -618,6 +691,11 @@
   .chat-message-actions-toggle {
     min-width: 32px;
     height: 32px;
+  }
+
+  .chat-message-reaction {
+    width: 36px;
+    min-width: 36px;
   }
 
   .chat-message-reaction-add,

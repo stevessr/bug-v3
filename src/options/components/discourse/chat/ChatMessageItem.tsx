@@ -556,90 +556,93 @@ export default defineComponent({
             </div>
             {/* Kept outside the bubble surface and absolutely positioned: reactions
                 and hover actions never add a footer or vertical row height. */}
-            <div
-              ref={floatingControlsRef}
-              class="chat-message-side-controls"
-              onFocusout={handleControlsFocusout}
-            >
-              {reactionItems.value.length > 0 && (
-                <div class="chat-message-reaction-rail" aria-label="消息反应">
-                  {reactionItems.value.map(reaction => {
-                    const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
-                    const label = formatReactionLabel(reaction.emoji)
-                    return (
-                      <button
-                        type="button"
-                        key={`${props.message.id}-${reaction.emoji}`}
-                        class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                        onPointerenter={(event: PointerEvent) => {
-                          if (event.pointerType === 'touch') return
-                          scheduleReactionUsersPopover(
-                            event.currentTarget as HTMLElement,
-                            reaction.emoji
-                          )
-                        }}
-                        onPointerleave={(event: PointerEvent) => {
-                          clearReactionUsersHoldTimer()
-                          if (event.pointerType !== 'touch') scheduleReactionUsersPopoverClose()
-                        }}
-                        onPointerdown={(event: PointerEvent) =>
-                          startReactionHold(event, reaction.emoji)
-                        }
-                        onPointerup={clearReactionUsersHoldTimer}
-                        onPointercancel={clearReactionUsersHoldTimer}
-                        onContextmenu={handleReactionContextMenu}
-                        onClick={(event: MouseEvent) =>
-                          handleReactionClick(event, reaction.emoji, reaction.reacted)
-                        }
-                        title={`${label} · ${reaction.count} 个反应（悬浮或长按查看反应者）`}
-                        aria-label={`${label} · ${reaction.count} 个反应，悬浮或长按查看反应者`}
-                        aria-expanded={
-                          reactionUsersPopoverOpen.value &&
-                          reactionUsersPopoverValue.value === normalizeReactionValue(reaction.emoji)
-                        }
-                      >
-                        <span class="chat-message-reaction-emoji">
-                          {resolvedEmoji?.url ? (
-                            <img
-                              class="chat-message-reaction-image"
-                              src={resolvedEmoji.url}
-                              alt={label}
-                              loading="lazy"
-                            />
-                          ) : resolvedEmoji?.unicode ? (
-                            resolvedEmoji.unicode
-                          ) : (
-                            label
-                          )}
-                        </span>
-                        <span class="chat-message-reaction-count">{reaction.count}</span>
-                      </button>
-                    )
-                  })}
+            <div ref={floatingControlsRef} class="chat-message-controls-layer">
+              <div class="chat-message-side-controls" onFocusout={handleControlsFocusout}>
+                {reactionItems.value.length > 0 && (
+                  <div class="chat-message-reaction-rail" aria-label="消息反应">
+                    {reactionItems.value.map(reaction => {
+                      const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
+                      const label = formatReactionLabel(reaction.emoji)
+                      const count = Math.max(1, Number(reaction.count) || 1)
+                      const countLabel = count > 99 ? '99+' : String(count)
+                      return (
+                        <button
+                          type="button"
+                          key={`${props.message.id}-${reaction.emoji}`}
+                          class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
+                          onPointerenter={(event: PointerEvent) => {
+                            if (event.pointerType === 'touch') return
+                            scheduleReactionUsersPopover(
+                              event.currentTarget as HTMLElement,
+                              reaction.emoji
+                            )
+                          }}
+                          onPointerleave={(event: PointerEvent) => {
+                            clearReactionUsersHoldTimer()
+                            if (event.pointerType !== 'touch') scheduleReactionUsersPopoverClose()
+                          }}
+                          onPointerdown={(event: PointerEvent) =>
+                            startReactionHold(event, reaction.emoji)
+                          }
+                          onPointerup={clearReactionUsersHoldTimer}
+                          onPointercancel={clearReactionUsersHoldTimer}
+                          onContextmenu={handleReactionContextMenu}
+                          onClick={(event: MouseEvent) =>
+                            handleReactionClick(event, reaction.emoji, reaction.reacted)
+                          }
+                          title={`${label} · ${count} 个反应（悬浮或长按查看反应者）`}
+                          aria-label={`${label} · ${count} 个反应，悬浮或长按查看反应者`}
+                          aria-expanded={
+                            reactionUsersPopoverOpen.value &&
+                            reactionUsersPopoverValue.value ===
+                              normalizeReactionValue(reaction.emoji)
+                          }
+                        >
+                          <span class="chat-message-reaction-emoji">
+                            {resolvedEmoji?.url ? (
+                              <img
+                                class="chat-message-reaction-image"
+                                src={resolvedEmoji.url}
+                                alt={label}
+                                loading="lazy"
+                              />
+                            ) : resolvedEmoji?.unicode ? (
+                              resolvedEmoji.unicode
+                            ) : (
+                              label
+                            )}
+                          </span>
+                          <span class="chat-message-reaction-count">{countLabel}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                <div class="chat-message-hover-actions">
+                  <button
+                    type="button"
+                    ref={reactionButtonRef}
+                    class="chat-message-reaction-add"
+                    title="添加反应"
+                    onClick={handleAddReaction}
+                    aria-label="添加消息反应"
+                    aria-expanded={showEmojiPicker.value}
+                  >
+                    +
+                  </button>
+                  <ChatEmojiPicker
+                    visible={showEmojiPicker.value}
+                    baseUrl={props.baseUrl}
+                    allowAnyEmoji
+                    anchorEl={reactionButtonRef.value}
+                    onSelect={handleEmojiSelect}
+                    onClose={() => {
+                      showEmojiPicker.value = false
+                    }}
+                  />
                 </div>
-              )}
-              <div class="chat-message-hover-actions">
-                <button
-                  type="button"
-                  ref={reactionButtonRef}
-                  class="chat-message-reaction-add"
-                  title="添加反应"
-                  onClick={handleAddReaction}
-                  aria-label="添加消息反应"
-                  aria-expanded={showEmojiPicker.value}
-                >
-                  +
-                </button>
-                <ChatEmojiPicker
-                  visible={showEmojiPicker.value}
-                  baseUrl={props.baseUrl}
-                  allowAnyEmoji
-                  anchorEl={reactionButtonRef.value}
-                  onSelect={handleEmojiSelect}
-                  onClose={() => {
-                    showEmojiPicker.value = false
-                  }}
-                />
+              </div>
+              <div class="chat-message-more-controls" onFocusout={handleControlsFocusout}>
                 <button
                   type="button"
                   class="chat-message-actions-toggle"
