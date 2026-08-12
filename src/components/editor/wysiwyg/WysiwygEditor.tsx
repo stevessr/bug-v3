@@ -7,6 +7,7 @@ import EmojiPicker from './EmojiPicker'
 import PluginEmojiPicker from './PluginEmojiPicker'
 import WysiwygEditorToolbar from './WysiwygEditorToolbar'
 import WysiwygEditorDialogs from './WysiwygEditorDialogs'
+import { encodeDiscourseDraftSource } from './discourseDrafts'
 
 import { renderDiscourseMarkdown } from '@/options/components/discourse/bbcode/renderDiscourse'
 import { useDiscourseUpload } from '@/options/components/discourse/composables/useDiscourseUpload'
@@ -33,7 +34,20 @@ export default defineComponent({
     const showImagePanel = ref(false)
     const imageUrl = ref('https://')
     const imageAlt = ref('')
+    const showTableAssistant = ref(false)
+    const tableRows = ref(3)
+    const tableColumns = ref(3)
+    const tableHasHeader = ref(true)
+    const showPollAssistant = ref(false)
+    const pollQuestion = ref('')
+    const pollOptions = ref('选项一\n选项二')
+    const pollType = ref<'regular' | 'multiple' | 'number'>('regular')
+    const pollResults = ref<'always' | 'on_close'>('always')
+    const showFormulaAssistant = ref(false)
+    const formula = ref('E = mc^2')
+    const formulaDisplay = ref<'inline' | 'block'>('inline')
     let lastEmittedValue = ''
+    let savedSelectionRange: Range | null = null
 
     const escapeAttr = (value: string) =>
       value
@@ -208,12 +222,93 @@ export default defineComponent({
       }
     }
 
+    const captureEditorSelection = () => {
+      const editor = editorRef.value
+      const selection = window.getSelection()
+      if (
+        !editor ||
+        !selection?.rangeCount ||
+        !selection.anchorNode ||
+        !editor.contains(selection.anchorNode)
+      ) {
+        return
+      }
+      savedSelectionRange = selection.getRangeAt(0).cloneRange()
+    }
+
+    const focusEditorAtSavedSelection = () => {
+      const editor = editorRef.value
+      if (!editor) return
+      editor.focus()
+      if (!savedSelectionRange) return
+      const selection = window.getSelection()
+      try {
+        selection?.removeAllRanges()
+        selection?.addRange(savedSelectionRange)
+      } catch {
+        savedSelectionRange = null
+      }
+    }
+
     const readEditorHtml = () => editorRef.value?.innerHTML ?? ''
 
     const normalizeHtml = (value: string) => {
       const trimmed = value.trim()
       if (trimmed === '<br>' || trimmed === '<div><br></div>') return ''
       return value
+    }
+
+    const draftText = (element: HTMLElement) =>
+      (element.innerText || element.textContent || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+
+    const refreshDiscourseDraftSources = () => {
+      const editor = editorRef.value
+      if (!editor) return
+
+      editor.querySelectorAll<HTMLElement>('[data-discourse-draft]').forEach(element => {
+        const kind = element.dataset.discourseDraft
+        if (kind === 'spoiler') {
+          const source = `[spoiler]\n${draftText(element)}\n[/spoiler]`
+          element.dataset.discourseSource = encodeDiscourseDraftSource(source)
+          return
+        }
+
+        if (kind === 'details') {
+          const summary = element.querySelector('summary')?.textContent?.trim() || '详细信息'
+          const content = element.querySelector<HTMLElement>('.wysiwyg-details-content')
+          const source = `[details="${summary.replace(/"/g, '\\"')}"]\n${
+            content ? draftText(content) : ''
+          }\n[/details]`
+          element.dataset.discourseSource = encodeDiscourseDraftSource(source)
+          return
+        }
+
+        if (kind === 'table') {
+          const rows = Array.from(element.querySelectorAll('tr'))
+            .map(row =>
+              Array.from(row.querySelectorAll('th, td'))
+                .map(cell => (cell.textContent || '').replace(/\|/g, '\\|').trim())
+                .join(' | ')
+            )
+            .filter(Boolean)
+          if (rows.length === 0) return
+          const hasHeader = element.querySelector('thead') !== null
+          const lines = rows.map((row, index) => {
+            const cells = row.split(' | ')
+            const line = `| ${cells.join(' | ')} |`
+            if (hasHeader && index === 0) {
+              return `${line}\n| ${cells.map(() => '---').join(' | ')} |`
+            }
+            return line
+          })
+          element.dataset.discourseSource = encodeDiscourseDraftSource(
+            `[table]\n${lines.join('\n')}\n[/table]`
+          )
+        }
+      })
     }
 
     const syncEditorHtml = (value: string) => {
@@ -224,6 +319,7 @@ export default defineComponent({
     }
 
     const handleInput = () => {
+      refreshDiscourseDraftSources()
       const html = normalizeHtml(readEditorHtml())
       const plainText = editorRef.value?.innerText?.replace(/\u00a0/g, ' ') ?? ''
       if (html && isPlainTextHtml(html)) {
@@ -234,14 +330,16 @@ export default defineComponent({
             editorRef.value.innerHTML = converted
           }
           emitValue(converted)
+          captureEditorSelection()
           return
         }
       }
       emitValue(html)
+      captureEditorSelection()
     }
 
     const execCommand = (command: string, value?: string) => {
-      editorRef.value?.focus()
+      focusEditorAtSavedSelection()
       if (document.queryCommandSupported(command)) {
         document.execCommand(command, false, value)
       }
@@ -249,7 +347,7 @@ export default defineComponent({
     }
 
     const insertHtml = (html: string) => {
-      editorRef.value?.focus()
+      focusEditorAtSavedSelection()
       if (document.queryCommandSupported('insertHTML')) {
         document.execCommand('insertHTML', false, html)
       }
@@ -257,7 +355,7 @@ export default defineComponent({
     }
 
     const insertText = (text: string) => {
-      editorRef.value?.focus()
+      focusEditorAtSavedSelection()
       if (document.queryCommandSupported('insertText')) {
         document.execCommand('insertText', false, text)
       }
@@ -270,7 +368,7 @@ export default defineComponent({
         insertText(`${prefix}${suffix}`)
         return
       }
-      editor.focus()
+      focusEditorAtSavedSelection()
       const selection = window.getSelection()
       if (
         !selection ||
@@ -310,32 +408,127 @@ export default defineComponent({
       wrapSelection(`\n${hashes} `, '\n')
     }
 
+    const selectedEditorText = () => {
+      const selection = window.getSelection()
+      if (
+        !selection?.rangeCount ||
+        !selection.anchorNode ||
+        !editorRef.value?.contains(selection.anchorNode)
+      ) {
+        return ''
+      }
+      return selection.toString().trim()
+    }
+
+    const closeAssistants = () => {
+      showTableAssistant.value = false
+      showPollAssistant.value = false
+      showFormulaAssistant.value = false
+    }
+
+    const openTableAssistant = () => {
+      captureEditorSelection()
+      closePanels()
+      closeAssistants()
+      showTableAssistant.value = true
+    }
+
     const insertTable = () => {
-      insertText(`\n| 列 1 | 列 2 |\n| --- | --- |\n| 内容 1 | 内容 2 |\n`)
+      const rows = Math.min(20, Math.max(1, Math.round(tableRows.value || 1)))
+      const columns = Math.min(12, Math.max(1, Math.round(tableColumns.value || 1)))
+      const headers = Array.from({ length: columns }, (_, index) => `列 ${index + 1}`)
+      const bodyRows = Array.from({ length: rows }, (_, rowIndex) =>
+        Array.from(
+          { length: columns },
+          (_, columnIndex) => `内容 ${rowIndex + 1}-${columnIndex + 1}`
+        )
+      )
+      const sourceRows = tableHasHeader.value
+        ? [headers, Array.from({ length: columns }, () => '---'), ...bodyRows]
+        : bodyRows
+      const source = `[table]\n${sourceRows
+        .map(row => `| ${row.join(' | ')} |`)
+        .join('\n')}\n[/table]`
+      const headerHtml = tableHasHeader.value
+        ? `<thead><tr>${headers.map(cell => `<th>${escapeAttr(cell)}</th>`).join('')}</tr></thead>`
+        : ''
+      const bodyHtml = `<tbody>${bodyRows
+        .map(row => `<tr>${row.map(cell => `<td>${escapeAttr(cell)}</td>`).join('')}</tr>`)
+        .join('')}</tbody>`
+      insertHtml(
+        `<table class="wysiwyg-table-draft" data-discourse-draft="table" data-discourse-source="${encodeDiscourseDraftSource(source)}">${headerHtml}${bodyHtml}</table><p><br></p>`
+      )
+      closeAssistants()
     }
 
     const insertDetails = () => {
-      wrapSelection('[details="详细信息"]\n', '\n[/details]')
+      const selected = selectedEditorText()
+      const source = `[details="详细信息"]\n${selected}\n[/details]`
+      insertHtml(
+        `<details open class="wysiwyg-details-draft" data-discourse-draft="details" data-discourse-source="${encodeDiscourseDraftSource(source)}"><summary>详细信息</summary><div class="wysiwyg-details-content"><p>${selected ? escapeAttr(selected) : '<br>'}</p></div></details><p><br></p>`
+      )
     }
 
     const insertSpoiler = () => {
-      wrapSelection('[spoiler]', '[/spoiler]')
+      const selected = selectedEditorText()
+      const source = `[spoiler]\n${selected}\n[/spoiler]`
+      insertHtml(
+        `<div class="spoiler wysiwyg-spoiler-draft" data-discourse-draft="spoiler" data-discourse-source="${encodeDiscourseDraftSource(source)}"><p>${selected ? escapeAttr(selected) : '<br>'}</p></div><p><br></p>`
+      )
     }
 
     const insertPoll = () => {
-      insertText(`\n[poll]\n* 选项一\n* 选项二\n[/poll]\n`)
+      const question = pollQuestion.value.trim()
+      const options = pollOptions.value
+        .split(/\r?\n/)
+        .map(option => option.trim())
+        .filter(Boolean)
+      if (!question || (pollType.value !== 'number' && options.length < 2)) return
+
+      const source =
+        pollType.value === 'number'
+          ? `[poll type=number min=1 max=10 step=1 results=${pollResults.value}]\n# ${question}\n[/poll]`
+          : `[poll type=${pollType.value} results=${pollResults.value} chartType=bar]\n# ${question}\n${options
+              .map(option => `* ${option}`)
+              .join('\n')}\n[/poll]`
+      const description =
+        pollType.value === 'multiple'
+          ? '多选 · 发布后由 Discourse 统计'
+          : pollType.value === 'number'
+            ? '数字评分 · 1–10'
+            : '单选 · 发布后由 Discourse 统计'
+      const optionsHtml =
+        pollType.value === 'number'
+          ? '<div class="discourse-poll-draft__scale">1&nbsp;&nbsp;2&nbsp;&nbsp;3&nbsp;&nbsp;4&nbsp;&nbsp;5&nbsp;&nbsp;6&nbsp;&nbsp;7&nbsp;&nbsp;8&nbsp;&nbsp;9&nbsp;&nbsp;10</div>'
+          : `<ol>${options.map(option => `<li>${escapeAttr(option)}</li>`).join('')}</ol>`
+      insertHtml(
+        `<section class="poll discourse-poll-draft" contenteditable="false" data-discourse-draft="poll" data-discourse-source="${encodeDiscourseDraftSource(source)}"><strong>${escapeAttr(question)}</strong>${optionsHtml}<small>${description}</small></section><p><br></p>`
+      )
+      closeAssistants()
     }
 
     const insertFootnote = () => {
       wrapSelection('^[', ']')
     }
 
-    const insertMathInline = () => {
-      wrapSelection('$', '$')
+    const openFormulaAssistant = () => {
+      captureEditorSelection()
+      closePanels()
+      closeAssistants()
+      const selected = selectedEditorText()
+      if (selected) formula.value = selected
+      showFormulaAssistant.value = true
     }
 
-    const insertMathBlock = () => {
-      insertText(`\n$$\nE=mc^2\n$$\n`)
+    const insertFormula = () => {
+      const value = formula.value.trim()
+      if (!value) return
+      const source = formulaDisplay.value === 'block' ? `$$\n${value}\n$$` : `$${value}$`
+      const displayClass = formulaDisplay.value === 'block' ? 'is-block' : 'is-inline'
+      insertHtml(
+        `<span class="discourse-formula-draft ${displayClass}" contenteditable="false" data-discourse-draft="formula" data-discourse-source="${encodeDiscourseDraftSource(source)}">${escapeAttr(value)}</span>${formulaDisplay.value === 'block' ? '<p><br></p>' : '&nbsp;'}`
+      )
+      closeAssistants()
     }
 
     const insertMermaid = () => {
@@ -354,13 +547,17 @@ export default defineComponent({
     const redoAction = () => execCommand('redo')
 
     const openLinkPanel = () => {
+      captureEditorSelection()
       showLinkPanel.value = true
       showImagePanel.value = false
+      closeAssistants()
     }
 
     const openImagePanel = () => {
+      captureEditorSelection()
       showImagePanel.value = true
       showLinkPanel.value = false
+      closeAssistants()
     }
 
     const closePanels = () => {
@@ -385,6 +582,7 @@ export default defineComponent({
     }
 
     const handleEmojiPickerOpen = (event?: MouseEvent) => {
+      captureEditorSelection()
       const target = event?.currentTarget as HTMLElement | null | undefined
       if (target) {
         const rect = target.getBoundingClientRect()
@@ -396,6 +594,7 @@ export default defineComponent({
     }
 
     const handlePluginEmojiPickerOpen = (event?: MouseEvent) => {
+      captureEditorSelection()
       const target = event?.currentTarget as HTMLElement | null | undefined
       if (target) {
         const rect = target.getBoundingClientRect()
@@ -444,7 +643,31 @@ export default defineComponent({
       if (event.key === 'Tab') {
         event.preventDefault()
         insertText('  ')
+        return
       }
+
+      if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
+      const selection = window.getSelection()
+      const anchor = selection?.anchorNode
+      const anchorElement =
+        anchor?.nodeType === Node.ELEMENT_NODE
+          ? (anchor as HTMLElement)
+          : anchor?.parentElement || null
+      const spoiler = anchorElement?.closest<HTMLElement>('.wysiwyg-spoiler-draft, .spoiler')
+      if (!spoiler || !editorRef.value?.contains(spoiler)) return
+
+      // A native contenteditable block split can place the new paragraph after
+      // `.spoiler`, making the spoiler appear to disappear. Insert a line break
+      // at the current range instead so the caret and every following line stay
+      // inside the spoiler draft.
+      event.preventDefault()
+      editorRef.value?.focus()
+      if (document.queryCommandSupported('insertLineBreak')) {
+        document.execCommand('insertLineBreak', false)
+      } else {
+        document.execCommand('insertHTML', false, '<br>')
+      }
+      handleInput()
     }
 
     watch(
@@ -483,8 +706,8 @@ export default defineComponent({
       toggleItalic,
       toggleUnderline,
       toggleStrike,
-      openEmojiPicker: () => handleEmojiPickerOpen(),
-      openPluginEmojiPicker: () => handlePluginEmojiPickerOpen(),
+      openEmojiPicker: handleEmojiPickerOpen,
+      openPluginEmojiPicker: handlePluginEmojiPickerOpen,
       handleUploadClick,
       openLinkPanel,
       openImagePanel,
@@ -493,13 +716,17 @@ export default defineComponent({
       insertOrderedList,
       insertUnorderedList,
       insertHeadingLevel,
-      insertTable,
+      openTableAssistant,
       insertDetails,
       insertSpoiler,
-      insertPoll,
+      openPollAssistant: () => {
+        captureEditorSelection()
+        closePanels()
+        closeAssistants()
+        showPollAssistant.value = true
+      },
       insertFootnote,
-      insertMathInline,
-      insertMathBlock,
+      openFormulaAssistant,
       insertMermaid,
       insertScrollable,
       insertAppWrap
@@ -508,10 +735,22 @@ export default defineComponent({
     const dialogState = computed(() => ({
       showLinkPanel: showLinkPanel.value,
       showImagePanel: showImagePanel.value,
+      showTableAssistant: showTableAssistant.value,
+      showPollAssistant: showPollAssistant.value,
+      showFormulaAssistant: showFormulaAssistant.value,
       linkUrl: linkUrl.value,
       linkText: linkText.value,
       imageUrl: imageUrl.value,
-      imageAlt: imageAlt.value
+      imageAlt: imageAlt.value,
+      tableRows: tableRows.value,
+      tableColumns: tableColumns.value,
+      tableHasHeader: tableHasHeader.value,
+      pollQuestion: pollQuestion.value,
+      pollOptions: pollOptions.value,
+      pollType: pollType.value,
+      pollResults: pollResults.value,
+      formula: formula.value,
+      formulaDisplay: formulaDisplay.value
     }))
 
     const dialogActions = {
@@ -523,7 +762,24 @@ export default defineComponent({
       onLinkInput: (value: string) => (linkUrl.value = value),
       onLinkTextInput: (value: string) => (linkText.value = value),
       onImageInput: (value: string) => (imageUrl.value = value),
-      onImageAltInput: (value: string) => (imageAlt.value = value)
+      onImageAltInput: (value: string) => (imageAlt.value = value),
+      closeTableAssistant: () => (showTableAssistant.value = false),
+      insertTable,
+      onTableRowsInput: (value: number) =>
+        (tableRows.value = Math.min(20, Math.max(1, Math.round(value || 1)))),
+      onTableColumnsInput: (value: number) =>
+        (tableColumns.value = Math.min(12, Math.max(1, Math.round(value || 1)))),
+      onTableHeaderChange: (value: boolean) => (tableHasHeader.value = value),
+      closePollAssistant: () => (showPollAssistant.value = false),
+      insertPoll,
+      onPollQuestionInput: (value: string) => (pollQuestion.value = value),
+      onPollOptionsInput: (value: string) => (pollOptions.value = value),
+      onPollTypeInput: (value: 'regular' | 'multiple' | 'number') => (pollType.value = value),
+      onPollResultsInput: (value: 'always' | 'on_close') => (pollResults.value = value),
+      closeFormulaAssistant: () => (showFormulaAssistant.value = false),
+      insertFormula,
+      onFormulaInput: (value: string) => (formula.value = value),
+      onFormulaDisplayInput: (value: 'inline' | 'block') => (formulaDisplay.value = value)
     }
 
     return () => (

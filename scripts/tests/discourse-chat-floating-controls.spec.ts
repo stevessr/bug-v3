@@ -25,7 +25,8 @@ test.describe('Discourse chat floating controls', () => {
         messages: [
           {
             id: 101,
-            cooked: '<p>悬浮操作现在会自己关闭吗？</p>',
+            cooked:
+              '<p>悬浮操作现在会自己关闭吗？<img src="/uploads/default/original/already-rendered.png" alt="已渲染图片"></p>',
             created_at: '2026-08-09T07:58:00Z',
             chat_channel_id: 7,
             user_id: 2,
@@ -38,8 +39,22 @@ test.describe('Discourse chat floating controls', () => {
               name: 'Alice',
               avatar_template: '/letter_avatar_proxy/v4/letter/a/8491ac/{size}.png'
             },
-            reactions: [],
+            reactions: [{ emoji: 'heart', count: 2, reacted: false }],
             blocks: [],
+            uploads: [
+              {
+                id: 1,
+                short_url: '/uploads/default/original/already-rendered.png',
+                original_filename: 'already-rendered.png',
+                mime_type: 'image/png'
+              },
+              {
+                id: 2,
+                short_url: '/uploads/default/original/attachment-only.png',
+                original_filename: 'attachment-only.png',
+                mime_type: 'image/png'
+              }
+            ],
             thread: {
               id: 501,
               title: '悬浮消息串',
@@ -160,6 +175,44 @@ test.describe('Discourse chat floating controls', () => {
     await expect(menu).toBeVisible()
     await message.dispatchEvent('mouseleave')
     await expect(menu).toHaveCount(0)
+  })
+
+  test('renders upload-only images once and keeps reactions beside their action buttons', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    await page.locator('.toolbar-address input').fill('https://linux.do/chat')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    const message = page.locator('.chat-message-item').first()
+    await expect(message.locator('img[src*="already-rendered.png"]')).toHaveCount(1)
+    await expect(
+      message.locator('.chat-message-attachments img[src*="attachment-only.png"]')
+    ).toHaveCount(1)
+
+    const reactionRail = message.locator('.chat-message-reaction-rail')
+    const hoverActions = message.locator('.chat-message-hover-actions')
+    await expect(reactionRail.getByRole('button', { name: /heart.*2 个反应/ })).toBeVisible()
+    await message.hover()
+    await expect(hoverActions).toHaveCSS('opacity', '1')
+
+    const geometry = await message.evaluate(element => {
+      const rail = element.querySelector<HTMLElement>('.chat-message-reaction-rail')
+      const actions = element.querySelector<HTMLElement>('.chat-message-hover-actions')
+      const side = element.querySelector<HTMLElement>('.chat-message-side-controls')
+      if (!rail || !actions || !side) return null
+      const railBox = rail.getBoundingClientRect()
+      const actionBox = actions.getBoundingClientRect()
+      const sideBox = side.getBoundingClientRect()
+      return {
+        actionsStartAfterRail: actionBox.left >= railBox.right - 1,
+        sideHeight: sideBox.height,
+        reactionHeight: railBox.height
+      }
+    })
+    expect(geometry?.actionsStartAfterRail).toBe(true)
+    expect(geometry?.reactionHeight).toBeGreaterThanOrEqual(34)
+    expect(geometry?.sideHeight).toBeLessThanOrEqual((geometry?.reactionHeight || 0) + 1)
   })
 
   test('keeps the active browser tab and URL unchanged when a floating chat opens a thread', async ({

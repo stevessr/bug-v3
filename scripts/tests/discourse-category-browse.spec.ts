@@ -196,4 +196,27 @@ test.describe('Discourse category browse page', () => {
     await expect(address).toHaveValue('https://linux.do/c/gossip-lv1/35')
     await expect(page.getByRole('heading', { name: '搞七捻三，Lv1' })).toBeVisible()
   })
+
+  test('uses the full browse layout when entering a nested /c/gossip/* list URL directly', async ({
+    page
+  }) => {
+    await page.goto('/discourse.html')
+    const address = page.locator('.toolbar-address input')
+    await address.fill('https://linux.do/c/gossip/11/l/new')
+    await page.getByRole('button', { name: '打开地址' }).click()
+
+    await expect(address).toHaveValue('https://linux.do/c/gossip/11/l/new')
+    await expect(page.getByRole('heading', { name: '搞七捻三' })).toBeVisible()
+    await expect(page.locator('.category-page-subcategory-grid .category-card')).toHaveCount(3)
+    await expect(page.getByText('分类新话题')).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (globalThis as any).__categoryBrowseRequests.includes(
+            'https://linux.do/c/gossip/11/l/new.json'
+          )
+        )
+      )
+      .toBe(true)
+  })
 })

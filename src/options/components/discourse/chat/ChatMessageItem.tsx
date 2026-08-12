@@ -9,13 +9,85 @@ import {
   CommentOutlined
 } from '@ant-design/icons-vue'
 
-import type { ChatMessage, ParsedContent } from '../types'
+import type { ChatMessage, ChatMessageAttachment, ParsedContent } from '../types'
+import { resolveDiscourseHttpUrl } from '../navigation'
 import { formatTime, getAvatarUrl } from '../utils'
 import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
 import PostContent from '../topic/PostContent'
 
 import ChatEmojiPicker from './ChatEmojiPicker'
 import '../css/chat/ChatMessageItem.css'
+
+type ChatAttachmentImage = {
+  key: string
+  url: string
+  alt: string
+}
+
+const IMAGE_ATTACHMENT_EXTENSION_RE = /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|webp)(?:$|[?#])/i
+
+const normalizedImageKey = (value: string) => {
+  try {
+    const url = new URL(value)
+    return `${url.origin}${url.pathname}`.toLowerCase()
+  } catch {
+    return value.replace(/[?#].*$/, '').toLowerCase()
+  }
+}
+
+const attachmentUrlCandidates = (attachment: ChatMessageAttachment): string[] =>
+  [
+    attachment.url,
+    attachment.short_url,
+    attachment.shortUrl,
+    attachment.original_url,
+    attachment.image_url,
+    attachment.thumbnail_url,
+    attachment.thumbnailUrl
+  ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+
+const isImageAttachment = (attachment: ChatMessageAttachment, urls: string[]) => {
+  const mime = String(attachment.mime_type || attachment.content_type || '').toLowerCase()
+  if (mime.startsWith('image/')) return true
+  const extension = String(attachment.extension || '').replace(/^\./, '')
+  if (/^(?:avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i.test(extension)) return true
+  return urls.some(url => IMAGE_ATTACHMENT_EXTENSION_RE.test(url))
+}
+
+const getRenderedImageUrls = (parsed: ParsedContent, baseUrl: string) => {
+  const urls = new Set<string>()
+  const add = (value?: string) => {
+    if (!value) return
+    const resolved = resolveDiscourseHttpUrl(value, baseUrl)
+    if (resolved) urls.add(normalizedImageKey(resolved))
+  }
+  const readHtmlImages = (html: string) => {
+    const matches = html.matchAll(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi)
+    for (const match of matches) add(match[1])
+  }
+
+  parsed.images.forEach(add)
+  parsed.segments.forEach(segment => {
+    if (segment.type === 'html') {
+      readHtmlImages(segment.html)
+    } else if (segment.type === 'lightbox') {
+      add(segment.image.href)
+      add(segment.image.thumbSrc)
+    } else if (segment.type === 'carousel') {
+      segment.images.forEach(image => {
+        add(image.href)
+        add(image.thumbSrc)
+      })
+    } else if (segment.type === 'image-grid') {
+      segment.columns.flat().forEach(image => {
+        add(image.href)
+        add(image.thumbSrc)
+      })
+    }
+  })
+
+  return urls
+}
 
 export default defineComponent({
   name: 'ChatMessageItem',
@@ -84,6 +156,47 @@ export default defineComponent({
     const reactionItems = computed(() =>
       Array.isArray(props.message.reactions) ? props.message.reactions : []
     )
+
+    /**
+     * Upload-only chat messages do not always repeat their image in `cooked`.
+     * Render those images here, but compare every serializer URL variant with
+     * the parsed cooked content first so a normal inline upload is never shown
+     * twice.
+     */
+    const attachmentImages = computed<ChatAttachmentImage[]>(() => {
+      const rendered = getRenderedImageUrls(props.parsed, props.baseUrl)
+      const seen = new Set<string>()
+      const images: ChatAttachmentImage[] = []
+      const attachments = [
+        ...(Array.isArray(props.message.uploads) ? props.message.uploads : []),
+        ...(Array.isArray(props.message.attachments) ? props.message.attachments : [])
+      ]
+
+      attachments.forEach((attachment, index) => {
+        if (!attachment || typeof attachment !== 'object') return
+        const candidates = attachmentUrlCandidates(attachment)
+        if (!isImageAttachment(attachment, candidates)) return
+
+        const resolvedCandidates = candidates
+          .map(url => resolveDiscourseHttpUrl(url, props.baseUrl))
+          .filter((url): url is string => Boolean(url))
+        if (resolvedCandidates.length === 0) return
+
+        const candidateKeys = resolvedCandidates.map(normalizedImageKey)
+        if (candidateKeys.some(key => rendered.has(key) || seen.has(key))) return
+
+        const url = resolvedCandidates[0]
+        const key = candidateKeys[0]
+        seen.add(key)
+        images.push({
+          key: `${attachment.id ?? index}-${key}`,
+          url,
+          alt: attachment.original_filename || attachment.filename || '聊天图片附件'
+        })
+      })
+
+      return images
+    })
 
     const threadId = computed(() => {
       const id = Number(props.message.thread?.id || props.message.thread_id || 0)
@@ -316,6 +429,23 @@ export default defineComponent({
                 />
               ) : null}
 
+              {attachmentImages.value.length > 0 && (
+                <div class="chat-message-attachments" aria-label="图片附件">
+                  {attachmentImages.value.map(image => (
+                    <a
+                      key={image.key}
+                      class="chat-message-attachment"
+                      href={image.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`打开图片附件：${image.alt}`}
+                    >
+                      <img src={image.url} alt={image.alt} loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               {blockButtons.value.length > 0 && (
                 <div class="chat-message-blocks">
                   {blockButtons.value.map((button, index) => (
@@ -334,135 +464,140 @@ export default defineComponent({
                 </div>
               )}
             </div>
-            {reactionItems.value.length > 0 && (
-              <div class="chat-message-reaction-rail" aria-label="消息反应">
-                {reactionItems.value.map(reaction => {
-                  const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
-                  return (
-                    <button
-                      type="button"
-                      key={`${props.message.id}-${reaction.emoji}`}
-                      class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
-                      onClick={() => handleReact(reaction.emoji, reaction.reacted)}
-                      title={reaction.emoji}
-                    >
-                      <span class="chat-message-reaction-emoji">
-                        {resolvedEmoji?.url ? (
-                          <img
-                            class="chat-message-reaction-image"
-                            src={resolvedEmoji.url}
-                            alt={formatReactionLabel(reaction.emoji)}
-                            loading="lazy"
-                          />
-                        ) : resolvedEmoji?.unicode ? (
-                          resolvedEmoji.unicode
-                        ) : (
-                          formatReactionLabel(reaction.emoji)
-                        )}
-                      </span>
-                      <span class="chat-message-reaction-count">{reaction.count}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {/* Absolutely positioned: it is beside the bubble without affecting row height. */}
+            {/* Kept outside the bubble surface and absolutely positioned: reactions
+                and hover actions never add a footer or vertical row height. */}
             <div
               ref={floatingControlsRef}
-              class="chat-message-hover-actions"
+              class="chat-message-side-controls"
               onFocusout={handleControlsFocusout}
             >
-              <button
-                type="button"
-                ref={reactionButtonRef}
-                class="chat-message-reaction-add"
-                title="添加反应"
-                onClick={handleAddReaction}
-                aria-label="添加消息反应"
-                aria-expanded={showEmojiPicker.value}
-              >
-                +
-              </button>
-              <ChatEmojiPicker
-                visible={showEmojiPicker.value}
-                baseUrl={props.baseUrl}
-                allowAnyEmoji
-                anchorEl={reactionButtonRef.value}
-                onSelect={handleEmojiSelect}
-                onClose={() => {
-                  showEmojiPicker.value = false
-                }}
-              />
-              <button
-                type="button"
-                class="chat-message-actions-toggle"
-                title="更多操作"
-                onClick={toggleActions}
-                aria-label="更多消息操作"
-                aria-haspopup="menu"
-                aria-expanded={showActions.value}
-              >
-                <MoreOutlined />
-              </button>
-              {showActions.value && (
-                <div class="chat-message-actions-menu" role="menu" aria-label="消息操作">
-                  <button
-                    type="button"
-                    class="chat-message-actions-item"
-                    role="menuitem"
-                    onClick={handleReply}
-                  >
-                    {hasThreadAction.value ? <CommentOutlined /> : <RollbackOutlined />}
-                    {hasThreadAction.value
-                      ? threadId.value
-                        ? '打开消息串'
-                        : '在消息串中回复'
-                      : '回复'}
-                  </button>
-                  {props.isOwn && (
-                    <button
-                      type="button"
-                      class="chat-message-actions-item"
-                      role="menuitem"
-                      onClick={handleEdit}
-                    >
-                      <EditOutlined /> 编辑
-                    </button>
-                  )}
-                  {props.isOwn && (
-                    <button
-                      type="button"
-                      class="chat-message-actions-item is-danger"
-                      role="menuitem"
-                      onClick={handleDelete}
-                    >
-                      <DeleteOutlined /> 删除
-                    </button>
-                  )}
-                  {props.canManagePins && (
-                    <button
-                      type="button"
-                      class="chat-message-actions-item"
-                      role="menuitem"
-                      disabled={props.pinSaving}
-                      onClick={handlePin}
-                    >
-                      <PushpinOutlined />
-                      {props.pinSaving ? '处理中…' : props.isPinned ? '取消置顶' : '置顶消息'}
-                    </button>
-                  )}
-                  {!props.isOwn && (
-                    <button
-                      type="button"
-                      class="chat-message-actions-item is-danger"
-                      role="menuitem"
-                      onClick={handleFlag}
-                    >
-                      <FlagOutlined /> 举报
-                    </button>
-                  )}
+              {reactionItems.value.length > 0 && (
+                <div class="chat-message-reaction-rail" aria-label="消息反应">
+                  {reactionItems.value.map(reaction => {
+                    const resolvedEmoji = resolveReactionEmoji(reaction.emoji)
+                    const label = formatReactionLabel(reaction.emoji)
+                    return (
+                      <button
+                        type="button"
+                        key={`${props.message.id}-${reaction.emoji}`}
+                        class={['chat-message-reaction', reaction.reacted ? 'active' : '']}
+                        onClick={() => handleReact(reaction.emoji, reaction.reacted)}
+                        title={`${label} · ${reaction.count} 个反应`}
+                        aria-label={`${label} · ${reaction.count} 个反应`}
+                      >
+                        <span class="chat-message-reaction-emoji">
+                          {resolvedEmoji?.url ? (
+                            <img
+                              class="chat-message-reaction-image"
+                              src={resolvedEmoji.url}
+                              alt={label}
+                              loading="lazy"
+                            />
+                          ) : resolvedEmoji?.unicode ? (
+                            resolvedEmoji.unicode
+                          ) : (
+                            label
+                          )}
+                        </span>
+                        <span class="chat-message-reaction-count">{reaction.count}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
+              <div class="chat-message-hover-actions">
+                <button
+                  type="button"
+                  ref={reactionButtonRef}
+                  class="chat-message-reaction-add"
+                  title="添加反应"
+                  onClick={handleAddReaction}
+                  aria-label="添加消息反应"
+                  aria-expanded={showEmojiPicker.value}
+                >
+                  +
+                </button>
+                <ChatEmojiPicker
+                  visible={showEmojiPicker.value}
+                  baseUrl={props.baseUrl}
+                  allowAnyEmoji
+                  anchorEl={reactionButtonRef.value}
+                  onSelect={handleEmojiSelect}
+                  onClose={() => {
+                    showEmojiPicker.value = false
+                  }}
+                />
+                <button
+                  type="button"
+                  class="chat-message-actions-toggle"
+                  title="更多操作"
+                  onClick={toggleActions}
+                  aria-label="更多消息操作"
+                  aria-haspopup="menu"
+                  aria-expanded={showActions.value}
+                >
+                  <MoreOutlined />
+                </button>
+                {showActions.value && (
+                  <div class="chat-message-actions-menu" role="menu" aria-label="消息操作">
+                    <button
+                      type="button"
+                      class="chat-message-actions-item"
+                      role="menuitem"
+                      onClick={handleReply}
+                    >
+                      {hasThreadAction.value ? <CommentOutlined /> : <RollbackOutlined />}
+                      {hasThreadAction.value
+                        ? threadId.value
+                          ? '打开消息串'
+                          : '在消息串中回复'
+                        : '回复'}
+                    </button>
+                    {props.isOwn && (
+                      <button
+                        type="button"
+                        class="chat-message-actions-item"
+                        role="menuitem"
+                        onClick={handleEdit}
+                      >
+                        <EditOutlined /> 编辑
+                      </button>
+                    )}
+                    {props.isOwn && (
+                      <button
+                        type="button"
+                        class="chat-message-actions-item is-danger"
+                        role="menuitem"
+                        onClick={handleDelete}
+                      >
+                        <DeleteOutlined /> 删除
+                      </button>
+                    )}
+                    {props.canManagePins && (
+                      <button
+                        type="button"
+                        class="chat-message-actions-item"
+                        role="menuitem"
+                        disabled={props.pinSaving}
+                        onClick={handlePin}
+                      >
+                        <PushpinOutlined />
+                        {props.pinSaving ? '处理中…' : props.isPinned ? '取消置顶' : '置顶消息'}
+                      </button>
+                    )}
+                    {!props.isOwn && (
+                      <button
+                        type="button"
+                        class="chat-message-actions-item is-danger"
+                        role="menuitem"
+                        onClick={handleFlag}
+                      >
+                        <FlagOutlined /> 举报
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {hasThreadEntry.value && (

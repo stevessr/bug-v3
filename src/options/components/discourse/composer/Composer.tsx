@@ -22,6 +22,7 @@ import ProseMirrorEditor from '../ProseMirrorEditor'
 import { extractData, getAvatarUrl, pageFetch } from '../utils'
 
 import { WysiwygEditor } from '@/components/editor/wysiwyg'
+import { serializeWysiwygDiscourseDrafts } from '@/components/editor/wysiwyg/discourseDrafts'
 import '../css/Composer.css'
 import '../css/highlight.css'
 
@@ -593,7 +594,8 @@ export default defineComponent({
     }
 
     async function handleSubmit() {
-      if (!raw.value.trim()) {
+      const submitRaw = serializeWysiwygDiscourseDrafts(raw.value).trim()
+      if (!submitRaw) {
         errorMessage.value = '请输入内容'
         return
       }
@@ -622,7 +624,7 @@ export default defineComponent({
         if (props.mode === 'topic') {
           result = await createTopic(props.baseUrl, {
             title: title.value.trim(),
-            raw: raw.value.trim(),
+            raw: submitRaw,
             categoryId: categoryId.value,
             tags: selectedTags.value
           })
@@ -631,7 +633,7 @@ export default defineComponent({
         } else if (props.mode === 'privateMessage') {
           result = await createTopic(props.baseUrl, {
             title: title.value.trim() || `私信给 ${targetUsernames.value.join(', ')}`,
-            raw: raw.value.trim(),
+            raw: submitRaw,
             targetUsernames: targetUsernames.value
           })
           title.value = ''
@@ -640,14 +642,14 @@ export default defineComponent({
           const topicId = props.topicId as number
           result = await replyToTopic(props.baseUrl, {
             topicId,
-            raw: raw.value.trim(),
+            raw: submitRaw,
             replyToPostNumber: props.replyToPostNumber
           })
         } else {
           const postId = props.postId as number
           result = await editPost(props.baseUrl, {
             postId,
-            raw: raw.value.trim(),
+            raw: submitRaw,
             editReason: editReason.value || undefined,
             topicId: props.topicId,
             originalText: props.originalRaw ?? props.initialRaw ?? raw.value.trim(),
@@ -974,7 +976,9 @@ export default defineComponent({
                 onUpdate:modelValue={value => (raw.value = value)}
               />
               <div class="text-xs text-gray-500">
-                <span>所见即所得模式 · 输出 HTML</span>
+                <span>
+                  所见即所得模式 · 输出 HTML；投票、公式和辅助块发布时转换为 Discourse 语法
+                </span>
               </div>
             </div>
           ) : null}

@@ -624,6 +624,29 @@ export interface ChatMessageBlock {
   elements?: ChatMessageBlockElement[]
 }
 
+/**
+ * Chat serializers have used both `uploads` and `attachments` over time.
+ * Keep the wire shape permissive while rendering only a safe, deduplicated
+ * image subset in the message component.
+ */
+export interface ChatMessageAttachment {
+  id?: number | string
+  url?: string
+  short_url?: string
+  shortUrl?: string
+  original_url?: string
+  image_url?: string
+  thumbnail_url?: string
+  thumbnailUrl?: string
+  original_filename?: string
+  filename?: string
+  extension?: string
+  mime_type?: string
+  content_type?: string
+  width?: number
+  height?: number
+}
+
 export interface ChatMessage {
   id: number
   message?: string
@@ -642,6 +665,8 @@ export interface ChatMessage {
   user?: DiscourseUser
   reactions?: ChatMessageReaction[]
   blocks?: ChatMessageBlock[]
+  uploads?: ChatMessageAttachment[]
+  attachments?: ChatMessageAttachment[]
   edited?: boolean
   deleted?: boolean
 }

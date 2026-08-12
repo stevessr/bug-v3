@@ -258,6 +258,16 @@ export const normalizeSingleMessage = (value: any): ChatMessage => {
   if (!Array.isArray(message.blocks)) {
     message.blocks = []
   }
+  // Chat message payloads differ across Discourse versions: some expose the
+  // associated uploads as `uploads`, while others call them `attachments`.
+  // Normalize both to arrays so the renderer can combine and deduplicate them
+  // without treating a malformed field as a visible attachment.
+  if (!Array.isArray(message.uploads)) {
+    message.uploads = []
+  }
+  if (!Array.isArray(message.attachments)) {
+    message.attachments = []
+  }
   if (message.thread && typeof message.thread.id === 'number') {
     message.thread = normalizeChatThread(message.thread)
   }

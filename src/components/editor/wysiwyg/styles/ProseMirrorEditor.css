@@ -76,6 +76,10 @@
   padding: 0 8px;
 }
 
+.toolbar-btn__chevron {
+  font-size: 9px;
+}
+
 .forum-emoji-menu,
 .advanced-syntax-menu {
   position: fixed;
@@ -240,13 +244,13 @@
 }
 
 .advanced-syntax-menu {
-  width: 190px;
+  width: min(252px, calc(100vw - 16px));
   padding: 6px;
 }
 
 .advanced-syntax-menu button {
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -259,6 +263,49 @@
   font: inherit;
   font-size: 12px;
   text-align: left;
+}
+
+.editor-extension-menu--headings {
+  width: min(196px, calc(100vw - 16px));
+}
+
+.editor-extension-menu__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px 8px;
+  color: var(--d-text, #1d1b20);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.editor-extension-menu__title .anticon {
+  color: var(--d-primary, #6750a4);
+}
+
+.editor-extension-menu__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.editor-extension-menu__copy strong {
+  overflow: hidden;
+  color: var(--d-text, #1d1b20);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-extension-menu__copy small {
+  overflow: hidden;
+  color: var(--d-text-muted, #625b71);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .advanced-syntax-menu button:hover,
@@ -358,6 +405,21 @@
   margin-bottom: 0.5em;
 }
 
+/* Keep an empty details body editable and visibly one text line tall. Without
+ * this, an empty <details> looked like it had lost its content area. */
+.wysiwyg-editor-content .wysiwyg-details-content {
+  min-height: 1.5em;
+  padding: 0 0.75em 0.7em;
+}
+
+.wysiwyg-editor-content .wysiwyg-details-content > :first-child {
+  min-height: 1.5em;
+}
+
+.wysiwyg-editor-content .wysiwyg-details-content > :last-child {
+  margin-bottom: 0;
+}
+
 /* 剧透 [spoiler] → div.spoiler（模糊，悬停/聚焦时显示，对齐官方交互） */
 .wysiwyg-editor-content .spoiler {
   position: relative;
@@ -382,6 +444,10 @@
 
 .wysiwyg-editor-content .spoiler p {
   margin: 0.5em 0;
+}
+
+.wysiwyg-editor-content .wysiwyg-spoiler-draft {
+  min-height: 1.5em;
 }
 
 /* 包装块 [wrap=xxx] → div.d-wrap-* */
@@ -414,6 +480,49 @@
 
 .wysiwyg-editor-content .poll li {
   margin: 0.25em 0;
+}
+
+.wysiwyg-editor-content .discourse-poll-draft {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wysiwyg-editor-content .discourse-poll-draft > strong {
+  font-size: 14px;
+}
+
+.wysiwyg-editor-content .discourse-poll-draft > small {
+  color: var(--md3-on-surface-variant, #49454f);
+  font-size: 11px;
+}
+
+.wysiwyg-editor-content .discourse-poll-draft__scale {
+  display: flex;
+  max-width: 100%;
+  justify-content: space-between;
+  overflow-x: auto;
+  color: var(--md3-primary, #6750a4);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.wysiwyg-editor-content .discourse-formula-draft {
+  border-radius: 6px;
+  padding: 0.12em 0.35em;
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 10%, transparent);
+  color: var(--md3-primary, #6750a4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.wysiwyg-editor-content .discourse-formula-draft.is-block {
+  display: block;
+  margin: 0.75em 0;
+  padding: 0.75em;
+  text-align: center;
 }
 
 /* 选项卡 [tabs]/[tab] → .tabs */
@@ -577,7 +686,6 @@
   border-radius: 8px;
 }
 
-
 .prosemirror-editor-textarea {
   width: 100%;
   min-height: 220px;
@@ -701,11 +809,88 @@
   color: var(--md3-on-surface, #1d1b20);
 }
 
+.editor-modal-card--assistant {
+  width: min(480px, 100%);
+}
+
 .editor-modal-header {
   font-size: 22px;
   line-height: 28px;
   font-weight: 400;
   color: var(--md3-on-surface, #1d1b20);
+}
+
+.editor-modal-helper {
+  margin: -8px 0 0;
+  color: var(--md3-on-surface-variant, #49454f);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.editor-modal-grid-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.editor-modal-field__textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.editor-modal-field__textarea--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.editor-modal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--md3-on-surface, #1d1b20);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.editor-modal-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--md3-primary, #6750a4);
+}
+
+.editor-modal-assistant-preview {
+  min-height: 32px;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--md3-primary, #6750a4) 7%, transparent);
+}
+
+.editor-modal-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--md3-outline, #79747e);
+  border-radius: 999px;
+}
+
+.editor-modal-segmented button {
+  min-height: 38px;
+  border: 0;
+  border-right: 1px solid var(--md3-outline, #79747e);
+  background: transparent;
+  color: var(--md3-on-surface, #1d1b20);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.editor-modal-segmented button:last-child {
+  border-right: 0;
+}
+
+.editor-modal-segmented button.is-selected {
+  background: var(--md3-secondary-container, #e8def8);
+  color: var(--md3-on-secondary-container, #1d192b);
 }
 
 /* MD3 filled 文本字段 */

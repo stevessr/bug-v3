@@ -213,7 +213,7 @@ export function categoryRouteFromPath(pathname: string): CategoryRoute | null {
   const idIndex = categorySegments.findIndex(
     segment => /^\d+$/.test(segment) && Number(segment) > 0
   )
-  const categoryId = idIndex >= 0 ? Number(segments[idIndex]) : null
+  const categoryId = idIndex >= 0 ? Number(categorySegments[idIndex]) : null
   const slugSegments = idIndex >= 0 ? categorySegments.slice(0, idIndex) : categorySegments
   const slug = slugSegments.join('/').trim()
   if (!slug) return null

@@ -17,6 +17,19 @@
   position: relative;
 }
 
+/* `sanitizeDiscourseHtml` only keeps explicitly allow-listed Spotify embeds.
+ * Keep the player responsive instead of inheriting the browser's fixed iframe
+ * geometry, especially inside a narrow chat/message column. */
+.post-content iframe.spotify-embed {
+  display: block;
+  width: min(100%, 660px);
+  min-height: 152px;
+  margin: 0.75rem 0;
+  border: 0;
+  border-radius: 12px;
+  background: #191414;
+}
+
 .post-content .post-inline-image-wrapper {
   display: inline-block;
   margin: 0.5rem 0;

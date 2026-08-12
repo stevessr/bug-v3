@@ -961,10 +961,16 @@ test.describe('Discourse chat message threads', () => {
     await expect(firstThreadLink).toHaveClass(/active/)
     await expect(firstThreadLink.locator('.chat-thread-list__item-unread')).toHaveCount(0)
 
-    const trackingSelect = panel.getByRole('combobox', { name: '消息串通知级别' })
-    await expect(trackingSelect).toHaveValue('2')
-    await trackingSelect.selectOption('3')
-    await expect(trackingSelect).toHaveValue('3')
+    const trackingTrigger = panel.getByRole('button', { name: '消息串通知级别：跟踪' })
+    await expect(trackingTrigger).toBeVisible()
+    await trackingTrigger.click()
+    const trackingMenu = panel.getByRole('menu', { name: '消息串通知级别' })
+    await expect(trackingMenu).toBeVisible()
+    await expect(
+      trackingMenu.getByRole('menuitemradio', { name: /跟踪.*显示未读/ })
+    ).toHaveAttribute('aria-checked', 'true')
+    await trackingMenu.getByRole('menuitemradio', { name: /关注.*所有新回复/ }).click()
+    await expect(panel.getByRole('button', { name: '消息串通知级别：关注' })).toBeVisible()
 
     const notificationRequest = await page.evaluate(() =>
       (globalThis as any).__chatThreadRequests.find(

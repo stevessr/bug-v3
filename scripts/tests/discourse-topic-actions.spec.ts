@@ -72,8 +72,10 @@ test.describe('Discourse topic actions and private messages', () => {
                 name: 'Alice',
                 avatar_template: alice.avatar_template,
                 created_at: '2026-08-10T01:05:00Z',
-                cooked:
-                  '<p>这是可反应的帖子</p><aside class="quote" data-post="1" data-topic="2561686"><div class="title">debug</div><blockquote><p>抱怀里就开始自动的响，不</p></blockquote></aside>',
+                cooked: String(
+                  (globalThis as any).__topicActionSecondCooked ||
+                    '<p>这是可反应的帖子</p><aside class="quote" data-post="1" data-topic="2561686"><div class="title">debug</div><blockquote><p>抱怀里就开始自动的响，不</p></blockquote></aside>'
+                ),
                 reply_count: 0,
                 like_count: 4,
                 can_assign: true,
@@ -427,6 +429,24 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(title.locator('.discourse-emoji-title > div')).toHaveCount(0)
   })
 
+  test('renders the allow-listed Spotify player but drops arbitrary iframes', async ({ page }) => {
+    await page.addInitScript(() => {
+      ;(globalThis as any).__topicActionSecondCooked =
+        '<p>音乐：</p><iframe src="https://open.spotify.com/embed/track/45h9XBwzKkxYucjgfV0Fts"></iframe><iframe src="https://example.test/embed/unsafe"></iframe>'
+    })
+    await openTopic(page)
+
+    const post = page.locator('[data-post-number="2"] .post-content')
+    const spotify = post.locator('iframe.spotify-embed')
+    await expect(spotify).toHaveCount(1)
+    await expect(spotify).toHaveAttribute(
+      'src',
+      'https://open.spotify.com/embed/track/45h9XBwzKkxYucjgfV0Fts'
+    )
+    await expect(spotify).toHaveAttribute('loading', 'lazy')
+    await expect(post.locator('iframe[src*="example.test"]')).toHaveCount(0)
+  })
+
   test('expands quoted posts, jumps to their topic, and quotes selected post text', async ({
     page
   }) => {
@@ -642,6 +662,95 @@ test.describe('Discourse topic actions and private messages', () => {
     await expect(advancedMenu).toBeVisible()
     await expect(page.locator('.floating-composer .advanced-syntax-menu')).toHaveCount(0)
     await expect(page.locator('body > .advanced-syntax-menu')).toHaveCount(1)
+  })
+
+  test('keeps WYSIWYG extras in portal menus and creates Discourse helper blocks', async ({
+    page
+  }) => {
+    await openTopic(page)
+    await page
+      .locator('[data-post-number="2"]')
+      .getByRole('button', { name: '回复 @alice 发布的帖子 #2' })
+      .click()
+
+    const composer = page.locator('.floating-composer')
+    await composer.getByRole('button', { name: '所见即所得' }).click()
+    const wysiwyg = composer.locator('.wysiwyg-editor')
+    const toolbar = wysiwyg.locator('.prosemirror-toolbar')
+    await expect(wysiwyg).toBeVisible()
+    const heightBefore = (await wysiwyg.boundingBox())?.height || 0
+
+    await toolbar.getByRole('button', { name: '标题级别' }).click()
+    const headingMenu = page.getByRole('menu', { name: '标题级别' })
+    await expect(headingMenu).toBeVisible()
+    await expect(wysiwyg.locator('.advanced-syntax-menu')).toHaveCount(0)
+    await headingMenu.getByRole('menuitem', { name: /二级标题.*内容分段/ }).click()
+
+    await toolbar.getByRole('button', { name: '高级功能' }).click()
+    const advancedMenu = page.getByRole('menu', { name: '高级功能' })
+    await expect(advancedMenu).toBeVisible()
+    await expect(page.locator('body > .advanced-syntax-menu')).toHaveCount(1)
+    expect(Math.abs(((await wysiwyg.boundingBox())?.height || 0) - heightBefore)).toBeLessThan(1)
+
+    await advancedMenu.getByRole('menuitem', { name: /制表.*行列和表头辅助/ }).click()
+    const tableDialog = page.locator('.editor-modal-card').filter({ hasText: '制表辅助' })
+    await expect(tableDialog).toBeVisible()
+    await tableDialog.getByRole('button', { name: '插入表格' }).click()
+    await expect(wysiwyg.locator('table.wysiwyg-table-draft')).toHaveCount(1)
+
+    await toolbar.getByRole('button', { name: '高级功能' }).click()
+    await page
+      .getByRole('menu', { name: '高级功能' })
+      .getByRole('menuitem', { name: /详细信息/ })
+      .click()
+    const detailsBody = wysiwyg.locator('.wysiwyg-details-content')
+    await expect(detailsBody).toBeVisible()
+    expect((await detailsBody.boundingBox())?.height || 0).toBeGreaterThanOrEqual(20)
+
+    await toolbar.getByRole('button', { name: '高级功能' }).click()
+    await page
+      .getByRole('menu', { name: '高级功能' })
+      .getByRole('menuitem', { name: /剧透/ })
+      .click()
+    const spoiler = wysiwyg.locator('.wysiwyg-spoiler-draft')
+    await spoiler.click()
+    await page.keyboard.press('Enter')
+    await expect(wysiwyg.locator('.wysiwyg-spoiler-draft')).toHaveCount(1)
+
+    await toolbar.getByRole('button', { name: '高级功能' }).click()
+    await page
+      .getByRole('menu', { name: '高级功能' })
+      .getByRole('menuitem', { name: /投票/ })
+      .click()
+    const pollDialog = page.locator('.editor-modal-card').filter({ hasText: 'Discourse 投票制作' })
+    await pollDialog.locator('input').first().fill('要发布哪个方案？')
+    await pollDialog.locator('textarea').first().fill('方案 A\n方案 B')
+    await pollDialog.getByRole('button', { name: '插入投票' }).click()
+    await expect(wysiwyg.locator('.discourse-poll-draft')).toHaveCount(1)
+
+    await toolbar.getByRole('button', { name: '高级功能' }).click()
+    await page
+      .getByRole('menu', { name: '高级功能' })
+      .getByRole('menuitem', { name: /公式/ })
+      .click()
+    const formulaDialog = page.locator('.editor-modal-card').filter({ hasText: '公式辅助' })
+    await formulaDialog.locator('textarea').fill('a^2 + b^2 = c^2')
+    await formulaDialog.getByRole('button', { name: '插入公式' }).click()
+    await expect(wysiwyg.locator('.discourse-formula-draft')).toHaveCount(1)
+
+    await composer.getByRole('button', { name: '回复', exact: true }).click()
+    const raw = await page.evaluate(() => {
+      const request = (globalThis as any).__topicActionRequests.find(
+        (item: any) => item.method === 'POST' && new URL(item.url).pathname === '/posts'
+      )
+      return request ? new URLSearchParams(request.body).get('raw') : ''
+    })
+    expect(raw).toContain('[table]')
+    expect(raw).toContain('[details="详细信息"]')
+    expect(raw).toContain('[spoiler]')
+    expect(raw).toContain('[poll type=regular results=always chartType=bar]')
+    expect(raw).toContain('$a^2 + b^2 = c^2$')
+    expect(raw).not.toContain('data-discourse-source')
   })
 
   test('updates Boosts in place, confirms delete, and submits a selected flag reason', async ({

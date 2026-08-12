@@ -1,12 +1,14 @@
-import { computed, defineComponent, nextTick, ref, watch } from 'vue'
+import { computed, defineComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import {
   BellOutlined,
   CheckOutlined,
   CloseOutlined,
   CommentOutlined,
   DownOutlined,
+  EyeOutlined,
   EditOutlined,
-  LockOutlined
+  LockOutlined,
+  NotificationOutlined
 } from '@ant-design/icons-vue'
 
 import type { ChatMessage, ChatThread } from '../types'
@@ -61,6 +63,9 @@ export default defineComponent({
     const editingTitle = ref(false)
     const titleDraft = ref('')
     const titleInput = ref<HTMLInputElement | null>(null)
+    const showTrackingMenu = ref(false)
+    const trackingMenuRef = ref<HTMLDivElement | null>(null)
+    const trackingTriggerRef = ref<HTMLButtonElement | null>(null)
     const title = computed(() => props.thread.title?.trim() || '消息串')
     const replyCount = computed(() =>
       Math.max(0, Number(props.thread.reply_count || props.thread.preview?.reply_count || 0))
@@ -93,6 +98,31 @@ export default defineComponent({
     const normalizedDraft = computed(() => titleDraft.value.trim())
     const titleChanged = computed(
       () => normalizedDraft.value !== String(props.thread.title || '').trim()
+    )
+    const trackingOptions = [
+      {
+        level: 3,
+        label: '关注',
+        description: '所有新回复',
+        icon: BellOutlined
+      },
+      {
+        level: 2,
+        label: '跟踪',
+        description: '显示未读',
+        icon: EyeOutlined
+      },
+      {
+        level: 1,
+        label: '常规',
+        description: '仅提及',
+        icon: NotificationOutlined
+      }
+    ] as const
+    const activeTrackingOption = computed(
+      () =>
+        trackingOptions.find(option => option.level === notificationLevel.value) ||
+        trackingOptions[2]
     )
 
     watch(
@@ -146,12 +176,46 @@ export default defineComponent({
       }
     }
 
-    const handleNotificationLevelChange = (event: Event) => {
-      const level = Number((event.currentTarget as HTMLSelectElement).value)
+    const closeTrackingMenu = () => {
+      showTrackingMenu.value = false
+    }
+
+    const selectNotificationLevel = (level: number) => {
+      closeTrackingMenu()
       if ([1, 2, 3].includes(level) && level !== notificationLevel.value) {
         emit('updateNotificationLevel', level)
       }
     }
+
+    const isTrackingMenuTarget = (target: EventTarget | null) =>
+      target instanceof Node &&
+      Boolean(trackingMenuRef.value?.contains(target) || trackingTriggerRef.value?.contains(target))
+
+    const handleTrackingDocumentPointerDown = (event: PointerEvent) => {
+      if (!isTrackingMenuTarget(event.target)) closeTrackingMenu()
+    }
+
+    const handleTrackingDocumentKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeTrackingMenu()
+        trackingTriggerRef.value?.focus()
+      }
+    }
+
+    watch(showTrackingMenu, open => {
+      document.removeEventListener('pointerdown', handleTrackingDocumentPointerDown, true)
+      document.removeEventListener('keydown', handleTrackingDocumentKeydown)
+      if (open) {
+        document.addEventListener('pointerdown', handleTrackingDocumentPointerDown, true)
+        document.addEventListener('keydown', handleTrackingDocumentKeydown)
+      }
+    })
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('pointerdown', handleTrackingDocumentPointerDown, true)
+      document.removeEventListener('keydown', handleTrackingDocumentKeydown)
+    })
 
     return () => (
       <aside class="chat-thread-panel" role="region" aria-label={`消息串：${title.value}`}>
@@ -213,25 +277,63 @@ export default defineComponent({
             <span>{replyCount.value} 条回复</span>
           </div>
           <div class="chat-thread-panel__header-actions">
-            <label
-              class={['chat-thread-panel__tracking', props.notificationSaving ? 'is-saving' : '']}
-              title="设置此消息串的通知级别"
+            <div
+              class={[
+                'chat-thread-panel__tracking',
+                props.notificationSaving ? 'is-saving' : '',
+                showTrackingMenu.value ? 'is-open' : ''
+              ]}
             >
-              <BellOutlined aria-hidden="true" />
-              <span class="chat-thread-panel__tracking-select-wrap">
-                <select
-                  aria-label="消息串通知级别"
-                  value={notificationLevel.value}
-                  disabled={props.notificationSaving}
-                  onChange={handleNotificationLevelChange}
-                >
-                  <option value={3}>关注：所有新回复</option>
-                  <option value={2}>跟踪：显示未读</option>
-                  <option value={1}>常规：仅提及</option>
-                </select>
+              <button
+                ref={trackingTriggerRef}
+                type="button"
+                class="chat-thread-panel__tracking-trigger"
+                title="设置此消息串的通知级别"
+                aria-label={`消息串通知级别：${activeTrackingOption.value.label}`}
+                aria-haspopup="menu"
+                aria-expanded={showTrackingMenu.value}
+                disabled={props.notificationSaving}
+                onClick={() => (showTrackingMenu.value = !showTrackingMenu.value)}
+              >
+                <BellOutlined aria-hidden="true" />
+                <span class="chat-thread-panel__tracking-trigger-copy">
+                  <span>{activeTrackingOption.value.label}</span>
+                  <small>{activeTrackingOption.value.description}</small>
+                </span>
                 <DownOutlined aria-hidden="true" />
-              </span>
-            </label>
+              </button>
+              {showTrackingMenu.value && (
+                <div
+                  ref={trackingMenuRef}
+                  class="chat-thread-panel__tracking-menu"
+                  role="menu"
+                  aria-label="消息串通知级别"
+                >
+                  {trackingOptions.map(option => {
+                    const Icon = option.icon
+                    return (
+                      <button
+                        key={option.level}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={notificationLevel.value === option.level}
+                        class={notificationLevel.value === option.level ? 'is-active' : ''}
+                        onClick={() => selectNotificationLevel(option.level)}
+                      >
+                        <Icon aria-hidden="true" />
+                        <span>
+                          <strong>{option.label}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                        {notificationLevel.value === option.level && (
+                          <CheckOutlined aria-hidden="true" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               class="chat-thread-panel__close"

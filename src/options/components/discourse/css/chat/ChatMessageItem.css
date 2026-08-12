@@ -87,14 +87,20 @@
   min-width: 0;
   max-width: min(76%, 760px);
   flex: 0 1 auto;
-  /* Reserve horizontal space for hover controls beside the bubble. */
-  margin-right: 68px;
+  /* Reserve a physical right-side gutter for hover controls. */
+  margin-right: 76px;
+}
+
+.chat-message-item.has-reactions .chat-message-bubble-wrap {
+  /* Reactions and action buttons share one horizontal side row. Reserving the
+   * gutter prevents them from crossing the avatar without creating a footer. */
+  margin-right: min(238px, 44vw);
 }
 
 .chat-message-own .chat-message-bubble-wrap {
   /* Keep a physical right-side gutter between an outgoing bubble and its
    * avatar so reactions/hover actions remain on the message's right, too. */
-  margin-right: 68px;
+  margin-right: 76px;
   margin-left: 0;
 }
 
@@ -241,44 +247,60 @@
   color: color-mix(in oklab, var(--on-primary-container) 72%, transparent);
 }
 
-/* Reactions sit in a trailing rail, outside the message surface. This keeps
- * the bubble height equal to the message content and matches Chat's compact
- * side-by-side reaction layout. */
-.chat-message-reaction-rail {
+/* A message's reactions and controls share an absolute side row.  The row is
+ * deliberately outside `.chat-message-content`: it stays beside the bubble,
+ * has no impact on its height, and keeps the action buttons to the reactions'
+ * physical right instead of moving them above the message. */
+.chat-message-side-controls {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 50%;
   left: calc(100% + 8px);
   display: flex;
-  max-width: 60px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  max-width: min(330px, calc(100vw - 32px));
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
   transform: translateY(-50%);
 }
 
-.chat-message-own .chat-message-reaction-rail {
+.chat-message-own .chat-message-side-controls {
   right: auto;
   left: calc(100% + 8px);
-  align-items: flex-start;
+}
+
+.chat-message-reaction-rail {
+  display: flex;
+  min-width: 0;
+  max-width: min(190px, 34vw);
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.chat-message-reaction-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-message-reaction,
 .chat-message-reaction-add,
 .chat-message-actions-toggle {
   display: inline-flex;
-  min-width: 28px;
-  height: 28px;
+  min-width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 0 8px;
+  gap: 5px;
+  padding: 0 9px;
   border: 0;
   border-radius: var(--d-shape-full, 999px);
   background: color-mix(in oklab, var(--d-text) 7%, transparent);
   color: var(--d-text-muted, var(--theme-on-surface-variant));
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   transition:
     color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
     background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
@@ -311,35 +333,26 @@
 }
 
 .chat-message-reaction-image {
-  width: 16px;
-  height: 16px;
+  width: 21px;
+  height: 21px;
   object-fit: contain;
-  vertical-align: -2px;
+  vertical-align: -3px;
 }
 
 .chat-message-reaction-add {
-  width: 28px;
+  width: 34px;
   padding: 0;
-  font-size: 14px;
+  font-size: 18px;
 }
 
-/*
- * Keep hover controls beside the bubble rather than in its footer.  A footer
- * changes a message's height even when it has no reactions; this row keeps
- * the controls on the message's physical right side without consuming vertical
- * space. Outgoing messages reserve a right-side gutter before their avatar.
- */
 .chat-message-hover-actions {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  left: calc(100% + 8px);
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 2px;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(calc(-50% + 2px)) scale(0.96);
+  transform: scale(0.96);
   transition:
     opacity var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
     transform var(--d-motion-fast, 120ms) var(--d-motion-standard, ease),
@@ -348,7 +361,7 @@
 }
 
 .chat-message-hover-actions .chat-message-actions-toggle {
-  width: 28px;
+  width: 34px;
   padding: 0;
 }
 
@@ -357,34 +370,18 @@
 .chat-message-item.has-floating-controls .chat-message-hover-actions {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(-50%);
-}
-
-.chat-message-own .chat-message-hover-actions {
-  right: auto;
-  left: calc(100% + 8px);
-}
-
-/* A populated reaction rail owns the middle of the trailing side. Keep the
- * transient action buttons just above the bubble rather than stacking into
- * the rail, while still consuming no row height. */
-.chat-message-item.has-reactions .chat-message-hover-actions {
-  top: -4px;
-  transform: translateY(-100%) scale(0.96);
-}
-
-.chat-message-item.has-reactions:hover .chat-message-hover-actions,
-.chat-message-item.has-reactions:focus-within .chat-message-hover-actions,
-.chat-message-item.has-reactions.has-floating-controls .chat-message-hover-actions {
-  transform: translateY(-100%);
+  transform: scale(1);
 }
 
 .chat-message-reaction-emoji {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .chat-message-reaction-count {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -513,6 +510,39 @@
   justify-content: flex-end;
 }
 
+.chat-message-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 6px;
+  max-width: min(520px, 100%);
+  margin-top: 8px;
+}
+
+.chat-message-own .chat-message-attachments {
+  margin-left: auto;
+}
+
+.chat-message-attachment {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--d-shape-md, 12px);
+  background: color-mix(in oklab, var(--d-text) 6%, transparent);
+  line-height: 0;
+}
+
+.chat-message-attachment:focus-visible {
+  outline: 2px solid var(--primary, var(--theme-primary));
+  outline-offset: 2px;
+}
+
+.chat-message-attachment img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+
 .chat-message-block-button {
   min-height: 36px;
   padding: 0 14px;
@@ -561,17 +591,38 @@
   .chat-message-hover-actions {
     opacity: 1;
     pointer-events: auto;
-    transform: translateY(-50%);
-  }
-
-  .chat-message-item.has-reactions .chat-message-hover-actions {
-    transform: translateY(-100%);
+    transform: scale(1);
   }
 }
 
 @media (max-width: 560px) {
   .chat-message-bubble-wrap {
     max-width: calc(100% - 42px);
+  }
+
+  .chat-message-item.has-reactions .chat-message-bubble-wrap {
+    margin-right: min(176px, 42vw);
+  }
+
+  .chat-message-side-controls {
+    max-width: min(240px, calc(100vw - 20px));
+    gap: 4px;
+  }
+
+  .chat-message-reaction-rail {
+    max-width: min(122px, 28vw);
+  }
+
+  .chat-message-reaction,
+  .chat-message-reaction-add,
+  .chat-message-actions-toggle {
+    min-width: 32px;
+    height: 32px;
+  }
+
+  .chat-message-reaction-add,
+  .chat-message-hover-actions .chat-message-actions-toggle {
+    width: 32px;
   }
 
   .chat-message-avatar {
