@@ -53,7 +53,7 @@ test('visual context validates image data URLs and summaries never retain pixels
   assert.equal(summary.name, 'page.png')
 })
 
-test('AgentThread forwards mixed text and images to the PI runtime without flattening pixels', async () => {
+test('AgentThread forwards mixed text and images to the browser Agent runtime without flattening pixels', async () => {
   let received
   const threadModule = loadTypeScriptModule('src/agent/agentThread.ts', {
     './agentService': {

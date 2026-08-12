@@ -38,6 +38,7 @@ export type BrowserVmRequest = {
   text?: string
   url?: string
   tabId?: number
+  ms?: number
   x?: number
   y?: number
   behavior?: 'auto' | 'smooth'
@@ -99,7 +100,11 @@ export class BrowserVmInstance {
     const current = this.memory.buffer.byteLength
     if (required > current) {
       const pages = Math.ceil((required - current) / 65_536)
-      this.memory.grow(Math.max(1, pages))
+      try {
+        this.memory.grow(Math.max(1, pages))
+      } catch {
+        throw new Error('浏览器 VM 虚拟内存不足')
+      }
     }
     new Uint8Array(this.memory.buffer, this.nextOffset, bytes.byteLength).set(bytes)
     const result = { offset: this.nextOffset, byteLength: bytes.byteLength }
@@ -162,6 +167,13 @@ export class BrowserVmInstance {
     const normalized = normalizePath(path)
     const file = this.writeFile(normalized, content)
     return { path: normalized, byteLength: file.byteLength, offset: file.offset }
+  }
+
+  /** Release this instance and its linear-memory-backed virtual files. */
+  dispose(): void {
+    this.files.clear()
+    this.nextOffset = 0
+    instances.delete(this.id)
   }
 
   listVirtualFiles(path?: string, recursive = false, maxEntries = 200) {
@@ -246,7 +258,7 @@ export class BrowserVmInstance {
         action = {
           id,
           type: 'wait',
-          ms: Math.min(Math.max(Number(request.text || 0), 0), 30_000)
+          ms: Math.min(Math.max(Number(request.ms ?? request.text ?? 0), 0), 30_000)
         } as AgentAction
         break
       default:
@@ -376,6 +388,7 @@ export const browserVmToolSchema: Record<string, unknown> = {
     text: { type: 'string' },
     url: { type: 'string' },
     tabId: { type: 'number' },
+    ms: { type: 'number', description: 'wait 操作的毫秒数（上限 30000）' },
     x: { type: 'number' },
     y: { type: 'number' },
     behavior: { type: 'string', enum: ['auto', 'smooth'] },

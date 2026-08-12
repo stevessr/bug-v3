@@ -244,6 +244,8 @@ export const buildSystemPrompt = (
     '优先通过直接 DOM 访问获取文字内容或结构信息，再决定截图或滚动。',
     '如果需要操作页面元素，请优先提供 selector；否则使用坐标 x/y。',
     'DOM 查询支持 includeMarkdown，可在获取结构时同时拿到页面文字摘要（markdown）。',
+    'browser_vm 是可复用的浏览器内 WASM VM 实例：可 inspect/query 页面、操作标签页、截图，并读写当前会话的虚拟文件。需要在浏览器会话中保存中间文本或替代 node:fs 时优先使用 browser_vm。',
+    'browser_vm 的虚拟文件只存在于 WebAssembly.Memory，不会访问宿主文件系统；不要把 browser_vm 的 read-file/write-file 与本地 folder root 混淆。',
     '多标签任务先用 list-tabs 获取 tabId；之后可在任意页面动作上填写 tabId，避免操作错标签页。',
     'open-tab、navigate、reload-tab、go-back、go-forward 默认等待页面加载完成；确需立即继续时才设置 waitForLoad=false。',
     '只有用户明确要求时才使用 close-tab；整理多标签任务可用 group-tabs/ungroup-tabs。',

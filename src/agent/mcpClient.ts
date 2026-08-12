@@ -646,7 +646,7 @@ export async function discoverAllMcpTools(
 /**
  * 将 MCP 工具转换为通用 JSON Schema 工具格式
  */
-export function mcpToolToAnthropicTool(
+export function mcpToolToJsonSchemaTool(
   serverId: string,
   serverName: string,
   tool: McpTool
@@ -675,6 +675,9 @@ export function mcpToolToAnthropicTool(
     }
   }
 }
+
+/** @deprecated Use mcpToolToJsonSchemaTool; retained for integrations that import the old name. */
+export const mcpToolToAnthropicTool = mcpToolToJsonSchemaTool
 
 /**
  * 解析 MCP 工具调用名称，提取服务 ID 和工具名

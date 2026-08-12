@@ -16,7 +16,7 @@ import {
   toolSchema,
   type AgentToolPayload
 } from './agentPayload'
-import { callMcpTool, discoverAllMcpTools, mcpToolToAnthropicTool } from './mcpClient'
+import { callMcpTool, discoverAllMcpTools, mcpToolToJsonSchemaTool } from './mcpClient'
 import {
   buildPiCallOptions,
   buildPiModel,
@@ -388,7 +388,7 @@ const buildTools = async (runtime: ThreadRuntime): Promise<AgentTool<any, any>[]
   const servers = getScopedEnabledMcpServers(runtime.settings, runtime.subagent)
   if (!servers.length) return tools
   for (const discovered of await discoverAllMcpTools(servers)) {
-    const proxy = mcpToolToAnthropicTool(
+    const proxy = mcpToolToJsonSchemaTool(
       discovered.serverId,
       discovered.serverName,
       discovered.tool
