@@ -856,8 +856,17 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
       const rect = quickInsertButton.getBoundingClientRect()
       menu.style.position = 'fixed'
       menu.style.zIndex = '10000'
-      menu.style.top = `${rect.bottom + 5}px`
+      // Prefer opening upward (buttons render near the editor bottom); fall back
+      // to below the button when there is not enough space above.
+      const menuHeight = menu.offsetHeight
+      const spaceAbove = rect.top
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUp = menuHeight <= spaceAbove || spaceAbove >= spaceBelow
+      menu.style.top = openUp
+        ? `${Math.max(8, rect.top - menuHeight - 5)}px`
+        : `${rect.bottom + 5}px`
       menu.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - 150, window.innerWidth - 300))}px`
+      menu.setAttribute('data-placement', openUp ? 'top' : 'bottom')
     }
 
     const removeMenu = (e: Event) => {
