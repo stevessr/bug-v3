@@ -1,11 +1,13 @@
-import { computed, defineComponent } from 'vue'
+import { computed, defineAsyncComponent, defineComponent, watch } from 'vue'
 import { Badge, Button, Dropdown } from 'ant-design-vue'
 import { BellOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
+import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
 
-import NotificationsView from './NotificationsView'
 import '../css/NotificationsDropdown.css'
+
+const NotificationsView = defineAsyncComponent(() => import('./NotificationsView'))
 
 export default defineComponent({
   name: 'NotificationsDropdown',
@@ -37,6 +39,14 @@ export default defineComponent({
     currentUsername: {
       type: String,
       default: ''
+    },
+    blockedUsernames: {
+      type: Array as () => string[],
+      default: () => []
+    },
+    exemptUsername: {
+      type: String,
+      default: null
     }
   },
   emits: {
@@ -48,6 +58,14 @@ export default defineComponent({
   },
   setup(props, { emit }) {
     const preview = computed(() => props.notifications.slice(0, 20))
+
+    watch(
+      () => props.baseUrl,
+      value => {
+        if (value) void ensureEmojiShortcodesLoaded(value).catch(() => undefined)
+      },
+      { immediate: true }
+    )
 
     return () => (
       <Dropdown
@@ -86,6 +104,8 @@ export default defineComponent({
                   loading={props.loading}
                   baseUrl={props.baseUrl}
                   currentUsername={props.currentUsername}
+                  blockedUsernames={props.blockedUsernames}
+                  exemptUsername={props.exemptUsername}
                   onChangeFilter={(filter: DiscourseNotificationFilter) =>
                     emit('changeFilter', filter)
                   }

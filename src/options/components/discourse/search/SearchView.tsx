@@ -9,6 +9,7 @@ import type {
   DiscourseCategory
 } from '../types'
 import { searchTags } from '../actions'
+import { shouldFilterBlockedContent } from '../blocked'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime } from '../utils'
 import TagPill from '../layout/TagPill'
@@ -25,7 +26,9 @@ export default defineComponent({
     state: { type: Object as () => SearchState, required: true },
     baseUrl: { type: String, required: true },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
-    currentCategory: { type: Object as () => DiscourseCategory | null, default: null }
+    currentCategory: { type: Object as () => DiscourseCategory | null, default: null },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as () => string | null, default: null }
   },
   emits: ['search', 'loadMore', 'open'],
   setup(props, { emit }) {
@@ -214,6 +217,13 @@ export default defineComponent({
       props.state.topics.forEach(topic => map.set(topic.id, topic))
       return map
     })
+
+    const visiblePosts = computed(() =>
+      props.state.posts.filter(
+        post =>
+          !shouldFilterBlockedContent(props.blockedUsernames, post.username, props.exemptUsername)
+      )
+    )
 
     const handleSearch = () => {
       emit('search', localQuery.value.trim(), { ...localFilters.value })
@@ -735,7 +745,7 @@ export default defineComponent({
           aria-live="polite"
           aria-busy={props.state.loading}
         >
-          {props.state.posts.map(post => {
+          {visiblePosts.value.map(post => {
             const topic = topicMap.value.get(post.topic_id)
             const category = topic?.category_id
               ? mergedCategories.value.find(item => item.id === topic.category_id) || null
@@ -774,7 +784,7 @@ export default defineComponent({
               </article>
             )
           })}
-          {!props.state.loading && props.state.posts.length === 0 && (
+          {!props.state.loading && visiblePosts.value.length === 0 && (
             <div class="search-results__empty" role="status">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />

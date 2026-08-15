@@ -26,6 +26,8 @@ export default defineComponent({
     channelId: { type: Number, required: true },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as () => string | null, default: null },
     currentUserStaff: { type: Boolean, default: false },
     loading: { type: Boolean, required: true },
     sending: { type: Boolean, required: true },
@@ -357,6 +359,8 @@ export default defineComponent({
           channelId={props.thread.id}
           baseUrl={props.baseUrl}
           currentUsername={props.currentUsername}
+          blockedUsernames={props.blockedUsernames}
+          exemptUsername={props.exemptUsername}
           loading={props.loading}
           hasMore={props.hasMore}
           targetMessageId={props.targetMessageId}

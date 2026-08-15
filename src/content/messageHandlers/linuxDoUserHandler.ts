@@ -7,6 +7,12 @@ import type { LinuxDoUserResponse } from '@/types/messages'
 const optionalBoolean = (value: unknown): boolean | undefined =>
   typeof value === 'boolean' ? value : undefined
 
+const optionalUsernameList = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const names = value.map(item => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+  return names.length > 0 ? names : undefined
+}
+
 export const linuxDoUserHandler: MessageHandler = (message, _sender, sendResponse) => {
   if (message.type !== 'GET_LINUX_DO_USER') return false
 
@@ -15,6 +21,8 @@ export const linuxDoUserHandler: MessageHandler = (message, _sender, sendRespons
     if (user?.username) {
       const admin = optionalBoolean(user.admin)
       const moderator = optionalBoolean(user.moderator)
+      const ignoredUsernames = optionalUsernameList(user.ignored_usernames)
+      const mutedUsernames = optionalUsernameList(user.muted_usernames)
       const response: LinuxDoUserResponse = {
         success: true,
         user: {
@@ -26,7 +34,9 @@ export const linuxDoUserHandler: MessageHandler = (message, _sender, sendRespons
           moderator,
           canChat: optionalBoolean(user.can_chat),
           canDirectMessage: optionalBoolean(user.can_direct_message),
-          hasChatEnabled: optionalBoolean(user.has_chat_enabled)
+          hasChatEnabled: optionalBoolean(user.has_chat_enabled),
+          ...(ignoredUsernames ? { ignoredUsernames } : {}),
+          ...(mutedUsernames ? { mutedUsernames } : {})
         }
       }
       sendResponse(response)

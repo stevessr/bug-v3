@@ -1,8 +1,11 @@
-import { computed, defineComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineComponent, onMounted, ref, watch, type PropType } from 'vue'
 import { Spin } from 'ant-design-vue'
 
+import { getTopicAuthorUsername, shouldFilterBlockedContent } from '../blocked'
 import type {
   DiscourseCategory,
+  DiscourseTopic,
+  DiscourseUser,
   DiscourseUserProfile,
   UserActivityState,
   ActivityTabType
@@ -24,12 +27,15 @@ export default defineComponent({
   name: 'ActivityView',
   props: {
     user: { type: Object as () => DiscourseUserProfile, required: true },
+    users: { type: Object as () => Map<number, DiscourseUser>, default: () => new Map() },
     activityState: { type: Object as () => UserActivityState, required: true },
     baseUrl: { type: String, required: true },
     isLoadingMore: { type: Boolean, required: true },
     showReadTab: { type: Boolean, default: false },
     showSettings: { type: Boolean, default: false },
-    showGroups: { type: Boolean, default: true }
+    showGroups: { type: Boolean, default: true },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: ['switchTab', 'openTopic', 'openUser', 'goToProfile', 'switchMainTab'],
   setup(props, { emit }) {
@@ -53,6 +59,44 @@ export default defineComponent({
 
     const visibleTabs = computed(() =>
       props.showReadTab ? tabs : tabs.filter(tab => tab.key !== 'read')
+    )
+    const getActivityTopicAuthor = (topic: DiscourseTopic) =>
+      getTopicAuthorUsername(topic, userId => props.users.get(userId)?.username)
+
+    const visibleActions = computed(() =>
+      props.activityState.actions.filter(
+        action =>
+          !shouldFilterBlockedContent(props.blockedUsernames, action.username, props.exemptUsername)
+      )
+    )
+
+    const visibleTopics = computed(() =>
+      props.activityState.topics.filter(
+        topic =>
+          !shouldFilterBlockedContent(
+            props.blockedUsernames,
+            getActivityTopicAuthor(topic),
+            props.exemptUsername
+          )
+      )
+    )
+
+    const visibleReactions = computed(() =>
+      props.activityState.reactions.filter(
+        reaction =>
+          !shouldFilterBlockedContent(
+            props.blockedUsernames,
+            reaction.post.username,
+            props.exemptUsername
+          )
+      )
+    )
+
+    const visibleSolvedPosts = computed(() =>
+      props.activityState.solvedPosts.filter(
+        post =>
+          !shouldFilterBlockedContent(props.blockedUsernames, post.username, props.exemptUsername)
+      )
     )
 
     const emptyTopicsText = computed(() => {
@@ -245,7 +289,7 @@ export default defineComponent({
 
           {['all', 'replies', 'likes'].includes(props.activityState.activeTab) && (
             <div class="activity-list">
-              {props.activityState.actions.map(action => (
+              {visibleActions.value.map(action => (
                 <article
                   key={`${action.action_type}-${action.post_id ?? 'na'}-${action.created_at}`}
                   class="activity-item"
@@ -297,7 +341,7 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.actions.length === 0 &&
+              {visibleActions.value.length === 0 &&
                 !props.activityState.loading &&
                 !props.isLoadingMore && <div class="activity-state-empty">暂无数据</div>}
             </div>
@@ -307,7 +351,7 @@ export default defineComponent({
             props.activityState.activeTab
           ) && (
             <div class="activity-list">
-              {props.activityState.topics.map(topic => (
+              {visibleTopics.value.map(topic => (
                 <button
                   key={topic.id}
                   type="button"
@@ -343,7 +387,7 @@ export default defineComponent({
                 </button>
               ))}
 
-              {props.activityState.topics.length === 0 &&
+              {visibleTopics.value.length === 0 &&
                 !props.activityState.loading &&
                 !props.isLoadingMore && (
                   <div class="activity-state-empty">{emptyTopicsText.value}</div>
@@ -353,7 +397,7 @@ export default defineComponent({
 
           {props.activityState.activeTab === 'reactions' && (
             <div class="activity-list">
-              {props.activityState.reactions.map(reaction => (
+              {visibleReactions.value.map(reaction => (
                 <article key={reaction.id} class="activity-item">
                   <div class="activity-item__main">
                     <button
@@ -428,7 +472,7 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.reactions.length === 0 &&
+              {visibleReactions.value.length === 0 &&
                 !props.activityState.loading &&
                 !props.isLoadingMore && <div class="activity-state-empty">暂无反应</div>}
             </div>
@@ -436,7 +480,7 @@ export default defineComponent({
 
           {props.activityState.activeTab === 'solved' && (
             <div class="activity-list">
-              {props.activityState.solvedPosts.map(post => (
+              {visibleSolvedPosts.value.map(post => (
                 <article key={post.post_id} class="activity-item">
                   <div class="activity-item__main">
                     <img
@@ -475,7 +519,7 @@ export default defineComponent({
                 </article>
               ))}
 
-              {props.activityState.solvedPosts.length === 0 &&
+              {visibleSolvedPosts.value.length === 0 &&
                 !props.activityState.loading &&
                 !props.isLoadingMore && <div class="activity-state-empty">暂无已解决问题</div>}
             </div>

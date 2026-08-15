@@ -7,6 +7,8 @@ type Props = {
   activeTab: BrowserTab
   baseUrl: string
   currentUsername: string
+  blockedUsernames: string[]
+  exemptUsername?: string | null
 }
 
 defineProps<Props>()
@@ -45,6 +47,8 @@ defineEmits([
         :filter="activeTab.notificationsFilter"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         @changeFilter="$emit('changeFilter', $event)"
         @open="$emit('openNotification', $event)"
       />

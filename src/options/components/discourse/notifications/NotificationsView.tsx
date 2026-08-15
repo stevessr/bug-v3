@@ -1,11 +1,12 @@
-import { defineComponent, computed, onMounted, ref, watch } from 'vue'
+import { computed, defineComponent, onMounted, ref, watch, type PropType } from 'vue'
 import { Spin } from 'ant-design-vue'
 
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
-import { replaceEmojiShortcodesInHtml } from '../bbcode'
+import { replaceEmojiShortcodesInHtml } from '../bbcode/emojiShortcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
-import { sanitizeDiscourseHtml } from '../sanitizeHtml'
+import { shouldFilterBlockedContent } from '../blocked'
 import { getAvatarUrl, formatTime } from '../utils'
+import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import '../css/NotificationsView.css'
 
 // Notification type → icon SVG path + color
@@ -184,7 +185,9 @@ export default defineComponent({
     filter: { type: String as () => DiscourseNotificationFilter, required: true },
     loading: { type: Boolean, default: false },
     baseUrl: { type: String, default: '' },
-    currentUsername: { type: String, default: '' }
+    currentUsername: { type: String, default: '' },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: ['changeFilter', 'open'],
   setup(props, { emit }) {
@@ -216,9 +219,17 @@ export default defineComponent({
     const formatFilter = (n: DiscourseNotification) => typeLabelMap[n.notification_type] || 'other'
 
     const filteredNotifications = computed(() => {
-      if (props.filter === 'all') return props.notifications
-      if (props.filter === 'unread') return props.notifications.filter(item => !item.read)
-      return props.notifications.filter(n => formatFilter(n) === props.filter)
+      const visible = props.notifications.filter(
+        notification =>
+          !shouldFilterBlockedContent(
+            props.blockedUsernames,
+            formatActor(notification),
+            props.exemptUsername
+          )
+      )
+      if (props.filter === 'all') return visible
+      if (props.filter === 'unread') return visible.filter(item => !item.read)
+      return visible.filter(n => formatFilter(n) === props.filter)
     })
 
     const formatTitle = (n: DiscourseNotification) =>
@@ -231,6 +242,17 @@ export default defineComponent({
       const sanitized = sanitizeDiscourseHtml(title)
       return sanitizeDiscourseHtml(replaceEmojiShortcodesInHtml(sanitized))
     }
+
+    const renderedTitles = computed(() => {
+      // Keep title rendering tied to the async emoji-map token explicitly.
+      emojiReadyToken.value
+      const titles = new Map<number, string>()
+      props.notifications.forEach(notification => {
+        const title = formatTitle(notification)
+        if (title) titles.set(notification.id, renderTitle(title))
+      })
+      return titles
+    })
 
     const formatActor = (n: DiscourseNotification) =>
       n.data?.display_username || n.data?.username || n.data?.original_username || ''
@@ -437,7 +459,7 @@ export default defineComponent({
                         )}
                       </div>
                     ) : title ? (
-                      <div class="ntf-title" innerHTML={renderTitle(title)} />
+                      <div class="ntf-title" innerHTML={renderedTitles.value.get(item.id) || ''} />
                     ) : null}
                     <span class="ntf-time">{formatTime(item.created_at)}</span>
                   </div>

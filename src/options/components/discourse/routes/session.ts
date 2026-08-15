@@ -3,6 +3,12 @@ import type { DiscourseSessionUser, LinuxDoUserResponse } from '@/types/messages
 const readBoolean = (value: unknown): boolean | undefined =>
   typeof value === 'boolean' ? value : undefined
 
+const listUsernames = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const names = value.map(item => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+  return names.length > 0 ? names : undefined
+}
+
 const normalizeSessionUser = (value: any): DiscourseSessionUser | null => {
   if (!value?.username) return null
   const admin = readBoolean(value.admin)
@@ -21,7 +27,9 @@ const normalizeSessionUser = (value: any): DiscourseSessionUser | null => {
     moderator,
     canChat: readBoolean(value.canChat) ?? readBoolean(value.can_chat),
     canDirectMessage: readBoolean(value.canDirectMessage) ?? readBoolean(value.can_direct_message),
-    hasChatEnabled: readBoolean(value.hasChatEnabled) ?? readBoolean(value.has_chat_enabled)
+    hasChatEnabled: readBoolean(value.hasChatEnabled) ?? readBoolean(value.has_chat_enabled),
+    ignoredUsernames: listUsernames(value.ignoredUsernames ?? value.ignored_usernames),
+    mutedUsernames: listUsernames(value.mutedUsernames ?? value.muted_usernames)
   }
 }
 

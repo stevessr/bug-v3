@@ -76,7 +76,11 @@ export default defineComponent({
     },
     baseUrl: { type: String, required: true },
     showSettings: { type: Boolean, default: false },
-    showGroups: { type: Boolean, default: true }
+    showGroups: { type: Boolean, default: true },
+    /** 该用户是否已被当前登录用户忽略（用于显示"取消忽略"） */
+    isUserIgnored: { type: Boolean, default: false },
+    /** 忽略操作是否正在保存 */
+    ignoreSaving: { type: Boolean, default: false }
   },
   emits: [
     'openTopic',
@@ -90,7 +94,8 @@ export default defineComponent({
     'composeMessage',
     'startChat',
     'openCategory',
-    'switchMainTab'
+    'switchMainTab',
+    'toggleIgnore'
   ],
   setup(props, { emit }) {
     const followSaving = ref(false)
@@ -223,9 +228,7 @@ export default defineComponent({
           style={{
             backgroundImage: profileBackground.value
               ? `url("${profileBackground.value.replace(/"/g, '%22')}")`
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
+              : undefined
           }}
         >
           <div class="user-profile-header__overlay">
@@ -321,6 +324,18 @@ export default defineComponent({
                       {followSaving.value ? '处理中…' : isFollowed.value ? '已关注' : '关注'}
                     </button>
                   )}
+                  {!props.showSettings &&
+                    props.user.can_ignore_user !== false &&
+                    props.user.can_ignore !== false && (
+                      <button
+                        type="button"
+                        class={props.isUserIgnored ? 'is-ignored' : ''}
+                        disabled={props.ignoreSaving}
+                        onClick={() => emit('toggleIgnore', !props.isUserIgnored)}
+                      >
+                        {props.ignoreSaving ? '处理中…' : props.isUserIgnored ? '取消忽略' : '忽略'}
+                      </button>
+                    )}
                 </div>
               )}
             </div>

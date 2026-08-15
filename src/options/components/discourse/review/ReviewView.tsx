@@ -1,4 +1,4 @@
-import { computed, defineComponent, nextTick, ref, watch } from 'vue'
+import { computed, defineComponent, nextTick, ref, watch, type PropType } from 'vue'
 import { Spin, Empty } from 'ant-design-vue'
 import { EyeOutlined, UndoOutlined, FlagOutlined } from '@ant-design/icons-vue'
 
@@ -11,6 +11,7 @@ import type {
 } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
+import { shouldFilterBlockedContent } from '../blocked'
 import '../css/ReviewView.css'
 
 const STATUS_LABELS: Record<ReviewStatus, string> = {
@@ -47,7 +48,9 @@ export default defineComponent({
     reviewState: { type: Object as () => ReviewState, required: true },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
-    users: { type: Object as () => Map<number, DiscourseUser>, required: true }
+    users: { type: Object as () => Map<number, DiscourseUser>, required: true },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: [
     'switchStatus',
@@ -73,7 +76,17 @@ export default defineComponent({
 
     const statusTabs: ReviewStatus[] = ['pending', 'approved', 'rejected', 'ignored', 'deleted']
 
-    const visibleReviewables = computed(() => props.reviewState.reviewables)
+    const visibleReviewables = computed(() =>
+      props.reviewState.reviewables.filter(reviewable => {
+        const targetUser =
+          reviewable.target || reviewable.target_created_by || reviewable.created_by
+        return !shouldFilterBlockedContent(
+          props.blockedUsernames,
+          targetUser?.username,
+          props.exemptUsername
+        )
+      })
+    )
 
     const getScoreReason = (reviewable: Reviewable) => {
       const scores = reviewable.reviewable_scores || []

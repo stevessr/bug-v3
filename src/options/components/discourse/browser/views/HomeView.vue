@@ -20,6 +20,8 @@ type Props = {
   isLoadingMore: boolean
   currentUsername: string | null
   composerMode: 'reply' | 'topic' | 'edit' | null
+  blockedUsernames: string[]
+  exemptUsername?: string | null
 }
 
 defineProps<Props>()
@@ -84,6 +86,8 @@ defineEmits([
           :baseUrl="baseUrl"
           :categories="activeTab.categories"
           :users="activeTab.activeUsers"
+          :blockedUsernames="blockedUsernames"
+          :exemptUsername="exemptUsername"
           :sortKey="topicSortKey"
           :sortOrder="topicSortOrder"
           @sort="$emit('topicSort', $event)"

@@ -1,5 +1,6 @@
 import { computed, defineComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { shouldFilterBlockedContent } from '../blocked'
 import type { ChatChannel, ChatMessage, DiscourseUser, ParsedContent } from '../types'
 import { parsePostContent } from '../parser/parsePostContent'
 import { getAvatarUrl } from '../utils'
@@ -15,6 +16,8 @@ export default defineComponent({
     channelId: { type: Number, default: null },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as () => string | null, default: null },
     loading: { type: Boolean, required: true },
     hasMore: { type: Boolean, required: true },
     targetMessageId: { type: Number, default: null },
@@ -62,7 +65,16 @@ export default defineComponent({
       return parsed
     }
 
-    const orderedMessages = computed(() => [...props.messages].sort((a, b) => a.id - b.id))
+    const orderedMessages = computed(() => {
+      const current = (props.currentUsername || '').trim().toLowerCase()
+      return [...props.messages]
+        .filter(message => {
+          const sender = message.user?.username || message.username
+          if (sender && sender.trim().toLowerCase() === current) return true // 自己的消息始终显示
+          return !shouldFilterBlockedContent(props.blockedUsernames, sender, props.exemptUsername)
+        })
+        .sort((a, b) => a.id - b.id)
+    })
     const pinnedMessageIdSet = computed(() => new Set(props.pinnedMessageIds))
 
     const channelUsers = computed<DiscourseUser[]>(() => {

@@ -6,21 +6,27 @@
 
 .user-profile-header {
   position: relative;
-  min-height: 210px;
   overflow: hidden;
-  border-radius: var(--d-shape-xl, 28px);
-  background-color: var(--primary, var(--theme-primary));
-  box-shadow: var(--d-elevation-1);
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-md, 10px);
+  background-color: var(--secondary, var(--theme-surface));
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-size: 100% 190px;
+  box-shadow: none;
 }
 
 .user-profile-header__overlay {
   display: flex;
   align-items: flex-end;
-  min-height: 210px;
-  padding: 26px;
-  background:
-    linear-gradient(105deg, color-mix(in oklab, #000 72%, transparent), transparent 82%),
-    linear-gradient(0deg, color-mix(in oklab, #000 52%, transparent), transparent 68%);
+  padding: 150px 24px 18px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 108px,
+    color-mix(in srgb, var(--secondary, #fff) 96%, transparent) 170px,
+    var(--secondary, #fff) 190px
+  );
 }
 
 .user-profile-header__main {
@@ -36,30 +42,37 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
   margin-left: auto;
+  max-width: 13.5em;
 }
 
 .user-profile-header__actions button {
-  min-height: 38px;
-  padding: 0 15px;
-  border: 1px solid color-mix(in oklab, #fff 35%, transparent);
-  border-radius: var(--d-shape-full, 999px);
-  background: color-mix(in oklab, #111 36%, transparent);
-  color: #fff;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--d-border, var(--theme-outline-variant));
+  border-radius: var(--d-shape-sm, 6px);
+  background: var(--d-surface-0, var(--theme-surface));
+  color: var(--primary, var(--theme-primary));
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
-  font-weight: 680;
-  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .user-profile-header__actions button:hover:not(:disabled) {
-  background: color-mix(in oklab, #fff 24%, transparent);
+  background: var(--primary-low, var(--theme-primary-container));
 }
 
 .user-profile-header__actions button.is-following {
-  background: color-mix(in oklab, var(--primary, #6750a4) 78%, transparent);
+  background: var(--primary, var(--theme-primary));
+  color: var(--secondary, #fff);
+}
+
+.user-profile-header__actions button.is-ignored {
+  border-color: var(--danger, var(--theme-error));
+  background: var(--danger-low, color-mix(in srgb, var(--danger, #c00) 12%, transparent));
+  color: var(--danger, var(--theme-error));
 }
 
 .user-profile-header__actions button:disabled {
@@ -68,19 +81,18 @@
 }
 
 .user-profile-header__avatar {
-  width: 104px;
-  height: 104px;
+  width: 96px;
+  height: 96px;
   flex: 0 0 auto;
-  border: 4px solid color-mix(in oklab, #fff 90%, transparent);
+  border: 4px solid var(--secondary, var(--theme-surface));
   border-radius: var(--d-shape-full, 999px);
   object-fit: cover;
-  box-shadow: var(--d-elevation-3);
+  box-shadow: var(--d-elevation-1);
 }
 
 .user-profile-header__info {
   min-width: 0;
-  color: #fff;
-  text-shadow: 0 1px 2px color-mix(in oklab, #000 65%, transparent);
+  color: var(--primary, var(--theme-on-surface));
 }
 
 .user-profile-header__name-row {
@@ -88,15 +100,15 @@
   align-items: center;
   min-width: 0;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 8px;
 }
 
 .user-profile-header__username {
   overflow: hidden;
   margin: 0;
-  font-size: clamp(25px, 4vw, 34px);
-  font-weight: 720;
-  letter-spacing: -0.03em;
+  color: var(--primary, var(--theme-on-surface));
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -105,13 +117,12 @@
 .user-profile-header__badge {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: var(--d-shape-full, 999px);
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: var(--d-shape-sm, 6px);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
-  text-shadow: none;
 }
 
 .user-profile-header__badge.is-admin {
@@ -123,16 +134,16 @@
 }
 
 .user-profile-header__name {
-  margin-top: 5px;
-  font-size: 13px;
-  opacity: 0.9;
+  margin-top: 4px;
+  color: var(--primary-medium, var(--theme-on-surface-variant));
+  font-size: 14px;
 }
 
 .user-profile-header__title {
   margin-top: 3px;
-  color: #ffe08a;
+  color: var(--primary-medium, var(--theme-on-surface-variant));
   font-size: 13px;
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .user-profile-header__status {
@@ -140,63 +151,56 @@
   align-items: center;
   gap: 6px;
   margin-top: 7px;
+  color: var(--primary-medium, var(--theme-on-surface-variant));
   font-size: 12px;
 }
 
 .user-profile-header__meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px 14px;
   margin-top: 10px;
-  font-size: 11px;
-  text-shadow: none;
+  color: var(--primary-medium, var(--theme-on-surface-variant));
+  font-size: 12px;
 }
 
 .user-profile-header__meta-row > :where(span, a) {
-  min-height: 28px;
-  padding: 5px 10px;
-  border-radius: var(--d-shape-full, 999px);
-  background: color-mix(in oklab, #fff 16%, transparent);
-  color: #fff;
-  backdrop-filter: blur(8px);
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
 }
 
 .user-profile-header__follow-count {
-  min-height: 28px;
-  padding: 5px 10px;
+  min-height: 0;
+  padding: 0;
   border: 0;
-  border-radius: var(--d-shape-full, 999px);
-  background: color-mix(in oklab, #fff 16%, transparent);
-  color: #fff;
-  font-size: 11px;
+  background: transparent;
+  color: var(--primary, var(--theme-primary));
+  font: inherit;
+  font-size: 12px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background-color var(--d-motion-fast, 120ms) var(--d-motion-standard, ease);
 }
 
 .user-profile-header__follow-count:hover {
-  background: color-mix(in oklab, #fff 26%, transparent);
+  text-decoration: underline;
 }
 
 .user-profile-link {
   max-width: 280px;
   overflow: hidden;
+  color: var(--primary, var(--theme-primary));
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .user-profile-link:hover {
-  background: color-mix(in oklab, #fff 24%, transparent);
+  text-decoration: underline;
 }
 
 .user-profile-header__hint {
-  margin-top: 9px;
-  font-size: 10px;
-  font-weight: 680;
-  letter-spacing: 0.09em;
-  opacity: 0.82;
-  text-transform: uppercase;
+  display: none;
 }
 
 .user-profile-card {
@@ -611,17 +615,13 @@
 }
 
 @media (max-width: 640px) {
-  .user-profile-header,
-  .user-profile-header__overlay {
-    min-height: 260px;
-  }
-
   .user-profile-header {
-    border-radius: var(--d-shape-lg, 16px);
+    border-radius: var(--d-shape-sm, 6px);
+    background-size: auto 150px;
   }
 
   .user-profile-header__overlay {
-    padding: 20px;
+    padding: 118px 16px 16px;
   }
 
   .user-profile-header__main {
@@ -633,6 +633,7 @@
     width: 100%;
     justify-content: flex-start;
     margin-left: 0;
+    max-width: none;
   }
 
   .user-profile-header__avatar {

@@ -111,6 +111,9 @@ const {
   isLoadingMore,
   currentUsername,
   currentUserStaff,
+  ignoredUsernames,
+  blockedUsernames,
+  setUserIgnored,
   unreadNotificationsCount,
   ensureSessionUser,
   createTab,
@@ -227,6 +230,9 @@ const userExtrasTab = computed(
     (activeTab.value?.viewType as
       'badges' | 'followFeed' | 'following' | 'followers' | undefined) || 'followFeed'
 )
+/** 当前正在浏览其主页的用户名；用于"被忽略用户自己的主页仍显示其内容"的豁免。 */
+const exemptUsername = computed(() => activeTab.value?.currentUser?.username || undefined)
+
 const isViewingSelf = computed(
   () =>
     !!activeTab.value?.currentUser?.username &&
@@ -2470,6 +2476,31 @@ const handleStartUserChat = async (username?: string) => {
   openChatChannel(channel, false)
 }
 
+const ignoreSavingUsername = ref<string | null>(null)
+const isUserIgnoredOnActiveProfile = computed(() => {
+  const username = activeTab.value?.currentUser?.username
+  if (!username) return false
+  return ignoredUsernames.value.some(
+    name => name.trim().toLowerCase() === username.trim().toLowerCase()
+  )
+})
+const handleToggleUserIgnore = async (ignoredNext: boolean) => {
+  const tab = activeTab.value
+  const username = tab?.currentUser?.username
+  if (!username || ignoreSavingUsername.value) return
+  ignoreSavingUsername.value = username
+  try {
+    const ok = await setUserIgnored(username, ignoredNext)
+    if (ok) {
+      message.success(ignoredNext ? `已忽略 @${username}` : `已取消忽略 @${username}`)
+    } else {
+      message.error('忽略操作失败，请稍后重试')
+    }
+  } finally {
+    ignoreSavingUsername.value = null
+  }
+}
+
 const handleOpenUserBadges = (username: string) => {
   openUserBadges(username)
 }
@@ -3428,6 +3459,8 @@ onUnmounted(() => {
           :loading="notificationsLoading"
           :baseUrl="baseUrl"
           :currentUsername="currentUsername || ''"
+          :blockedUsernames="blockedUsernames"
+          :exemptUsername="exemptUsername"
           @openChange="handleNotificationsOpenChange"
           @refresh="handleRefreshNotifications"
           @openAll="handleOpenNotifications"
@@ -3537,6 +3570,8 @@ onUnmounted(() => {
         :topicSortOrder="topicSortOrder"
         :isLoadingMore="isLoadingMore"
         :currentUsername="currentUsername ?? null"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :composerMode="composerMode"
         @homeNavClick="handleHomeNavClick"
         @openChat="handleOpenChat"
@@ -3580,6 +3615,8 @@ onUnmounted(() => {
         :activeTab="activeTab"
         :baseUrl="baseUrl"
         :currentUsername="currentUsername || ''"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         @changeFilter="handleNotificationFilterChange"
         @openNotification="handleOpenNotification"
         @categoryClick="handleCategoryClick"
@@ -3596,6 +3633,8 @@ onUnmounted(() => {
         :topicSortKey="topicSortKey"
         :topicSortOrder="topicSortOrder"
         :isLoadingMore="isLoadingMore"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :notificationLevel="tagNotificationLevel"
         :notificationSaving="tagNotificationSaving"
         @changeNotificationLevel="handleTagNotificationLevelChange"
@@ -3619,6 +3658,8 @@ onUnmounted(() => {
         :topicSortOrder="topicSortOrder"
         :isLoadingMore="isLoadingMore"
         :composerMode="composerMode"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :notificationLevel="categoryNotificationLevel"
         :notificationSaving="categoryNotificationSaving"
         @toggleComposer="toggleTopicComposer"
@@ -3650,6 +3691,8 @@ onUnmounted(() => {
         :currentUserStaff="currentUserStaff"
         :users="users"
         :categories="activeTab.categories"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :createGroupSearching="createGroupSearching"
         :createGroupResults="createGroupResults"
         :creatingGroup="chatDirectCreating"
@@ -3729,6 +3772,8 @@ onUnmounted(() => {
         :targetPostNumber="activeTab.targetPostNumber"
         :currentUser="activeTab.currentUser"
         :currentUsername="currentUsername ?? undefined"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :ensurePostLoaded="ensurePostNumberLoaded"
         @openSuggestedTopic="handleSuggestedTopicClick"
         @openUser="handleUserClick"
@@ -3759,6 +3804,9 @@ onUnmounted(() => {
         @startChat="handleStartUserChat"
         @openCategory="handleCategoryClick"
         @switchMainTab="handleUserMainTabSwitch"
+        :isUserIgnored="isUserIgnoredOnActiveProfile"
+        :ignoreSaving="ignoreSavingUsername === activeTab?.currentUser?.username"
+        @toggleIgnore="handleToggleUserIgnore"
       />
 
       <UserExtrasView
@@ -3776,6 +3824,8 @@ onUnmounted(() => {
         :hasMore="activeTab.followFeedHasMore"
         :loading="activeTab.userExtrasLoading"
         :showSettings="isViewingSelf"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         showGroups
         @switchTab="handleUserExtrasTabSwitch"
         @openUser="handleUserClick"
@@ -3790,11 +3840,14 @@ onUnmounted(() => {
           activeTab?.viewType === 'activity' && activeTab.currentUser && activeTab.activityState
         "
         :user="activeTab.currentUser"
+        :users="users"
         :activityState="activeTab.activityState"
         :baseUrl="baseUrl"
         :isLoadingMore="isLoadingMore"
         :showReadTab="isViewingSelf"
         :showSettings="isViewingSelf"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         showGroups
         @switchTab="handleActivityTabSwitch"
         @openTopic="handleUserTopicClick"
@@ -3814,6 +3867,8 @@ onUnmounted(() => {
         :users="users"
         :isLoadingMore="isLoadingMore"
         :showSettings="isViewingSelf"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         showGroups
         @switchTab="handleMessagesTabSwitch"
         @openTopic="handleUserTopicClick"
@@ -3835,6 +3890,8 @@ onUnmounted(() => {
         :currentUsername="currentUsername ?? undefined"
         :currentUserStaff="currentUserStaff"
         :users="users"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         @switchStatus="handleReviewSwitchStatus"
         @perform="handleReviewPerform"
         @update="handleReviewUpdate"
@@ -3892,6 +3949,8 @@ onUnmounted(() => {
         :baseUrl="baseUrl"
         :categories="activeTab?.categories || []"
         :currentCategory="currentCategoryOption"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         @search="handleSearch"
         @loadMore="handleLoadMoreSearch"
         @open="handleOpenSearchResult"
@@ -4000,6 +4059,8 @@ onUnmounted(() => {
         :currentUserStaff="currentUserStaff"
         :users="users"
         :categories="activeTab.categories"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :createGroupSearching="createGroupSearching"
         :createGroupResults="createGroupResults"
         :creatingGroup="chatDirectCreating"

@@ -44,6 +44,8 @@ export default defineComponent({
     chatState: { type: Object as () => ChatState, required: true },
     baseUrl: { type: String, required: true },
     currentUsername: { type: String, default: undefined },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as () => string | null, default: null },
     currentUserStaff: { type: Boolean, default: false },
     users: { type: Object as () => Map<number, DiscourseUser>, required: true },
     categories: { type: Array as () => DiscourseCategory[], default: () => [] },
@@ -712,6 +714,8 @@ export default defineComponent({
               channelId={props.chatState.activeChannelId ?? undefined}
               baseUrl={props.baseUrl}
               currentUsername={props.currentUsername}
+              blockedUsernames={props.blockedUsernames}
+              exemptUsername={props.exemptUsername}
               loading={props.chatState.loadingMessages}
               hasMore={hasMore.value}
               targetMessageId={props.chatState.activeTargetMessageId ?? undefined}
@@ -812,6 +816,8 @@ export default defineComponent({
               baseUrl={props.baseUrl}
               currentUsername={props.currentUsername}
               currentUserStaff={props.currentUserStaff}
+              blockedUsernames={props.blockedUsernames}
+              exemptUsername={props.exemptUsername}
               loading={props.chatState.loadingThread}
               sending={props.chatState.sendingThreadMessage}
               hasMore={activeThreadHasMore.value}

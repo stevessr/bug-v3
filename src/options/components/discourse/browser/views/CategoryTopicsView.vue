@@ -27,6 +27,8 @@ type Props = {
   topicSortOrder: TopicSortOrder
   isLoadingMore: boolean
   composerMode: 'reply' | 'topic' | 'edit' | null
+  blockedUsernames: string[]
+  exemptUsername?: string | null
   notificationLevel: number
   notificationSaving: boolean
 }
@@ -281,6 +283,8 @@ function openCategoryTags() {
           :baseUrl="baseUrl"
           :categories="activeTab.categories"
           :users="activeTab.activeUsers"
+          :blockedUsernames="blockedUsernames"
+          :exemptUsername="exemptUsername"
           :sortKey="topicSortKey"
           :sortOrder="topicSortOrder"
           @sort="emit('topicSort', $event)"

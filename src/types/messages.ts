@@ -506,6 +506,10 @@ export interface DiscourseSessionUser {
   canChat?: boolean
   canDirectMessage?: boolean
   hasChatEnabled?: boolean
+  /** Usernames the logged-in user has ignored (server-side IgnoredUser list). */
+  ignoredUsernames?: string[]
+  /** Usernames the logged-in user has muted (server-side MutedUser list). */
+  mutedUsernames?: string[]
 }
 
 export interface DiscourseSiteSettingsResponse {

@@ -1,9 +1,10 @@
-import { defineComponent } from 'vue'
+import { computed, defineComponent, type PropType } from 'vue'
 
 import type { DiscourseFollowPost, DiscourseUserProfile } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
 import { getDiscourseIconHref } from '../layout/iconSprite'
+import { shouldFilterBlockedContent } from '../blocked'
 
 import UserTabs from './UserTabs'
 import type { UserMainTab } from './UserTabs'
@@ -45,10 +46,35 @@ export default defineComponent({
     hasMore: { type: Boolean, default: false },
     loading: { type: Boolean, default: false },
     showSettings: { type: Boolean, default: false },
-    showGroups: { type: Boolean, default: true }
+    showGroups: { type: Boolean, default: true },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: ['switchTab', 'switchMainTab', 'openUser', 'openTopic', 'goToProfile'],
   setup(props, { emit }) {
+    const visibleFollowFeed = computed(() =>
+      (props.user._follow_feed || []).filter(
+        post =>
+          !shouldFilterBlockedContent(
+            props.blockedUsernames,
+            post.user.username,
+            props.exemptUsername
+          )
+      )
+    )
+    const visibleFollowing = computed(() =>
+      (props.user._following || []).filter(
+        user =>
+          !shouldFilterBlockedContent(props.blockedUsernames, user.username, props.exemptUsername)
+      )
+    )
+    const visibleFollowers = computed(() =>
+      (props.user._followers || []).filter(
+        user =>
+          !shouldFilterBlockedContent(props.blockedUsernames, user.username, props.exemptUsername)
+      )
+    )
+
     return () => (
       <div class="user-extras">
         <UserTabs
@@ -125,11 +151,11 @@ export default defineComponent({
 
         {!props.loading && props.tab === 'followFeed' && (
           <section class="user-extras-card">
-            {!props.user._follow_feed || props.user._follow_feed.length === 0 ? (
+            {visibleFollowFeed.value.length === 0 ? (
               <div class="user-extras-empty">暂无关注动态</div>
             ) : (
               <div class="user-extras-feed-list">
-                {props.user._follow_feed.map(post => (
+                {visibleFollowFeed.value.map(post => (
                   <div key={post.id} class="user-extras-feed-item">
                     <div class="user-extras-feed-item__meta">
                       {formatTime(post.created_at)} · @{post.user.username}
@@ -149,7 +175,7 @@ export default defineComponent({
                 {props.isLoadingMore && (
                   <div class="user-extras-state-loading">加载更多动态...</div>
                 )}
-                {props.hasMore === false && props.user._follow_feed.length > 0 && (
+                {props.hasMore === false && visibleFollowFeed.value.length > 0 && (
                   <div class="user-extras-state-end">已加载全部动态</div>
                 )}
               </div>
@@ -159,11 +185,11 @@ export default defineComponent({
 
         {props.tab === 'following' && (
           <section class="user-extras-card">
-            {!props.user._following || props.user._following.length === 0 ? (
+            {visibleFollowing.value.length === 0 ? (
               <div class="user-extras-empty">暂无关注</div>
             ) : (
               <div class="user-extras-user-grid">
-                {props.user._following.map(u => (
+                {visibleFollowing.value.map(u => (
                   <div
                     key={u.id}
                     class="user-extras-user-item"
@@ -186,11 +212,11 @@ export default defineComponent({
 
         {props.tab === 'followers' && (
           <section class="user-extras-card">
-            {!props.user._followers || props.user._followers.length === 0 ? (
+            {visibleFollowers.value.length === 0 ? (
               <div class="user-extras-empty">暂无关注者</div>
             ) : (
               <div class="user-extras-user-grid">
-                {props.user._followers.map(u => (
+                {visibleFollowers.value.map(u => (
                   <div
                     key={u.id}
                     class="user-extras-user-item"

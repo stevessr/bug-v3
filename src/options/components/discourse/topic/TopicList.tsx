@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, type PropType } from 'vue'
+import { computed, defineComponent, ref, watch, type PropType } from 'vue'
 
 import type {
   DiscourseTopic,
@@ -12,6 +12,7 @@ import TagPill from '../layout/TagPill'
 import EmojiTitle from '../layout/EmojiTitle'
 import TopicCategoryBadge from '../layout/TopicCategoryBadge'
 import { normalizeCategoriesFromResponse } from '../routes/categories'
+import { getTopicAuthorUsername, shouldFilterBlockedContent } from '../blocked'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories
@@ -33,7 +34,9 @@ export default defineComponent({
     sortOrder: {
       type: String as PropType<'asc' | 'desc'>,
       default: 'desc'
-    }
+    },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: ['click', 'middleClick', 'openUser', 'openTag', 'openCategory', 'sort'],
   setup(props, { emit }) {
@@ -244,6 +247,21 @@ export default defineComponent({
       return props.sortOrder === 'asc' ? '↑' : '↓'
     }
 
+    // 屏蔽：隐藏被忽略用户（作者）发起的话题（作者自己的主页上除外）。
+    const visibleTopics = computed(() =>
+      props.topics.filter(topic => {
+        const authorUsername = getTopicAuthorUsername(
+          topic,
+          userId => getUserById(userId, props.users)?.username
+        )
+        return !shouldFilterBlockedContent(
+          props.blockedUsernames,
+          authorUsername,
+          props.exemptUsername
+        )
+      })
+    )
+
     return () => (
       <div class="topic-list">
         {props.showHeader && (
@@ -286,7 +304,7 @@ export default defineComponent({
             </div>
           </div>
         )}
-        {props.topics.map(topic => (
+        {visibleTopics.value.map(topic => (
           <div
             key={topic.id}
             class="topic-row"

@@ -1,5 +1,6 @@
-import { defineComponent, type PropType } from 'vue'
+import { computed, defineComponent, type PropType } from 'vue'
 
+import { shouldFilterBlockedContent } from '../blocked'
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 
 import PostItem from './PostItem'
@@ -14,6 +15,8 @@ export default defineComponent({
     topicId: { type: Number, required: true },
     currentUser: { type: Object as () => DiscourseUserProfile | null, default: null },
     currentUsername: { type: String, default: undefined },
+    blockedUsernames: { type: Array as PropType<string[]>, default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null },
     highlightedPostNumber: { type: Number as () => number | null, default: null },
     getParsedPost: {
       type: Function as PropType<(postId: number) => ParsedContent>,
@@ -96,9 +99,16 @@ export default defineComponent({
       return props.isPostLiked(post, reactionId)
     }
 
+    const visiblePosts = computed(() =>
+      props.posts.filter(
+        post =>
+          !shouldFilterBlockedContent(props.blockedUsernames, post.username, props.exemptUsername)
+      )
+    )
+
     return () => (
       <div class="posts-list">
-        {props.posts.map(post => (
+        {visiblePosts.value.map(post => (
           <div key={post.id} class="posts-list__item">
             {post.reply_to_post_number && props.isParentExpanded(post.post_number) && (
               <div class="post-parent-outer">

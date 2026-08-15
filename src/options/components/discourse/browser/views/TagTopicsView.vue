@@ -21,6 +21,8 @@ type Props = {
   topicSortKey: TopicSortKey
   topicSortOrder: TopicSortOrder
   isLoadingMore: boolean
+  blockedUsernames: string[]
+  exemptUsername?: string | null
   notificationLevel: number
   notificationSaving: boolean
 }
@@ -86,6 +88,8 @@ defineEmits([
         :baseUrl="baseUrl"
         :categories="activeTab.categories"
         :users="activeTab.activeUsers"
+        :blockedUsernames="blockedUsernames"
+        :exemptUsername="exemptUsername"
         :sortKey="topicSortKey"
         :sortOrder="topicSortOrder"
         @sort="$emit('topicSort', $event)"

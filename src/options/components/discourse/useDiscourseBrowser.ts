@@ -70,6 +70,8 @@ import {
   movePrivateMessageToInbox as movePrivateMessageToInboxRoute,
   markPrivateMessagesRead as markPrivateMessagesReadRoute
 } from './routes/user'
+import { setUserNotificationLevel } from './actions/user'
+import { normalizeBlockUsername } from './blocked'
 import {
   loadReview as loadReviewRoute,
   loadMoreReviewables as loadMoreReviewablesRoute,
@@ -388,6 +390,20 @@ export function useDiscourseBrowser() {
   const currentUsername = ref<string | null>(null)
   const currentSessionUser = ref<DiscourseSessionUser | null>(null)
   const currentUserStaff = computed(() => currentSessionUser.value?.staff === true)
+
+  // 屏蔽类能力：读取当前登录用户忽略/静音的用户名列表。
+  // Discourse 的 mute 只关闭通知，不应隐藏用户内容；只有 ignore 进入过滤集合。
+  const ignoredUsernames = computed(() => currentSessionUser.value?.ignoredUsernames || [])
+  const mutedUsernames = computed(() => currentSessionUser.value?.mutedUsernames || [])
+  const blockedUsernames = computed<string[]>(() => {
+    const normalized = ignoredUsernames.value.map(normalizeBlockUsername).filter(Boolean)
+    return Array.from(new Set(normalized))
+  })
+  const isUsernameBlocked = (username?: string | null): boolean => {
+    const needle = normalizeBlockUsername(username)
+    return needle ? blockedUsernames.value.includes(needle) : false
+  }
+
   let sessionUserPromise: Promise<string | null> | null = null
   // Navigation can overlap (for example, when switching profile sub-tabs).
   // Keep the ordering per browser tab so a request in another tab cannot leave
@@ -427,6 +443,55 @@ export function useDiscourseBrowser() {
       })
 
     return sessionUserPromise
+  }
+
+  const updateLocalNotificationLevel = (username: string, level: 'ignore' | 'mute' | 'normal') => {
+    const sessionUser = currentSessionUser.value
+    const normalizedUsername = normalizeBlockUsername(username)
+    if (!sessionUser || !normalizedUsername) return
+
+    const updateList = (list: string[] | undefined, included: boolean) => {
+      const current = list || []
+      const withoutTarget = current.filter(
+        name => normalizeBlockUsername(name) !== normalizedUsername
+      )
+      if (!included) return withoutTarget
+      const existing = current.find(name => normalizeBlockUsername(name) === normalizedUsername)
+      return existing ? [...withoutTarget, existing] : [...withoutTarget, username.trim()]
+    }
+
+    currentSessionUser.value = {
+      ...sessionUser,
+      ignoredUsernames: updateList(sessionUser.ignoredUsernames, level === 'ignore'),
+      mutedUsernames: updateList(sessionUser.mutedUsernames, level === 'mute')
+    }
+  }
+
+  /**
+   * 忽略 / 静音 / 恢复正常一个用户。成功后立即更新本地会话状态，避免重新读取
+   * 不会随 PUT 自动更新的 `data-preloaded` 内容而把旧列表覆盖回来。
+   */
+  async function setUserIgnored(
+    username: string,
+    ignored: boolean,
+    opts?: { mute?: boolean }
+  ): Promise<boolean> {
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) return false
+
+    try {
+      const level: 'ignore' | 'mute' | 'normal' = ignored
+        ? opts?.mute
+          ? 'mute'
+          : 'ignore'
+        : 'normal'
+      await setUserNotificationLevel(baseUrl.value, normalizedUsername, level)
+      if (!currentSessionUser.value) await ensureSessionUser()
+      updateLocalNotificationLevel(normalizedUsername, level)
+      return true
+    } catch {
+      return false
+    }
   }
 
   watch(
@@ -2909,6 +2974,11 @@ export function useDiscourseBrowser() {
     isLoadingMore,
     currentUsername,
     currentUserStaff,
+    ignoredUsernames,
+    mutedUsernames,
+    blockedUsernames,
+    isUsernameBlocked,
+    setUserIgnored,
     unreadNotificationsCount,
     ensureSessionUser,
 

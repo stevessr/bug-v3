@@ -916,6 +916,8 @@ export interface DiscourseUserProfile {
   can_send_private_message_to_user?: boolean
   can_chat_user?: boolean
   can_follow?: boolean
+  can_ignore?: boolean
+  can_ignore_user?: boolean
   is_followed?: boolean
   total_followers?: number
   total_following?: number

@@ -167,7 +167,18 @@ test.describe('Discourse user profile area', () => {
         lastError: null,
         sendMessage(request: any, callback: (response: any) => void) {
           if (request.type === 'GET_LINUX_DO_USER') {
-            queueMicrotask(() => callback({ success: true, user: sessionUser }))
+            const value = Object.getOwnPropertyDescriptor(
+              globalThis,
+              '__profileIgnoredUsernames'
+            )?.value
+            const ignoredUsernames =
+              Array.isArray(value) && value.every(item => typeof item === 'string') ? value : []
+            queueMicrotask(() =>
+              callback({
+                success: true,
+                user: { ...sessionUser, ignored_usernames: ignoredUsernames }
+              })
+            )
             return
           }
 
@@ -230,8 +241,20 @@ test.describe('Discourse user profile area', () => {
                   post_id: 9,
                   topic_id: 9,
                   slug: 'design-thread',
-                  username: 'alice',
-                  name: 'Alice',
+                  username: (() => {
+                    const value = Object.getOwnPropertyDescriptor(
+                      globalThis,
+                      '__profileActivityUsername'
+                    )?.value
+                    return typeof value === 'string' && value ? value : 'alice'
+                  })(),
+                  name: (() => {
+                    const value = Object.getOwnPropertyDescriptor(
+                      globalThis,
+                      '__profileActivityUsername'
+                    )?.value
+                    return typeof value === 'string' && value ? value : 'Alice'
+                  })(),
                   avatar_template: '/letter_avatar_proxy/v4/letter/a/8491ac/{size}.png',
                   title: '设计串',
                   excerpt: '动作摘要',
@@ -372,6 +395,25 @@ test.describe('Discourse user profile area', () => {
     await expect(page.getByText('Bob')).toBeVisible()
   })
 
+  test('filters ignored activity authors but exempts their own profile', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.assign(globalThis, { __profileIgnoredUsernames: ['alice'] })
+    })
+    await openAddress(page, 'https://linux.do/u/steve')
+    await page.getByRole('tab', { name: '活动' }).click()
+    await expect(page.getByText('动作摘要')).toHaveCount(0)
+    await expect(page.getByText('暂无数据')).toBeVisible()
+
+    await page.addInitScript(() => {
+      Object.assign(globalThis, {
+        __profileIgnoredUsernames: ['steve'],
+        __profileActivityUsername: 'steve'
+      })
+    })
+    await openAddress(page, 'https://linux.do/u/steve')
+    await page.getByRole('tab', { name: '活动' }).click()
+    await expect(page.getByText('动作摘要')).toBeVisible()
+  })
   test('shows activity reactions and portfolio tabs', async ({ page }) => {
     await openAddress(page, 'https://linux.do/u/steve')
 

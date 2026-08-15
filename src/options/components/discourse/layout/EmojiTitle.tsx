@@ -1,7 +1,6 @@
-import { computed, defineComponent, ref, watch } from 'vue'
+import { computed, defineComponent, ref, shallowRef, watch } from 'vue'
 
 import { fetchDiscourseEmojiGroups } from '../linux.do/emojis'
-import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 
 import '../css/EmojiTitle.css'
 
@@ -16,6 +15,30 @@ const escapeHtml = (value: string) =>
 type EmojiUrlMap = Record<string, string>
 
 const shortcodePattern = /:([a-zA-Z0-9_+\-\u4e00-\u9fa5]+):/g
+
+type DiscourseSanitizer = (value: unknown) => string
+
+let sanitizerModulePromise: Promise<typeof import('../sanitizeHtml')> | null = null
+
+const loadDiscourseSanitizer = () => {
+  if (!sanitizerModulePromise) {
+    sanitizerModulePromise = import('../sanitizeHtml').catch(error => {
+      sanitizerModulePromise = null
+      throw error
+    })
+  }
+  return sanitizerModulePromise
+}
+
+const isSafeEmojiUrl = (value: string) => {
+  try {
+    const baseUrl = typeof document === 'undefined' ? undefined : document.baseURI
+    const protocol = new URL(value, baseUrl).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 /**
  * Resolve known shortcodes only in text nodes. Apart from avoiding an XSS
@@ -51,7 +74,7 @@ const replaceTitleEmojiShortcodes = (html: string, emojiUrls: EmojiUrlMap) => {
       if (start > 0 && text[start - 1] === '\\') continue
       const name = match[1]
       const url = emojiUrls[name]
-      if (!url) continue
+      if (!url || !isSafeEmojiUrl(url)) continue
 
       fragment.append(document.createTextNode(text.slice(lastIndex, start)))
       const image = document.createElement('img')
@@ -88,11 +111,27 @@ export default defineComponent({
   },
   setup(props) {
     const emojiUrls = ref<EmojiUrlMap>({})
+    const sanitizer = shallowRef<DiscourseSanitizer | null>(null)
     let emojiRequestId = 0
 
+    const ensureSanitizer = () => {
+      if (sanitizer.value) return
+      void loadDiscourseSanitizer()
+        .then(module => {
+          sanitizer.value = module.sanitizeDiscourseHtml
+        })
+        .catch(() => {
+          // Plain escaped text remains a safe fallback if the lazy chunk fails.
+        })
+    }
+
+    if (props.html) ensureSanitizer()
+
     const rendered = computed(() => {
-      const source = props.html ? sanitizeDiscourseHtml(props.text) : escapeHtml(props.text)
-      return sanitizeDiscourseHtml(replaceTitleEmojiShortcodes(source, emojiUrls.value))
+      const sanitize = sanitizer.value
+      const source = props.html && sanitize ? sanitize(props.text) : escapeHtml(props.text)
+      const withEmoji = replaceTitleEmojiShortcodes(source, emojiUrls.value)
+      return props.html && sanitize ? sanitize(withEmoji) : withEmoji
     })
 
     const loadEmojiShortcodes = async (baseUrl: string) => {
@@ -118,6 +157,13 @@ export default defineComponent({
         if (requestId === emojiRequestId) emojiUrls.value = {}
       }
     }
+
+    watch(
+      () => props.html,
+      value => {
+        if (value) ensureSanitizer()
+      }
+    )
 
     watch(
       () => props.baseUrl,

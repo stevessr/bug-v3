@@ -157,6 +157,17 @@
   -webkit-line-clamp: 2;
 }
 
+.ntf-title img.emoji-inline {
+  display: inline-block;
+  width: 1.25em;
+  min-width: 1.25em;
+  max-width: none;
+  height: 1.25em;
+  margin: 0 0.035em;
+  object-fit: contain;
+  vertical-align: -0.18em;
+}
+
 .ntf-badge-desc {
   font-size: 12px;
 }

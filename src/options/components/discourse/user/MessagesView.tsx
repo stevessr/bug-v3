@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, computed } from 'vue'
+import { computed, defineComponent, ref, watch, type PropType } from 'vue'
 import { Spin, Input, message } from 'ant-design-vue'
 import {
   SearchOutlined,
@@ -11,6 +11,7 @@ import {
 import type { DiscourseUserProfile, MessagesState, MessagesTabType, DiscourseUser } from '../types'
 import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime, getAvatarUrl } from '../utils'
+import { getTopicAuthorUsername, shouldFilterBlockedContent } from '../blocked'
 
 import UserTabs from './UserTabs'
 import '../css/MessagesView.css'
@@ -24,7 +25,9 @@ export default defineComponent({
     isLoadingMore: { type: Boolean, required: true },
     users: { type: Object as () => Map<number, DiscourseUser>, required: true },
     showSettings: { type: Boolean, default: false },
-    showGroups: { type: Boolean, default: true }
+    showGroups: { type: Boolean, default: true },
+    blockedUsernames: { type: Array as () => string[], default: () => [] },
+    exemptUsername: { type: String as PropType<string | null>, default: null }
   },
   emits: [
     'switchTab',
@@ -57,6 +60,18 @@ export default defineComponent({
       return state.topics
     }
 
+    const isTopicBlocked = (topic: MessagesState['topics'][number]) => {
+      const author = getTopicAuthorUsername(topic, userId => props.users.get(userId)?.username)
+      const participantNames = (topic.participants || []).map(
+        participant => props.users.get(participant.user_id)?.username
+      )
+      return [author, ...participantNames].some(username =>
+        shouldFilterBlockedContent(props.blockedUsernames, username, props.exemptUsername)
+      )
+    }
+
+    const topics = computed(() => displayTopics().filter(topic => !isTopicBlocked(topic)))
+
     const handleSearch = () => {
       emit('searchMessages', searchQuery.value)
     }
@@ -72,14 +87,14 @@ export default defineComponent({
     }
 
     const handleMarkAllRead = () => {
-      const unreadTopics = displayTopics().filter(topic => (topic.unread || 0) > 0)
+      const unreadTopics = topics.value.filter(topic => (topic.unread || 0) > 0)
       emit(
         'markAllRead',
         unreadTopics.map(topic => topic.id)
       )
     }
 
-    const hasUnread = () => displayTopics().some(topic => (topic.unread || 0) > 0)
+    const hasUnread = () => topics.value.some(topic => (topic.unread || 0) > 0)
 
     const handleArchive = (topicId: number) => {
       message.info('正在归档...')
@@ -101,7 +116,6 @@ export default defineComponent({
       }
     )
 
-    const topics = computed(displayTopics)
     const searching = computed(() => props.messagesState.searching || false)
     const loading = computed(() => props.messagesState.loading === true)
 
