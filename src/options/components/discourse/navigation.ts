@@ -264,12 +264,13 @@ export function categoryRouteFromPath(pathname: string): CategoryRoute | null {
   const listTypeSegment = listIndex >= 0 ? segments[listIndex + 1]?.toLocaleLowerCase() : 'latest'
   const listType = listTypeSegment as TopicListType
 
-  if (!listTypeSegment || !TOPIC_LIST_TYPES.has(listType)) return null
+  if (!listTypeSegment || !TOPIC_LIST_TYPES.has(listType as TopicListType)) return null
 
   const idIndex = categorySegments.findIndex(
     segment => /^\d+$/.test(segment) && Number(segment) > 0
   )
   const categoryId = idIndex >= 0 ? Number(categorySegments[idIndex]) : null
+  if (categoryId !== null && !Number.isFinite(categoryId)) return null
   const slugSegments = idIndex >= 0 ? categorySegments.slice(0, idIndex) : categorySegments
   const slug = slugSegments.join('/').trim()
   if (!slug) return null

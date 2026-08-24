@@ -2016,9 +2016,7 @@
     if (!toolbar?.isConnected) return false
 
     const composerRoot = getComposerRoot(toolbar)
-    const existingButtons = Array.from(
-      composerRoot.querySelectorAll(TOOLBAR_BUTTON_SELECTOR)
-    )
+    const existingButtons = Array.from(composerRoot.querySelectorAll(TOOLBAR_BUTTON_SELECTOR))
 
     // 正确工具栏里已经存在按钮：只保留这一枚，并清理同一 composer 内的历史重复项。
     const correctButton = existingButtons.find(btn => btn.parentElement === toolbar)
