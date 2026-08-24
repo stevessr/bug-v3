@@ -10,6 +10,7 @@ export interface AppSettings {
   // New settings for X.com selectors
   enableXcomExtraSelectors?: boolean // 控制是否在 X.com 启用额外选择器
   enableCalloutSuggestions?: boolean // 在编辑器中启用 callout suggestions（'[' 触发）
+  enableColorSuggestions?: boolean // 在编辑器中启用 [co 颜色自动补全（[color=...][/color]）
   enableBatchParseImages?: boolean // 控制是否显示"一键解析并添加所有图片"按钮
   enableExperimentalFeatures?: boolean // 启用试验性特性开关（控制实验功能显示）
   enableChatMultiReactor?: boolean // 启用聊天多表情反应功能（在 Discourse 聊天消息旁添加批量发送表情按钮）

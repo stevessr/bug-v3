@@ -25,6 +25,7 @@ export const defaultSettings: AppSettings = {
   enableHoverPreview: true, // 默认启用悬浮预览
   enableXcomExtraSelectors: false, // 默认不启用 X.com 额外选择器
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
+  enableColorSuggestions: true, // 默认启用 [co 颜色自动补全
   enableBatchParseImages: false, // 默认启用一键解析图片按钮
   enableExperimentalFeatures: false, // 默认关闭试验性特性
   enableChatMultiReactor: false, // 默认禁用聊天多表情反应功能

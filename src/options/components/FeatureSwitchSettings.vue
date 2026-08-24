@@ -279,6 +279,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
       />
 
       <SettingSwitch
+        :model-value="getSetting('enableColorSuggestions', true)"
+        @update:model-value="handleSettingUpdate('enableColorSuggestions', $event)"
+        label="启用颜色自动补全"
+        description="在编辑器中输入 [co 时显示 [color=...] 补全，支持调色盘、屏幕取色与 HEX/RGB/HSL 切换"
+      />
+
+      <SettingSwitch
         :model-value="getSetting('enableBatchParseImages', true)"
         @update:model-value="handleSettingUpdate('enableBatchParseImages', $event)"
         label="启用一键解析全部图片"

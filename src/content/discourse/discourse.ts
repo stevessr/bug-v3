@@ -6,6 +6,7 @@ import { scanForCookedContent, observeCookedContent } from './utils/cooked-conte
 import { isDiscoursePage } from './utils/page-detection'
 import { setupDiscourseUploadHandler } from './utils/upload-handler'
 import { initCalloutSuggestions } from './callout-suggestions'
+import { initColorSuggestions } from './color-suggestions'
 import { initChatMultiReactor } from './utils/chat-multi-reactor'
 import { initSubmenuInjector } from './utils/submenu-injector'
 import { initLinuxDoSeeking } from './seeking'
@@ -29,6 +30,7 @@ export async function initDiscourse() {
     const settings = await requestSettingsBatch([
       'enableBatchParseImages',
       'enableCalloutSuggestions',
+      'enableColorSuggestions',
       'enableChatMultiReactor',
       'chatMultiReactorEmojis',
       'enableSubmenuInjector',
@@ -53,6 +55,13 @@ export async function initDiscourse() {
       initCalloutSuggestions()
     } else {
       console.log('[DiscourseOneClick] callout suggestions disabled by user setting')
+    }
+
+    // 颜色自动补全（默认启用，只有明确设置为 false 时才禁用）
+    if (settings.enableColorSuggestions !== false) {
+      initColorSuggestions()
+    } else {
+      console.log('[DiscourseOneClick] color suggestions disabled by user setting')
     }
 
     // 聊天多表情反应功能

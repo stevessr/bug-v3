@@ -243,6 +243,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableCalloutSuggestions: value })
   }
 
+  const updateEnableColorSuggestions = (value: boolean) => {
+    emojiStore.updateSettings({ enableColorSuggestions: value })
+  }
+
   const updateEnableBatchParseImages = (value: boolean) => {
     emojiStore.updateSettings({ enableBatchParseImages: value })
   }
@@ -842,6 +846,7 @@ export default function useOptions() {
     updateForceMobileMode,
     updateEnableXcomExtraSelectors,
     updateEnableCalloutSuggestions,
+    updateEnableColorSuggestions,
     updateEnableBatchParseImages,
     updateEnableExperimentalFeatures,
     updateEnableChatMultiReactor,

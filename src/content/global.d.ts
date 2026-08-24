@@ -18,6 +18,11 @@ declare global {
 
     /** Chrome API (may not be available in all contexts) */
     chrome?: typeof globalThis.chrome
+
+    /** EyeDropper API（屏幕取色，Chrome 95+；不支持的浏览器上相关按钮隐藏） */
+    EyeDropper?: new () => {
+      open: () => Promise<{ sRGBHex: string }>
+    }
   }
 }
 

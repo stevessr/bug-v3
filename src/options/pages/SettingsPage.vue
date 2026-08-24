@@ -55,6 +55,7 @@ const {
   updateForceMobileMode,
   updateEnableXcomExtraSelectors,
   updateEnableCalloutSuggestions,
+  updateEnableColorSuggestions,
   updateEnableBatchParseImages,
   updateEnableExperimentalFeatures,
   updateEnableChatMultiReactor,
@@ -169,6 +170,7 @@ onMounted(async () => {
               @update:forceMobileMode="updateForceMobileMode"
               @update:enableXcomExtraSelectors="updateEnableXcomExtraSelectors"
               @update:enableCalloutSuggestions="updateEnableCalloutSuggestions"
+              @update:enableColorSuggestions="updateEnableColorSuggestions"
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
               @update:imageCacheStrategy="updateImageCacheStrategy"
