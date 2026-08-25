@@ -47,6 +47,10 @@ export default defineComponent({
     exemptUsername: {
       type: String,
       default: null
+    },
+    markingAll: {
+      type: Boolean,
+      default: false
     }
   },
   emits: {
@@ -54,7 +58,9 @@ export default defineComponent({
     refresh: () => true,
     openAll: () => true,
     open: (path: string) => typeof path === 'string',
-    changeFilter: (filter: DiscourseNotificationFilter) => typeof filter === 'string'
+    changeFilter: (filter: DiscourseNotificationFilter) => typeof filter === 'string',
+    markAll: () => true,
+    markRead: (id: number) => Number.isFinite(id)
   },
   setup(props, { emit }) {
     const preview = computed(() => props.notifications.slice(0, 20))
@@ -91,6 +97,16 @@ export default defineComponent({
                   <Button
                     size="small"
                     class="notifications-dropdown__action"
+                    disabled={props.markingAll}
+                    loading={props.markingAll}
+                    aria-label="将全部通知标记为已读"
+                    onClick={() => emit('markAll')}
+                  >
+                    全部已读
+                  </Button>
+                  <Button
+                    size="small"
+                    class="notifications-dropdown__action"
                     onClick={() => emit('openAll')}
                   >
                     查看全部
@@ -110,6 +126,8 @@ export default defineComponent({
                     emit('changeFilter', filter)
                   }
                   onOpen={(path: string) => emit('open', path)}
+                  onMarkAll={() => emit('markAll')}
+                  onMarkRead={(id: number) => emit('markRead', id)}
                 />
               </div>
             </div>

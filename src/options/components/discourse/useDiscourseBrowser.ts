@@ -44,6 +44,7 @@ import {
 } from './navigation'
 import {
   loadNotifications as loadNotificationsRoute,
+  markNotificationsRead as markNotificationsReadRoute,
   normalizeNotificationsFromResponse
 } from './routes/notifications'
 import { loadSearch as loadSearchRoute } from './routes/search'
@@ -1133,6 +1134,17 @@ export function useDiscourseBrowser() {
     } finally {
       notificationsInFlight.delete(cacheKey)
     }
+  }
+
+  /** Marks one notification (id) or all read; updates local tab state + caches. */
+  async function markNotificationRead(id?: number) {
+    const tab = activeTab.value
+    if (!tab) return
+    await markNotificationsReadRoute(baseUrl, id)
+    tab.notifications = (tab.notifications || []).map(item =>
+      !id || item.id === id ? { ...item, read: true } : item
+    )
+    syncUnreadStateFromNotifications(tab)
   }
 
   async function loadSearch(tab: BrowserTab, query: string) {
@@ -3045,6 +3057,7 @@ export function useDiscourseBrowser() {
     replyChatInteraction,
     changeTopicListType,
     loadNotifications,
+    markNotificationRead,
     checkTopicListUpdates,
     applyPendingTopics,
     pollTopicUpdates,

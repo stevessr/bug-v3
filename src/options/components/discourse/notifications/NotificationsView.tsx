@@ -189,7 +189,7 @@ export default defineComponent({
     blockedUsernames: { type: Array as () => string[], default: () => [] },
     exemptUsername: { type: String as PropType<string | null>, default: null }
   },
-  emits: ['changeFilter', 'open'],
+  emits: ['changeFilter', 'open', 'markAll', 'markRead'],
   setup(props, { emit }) {
     // Notification titles are supplied as small pieces of cooked HTML.  They
     // can still contain site-specific `:shortcode:` values though, unlike a
@@ -344,7 +344,11 @@ export default defineComponent({
     const handleOpen = (n: DiscourseNotification) => {
       const path = buildPath(n)
       if (path) emit('open', path)
+      // Opening an unread notification marks it read, mirroring Discourse.
+      if (!n.read) emit('markRead', n.id)
     }
+
+    const hasUnread = computed(() => props.notifications.some(item => !item.read))
 
     const getAccessibleLabel = (n: DiscourseNotification) => {
       const actor = formatActor(n)
@@ -379,8 +383,19 @@ export default defineComponent({
 
     return () => (
       <section class="ntf-root" aria-label="通知列表">
-        {/* Notification list */}
         <div class="ntf-list" aria-live="polite" aria-busy={props.loading}>
+          <div class="ntf-toolbar">
+            <button
+              type="button"
+              class="ntf-mark-all"
+              disabled={!hasUnread.value}
+              title="将全部通知标记为已读"
+              aria-label="将全部通知标记为已读"
+              onClick={() => emit('markAll')}
+            >
+              全部已读
+            </button>
+          </div>
           {props.loading ? (
             <div class="ntf-loading">
               <Spin size="small" />

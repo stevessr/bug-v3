@@ -19,7 +19,9 @@ defineEmits([
   'categoryClick',
   'openUser',
   'changeTopicListType',
-  'navigate'
+  'navigate',
+  'markAll',
+  'markRead'
 ])
 </script>
 
@@ -51,6 +53,8 @@ defineEmits([
         :exemptUsername="exemptUsername"
         @changeFilter="$emit('changeFilter', $event)"
         @open="$emit('openNotification', $event)"
+        @markAll="$emit('markAll')"
+        @markRead="$emit('markRead', $event)"
       />
     </div>
     <div class="notifications-panel-side">

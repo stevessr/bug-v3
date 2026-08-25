@@ -172,6 +172,7 @@ const {
   replyChatInteraction,
   changeTopicListType,
   loadNotifications,
+  markNotificationRead,
   checkTopicListUpdates,
   applyPendingTopics,
   pollTopicUpdates,
@@ -847,6 +848,27 @@ const handleRefreshNotifications = async () => {
   } finally {
     notificationsLoading.value = false
   }
+}
+
+const markingAllRead = ref(false)
+const handleMarkAllNotificationsRead = async () => {
+  if (markingAllRead.value) return
+  markingAllRead.value = true
+  try {
+    await markNotificationRead()
+    await handleRefreshNotifications()
+    message.success('通知已全部标为已读')
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '标记已读失败')
+  } finally {
+    markingAllRead.value = false
+  }
+}
+
+const handleMarkNotificationRead = (id: number) => {
+  void markNotificationRead(id).catch(error => {
+    console.warn('[DiscourseBrowser] mark notification read failed:', error)
+  })
 }
 
 const handleNotificationFilterChange = async (filter: DiscourseNotificationFilter) => {
@@ -3466,6 +3488,9 @@ onUnmounted(() => {
           @openAll="handleOpenNotifications"
           @open="handleOpenNotification"
           @changeFilter="handleNotificationFilterChange"
+          :markingAll="markingAllRead"
+          @markAll="handleMarkAllNotificationsRead"
+          @markRead="handleMarkNotificationRead"
         />
       </template>
     </BrowserToolbar>
@@ -3622,7 +3647,8 @@ onUnmounted(() => {
         @categoryClick="handleCategoryClick"
         @openUser="handleUserClick"
         @changeTopicListType="handleChangeTopicListType"
-        @navigate="handleNavigate"
+        @markAll="handleMarkAllNotificationsRead"
+        @markRead="handleMarkNotificationRead"
       />
 
       <TagTopicsView

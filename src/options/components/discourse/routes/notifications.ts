@@ -202,3 +202,26 @@ export async function loadNotifications(
           .length
   }
 }
+
+/**
+ * Marks notifications read via `PUT /notifications/mark-read`.
+ * With `id`: marks that single notification. Without: marks ALL read
+ * (Discourse core NotificationsController#mark_read).
+ */
+export async function markNotificationsRead(baseUrl: Ref<string>, id?: number): Promise<void> {
+  const params = new URLSearchParams()
+  if (id) params.set('id', String(id))
+  const result = await pageFetch<any>(`${baseUrl.value}/notifications/mark-read`, {
+    method: 'PUT',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Discourse-Logged-In': 'true',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    },
+    body: params.toString()
+  })
+  if (!result.ok) {
+    const data = extractData(result)
+    throw new Error(data?.errors?.join(', ') || data?.error || '标记通知已读失败')
+  }
+}
