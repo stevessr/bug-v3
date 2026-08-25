@@ -20,6 +20,38 @@ import {
 } from '../linux.do/preloadedCategories'
 import '../css/SearchView.css'
 
+const SEARCH_HISTORY_LIMIT = 10
+
+const searchHistoryKey = (baseUrl: string) => {
+  try {
+    return `discourse-browser:search-history:v1:${encodeURIComponent(new URL(baseUrl).origin)}`
+  } catch {
+    return ''
+  }
+}
+
+const loadSearchHistory = (baseUrl: string): string[] => {
+  const key = searchHistoryKey(baseUrl)
+  if (!key || typeof localStorage === 'undefined') return []
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) || '[]')
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+      : []
+  } catch {
+    return []
+  }
+}
+
+const saveSearchHistory = (baseUrl: string, entries: string[]) => {
+  const key = searchHistoryKey(baseUrl)
+  if (!key || typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(key, JSON.stringify(entries.slice(0, SEARCH_HISTORY_LIMIT)))
+  } catch {
+    // History is optional; quota errors must not break searching.
+  }
+}
 export default defineComponent({
   name: 'SearchView',
   props: {
@@ -38,6 +70,8 @@ export default defineComponent({
     const tagOptions = ref<Array<{ value: string; label: string; description?: string | null }>>([])
     const tagsLoading = ref(false)
     const showAdvanced = ref(false)
+    const searchHistory = ref<string[]>(loadSearchHistory(props.baseUrl))
+    const historyVisible = ref(false)
     let tagSearchTimer: number | null = null
     const preloadedCategoriesReadyToken = ref(0)
 
@@ -226,7 +260,29 @@ export default defineComponent({
     )
 
     const handleSearch = () => {
-      emit('search', localQuery.value.trim(), { ...localFilters.value })
+      const query = localQuery.value.trim()
+      if (query) {
+        const next = [query, ...searchHistory.value.filter(item => item !== query)]
+        searchHistory.value = next.slice(0, SEARCH_HISTORY_LIMIT)
+        saveSearchHistory(props.baseUrl, searchHistory.value)
+      }
+      historyVisible.value = false
+      emit('search', query, { ...localFilters.value })
+    }
+
+    const removeHistoryEntry = (entry: string) => {
+      searchHistory.value = searchHistory.value.filter(item => item !== entry)
+      saveSearchHistory(props.baseUrl, searchHistory.value)
+    }
+
+    const clearSearchHistory = () => {
+      searchHistory.value = []
+      saveSearchHistory(props.baseUrl, [])
+    }
+
+    const applyHistoryEntry = (entry: string) => {
+      localQuery.value = entry
+      handleSearch()
     }
 
     const setSearchScope = (inMessages: boolean) => {
@@ -286,6 +342,14 @@ export default defineComponent({
               onUpdate:value={(value: string) => {
                 localQuery.value = value
               }}
+              onFocus={() => {
+                historyVisible.value = true
+              }}
+              onBlur={() => {
+                window.setTimeout(() => {
+                  historyVisible.value = false
+                }, 150)
+              }}
             />
             <Button
               type="primary"
@@ -303,6 +367,50 @@ export default defineComponent({
               </span>
             </Button>
           </form>
+
+          {historyVisible.value && !localQuery.value.trim() && searchHistory.value.length > 0 && (
+            <div class="search-history" aria-label="搜索历史">
+              <div class="search-history__header">
+                <span class="search-history__title">最近搜索</span>
+                <button
+                  type="button"
+                  class="search-history__clear"
+                  onMousedown={(event: Event) => event.preventDefault()}
+                  onClick={clearSearchHistory}
+                >
+                  清除
+                </button>
+              </div>
+              <div class="search-history__items">
+                {searchHistory.value.map(entry => (
+                  <span key={entry} class="search-history__item">
+                    <button
+                      type="button"
+                      class="search-history__entry"
+                      title={`搜索“${entry}”`}
+                      onMousedown={(event: Event) => {
+                        event.preventDefault()
+                        applyHistoryEntry(entry)
+                      }}
+                    >
+                      {entry}
+                    </button>
+                    <button
+                      type="button"
+                      class="search-history__remove"
+                      aria-label={`删除搜索记录 ${entry}`}
+                      onMousedown={(event: Event) => {
+                        event.preventDefault()
+                        removeHistoryEntry(entry)
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div class="search-scope" role="radiogroup" aria-label="搜索范围">
             <span class="search-scope__label">范围</span>
