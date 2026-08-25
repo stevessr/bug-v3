@@ -74,7 +74,26 @@ DOMPurify.addHook('uponSanitizeElement', node => {
   frame.setAttribute('allowfullscreen', '')
 })
 
+// DOMPurify is deterministic for a fixed config, so identical cooked HTML
+// (re-rendered lists, PostContent's double pass) can reuse the previous
+// result instead of re-sanitizing on every render. Bounded LRU keeps
+// memory flat on long browsing sessions.
+const SANITIZE_CACHE_LIMIT = 300
+const sanitizeCache = new Map<string, string>()
+
 export function sanitizeDiscourseHtml(value: unknown): string {
   if (typeof value !== 'string' || !value) return ''
-  return DOMPurify.sanitize(value, DISCOURSE_HTML_SANITIZE_CONFIG)
+  const cached = sanitizeCache.get(value)
+  if (cached !== undefined) {
+    sanitizeCache.delete(value)
+    sanitizeCache.set(value, cached)
+    return cached
+  }
+  const result = DOMPurify.sanitize(value, DISCOURSE_HTML_SANITIZE_CONFIG)
+  if (sanitizeCache.size >= SANITIZE_CACHE_LIMIT) {
+    const oldest = sanitizeCache.keys().next().value
+    if (oldest !== undefined) sanitizeCache.delete(oldest)
+  }
+  sanitizeCache.set(value, result)
+  return result
 }

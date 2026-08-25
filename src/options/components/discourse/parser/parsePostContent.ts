@@ -41,14 +41,28 @@ const rewriteImageSources = (node: unknown, baseUrl?: string): void => {
   }
 }
 
+const PARSE_CACHE_LIMIT = 200
+const parseCache = new Map<string, ParsedContent>()
+
 export const parsePostContent = (cooked: string, baseUrl?: string): ParsedContent => {
   if (!cooked) return { html: '', images: [], segments: [] }
+
+  // TopicView re-derives its parsed-post map whenever any post in the stream
+  // changes (likes, message-bus patches). Parsing is a full rehype pass, so
+  // memoize by (baseUrl, cooked); entries evicted LRU to bound memory.
+  const cacheKey = `${baseUrl ?? ''}\u0000${cooked}`
+  const cached = parseCache.get(cacheKey)
+  if (cached) {
+    parseCache.delete(cacheKey)
+    parseCache.set(cacheKey, cached)
+    return cached
+  }
 
   const sanitizedCooked = sanitizeDiscourseHtml(cooked)
 
   const hasSpoiler =
     sanitizedCooked.includes('spoiled') || sanitizedCooked.includes('spoiler-blurred')
-  if (hasSpoiler) {
+  if (__ENABLE_LOGGING__ && hasSpoiler) {
     console.log('[parsePostContent] Input contains spoiler:', sanitizedCooked.substring(0, 500))
   }
 
@@ -80,7 +94,7 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   const html = String(processor.stringify(tree))
 
-  if (hasSpoiler) {
+  if (__ENABLE_LOGGING__ && hasSpoiler) {
     console.log('[parsePostContent] Output HTML:', html.substring(0, 500))
     console.log('[parsePostContent] Lightboxes extracted:', ctx.lightboxes.length)
   }
@@ -89,5 +103,13 @@ export const parsePostContent = (cooked: string, baseUrl?: string): ParsedConten
 
   const fullHtml = renderSegmentsToHtml(segments)
 
-  return { html: fullHtml, images: ctx.images, segments, footnotes }
+  const result = { html: fullHtml, images: ctx.images, segments, footnotes }
+
+  if (parseCache.size >= PARSE_CACHE_LIMIT) {
+    const oldest = parseCache.keys().next().value
+    if (oldest !== undefined) parseCache.delete(oldest)
+  }
+  parseCache.set(cacheKey, result)
+
+  return result
 }

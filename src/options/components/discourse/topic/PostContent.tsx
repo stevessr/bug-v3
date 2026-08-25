@@ -51,15 +51,30 @@ export default defineComponent({
       return true
     }
 
-    const replaceEmojiInCookedHtml = (html: string) => {
-      if (!html || !emojiReadyToken.value) return html
-      return replaceEmojiShortcodesInHtml(html)
-    }
+    const PROCESS_CACHE_LIMIT = 200
+    const processCache = new Map<string, string>()
 
     const processHtmlContent = (html: string) => {
       // Access token to trigger reactivity
-      emojiReadyToken.value
-      return sanitizeDiscourseHtml(replaceEmojiInCookedHtml(sanitizeDiscourseHtml(html)))
+      const emojiToken = emojiReadyToken.value
+      // Render functions run on every parent update; sanitize + emoji
+      // replacement are expensive, so memoize per (emoji token, html).
+      const key = `${emojiToken}\u0000${html}`
+      const cached = processCache.get(key)
+      if (cached !== undefined) {
+        processCache.delete(key)
+        processCache.set(key, cached)
+        return cached
+      }
+      const result = sanitizeDiscourseHtml(
+        emojiToken ? replaceEmojiShortcodesInHtml(sanitizeDiscourseHtml(html)) : html
+      )
+      if (processCache.size >= PROCESS_CACHE_LIMIT) {
+        const oldest = processCache.keys().next().value
+        if (oldest !== undefined) processCache.delete(oldest)
+      }
+      processCache.set(key, result)
+      return result
     }
 
     const getQuoteTarget = (quote: HTMLElement) => {

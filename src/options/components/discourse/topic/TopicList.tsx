@@ -148,20 +148,28 @@ export default defineComponent({
       return merged
     }
 
+    // Index categories once per (props, preloaded) change instead of
+    // rebuilding the merged source array for every topic row render.
+    const categoryIndex = computed(() => {
+      const map = new Map<number, DiscourseCategory>()
+      for (const category of props.categories) map.set(category.id, category)
+      for (const category of preloadedCategories.value) {
+        if (!map.has(category.id)) map.set(category.id, category)
+      }
+      return map
+    })
+
     const getCategory = (topic: DiscourseTopic | SuggestedTopic) => {
       const rawTopic = topic as DiscourseTopic & { category?: unknown }
       const categoryId = Number(rawTopic.category_id)
       const inline = normalizeInlineCategory(rawTopic.category)
-      const sources = [...props.categories, ...preloadedCategories.value]
       const fromId = Number.isFinite(categoryId)
-        ? sources.find(category => category.id === categoryId) || null
+        ? categoryIndex.value.get(categoryId) || null
         : null
       return mergeCategory(fromId, inline)
     }
 
-    const renderCategory = (topic: DiscourseTopic | SuggestedTopic) => {
-      const cat = getCategory(topic)
-      if (!cat) return null
+    const renderCategory = (cat: DiscourseCategory) => {
       return (
         <TopicCategoryBadge
           category={cat}
@@ -177,7 +185,7 @@ export default defineComponent({
       const tags = (topic as DiscourseTopic).tags || []
       return (
         <div class="topic-meta">
-          {category && renderCategory(topic)}
+          {category && renderCategory(category)}
           {category && tags.length > 0 && <span class="topic-meta-divider" aria-hidden="true" />}
           {tags.map(tag => (
             <span
@@ -334,42 +342,46 @@ export default defineComponent({
               {renderTopicMeta(topic)}
             </div>
             <div class="topic-right">
-              {getPosters(topic, props.users).length > 0 && (
-                <div class="topic-posters">
-                  {getPosters(topic, props.users).map(poster => (
-                    <div
-                      key={poster.user_id}
-                      class={['poster-avatar', poster.extras === 'latest' ? 'latest-poster' : '']}
-                      data-discourse-url={
-                        poster.user
-                          ? `${props.baseUrl}/u/${encodeURIComponent(poster.user.username)}`
-                          : undefined
-                      }
-                      data-user-card={poster.user?.username}
-                      title={
-                        poster.user
-                          ? `${poster.user.name || poster.user.username} - ${poster.description}`
-                          : poster.description
-                      }
-                      onClick={(e: Event) => {
-                        if (poster.user) {
-                          e.stopPropagation()
-                          handleUserClick(poster.user.username)
+              {(() => {
+                const posters = getPosters(topic, props.users)
+                if (posters.length === 0) return null
+                return (
+                  <div class="topic-posters">
+                    {posters.map(poster => (
+                      <div
+                        key={poster.user_id}
+                        class={['poster-avatar', poster.extras === 'latest' ? 'latest-poster' : '']}
+                        data-discourse-url={
+                          poster.user
+                            ? `${props.baseUrl}/u/${encodeURIComponent(poster.user.username)}`
+                            : undefined
                         }
-                      }}
-                    >
-                      {poster.user && (
-                        <img
-                          src={getAvatarUrl(poster.user.avatar_template, props.baseUrl, 24)}
-                          alt={poster.user.username}
-                          class="avatar"
-                          loading="lazy"
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                        data-user-card={poster.user?.username}
+                        title={
+                          poster.user
+                            ? `${poster.user.name || poster.user.username} - ${poster.description}`
+                            : poster.description
+                        }
+                        onClick={(e: Event) => {
+                          if (poster.user) {
+                            e.stopPropagation()
+                            handleUserClick(poster.user.username)
+                          }
+                        }}
+                      >
+                        {poster.user && (
+                          <img
+                            src={getAvatarUrl(poster.user.avatar_template, props.baseUrl, 24)}
+                            alt={poster.user.username}
+                            class="avatar"
+                            loading="lazy"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
               <div class="topic-numbers">
                 <span class="topic-stat topic-col topic-col--replies">{topic.posts_count}</span>
                 <span class="topic-stat topic-col topic-col--views">{topic.views}</span>
