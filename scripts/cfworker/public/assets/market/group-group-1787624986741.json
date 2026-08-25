@@ -1,0 +1,66 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-08-25T03:31:35.992Z",
+  "group": {
+    "id": "group-1787624986741",
+    "name": "超时空辉夜姬",
+    "icon": "https://cdn3.ldstatic.com/original/4X/2/b/1/2b1311d5c9e521df530ab51c765ae9f1fdba0486.webp?v=1787625044416",
+    "detail": "https://www.pixiv.net/artworks/148832528",
+    "order": 13
+  },
+  "id": "group-1787624986741",
+  "name": "超时空辉夜姬",
+  "icon": "https://cdn3.ldstatic.com/original/4X/2/b/1/2b1311d5c9e521df530ab51c765ae9f1fdba0486.webp?v=1787625044416",
+  "detail": "https://www.pixiv.net/artworks/148832528",
+  "order": 13,
+  "emojis": [
+    {
+      "id": "emoji-1787625044416-7v5vkr",
+      "packet": 1787625044416,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/2/b/1/2b1311d5c9e521df530ab51c765ae9f1fdba0486.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/2/b/1/2b1311d5c9e521df530ab51c765ae9f1fdba0486.webp",
+      "groupId": "group-1787624986741"
+    },
+    {
+      "id": "emoji-1787625044417-sgnbqs",
+      "packet": 1787625044417,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/6/5/c/65ca03be6e1d751c2eee4883482e115b8ae4ef78.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/6/5/c/65ca03be6e1d751c2eee4883482e115b8ae4ef78.webp",
+      "groupId": "group-1787624986741"
+    },
+    {
+      "id": "emoji-1787625044417-sg0w8c",
+      "packet": 1787625044417,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/7/1/2/712c4760437d8de8d446ba40fcee2f1bf243d6dc.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/7/1/2/712c4760437d8de8d446ba40fcee2f1bf243d6dc.webp",
+      "groupId": "group-1787624986741"
+    },
+    {
+      "id": "emoji-1787625044417-2w9glq",
+      "packet": 1787625044417,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/5/a/6/5a62efa00ed3de71e8005480dbe928d1abe5e97f.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/5/a/6/5a62efa00ed3de71e8005480dbe928d1abe5e97f.webp",
+      "groupId": "group-1787624986741"
+    },
+    {
+      "id": "emoji-1787625044417-7vqccc",
+      "packet": 1787625044417,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/4/c/7/4c73f691dd7efed71ad1e368e778f12c4a955f11.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/4/c/7/4c73f691dd7efed71ad1e368e778f12c4a955f11.webp",
+      "groupId": "group-1787624986741"
+    },
+    {
+      "id": "emoji-1787625044417-4yt6ud",
+      "packet": 1787625044417,
+      "name": "image",
+      "url": "https://cdn3.ldstatic.com/original/4X/1/f/b/1fbd07d2770c1e88662b6fd1a18aa231f1104e00.webp",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/1/f/b/1fbd07d2770c1e88662b6fd1a18aa231f1104e00.webp",
+      "groupId": "group-1787624986741"
+    }
+  ]
+}

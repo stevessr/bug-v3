@@ -1,0 +1,18 @@
+{
+  "topic": "all",
+  "page": 7,
+  "pageSize": 48,
+  "totalPages": 7,
+  "totalGroups": 289,
+  "groups": [
+    {
+      "id": "group-1763038870366",
+      "name": "🍟 藤田言音",
+      "icon": "https://cdn3.ldstatic.com/original/4X/6/d/4/6d490b7ac0c7b80ac7ecae455b9f928ee151df92.avif",
+      "topic": "other",
+      "order": 288,
+      "emojiCount": 49,
+      "isArchived": false
+    }
+  ]
+}
