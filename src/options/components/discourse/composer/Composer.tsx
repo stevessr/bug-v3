@@ -10,7 +10,7 @@ import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories
 } from '../linux.do/preloadedCategories'
-import { createTopic, replyToTopic, editPost, searchTags } from '../actions'
+import { createTopic, replyToTopic, editPost, searchTags, resolveLinkTitle } from '../actions'
 import { parseEmojiShortcodeToBBCode, renderBBCode } from '../bbcode'
 import { renderDiscourseMarkdown } from '../bbcode/renderDiscourse'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'
@@ -20,8 +20,24 @@ import { getDiscourseIconHref } from '../layout/iconSprite'
 import ProseMirrorEditor from '../ProseMirrorEditor'
 import { extractData, getAvatarUrl, pageFetch } from '../utils'
 
+import {
+  clearDraft,
+  deleteTemplate,
+  draftScope,
+  loadDraft,
+  loadRecentTags,
+  loadTemplates,
+  markTemplateUsed,
+  recordRecentTags,
+  saveDraft,
+  saveTemplate,
+  type ComposerDraft,
+  type ComposerTemplate
+} from './composerStorage'
+
 import { WysiwygEditor } from '@/components/editor/wysiwyg'
 import { serializeWysiwygDiscourseDrafts } from '@/components/editor/wysiwyg/discourseDrafts'
+
 import '../css/Composer.css'
 import '../css/highlight.css'
 
@@ -59,6 +75,31 @@ export default defineComponent({
     const tagsLoading = ref(false)
     const categoryId = ref<number | null>(props.defaultCategoryId ?? null)
     const editMode = ref<'edit' | 'preview' | 'split' | 'wysiwyg'>('edit')
+    const linkResolving = ref(false)
+    const linkHint = ref('')
+    let linkResolveTimer: number | null = null
+    let draftSaveTimer: number | null = null
+    const draftPanelOpen = ref(false)
+    const templatePanelOpen = ref(false)
+    const templates = ref<ComposerTemplate[]>([])
+    const templateNameInput = ref('')
+
+    const activeDraft = ref<ComposerDraft | null>(null)
+
+    const refreshActiveDraft = () => {
+      if (props.mode === 'edit') {
+        activeDraft.value = null
+        return
+      }
+      activeDraft.value = loadDraft(
+        props.baseUrl,
+        draftScope(props.mode as 'topic' | 'reply' | 'privateMessage', props.topicId)
+      )
+    }
+
+    const refreshTemplates = () => {
+      templates.value = loadTemplates(props.baseUrl)
+    }
     const editReason = ref('')
     const inputFormat = ref<'markdown' | 'bbcode'>('markdown')
     const isSubmitting = ref(false)
@@ -124,6 +165,8 @@ export default defineComponent({
     onBeforeUnmount(() => {
       if (tagSearchTimer) window.clearTimeout(tagSearchTimer)
       if (recipientSearchTimer) clearTimeout(recipientSearchTimer)
+      if (linkResolveTimer) window.clearTimeout(linkResolveTimer)
+      if (draftSaveTimer) window.clearTimeout(draftSaveTimer)
     })
 
     watch(
@@ -626,8 +669,8 @@ export default defineComponent({
             categoryId: categoryId.value,
             tags: selectedTags.value
           })
+          recordRecentTags(props.baseUrl, selectedTags.value)
           title.value = ''
-          selectedTags.value = []
         } else if (props.mode === 'privateMessage') {
           result = await createTopic(props.baseUrl, {
             title: title.value.trim() || `私信给 ${targetUsernames.value.join(', ')}`,
@@ -654,6 +697,13 @@ export default defineComponent({
             locale: ''
           })
         }
+        if (props.mode === 'topic') {
+          clearDraft(props.baseUrl, draftScope('topic'))
+        } else if (props.mode === 'privateMessage') {
+          clearDraft(props.baseUrl, draftScope('privateMessage'))
+        } else if (props.mode === 'reply') {
+          clearDraft(props.baseUrl, draftScope('reply', props.topicId))
+        }
         raw.value = ''
         successMessage.value =
           props.mode === 'edit'
@@ -668,16 +718,27 @@ export default defineComponent({
         isSubmitting.value = false
       }
     }
-
     async function runTagSearch(query: string) {
       tagsLoading.value = true
       try {
         const results = await searchTags(props.baseUrl, query, categoryId.value)
-        tagOptions.value = results.map(item => ({
+        let options = results.map(item => ({
           value: item.name || item.text,
           label: item.text || item.name,
           description: item.description || null
         }))
+        if (!query.trim()) {
+          // Default recommendation: locally tracked recently used tags first,
+          // then whatever the server ranks for an empty query (recently used
+          // on newer Discourse installs).
+          const known = new Set(options.map(option => option.value.toLowerCase()))
+          const recent = loadRecentTags(props.baseUrl)
+            .filter(tag => tag && !known.has(tag.toLowerCase()))
+            .slice(0, 10)
+            .map(tag => ({ value: tag, label: tag, description: '近期使用' }))
+          options = [...recent, ...options]
+        }
+        tagOptions.value = options
       } catch {
         tagOptions.value = []
       } finally {
@@ -706,6 +767,164 @@ export default defineComponent({
         runTagSearch('')
       }
     })
+
+    // ── 标题链接解析（对齐 Discourse 原生行为：把链接粘进标题自动解析出页面标题）──
+    const isExternalUrl = (candidate: string) => {
+      if (!/^https?:\/\/\S+$/i.test(candidate)) return false
+      try {
+        return new URL(candidate).hostname !== new URL(props.baseUrl).hostname
+      } catch {
+        return false
+      }
+    }
+
+    const resolveTitleFromLink = async (url: string) => {
+      linkResolving.value = true
+      try {
+        const resolved = await resolveLinkTitle(props.baseUrl, url, categoryId.value)
+        // 用户可能在请求期间继续输入，只有标题仍是这个链接时才替换。
+        if (!resolved || title.value.trim() !== url) return
+        title.value = resolved.title
+        const current = raw.value.trimEnd()
+        if (!current.toLowerCase().includes(url.toLowerCase())) {
+          raw.value = current ? `${current}\n\n${url}\n` : `${url}\n`
+        }
+        linkHint.value = '已解析链接标题并插入正文'
+      } finally {
+        linkResolving.value = false
+      }
+    }
+
+    watch(title, value => {
+      linkHint.value = ''
+      if (props.mode !== 'topic') return
+      if (linkResolveTimer) window.clearTimeout(linkResolveTimer)
+      const candidate = value.trim()
+      if (!isExternalUrl(candidate)) return
+      linkResolveTimer = window.setTimeout(() => void resolveTitleFromLink(candidate), 500)
+    })
+
+    // ── 本地草稿：按 论坛+模式(+话题) 作用域自动保存，切换时恢复 ──
+    watch(
+      () => [props.mode, props.topicId] as const,
+      ([mode]) => {
+        draftPanelOpen.value = false
+        templatePanelOpen.value = false
+        if (mode === 'edit') {
+          activeDraft.value = null
+          return
+        }
+        const scope = draftScope(mode as 'topic' | 'reply' | 'privateMessage', props.topicId)
+        const draft = loadDraft(props.baseUrl, scope)
+        activeDraft.value = draft
+        if (!draft) return
+        title.value = draft.title || ''
+        // 追加而非覆盖，保留父组件刚插入的引用内容。
+        const pending = raw.value.trimEnd()
+        const restored = (draft.raw || '').trim()
+        raw.value =
+          pending && restored && pending !== restored
+            ? `${pending}\n\n${restored}`
+            : restored || pending
+        selectedTags.value = Array.isArray(draft.tags) ? [...draft.tags] : []
+        if (
+          mode === 'topic' &&
+          typeof draft.categoryId === 'number' &&
+          props.defaultCategoryId == null
+        ) {
+          categoryId.value = draft.categoryId
+        }
+        if (Array.isArray(draft.recipients) && draft.recipients.length) {
+          setInitialRecipients(draft.recipients)
+        }
+      },
+      { immediate: true }
+    )
+
+    watch(
+      () =>
+        [
+          props.mode,
+          props.topicId,
+          title.value,
+          raw.value,
+          selectedTags.value.join(','),
+          categoryId.value,
+          targetUsernames.value.join(',')
+        ] as const,
+      ([mode]) => {
+        if (draftSaveTimer) window.clearTimeout(draftSaveTimer)
+        if (mode === 'edit') return
+        draftSaveTimer = window.setTimeout(() => {
+          const scope = draftScope(mode as 'topic' | 'reply' | 'privateMessage', props.topicId)
+          const hasContent = Boolean(
+            raw.value.trim() || title.value.trim() || targetUsernames.value.length
+          )
+          if (hasContent) {
+            saveDraft(props.baseUrl, scope, {
+              title: title.value,
+              raw: raw.value,
+              tags: selectedTags.value,
+              categoryId: categoryId.value,
+              recipients: targetUsernames.value
+            })
+            activeDraft.value = loadDraft(props.baseUrl, scope)
+          } else {
+            clearDraft(props.baseUrl, scope)
+            activeDraft.value = null
+          }
+        }, 800)
+      }
+    )
+
+    const toggleDraftPanel = () => {
+      draftPanelOpen.value = !draftPanelOpen.value
+      templatePanelOpen.value = false
+      refreshActiveDraft()
+    }
+
+    const removeActiveDraft = () => {
+      if (props.mode === 'edit') return
+      const scope = draftScope(props.mode as 'topic' | 'reply' | 'privateMessage', props.topicId)
+      clearDraft(props.baseUrl, scope)
+      activeDraft.value = null
+      title.value = ''
+      raw.value = ''
+      selectedTags.value = []
+    }
+
+    // ── 本地模板：保存当前内容为可复用模板，随时插入 ──
+    const toggleTemplatePanel = () => {
+      templatePanelOpen.value = !templatePanelOpen.value
+      draftPanelOpen.value = false
+      if (templatePanelOpen.value) refreshTemplates()
+    }
+
+    const saveCurrentAsTemplate = () => {
+      const content = serializeWysiwygDiscourseDrafts(raw.value).trim()
+      if (!content) return
+      saveTemplate(props.baseUrl, templateNameInput.value, content)
+      templateNameInput.value = ''
+      refreshTemplates()
+    }
+
+    const insertLocalTemplate = (template: ComposerTemplate) => {
+      const content = template.content.trim()
+      if (!content) return
+      const current = raw.value.trimEnd()
+      raw.value = current ? `${current}\n\n${content}` : content
+      markTemplateUsed(props.baseUrl, template.id)
+      refreshTemplates()
+      templatePanelOpen.value = false
+      errorMessage.value = ''
+      successMessage.value = ''
+      if (props.mode === 'reply') editMode.value = 'edit'
+    }
+
+    const removeLocalTemplate = (templateId: string) => {
+      deleteTemplate(props.baseUrl, templateId)
+      refreshTemplates()
+    }
 
     return () => (
       <div class="composer border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -762,6 +981,26 @@ export default defineComponent({
             >
               所见即所得
             </Button>
+            {props.mode !== 'edit' ? (
+              <>
+                <Button
+                  size="small"
+                  type="text"
+                  class={{ 'text-blue-500': draftPanelOpen.value }}
+                  onClick={toggleDraftPanel}
+                >
+                  草稿
+                </Button>
+                <Button
+                  size="small"
+                  type="text"
+                  class={{ 'text-blue-500': templatePanelOpen.value }}
+                  onClick={toggleTemplatePanel}
+                >
+                  模板
+                </Button>
+              </>
+            ) : null}
             {props.mode === 'reply' && props.replyToPostNumber ? (
               <Button size="small" onClick={() => emit('clearReply')}>
                 取消引用
@@ -774,6 +1013,80 @@ export default defineComponent({
             ) : null}
           </div>
         </div>
+
+        {draftPanelOpen.value || templatePanelOpen.value ? (
+          <div class="composer-panel border-b dark:border-gray-700 px-4 py-3">
+            {draftPanelOpen.value ? (
+              <div class="composer-draft-panel">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                  {activeDraft.value
+                    ? `当前草稿自动保存于 ${new Date(activeDraft.value.savedAt ?? 0).toLocaleString()}`
+                    : '暂无本地草稿；输入内容后会自动保存'}
+                </div>
+                <Button
+                  size="small"
+                  danger
+                  disabled={!activeDraft.value}
+                  onClick={removeActiveDraft}
+                >
+                  删除草稿
+                </Button>
+              </div>
+            ) : null}
+            {templatePanelOpen.value ? (
+              <div class="composer-template-panel">
+                <div class="composer-template-save flex items-center gap-2">
+                  <Input
+                    value={templateNameInput.value}
+                    placeholder="模板名称（可选，默认取首行）"
+                    onUpdate:value={v => (templateNameInput.value = v)}
+                    onPressEnter={saveCurrentAsTemplate}
+                  />
+                  <Button size="small" disabled={!raw.value.trim()} onClick={saveCurrentAsTemplate}>
+                    存为模板
+                  </Button>
+                </div>
+                {templates.value.length ? (
+                  <ul class="composer-template-list">
+                    {templates.value.map(template => (
+                      <li key={template.id} class="composer-template-item">
+                        <div class="min-w-0">
+                          <div class="text-sm font-medium dark:text-white truncate">
+                            {template.name}
+                          </div>
+                          <div class="text-xs text-gray-400 truncate">
+                            {template.content.trim().split('\n')[0]?.slice(0, 80)}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="small"
+                            type="link"
+                            onClick={() => insertLocalTemplate(template)}
+                          >
+                            插入
+                          </Button>
+                          <Button
+                            size="small"
+                            type="link"
+                            danger
+                            onClick={() => removeLocalTemplate(template.id)}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div class="text-xs text-gray-400">
+                    还没有本地模板；编辑好内容后点“存为模板”。
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {props.mode === 'privateMessage' ? (
           <div class="composer-private-message-fields">
@@ -853,7 +1166,22 @@ export default defineComponent({
           </div>
         ) : props.mode === 'topic' ? (
           <div class="px-4 pt-4 space-y-3">
-            <Input value={title.value} placeholder="标题" onUpdate:value={v => (title.value = v)} />
+            <div>
+              <Input
+                value={title.value}
+                placeholder="标题（粘贴链接可自动解析标题）"
+                onUpdate:value={v => (title.value = v)}
+              />
+              {linkResolving.value || linkHint.value ? (
+                <div class="composer-link-hint text-xs mt-1">
+                  {linkResolving.value ? (
+                    <span class="text-gray-400">正在解析链接…</span>
+                  ) : (
+                    <span class="text-green-600">{linkHint.value}</span>
+                  )}
+                </div>
+              ) : null}
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <TreeSelect
                 value={categoryId.value}

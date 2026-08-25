@@ -446,3 +446,36 @@
 .composer-body > div[style*='display: none'] ~ * {
   animation: none;
 }
+
+/* ── 本地草稿 / 模板面板 ── */
+.composer-draft-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composer-template-save {
+  margin-bottom: 8px;
+}
+
+.composer-template-list {
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.composer-template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid rgba(107, 114, 128, 0.15);
+}
+
+.composer-template-item:last-child {
+  border-bottom: none;
+}

@@ -33,6 +33,8 @@ export type { BookmarkPayload, FlagPayload, AssignPayload, EditPostPayload } fro
 export * from './tags'
 export { searchTags } from './tags'
 export type { TagSearchResult } from './tags'
+export { resolveLinkTitle } from './linkTitle'
+export type { ResolvedLink } from './linkTitle'
 
 // Boost actions
 export * from './boost'
