@@ -18,6 +18,10 @@ export interface ComposerTemplate {
   id: string
   name: string
   content: string
+  /** 应用模板时分类直接覆盖当前选择；null 表示模板不带分类。 */
+  categoryId: number | null
+  /** 应用模板时标签追加合并（大小写去重），不覆盖。 */
+  tags: string[]
   createdAt: number
   lastUsedAt: number
 }
@@ -107,13 +111,21 @@ export function loadTemplates(baseUrl: string): ComposerTemplate[] {
     .sort((left, right) => right.lastUsedAt - left.lastUsedAt)
 }
 
-export function saveTemplate(baseUrl: string, name: string, content: string): void {
+export function saveTemplate(
+  baseUrl: string,
+  name: string,
+  content: string,
+  categoryId?: number | null,
+  tags: string[] = []
+): void {
   const trimmedName = name.trim() || content.trim().split('\n')[0].slice(0, 40) || '未命名模板'
   const list = loadTemplates(baseUrl).filter(item => item.name !== trimmedName)
   list.unshift({
     id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: trimmedName,
     content,
+    categoryId: typeof categoryId === 'number' ? categoryId : null,
+    tags: tags.map(tag => String(tag || '').trim()).filter(Boolean),
     createdAt: Date.now(),
     lastUsedAt: Date.now()
   })

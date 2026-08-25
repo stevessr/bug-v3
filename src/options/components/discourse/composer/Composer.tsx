@@ -893,7 +893,9 @@ export default defineComponent({
       selectedTags.value = []
     }
 
-    // ── 本地模板：保存当前内容为可复用模板，随时插入 ──
+    // ── 本地模板：保存当前内容/分类/标签为可复用模板 ──
+    // 应用语义（与官方 Templates 插件的“替换正文”区分开）：
+    // 正文追加到现有内容之后；分类直接覆盖；标签追加合并。
     const toggleTemplatePanel = () => {
       templatePanelOpen.value = !templatePanelOpen.value
       draftPanelOpen.value = false
@@ -903,16 +905,30 @@ export default defineComponent({
     const saveCurrentAsTemplate = () => {
       const content = serializeWysiwygDiscourseDrafts(raw.value).trim()
       if (!content) return
-      saveTemplate(props.baseUrl, templateNameInput.value, content)
+      saveTemplate(
+        props.baseUrl,
+        templateNameInput.value,
+        content,
+        props.mode === 'topic' ? categoryId.value : null,
+        props.mode === 'topic' ? selectedTags.value : []
+      )
       templateNameInput.value = ''
       refreshTemplates()
     }
 
-    const insertLocalTemplate = (template: ComposerTemplate) => {
+    const appendLocalTemplate = (template: ComposerTemplate) => {
       const content = template.content.trim()
       if (!content) return
       const current = raw.value.trimEnd()
       raw.value = current ? `${current}\n\n${content}` : content
+      if (template.categoryId != null && props.mode === 'topic') {
+        categoryId.value = template.categoryId
+      }
+      if (template.tags.length && props.mode === 'topic') {
+        const known = new Set(selectedTags.value.map(tag => tag.toLowerCase()))
+        const mergedTags = template.tags.filter(tag => !known.has(tag.toLowerCase()))
+        if (mergedTags.length) selectedTags.value = [...selectedTags.value, ...mergedTags]
+      }
       markTemplateUsed(props.baseUrl, template.id)
       refreshTemplates()
       templatePanelOpen.value = false
@@ -1046,6 +1062,9 @@ export default defineComponent({
                     存为模板
                   </Button>
                 </div>
+                <div class="text-xs text-gray-400">
+                  追加语义：正文追加到现有内容后；分类覆盖为模板分类；标签追加合并（已选中的不重复）。
+                </div>
                 {templates.value.length ? (
                   <ul class="composer-template-list">
                     {templates.value.map(template => (
@@ -1057,14 +1076,26 @@ export default defineComponent({
                           <div class="text-xs text-gray-400 truncate">
                             {template.content.trim().split('\n')[0]?.slice(0, 80)}
                           </div>
+                          {template.categoryId != null || template.tags.length ? (
+                            <div class="composer-template-meta text-xs text-gray-400 truncate">
+                              {template.categoryId != null
+                                ? `分类: ${
+                                    mergedCategories.value.find(
+                                      cat => cat.id === template.categoryId
+                                    )?.name || template.categoryId
+                                  }`
+                                : null}
+                              {template.tags.length ? ` 标签: ${template.tags.join(', ')}` : null}
+                            </div>
+                          ) : null}
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
                           <Button
                             size="small"
                             type="link"
-                            onClick={() => insertLocalTemplate(template)}
+                            onClick={() => appendLocalTemplate(template)}
                           >
-                            插入
+                            追加
                           </Button>
                           <Button
                             size="small"
