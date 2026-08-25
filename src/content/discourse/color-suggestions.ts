@@ -33,6 +33,16 @@ let navSequence: HTMLElement[] = []
 let activeIndex = 0
 let activeEditor: EditorEl | null = null
 let lastKeyword = ''
+interface SavedColorInsertion {
+  editor: EditorEl
+  textareaStart?: number
+  textareaEnd?: number
+  proseMirrorRange?: Range
+}
+
+let savedColorInsertion: SavedColorInsertion | null = null
+let paletteInput: HTMLInputElement | null = null
+let palettePanel: HTMLDivElement | null = null
 
 // ------------------------- 颜色转换 -------------------------
 
@@ -229,11 +239,15 @@ function applyToTextarea(el: HTMLTextAreaElement, value: string) {
   el.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-function applyToProseMirror(el: HTMLElement, value: string): boolean {
+function applyToProseMirror(el: HTMLElement, value: string, savedRange?: Range): boolean {
   try {
     const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return false
-    const range = selection.getRangeAt(0)
+    if (!selection) return false
+    const range =
+      savedRange?.cloneRange() ??
+      (selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null)
+    if (!range || !el.contains(range.commonAncestorContainer)) return false
+
     const node = range.startContainer
     const offset = range.startOffset
     const trig = matchColorTrigger((node.textContent || '').slice(0, offset), offset)
@@ -269,6 +283,37 @@ function applyToProseMirror(el: HTMLElement, value: string): boolean {
   }
 }
 
+function saveColorInsertionPoint() {
+  const editor = activeEditor
+  if (!editor || !editor.isConnected) return
+
+  if (editor instanceof HTMLTextAreaElement) {
+    savedColorInsertion = {
+      editor,
+      textareaStart: editor.selectionStart ?? editor.value.length,
+      textareaEnd: editor.selectionEnd ?? editor.value.length
+    }
+    return
+  }
+
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return
+  const range = selection.getRangeAt(0)
+  if (!editor.contains(range.commonAncestorContainer)) return
+  savedColorInsertion = { editor, proseMirrorRange: range.cloneRange() }
+}
+
+function restoreColorInsertionPoint(editor: EditorEl) {
+  if (!savedColorInsertion || savedColorInsertion.editor !== editor) return
+  if (editor instanceof HTMLTextAreaElement) {
+    editor.focus()
+    editor.setSelectionRange(
+      savedColorInsertion.textareaStart ?? editor.value.length,
+      savedColorInsertion.textareaEnd ?? editor.value.length
+    )
+  }
+}
+
 function insertColorFromHex(hex: string) {
   const norm = normalizeToHex(hex)
   if (!norm) return
@@ -277,12 +322,14 @@ function insertColorFromHex(hex: string) {
     hideSuggestionBox()
     return
   }
+  restoreColorInsertionPoint(editor)
   const value = formatColor(norm, currentFormat)
-  if (editor instanceof HTMLTextAreaElement) {
-    applyToTextarea(editor, value)
-  } else if (!applyToProseMirror(editor, value)) {
-    return
-  }
+  const inserted =
+    editor instanceof HTMLTextAreaElement
+      ? (applyToTextarea(editor, value), true)
+      : applyToProseMirror(editor, value, savedColorInsertion?.proseMirrorRange)
+  if (!inserted) return
+  savedColorInsertion = null
   recordRecent(norm)
   hideSuggestionBox()
 }
@@ -377,9 +424,11 @@ function injectStyles() {
     #${BOX_ID} .cs-chips,
     #${BOX_ID} .cs-list,
     #${BOX_ID} .cs-format-btn,
-    #${BOX_ID} .cs-tool {
+    #${BOX_ID} .cs-tool,
+    #${BOX_ID} .cs-palette-panel {
       pointer-events: auto;
     }
+
     #${BOX_ID} .cs-header {
       display: flex;
       align-items: center;
@@ -497,6 +546,18 @@ function injectStyles() {
       cursor: pointer;
     }
     #${BOX_ID} .cs-tool:hover { background: var(--primary-low, #f0f0f0); }
+    #${BOX_ID} .cs-palette-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid var(--primary-low, #eee);
+      color: inherit;
+      font-size: 12px;
+    }
+
   `
   ESI(STYLES_ID, css)
 }
@@ -510,6 +571,10 @@ function createSuggestionBox() {
 
 function hideSuggestionBox() {
   if (suggestionBox) suggestionBox.style.display = 'none'
+  palettePanel?.remove()
+  palettePanel = null
+  paletteInput = null
+  savedColorInsertion = null
 }
 
 function updateActiveItem() {
@@ -663,7 +728,6 @@ function positionSuggestionBox(editor: EditorEl) {
 
 function showSuggestionBox(editor: EditorEl, keyword: string) {
   lastKeyword = keyword
-  ensurePaletteInput()
   createSuggestionBox()
   renderMenu(keyword)
   if (navItems.length === 0) {
@@ -673,31 +737,33 @@ function showSuggestionBox(editor: EditorEl, keyword: string) {
   positionSuggestionBox(editor)
   updateActiveItem()
 }
-
 // ------------------------- 调色盘 / 取色器 -------------------------
 
-let paletteInput: HTMLInputElement | null = null
-
 function ensurePaletteInput() {
-  if (paletteInput) return
-  paletteInput = createE('input', { type: 'color' })
-  // 放到视口外但保持“已渲染”状态：display:none / opacity:0 的取色控件在部分
-  // Chromium 版本中 showPicker()/click() 弹不出原生调色盘
-  paletteInput.style.cssText =
-    'position:fixed;left:-200px;top:-200px;width:24px;height:24px;margin:0;border:0;padding:0;'
+  if (paletteInput?.isConnected) return
+  if (!suggestionBox) return
+
+  palettePanel = createE('div', { class: 'cs-palette-panel' })
+  const label = createE('span', { text: '选择颜色' })
+  paletteInput = createE('input', {
+    type: 'color',
+    attrs: { 'aria-label': '选择颜色' }
+  })
+  paletteInput.style.cssText = 'width:40px;height:28px;padding:0;border:0;cursor:pointer;'
+  palettePanel.append(label, paletteInput)
+  suggestionBox.appendChild(palettePanel)
   paletteInput.addEventListener('change', () => {
     const hex = normalizeToHex(paletteInput?.value || '')
     if (hex) insertColorFromHex(hex)
   })
-  DOA(paletteInput)
 }
 
 function openPalette() {
+  saveColorInsertionPoint()
   ensurePaletteInput()
   if (!paletteInput) return
-  // 打开时带上当前选中候选色作为初始值
   paletteInput.value = navItems[activeIndex]?.dataset.hex || '#ffffff'
-  // showPicker() 显式弹出选择器且不要求元素可见；旧浏览器回退 click()
+  // 输入框保持真实可见；即使 showPicker() 不可用，页面内控件仍然可操作。
   try {
     paletteInput.showPicker()
   } catch {
@@ -706,6 +772,7 @@ function openPalette() {
 }
 
 function openEyeDropper() {
+  saveColorInsertionPoint()
   const EyeDropperCtor = window.EyeDropper
   if (!EyeDropperCtor) return
   new EyeDropperCtor()
@@ -715,7 +782,7 @@ function openEyeDropper() {
       if (hex) insertColorFromHex(hex)
     })
     .catch(() => {
-      // 用户取消取色，忽略
+      savedColorInsertion = null
     })
 }
 

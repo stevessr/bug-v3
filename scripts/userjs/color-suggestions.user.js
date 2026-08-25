@@ -99,6 +99,8 @@
   var activeEditor = null
   var lastKeyword = ''
   var paletteInput = null
+  var savedColorInsertion = null
+  var palettePanel = null
 
   // ===== 存储持久化 =====
   function loadState() {
@@ -268,20 +270,24 @@
     el.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
-  function applyToProseMirror(el, value) {
+  function applyToProseMirror(el, value, savedRange) {
     try {
       var selection = window.getSelection()
-      if (!selection || selection.rangeCount === 0) return false
-      var range = selection.getRangeAt(0)
+      if (!selection) return false
+      var range = savedRange
+        ? savedRange.cloneRange()
+        : selection.rangeCount > 0
+          ? selection.getRangeAt(0).cloneRange()
+          : null
+      if (!range || !el.contains(range.commonAncestorContainer)) return false
+
       var node = range.startContainer
       var offset = range.startOffset
       var trig = matchColorTrigger((node.textContent || '').slice(0, offset), offset)
-
       var openNode = document.createTextNode('[color=' + value + ']')
       var closeNode = document.createTextNode('[/color]')
       var workRange = document.createRange()
       if (trig) {
-        // 删除从 '[' 到光标的触发文本
         workRange.setStart(node, trig.start)
         workRange.setEnd(node, offset)
       } else {
@@ -289,22 +295,45 @@
         workRange.setEnd(node, offset)
       }
       workRange.deleteContents()
-      // 先插 close 再插 open，最终顺序为 open -> close
       workRange.insertNode(closeNode)
       workRange.insertNode(openNode)
 
-      // 光标放在两组标签之间
       var caret = document.createRange()
       caret.setStartAfter(openNode)
       caret.collapse(true)
       selection.removeAllRanges()
       selection.addRange(caret)
-
       el.dispatchEvent(new Event('input', { bubbles: true }))
       return true
     } catch (e) {
       console.error('[Color Suggestions] ProseMirror 插入失败', e)
       return false
+    }
+  }
+
+  function saveColorInsertionPoint() {
+    var editor = activeEditor
+    if (!editor || !editor.isConnected) return
+    if (editor.tagName === 'TEXTAREA') {
+      savedColorInsertion = {
+        editor: editor,
+        textareaStart: editor.selectionStart != null ? editor.selectionStart : editor.value.length,
+        textareaEnd: editor.selectionEnd != null ? editor.selectionEnd : editor.value.length
+      }
+      return
+    }
+    var selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    var range = selection.getRangeAt(0)
+    if (!editor.contains(range.commonAncestorContainer)) return
+    savedColorInsertion = { editor: editor, proseMirrorRange: range.cloneRange() }
+  }
+
+  function restoreColorInsertionPoint(editor) {
+    if (!savedColorInsertion || savedColorInsertion.editor !== editor) return
+    if (editor.tagName === 'TEXTAREA') {
+      editor.focus()
+      editor.setSelectionRange(savedColorInsertion.textareaStart, savedColorInsertion.textareaEnd)
     }
   }
 
@@ -316,12 +345,18 @@
       hideSuggestionBox()
       return
     }
+    restoreColorInsertionPoint(editor)
     var value = formatColor(norm, currentFormat)
-    if (editor.tagName === 'TEXTAREA') {
-      applyToTextarea(editor, value)
-    } else if (!applyToProseMirror(editor, value)) {
-      return
-    }
+    var inserted =
+      editor.tagName === 'TEXTAREA'
+        ? (applyToTextarea(editor, value), true)
+        : applyToProseMirror(
+            editor,
+            value,
+            savedColorInsertion && savedColorInsertion.proseMirrorRange
+          )
+    if (!inserted) return
+    savedColorInsertion = null
     recordRecent(norm)
     hideSuggestionBox()
   }
@@ -393,198 +428,29 @@
 
   // ===== 菜单 UI =====
   function injectStyles() {
-    var css =
-      '#' +
-      BOX_ID +
-      ` {
-      position: absolute;
-      z-index: 99999;
-      width: 300px;
-      padding: 8px;
-      background-color: var(--secondary, #fff);
-      color: var(--primary-high, #222);
-      border: 1px solid var(--primary-low-mid, #ccc);
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-      font-size: 13px;
-      display: none;
-      user-select: none;
-      /* 空白区域对点击穿透，避免菜单悬浮遮挡下方编辑器导致无法点击 */
-      pointer-events: none;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-chips,
-    #` +
-      BOX_ID +
-      ` .cs-list,
-    #` +
-      BOX_ID +
-      ` .cs-format-btn,
-    #` +
-      BOX_ID +
-      ` .cs-tool {
-      pointer-events: auto;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-title { font-weight: 600; }
-    #` +
-      BOX_ID +
-      ` .cs-formats {
-      display: flex;
-      border: 1px solid var(--primary-low-mid, #ddd);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-format-btn {
-      padding: 2px 8px;
-      border: none;
-      background: transparent;
-      color: inherit;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-format-btn.active {
-      background: var(--tertiary, #0088cc);
-      color: #fff;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-section-label {
-      font-size: 11px;
-      opacity: 0.65;
-      margin: 6px 0 4px;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      max-height: 78px;
-      overflow-y: auto;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-chip {
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      border-radius: 5px;
-      border: 1px solid rgba(128, 128, 128, 0.45);
-      cursor: pointer;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-list {
-      max-height: 190px;
-      overflow-y: auto;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 4px 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-family: monospace;
-      /* 行元素用 <button> 实现，保证键盘可聚焦/可激活 */
-      width: 100%;
-      background: none;
-      border: none;
-      color: inherit;
-      text-align: left;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
-      border: 1px solid rgba(128, 128, 128, 0.45);
-      flex: none;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-name { white-space: nowrap; }
-    #` +
-      BOX_ID +
-      ` .cs-zh {
-      margin-left: auto;
-      font-family: sans-serif;
-      font-size: 12px;
-      opacity: 0.55;
-      white-space: nowrap;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-val {
-      font-size: 12px;
-      opacity: 0.7;
-      white-space: nowrap;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-item.active {
-      outline: 2px solid var(--tertiary, #0088cc);
-      outline-offset: -2px;
-      background-color: var(--primary-low, #eee);
-    }
-    #` +
-      BOX_ID +
-      ` .cs-item:focus-visible,
-    #` +
-      BOX_ID +
-      ` .cs-format-btn:focus-visible,
-    #` +
-      BOX_ID +
-      ` .cs-tool:focus-visible {
-      outline: 2px solid var(--tertiary, #0088cc);
-      outline-offset: -2px;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-footer {
-      display: flex;
-      gap: 6px;
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px solid var(--primary-low, #eee);
-    }
-    #` +
-      BOX_ID +
-      ` .cs-tool {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 4px;
-      border: 1px solid var(--primary-low-mid, #ddd);
-      border-radius: 6px;
-      background: var(--secondary, #fff);
-      color: inherit;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    #` +
-      BOX_ID +
-      ` .cs-tool:hover { background: var(--primary-low, #f0f0f0); }`
+    var css = `
+      #${BOX_ID} { position: absolute; z-index: 99999; width: 300px; padding: 8px; background: var(--secondary, #fff); color: var(--primary-high, #222); border: 1px solid var(--primary-low-mid, #ccc); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 13px; display: none; user-select: none; pointer-events: none; }
+      #${BOX_ID} .cs-chips, #${BOX_ID} .cs-list, #${BOX_ID} .cs-format-btn, #${BOX_ID} .cs-tool, #${BOX_ID} .cs-palette-panel { pointer-events: auto; }
+      #${BOX_ID} .cs-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+      #${BOX_ID} .cs-title { font-weight: 600; }
+      #${BOX_ID} .cs-formats { display: flex; border: 1px solid var(--primary-low-mid, #ddd); border-radius: 6px; overflow: hidden; }
+      #${BOX_ID} .cs-format-btn { padding: 2px 8px; border: none; background: transparent; color: inherit; font-size: 12px; cursor: pointer; }
+      #${BOX_ID} .cs-format-btn.active { background: var(--tertiary, #0088cc); color: #fff; }
+      #${BOX_ID} .cs-section-label { font-size: 11px; opacity: .65; margin: 6px 0 4px; }
+      #${BOX_ID} .cs-chips { display: flex; flex-wrap: wrap; gap: 4px; max-height: 78px; overflow-y: auto; }
+      #${BOX_ID} .cs-chip { width: 22px; height: 22px; padding: 0; border-radius: 5px; border: 1px solid rgba(128,128,128,.45); cursor: pointer; }
+      #${BOX_ID} .cs-list { max-height: 190px; overflow-y: auto; }
+      #${BOX_ID} .cs-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-family: monospace; width: 100%; background: none; border: none; color: inherit; text-align: left; }
+      #${BOX_ID} .cs-swatch { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(128,128,128,.45); flex: none; }
+      #${BOX_ID} .cs-name { white-space: nowrap; }
+      #${BOX_ID} .cs-zh { margin-left: auto; font-family: sans-serif; font-size: 12px; opacity: .55; white-space: nowrap; }
+      #${BOX_ID} .cs-val { font-size: 12px; opacity: .7; white-space: nowrap; }
+      #${BOX_ID} .cs-item.active { outline: 2px solid var(--tertiary, #0088cc); outline-offset: -2px; background: var(--primary-low, #eee); }
+      #${BOX_ID} .cs-footer { display: flex; gap: 6px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--primary-low, #eee); }
+      #${BOX_ID} .cs-tool { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px; border: 1px solid var(--primary-low-mid, #ddd); border-radius: 6px; background: var(--secondary, #fff); color: inherit; font-size: 12px; cursor: pointer; }
+      #${BOX_ID} .cs-tool:hover { background: var(--primary-low, #f0f0f0); }
+      #${BOX_ID} .cs-palette-panel { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--primary-low, #eee); color: inherit; font-size: 12px; }
+    `
     var existing = document.getElementById(STYLES_ID)
     if (existing) existing.remove()
     var styleEl = document.createElement('style')
@@ -603,6 +469,10 @@
 
   function hideSuggestionBox() {
     if (suggestionBox) suggestionBox.style.display = 'none'
+    if (palettePanel) palettePanel.remove()
+    palettePanel = null
+    paletteInput = null
+    savedColorInsertion = null
   }
 
   function updateActiveItem() {
@@ -818,7 +688,6 @@
 
   function showSuggestionBox(editor, keyword) {
     lastKeyword = keyword
-    ensurePaletteInput()
     createSuggestionBox()
     renderMenu(keyword)
     if (navItems.length === 0) {
@@ -831,27 +700,31 @@
 
   // ===== 调色盘 / 取色器 =====
   function ensurePaletteInput() {
-    if (paletteInput) return
+    if (paletteInput && paletteInput.isConnected) return
+    if (!suggestionBox) return
+    palettePanel = document.createElement('div')
+    palettePanel.className = 'cs-palette-panel'
+    var label = document.createElement('span')
+    label.textContent = '选择颜色'
     paletteInput = document.createElement('input')
     paletteInput.type = 'color'
-    // 放到视口外但保持“已渲染”状态：display:none / opacity:0 的取色控件在部分
-    // Chromium 版本中 showPicker()/click() 弹不出原生调色盘
-    paletteInput.style.cssText =
-      'position:fixed;left:-200px;top:-200px;width:24px;height:24px;margin:0;border:0;padding:0;'
+    paletteInput.setAttribute('aria-label', '选择颜色')
+    paletteInput.style.cssText = 'width:40px;height:28px;padding:0;border:0;cursor:pointer;'
+    palettePanel.appendChild(label)
+    palettePanel.appendChild(paletteInput)
+    suggestionBox.appendChild(palettePanel)
     paletteInput.addEventListener('change', function () {
       var hex = normalizeToHex(paletteInput ? paletteInput.value : '')
       if (hex) insertColorFromHex(hex)
     })
-    document.body.appendChild(paletteInput)
   }
 
   function openPalette() {
+    saveColorInsertionPoint()
     ensurePaletteInput()
     if (!paletteInput) return
-    // 打开时带上当前选中候选色作为初始值
     paletteInput.value =
       (navItems[activeIndex] && navItems[activeIndex].getAttribute('data-hex')) || '#ffffff'
-    // showPicker() 显式弹出选择器且不要求元素可见；旧浏览器回退 click()
     try {
       paletteInput.showPicker()
     } catch (e) {
@@ -860,6 +733,7 @@
   }
 
   function openEyeDropper() {
+    saveColorInsertionPoint()
     if (!window.EyeDropper) return
     new window.EyeDropper()
       .open()
@@ -868,7 +742,7 @@
         if (hex) insertColorFromHex(hex)
       })
       .catch(function () {
-        // 用户取消取色，忽略
+        savedColorInsertion = null
       })
   }
 
