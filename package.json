@@ -35,7 +35,7 @@
     "type-check": "vue-tsc --noEmit",
     "prepare:json": "node scripts/prepare-json-assets.js",
     "validate:market": "node scripts/validate-market-assets.mjs",
-    "update:data": "pnpm --filter video2gif-static deploy",
+    "update:data": "pnpm --filter video2gif-static run deploy",
     "update:metadata": "node scripts/update-market-metadata.js",
     "update:push": "git push",
     "update:deploy": "./scripts/deploy-update.sh",
