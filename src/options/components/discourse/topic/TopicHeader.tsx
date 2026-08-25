@@ -2,7 +2,7 @@ import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 import { message, Select, TreeSelect } from 'ant-design-vue'
 
 import type { DiscourseCategory, DiscourseTopicDetail } from '../types'
-import { searchTags, updateTopicTitle } from '../actions'
+import { searchTags, updateTopicStatus, updateTopicTitle, type TopicStatusKey } from '../actions'
 import { getDiscourseIconHref } from '../layout/iconSprite'
 import TagPill from '../layout/TagPill'
 import EmojiTitle from '../layout/EmojiTitle'
@@ -387,6 +387,60 @@ export default defineComponent({
       }
     }
 
+    const statusUpdating = ref<TopicStatusKey | ''>('')
+    const canManageStatus = computed(() => Boolean(props.topic.details?.can_edit))
+
+    const toggleTopicStatus = async (status: TopicStatusKey) => {
+      if (statusUpdating.value) return
+      const current =
+        status === 'closed'
+          ? props.topic.closed
+          : status === 'pinned'
+            ? props.topic.pinned
+            : props.topic.visible
+      statusUpdating.value = status
+      try {
+        await updateTopicStatus(props.baseUrl, props.topic.id, status, !current)
+        if (status === 'closed') props.topic.closed = !current
+        else if (status === 'pinned') props.topic.pinned = !current
+        else props.topic.visible = !current
+        const labels: Record<TopicStatusKey, [string, string]> = {
+          closed: ['话题已开启', '话题已关闭'],
+          pinned: ['已取消置顶', '话题已置顶'],
+          visible: ['话题已设为公开', '话题已隐藏']
+        }
+        message.success(labels[status][current ? 0 : 1])
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '修改话题状态失败')
+      } finally {
+        statusUpdating.value = ''
+      }
+    }
+
+    const statusButtons = computed(() => {
+      if (props.topic.archived) return []
+      return [
+        {
+          key: 'closed' as const,
+          active: Boolean(props.topic.closed),
+          label: props.topic.closed ? '已关闭' : '关闭',
+          title: props.topic.closed ? '重新开启话题' : '关闭话题'
+        },
+        {
+          key: 'pinned' as const,
+          active: Boolean(props.topic.pinned),
+          label: props.topic.pinned ? '已置顶' : '置顶',
+          title: props.topic.pinned ? '取消置顶' : '置顶话题'
+        },
+        {
+          key: 'visible' as const,
+          active: props.topic.visible !== false,
+          label: props.topic.visible !== false ? '公开' : '已隐藏',
+          title: props.topic.visible !== false ? '将话题转为不可见（隐藏）' : '将话题设为公开可见'
+        }
+      ]
+    })
+
     const categoryTreeData = computed(() => toCategoryTreeData(categories.value))
 
     const getCategoryImageUrl = (url?: string) =>
@@ -625,7 +679,27 @@ export default defineComponent({
               )}
             </div>
           )}
+          {!editing.value && canManageStatus.value && statusButtons.value.length > 0 && (
+            <div class="topic-header__status" role="group" aria-label="话题状态管理">
+              {statusButtons.value.map(item => (
+                <button
+                  key={item.key}
+                  type="button"
+                  class={['topic-header__status-btn', item.active ? 'is-active' : '']}
+                  disabled={Boolean(statusUpdating.value)}
+                  title={item.title}
+                  aria-pressed={item.active}
+                  onClick={() => void toggleTopicStatus(item.key)}
+                >
+                  {statusUpdating.value === item.key ? '处理中…' : item.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div class="topic-header__meta">
+            {props.topic.closed && <span class="topic-header__meta-item">已关闭</span>}
+            {props.topic.pinned && <span class="topic-header__meta-item">置顶</span>}
+            {props.topic.visible === false && <span class="topic-header__meta-item">不可见</span>}
             <span class="topic-header__meta-item">{props.topic.posts_count} 回复</span>
             <span class="topic-header__meta-item">
               创建于{' '}

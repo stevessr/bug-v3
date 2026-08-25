@@ -15,7 +15,6 @@ export interface ReplyPayload {
   raw: string
   replyToPostNumber?: number | null
 }
-
 export interface UpdateTopicOptions {
   categoryId?: number | null
   tags?: string[]
@@ -50,6 +49,30 @@ export async function updateTopicTitle(
   const data = extractData(result)
   if (result.ok === false) {
     throw new Error(data?.errors?.join(', ') || data?.error || '修改话题失败')
+  }
+  return data
+}
+
+export type TopicStatusKey = 'closed' | 'pinned' | 'visible'
+
+export async function updateTopicStatus(
+  baseUrl: string,
+  topicId: number,
+  status: TopicStatusKey,
+  enabled: boolean
+) {
+  const result = await pageFetch<any>(`${baseUrl}/t/${topicId}/status`, {
+    method: 'PUT',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json',
+      'Discourse-Logged-In': 'true'
+    },
+    body: JSON.stringify({ status, enabled })
+  })
+  const data = extractData(result)
+  if (result.ok === false) {
+    throw new Error(data?.errors?.join(', ') || data?.error || '修改话题状态失败')
   }
   return data
 }

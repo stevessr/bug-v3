@@ -394,6 +394,10 @@ export interface DiscourseTopicDetail {
     uploaded_logo_dark?: { url: string } | null
   } | null
   tags?: Array<string | DiscourseTopicTag>
+  closed?: boolean
+  archived?: boolean
+  pinned?: boolean
+  visible?: boolean
   highest_post_number?: number
   views: number
   like_count: number

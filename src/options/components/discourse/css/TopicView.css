@@ -326,6 +326,40 @@
   font-weight: 590;
 }
 
+.topic-header__status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.topic-header__status-btn {
+  padding: 4px 12px;
+  border: 1px solid color-mix(in oklab, currentColor 24%, transparent);
+  border-radius: var(--d-shape-full, 999px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 590;
+}
+
+.topic-header__status-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.topic-header__status-btn.is-active {
+  background: color-mix(in oklab, currentColor 14%, transparent);
+  border-color: color-mix(in oklab, currentColor 40%, transparent);
+}
+
+.topic-header__status-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 @media (max-width: 560px) {
   .topic-header__editor {
     align-items: stretch;
