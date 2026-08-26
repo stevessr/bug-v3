@@ -208,7 +208,6 @@ const loadMarketIndex = async () => {
   const data = await response.json()
   return data
 }
-
 const getMarketTopicPageFileName = (topic: MarketTopicId, page: number) => {
   return topic === 'all' ? `page-${page}.json` : `${topic}-page-${page}.json`
 }
@@ -225,6 +224,15 @@ const loadMarketPage = async (page: number, topic: MarketTopicId = selectedTopic
   totalMarketGroups.value = data.totalGroups || marketGroups.value.length
 }
 
+const loadMarketTopics = async (): Promise<MarketTopicSummary[] | null> => {
+  const baseUrl = getMarketBaseUrl()
+  const topicsUrl = `${baseUrl}/assets/market/index/topics.json`
+  const response = await fetch(topicsUrl)
+  if (!response.ok) return null
+  const data = await response.json()
+  return Array.isArray(data.topics) ? data.topics : null
+}
+
 const loadMarketMetadata = async () => {
   const baseUrl = getMarketBaseUrl()
   const metadataUrl = `${baseUrl}/assets/market/metadata.json`
@@ -233,6 +241,7 @@ const loadMarketMetadata = async () => {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
   const data = await response.json()
+
   marketMetadata.value = {
     version: data.version,
     exportDate: data.exportDate,
@@ -241,9 +250,14 @@ const loadMarketMetadata = async () => {
   fullMarketGroups.value = data.groups || []
   marketGroups.value = fullMarketGroups.value
   totalMarketGroups.value = data.totalGroups || marketGroups.value.length
-  marketTopics.value = Array.isArray(data.topics)
-    ? data.topics
-    : buildMarketTopicSummaries(fullMarketGroups.value)
+  // 分类独立从 topics.json 获取，失败时按数据动态推导
+  let dynamicTopics: MarketTopicSummary[] | null = null
+  try {
+    dynamicTopics = await loadMarketTopics()
+  } catch {
+    dynamicTopics = null
+  }
+  marketTopics.value = dynamicTopics || buildMarketTopicSummaries(fullMarketGroups.value)
   hasLoadedFullMarketMetadata.value = true
 }
 

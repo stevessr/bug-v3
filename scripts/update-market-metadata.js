@@ -100,6 +100,9 @@ files.forEach(file => {
     const content = fs.readFileSync(path.join(MARKET_DIR, file), 'utf8')
     const data = JSON.parse(content)
 
+    // Skip non-group JSON files (e.g. topics.json leftovers) without a valid id
+    if (!data || typeof data.id !== 'string' || !data.id) return
+
     // Extract group summary info
     const groupInfo = {
       id: data.id,
@@ -188,7 +191,6 @@ const metadata = {
   exportDate: new Date().toISOString(),
   totalGroups: groups.length,
   includeArchived: true,
-  topics: topicStats,
   groups: groups
 }
 
@@ -199,6 +201,24 @@ console.log(`Generated metadata.json with ${groups.length} groups.`)
 try {
   fs.rmSync(MARKET_INDEX_DIR, { recursive: true, force: true })
   fs.mkdirSync(MARKET_INDEX_DIR, { recursive: true })
+
+  // Standalone topics file so clients can fetch available categories without
+  // downloading the full metadata.json group list. Written after the index dir
+  // cleanup above so it survives regeneration.
+  fs.writeFileSync(
+    path.join(MARKET_INDEX_DIR, 'topics.json'),
+    JSON.stringify(
+      {
+        version: '1.0',
+        exportDate: metadata.exportDate,
+        totalGroups: groups.length,
+        topics: topicStats
+      },
+      null,
+      2
+    )
+  )
+  console.log(`Generated topics.json with ${topicStats.length} topics.`)
 
   const topicIndexes = topicStats.map(topic => {
     const topicGroups =
