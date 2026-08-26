@@ -19,7 +19,7 @@
       "id": "group-1756870014160",
       "name": "群友",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/b/2/eb2c2a4c2102264f69f4b794f26179aa7d0feb16.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 241,
       "emojiCount": 64,
       "isArchived": false
@@ -28,7 +28,7 @@
       "id": "group-1759671340288",
       "name": "舞萌",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/a/8/ea84e70f67c32e54208772f9134d8ebb549d378a.webp",
-      "topic": "other",
+      "topic": "game",
       "order": 242,
       "emojiCount": 47,
       "isArchived": false
@@ -46,7 +46,7 @@
       "id": "group-1767645336767",
       "name": "芙宁娜｜Furina",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/0/7/207d7ae3fb606f8d2068854f715e93822a9aa34e.avif",
-      "topic": "other",
+      "topic": "game",
       "order": 244,
       "emojiCount": 36,
       "isArchived": false
@@ -84,7 +84,7 @@
       "id": "group-1755964482153",
       "name": "菲比",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/b/9/cb9e72b10478eda89324d505f8597b6520516cc9.webp",
-      "topic": "other",
+      "topic": "game",
       "order": 248,
       "emojiCount": 54,
       "isArchived": false
@@ -93,7 +93,7 @@
       "id": "group-1758505345831",
       "name": "菲比 IDC",
       "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
-      "topic": "100",
+      "topic": "idc",
       "order": 249,
       "emojiCount": 102,
       "isArchived": true
@@ -112,7 +112,7 @@
       "id": "group-1767645385314",
       "name": "藤田言音｜Kotone Fujita",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/c/0/dc0bec3638c4a26e0a15ddf25fd1581003158574.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 251,
       "emojiCount": 20,
       "isArchived": false
@@ -140,7 +140,7 @@
       "id": "group-1763199195538",
       "name": "该死的群友",
       "icon": "🦀",
-      "topic": "other",
+      "topic": "OC",
       "order": 254,
       "emojiCount": 49,
       "isArchived": false
@@ -149,7 +149,7 @@
       "id": "group-1767645395060",
       "name": "赏花爱音",
       "icon": "https://cdn3.ldstatic.com/original/4X/3/f/c/3fc66dc0ab5e33b42f2669afec9ad7b5baa1fde4.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 255,
       "emojiCount": 20,
       "isArchived": false
@@ -158,7 +158,8 @@
       "id": "group-1759065160041",
       "name": "超",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/2/7/9272a6fd0cb3cbbbbd101ed51163628965890ad2.webp",
-      "topic": "other",
+      "detail": "from telegram",
+      "topic": "telegram",
       "order": 256,
       "emojiCount": 79,
       "isArchived": false
@@ -167,7 +168,7 @@
       "id": "group-1767645449104",
       "name": "超天酱｜KAngel",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/9/b/d9bea8cbc66770b11eca6a5627d0a2ab7e285244.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 257,
       "emojiCount": 32,
       "isArchived": false
@@ -176,17 +177,17 @@
       "id": "group-1765771538157",
       "name": "超天酱超可爱花卤鸭牌",
       "icon": "https://cdn3.ldstatic.com/original/4X/8/a/8/8a8b06c4b8bf534b7edd2f40136543859d2c1c68.gif",
-      "topic": "other",
+      "topic": "anime",
       "order": 258,
       "emojiCount": 32,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1787624986741",
       "name": "超时空辉夜姬",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/b/1/2b1311d5c9e521df530ab51c765ae9f1fdba0486.webp?v=1787625044416",
       "detail": "https://www.pixiv.net/artworks/148832528",
-      "topic": "other",
+      "topic": "超时空辉夜姬",
       "order": 259,
       "emojiCount": 6,
       "isArchived": false
@@ -195,7 +196,7 @@
       "id": "group-1765973766413",
       "name": "软件工程师",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/6/e/46ec175aaafc2ea5ce77aa0f3fd4d0b5be124fd2.webp",
-      "topic": "other",
+      "topic": "miexed",
       "order": 260,
       "emojiCount": 48,
       "isArchived": false
@@ -224,7 +225,7 @@
       "id": "group-1767645457405",
       "name": "遥奈",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/5/4/4547b563f1d912bd117558d62840df1ceb81246c.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 263,
       "emojiCount": 20,
       "isArchived": false
@@ -243,7 +244,7 @@
       "id": "group-1767645462518",
       "name": "重音 tetoSV｜Kasane TetoSV",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/c/e/9ce9259212f14b73289b6b98c082d8a76218ae83.avif",
-      "topic": "other",
+      "topic": "术力口",
       "order": 265,
       "emojiCount": 20,
       "isArchived": false
@@ -252,10 +253,10 @@
       "id": "group-1762695828124",
       "name": "钞币企鹅",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/6/b/46b20c005b474313eabeab1b4d59f0614cfb49d8.webp",
-      "topic": "100",
+      "topic": "miexed",
       "order": 266,
       "emojiCount": 117,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1767645514114",
@@ -280,7 +281,7 @@
       "id": "group-1765972558970",
       "name": "铃牙茶茶",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/e/0/7e04eae53d11673e12c356073dff50bb6242067d.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 269,
       "emojiCount": 81,
       "isArchived": false
@@ -336,7 +337,7 @@
       "id": "group-1761446644760",
       "name": "風間白花",
       "icon": "https://cdn3.ldstatic.com/original/4X/5/c/8/5c8016aa6233bdcdc60c984e2bbc60f8a2097dab.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 275,
       "emojiCount": 16,
       "isArchived": false
@@ -399,7 +400,7 @@
       "id": "group-1767645584240",
       "name": "鳰原令王那｜Nyubara Reona",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/0/a/90a9235602ae1647167436610b28c058c01c5b07.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 282,
       "emojiCount": 20,
       "isArchived": false
@@ -438,7 +439,7 @@
       "id": "group-1755913842696",
       "name": "黄",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/3/8/c38f18581aafd9d9eae31b67c91261cc336072b6.webp",
-      "topic": "other",
+      "topic": "anime",
       "order": 286,
       "emojiCount": 85,
       "isArchived": false
@@ -447,7 +448,7 @@
       "id": "group-1767644542108",
       "name": "墨提斯｜Mortis",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/d/d/2dd1788f2e5bdb0f0b15a3c2bd537af1d2f685ca.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 287,
       "emojiCount": 48,
       "isArchived": false

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-08-25T03:36:58.873Z",
+  "exportDate": "2026-08-26T07:14:10.215Z",
   "totalGroups": 289,
   "pageSize": 48,
   "totalPages": 7,
@@ -116,14 +116,20 @@
     {
       "id": "telegram",
       "label": "telegram",
-      "totalGroups": 48,
-      "totalPages": 1,
+      "totalGroups": 49,
+      "totalPages": 2,
       "pages": [
         {
           "name": "telegram-page-1.json",
           "start": 1,
           "end": 48,
           "count": 48
+        },
+        {
+          "name": "telegram-page-2.json",
+          "start": 49,
+          "end": 49,
+          "count": 1
         }
       ]
     },
@@ -150,34 +156,28 @@
     {
       "id": "other",
       "label": "其他",
-      "totalGroups": 93,
-      "totalPages": 2,
+      "totalGroups": 2,
+      "totalPages": 1,
       "pages": [
         {
           "name": "other-page-1.json",
           "start": 1,
-          "end": 48,
-          "count": 48
-        },
-        {
-          "name": "other-page-2.json",
-          "start": 49,
-          "end": 93,
-          "count": 45
+          "end": 2,
+          "count": 2
         }
       ]
     },
     {
       "id": "OC",
       "label": "OC",
-      "totalGroups": 5,
+      "totalGroups": 24,
       "totalPages": 1,
       "pages": [
         {
           "name": "OC-page-1.json",
           "start": 1,
-          "end": 5,
-          "count": 5
+          "end": 24,
+          "count": 24
         }
       ]
     },
@@ -240,14 +240,14 @@
     {
       "id": "100",
       "label": "100+",
-      "totalGroups": 20,
+      "totalGroups": 17,
       "totalPages": 1,
       "pages": [
         {
           "name": "100-page-1.json",
           "start": 1,
-          "end": 20,
-          "count": 20
+          "end": 17,
+          "count": 17
         }
       ]
     },
@@ -268,14 +268,14 @@
     {
       "id": "touhou",
       "label": "东方",
-      "totalGroups": 11,
+      "totalGroups": 14,
       "totalPages": 1,
       "pages": [
         {
           "name": "touhou-page-1.json",
           "start": 1,
-          "end": 11,
-          "count": 11
+          "end": 14,
+          "count": 14
         }
       ]
     },
@@ -296,14 +296,140 @@
     {
       "id": "magic_girl",
       "label": "魔法少女",
-      "totalGroups": 5,
+      "totalGroups": 10,
       "totalPages": 1,
       "pages": [
         {
           "name": "magic_girl-page-1.json",
           "start": 1,
-          "end": 5,
-          "count": 5
+          "end": 10,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "idc",
+      "label": "idc",
+      "totalGroups": 2,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "idc-page-1.json",
+          "start": 1,
+          "end": 2,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "术力口",
+      "label": "术力口",
+      "totalGroups": 2,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "术力口-page-1.json",
+          "start": 1,
+          "end": 2,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "galgame",
+      "label": "galgame",
+      "totalGroups": 7,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "galgame-page-1.json",
+          "start": 1,
+          "end": 7,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "acnfun",
+      "label": "acfun",
+      "totalGroups": 0,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "acnfun-page-1.json",
+          "start": 1,
+          "end": 0,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "miexed",
+      "label": "mixed",
+      "totalGroups": 15,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "miexed-page-1.json",
+          "start": 1,
+          "end": 15,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "test",
+      "label": "测试",
+      "totalGroups": 4,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "test-page-1.json",
+          "start": 1,
+          "end": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "game",
+      "label": "游戏",
+      "totalGroups": 8,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "game-page-1.json",
+          "start": 1,
+          "end": 8,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "anime",
+      "label": "动漫",
+      "totalGroups": 27,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "anime-page-1.json",
+          "start": 1,
+          "end": 27,
+          "count": 27
+        }
+      ]
+    },
+    {
+      "id": "超时空辉夜姬",
+      "label": "超时空辉夜姬",
+      "totalGroups": 1,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "超时空辉夜姬-page-1.json",
+          "start": 1,
+          "end": 1,
+          "count": 1
         }
       ]
     }

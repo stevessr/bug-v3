@@ -3,8 +3,54 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 5,
+  "totalGroups": 10,
   "groups": [
+    {
+      "id": "group-1762354829964",
+      "name": "二阶堂希罗",
+      "icon": "https://cdn3.ldstatic.com/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
+      "topic": "magic_girl",
+      "order": 141,
+      "emojiCount": 45,
+      "isArchived": true
+    },
+    {
+      "id": "group-1768045118897",
+      "name": "二阶堂希罗 专题",
+      "icon": "⚔️",
+      "detail": "",
+      "topic": "magic_girl",
+      "order": 142,
+      "emojiCount": 47,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761749438138",
+      "name": "夏目安安",
+      "icon": "https://cdn3.ldstatic.com/optimized/4X/8/7/0/870aeb149aeb68b7eda41fc7cf45cdb86535ad01_2_382x500.jpeg",
+      "topic": "magic_girl",
+      "order": 171,
+      "emojiCount": 20,
+      "isArchived": false
+    },
+    {
+      "id": "group-1762354787132",
+      "name": "樱宇艾玛",
+      "icon": "https://cdn3.ldstatic.com/original/4X/6/d/0/6d0cd553b74d4ad762b9125de541fd42b3e28d2f.webp",
+      "topic": "magic_girl",
+      "order": 207,
+      "emojiCount": 25,
+      "isArchived": true
+    },
+    {
+      "id": "group-1760528644701",
+      "name": "橘雪莉",
+      "icon": "🍊",
+      "topic": "magic_girl",
+      "order": 208,
+      "emojiCount": 25,
+      "isArchived": false
+    },
     {
       "id": "group-1762523521486",
       "name": "魔女",

@@ -1,0 +1,46 @@
+{
+  "topic": "test",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 4,
+  "groups": [
+    {
+      "id": "group-1763969927132",
+      "name": "demo",
+      "icon": "https://linux.do/user_avatar/linux.do/stevessr/999/1169032_2.png",
+      "topic": "test",
+      "order": 10,
+      "emojiCount": 4,
+      "isArchived": true
+    },
+    {
+      "id": "group-1768553733361",
+      "name": "大召唤术",
+      "icon": "📦",
+      "detail": "",
+      "topic": "test",
+      "order": 172,
+      "emojiCount": 6,
+      "isArchived": false
+    },
+    {
+      "id": "group-1768974056814",
+      "name": "存档喵",
+      "icon": "https://cdn3.ldstatic.com/original/4X/2/2/4/2243cc7bc9b95d54773b22fce674d2305bd2c70d.jpeg",
+      "topic": "test",
+      "order": 179,
+      "emojiCount": 14,
+      "isArchived": false
+    },
+    {
+      "id": "ungrouped",
+      "name": "未分组",
+      "icon": "📦",
+      "topic": "test",
+      "order": 201,
+      "emojiCount": 6,
+      "isArchived": false
+    }
+  ]
+}

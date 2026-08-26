@@ -2,8 +2,8 @@
   "topic": "telegram",
   "page": 1,
   "pageSize": 48,
-  "totalPages": 1,
-  "totalGroups": 48,
+  "totalPages": 2,
+  "totalGroups": 49,
   "groups": [
     {
       "id": "telegram_1769227166276_pe3zr005t",
@@ -11,7 +11,7 @@
       "icon": "https://cdn3.ldstatic.com/original/4X/e/f/9/ef9d71586ad02952f2c4a141eda751c50b6a92ef.avif?v=telegram#/",
       "detail": "Telegram 贴纸包：https://t.me/addstickers/stickers_atri",
       "topic": "telegram",
-      "order": 5,
+      "order": 4,
       "emojiCount": 46,
       "isArchived": false
     },
@@ -406,6 +406,16 @@
       "isArchived": false
     },
     {
+      "id": "group-1759065160041",
+      "name": "超",
+      "icon": "https://cdn3.ldstatic.com/original/4X/9/2/7/9272a6fd0cb3cbbbbd101ed51163628965890ad2.webp",
+      "detail": "from telegram",
+      "topic": "telegram",
+      "order": 256,
+      "emojiCount": 79,
+      "isArchived": false
+    },
+    {
       "id": "telegram_1769511573956_2w11el2v2",
       "name": "道姑狐娘 @zhaxia_cn",
       "icon": "https://cdn3.ldstatic.com/original/4X/5/d/4/5d4b4004926ce1ba7aa017690c5b3262baea1b72.webp?v=telegram",
@@ -473,16 +483,6 @@
       "topic": "telegram",
       "order": 284,
       "emojiCount": 43,
-      "isArchived": false
-    },
-    {
-      "id": "telegram_1768789010285_kqetakqsg",
-      "name": "麦颂小紫狐 @zhaxia_cn",
-      "icon": "https://cdn3.ldstatic.com/original/4X/0/e/f/0efbe6803dd5f8dec17e89597c5fc466e4f74870.webp?v=telegram",
-      "detail": "Telegram 贴纸包：https://t.me/addstickers/in_BEEFEC_by_NaiDrawBot",
-      "topic": "telegram",
-      "order": 285,
-      "emojiCount": 16,
       "isArchived": false
     }
   ]

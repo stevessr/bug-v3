@@ -248,3 +248,30 @@
     padding-right: 12px;
   }
 }
+
+.ntf-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px 6px;
+}
+
+.ntf-mark-all {
+  padding: 4px 12px;
+  border: 1px solid color-mix(in oklab, currentColor 24%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 590;
+}
+
+.ntf-mark-all:hover:not(:disabled) {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.ntf-mark-all:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

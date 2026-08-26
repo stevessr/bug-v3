@@ -1,0 +1,27 @@
+{
+  "topic": "术力口",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 2,
+  "groups": [
+    {
+      "id": "group-1758720673759",
+      "name": "fu 师傅🍜",
+      "icon": "https://cdn3.ldstatic.com/original/4X/3/2/1/321359362aaa44d55185e02dc56f3381c7137b34.jpeg",
+      "topic": "术力口",
+      "order": 13,
+      "emojiCount": 9,
+      "isArchived": true
+    },
+    {
+      "id": "group-1767645462518",
+      "name": "重音 tetoSV｜Kasane TetoSV",
+      "icon": "https://cdn3.ldstatic.com/original/4X/9/c/e/9ce9259212f14b73289b6b98c082d8a76218ae83.avif",
+      "topic": "术力口",
+      "order": 265,
+      "emojiCount": 20,
+      "isArchived": false
+    }
+  ]
+}

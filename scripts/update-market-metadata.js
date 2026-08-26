@@ -2,7 +2,19 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import { TOUHOU_KEYWORDS, MAGIC_GIRL_KEYWORDS, keyword_match } from './lib/constants.ts'
+import {
+  TOUHOU_KEYWORDS,
+  MAGIC_GIRL_KEYWORDS,
+  术力口_KEYWORDS,
+  galgame_keywords,
+  mixed_keywords,
+  test_keywords,
+  game_keywords,
+  anime_keywords,
+  OC_KEYWORDS,
+  超时空辉夜姬_KEYWORDS,
+  keyword_match
+} from './lib/constants.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,7 +38,16 @@ const MARKET_TOPICS = [
   { id: 'neuro', label: 'neuro' },
   { id: 'touhou', label: '东方' },
   { id: 'neko', label: 'neko' },
-  { id: 'magic_girl', label: '魔法少女' }
+  { id: 'magic_girl', label: '魔法少女' },
+  { id: 'idc', label: 'idc' },
+  { id: '术力口', label: '术力口' },
+  { id: 'galgame', label: 'galgame' },
+  { id: 'acnfun', label: 'acfun' },
+  { id: 'miexed', label: 'mixed' },
+  { id: 'test', label: '测试' },
+  { id: 'game', label: '游戏' },
+  { id: 'anime', label: '动漫' },
+  { id: '超时空辉夜姬', label: '超时空辉夜姬' }
 ]
 
 function resolveMarketTopic(group) {
@@ -36,10 +57,10 @@ function resolveMarketTopic(group) {
     .toLowerCase()
   const len = group.emojiCount || group.emojis?.length || 0
 
-  if (detail.includes('t.me')) return 'telegram'
+  if (detail.includes('t.me') || detail.includes('telegram')) return 'telegram'
   if (detail.includes('bili')) return 'bilibili'
   if (name.startsWith('x')) return 'x'
-  if (name.includes('oc') || detail.includes('oc') || name.includes('steve')) return 'OC'
+  if (keyword_match(OC_KEYWORDS, name) || keyword_match(OC_KEYWORDS, detail)) return 'OC'
   if (name.includes('emoji')) return 'emoji'
   if (name.includes('animated') || name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
@@ -51,6 +72,18 @@ function resolveMarketTopic(group) {
   if (name.includes('neko')) return 'neko'
   if (keyword_match(MAGIC_GIRL_KEYWORDS, name) || keyword_match(MAGIC_GIRL_KEYWORDS, detail))
     return 'magic_girl'
+  if (name.includes('idc') || detail.includes('idc')) return 'idc'
+  if (keyword_match(术力口_KEYWORDS, name) || keyword_match(术力口_KEYWORDS, detail))
+    return '术力口'
+  if (keyword_match(galgame_keywords, name) || keyword_match(galgame_keywords, detail))
+    return 'galgame'
+  if (name.includes('acnfun') || detail.includes('acnfun')) return 'acnfun'
+  if (keyword_match(mixed_keywords, name) || keyword_match(mixed_keywords, detail)) return 'miexed'
+  if (keyword_match(test_keywords, name) || keyword_match(test_keywords, detail)) return 'test'
+  if (keyword_match(game_keywords, name) || keyword_match(game_keywords, detail)) return 'game'
+  if (keyword_match(anime_keywords, name) || keyword_match(anime_keywords, detail)) return 'anime'
+  if (keyword_match(超时空辉夜姬_KEYWORDS, name) || keyword_match(超时空辉夜姬_KEYWORDS, detail))
+    return '超时空辉夜姬'
   if (len > 100) return '100'
   return 'other'
 }
@@ -151,6 +184,7 @@ console.log(`Generated metadata.json with ${groups.length} groups.`)
 
 // Generate paginated index files for market browsing
 try {
+  fs.rmSync(MARKET_INDEX_DIR, { recursive: true, force: true })
   fs.mkdirSync(MARKET_INDEX_DIR, { recursive: true })
 
   const topicIndexes = MARKET_TOPICS.map(topic => {

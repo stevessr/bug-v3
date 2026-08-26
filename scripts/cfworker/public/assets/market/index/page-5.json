@@ -9,7 +9,7 @@
       "id": "group-1761153964258",
       "name": "明前奶绿",
       "icon": "https://cdn3.ldstatic.com/original/4X/8/0/7/807e55ab43794732803a5ef83a6a98592321a4bd.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 192,
       "emojiCount": 34,
       "isArchived": false
@@ -18,7 +18,7 @@
       "id": "group-1767644842489",
       "name": "明日方舟联动",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
-      "topic": "100",
+      "topic": "game",
       "order": 193,
       "emojiCount": 116,
       "isArchived": false
@@ -27,7 +27,7 @@
       "id": "group-1761152742132",
       "name": "明风风风",
       "icon": "https://cdn3.ldstatic.com/original/4X/8/9/2/89229b93f42d8d9843a01f6b71ecfffc40a2c9e5.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 194,
       "emojiCount": 97,
       "isArchived": false
@@ -46,7 +46,7 @@
       "id": "group-1766479646538",
       "name": "春也 Haruya",
       "icon": "https://cdn3.ldstatic.com/original/4X/f/f/9/ff94fddd15b87e0fd97aa543b757a7f2d632a378.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 196,
       "emojiCount": 25,
       "isArchived": false
@@ -75,7 +75,7 @@
       "id": "group-1759065232486",
       "name": "服务器",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/f/9/af9f35ab8c6376c3bef9fa6da4675b7feb0b0564.webp",
-      "topic": "other",
+      "topic": "miexed",
       "order": 199,
       "emojiCount": 17,
       "isArchived": false
@@ -84,7 +84,7 @@
       "id": "group-1767644847774",
       "name": "朝日六花｜Asahi Rokka",
       "icon": "https://cdn3.ldstatic.com/original/4X/f/3/2/f322d1acb1ec94845193ebde2121d8cedf17bd87.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 200,
       "emojiCount": 20,
       "isArchived": false
@@ -93,7 +93,7 @@
       "id": "ungrouped",
       "name": "未分组",
       "icon": "📦",
-      "topic": "other",
+      "topic": "test",
       "order": 201,
       "emojiCount": 6,
       "isArchived": false
@@ -102,7 +102,7 @@
       "id": "group-1762696295842",
       "name": "杂鱼喵喵喵",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/b/e/dbe3883d903d210eab0596e208118dfa0b3a351d.webp",
-      "topic": "other",
+      "topic": "miexed",
       "order": 202,
       "emojiCount": 65,
       "isArchived": false
@@ -151,7 +151,7 @@
       "id": "group-1762354787132",
       "name": "樱宇艾玛",
       "icon": "https://cdn3.ldstatic.com/original/4X/6/d/0/6d0cd553b74d4ad762b9125de541fd42b3e28d2f.webp",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 207,
       "emojiCount": 25,
       "isArchived": true
@@ -160,7 +160,7 @@
       "id": "group-1760528644701",
       "name": "橘雪莉",
       "icon": "🍊",
-      "topic": "other",
+      "topic": "magic_girl",
       "order": 208,
       "emojiCount": 25,
       "isArchived": false
@@ -198,7 +198,7 @@
       "id": "group-1767645020723",
       "name": "永雏塔菲｜Taffy",
       "icon": "https://cdn3.ldstatic.com/original/4X/8/3/0/83001f3e25a1c8af299f55a6b92fe0f95adb7ccd.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 212,
       "emojiCount": 81,
       "isArchived": false
@@ -250,13 +250,13 @@
       "topic": "100",
       "order": 217,
       "emojiCount": 115,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1756870039233",
       "name": "爱丽丝",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/6/6/966615f73c28f39828580b82c095acc6fb121568.webp",
-      "topic": "other",
+      "topic": "anime",
       "order": 218,
       "emojiCount": 89,
       "isArchived": false
@@ -314,7 +314,7 @@
       "id": "group-1762519966926",
       "name": "猪包 TV",
       "icon": "https://cdn3.ldstatic.com/original/4X/2/4/6/246f64f7604c2d69301f0ac003661af7af71c47d.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 224,
       "emojiCount": 61,
       "isArchived": false
@@ -323,7 +323,7 @@
       "id": "group-1759820228329",
       "name": "玻璃灵梦",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
-      "topic": "other",
+      "topic": "touhou",
       "order": 225,
       "emojiCount": 29,
       "isArchived": false
@@ -350,7 +350,7 @@
       "id": "group-1758292062046",
       "name": "疯传箱子",
       "icon": "https://cdn3.ldstatic.com/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
-      "topic": "other",
+      "topic": "anime",
       "order": 228,
       "emojiCount": 24,
       "isArchived": false
@@ -379,7 +379,7 @@
       "id": "group-1761154861189",
       "name": "真白花音",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/c/e/9cef029cf8659ad3e40a2e286e1da62df9f650d0.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 231,
       "emojiCount": 96,
       "isArchived": false
@@ -388,7 +388,7 @@
       "id": "group-1767645208165",
       "name": "礼服素世",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/c/0/4c0879dbdfa937e853c1b25da4688941bc2990bc.avif",
-      "topic": "other",
+      "topic": "anime",
       "order": 232,
       "emojiCount": 60,
       "isArchived": false
@@ -397,7 +397,7 @@
       "id": "group-1759678713445",
       "name": "神人表情包",
       "icon": "👊",
-      "topic": "other",
+      "topic": "miexed",
       "order": 233,
       "emojiCount": 62,
       "isArchived": false
@@ -406,7 +406,7 @@
       "id": "group-1756869988533",
       "name": "科研喵",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/0/5/405d8e2a4849c28afed8fc363348c3e9b3a24f33.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 234,
       "emojiCount": 16,
       "isArchived": false
@@ -415,7 +415,7 @@
       "id": "group-1767645265317",
       "name": "米塔｜MiSide",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/f/e/4fe7541f5b7772e0781572b2f0f3f4237802d226.avif",
-      "topic": "other",
+      "topic": "galgame",
       "order": 235,
       "emojiCount": 40,
       "isArchived": false
@@ -424,7 +424,7 @@
       "id": "group-1767645270562",
       "name": "糖糖｜Ame",
       "icon": "https://cdn3.ldstatic.com/original/4X/6/8/d/68da88abb3c708325fba02dad392514d12967f55.avif",
-      "topic": "other",
+      "topic": "galgame",
       "order": 236,
       "emojiCount": 20,
       "isArchived": false
@@ -433,7 +433,7 @@
       "id": "group-1765973308075",
       "name": "系敷敷",
       "icon": "https://cdn3.ldstatic.com/original/4X/d/4/e/d4e5072592d8967ee9f45f21b29fc06b1f76f0f0.webp",
-      "topic": "other",
+      "topic": "OC",
       "order": 237,
       "emojiCount": 92,
       "isArchived": false
@@ -442,10 +442,10 @@
       "id": "group-1758072938224",
       "name": "素晴",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/2/d/e2d0303b6833d8df9097e30001f47e4c56c5e7e2.png",
-      "topic": "other",
+      "topic": "anime",
       "order": 238,
       "emojiCount": 23,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "telegram_1768060557672_omrisx7d1",

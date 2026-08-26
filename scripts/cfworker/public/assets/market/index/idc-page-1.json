@@ -1,0 +1,27 @@
+{
+  "topic": "idc",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 2,
+  "groups": [
+    {
+      "id": "group-1758435118749",
+      "name": "bilibili idc",
+      "icon": "https://idcflare.com/uploads/default/original/2X/c/c8b533868759cbe3d1cc72ac845439995bb71070.png",
+      "topic": "idc",
+      "order": 6,
+      "emojiCount": 51,
+      "isArchived": true
+    },
+    {
+      "id": "group-1758505345831",
+      "name": "菲比 IDC",
+      "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
+      "topic": "idc",
+      "order": 249,
+      "emojiCount": 102,
+      "isArchived": true
+    }
+  ]
+}

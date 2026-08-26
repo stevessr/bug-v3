@@ -3,8 +3,17 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 11,
+  "totalGroups": 14,
   "groups": [
+    {
+      "id": "group-1767644169911",
+      "name": "Blue Lemon(蓝色灵梦)",
+      "icon": "https://cdn3.ldstatic.com/original/4X/c/0/7/c0766e02663fbcccca6e1e45bf272c7b5bfa0847.avif",
+      "topic": "touhou",
+      "order": 7,
+      "emojiCount": 32,
+      "isArchived": false
+    },
     {
       "id": "group-1758290078442",
       "name": "东方大头",
@@ -33,6 +42,15 @@
       "isArchived": false
     },
     {
+      "id": "group-1767644477951",
+      "name": "古明地觉｜Komeiji Satori",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b3c4c331a0ed6981463666fb27b54fe2cca933c.avif",
+      "topic": "touhou",
+      "order": 164,
+      "emojiCount": 20,
+      "isArchived": false
+    },
+    {
       "id": "group-1761446423721",
       "name": "可爱东方 1",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/a/3/1a3be398e1b0de1e3884f88a34b7252065aa3474.webp",
@@ -57,6 +75,15 @@
       "topic": "touhou",
       "order": 210,
       "emojiCount": 40,
+      "isArchived": false
+    },
+    {
+      "id": "group-1759820228329",
+      "name": "玻璃灵梦",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
+      "topic": "touhou",
+      "order": 225,
+      "emojiCount": 29,
       "isArchived": false
     },
     {

@@ -1,0 +1,82 @@
+{
+  "topic": "game",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 8,
+  "groups": [
+    {
+      "id": "group-1761182392763",
+      "name": "by her side",
+      "icon": "https://cdn3.ldstatic.com/original/4X/5/0/6/50694e3927be0a3a571c8655a966eca6c83f2154.webp",
+      "topic": "game",
+      "order": 8,
+      "emojiCount": 64,
+      "isArchived": false
+    },
+    {
+      "id": "group-1787628656789",
+      "name": "maimai",
+      "icon": "https://cdn3.ldstatic.com/original/4X/7/9/e/79e72c71fdf098af9d3e8a8d534000243d978533.gif?v=emoji-17",
+      "detail": "https://x.com/Zzul0714/status/2091892515465211975?s=20",
+      "topic": "game",
+      "order": 24,
+      "emojiCount": 69,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761445939845",
+      "name": "mon3tr",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/c/f/dcf74565da4918578345e1c2eae968726d9b350c.webp",
+      "topic": "game",
+      "order": 30,
+      "emojiCount": 29,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767644234348",
+      "name": "佑天寺若麦 (明日方舟)｜Nyamu Yūtenji(Arknights)",
+      "icon": "https://cdn3.ldstatic.com/original/4X/9/7/6/97634d97c36b0d62cbe4ee76bdcbd5f36aac1d71.avif",
+      "topic": "game",
+      "order": 150,
+      "emojiCount": 20,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767644842489",
+      "name": "明日方舟联动",
+      "icon": "https://cdn3.ldstatic.com/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
+      "topic": "game",
+      "order": 193,
+      "emojiCount": 116,
+      "isArchived": false
+    },
+    {
+      "id": "group-1759671340288",
+      "name": "舞萌",
+      "icon": "https://cdn3.ldstatic.com/original/4X/e/a/8/ea84e70f67c32e54208772f9134d8ebb549d378a.webp",
+      "topic": "game",
+      "order": 242,
+      "emojiCount": 47,
+      "isArchived": false
+    },
+    {
+      "id": "group-1767645336767",
+      "name": "芙宁娜｜Furina",
+      "icon": "https://cdn3.ldstatic.com/original/4X/2/0/7/207d7ae3fb606f8d2068854f715e93822a9aa34e.avif",
+      "topic": "game",
+      "order": 244,
+      "emojiCount": 36,
+      "isArchived": false
+    },
+    {
+      "id": "group-1755964482153",
+      "name": "菲比",
+      "icon": "https://cdn3.ldstatic.com/original/4X/c/b/9/cb9e72b10478eda89324d505f8597b6520516cc9.webp",
+      "topic": "game",
+      "order": 248,
+      "emojiCount": 54,
+      "isArchived": false
+    }
+  ]
+}
