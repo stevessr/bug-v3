@@ -154,11 +154,13 @@ test('Discourse list, nested category, message, and notification routes are pars
 
   assert.deepEqual(navigation.categoryRouteFromPath('/c/parent/child/42/l/latest'), {
     slug: 'parent/child',
-    categoryId: 42
+    categoryId: 42,
+    listType: 'latest'
   })
   assert.deepEqual(navigation.categoryRouteFromPath('/c/support.json'), {
     slug: 'support',
-    categoryId: null
+    categoryId: null,
+    listType: 'latest'
   })
 
   assert.equal(navigation.messagesTabFromPath('/u/alice/messages/sent'), 'sent')

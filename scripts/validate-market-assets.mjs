@@ -70,7 +70,9 @@ function validateMarketAssets() {
     assert(group && typeof group === 'object', `${fileName} must contain an object`)
     assert(typeof group.id === 'string' && group.id.length > 0, `${fileName} is missing a group id`)
     assert(Array.isArray(group.emojis), `${fileName} is missing an emojis array`)
-    const canonicalBaseName = 'group-' + group.id
+    const canonicalBaseName = group.id.startsWith('group-')
+      ? group.id
+      : 'group-' + group.id
     const canonicalFileName = canonicalBaseName + '.json'
     const isLegacyDuplicate =
       fileName.startsWith(canonicalBaseName + ' (') && fileName.endsWith(').json')
