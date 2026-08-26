@@ -120,13 +120,30 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
 }
 
 const buildMarketTopicSummaries = (groups: MarketGroupSummary[]): MarketTopicSummary[] => {
-  return defaultMarketTopics.map(topic => ({
-    ...topic,
-    totalGroups:
-      topic.id === 'all'
-        ? groups.length
-        : groups.filter(group => (group.topic || resolveMarketTopic(group)) === topic.id).length
-  }))
+  // 动态收集数据中实际出现的分类，defaultMarketTopics 仅作为标签与排序参照
+  const labelOf = (id: MarketTopicId) =>
+    defaultMarketTopics.find(t => t.id === id)?.label ?? String(id)
+  const orderOf = (id: MarketTopicId) => {
+    const idx = defaultMarketTopics.findIndex(t => t.id === id)
+    return idx === -1 ? defaultMarketTopics.length : idx
+  }
+  const counts = new Map<MarketTopicId, number>()
+  groups.forEach(group => {
+    const id = group.topic || resolveMarketTopic(group)
+    counts.set(id, (counts.get(id) || 0) + 1)
+  })
+  return [
+    { id: 'all', label: '全部', totalGroups: groups.length, totalPages: 1 },
+    ...[...counts.entries()]
+      .filter(([id]) => id !== 'all')
+      .sort((a, b) => orderOf(a[0]) - orderOf(b[0]))
+      .map(([id, count]) => ({
+        id,
+        label: labelOf(id),
+        totalGroups: count,
+        totalPages: Math.max(1, Math.ceil(count / pageSize.value))
+      }))
+  ]
 }
 
 const topicCounts = computed(() => {

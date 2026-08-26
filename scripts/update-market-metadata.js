@@ -171,11 +171,24 @@ for (let i = 0; i < groups.length; i++) {
   groups[i].order = i
 }
 
+// Compute per-topic statistics once so metadata.json and index files stay consistent.
+const topicStats = MARKET_TOPICS.map(topic => {
+  const totalGroups =
+    topic.id === 'all' ? groups.length : groups.filter(group => group.topic === topic.id).length
+  return {
+    id: topic.id,
+    label: topic.label,
+    totalGroups,
+    totalPages: Math.max(1, Math.ceil(totalGroups / PAGE_SIZE))
+  }
+})
+
 const metadata = {
   version: '1.0',
   exportDate: new Date().toISOString(),
   totalGroups: groups.length,
   includeArchived: true,
+  topics: topicStats,
   groups: groups
 }
 
@@ -187,10 +200,10 @@ try {
   fs.rmSync(MARKET_INDEX_DIR, { recursive: true, force: true })
   fs.mkdirSync(MARKET_INDEX_DIR, { recursive: true })
 
-  const topicIndexes = MARKET_TOPICS.map(topic => {
+  const topicIndexes = topicStats.map(topic => {
     const topicGroups =
       topic.id === 'all' ? groups : groups.filter(group => group.topic === topic.id)
-    const totalPages = Math.max(1, Math.ceil(topicGroups.length / PAGE_SIZE))
+    const totalPages = topic.totalPages
     const pages = []
 
     for (let page = 1; page <= totalPages; page++) {
