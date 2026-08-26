@@ -1,11 +1,13 @@
-import { createApp, h } from 'vue'
+import { createApp, defineAsyncComponent, h } from 'vue'
 import { createPinia } from 'pinia'
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
 
-import DiscourseBrowser from './options/components/DiscourseBrowser.vue'
-
 import './styles/main.ts'
 import './styles/discourse.css'
+
+const DiscourseBrowser = defineAsyncComponent(
+  () => import('./options/components/DiscourseBrowser.vue')
+)
 
 const App = {
   name: 'DiscourseStandalone',
