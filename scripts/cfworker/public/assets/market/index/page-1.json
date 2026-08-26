@@ -2,8 +2,8 @@
   "topic": "all",
   "page": 1,
   "pageSize": 48,
-  "totalPages": 7,
-  "totalGroups": 289,
+  "totalPages": 6,
+  "totalGroups": 288,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -67,7 +67,7 @@
       "topic": "idc",
       "order": 6,
       "emojiCount": 51,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1767644169911",
@@ -103,7 +103,7 @@
       "topic": "test",
       "order": 10,
       "emojiCount": 4,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1761060574614",
@@ -131,7 +131,7 @@
       "topic": "术力口",
       "order": 13,
       "emojiCount": 9,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1761569266491",
@@ -213,7 +213,7 @@
       "topic": "miexed",
       "order": 22,
       "emojiCount": 49,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "telegram_1768740682292_ectw51493",
@@ -399,7 +399,7 @@
       "topic": "OC",
       "order": 42,
       "emojiCount": 111,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1761328497264",
@@ -444,7 +444,7 @@
       "topic": "miexed",
       "order": 47,
       "emojiCount": 100,
-      "isArchived": true
+      "isArchived": false
     }
   ]
 }

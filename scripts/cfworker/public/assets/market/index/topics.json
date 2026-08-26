@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "exportDate": "2026-08-26T07:46:52.911Z",
-  "totalGroups": 289,
+  "exportDate": "2026-08-26T08:12:34.444Z",
+  "totalGroups": 288,
   "topics": [
     {
       "id": "all",
       "label": "全部",
-      "totalGroups": 289,
-      "totalPages": 7
+      "totalGroups": 288,
+      "totalPages": 6
     },
     {
       "id": "bilibili",
@@ -18,8 +18,8 @@
     {
       "id": "telegram",
       "label": "telegram",
-      "totalGroups": 49,
-      "totalPages": 2
+      "totalGroups": 48,
+      "totalPages": 1
     },
     {
       "id": "x",

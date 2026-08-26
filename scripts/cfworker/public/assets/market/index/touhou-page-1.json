@@ -73,7 +73,7 @@
       "name": "比那名居天子｜Hinanawi_Tenshi",
       "icon": "https://cdn3.ldstatic.com/original/4X/5/5/9/5593783784294d9ae906a0ba256c17ee8e00defe.avif",
       "topic": "touhou",
-      "order": 210,
+      "order": 209,
       "emojiCount": 40,
       "isArchived": false
     },
@@ -82,7 +82,7 @@
       "name": "玻璃灵梦",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
       "topic": "touhou",
-      "order": 225,
+      "order": 224,
       "emojiCount": 29,
       "isArchived": false
     },
@@ -91,7 +91,7 @@
       "name": "珠手知由｜Tamade Chiyu",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/e/3/ae3c4efbaed0d6ad247f0dde8c1f81493f88c602.avif",
       "topic": "touhou",
-      "order": 226,
+      "order": 225,
       "emojiCount": 20,
       "isArchived": false
     },
@@ -100,7 +100,7 @@
       "name": "琪露诺｜Cirno",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/b/4/4b4eb8b4ddee8f31b42f342e9eacf2c05bf1bd12.avif",
       "topic": "touhou",
-      "order": 227,
+      "order": 226,
       "emojiCount": 73,
       "isArchived": false
     },
@@ -109,7 +109,7 @@
       "name": "芙兰朵露·斯卡蕾特｜Flandre Scarlet",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/8/b/08b48dc6a82f75b6803bb056a94542241e865e73.avif",
       "topic": "touhou",
-      "order": 243,
+      "order": 242,
       "emojiCount": 20,
       "isArchived": false
     },
@@ -118,7 +118,7 @@
       "name": "铃仙｜Reisen",
       "icon": "https://cdn3.ldstatic.com/original/4X/a/8/b/a8b92d92858b2f8020885c6d0cc68b50e481bf67.avif",
       "topic": "touhou",
-      "order": 267,
+      "order": 266,
       "emojiCount": 20,
       "isArchived": false
     },
@@ -127,7 +127,7 @@
       "name": "雾雨魔理沙｜Kirisame Marisa",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/9/e/c9e433e439e8bbddf1978358a14aabd5d25e3ff2.avif",
       "topic": "touhou",
-      "order": 274,
+      "order": 273,
       "emojiCount": 54,
       "isArchived": false
     }

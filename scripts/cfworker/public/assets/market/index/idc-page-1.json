@@ -12,16 +12,16 @@
       "topic": "idc",
       "order": 6,
       "emojiCount": 51,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1758505345831",
       "name": "菲比 IDC",
       "icon": "https://idcflare.com/uploads/default/original/2X/c/cec9b4dc6db7b4241d92ae86bf17f6cc687d49ee.png",
       "topic": "idc",
-      "order": 249,
+      "order": 248,
       "emojiCount": 102,
-      "isArchived": true
+      "isArchived": false
     }
   ]
 }

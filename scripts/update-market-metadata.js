@@ -93,6 +93,34 @@ const files = fs
   .readdirSync(MARKET_DIR)
   .filter(file => file.endsWith('.json') && file !== 'metadata.json')
 
+// Migrate legacy double-prefixed files produced by the old `group-${id}.json`
+// naming when id already starts with 'group-' (e.g. group-group-123.json).
+// New convention: file name is `${id}.json` when id starts with 'group-',
+// otherwise `group-${id}.json`.
+for (const file of fs.readdirSync(MARKET_DIR)) {
+  const legacyMatch = /^group-group-(.+)\.json$/.exec(file)
+  if (!legacyMatch) continue
+  const targetName = `group-${legacyMatch[1]}.json`
+  const sourcePath = path.join(MARKET_DIR, file)
+  const targetPath = path.join(MARKET_DIR, targetName)
+  try {
+    const sourceData = JSON.parse(fs.readFileSync(sourcePath, 'utf8'))
+    if (fs.existsSync(targetPath)) {
+      const targetData = JSON.parse(fs.readFileSync(targetPath, 'utf8'))
+      if (targetData.id && sourceData.id && targetData.id === sourceData.id) {
+        fs.rmSync(sourcePath)
+        console.log(`Removed duplicate legacy file ${file} (${targetName} exists)`)
+      } else {
+        console.warn(`Skipping ${file}: ${targetName} exists with different group id`)
+      }
+    } else {
+      fs.renameSync(sourcePath, targetPath)
+      console.log(`Renamed legacy file ${file} -> ${targetName}`)
+    }
+  } catch (err) {
+    console.error(`Error migrating ${file}:`, err)
+  }
+}
 const groups = []
 
 files.forEach(file => {
@@ -102,6 +130,14 @@ files.forEach(file => {
 
     // Skip non-group JSON files (e.g. topics.json leftovers) without a valid id
     if (!data || typeof data.id !== 'string' || !data.id) return
+
+    // Enforce canonical file naming: `${id}.json` when id starts with 'group-',
+    // otherwise `group-${id}.json`. Skips stray downloads like "xxx (1).json".
+    const expectedName = data.id.startsWith('group-') ? `${data.id}.json` : `group-${data.id}.json`
+    if (file !== expectedName) {
+      console.warn(`Skipping ${file}: expected ${expectedName} for group id ${data.id}`)
+      return
+    }
 
     // Extract group summary info
     const groupInfo = {

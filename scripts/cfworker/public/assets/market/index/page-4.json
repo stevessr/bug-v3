@@ -2,8 +2,8 @@
   "topic": "all",
   "page": 4,
   "pageSize": 48,
-  "totalPages": 7,
-  "totalGroups": 289,
+  "totalPages": 6,
+  "totalGroups": 288,
   "groups": [
     {
       "id": "group-1756870080244",
@@ -252,7 +252,7 @@
       "topic": "OC",
       "order": 170,
       "emojiCount": 10,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1761749438138",

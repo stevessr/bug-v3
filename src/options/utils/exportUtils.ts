@@ -62,7 +62,8 @@ export function exportGroupFile(group: any) {
     order: group.order,
     emojis: (group.emojis || []).map((e: any) => buildEmojiExportItem(e, group.id))
   }
-  const filename = `group-${group.id}.json`
+  // 与云端市场命名一致：id 已带 group- 前缀时不再叠加
+  const filename = group.id.startsWith('group-') ? `${group.id}.json` : `group-${group.id}.json`
   downloadJson(filename, groupData)
 }
 
@@ -601,6 +602,9 @@ export async function exportToCloudMarket(
     }
 
     onProgress?.(i + 2, total, group.name)
-    downloadJson(`group-${group.id}.json`, groupData)
+    downloadJson(
+      group.id.startsWith('group-') ? `${group.id}.json` : `group-${group.id}.json`,
+      groupData
+    )
   }
 }

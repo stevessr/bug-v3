@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "exportDate": "2026-08-26T07:46:52.911Z",
-  "totalGroups": 289,
+  "exportDate": "2026-08-26T08:12:34.444Z",
+  "totalGroups": 288,
   "pageSize": 48,
-  "totalPages": 7,
+  "totalPages": 6,
   "pages": [
     {
       "name": "page-1.json",
@@ -40,20 +40,14 @@
       "start": 241,
       "end": 288,
       "count": 48
-    },
-    {
-      "name": "page-7.json",
-      "start": 289,
-      "end": 289,
-      "count": 1
     }
   ],
   "topics": [
     {
       "id": "all",
       "label": "全部",
-      "totalGroups": 289,
-      "totalPages": 7,
+      "totalGroups": 288,
+      "totalPages": 6,
       "pages": [
         {
           "name": "page-1.json",
@@ -90,12 +84,6 @@
           "start": 241,
           "end": 288,
           "count": 48
-        },
-        {
-          "name": "page-7.json",
-          "start": 289,
-          "end": 289,
-          "count": 1
         }
       ]
     },
@@ -116,20 +104,14 @@
     {
       "id": "telegram",
       "label": "telegram",
-      "totalGroups": 49,
-      "totalPages": 2,
+      "totalGroups": 48,
+      "totalPages": 1,
       "pages": [
         {
           "name": "telegram-page-1.json",
           "start": 1,
           "end": 48,
           "count": 48
-        },
-        {
-          "name": "telegram-page-2.json",
-          "start": 49,
-          "end": 49,
-          "count": 1
         }
       ]
     },

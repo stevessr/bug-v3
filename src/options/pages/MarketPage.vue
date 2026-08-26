@@ -71,22 +71,25 @@ const hasLoadedFullMarketMetadata = ref(false)
 const hasTopicIndex = ref(false)
 const selectedTopic = ref<MarketTopicId>('all')
 
-const defaultMarketTopics: MarketTopicSummary[] = [
-  { id: 'all', label: '全部', totalGroups: 0, totalPages: 1 },
-  { id: 'bilibili', label: 'bilibili', totalGroups: 0, totalPages: 1 },
-  { id: 'telegram', label: 'telegram', totalGroups: 0, totalPages: 1 },
-  { id: 'x', label: 'X', totalGroups: 0, totalPages: 1 },
-  { id: 'other', label: '其他', totalGroups: 0, totalPages: 1 },
-  { id: 'OC', label: 'OC', totalGroups: 0, totalPages: 1 },
-  { id: 'emoji', label: 'emoji', totalGroups: 0, totalPages: 1 },
-  { id: 'animated', label: '动画表情', totalGroups: 0, totalPages: 1 },
-  { id: 'linux.do', label: 'linux.do', totalGroups: 0, totalPages: 1 },
-  { id: 'tieba', label: '贴吧', totalGroups: 0, totalPages: 1 },
-  { id: '100', label: '100+', totalGroups: 0, totalPages: 1 },
-  { id: 'neuro', label: 'neuro', totalGroups: 0, totalPages: 1 }
-]
+// 已知分类的标签与排序参照；可用分类始终从 topics.json / index.json / 数据动态获取
+const MARKET_TOPIC_LABELS: Record<string, string> = {
+  all: '全部',
+  bilibili: 'bilibili',
+  telegram: 'telegram',
+  x: 'X',
+  other: '其他',
+  OC: 'OC',
+  emoji: 'emoji',
+  animated: '动画表情',
+  'linux.do': 'linux.do',
+  tieba: '贴吧',
+  '100': '100+',
+  neuro: 'neuro'
+}
 
-const marketTopics = shallowRef<MarketTopicSummary[]>(defaultMarketTopics)
+const marketTopics = shallowRef<MarketTopicSummary[]>([
+  { id: 'all', label: MARKET_TOPIC_LABELS.all, totalGroups: 0, totalPages: 1 }
+])
 
 // 优化：使用 shallowRef 减少缓存 Map 的响应式代理开销
 const groupDetailsCache = shallowRef<Map<string, EmojiGroup>>(new Map())
@@ -120,12 +123,12 @@ const resolveMarketTopic = (group: MarketGroupSummary): MarketTopicId => {
 }
 
 const buildMarketTopicSummaries = (groups: MarketGroupSummary[]): MarketTopicSummary[] => {
-  // 动态收集数据中实际出现的分类，defaultMarketTopics 仅作为标签与排序参照
-  const labelOf = (id: MarketTopicId) =>
-    defaultMarketTopics.find(t => t.id === id)?.label ?? String(id)
+  // 动态收集数据中实际出现的分类，MARKET_TOPIC_LABELS 仅作为标签与排序参照
+  const labelOf = (id: MarketTopicId) => MARKET_TOPIC_LABELS[id] ?? String(id)
+  const knownIds = Object.keys(MARKET_TOPIC_LABELS)
   const orderOf = (id: MarketTopicId) => {
-    const idx = defaultMarketTopics.findIndex(t => t.id === id)
-    return idx === -1 ? defaultMarketTopics.length : idx
+    const idx = knownIds.indexOf(id)
+    return idx === -1 ? knownIds.length : idx
   }
   const counts = new Map<MarketTopicId, number>()
   groups.forEach(group => {
@@ -276,7 +279,10 @@ const loadMarketData = async () => {
       pageSize.value = indexPageSize.value
       totalMarketGroups.value = indexData.totalGroups || 0
       hasTopicIndex.value = Array.isArray(indexData.topics)
-      marketTopics.value = hasTopicIndex.value ? indexData.topics : defaultMarketTopics
+      marketTopics.value = hasTopicIndex.value
+        ? indexData.topics
+        : (await loadMarketTopics().catch(() => null)) ||
+          buildMarketTopicSummaries(fullMarketGroups.value || [])
       marketMetadata.value = {
         version: indexData.version || '1.0',
         exportDate: indexData.exportDate || new Date().toISOString(),
@@ -289,10 +295,14 @@ const loadMarketData = async () => {
         await loadMarketPage(1, 'all')
         hasLoadedFullMarketMetadata.value = false
       } else {
+        // index.json 无 topics 时回退到完整 metadata.json（内部会再取 topics.json）
+        usePagedIndex.value = false
+        isSearchMode.value = false
+        hasTopicIndex.value = false
         await loadMarketMetadata()
       }
-    } catch (error) {
-      // 回退到完整 metadata.json
+    } catch {
+      // index.json 获取失败时回退到完整 metadata.json
       usePagedIndex.value = false
       isSearchMode.value = false
       hasTopicIndex.value = false
@@ -320,7 +330,9 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
   try {
     // 从云端加载分组详细数据
     const baseUrl = getMarketBaseUrl()
-    const groupUrl = `${baseUrl}/assets/market/group-${groupId}.json`
+    // id 以 group- 开头时文件名即 ${id}.json，否则保留 group- 前缀
+    const fileName = groupId.startsWith('group-') ? `${groupId}.json` : `group-${groupId}.json`
+    const groupUrl = `${baseUrl}/assets/market/${fileName}`
     const response = await fetch(groupUrl)
 
     if (!response.ok) {

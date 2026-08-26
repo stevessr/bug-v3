@@ -2,8 +2,8 @@
   "topic": "all",
   "page": 2,
   "pageSize": 48,
-  "totalPages": 7,
-  "totalGroups": 289,
+  "totalPages": 6,
+  "totalGroups": 288,
   "groups": [
     {
       "id": "group-1757396353003",
@@ -12,7 +12,7 @@
       "topic": "x",
       "order": 48,
       "emojiCount": 366,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1777608388684",
@@ -120,7 +120,7 @@
       "topic": "x",
       "order": 60,
       "emojiCount": 320,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1767453793359",
@@ -229,7 +229,7 @@
       "topic": "x",
       "order": 72,
       "emojiCount": 886,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1764738272674",
@@ -238,7 +238,7 @@
       "topic": "x",
       "order": 73,
       "emojiCount": 732,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1766980740966",
@@ -373,7 +373,7 @@
       "topic": "x",
       "order": 88,
       "emojiCount": 620,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1770996603720",

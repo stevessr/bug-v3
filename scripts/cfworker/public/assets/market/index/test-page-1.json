@@ -12,7 +12,7 @@
       "topic": "test",
       "order": 10,
       "emojiCount": 4,
-      "isArchived": true
+      "isArchived": false
     },
     {
       "id": "group-1768553733361",
@@ -38,7 +38,7 @@
       "name": "未分组",
       "icon": "📦",
       "topic": "test",
-      "order": 201,
+      "order": 200,
       "emojiCount": 6,
       "isArchived": false
     }
