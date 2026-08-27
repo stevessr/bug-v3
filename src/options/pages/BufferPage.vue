@@ -12,11 +12,17 @@ import TelegramStickerModal from '../modals/TelegramStickerModal.vue'
 import BufferEmojiGrid from '../components/BufferEmojiGrid'
 
 import { useBufferBatch } from './composables/useBufferBatch'
-import { useFilePersistence } from './composables/useFilePersistence'
+import { useFilePersistence, type FileItem } from './composables/useFilePersistence'
 import { useCollaborativeUpload } from './composables/useCollaborativeUpload'
 import { useUpload, type UploadProgressItem } from './composables/useUpload'
 
 import { requestConfirmation } from '@/options/utils/confirmService'
+import {
+  getEmojiPackFolderName,
+  isEmojiImageFile,
+  normalizeEmojiFilename,
+  parseEmojiPackFolderName
+} from '@/options/utils/folderUpload'
 import { getEmojiImageUrlWithLoading } from '@/utils/imageUrlHelper'
 import { shouldPreferCache, shouldUseImageCache } from '@/utils/imageCachePolicy'
 import CachedImage from '@/components/CachedImage.vue'
@@ -221,21 +227,8 @@ const loadUploadConcurrency = () => {
 
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
 const uploadConcurrency = ref<number | undefined>(DEFAULT_UPLOAD_CONCURRENCY)
-const selectedFiles = ref<
-  Array<{
-    id: string
-    file: File
-    previewUrl: string
-    width?: number
-    height?: number
-    cropData?: {
-      x: number
-      y: number
-      width: number
-      height: number
-    }
-  }>
->([])
+const selectedFiles = ref<FileItem[]>([])
+const folderInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const uploadScrollContainer = ref<HTMLElement | null>(null)
 
@@ -318,9 +311,7 @@ const { saveSelectedFiles, loadSelectedFiles, clearPersistedFiles } =
 // 优化：改为浅监听，只监听数组长度变化
 watch(
   () => selectedFiles.value.length,
-  () => {
-    saveSelectedFiles()
-  }
+  () => saveSelectedFiles()
 )
 
 // Collaborative Upload Logic
@@ -430,34 +421,49 @@ const formatNodeId = (nodeId: string) => {
   return nodeId.length > 15 ? nodeId.slice(0, 12) + '...' : nodeId
 }
 
-const addFiles = async (files: File[]) => {
-  const imageFiles = files.filter(file => file.type.startsWith('image/'))
+const addFiles = async (files: File[], requestedTargetGroupId?: string) => {
+  const imageFiles = files.filter(isEmojiImageFile)
+  const targetGroup =
+    (requestedTargetGroupId &&
+      emojiStore.groups.find(group => group.id === requestedTargetGroupId)) ||
+    bufferGroup.value
+  const targetGroupId =
+    requestedTargetGroupId && targetGroup && targetGroup.id !== 'buffer'
+      ? targetGroup.id
+      : undefined
 
-  // Filter out existing files from buffer group
-  const existingNames = bufferGroup.value?.emojis.map(e => e.name) || []
-
-  // Filter out existing files from current selection (remove extension for comparison)
-  const existingFileNames = new Set(
-    selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
+  // Folder imports must be compared with the destination pack, not only with
+  // the buffer. This keeps an append operation idempotent when the same folder
+  // is selected again.
+  const existingNames = new Set(
+    targetGroup?.emojis.map(emoji => normalizeEmojiFilename(emoji.name)) || []
   )
 
-  // Pre-filter files to avoid unnecessary processing
+  // Keep pending-file duplicate checks scoped to the same destination. Files
+  // with the same basename can legitimately be queued for different packs.
+  const existingFileNames = new Set(
+    selectedFiles.value
+      .filter(item => item.targetGroupId === targetGroupId)
+      .map(item => normalizeEmojiFilename(item.file.name))
+  )
+
+  // Pre-filter files to avoid unnecessary processing. Add accepted names to the
+  // set as we go so nested folders cannot queue two emojis with one basename.
   const filteredFiles = imageFiles.filter(file => {
     const fileName = file.name
-    const fileNameWithoutExt = fileName.toLowerCase().replace(/\.[^/.]+$/, '')
+    const normalizedName = normalizeEmojiFilename(fileName)
 
-    // Check if file already exists in buffer group
-    if (existingNames.includes(fileName)) {
-      console.log(`[BufferPage] Skipped ${fileName}: already exists in buffer group`)
+    if (existingNames.has(normalizedName)) {
+      console.log(`[BufferPage] Skipped ${fileName}: already exists in destination group`)
       return false
     }
 
-    // Check if file already exists in current selection
-    if (existingFileNames.has(fileNameWithoutExt)) {
+    if (existingFileNames.has(normalizedName)) {
       console.log(`[BufferPage] Skipped ${fileName}: duplicate in current selection`)
       return false
     }
 
+    existingFileNames.add(normalizedName)
     return true
   })
 
@@ -470,14 +476,7 @@ const addFiles = async (files: File[]) => {
 
   // Process files in batches to avoid memory overflow
   const BATCH_SIZE = 100 // Process 100 files at a time
-  const newFiles: Array<{
-    id: string
-    file: File
-    previewUrl: string
-    cropData: undefined
-    width: number | undefined
-    height: number | undefined
-  }> = []
+  const newFiles: FileItem[] = []
 
   let successCount = 0
   let errorCount = 0
@@ -510,7 +509,8 @@ const addFiles = async (files: File[]) => {
               previewUrl: url,
               cropData: undefined as undefined,
               width: undefined as number | undefined,
-              height: undefined as number | undefined
+              height: undefined as number | undefined,
+              ...(targetGroupId && { targetGroupId })
             }
 
             // Get image dimensions
@@ -573,6 +573,51 @@ const addFiles = async (files: File[]) => {
   }
 }
 
+// 从文件夹上传：解析文件夹名 → name/detail，查找或创建目标分组，并读取其内全部图片。
+// 每个待上传文件携带自己的目标分组，避免把文件夹导入和普通上传混到同一分组。
+const handleFolderSelected = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const fileList = input.files
+  if (!fileList || fileList.length === 0) {
+    input.value = ''
+    return
+  }
+
+  try {
+    const files = Array.from(fileList)
+    if (!files.some(isEmojiImageFile)) {
+      message.warning('所选文件夹中没有可上传的图片')
+      return
+    }
+
+    const folderName = getEmojiPackFolderName(files)
+    if (!folderName) {
+      message.error('无法读取所选文件夹名称，请重新选择一个文件夹')
+      return
+    }
+
+    const { name, detail } = parseEmojiPackFolderName(folderName)
+    if (!name) {
+      message.error('文件夹名称为空，无法创建表情包')
+      return
+    }
+
+    // 按名称复用已有分组；有 detail 时更新已有分组，无 detail 时保留原 detail。
+    let group = emojiStore.groups.find(existingGroup => existingGroup.name === name)
+    if (!group) {
+      group = emojiStore.createGroup(name, '📁')
+    }
+    if (detail !== undefined && group.detail !== detail) {
+      emojiStore.updateGroup(group.id, { detail })
+    }
+
+    await addFiles(files, group.id)
+  } finally {
+    // Reset the input so selecting the same folder again still emits change.
+    input.value = ''
+  }
+}
+
 // 图片切割相关方法
 const openImageCropper = (id: string) => {
   const fileItem = selectedFiles.value.find(f => f.id === id)
@@ -589,6 +634,11 @@ const closeImageCropper = () => {
 
 const handleCroppedEmojis = async (croppedEmojis: any[]) => {
   try {
+    const originalFile = cropImageFile.value
+    const originalItem = originalFile
+      ? selectedFiles.value.find(item => item.file === originalFile)
+      : undefined
+
     // Get existing names from current selection (remove extension for comparison)
     const existingFileNames = new Set(
       selectedFiles.value.map(item => item.file.name.toLowerCase().replace(/\.[^/.]+$/, ''))
@@ -632,6 +682,7 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
           cropData: undefined
           width: number
           height: number
+          targetGroupId?: string
         }>((resolve, reject) => {
           const img = new Image()
           img.onload = () => {
@@ -641,7 +692,10 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
               previewUrl: url,
               cropData: undefined,
               width: img.width,
-              height: img.height
+              height: img.height,
+              ...(originalItem?.targetGroupId && {
+                targetGroupId: originalItem.targetGroupId
+              })
             })
           }
           img.onerror = () => {
@@ -655,7 +709,6 @@ const handleCroppedEmojis = async (croppedEmojis: any[]) => {
     const newFilesWithUrls = await Promise.all(loadImagePromises)
 
     // Remove the original file that was cropped
-    const originalFile = cropImageFile.value
     if (originalFile) {
       const indexToRemove = selectedFiles.value.findIndex(item => item.file === originalFile)
       if (indexToRemove > -1) {
@@ -747,13 +800,8 @@ onMounted(() => {
   )
 
   if (!existingBuffer) {
-    emojiStore.createGroup('缓冲区', '📦')
-    // Find and update the group ID
-    const buffer = emojiStore.groups.find(g => g.name === '缓冲区')
-    if (buffer) {
-      buffer.id = 'buffer'
-      console.log('[BufferPage] Buffer group created:', buffer.id)
-    }
+    const buffer = emojiStore.createGroup('缓冲区', '📦', 'buffer')
+    console.log('[BufferPage] Buffer group created:', buffer.id)
   }
 
   progressInterval = setInterval(() => {
@@ -805,7 +853,7 @@ onBeforeUnmount(() => {
         </a-tooltip>
       </div>
       <p class="text-gray-600 dark:text-gray-400">
-        上传图片到 linux.do 或 idcflare.com，并自动添加到此分组
+        普通上传进入缓冲区；从文件夹导入时自动归入同名表情包
       </p>
     </div>
 
@@ -958,6 +1006,28 @@ onBeforeUnmount(() => {
 
       <!-- 自定义文件上传区域 -->
       <FileUploader @filesSelected="addFiles" />
+
+      <!-- 文件夹上传：按文件夹名解析分组名/detail 并追加到目标分组 -->
+      <div class="mt-3 flex items-center gap-2">
+        <a-button size="small" :disabled="isUploading" @click="folderInputRef?.click()">
+          <template #icon>
+            <span>📁</span>
+          </template>
+          从文件夹上传表情包
+        </a-button>
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          按文件夹名「名称 详情」自动创建/追加到分组，并沿用所选上传服务
+        </span>
+        <input
+          ref="folderInputRef"
+          type="file"
+          webkitdirectory
+          directory
+          multiple
+          style="display: none"
+          @change="handleFolderSelected"
+        />
+      </div>
 
       <!-- File List -->
       <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">

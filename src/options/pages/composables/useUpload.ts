@@ -27,7 +27,6 @@ interface UseUploadOptions {
 
 const DEFAULT_UPLOAD_CONCURRENCY = 5
 const MAX_UPLOAD_CONCURRENCY = 20
-
 export function useUpload(options: UseUploadOptions) {
   const {
     selectedFiles,
@@ -58,41 +57,62 @@ export function useUpload(options: UseUploadOptions) {
       percent: 0
     }))
 
-    // Ensure buffer group exists
-    let group = bufferGroup.value
-    if (!group) {
-      group = emojiStore.createGroup('缓冲区', '📦')
-      const buffer = emojiStore.groups.find(g => g.name === '缓冲区')
-      if (buffer) {
-        buffer.id = 'buffer'
-        group = buffer
+    const ensureBufferGroup = (): EmojiGroup | undefined => {
+      let group = bufferGroup.value
+      if (!group) {
+        group = emojiStore.createGroup('缓冲区', '📦', 'buffer')
       }
+      return group
     }
 
-    if (!group) {
-      console.error('Failed to create buffer group')
+    // A folder import carries targetGroupId on each file. Resolve the target
+    // once at upload start so mixed queues (ordinary files + multiple folders)
+    // are appended to their own groups instead of all landing in the buffer.
+    const destinationGroups = new Map<string, EmojiGroup>()
+    const getDestinationGroup = (item: any): EmojiGroup | undefined => {
+      const requestedId = item?.targetGroupId
+      if (typeof requestedId === 'string' && requestedId) {
+        const requestedGroup = emojiStore.groups.find(group => group.id === requestedId)
+        if (requestedGroup) return requestedGroup
+        console.warn(
+          `[BufferPage] Destination group ${requestedId} no longer exists; falling back to buffer`
+        )
+      }
+      return ensureBufferGroup()
+    }
+
+    for (const item of filesSnapshot) {
+      const group = getDestinationGroup(item)
+      if (group) destinationGroups.set(item.id, group)
+    }
+
+    if (destinationGroups.size !== filesSnapshot.length) {
+      console.error('Failed to resolve one or more upload destination groups')
       isUploading.value = false
       return
     }
 
-    const newEmojis: Array<{ id: string; index: number; emoji: any }> = []
-    const groupId = group.id || 'buffer'
+    const newEmojis: Array<{ id: string; index: number; groupId: string; emoji: any }> = []
     const flushedUploadIds = new Set<string>()
+    const successfulUploadIds = new Set<string>()
     let writeNewEmojisQueue = Promise.resolve()
 
     const writeNewEmojisBatch = async (): Promise<string[]> => {
       if (newEmojis.length === 0) return []
       const batch = newEmojis.splice(0).sort((a, b) => a.index - b.index)
       console.log(`Writing batch of ${batch.length} emojis.`)
+      const flushedIds: string[] = []
       emojiStore.beginBatch()
       try {
-        for (const { emoji } of batch) {
-          emojiStore.addEmojiWithoutSave(groupId, emoji)
+        for (const { id, groupId, emoji } of batch) {
+          if (emojiStore.addEmojiWithoutSave(groupId, emoji)) {
+            flushedIds.push(id)
+          }
         }
       } finally {
         await emojiStore.endBatch()
       }
-      return batch.map(item => item.id)
+      return flushedIds
     }
 
     const writeNewEmojis = async () => {
@@ -164,7 +184,7 @@ export function useUpload(options: UseUploadOptions) {
         const now = Date.now()
         rateLimitUntil = Math.max(rateLimitUntil, now + waitTime)
 
-        // ① 第一时间将已上传成功的文件写入缓冲区
+        // ① 第一时间将已上传成功的文件写入各自的目标分组
         await flushCompletedUploadsToPendingList()
 
         // ② 从 uploadProgress 中移除已写入缓冲区的项
@@ -218,8 +238,13 @@ export function useUpload(options: UseUploadOptions) {
 
         const { file, width, height } = currentItem
         const currentId = currentItem.id
+        const destinationGroup = destinationGroups.get(currentId)
 
         try {
+          if (!destinationGroup) {
+            throw new Error('未找到上传目标分组')
+          }
+
           const updateProgress = (percent: number) => {
             const idx = findProgressIndex(currentId)
             if (idx === -1) return
@@ -251,6 +276,7 @@ export function useUpload(options: UseUploadOptions) {
           newEmojis.push({
             id: currentId,
             index: fileIndex,
+            groupId: destinationGroup.id,
             emoji: {
               name: file.name,
               url: uploadUrl,
@@ -261,6 +287,7 @@ export function useUpload(options: UseUploadOptions) {
               height
             }
           })
+          successfulUploadIds.add(currentId)
           updateProgress(100)
 
           if (Date.now() < rateLimitUntil) {
@@ -309,7 +336,7 @@ export function useUpload(options: UseUploadOptions) {
       await flushCompletedUploadsToPendingList()
 
       // Count successes and failures
-      const successCount = uploadProgress.value.filter(p => p.percent === 100 && !p.error).length
+      const successCount = successfulUploadIds.size
       const failCount = uploadProgress.value.filter(p => p.error).length
 
       // Show notification

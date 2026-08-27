@@ -18,6 +18,8 @@ export interface FileItem {
   width?: number
   height?: number
   cropData?: { x: number; y: number; width: number; height: number }
+  /** Target group for folder imports; ordinary uploads leave this unset. */
+  targetGroupId?: string
 }
 
 // 序列化后的文件数据
@@ -29,6 +31,7 @@ interface SerializableFile {
   width?: number
   height?: number
   cropData?: { x: number; y: number; width: number; height: number }
+  targetGroupId?: string
 }
 
 export function useFilePersistence(selectedFiles: Ref<FileItem[]>) {
@@ -62,7 +65,8 @@ export function useFilePersistence(selectedFiles: Ref<FileItem[]>) {
         fileData: arrayBuffer, // 直接存储 ArrayBuffer
         width: fileItem.width,
         height: fileItem.height,
-        cropData: fileItem.cropData
+        cropData: fileItem.cropData,
+        targetGroupId: fileItem.targetGroupId
       }
     } catch {
       return null
@@ -84,7 +88,8 @@ export function useFilePersistence(selectedFiles: Ref<FileItem[]>) {
         previewUrl,
         width: data.width,
         height: data.height,
-        cropData: data.cropData
+        cropData: data.cropData,
+        targetGroupId: data.targetGroupId
       }
     } catch (error) {
       console.error('[useFilePersistence] Failed to restore file:', error)

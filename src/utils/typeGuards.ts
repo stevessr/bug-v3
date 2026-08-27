@@ -124,7 +124,8 @@ export function sanitizeEmojiGroup(group: unknown): EmojiGroup | undefined {
     name: g.name,
     emojis: validEmojis,
     order: typeof g.order === 'number' ? g.order : 0,
-    icon: typeof g.icon === 'string' ? g.icon : '📁'
+    icon: typeof g.icon === 'string' ? g.icon : '📁',
+    ...(typeof g.detail === 'string' ? { detail: g.detail } : {})
   }
 }
 
