@@ -30,25 +30,19 @@ const isValid = computed(() => {
   return groupName.value.trim().length > 0
 })
 
-// Watch for prop changes to reset form data
-watch(
-  () => props.initialName,
-  newName => {
-    groupName.value = newName
-  }
-)
+// Re-seed form fields from current props each time the modal opens, so a
+// previously edited group's content never leaks into the next group's dialog.
+const syncFromProps = () => {
+  groupName.value = props.initialName
+  groupIcon.value = props.initialIcon
+  groupDetail.value = props.initialDetail || ''
+}
 
+// Repopulate the inputs whenever the modal is (re)opened.
 watch(
-  () => props.initialIcon,
-  newIcon => {
-    groupIcon.value = newIcon
-  }
-)
-
-watch(
-  () => props.initialDetail,
-  newDetail => {
-    groupDetail.value = newDetail || ''
+  () => props.visible,
+  visible => {
+    if (visible) syncFromProps()
   }
 )
 
