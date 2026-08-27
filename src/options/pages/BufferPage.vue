@@ -226,6 +226,7 @@ const loadUploadConcurrency = () => {
 }
 
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
+const activeBufferTab = ref<'upload' | 'folder'>('upload')
 const uploadConcurrency = ref<number | undefined>(DEFAULT_UPLOAD_CONCURRENCY)
 const selectedFiles = ref<FileItem[]>([])
 const folderInputRef = ref<HTMLInputElement | null>(null)
@@ -899,359 +900,379 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- File Upload Area -->
-    <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-      <h3 class="text-lg font-semibold dark:text-white mb-4">上传图片</h3>
+    <a-tabs v-model:activeKey="activeBufferTab" type="card" class="mt-6 buffer-page-tabs">
+      <a-tab-pane key="upload" tab="普通上传">
+        <!-- File Upload Area -->
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <h3 class="text-lg font-semibold dark:text-white mb-4">上传图片</h3>
 
-      <!-- 重复过滤器设置 -->
-      <div
-        class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-      >
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center">
-            <a-checkbox v-model:checked="enableFilter" class="mr-2">
-              <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
-                启用重复过滤器
-              </span>
-            </a-checkbox>
-            <a-tooltip title="选择表情分组作为过滤器，按名称过滤重复的图片">
-              <QuestionCircleOutlined class="text-gray-400" />
-            </a-tooltip>
-          </div>
-        </div>
-
-        <div v-if="enableFilter" class="space-y-3">
-          <!-- 已选择的过滤器分组 -->
-          <div v-if="selectedFilterGroups.length > 0">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              过滤器分组
-            </label>
-            <div class="space-y-2">
-              <div
-                v-for="filterGroup in selectedFilterGroups"
-                :key="filterGroup.id"
-                class="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
-              >
-                <div class="flex items-center">
-                  <CachedImage
-                    v-if="
-                      filterGroup.icon &&
-                      (filterGroup.icon.startsWith('http') || filterGroup.icon.startsWith('data:'))
-                    "
-                    :src="filterGroup.icon"
-                    class="w-4 h-4 mr-2"
-                  />
-                  <span v-else class="mr-2">{{ filterGroup.icon }}</span>
-                  <span class="text-sm font-medium">{{ filterGroup.name }}</span>
-                  <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                    ({{ filterGroup.emojiNames.size }} 个表情)
+          <!-- 重复过滤器设置 -->
+          <div
+            class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <a-checkbox v-model:checked="enableFilter" class="mr-2">
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
+                    启用重复过滤器
                   </span>
+                </a-checkbox>
+                <a-tooltip title="选择表情分组作为过滤器，按名称过滤重复的图片">
+                  <QuestionCircleOutlined class="text-gray-400" />
+                </a-tooltip>
+              </div>
+            </div>
+
+            <div v-if="enableFilter" class="space-y-3">
+              <!-- 已选择的过滤器分组 -->
+              <div v-if="selectedFilterGroups.length > 0">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  过滤器分组
+                </label>
+                <div class="space-y-2">
+                  <div
+                    v-for="filterGroup in selectedFilterGroups"
+                    :key="filterGroup.id"
+                    class="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
+                  >
+                    <div class="flex items-center">
+                      <CachedImage
+                        v-if="
+                          filterGroup.icon &&
+                          (filterGroup.icon.startsWith('http') ||
+                            filterGroup.icon.startsWith('data:'))
+                        "
+                        :src="filterGroup.icon"
+                        class="w-4 h-4 mr-2"
+                      />
+                      <span v-else class="mr-2">{{ filterGroup.icon }}</span>
+                      <span class="text-sm font-medium">{{ filterGroup.name }}</span>
+                      <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        ({{ filterGroup.emojiNames.size }} 个表情)
+                      </span>
+                    </div>
+                    <a-button
+                      type="text"
+                      size="small"
+                      danger
+                      @click="removeGroupFromFilter(filterGroup.id)"
+                      title="移除分组"
+                    >
+                      移除
+                    </a-button>
+                  </div>
                 </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  共 {{ selectedFilterGroups.length }} 个分组，{{
+                    selectedFilterGroups.reduce((sum, g) => sum + g.emojiNames.size, 0)
+                  }}
+                  个表情
+                </p>
+              </div>
+
+              <!-- 添加分组按钮 -->
+              <div class="flex items-center gap-2">
                 <a-button
-                  type="text"
+                  type="dashed"
                   size="small"
-                  danger
-                  @click="removeGroupFromFilter(filterGroup.id)"
-                  title="移除分组"
+                  @click="showGroupSelector = true"
+                  :disabled="filterableGroups.length === 0"
                 >
-                  移除
+                  <template #icon>
+                    <span>+</span>
+                  </template>
+                  添加分组到过滤器
+                </a-button>
+                <span v-if="filterableGroups.length === 0" class="text-xs text-gray-500">
+                  没有可用的分组
+                </span>
+              </div>
+
+              <!-- 分组选择器模态框 -->
+              <a-modal
+                v-model:open="showGroupSelector"
+                title="选择要添加到过滤器的分组"
+                @ok="addGroupToFilter"
+                @cancel="
+                  () => {
+                    showGroupSelector = false
+                    selectedGroupIdForFilter = ''
+                  }
+                "
+                ok-text="添加"
+                cancel-text="取消"
+                :ok-button-props="{ disabled: !selectedGroupIdForFilter }"
+              >
+                <div class="py-2">
+                  <GroupSelector
+                    v-model="selectedGroupIdForFilter"
+                    :groups="filterableGroups"
+                    placeholder="搜索并选择分组"
+                  />
+                </div>
+              </a-modal>
+            </div>
+          </div>
+
+          <!-- 自定义文件上传区域 -->
+          <FileUploader @filesSelected="addFiles" />
+
+          <!-- File List -->
+          <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">
+            <a-collapse-panel key="files">
+              <template #header>
+                <div class="flex items-center justify-between w-full pr-2">
+                  <span class="font-medium">待上传文件 ({{ selectedFiles.length }})</span>
+                  <a-button
+                    size="small"
+                    danger
+                    @click.stop="clearSelectedFiles"
+                    :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
+                  >
+                    一键清空
+                  </a-button>
+                </div>
+              </template>
+              <FileListDisplay
+                :files="selectedFiles"
+                :loading="isCheckingDuplicates"
+                @removeFile="removeFile"
+                @cropImage="openImageCropper"
+              />
+            </a-collapse-panel>
+          </a-collapse>
+
+          <!-- 联动上传设置 -->
+          <div
+            class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <a-checkbox v-model:checked="enableCollaborativeUpload">
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
+                    🔗 启用联动上传
+                  </span>
+                </a-checkbox>
+                <a-tooltip
+                  title="连接到本地协调服务器，与其他用户并行上传，突破单账户速率限制。主机本身也会参与上传。"
+                >
+                  <QuestionCircleOutlined class="text-gray-400" />
+                </a-tooltip>
+              </div>
+              <span
+                v-if="enableCollaborativeUpload"
+                class="text-xs"
+                :class="isCollaborativeConnected ? 'text-green-600' : 'text-gray-500'"
+              >
+                {{ isCollaborativeConnected ? '✓ 已连接' : '未连接' }}
+              </span>
+            </div>
+
+            <div v-if="enableCollaborativeUpload" class="space-y-2">
+              <div class="flex items-center gap-2">
+                <a-input
+                  v-model:value="collaborativeServerUrl"
+                  placeholder="ws://localhost:9527"
+                  size="small"
+                  style="width: 200px"
+                  :disabled="isCollaborativeConnected"
+                  @blur="saveCollaborativeServerUrl"
+                />
+                <a-button
+                  size="small"
+                  :type="isCollaborativeConnected ? 'default' : 'primary'"
+                  :danger="isCollaborativeConnected"
+                  @click="connectCollaborativeServer"
+                >
+                  {{ isCollaborativeConnected ? '断开' : '连接' }}
                 </a-button>
               </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                运行协调服务器：
+                <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+                  cd scripts/collaborative-upload-server && npm start
+                </code>
+              </p>
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              共 {{ selectedFilterGroups.length }} 个分组，{{
-                selectedFilterGroups.reduce((sum, g) => sum + g.emojiNames.size, 0)
-              }}
-              个表情
-            </p>
           </div>
 
-          <!-- 添加分组按钮 -->
-          <div class="flex items-center gap-2">
-            <a-button
-              type="dashed"
-              size="small"
-              @click="showGroupSelector = true"
-              :disabled="filterableGroups.length === 0"
-            >
-              <template #icon>
-                <span>+</span>
-              </template>
-              添加分组到过滤器
-            </a-button>
-            <span v-if="filterableGroups.length === 0" class="text-xs text-gray-500">
-              没有可用的分组
-            </span>
-          </div>
-
-          <!-- 分组选择器模态框 -->
-          <a-modal
-            v-model:open="showGroupSelector"
-            title="选择要添加到过滤器的分组"
-            @ok="addGroupToFilter"
-            @cancel="
-              () => {
-                showGroupSelector = false
-                selectedGroupIdForFilter = ''
-              }
-            "
-            ok-text="添加"
-            cancel-text="取消"
-            :ok-button-props="{ disabled: !selectedGroupIdForFilter }"
-          >
-            <div class="py-2">
-              <GroupSelector
-                v-model="selectedGroupIdForFilter"
-                :groups="filterableGroups"
-                placeholder="搜索并选择分组"
-              />
-            </div>
-          </a-modal>
-        </div>
-      </div>
-
-      <!-- 自定义文件上传区域 -->
-      <FileUploader @filesSelected="addFiles" />
-
-      <!-- 文件夹上传：按文件夹名解析分组名/detail 并追加到目标分组 -->
-      <div class="mt-3 flex items-center gap-2">
-        <a-button size="small" :disabled="isUploading" @click="folderInputRef?.click()">
-          <template #icon>
-            <span>📁</span>
-          </template>
-          从文件夹上传表情包
-        </a-button>
-        <span class="text-xs text-gray-500 dark:text-gray-400">
-          按文件夹名「名称 详情」自动创建/追加到分组，并沿用所选上传服务
-        </span>
-        <input
-          ref="folderInputRef"
-          type="file"
-          webkitdirectory
-          directory
-          multiple
-          style="display: none"
-          @change="handleFolderSelected"
-        />
-      </div>
-
-      <!-- File List -->
-      <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">
-        <a-collapse-panel key="files">
-          <template #header>
-            <div class="flex items-center justify-between w-full pr-2">
-              <span class="font-medium">待上传文件 ({{ selectedFiles.length }})</span>
-              <a-button
-                size="small"
-                danger
-                @click.stop="clearSelectedFiles"
-                :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
-              >
-                一键清空
+          <!-- Upload Button -->
+          <div class="mt-4 flex justify-end space-x-2">
+            <!-- 联动上传按钮 -->
+            <template v-if="enableCollaborativeUpload">
+              <!-- 取消按钮 -->
+              <a-button v-if="isUploading" danger @click="cancelCollaborativeUpload">
+                取消上传
               </a-button>
-            </div>
-          </template>
-          <FileListDisplay
-            :files="selectedFiles"
-            :loading="isCheckingDuplicates"
-            @removeFile="removeFile"
-            @cropImage="openImageCropper"
-          />
-        </a-collapse-panel>
-      </a-collapse>
-
-      <!-- 联动上传设置 -->
-      <div
-        class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800"
-      >
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <a-checkbox v-model:checked="enableCollaborativeUpload">
-              <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
-                🔗 启用联动上传
-              </span>
-            </a-checkbox>
-            <a-tooltip
-              title="连接到本地协调服务器，与其他用户并行上传，突破单账户速率限制。主机本身也会参与上传。"
-            >
-              <QuestionCircleOutlined class="text-gray-400" />
-            </a-tooltip>
-          </div>
-          <span
-            v-if="enableCollaborativeUpload"
-            class="text-xs"
-            :class="isCollaborativeConnected ? 'text-green-600' : 'text-gray-500'"
-          >
-            {{ isCollaborativeConnected ? '✓ 已连接' : '未连接' }}
-          </span>
-        </div>
-
-        <div v-if="enableCollaborativeUpload" class="space-y-2">
-          <div class="flex items-center gap-2">
-            <a-input
-              v-model:value="collaborativeServerUrl"
-              placeholder="ws://localhost:9527"
-              size="small"
-              style="width: 200px"
-              :disabled="isCollaborativeConnected"
-              @blur="saveCollaborativeServerUrl"
-            />
+              <a-button
+                v-else
+                type="primary"
+                @click="uploadFilesCollaboratively"
+                :disabled="
+                  selectedFiles.length === 0 ||
+                  isUploading ||
+                  isCheckingDuplicates ||
+                  !isCollaborativeConnected
+                "
+                class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
+              >
+                🔗 联动上传 {{ selectedFiles.length }} 个文件
+              </a-button>
+            </template>
+            <!-- 普通上传按钮 -->
             <a-button
-              size="small"
-              :type="isCollaborativeConnected ? 'default' : 'primary'"
-              :danger="isCollaborativeConnected"
-              @click="connectCollaborativeServer"
+              :type="enableCollaborativeUpload ? 'default' : 'primary'"
+              @click="uploadFiles"
+              :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
+              :loading="isUploading && !enableCollaborativeUpload"
             >
-              {{ isCollaborativeConnected ? '断开' : '连接' }}
+              {{
+                isUploading && !enableCollaborativeUpload
+                  ? '上传中...'
+                  : `上传 ${selectedFiles.length} 个文件（并发 ${uploadConcurrency}）`
+              }}
             </a-button>
           </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            运行协调服务器：
-            <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
-              cd scripts/collaborative-upload-server && npm start
-            </code>
-          </p>
-        </div>
-      </div>
 
-      <!-- Upload Button -->
-      <div class="mt-4 flex justify-end space-x-2">
-        <!-- 联动上传按钮 -->
-        <template v-if="enableCollaborativeUpload">
-          <!-- 取消按钮 -->
-          <a-button v-if="isUploading" danger @click="cancelCollaborativeUpload">取消上传</a-button>
-          <a-button
-            v-else
-            type="primary"
-            @click="uploadFilesCollaboratively"
-            :disabled="
-              selectedFiles.length === 0 ||
-              isUploading ||
-              isCheckingDuplicates ||
-              !isCollaborativeConnected
-            "
-            class="bg-gradient-to-r from-blue-500 to-purple-500 border-0"
-          >
-            🔗 联动上传 {{ selectedFiles.length }} 个文件
-          </a-button>
-        </template>
-        <!-- 普通上传按钮 -->
-        <a-button
-          :type="enableCollaborativeUpload ? 'default' : 'primary'"
-          @click="uploadFiles"
-          :disabled="selectedFiles.length === 0 || isUploading || isCheckingDuplicates"
-          :loading="isUploading && !enableCollaborativeUpload"
-        >
-          {{
-            isUploading && !enableCollaborativeUpload
-              ? '上传中...'
-              : `上传 ${selectedFiles.length} 个文件（并发 ${uploadConcurrency}）`
-          }}
-        </a-button>
-      </div>
-
-      <!-- 联动上传进度 -->
-      <div
-        v-if="collaborativeProgress && enableCollaborativeUpload"
-        class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded"
-      >
-        <div class="flex justify-between text-sm mb-2">
-          <span class="dark:text-white">联动上传进度</span>
-          <span class="dark:text-gray-300">
-            {{ collaborativeProgress.completed + collaborativeProgress.failed }} /
-            {{ collaborativeProgress.total }}
-          </span>
-        </div>
-        <a-progress
-          :percent="
-            Math.round(
-              ((collaborativeProgress.completed + collaborativeProgress.failed) /
-                collaborativeProgress.total) *
-                100
-            )
-          "
-          :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
-        />
-
-        <!-- UUID 信息显示 -->
-        <div
-          v-if="collaborativeProgress.masterUuid || collaborativeProgress.currentUuid"
-          class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800"
-        >
-          <div class="text-xs space-y-1">
-            <div v-if="collaborativeProgress.masterUuid" class="flex items-center gap-2">
-              <span class="font-medium text-gray-700 dark:text-gray-300">主机 UUID:</span>
-              <code
-                class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
-              >
-                {{ collaborativeProgress.masterUuid }}
-              </code>
-            </div>
-            <div v-if="collaborativeProgress.currentUuid" class="flex items-center gap-2">
-              <span class="font-medium text-gray-700 dark:text-gray-300">当前节点 UUID:</span>
-              <code
-                class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
-              >
-                {{ collaborativeProgress.currentUuid }}
-              </code>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between mt-2">
-          <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500">
-            当前：{{ collaborativeProgress.currentFile }}
-          </div>
-          <!-- 429 等待进度条 -->
+          <!-- 联动上传进度 -->
           <div
-            v-if="collaborativeProgress.waitingFor && collaborativeProgress.waitStart"
-            class="flex items-center space-x-2"
+            v-if="collaborativeProgress && enableCollaborativeUpload"
+            class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded"
           >
-            <span class="text-xs text-orange-500">⏳ 等待限流</span>
+            <div class="flex justify-between text-sm mb-2">
+              <span class="dark:text-white">联动上传进度</span>
+              <span class="dark:text-gray-300">
+                {{ collaborativeProgress.completed + collaborativeProgress.failed }} /
+                {{ collaborativeProgress.total }}
+              </span>
+            </div>
             <a-progress
-              type="circle"
-              :width="28"
-              :percent="getWaitProgress(collaborativeProgress).percent"
-              :stroke-color="'#f97316'"
-            >
-              <template #format>
-                <span class="text-xs">{{ getWaitProgress(collaborativeProgress).remaining }}s</span>
-              </template>
-            </a-progress>
-          </div>
-        </div>
+              :percent="
+                Math.round(
+                  ((collaborativeProgress.completed + collaborativeProgress.failed) /
+                    collaborativeProgress.total) *
+                    100
+                )
+              "
+              :status="collaborativeProgress.failed > 0 ? 'exception' : 'active'"
+            />
 
-        <!-- 节点文件分配 -->
-        <div
-          v-if="
-            collaborativeProgress.nodeFiles &&
-            Object.keys(collaborativeProgress.nodeFiles).length > 0
-          "
-          class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"
-        >
-          <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">节点文件分配</div>
-          <div class="grid grid-cols-2 gap-2">
+            <!-- UUID 信息显示 -->
             <div
-              v-for="(files, nodeId) in collaborativeProgress.nodeFiles"
-              :key="nodeId"
-              class="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600"
+              v-if="collaborativeProgress.masterUuid || collaborativeProgress.currentUuid"
+              class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800"
             >
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-medium text-gray-900 dark:text-white">
-                  {{ formatNodeId(nodeId) }}
-                </span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ files.length }} 个文件
-                </span>
+              <div class="text-xs space-y-1">
+                <div v-if="collaborativeProgress.masterUuid" class="flex items-center gap-2">
+                  <span class="font-medium text-gray-700 dark:text-gray-300">主机 UUID:</span>
+                  <code
+                    class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
+                  >
+                    {{ collaborativeProgress.masterUuid }}
+                  </code>
+                </div>
+                <div v-if="collaborativeProgress.currentUuid" class="flex items-center gap-2">
+                  <span class="font-medium text-gray-700 dark:text-gray-300">当前节点 UUID:</span>
+                  <code
+                    class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-900 dark:text-gray-100"
+                  >
+                    {{ collaborativeProgress.currentUuid }}
+                  </code>
+                </div>
               </div>
-              <div class="text-xs text-gray-600 dark:text-gray-400 max-h-20 overflow-y-auto">
-                {{ files.join(', ') }}
+            </div>
+
+            <div class="flex items-center justify-between mt-2">
+              <div v-if="collaborativeProgress.currentFile" class="text-xs text-gray-500">
+                当前：{{ collaborativeProgress.currentFile }}
+              </div>
+              <!-- 429 等待进度条 -->
+              <div
+                v-if="collaborativeProgress.waitingFor && collaborativeProgress.waitStart"
+                class="flex items-center space-x-2"
+              >
+                <span class="text-xs text-orange-500">⏳ 等待限流</span>
+                <a-progress
+                  type="circle"
+                  :width="28"
+                  :percent="getWaitProgress(collaborativeProgress).percent"
+                  :stroke-color="'#f97316'"
+                >
+                  <template #format>
+                    <span class="text-xs">
+                      {{ getWaitProgress(collaborativeProgress).remaining }}s
+                    </span>
+                  </template>
+                </a-progress>
+              </div>
+            </div>
+
+            <!-- 节点文件分配 -->
+            <div
+              v-if="
+                collaborativeProgress.nodeFiles &&
+                Object.keys(collaborativeProgress.nodeFiles).length > 0
+              "
+              class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"
+            >
+              <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                节点文件分配
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="(files, nodeId) in collaborativeProgress.nodeFiles"
+                  :key="nodeId"
+                  class="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600"
+                >
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-medium text-gray-900 dark:text-white">
+                      {{ formatNodeId(nodeId) }}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ files.length }} 个文件
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400 max-h-20 overflow-y-auto">
+                    {{ files.join(', ') }}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </a-tab-pane>
+      <a-tab-pane key="folder" tab="文件夹上传">
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <h3 class="text-lg font-semibold dark:text-white mb-2">上传表情包</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            选择一个文件夹，按文件夹名「名称
+            详情」自动创建或追加到对应分组，并沿用上方选择的上传服务。
+          </p>
+          <div
+            class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-8 text-center"
+          >
+            <a-button size="large" :disabled="isUploading" @click="folderInputRef?.click()">
+              <template #icon>
+                <span>📁</span>
+              </template>
+              从文件夹上传表情包
+            </a-button>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              文件夹中的图片会直接开始上传；重复文件会自动跳过。
+            </p>
+            <input
+              ref="folderInputRef"
+              type="file"
+              webkitdirectory
+              directory
+              multiple
+              style="display: none"
+              @change="handleFolderSelected"
+            />
+          </div>
+        </div>
+      </a-tab-pane>
+    </a-tabs>
 
     <!-- Upload Progress - 水平卡片布局 -->
     <div
