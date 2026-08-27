@@ -24,7 +24,7 @@
     "identity"
   ],
   "optional_permissions": ["cookies"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["<all_urls>", "file:///*"],
   "side_panel": {
     "default_path": "index.html?mode=sidebar"
   },

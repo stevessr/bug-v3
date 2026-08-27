@@ -380,6 +380,34 @@ const folderRootLoading = reactive<Record<string, boolean>>({})
 const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
 const folderAccessSupported = supportsAgentFolderAccess()
 
+// file:// 主机权限：Chrome 不允许扩展在运行时请求 file 地址的访问权，只能由用户在
+// chrome://extensions 的“允许访问文件网址”开关开启。此处检测开关状态并给出引导。
+const fileUrlAccessAllowed = ref(false)
+const fileUrlCheckDone = ref(false)
+const checkFileUrlAccess = () => {
+  const ext = (chrome as typeof chrome | undefined)?.extension
+  if (!ext?.isAllowedFileSchemeAccess) return
+  ext.isAllowedFileSchemeAccess().then(
+    allowed => {
+      fileUrlAccessAllowed.value = Boolean(allowed)
+      fileUrlCheckDone.value = true
+    },
+    () => {
+      fileUrlCheckDone.value = true
+    }
+  )
+}
+// 打开 chrome://extensions 详情页，引导用户开启“允许访问文件网址”开关。
+const openExtensionDetails = () => {
+  const id = (chrome as typeof chrome | undefined)?.runtime?.id
+  const url = id ? `chrome://extensions/?id=${encodeURIComponent(id)}` : 'chrome://extensions'
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+// 挂载时检测一次文件网址访问权限（开关可能在扩展详情页被切换）。
+onMounted(() => {
+  void checkFileUrlAccess()
+})
+
 const subagentOptions = computed(() =>
   settings.value.subagents.map(agent => ({
     label: agent.name,
@@ -1425,6 +1453,20 @@ watch(
 
       <div v-if="!folderAccessSupported" class="text-xs text-amber-600 dark:text-amber-400">
         当前环境不支持 File System Access API，无法手动授权文件夹。
+      </div>
+
+      <div
+        v-else-if="fileUrlCheckDone && !fileUrlAccessAllowed"
+        class="rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            未启用文件网址访问。Chrome 不允许扩展在运行时请求 file:// 权限，需在扩展详情页开启
+            <span class="font-medium">“允许访问文件网址”</span>
+            开关；开启后同一文件夹跨会话免重复确认。
+          </div>
+          <a-button size="small" @click="openExtensionDetails">打开扩展详情页</a-button>
+        </div>
       </div>
 
       <template v-else>

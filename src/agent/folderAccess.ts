@@ -146,6 +146,30 @@ const queryHandlePermission = async (
   }
 }
 
+/**
+ * Ensure the requested permission for a handle, prompting the user only when
+ * access is not already granted. Chrome returns `granted` without a prompt when
+ * the same mode was previously authorized, so checking first avoids redundant
+ * confirmations for a folder the user has already granted.
+ */
+const ensureHandlePermission = async (
+  handle: FileSystemDirectoryHandle,
+  mode: FolderPermissionMode
+): Promise<FolderPermissionState> => {
+  if (!supportsDirectoryPermissions(handle)) return 'granted'
+
+  const state = await queryHandlePermission(handle, mode)
+  if (state === 'granted') return state
+
+  try {
+    const requestPermission = (handle as DirectoryHandleWithPermissions).requestPermission
+    if (typeof requestPermission !== 'function') return 'granted'
+    return (await requestPermission.call(handle, { mode })) as FolderPermissionState
+  } catch {
+    return 'prompt'
+  }
+}
+
 const resolveFolderRoot = (
   action: { rootId?: string; rootAlias?: string },
   settings: AgentSettings
@@ -222,11 +246,7 @@ export const pickAgentFolderRoot = async (rootId: string, mode: FolderPermission
     id: `agent-folder-${rootId}`,
     mode
   })
-  const requestPermission = (handle as DirectoryHandleWithPermissions).requestPermission
-  const permission =
-    typeof requestPermission === 'function'
-      ? await requestPermission.call(handle, { mode })
-      : 'granted'
+  const permission = await ensureHandlePermission(handle, mode)
 
   await writeDirectoryHandle(rootId, handle)
   return {
@@ -240,11 +260,7 @@ export const requestAgentFolderPermission = async (rootId: string, mode: FolderP
   if (!handle) {
     return { handleName: '', permission: 'missing' as FolderPermissionState }
   }
-  const requestPermission = (handle as DirectoryHandleWithPermissions).requestPermission
-  const permission =
-    typeof requestPermission === 'function'
-      ? await requestPermission.call(handle, { mode })
-      : 'granted'
+  const permission = await ensureHandlePermission(handle, mode)
 
   return {
     handleName: handle.name,
