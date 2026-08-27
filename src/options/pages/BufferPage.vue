@@ -612,6 +612,12 @@ const handleFolderSelected = async (event: Event) => {
     }
 
     await addFiles(files, group.id)
+
+    // 文件夹选择完成后直接开始普通上传，不再要求用户二次点击上传按钮。
+    // uploadFiles 会在调用时读取当前选择的上传服务，因此遵循页面上的服务选择。
+    if (selectedFiles.value.length > 0 && !isUploading.value) {
+      await uploadFiles()
+    }
   } finally {
     // Reset the input so selecting the same folder again still emits change.
     input.value = ''
