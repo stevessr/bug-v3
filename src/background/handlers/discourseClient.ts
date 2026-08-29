@@ -13,6 +13,25 @@ export interface DiscoursePostLikeState {
   actions_summary?: Array<{ id?: number; acted?: boolean }>
 }
 
+export interface DiscourseTopicWindowOptions {
+  includeRaw?: boolean
+  maxPosts?: number
+  postOffset?: number
+}
+
+export interface DiscourseTopicWindow {
+  topic: any
+  posts: any[]
+  stream: number[]
+  offset: number
+  windowSize: number
+  truncated: boolean
+  hasMore: boolean
+  hasPrevious: boolean
+  nextOffset: number | null
+  previousOffset: number | null
+}
+
 const DEFAULT_DISCOURSE_BASE_URL = 'https://linux.do'
 const DEFAULT_TIMEOUT_MS = 15000
 const DEFAULT_RETRIES = 2
@@ -87,6 +106,14 @@ function retryDelayMs(response: Response, attempt: number): number {
     if (Number.isFinite(dateMs)) return Math.min(Math.max(dateMs - Date.now(), 0), 10000)
   }
   return Math.min(500 * 2 ** attempt, 4000)
+}
+
+async function releaseResponse(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel()
+  } catch {
+    // Best-effort only; retrying should not fail because a body cannot be cancelled.
+  }
 }
 
 async function readResponseDetails(response: Response): Promise<unknown> {
@@ -257,9 +284,11 @@ export async function discourseRequest<T = any>(
       response = await perform(false)
       if (response.ok) break
 
-      const retryable = response.status === 429 || response.status >= 500
+      const retryable = response.status === 408 || response.status === 429 || response.status >= 500
       if (!retryable || attempt >= retries) break
-      await sleep(retryDelayMs(response, attempt))
+      const delayMs = retryDelayMs(response, attempt)
+      await releaseResponse(response)
+      await sleep(delayMs)
     } catch (error) {
       lastError = error
       if (attempt >= retries) throw error
@@ -273,6 +302,7 @@ export async function discourseRequest<T = any>(
 
   if (!response.ok && options.csrf && response.status === 403) {
     csrfCache.delete(normalized)
+    await releaseResponse(response)
     response = await perform(true)
   }
 
@@ -410,10 +440,18 @@ export async function fetchDiscourseTopicPostsByIds(
 export async function fetchDiscourseTopicWithPosts(
   baseUrl: string,
   topicId: number,
-  options: { includeRaw?: boolean; maxPosts?: number } = {}
-): Promise<{ topic: any; posts: any[]; stream: number[]; truncated: boolean }> {
+  options: DiscourseTopicWindowOptions = {}
+): Promise<DiscourseTopicWindow> {
   const includeRaw = Boolean(options.includeRaw)
-  const maxPosts = Math.max(1, Math.min(Number(options.maxPosts || 200), 2000))
+  const parsedMaxPosts = Number(options.maxPosts ?? 200)
+  const maxPosts = Number.isFinite(parsedMaxPosts)
+    ? Math.max(1, Math.min(Math.floor(parsedMaxPosts), 2000))
+    : 200
+  const parsedOffset = Number(options.postOffset ?? 0)
+  const postOffset = Number.isFinite(parsedOffset)
+    ? Math.max(0, Math.min(Math.floor(parsedOffset), 1_000_000))
+    : 0
+
   const topic = await fetchDiscourseTopic(baseUrl, topicId, includeRaw)
   const initialPosts = Array.isArray(topic?.post_stream?.posts) ? topic.post_stream.posts : []
   const stream = Array.isArray(topic?.post_stream?.stream)
@@ -422,7 +460,7 @@ export async function fetchDiscourseTopicWithPosts(
         .filter((id: number) => Number.isFinite(id) && id > 0)
     : initialPosts.map((post: any) => Number(post.id)).filter(Boolean)
 
-  const selectedStream = stream.slice(0, maxPosts)
+  const selectedStream = stream.slice(postOffset, postOffset + maxPosts)
   const initialById = new Map<number, any>(
     initialPosts.map((post: any) => [Number(post.id), post] as [number, any])
   )
@@ -437,15 +475,28 @@ export async function fetchDiscourseTopicWithPosts(
   fetched.forEach(post => allById.set(Number(post.id), post))
 
   const posts = selectedStream.map((id: number) => allById.get(id)).filter(Boolean)
-  if (posts.length === 0 && initialPosts.length > 0) {
+  if (postOffset === 0 && posts.length === 0 && initialPosts.length > 0) {
     posts.push(...initialPosts.slice(0, maxPosts))
   }
+
+  const effectiveWindowSize = selectedStream.length || posts.length
+  const knownTotal = Math.max(stream.length, Number(topic?.posts_count || 0))
+  const hasPrevious = postOffset > 0
+  const hasMore = postOffset + effectiveWindowSize < knownTotal
+  const nextOffset = hasMore ? postOffset + effectiveWindowSize : null
+  const previousOffset = hasPrevious ? Math.max(0, postOffset - maxPosts) : null
 
   return {
     topic,
     posts,
     stream,
-    truncated: stream.length > posts.length || Number(topic?.posts_count || 0) > posts.length
+    offset: postOffset,
+    windowSize: effectiveWindowSize,
+    truncated: hasPrevious || hasMore,
+    hasMore,
+    hasPrevious,
+    nextOffset,
+    previousOffset
   }
 }
 
