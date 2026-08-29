@@ -1,0 +1,58 @@
+name: One-shot repository formatter
+
+on:
+  push:
+    branches:
+      - feat/discourse-browser-core
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/discourse-browser-core
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.3.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format existing repository files
+        run: |
+          pnpm exec prettier --write \
+            scripts/lib/constants.ts \
+            scripts/tests/memo-check.entry.ts \
+            scripts/tests/verify-discourse-browser-perf.mjs \
+            scripts/tests/verify-emoji-card-buttons.mjs \
+            scripts/validate-market-assets.mjs
+
+      - name: Commit formatter output
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            scripts/lib/constants.ts \
+            scripts/tests/memo-check.entry.ts \
+            scripts/tests/verify-discourse-browser-perf.mjs \
+            scripts/tests/verify-emoji-card-buttons.mjs \
+            scripts/validate-market-assets.mjs
+          git commit -m "style: normalize repository script formatting"
+          git push origin HEAD:feat/discourse-browser-core
