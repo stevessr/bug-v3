@@ -152,6 +152,19 @@ const TOOLS = [
   },
   // Discourse tools
   {
+    name: 'discourse_get_current_page',
+    description: '自动识别当前活动 Discourse 标签页的 topic/category/tag/user/feed/search 路由并返回结构化上下文',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'number', description: '可选标签页 ID；默认使用当前活动标签页' },
+        baseUrl: { type: 'string', description: '可选 Discourse 站点 URL；提供时必须与标签页同源' },
+        includeRaw: { type: 'boolean', description: 'Topic 上下文是否返回 raw 原文', default: false },
+        maxPosts: { type: 'number', minimum: 1, maximum: 200, description: '当前页面最多返回帖子数', default: 40 }
+      }
+    }
+  },
+  {
     name: 'discourse_like_post',
     description: '点赞 Discourse 帖子',
     inputSchema: {
@@ -166,7 +179,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_topic_list',
-    description: '获取 Discourse 话题列表',
+    description: '获取 Discourse 话题列表，并返回续读 cursor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -192,7 +205,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_topic',
-    description: '获取 Discourse 话题详情，并按 post stream 补齐帖子',
+    description: '获取 Discourse 话题详情，按 post stream 补齐帖子并返回回复关系/参与者',
     inputSchema: {
       type: 'object',
       properties: {
@@ -219,7 +232,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_topic_posts',
-    description: '获取话题内指定楼层帖子',
+    description: '获取话题内指定楼层帖子，并返回这些楼层的回复关系',
     inputSchema: {
       type: 'object',
       properties: {
@@ -247,7 +260,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_category_topics',
-    description: '按分类浏览 Discourse 话题，可选择 latest/unread/new/top 等分类过滤器',
+    description: '按分类浏览 Discourse 话题，可选择 latest/unread/new/top 等分类过滤器并返回续读 cursor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -276,7 +289,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_tag_topics',
-    description: '按标签浏览 Discourse 话题',
+    description: '按标签浏览 Discourse 话题并返回续读 cursor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -335,7 +348,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_post_context',
-    description: '获取帖子上下文（定位到指定帖子附近的上下文）',
+    description: '获取帖子上下文（定位到指定帖子附近的上下文、回复关系与参与者）',
     inputSchema: {
       type: 'object',
       properties: {
@@ -415,7 +428,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_browse_topic',
-    description: '综合浏览话题（完整读取已加载帖子 + 阅读上报 + 可选点赞）',
+    description: '综合浏览话题（完整读取已加载帖子 + 阅读上报 + 可选点赞 + 回复关系）',
     inputSchema: {
       type: 'object',
       properties: {
@@ -430,7 +443,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_search',
-    description: '搜索 Discourse 内容',
+    description: '搜索 Discourse 内容，并返回续读 cursor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -444,7 +457,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_user_activity',
-    description: '获取用户活动记录',
+    description: '获取用户活动记录，并返回 next_offset cursor',
     inputSchema: {
       type: 'object',
       properties: {
