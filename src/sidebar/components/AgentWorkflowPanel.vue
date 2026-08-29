@@ -324,7 +324,7 @@ const confirmSchedule = () => {
             <a-switch
               size="small"
               :checked="schedule.enabled"
-              @change="enabled => emit('toggleSchedule', { schedule, enabled: Boolean(enabled) })"
+              @change="emit('toggleSchedule', { schedule, enabled: Boolean($event) })"
             />
             <a-button size="small" type="text" @click="emit('runSchedule', schedule)">
               立即运行
