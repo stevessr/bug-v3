@@ -195,24 +195,26 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_site_info',
-    description: '读取 Discourse 站点基本信息、分类与公开能力',
+    description: '读取并短期缓存 Discourse 站点基本信息、分类与公开能力',
     inputSchema: {
       type: 'object',
       properties: {
-        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' }
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        forceRefresh: { type: 'boolean', description: '忽略 60 秒站点信息缓存并强制刷新', default: false }
       }
     }
   },
   {
     name: 'discourse_get_topic',
-    description: '获取 Discourse 话题详情，按 post stream 补齐帖子并返回回复关系/参与者',
+    description: '按 post stream 窗口读取 Discourse 话题，并返回前后游标、回复关系和参与者',
     inputSchema: {
       type: 'object',
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         topicId: { type: 'number', description: '话题 ID' },
         includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false },
-        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '最多加载帖子数', default: 200 }
+        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '本窗口最多加载帖子数', default: 200 },
+        postOffset: { type: 'number', minimum: 0, description: 'post stream 起始偏移；可直接使用上次 next_post_offset', default: 0 }
       },
       required: ['topicId']
     }
@@ -428,7 +430,7 @@ const TOOLS = [
   },
   {
     name: 'discourse_browse_topic',
-    description: '综合浏览话题（完整读取已加载帖子 + 阅读上报 + 可选点赞 + 回复关系）',
+    description: '按 post stream 窗口浏览话题（阅读上报 + 可选点赞 + 回复关系 + 前后游标）',
     inputSchema: {
       type: 'object',
       properties: {
@@ -436,7 +438,8 @@ const TOOLS = [
         topicId: { type: 'number', description: '话题 ID' },
         readTimeMs: { type: 'number', description: '阅读时间 (毫秒)', default: 10000 },
         like: { type: 'boolean', description: '是否点赞', default: false },
-        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '最多加载帖子数', default: 200 }
+        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '本窗口最多加载帖子数', default: 200 },
+        postOffset: { type: 'number', minimum: 0, description: 'post stream 起始偏移；可直接使用上次 nextPostOffset', default: 0 }
       },
       required: ['topicId']
     }
