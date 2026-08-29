@@ -16,6 +16,12 @@ import {
 
 import type { BrowseStrategy } from '@/types/type'
 
+const SITE_INFO_CACHE_TTL_MS = 60_000
+const siteInfoCache = new Map<
+  string,
+  { site: any; basic: any; expiresAt: number }
+>()
+
 function getBaseUrl(args: Record<string, any>): string {
   return normalizeDiscourseBaseUrl(args.baseUrl || 'https://linux.do')
 }
@@ -41,6 +47,33 @@ function pathSegment(value: unknown, name: string): string {
   const text = String(value || '').trim()
   if (!text) throw new Error(`缺少 ${name}`)
   return encodeURIComponent(text)
+}
+
+async function getSiteInfoBundle(
+  baseUrl: string,
+  forceRefresh = false
+): Promise<{ site: any; basic: any; cacheHit: boolean; expiresAt: number }> {
+  const normalized = normalizeDiscourseBaseUrl(baseUrl)
+  const cached = siteInfoCache.get(normalized)
+  if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+    return { ...cached, cacheHit: true }
+  }
+
+  const site = await discourseRequest<any>(normalized, '/site.json')
+  let basic: any = null
+  try {
+    basic = await discourseRequest<any>(normalized, '/site/basic-info.json')
+  } catch {
+    // Older/custom Discourse installs may not expose the basic-info endpoint.
+  }
+
+  const value = {
+    site,
+    basic,
+    expiresAt: Date.now() + SITE_INFO_CACHE_TTL_MS
+  }
+  siteInfoCache.set(normalized, value)
+  return { ...value, cacheHit: false }
 }
 
 function mapTopicSummary(topic: any) {
@@ -313,19 +346,21 @@ async function getCurrentPageContext(args: Record<string, any>) {
     }
   }
 
-  let basic: any = null
-  try {
-    basic = await discourseRequest<any>(baseUrl, '/site/basic-info.json')
-  } catch {
-    await discourseRequest<any>(baseUrl, '/site.json')
-  }
+  const siteInfo = await getSiteInfoBundle(baseUrl)
   return {
     success: true,
     source,
     route,
-    context: basic
-      ? { site: { title: basic.title, description: basic.description, logo_url: basic.logo_url } }
-      : { site: { detected: true } }
+    context: siteInfo.basic
+      ? {
+          site: {
+            title: siteInfo.basic.title,
+            description: siteInfo.basic.description,
+            logo_url: siteInfo.basic.logo_url,
+            cache_hit: siteInfo.cacheHit
+          }
+        }
+      : { site: { detected: true, cache_hit: siteInfo.cacheHit } }
   }
 }
 
@@ -381,17 +416,17 @@ export async function handleDiscourseTool(
 
     case 'discourse.get_site_info': {
       const baseUrl = getBaseUrl(args)
-      const site = await discourseRequest<any>(baseUrl, '/site.json')
-      let basic: any = null
-      try {
-        basic = await discourseRequest<any>(baseUrl, '/site/basic-info.json')
-      } catch {
-        // Older/custom Discourse installs may not expose the basic-info endpoint.
-      }
-
+      const { site, basic, cacheHit, expiresAt } = await getSiteInfoBundle(
+        baseUrl,
+        Boolean(args.forceRefresh)
+      )
       const categories = Array.isArray(site?.categories) ? site.categories : []
       return {
         success: true,
+        cache: {
+          hit: cacheHit,
+          expires_at: expiresAt
+        },
         basic: basic
           ? {
               title: basic.title,
@@ -433,12 +468,23 @@ export async function handleDiscourseTool(
       const topicId = positiveInteger(args.topicId, 'topicId')
       const includeRaw = Boolean(args.includeRaw)
       const maxPosts = Math.floor(boundedNumber(args.maxPosts, 200, 1, 2000))
-      const { topic, posts, stream, truncated } = await fetchDiscourseTopicWithPosts(
-        baseUrl,
-        topicId,
-        { includeRaw, maxPosts }
-      )
-      const nextPostOffset = truncated ? posts.length : null
+      const postOffset = Math.floor(boundedNumber(args.postOffset, 0, 0, 1_000_000))
+      const {
+        topic,
+        posts,
+        stream,
+        offset,
+        windowSize,
+        truncated,
+        hasMore,
+        hasPrevious,
+        nextOffset,
+        previousOffset
+      } = await fetchDiscourseTopicWithPosts(baseUrl, topicId, {
+        includeRaw,
+        maxPosts,
+        postOffset
+      })
 
       return {
         success: true,
@@ -455,10 +501,15 @@ export async function handleDiscourseTool(
         created_at: topic.created_at,
         last_posted_at: topic.last_posted_at,
         post_stream: {
-          total_ids: stream.length,
+          total_ids: Math.max(stream.length, Number(topic.posts_count || 0)),
+          offset,
+          window_size: windowSize,
           loaded: posts.length,
           truncated,
-          next_post_offset: nextPostOffset
+          has_more: hasMore,
+          has_previous: hasPrevious,
+          next_post_offset: nextOffset,
+          previous_post_offset: previousOffset
         },
         reply_edges: buildReplyEdges(posts),
         participants: buildParticipants(posts),
@@ -865,11 +916,22 @@ export async function handleDiscourseTool(
       const readTimeMs = boundedNumber(args.readTimeMs, 10000, 1000, 30 * 60 * 1000)
       const shouldLike = Boolean(args.like)
       const maxPosts = Math.floor(boundedNumber(args.maxPosts, 200, 1, 2000))
-      const { topic, posts, stream, truncated } = await fetchDiscourseTopicWithPosts(
-        baseUrl,
-        topicId,
-        { maxPosts }
-      )
+      const postOffset = Math.floor(boundedNumber(args.postOffset, 0, 0, 1_000_000))
+      const {
+        topic,
+        posts,
+        stream,
+        offset,
+        windowSize,
+        truncated,
+        hasMore,
+        hasPrevious,
+        nextOffset,
+        previousOffset
+      } = await fetchDiscourseTopicWithPosts(baseUrl, topicId, {
+        maxPosts,
+        postOffset
+      })
 
       const postNumbers = posts
         .map((post: any) => Number(post.post_number))
@@ -916,10 +978,15 @@ export async function handleDiscourseTool(
         },
         browsing: {
           readTimeMs,
+          postOffset: offset,
+          windowSize,
           loadedPosts: posts.length,
-          totalPostIds: stream.length,
+          totalPostIds: Math.max(stream.length, Number(topic.posts_count || 0)),
           truncated,
-          nextPostOffset: truncated ? posts.length : null,
+          hasMore,
+          hasPrevious,
+          nextPostOffset: nextOffset,
+          previousPostOffset: previousOffset,
           timingsSent,
           timingError
         },
