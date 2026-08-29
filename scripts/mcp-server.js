@@ -181,13 +181,25 @@ const TOOLS = [
     }
   },
   {
+    name: 'discourse_get_site_info',
+    description: '读取 Discourse 站点基本信息、分类与公开能力',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' }
+      }
+    }
+  },
+  {
     name: 'discourse_get_topic',
-    description: '获取 Discourse 话题详情',
+    description: '获取 Discourse 话题详情，并按 post stream 补齐帖子',
     inputSchema: {
       type: 'object',
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
-        topicId: { type: 'number', description: '话题 ID' }
+        topicId: { type: 'number', description: '话题 ID' },
+        includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false },
+        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '最多加载帖子数', default: 200 }
       },
       required: ['topicId']
     }
@@ -234,6 +246,25 @@ const TOOLS = [
     }
   },
   {
+    name: 'discourse_get_category_topics',
+    description: '按分类浏览 Discourse 话题，可选择 latest/unread/new/top 等分类过滤器',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        slug: { type: 'string', description: '分类 slug' },
+        categoryId: { type: 'number', description: '分类 ID' },
+        filter: {
+          type: 'string',
+          enum: ['latest', 'unread', 'new', 'unseen', 'top', 'read', 'posted', 'bookmarks'],
+          description: '可选分类过滤器'
+        },
+        page: { type: 'number', description: '页码', default: 0 }
+      },
+      required: ['slug', 'categoryId']
+    }
+  },
+  {
     name: 'discourse_get_tag_list',
     description: '获取标签列表',
     inputSchema: {
@@ -241,6 +272,19 @@ const TOOLS = [
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' }
       }
+    }
+  },
+  {
+    name: 'discourse_get_tag_topics',
+    description: '按标签浏览 Discourse 话题',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        tag: { type: 'string', description: '标签名' },
+        page: { type: 'number', description: '页码', default: 0 }
+      },
+      required: ['tag']
     }
   },
   {
@@ -253,6 +297,18 @@ const TOOLS = [
         term: { type: 'string', description: '搜索关键词' }
       },
       required: ['term']
+    }
+  },
+  {
+    name: 'discourse_get_user',
+    description: '读取 Discourse 用户公开资料',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
+        username: { type: 'string', description: '用户名' }
+      },
+      required: ['username']
     }
   },
   {
@@ -359,14 +415,15 @@ const TOOLS = [
   },
   {
     name: 'discourse_browse_topic',
-    description: '综合浏览话题（阅读 + 可选点赞）',
+    description: '综合浏览话题（完整读取已加载帖子 + 阅读上报 + 可选点赞）',
     inputSchema: {
       type: 'object',
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         topicId: { type: 'number', description: '话题 ID' },
         readTimeMs: { type: 'number', description: '阅读时间 (毫秒)', default: 10000 },
-        like: { type: 'boolean', description: '是否点赞', default: false }
+        like: { type: 'boolean', description: '是否点赞', default: false },
+        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '最多加载帖子数', default: 200 }
       },
       required: ['topicId']
     }

@@ -35,6 +35,12 @@ function boundedNumber(value: unknown, fallback: number, min: number, max: numbe
   return Math.max(min, Math.min(parsed, max))
 }
 
+function pathSegment(value: unknown, name: string): string {
+  const text = String(value || '').trim()
+  if (!text) throw new Error(`缺少 ${name}`)
+  return encodeURIComponent(text)
+}
+
 function mapTopicSummary(topic: any) {
   return {
     id: topic.id,
@@ -55,6 +61,17 @@ function mapTopicSummary(topic: any) {
     last_posted_at: topic.last_posted_at,
     last_poster_username: topic.last_poster_username,
     posters: topic.posters
+  }
+}
+
+function mapTopicList(data: any) {
+  const topicList = data?.topic_list || {}
+  const topics = Array.isArray(topicList.topics) ? topicList.topics : []
+  return {
+    can_create_topic: topicList.can_create_topic,
+    more_topics_url: topicList.more_topics_url,
+    per_page: topicList.per_page,
+    topics: topics.map(mapTopicSummary)
   }
 }
 
@@ -97,14 +114,60 @@ export async function handleDiscourseTool(
       const strategy = (args.strategy || 'latest') as BrowseStrategy
       const page = optionalPage(args.page)
       const data = await fetchDiscourseTopicList(baseUrl, strategy, page)
-      const topics = Array.isArray(data?.topic_list?.topics) ? data.topic_list.topics : []
       return {
         success: true,
         strategy,
         page,
-        can_create_topic: data?.topic_list?.can_create_topic,
-        more_topics_url: data?.topic_list?.more_topics_url,
-        topics: topics.map(mapTopicSummary)
+        ...mapTopicList(data)
+      }
+    }
+
+    case 'discourse.get_site_info': {
+      const baseUrl = getBaseUrl(args)
+      const site = await discourseRequest<any>(baseUrl, '/site.json')
+      let basic: any = null
+      try {
+        basic = await discourseRequest<any>(baseUrl, '/site/basic-info.json')
+      } catch {
+        // Older/custom Discourse installs may not expose the basic-info endpoint.
+      }
+
+      const categories = Array.isArray(site?.categories) ? site.categories : []
+      return {
+        success: true,
+        basic: basic
+          ? {
+              title: basic.title,
+              description: basic.description,
+              logo_url: basic.logo_url,
+              logo_small_url: basic.logo_small_url,
+              mobile_logo_url: basic.mobile_logo_url,
+              apple_touch_icon_url: basic.apple_touch_icon_url,
+              favicon_url: basic.favicon_url
+            }
+          : null,
+        capabilities: {
+          can_create_tag: site?.can_create_tag,
+          can_tag_topics: site?.can_tag_topics,
+          can_create_topic: site?.can_create_topic,
+          can_create_post: site?.can_create_post,
+          tags_filter_regexp: site?.tags_filter_regexp
+        },
+        categories: categories.map((category: any) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          color: category.color,
+          text_color: category.text_color,
+          parent_category_id: category.parent_category_id,
+          topic_count: category.topic_count,
+          post_count: category.post_count,
+          read_restricted: category.read_restricted
+        })),
+        top_tags: site?.top_tags || [],
+        trust_levels: site?.trust_levels || [],
+        post_action_types: site?.post_action_types || [],
+        auth_providers: site?.auth_providers || []
       }
     }
 
@@ -200,6 +263,51 @@ export async function handleDiscourseTool(
       }
     }
 
+    case 'discourse.get_category_topics': {
+      const baseUrl = getBaseUrl(args)
+      const slug = pathSegment(args.slug || args.categorySlug, 'slug')
+      const categoryId = positiveInteger(args.categoryId, 'categoryId')
+      const page = optionalPage(args.page)
+      const filter = String(args.filter || '').trim()
+      const allowedFilters = new Set([
+        'latest',
+        'unread',
+        'new',
+        'unseen',
+        'top',
+        'read',
+        'posted',
+        'bookmarks'
+      ])
+      if (filter && !allowedFilters.has(filter)) throw new Error(`不支持的分类过滤器：${filter}`)
+
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const filterPath = filter ? `/l/${filter}` : ''
+      const data = await discourseRequest<any>(
+        baseUrl,
+        `/c/${slug}/${categoryId}${filterPath}.json${suffix}`
+      )
+
+      return {
+        success: true,
+        category: data?.category
+          ? {
+              id: data.category.id,
+              name: data.category.name,
+              slug: data.category.slug,
+              description_text: data.category.description_text,
+              parent_category_id: data.category.parent_category_id,
+              topic_count: data.category.topic_count
+            }
+          : { id: categoryId, slug: decodeURIComponent(slug) },
+        filter: filter || null,
+        page,
+        ...mapTopicList(data)
+      }
+    }
+
     case 'discourse.get_tag_list': {
       const baseUrl = getBaseUrl(args)
       const data = await discourseRequest<any>(baseUrl, '/tags.json')
@@ -208,10 +316,30 @@ export async function handleDiscourseTool(
         success: true,
         tags: tags.map((tag: any) => ({
           id: tag.id,
-          name: tag.name,
-          topic_count: tag.topic_count,
+          name: tag.name || tag.text,
+          text: tag.text,
+          topic_count: tag.topic_count ?? tag.count,
+          count: tag.count,
+          pm_count: tag.pm_count,
+          target_tag: tag.target_tag,
           staff: tag.staff
         }))
+      }
+    }
+
+    case 'discourse.get_tag_topics': {
+      const baseUrl = getBaseUrl(args)
+      const tag = pathSegment(args.tag || args.name, 'tag')
+      const page = optionalPage(args.page)
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const data = await discourseRequest<any>(baseUrl, `/tag/${tag}.json${suffix}`)
+      return {
+        success: true,
+        tag: decodeURIComponent(tag),
+        page,
+        ...mapTopicList(data)
       }
     }
 
@@ -230,6 +358,44 @@ export async function handleDiscourseTool(
           avatar_template: user.avatar_template,
           trust_level: user.trust_level
         }))
+      }
+    }
+
+    case 'discourse.get_user': {
+      const baseUrl = getBaseUrl(args)
+      const username = pathSegment(args.username, 'username')
+      const data = await discourseRequest<any>(baseUrl, `/u/${username}.json`)
+      const user = data?.user || data
+      return {
+        success: true,
+        user: {
+          id: user?.id,
+          username: user?.username,
+          name: user?.name,
+          avatar_template: user?.avatar_template,
+          title: user?.title,
+          trust_level: user?.trust_level,
+          moderator: user?.moderator,
+          admin: user?.admin,
+          staged: user?.staged,
+          created_at: user?.created_at,
+          last_seen_at: user?.last_seen_at,
+          last_posted_at: user?.last_posted_at,
+          post_count: user?.post_count,
+          topic_count: user?.topic_count,
+          time_read: user?.time_read,
+          recent_time_read: user?.recent_time_read,
+          likes_received: user?.likes_received,
+          likes_given: user?.likes_given,
+          bio_cooked: user?.bio_cooked,
+          location: user?.location,
+          website_name: user?.website_name,
+          website: user?.website,
+          primary_group_name: user?.primary_group_name,
+          flair_group_id: user?.flair_group_id,
+          featured_user_badge_ids: user?.featured_user_badge_ids,
+          user_fields: user?.user_fields
+        }
       }
     }
 
