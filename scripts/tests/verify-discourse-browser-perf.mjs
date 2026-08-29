@@ -21,7 +21,11 @@ await build({
   format: 'iife',
   outfile,
   platform: 'browser',
-  define: { __ENABLE_LOGGING__: 'false', __ENABLE_FORUM_BROWSER__: 'true', __ENABLE_LOCAL_MCP_BRIDGE__: 'false' }
+  define: {
+    __ENABLE_LOGGING__: 'false',
+    __ENABLE_FORUM_BROWSER__: 'true',
+    __ENABLE_LOCAL_MCP_BRIDGE__: 'false'
+  }
 })
 
 const browser = await chromium.launch()
@@ -36,11 +40,7 @@ const userDataDir = mkdtempSync(join(tmpdir(), 'ext-profile-'))
 const context = await chromium.launchPersistentContext(userDataDir, {
   executablePath: '/usr/bin/chromium',
   headless: false,
-  args: [
-    `--disable-extensions-except=${dist}`,
-    `--load-extension=${dist}`,
-    '--no-first-run'
-  ]
+  args: [`--disable-extensions-except=${dist}`, `--load-extension=${dist}`, '--no-first-run']
 })
 let worker = context.serviceWorkers()[0]
 if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 15000 })
@@ -57,7 +57,7 @@ await optPage.goto(`chrome-extension://${extensionId}/index.html#/discourse-brow
 await optPage.waitForTimeout(2500)
 results.smoke.push(
   `title=${await optPage.title()}`,
-  `bodyChars=${(await optPage.evaluate(() => document.body.innerText.length))}`,
+  `bodyChars=${await optPage.evaluate(() => document.body.innerText.length)}`,
   `url=${optPage.url()}`
 )
 await context.close()

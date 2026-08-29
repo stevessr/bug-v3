@@ -162,13 +162,7 @@ export const anime_keywords = [
   '藤田言音',
   '素晴',
   '赏花爱音',
-  '超天酱',
+  '超天酱'
 ]
 
-export const 超时空辉夜姬_KEYWORDS = [
-  '超时空辉夜姬',
-  '超时空',
-  '辉夜姬'
-]
-
-
+export const 超时空辉夜姬_KEYWORDS = ['超时空辉夜姬', '超时空', '辉夜姬']

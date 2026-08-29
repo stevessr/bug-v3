@@ -16,7 +16,8 @@ window.__memoCheck = () => {
   const dirty = '<p onclick="evil()">hello <script>alert(1)</script><b>world</b></p>'
   const clean1 = sanitizeDiscourseHtml(dirty)
   const clean2 = sanitizeDiscourseHtml(dirty)
-  results.sanitizeStripsScript = clean1 === '<p>hello <b>world</b></p>' || !clean1.includes('script')
+  results.sanitizeStripsScript =
+    clean1 === '<p>hello <b>world</b></p>' || !clean1.includes('script')
   results.sanitizeDeterministic = clean1 === clean2
 
   // LRU eviction: insert more than the limit, oldest entries recompute fine.
