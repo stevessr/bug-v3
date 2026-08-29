@@ -153,14 +153,25 @@ const TOOLS = [
   // Discourse tools
   {
     name: 'discourse_get_current_page',
-    description: '自动识别当前活动 Discourse 标签页的 topic/category/tag/user/feed/search 路由并返回结构化上下文',
+    description:
+      '自动识别当前活动 Discourse 标签页的 topic/category/tag/user/feed/search 路由并返回结构化上下文',
     inputSchema: {
       type: 'object',
       properties: {
         tabId: { type: 'number', description: '可选标签页 ID；默认使用当前活动标签页' },
         baseUrl: { type: 'string', description: '可选 Discourse 站点 URL；提供时必须与标签页同源' },
-        includeRaw: { type: 'boolean', description: 'Topic 上下文是否返回 raw 原文', default: false },
-        maxPosts: { type: 'number', minimum: 1, maximum: 200, description: '当前页面最多返回帖子数', default: 40 }
+        includeRaw: {
+          type: 'boolean',
+          description: 'Topic 上下文是否返回 raw 原文',
+          default: false
+        },
+        maxPosts: {
+          type: 'number',
+          minimum: 1,
+          maximum: 200,
+          description: '当前页面最多返回帖子数',
+          default: 40
+        }
       }
     }
   },
@@ -200,7 +211,11 @@ const TOOLS = [
       type: 'object',
       properties: {
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
-        forceRefresh: { type: 'boolean', description: '忽略 60 秒站点信息缓存并强制刷新', default: false }
+        forceRefresh: {
+          type: 'boolean',
+          description: '忽略 60 秒站点信息缓存并强制刷新',
+          default: false
+        }
       }
     }
   },
@@ -213,8 +228,19 @@ const TOOLS = [
         baseUrl: { type: 'string', description: 'Discourse 站点 URL', default: 'https://linux.do' },
         topicId: { type: 'number', description: '话题 ID' },
         includeRaw: { type: 'boolean', description: '是否返回 raw 原文', default: false },
-        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '本窗口最多加载帖子数', default: 200 },
-        postOffset: { type: 'number', minimum: 0, description: 'post stream 起始偏移；可直接使用上次 next_post_offset', default: 0 }
+        maxPosts: {
+          type: 'number',
+          minimum: 1,
+          maximum: 2000,
+          description: '本窗口最多加载帖子数',
+          default: 200
+        },
+        postOffset: {
+          type: 'number',
+          minimum: 0,
+          description: 'post stream 起始偏移；可直接使用上次 next_post_offset',
+          default: 0
+        }
       },
       required: ['topicId']
     }
@@ -262,7 +288,8 @@ const TOOLS = [
   },
   {
     name: 'discourse_get_category_topics',
-    description: '按分类浏览 Discourse 话题，可选择 latest/unread/new/top 等分类过滤器并返回续读 cursor',
+    description:
+      '按分类浏览 Discourse 话题，可选择 latest/unread/new/top 等分类过滤器并返回续读 cursor',
     inputSchema: {
       type: 'object',
       properties: {
@@ -438,8 +465,19 @@ const TOOLS = [
         topicId: { type: 'number', description: '话题 ID' },
         readTimeMs: { type: 'number', description: '阅读时间 (毫秒)', default: 10000 },
         like: { type: 'boolean', description: '是否点赞', default: false },
-        maxPosts: { type: 'number', minimum: 1, maximum: 2000, description: '本窗口最多加载帖子数', default: 200 },
-        postOffset: { type: 'number', minimum: 0, description: 'post stream 起始偏移；可直接使用上次 nextPostOffset', default: 0 }
+        maxPosts: {
+          type: 'number',
+          minimum: 1,
+          maximum: 2000,
+          description: '本窗口最多加载帖子数',
+          default: 200
+        },
+        postOffset: {
+          type: 'number',
+          minimum: 0,
+          description: 'post stream 起始偏移；可直接使用上次 nextPostOffset',
+          default: 0
+        }
       },
       required: ['topicId']
     }

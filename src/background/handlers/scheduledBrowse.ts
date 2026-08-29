@@ -1,4 +1,5 @@
 import { getChromeAPI } from '../utils/main'
+
 import {
   ensureDiscoursePostLiked,
   fetchDiscourseTopicList,
@@ -37,9 +38,7 @@ async function executeBrowseTask(
 
   try {
     const topicList = await fetchDiscourseTopicList(baseUrl, task.browseStrategy)
-    const topics = Array.isArray(topicList?.topic_list?.topics)
-      ? topicList.topic_list.topics
-      : []
+    const topics = Array.isArray(topicList?.topic_list?.topics) ? topicList.topic_list.topics : []
 
     if (topics.length === 0) {
       errors.push('没有找到话题')
@@ -82,11 +81,7 @@ async function executeBrowseTask(
           `[ScheduledBrowse] 已阅读话题 ${topic.id}: ${topic.title}（加载 ${detail.posts.length}/${detail.stream.length} 帖）`
         )
 
-        if (
-          task.enableRandomLike &&
-          likesRemaining > 0 &&
-          Math.random() * 100 < task.likeChance
-        ) {
+        if (task.enableRandomLike && likesRemaining > 0 && Math.random() * 100 < task.likeChance) {
           const unlikedPost = detail.posts.find((post: any) => !isDiscoursePostLiked(post))
           if (unlikedPost?.id) {
             try {

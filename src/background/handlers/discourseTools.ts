@@ -17,10 +17,7 @@ import {
 import type { BrowseStrategy } from '@/types/type'
 
 const SITE_INFO_CACHE_TTL_MS = 60_000
-const siteInfoCache = new Map<
-  string,
-  { site: any; basic: any; expiresAt: number }
->()
+const siteInfoCache = new Map<string, { site: any; basic: any; expiresAt: number }>()
 
 function getBaseUrl(args: Record<string, any>): string {
   return normalizeDiscourseBaseUrl(args.baseUrl || 'https://linux.do')
@@ -138,13 +135,7 @@ function buildReplyEdges(posts: any[]) {
 }
 
 function buildParticipants(posts: any[]): string[] {
-  return [
-    ...new Set(
-      posts
-        .map(post => String(post?.username || '').trim())
-        .filter(Boolean)
-    )
-  ]
+  return [...new Set(posts.map(post => String(post?.username || '').trim()).filter(Boolean))]
 }
 
 type DiscourseRoute =
@@ -294,7 +285,10 @@ async function getCurrentPageContext(args: Record<string, any>) {
   }
 
   if (route.kind === 'user') {
-    const data = await discourseRequest<any>(baseUrl, `/u/${encodeURIComponent(route.username)}.json`)
+    const data = await discourseRequest<any>(
+      baseUrl,
+      `/u/${encodeURIComponent(route.username)}.json`
+    )
     const user = data?.user || data
     return {
       success: true,
@@ -530,7 +524,11 @@ export async function handleDiscourseTool(
       const topicId = positiveInteger(args.topicId, 'topicId')
       const includeRaw = Boolean(args.includeRaw)
       const postNumbers = Array.isArray(args.postNumbers)
-        ? [...new Set(args.postNumbers.map(Number).filter(value => Number.isFinite(value) && value > 0))]
+        ? [
+            ...new Set(
+              args.postNumbers.map(Number).filter(value => Number.isFinite(value) && value > 0)
+            )
+          ]
         : []
       if (postNumbers.length === 0) throw new Error('缺少 postNumbers')
       if (postNumbers.length > 100) throw new Error('单次最多获取 100 个楼层')
@@ -538,10 +536,7 @@ export async function handleDiscourseTool(
       const posts = await mapWithConcurrency(postNumbers, 4, async postNumber => {
         const params = new URLSearchParams({ post_number: String(postNumber) })
         if (includeRaw) params.set('include_raw', '1')
-        const data = await discourseRequest<any>(
-          baseUrl,
-          `/t/${topicId}.json?${params.toString()}`
-        )
+        const data = await discourseRequest<any>(baseUrl, `/t/${topicId}.json?${params.toString()}`)
         const post = (data?.post_stream?.posts || []).find(
           (item: any) => item.post_number === postNumber
         )
@@ -953,11 +948,7 @@ export async function handleDiscourseTool(
         const unlikedPost = posts.find((post: any) => !isDiscoursePostLiked(post))
         if (unlikedPost?.id) {
           try {
-            const result = await ensureDiscoursePostLiked(
-              baseUrl,
-              Number(unlikedPost.id),
-              'heart'
-            )
+            const result = await ensureDiscoursePostLiked(baseUrl, Number(unlikedPost.id), 'heart')
             liked = result.liked
             likePostId = Number(unlikedPost.id)
           } catch (error) {

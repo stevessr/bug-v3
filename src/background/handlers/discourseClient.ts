@@ -144,7 +144,11 @@ function extractErrorMessage(details: unknown): string | undefined {
   return undefined
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -196,7 +200,10 @@ async function getCsrfTokenFallback(baseUrl: string): Promise<string> {
   return ''
 }
 
-export async function getDiscourseCsrfToken(baseUrl: string, forceRefresh = false): Promise<string> {
+export async function getDiscourseCsrfToken(
+  baseUrl: string,
+  forceRefresh = false
+): Promise<string> {
   const normalized = normalizeDiscourseBaseUrl(baseUrl)
   const cached = csrfCache.get(normalized)
   if (!forceRefresh && cached && cached.expiresAt > Date.now()) return cached.token
@@ -251,9 +258,7 @@ export async function discourseRequest<T = any>(
   const method = String(init.method || 'GET').toUpperCase()
   const timeoutMs = Math.max(1000, Number(options.timeoutMs || DEFAULT_TIMEOUT_MS))
   const retries =
-    method === 'GET' || method === 'HEAD'
-      ? Math.max(0, options.retries ?? DEFAULT_RETRIES)
-      : 0
+    method === 'GET' || method === 'HEAD' ? Math.max(0, options.retries ?? DEFAULT_RETRIES) : 0
 
   const perform = async (forceCsrfRefresh = false): Promise<Response> => {
     const headers = new Headers(init.headers || {})
@@ -409,26 +414,20 @@ export async function fetchDiscourseTopicPostsByIds(
   postIds: number[],
   includeRaw = false
 ): Promise<any[]> {
-  const uniqueIds = [
-    ...new Set(postIds.map(Number).filter(id => Number.isFinite(id) && id > 0))
-  ]
+  const uniqueIds = [...new Set(postIds.map(Number).filter(id => Number.isFinite(id) && id > 0))]
   if (uniqueIds.length === 0) return []
 
   const batches = chunk(uniqueIds, POST_BATCH_SIZE)
-  const responses = await mapWithConcurrency(
-    batches,
-    POST_BATCH_CONCURRENCY,
-    async ids => {
-      const params = new URLSearchParams()
-      ids.forEach(id => params.append('post_ids[]', String(id)))
-      if (includeRaw) params.set('include_raw', '1')
-      const data = await discourseRequest<any>(
-        baseUrl,
-        `/t/${topicId}/posts.json?${params.toString()}`
-      )
-      return Array.isArray(data?.post_stream?.posts) ? data.post_stream.posts : []
-    }
-  )
+  const responses = await mapWithConcurrency(batches, POST_BATCH_CONCURRENCY, async ids => {
+    const params = new URLSearchParams()
+    ids.forEach(id => params.append('post_ids[]', String(id)))
+    if (includeRaw) params.set('include_raw', '1')
+    const data = await discourseRequest<any>(
+      baseUrl,
+      `/t/${topicId}/posts.json?${params.toString()}`
+    )
+    return Array.isArray(data?.post_stream?.posts) ? data.post_stream.posts : []
+  })
 
   const posts = responses.flat()
   const byId = new Map<number, any>(
@@ -455,9 +454,7 @@ export async function fetchDiscourseTopicWithPosts(
   const topic = await fetchDiscourseTopic(baseUrl, topicId, includeRaw)
   const initialPosts = Array.isArray(topic?.post_stream?.posts) ? topic.post_stream.posts : []
   const stream = Array.isArray(topic?.post_stream?.stream)
-    ? topic.post_stream.stream
-        .map(Number)
-        .filter((id: number) => Number.isFinite(id) && id > 0)
+    ? topic.post_stream.stream.map(Number).filter((id: number) => Number.isFinite(id) && id > 0)
     : initialPosts.map((post: any) => Number(post.id)).filter(Boolean)
 
   const selectedStream = stream.slice(postOffset, postOffset + maxPosts)
@@ -465,12 +462,7 @@ export async function fetchDiscourseTopicWithPosts(
     initialPosts.map((post: any) => [Number(post.id), post] as [number, any])
   )
   const missingIds = selectedStream.filter((id: number) => !initialById.has(id))
-  const fetched = await fetchDiscourseTopicPostsByIds(
-    baseUrl,
-    topicId,
-    missingIds,
-    includeRaw
-  )
+  const fetched = await fetchDiscourseTopicPostsByIds(baseUrl, topicId, missingIds, includeRaw)
   const allById = new Map<number, any>(initialById)
   fetched.forEach(post => allById.set(Number(post.id), post))
 
