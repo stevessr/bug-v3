@@ -1,3 +1,5 @@
+import { getChromeAPI } from '../utils/main'
+
 import {
   discourseRequest,
   ensureDiscoursePostLiked,
@@ -64,14 +66,266 @@ function mapTopicSummary(topic: any) {
   }
 }
 
+function getNextPage(moreTopicsUrl: unknown): number | null {
+  if (typeof moreTopicsUrl !== 'string' || !moreTopicsUrl) return null
+  try {
+    const parsed = new URL(moreTopicsUrl, 'https://discourse.invalid')
+    const page = Number(parsed.searchParams.get('page'))
+    return Number.isFinite(page) && page >= 0 ? Math.floor(page) : null
+  } catch {
+    return null
+  }
+}
+
 function mapTopicList(data: any) {
   const topicList = data?.topic_list || {}
   const topics = Array.isArray(topicList.topics) ? topicList.topics : []
+  const nextPage = getNextPage(topicList.more_topics_url)
   return {
     can_create_topic: topicList.can_create_topic,
     more_topics_url: topicList.more_topics_url,
     per_page: topicList.per_page,
+    cursor: {
+      has_more: Boolean(topicList.more_topics_url),
+      next_page: nextPage
+    },
     topics: topics.map(mapTopicSummary)
+  }
+}
+
+function buildReplyEdges(posts: any[]) {
+  return posts
+    .map(post => {
+      const from = Number(post?.post_number)
+      const to = Number(post?.reply_to_post_number)
+      if (!Number.isFinite(from) || from <= 0 || !Number.isFinite(to) || to <= 0) return null
+      return { from_post_number: from, to_post_number: to }
+    })
+    .filter(Boolean)
+}
+
+function buildParticipants(posts: any[]): string[] {
+  return [
+    ...new Set(
+      posts
+        .map(post => String(post?.username || '').trim())
+        .filter(Boolean)
+    )
+  ]
+}
+
+type DiscourseRoute =
+  | { kind: 'topic'; topicId: number; postNumber?: number }
+  | { kind: 'category'; slug: string; categoryId: number; filter?: string }
+  | { kind: 'tag'; tag: string }
+  | { kind: 'user'; username: string }
+  | { kind: 'feed'; strategy: BrowseStrategy }
+  | { kind: 'search'; query: string }
+  | { kind: 'other'; pathname: string }
+
+function parseDiscourseRoute(url: string): DiscourseRoute {
+  const parsed = new URL(url)
+  const pathname = parsed.pathname.replace(/\/+$/, '') || '/'
+
+  const topicMatch = pathname.match(/^\/t\/(?:[^/]+\/)?(\d+)(?:\/(\d+))?(?:\/|$)/)
+  if (topicMatch) {
+    return {
+      kind: 'topic',
+      topicId: Number(topicMatch[1]),
+      postNumber: topicMatch[2] ? Number(topicMatch[2]) : undefined
+    }
+  }
+
+  const categoryMatch = pathname.match(/^\/c\/([^/]+)\/(\d+)(?:\/l\/([^/]+))?(?:\/|$)/)
+  if (categoryMatch) {
+    return {
+      kind: 'category',
+      slug: decodeURIComponent(categoryMatch[1]),
+      categoryId: Number(categoryMatch[2]),
+      filter: categoryMatch[3] ? decodeURIComponent(categoryMatch[3]) : undefined
+    }
+  }
+
+  const tagMatch = pathname.match(/^\/tag\/([^/]+)(?:\/|$)/)
+  if (tagMatch) return { kind: 'tag', tag: decodeURIComponent(tagMatch[1]) }
+
+  const userMatch = pathname.match(/^\/u\/([^/]+)(?:\/|$)/)
+  if (userMatch) return { kind: 'user', username: decodeURIComponent(userMatch[1]) }
+
+  if (pathname === '/new') return { kind: 'feed', strategy: 'new' }
+  if (pathname === '/unread') return { kind: 'feed', strategy: 'unread' }
+  if (pathname === '/top') return { kind: 'feed', strategy: 'top' }
+  if (pathname === '/' || pathname === '/latest') return { kind: 'feed', strategy: 'latest' }
+
+  if (pathname === '/search') {
+    return { kind: 'search', query: parsed.searchParams.get('q') || '' }
+  }
+
+  return { kind: 'other', pathname }
+}
+
+async function getTargetTab(args: Record<string, any>): Promise<chrome.tabs.Tab> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.tabs) throw new Error('浏览器 tabs API 不可用')
+
+  const requestedTabId = Number(args.tabId || 0)
+  if (requestedTabId > 0 && chromeAPI.tabs.get) {
+    const tab = await chromeAPI.tabs.get(requestedTabId)
+    if (!tab?.url) throw new Error(`标签页 ${requestedTabId} 没有可读取 URL`)
+    return tab
+  }
+
+  const tabs = await chromeAPI.tabs.query({ active: true, lastFocusedWindow: true })
+  const tab = tabs[0]
+  if (!tab?.url) throw new Error('没有可读取的活动标签页')
+  return tab
+}
+
+async function getCurrentPageContext(args: Record<string, any>) {
+  const tab = await getTargetTab(args)
+  const tabUrl = new URL(String(tab.url))
+  if (!['http:', 'https:'].includes(tabUrl.protocol)) {
+    throw new Error(`当前标签页不是 HTTP(S) 页面：${tabUrl.protocol}`)
+  }
+
+  const baseUrl = args.baseUrl
+    ? normalizeDiscourseBaseUrl(String(args.baseUrl))
+    : normalizeDiscourseBaseUrl(tabUrl.origin)
+  if (new URL(baseUrl).origin !== tabUrl.origin) {
+    throw new Error('baseUrl 与当前标签页 origin 不一致')
+  }
+
+  const route = parseDiscourseRoute(tabUrl.toString())
+  const includeRaw = Boolean(args.includeRaw)
+  const maxPosts = Math.floor(boundedNumber(args.maxPosts, 40, 1, 200))
+  const source = {
+    tab_id: tab.id,
+    title: tab.title,
+    url: tab.url,
+    base_url: baseUrl
+  }
+
+  if (route.kind === 'topic') {
+    const params = new URLSearchParams()
+    if (route.postNumber) params.set('post_number', String(route.postNumber))
+    if (includeRaw) params.set('include_raw', '1')
+    const suffix = params.size ? `?${params.toString()}` : ''
+    const data = await discourseRequest<any>(baseUrl, `/t/${route.topicId}.json${suffix}`)
+    const rawPosts = Array.isArray(data?.post_stream?.posts) ? data.post_stream.posts : []
+    const posts = rawPosts.slice(0, maxPosts)
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        topic: {
+          id: data.id,
+          title: data.title,
+          fancy_title: data.fancy_title,
+          slug: data.slug,
+          posts_count: data.posts_count,
+          reply_count: data.reply_count,
+          category_id: data.category_id,
+          tags: data.tags,
+          created_at: data.created_at,
+          last_posted_at: data.last_posted_at
+        },
+        anchor_post_number: route.postNumber || null,
+        posts: posts.map((post: any) => mapDiscoursePost(post, includeRaw)),
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts)
+      }
+    }
+  }
+
+  if (route.kind === 'category') {
+    const filterPath = route.filter ? `/l/${encodeURIComponent(route.filter)}` : ''
+    const data = await discourseRequest<any>(
+      baseUrl,
+      `/c/${encodeURIComponent(route.slug)}/${route.categoryId}${filterPath}.json`
+    )
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        category: data?.category || { id: route.categoryId, slug: route.slug },
+        ...mapTopicList(data)
+      }
+    }
+  }
+
+  if (route.kind === 'tag') {
+    const data = await discourseRequest<any>(baseUrl, `/tag/${encodeURIComponent(route.tag)}.json`)
+    return { success: true, source, route, context: mapTopicList(data) }
+  }
+
+  if (route.kind === 'user') {
+    const data = await discourseRequest<any>(baseUrl, `/u/${encodeURIComponent(route.username)}.json`)
+    const user = data?.user || data
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        user: {
+          id: user?.id,
+          username: user?.username,
+          name: user?.name,
+          title: user?.title,
+          trust_level: user?.trust_level,
+          avatar_template: user?.avatar_template,
+          created_at: user?.created_at,
+          last_seen_at: user?.last_seen_at,
+          post_count: user?.post_count,
+          topic_count: user?.topic_count,
+          bio_cooked: user?.bio_cooked,
+          primary_group_name: user?.primary_group_name
+        }
+      }
+    }
+  }
+
+  if (route.kind === 'feed') {
+    const data = await fetchDiscourseTopicList(baseUrl, route.strategy, 0)
+    return { success: true, source, route, context: mapTopicList(data) }
+  }
+
+  if (route.kind === 'search' && route.query) {
+    const params = new URLSearchParams({ q: route.query })
+    const data = await discourseRequest<any>(baseUrl, `/search.json?${params.toString()}`)
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        topics: (data?.topics || []).map(mapTopicSummary),
+        posts: (data?.posts || []).slice(0, maxPosts).map((post: any) => ({
+          id: post.id,
+          topic_id: post.topic_id,
+          post_number: post.post_number,
+          username: post.username,
+          created_at: post.created_at,
+          blurb: post.blurb,
+          like_count: post.like_count
+        }))
+      }
+    }
+  }
+
+  let basic: any = null
+  try {
+    basic = await discourseRequest<any>(baseUrl, '/site/basic-info.json')
+  } catch {
+    await discourseRequest<any>(baseUrl, '/site.json')
+  }
+  return {
+    success: true,
+    source,
+    route,
+    context: basic
+      ? { site: { title: basic.title, description: basic.description, logo_url: basic.logo_url } }
+      : { site: { detected: true } }
   }
 }
 
@@ -108,6 +362,9 @@ export async function handleDiscourseTool(
       const result = await ensureDiscoursePostLiked(baseUrl, postId, reactionId)
       return { success: true, postId, ...result }
     }
+
+    case 'discourse.get_current_page':
+      return getCurrentPageContext(args)
 
     case 'discourse.get_topic_list': {
       const baseUrl = getBaseUrl(args)
@@ -181,6 +438,7 @@ export async function handleDiscourseTool(
         topicId,
         { includeRaw, maxPosts }
       )
+      const nextPostOffset = truncated ? posts.length : null
 
       return {
         success: true,
@@ -199,8 +457,11 @@ export async function handleDiscourseTool(
         post_stream: {
           total_ids: stream.length,
           loaded: posts.length,
-          truncated
+          truncated,
+          next_post_offset: nextPostOffset
         },
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
         posts: posts.map(post => mapDiscoursePost(post, includeRaw))
       }
     }
@@ -236,7 +497,14 @@ export async function handleDiscourseTool(
         return post ? mapDiscoursePost(post, includeRaw) : null
       })
 
-      return { success: true, topicId, posts: posts.filter(Boolean) }
+      const loaded = posts.filter(Boolean)
+      return {
+        success: true,
+        topicId,
+        reply_edges: buildReplyEdges(loaded),
+        participants: buildParticipants(loaded),
+        posts: loaded
+      }
     }
 
     case 'discourse.get_category_list': {
@@ -459,6 +727,8 @@ export async function handleDiscourseTool(
           tags: data.tags
         },
         anchor: { postId, postNumber, topicId },
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
         posts: posts.map((post: any) => mapDiscoursePost(post, includeRaw))
       }
     }
@@ -571,6 +841,10 @@ export async function handleDiscourseTool(
         success: true,
         offset,
         limit,
+        cursor: {
+          next_offset: (data?.user_actions || []).length >= limit ? offset + limit : null,
+          has_more: (data?.user_actions || []).length >= limit
+        },
         user_actions: (data?.user_actions || []).map((action: any) => ({
           post_id: action.post_id,
           post_number: action.post_number,
@@ -645,9 +919,12 @@ export async function handleDiscourseTool(
           loadedPosts: posts.length,
           totalPostIds: stream.length,
           truncated,
+          nextPostOffset: truncated ? posts.length : null,
           timingsSent,
           timingError
         },
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
         liked,
         likePostId,
         likeError
@@ -666,11 +943,16 @@ export async function handleDiscourseTool(
       if (type) params.set('type', type)
       const data = await discourseRequest<any>(baseUrl, `/search.json?${params.toString()}`)
 
+      const grouped = data?.grouped_search_result || {}
       return {
         success: true,
         query,
         page,
-        grouped_search_result: data?.grouped_search_result,
+        cursor: {
+          has_more: Boolean(grouped?.more_posts || grouped?.more_users || grouped?.more_categories),
+          next_page: grouped?.more_posts || grouped?.more_users ? page + 1 : null
+        },
+        grouped_search_result: grouped,
         topics: (data?.topics || []).map(mapTopicSummary),
         posts: (data?.posts || []).map((post: any) => ({
           id: post.id,
