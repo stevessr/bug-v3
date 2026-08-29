@@ -1,0 +1,67 @@
+name: One-shot Discourse formatter
+
+on:
+  push:
+    branches:
+      - feat/discourse-browser-core
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-shot-discourse-format
+  cancel-in-progress: false
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/discourse-browser-core
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.3.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format Discourse changes
+        run: |
+          pnpm exec eslint \
+            src/background/handlers/discourseClient.ts \
+            src/background/handlers/discourseTools.ts \
+            src/background/handlers/scheduledBrowse.ts \
+            --fix
+          pnpm exec prettier --write \
+            src/background/handlers/discourseClient.ts \
+            src/background/handlers/discourseTools.ts \
+            src/background/handlers/scheduledBrowse.ts \
+            scripts/mcp-server.js \
+            .github/workflows/quality.yml
+
+      - name: Commit formatter output
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/background/handlers/discourseClient.ts \
+            src/background/handlers/discourseTools.ts \
+            src/background/handlers/scheduledBrowse.ts \
+            scripts/mcp-server.js \
+            .github/workflows/quality.yml
+          git commit -m "style(discourse): apply repository formatting"
+          git push origin HEAD:feat/discourse-browser-core
