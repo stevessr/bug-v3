@@ -2,6 +2,8 @@
 
 A modern, feature-rich browser extension for managing and using custom emojis across the web. Built with Vue 3, Vite, and TypeScript, featuring a progressive multi-layer storage system, AI-powered features, and compile-time optimization flags.
 
+[Linux Do](https://linux.do/t/topic/1134520/21)
+
 ## ✨ Key Features
 
 ### 🎯 Core Functionality
