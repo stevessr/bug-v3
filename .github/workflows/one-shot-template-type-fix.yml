@@ -1,0 +1,103 @@
+name: One-shot Vue template type fix
+
+on:
+  push:
+    branches:
+      - feat/discourse-browser-core
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/discourse-browser-core
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.3.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Replace untyped template callbacks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'src/options/components/AIAgentSettings.vue': {
+                  '@change="checked => onMcpBridgeToggle(Boolean(checked))"': '@change="onMcpBridgeToggle(Boolean($event))"',
+                  '@change="keys => (oauthAdvancedOpen[server.id] = (keys as string[]).includes(\'adv\'))"': '@change="oauthAdvancedOpen[server.id] = (Array.isArray($event) ? $event : [$event]).includes(\'adv\')"',
+                  '@change="value => onFolderReadOnlyChange(root, Boolean(value))"': '@change="onFolderReadOnlyChange(root, Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'click\', value as boolean)"': '@change="updatePermission(agent, \'click\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'scroll\', value as boolean)"': '@change="updatePermission(agent, \'scroll\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'touch\', value as boolean)"': '@change="updatePermission(agent, \'touch\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'screenshot\', value as boolean)"': '@change="updatePermission(agent, \'screenshot\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'navigate\', value as boolean)"': '@change="updatePermission(agent, \'navigate\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'tabs\', value as boolean)"': '@change="updatePermission(agent, \'tabs\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'debugger\', value as boolean)"': '@change="updatePermission(agent, \'debugger\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'clickDom\', value as boolean)"': '@change="updatePermission(agent, \'clickDom\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'input\', value as boolean)"': '@change="updatePermission(agent, \'input\', Boolean($event))"',
+                  '@change="value => updatePermission(agent, \'fileAccess\', value as boolean)"': '@change="updatePermission(agent, \'fileAccess\', Boolean($event))"',
+              },
+              'src/options/components/SkillsSettings.vue': {
+                  '@change="value => toggleBuiltinMcp(server.id, Boolean(value))"': '@change="toggleBuiltinMcp(server.id, Boolean($event))"',
+                  '@change="value => toggleSkill(skill.id, value as boolean)"': '@change="toggleSkill(skill.id, Boolean($event))"',
+              },
+              'src/sidebar/Agent.vue': {
+                  '@change="keys => setTimelineCollapsed(message.id, (keys as string[]).length === 0)"': '@change="setTimelineCollapsed(message.id, (Array.isArray($event) ? $event : [$event]).length === 0)"',
+              },
+              'src/sidebar/components/AgentWorkflowPanel.vue': {
+                  '@change="enabled => emit(\'toggleSchedule\', { schedule, enabled: Boolean(enabled) })"': '@change="emit(\'toggleSchedule\', { schedule, enabled: Boolean($event) })"',
+              },
+          }
+
+          for filename, mapping in replacements.items():
+              path = Path(filename)
+              text = path.read_text()
+              for old, new in mapping.items():
+                  count = text.count(old)
+                  if count == 0:
+                      raise SystemExit(f'missing expected pattern in {filename}: {old}')
+                  text = text.replace(old, new)
+              path.write_text(text)
+          PY
+
+      - name: Format touched Vue files
+        run: |
+          pnpm exec prettier --write \
+            src/options/components/AIAgentSettings.vue \
+            src/options/components/SkillsSettings.vue \
+            src/sidebar/Agent.vue \
+            src/sidebar/components/AgentWorkflowPanel.vue
+
+      - name: Validate full repository
+        run: pnpm check:all
+
+      - name: Commit type fixes
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/options/components/AIAgentSettings.vue \
+            src/options/components/SkillsSettings.vue \
+            src/sidebar/Agent.vue \
+            src/sidebar/components/AgentWorkflowPanel.vue
+          git commit -m "fix(types): type Vue template event callbacks"
+          git push origin HEAD:feat/discourse-browser-core

@@ -963,10 +963,7 @@ watch(
               手动启用 Native Messaging 后才可生效，关闭会停止自动探测。
             </p>
           </div>
-          <a-switch
-            :checked="mcpBridgeEnabled"
-            @change="checked => onMcpBridgeToggle(Boolean(checked))"
-          />
+          <a-switch :checked="mcpBridgeEnabled" @change="onMcpBridgeToggle(Boolean($event))" />
         </div>
         <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <div>启用步骤：</div>
@@ -1241,7 +1238,11 @@ watch(
             </div>
             <a-collapse
               :active-key="oauthAdvancedOpen[server.id] ? ['adv'] : []"
-              @change="keys => (oauthAdvancedOpen[server.id] = (keys as string[]).includes('adv'))"
+              @change="
+                oauthAdvancedOpen[server.id] = (Array.isArray($event) ? $event : [$event]).includes(
+                  'adv'
+                )
+              "
               ghost
             >
               <a-collapse-panel key="adv" header="高级 OAuth 设置">
@@ -1454,7 +1455,7 @@ watch(
               :checked="root.readOnly"
               checked-children="只读"
               un-checked-children="可写"
-              @change="value => onFolderReadOnlyChange(root, Boolean(value))"
+              @change="onFolderReadOnlyChange(root, Boolean($event))"
             />
           </div>
 
@@ -1556,61 +1557,61 @@ watch(
           <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
             <a-switch
               :checked="agent.permissions.click"
-              @change="value => updatePermission(agent, 'click', value as boolean)"
+              @change="updatePermission(agent, 'click', Boolean($event))"
               checked-children="点击"
               un-checked-children="点击"
             />
             <a-switch
               :checked="agent.permissions.scroll"
-              @change="value => updatePermission(agent, 'scroll', value as boolean)"
+              @change="updatePermission(agent, 'scroll', Boolean($event))"
               checked-children="滑动"
               un-checked-children="滑动"
             />
             <a-switch
               :checked="agent.permissions.touch"
-              @change="value => updatePermission(agent, 'touch', value as boolean)"
+              @change="updatePermission(agent, 'touch', Boolean($event))"
               checked-children="触摸"
               un-checked-children="触摸"
             />
             <a-switch
               :checked="agent.permissions.screenshot"
-              @change="value => updatePermission(agent, 'screenshot', value as boolean)"
+              @change="updatePermission(agent, 'screenshot', Boolean($event))"
               checked-children="截图"
               un-checked-children="截图"
             />
             <a-switch
               :checked="agent.permissions.navigate"
-              @change="value => updatePermission(agent, 'navigate', value as boolean)"
+              @change="updatePermission(agent, 'navigate', Boolean($event))"
               checked-children="切换URL"
               un-checked-children="切换URL"
             />
             <a-switch
               :checked="agent.permissions.tabs"
-              @change="value => updatePermission(agent, 'tabs', value as boolean)"
+              @change="updatePermission(agent, 'tabs', Boolean($event))"
               checked-children="多标签"
               un-checked-children="多标签"
             />
             <a-switch
               :checked="agent.permissions.debugger"
-              @change="value => updatePermission(agent, 'debugger', value as boolean)"
+              @change="updatePermission(agent, 'debugger', Boolean($event))"
               checked-children="开发者观测"
               un-checked-children="开发者观测"
             />
             <a-switch
               :checked="agent.permissions.clickDom"
-              @change="value => updatePermission(agent, 'clickDom', value as boolean)"
+              @change="updatePermission(agent, 'clickDom', Boolean($event))"
               checked-children="点击DOM"
               un-checked-children="点击DOM"
             />
             <a-switch
               :checked="agent.permissions.input"
-              @change="value => updatePermission(agent, 'input', value as boolean)"
+              @change="updatePermission(agent, 'input', Boolean($event))"
               checked-children="输入"
               un-checked-children="输入"
             />
             <a-switch
               :checked="agent.permissions.fileAccess"
-              @change="value => updatePermission(agent, 'fileAccess', value as boolean)"
+              @change="updatePermission(agent, 'fileAccess', Boolean($event))"
               checked-children="文件夹"
               un-checked-children="文件夹"
             />

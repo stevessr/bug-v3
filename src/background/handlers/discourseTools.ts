@@ -1,101 +1,382 @@
 import { getChromeAPI } from '../utils/main'
 
+import {
+  discourseRequest,
+  ensureDiscoursePostLiked,
+  ensureDiscoursePostUnliked,
+  fetchDiscoursePost,
+  fetchDiscourseTopic,
+  fetchDiscourseTopicList,
+  fetchDiscourseTopicWithPosts,
+  isDiscoursePostLiked,
+  mapDiscoursePost,
+  normalizeDiscourseBaseUrl,
+  sendDiscourseTimings
+} from './discourseClient'
+
 import type { BrowseStrategy } from '@/types/type'
 
-async function getDiscourseCsrfToken(baseUrl: string): Promise<string> {
-  const chromeAPI = getChromeAPI()
-  if (!chromeAPI) return ''
+const SITE_INFO_CACHE_TTL_MS = 60_000
+const siteInfoCache = new Map<string, { site: any; basic: any; expiresAt: number }>()
 
-  let host = ''
-  let origin = ''
-  try {
-    const parsed = new URL(baseUrl)
-    host = parsed.hostname
-    origin = parsed.origin
-  } catch {
-    return ''
+function getBaseUrl(args: Record<string, any>): string {
+  return normalizeDiscourseBaseUrl(args.baseUrl || 'https://linux.do')
+}
+
+function positiveInteger(value: unknown, name: string): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) throw new Error(`缺少或无效 ${name}`)
+  return Math.floor(parsed)
+}
+
+function optionalPage(value: unknown): number {
+  const parsed = Number(value || 0)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0
+}
+
+function boundedNumber(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(parsed, max))
+}
+
+function pathSegment(value: unknown, name: string): string {
+  const text = String(value || '').trim()
+  if (!text) throw new Error(`缺少 ${name}`)
+  return encodeURIComponent(text)
+}
+
+async function getSiteInfoBundle(
+  baseUrl: string,
+  forceRefresh = false
+): Promise<{ site: any; basic: any; cacheHit: boolean; expiresAt: number }> {
+  const normalized = normalizeDiscourseBaseUrl(baseUrl)
+  const cached = siteInfoCache.get(normalized)
+  if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+    return { ...cached, cacheHit: true }
   }
 
+  const site = await discourseRequest<any>(normalized, '/site.json')
+  let basic: any = null
   try {
-    if (chromeAPI.cookies?.getAll) {
-      const cookies = await chromeAPI.cookies.getAll({ domain: host })
-      const tokenCookie = cookies.find((cookie: any) =>
-        ['csrf_token', 'XSRF-TOKEN', '_csrf'].includes(cookie.name)
-      )
-      if (tokenCookie?.value) return tokenCookie.value
+    basic = await discourseRequest<any>(normalized, '/site/basic-info.json')
+  } catch {
+    // Older/custom Discourse installs may not expose the basic-info endpoint.
+  }
+
+  const value = {
+    site,
+    basic,
+    expiresAt: Date.now() + SITE_INFO_CACHE_TTL_MS
+  }
+  siteInfoCache.set(normalized, value)
+  return { ...value, cacheHit: false }
+}
+
+function mapTopicSummary(topic: any) {
+  return {
+    id: topic.id,
+    title: topic.title,
+    fancy_title: topic.fancy_title,
+    slug: topic.slug,
+    posts_count: topic.posts_count,
+    reply_count: topic.reply_count,
+    views: topic.views,
+    like_count: topic.like_count,
+    category_id: topic.category_id,
+    tags: topic.tags,
+    pinned: topic.pinned,
+    closed: topic.closed,
+    archived: topic.archived,
+    visible: topic.visible,
+    created_at: topic.created_at,
+    last_posted_at: topic.last_posted_at,
+    last_poster_username: topic.last_poster_username,
+    posters: topic.posters
+  }
+}
+
+function getNextPage(moreTopicsUrl: unknown): number | null {
+  if (typeof moreTopicsUrl !== 'string' || !moreTopicsUrl) return null
+  try {
+    const parsed = new URL(moreTopicsUrl, 'https://discourse.invalid')
+    const page = Number(parsed.searchParams.get('page'))
+    return Number.isFinite(page) && page >= 0 ? Math.floor(page) : null
+  } catch {
+    return null
+  }
+}
+
+function mapTopicList(data: any) {
+  const topicList = data?.topic_list || {}
+  const topics = Array.isArray(topicList.topics) ? topicList.topics : []
+  const nextPage = getNextPage(topicList.more_topics_url)
+  return {
+    can_create_topic: topicList.can_create_topic,
+    more_topics_url: topicList.more_topics_url,
+    per_page: topicList.per_page,
+    cursor: {
+      has_more: Boolean(topicList.more_topics_url),
+      next_page: nextPage
+    },
+    topics: topics.map(mapTopicSummary)
+  }
+}
+
+function buildReplyEdges(posts: any[]) {
+  return posts
+    .map(post => {
+      const from = Number(post?.post_number)
+      const to = Number(post?.reply_to_post_number)
+      if (!Number.isFinite(from) || from <= 0 || !Number.isFinite(to) || to <= 0) return null
+      return { from_post_number: from, to_post_number: to }
+    })
+    .filter(Boolean)
+}
+
+function buildParticipants(posts: any[]): string[] {
+  return [...new Set(posts.map(post => String(post?.username || '').trim()).filter(Boolean))]
+}
+
+type DiscourseRoute =
+  | { kind: 'topic'; topicId: number; postNumber?: number }
+  | { kind: 'category'; slug: string; categoryId: number; filter?: string }
+  | { kind: 'tag'; tag: string }
+  | { kind: 'user'; username: string }
+  | { kind: 'feed'; strategy: BrowseStrategy }
+  | { kind: 'search'; query: string }
+  | { kind: 'other'; pathname: string }
+
+function parseDiscourseRoute(url: string): DiscourseRoute {
+  const parsed = new URL(url)
+  const pathname = parsed.pathname.replace(/\/+$/, '') || '/'
+
+  const topicMatch = pathname.match(/^\/t\/(?:[^/]+\/)?(\d+)(?:\/(\d+))?(?:\/|$)/)
+  if (topicMatch) {
+    return {
+      kind: 'topic',
+      topicId: Number(topicMatch[1]),
+      postNumber: topicMatch[2] ? Number(topicMatch[2]) : undefined
     }
-  } catch {
-    // ignore cookie failures
   }
 
-  try {
-    if (chromeAPI.tabs?.query) {
-      const tabs = await chromeAPI.tabs.query({ url: `${origin}/*` })
-      for (const tab of tabs) {
-        if (!tab.id) continue
-        try {
-          const resp = await chromeAPI.tabs.sendMessage(tab.id, { type: 'GET_CSRF_TOKEN' })
-          if (resp?.csrfToken) return resp.csrfToken
-        } catch {
-          continue
+  const categoryMatch = pathname.match(/^\/c\/([^/]+)\/(\d+)(?:\/l\/([^/]+))?(?:\/|$)/)
+  if (categoryMatch) {
+    return {
+      kind: 'category',
+      slug: decodeURIComponent(categoryMatch[1]),
+      categoryId: Number(categoryMatch[2]),
+      filter: categoryMatch[3] ? decodeURIComponent(categoryMatch[3]) : undefined
+    }
+  }
+
+  const tagMatch = pathname.match(/^\/tag\/([^/]+)(?:\/|$)/)
+  if (tagMatch) return { kind: 'tag', tag: decodeURIComponent(tagMatch[1]) }
+
+  const userMatch = pathname.match(/^\/u\/([^/]+)(?:\/|$)/)
+  if (userMatch) return { kind: 'user', username: decodeURIComponent(userMatch[1]) }
+
+  if (pathname === '/new') return { kind: 'feed', strategy: 'new' }
+  if (pathname === '/unread') return { kind: 'feed', strategy: 'unread' }
+  if (pathname === '/top') return { kind: 'feed', strategy: 'top' }
+  if (pathname === '/' || pathname === '/latest') return { kind: 'feed', strategy: 'latest' }
+
+  if (pathname === '/search') {
+    return { kind: 'search', query: parsed.searchParams.get('q') || '' }
+  }
+
+  return { kind: 'other', pathname }
+}
+
+async function getTargetTab(args: Record<string, any>): Promise<chrome.tabs.Tab> {
+  const chromeAPI = getChromeAPI()
+  if (!chromeAPI?.tabs) throw new Error('浏览器 tabs API 不可用')
+
+  const requestedTabId = Number(args.tabId || 0)
+  if (requestedTabId > 0 && chromeAPI.tabs.get) {
+    const tab = await chromeAPI.tabs.get(requestedTabId)
+    if (!tab?.url) throw new Error(`标签页 ${requestedTabId} 没有可读取 URL`)
+    return tab
+  }
+
+  const tabs = await chromeAPI.tabs.query({ active: true, lastFocusedWindow: true })
+  const tab = tabs[0]
+  if (!tab?.url) throw new Error('没有可读取的活动标签页')
+  return tab
+}
+
+async function getCurrentPageContext(args: Record<string, any>) {
+  const tab = await getTargetTab(args)
+  const tabUrl = new URL(String(tab.url))
+  if (!['http:', 'https:'].includes(tabUrl.protocol)) {
+    throw new Error(`当前标签页不是 HTTP(S) 页面：${tabUrl.protocol}`)
+  }
+
+  const baseUrl = args.baseUrl
+    ? normalizeDiscourseBaseUrl(String(args.baseUrl))
+    : normalizeDiscourseBaseUrl(tabUrl.origin)
+  if (new URL(baseUrl).origin !== tabUrl.origin) {
+    throw new Error('baseUrl 与当前标签页 origin 不一致')
+  }
+
+  const route = parseDiscourseRoute(tabUrl.toString())
+  const includeRaw = Boolean(args.includeRaw)
+  const maxPosts = Math.floor(boundedNumber(args.maxPosts, 40, 1, 200))
+  const source = {
+    tab_id: tab.id,
+    title: tab.title,
+    url: tab.url,
+    base_url: baseUrl
+  }
+
+  if (route.kind === 'topic') {
+    const params = new URLSearchParams()
+    if (route.postNumber) params.set('post_number', String(route.postNumber))
+    if (includeRaw) params.set('include_raw', '1')
+    const suffix = params.size ? `?${params.toString()}` : ''
+    const data = await discourseRequest<any>(baseUrl, `/t/${route.topicId}.json${suffix}`)
+    const rawPosts = Array.isArray(data?.post_stream?.posts) ? data.post_stream.posts : []
+    const posts = rawPosts.slice(0, maxPosts)
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        topic: {
+          id: data.id,
+          title: data.title,
+          fancy_title: data.fancy_title,
+          slug: data.slug,
+          posts_count: data.posts_count,
+          reply_count: data.reply_count,
+          category_id: data.category_id,
+          tags: data.tags,
+          created_at: data.created_at,
+          last_posted_at: data.last_posted_at
+        },
+        anchor_post_number: route.postNumber || null,
+        posts: posts.map((post: any) => mapDiscoursePost(post, includeRaw)),
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts)
+      }
+    }
+  }
+
+  if (route.kind === 'category') {
+    const filterPath = route.filter ? `/l/${encodeURIComponent(route.filter)}` : ''
+    const data = await discourseRequest<any>(
+      baseUrl,
+      `/c/${encodeURIComponent(route.slug)}/${route.categoryId}${filterPath}.json`
+    )
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        category: data?.category || { id: route.categoryId, slug: route.slug },
+        ...mapTopicList(data)
+      }
+    }
+  }
+
+  if (route.kind === 'tag') {
+    const data = await discourseRequest<any>(baseUrl, `/tag/${encodeURIComponent(route.tag)}.json`)
+    return { success: true, source, route, context: mapTopicList(data) }
+  }
+
+  if (route.kind === 'user') {
+    const data = await discourseRequest<any>(
+      baseUrl,
+      `/u/${encodeURIComponent(route.username)}.json`
+    )
+    const user = data?.user || data
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        user: {
+          id: user?.id,
+          username: user?.username,
+          name: user?.name,
+          title: user?.title,
+          trust_level: user?.trust_level,
+          avatar_template: user?.avatar_template,
+          created_at: user?.created_at,
+          last_seen_at: user?.last_seen_at,
+          post_count: user?.post_count,
+          topic_count: user?.topic_count,
+          bio_cooked: user?.bio_cooked,
+          primary_group_name: user?.primary_group_name
         }
       }
     }
-  } catch {
-    // ignore tab failures
   }
 
-  return ''
-}
-
-async function buildDiscourseHeaders(
-  baseUrl: string,
-  headers: Record<string, string>
-): Promise<Record<string, string>> {
-  const csrfToken = await getDiscourseCsrfToken(baseUrl)
-  if (csrfToken) headers['X-CSRF-Token'] = csrfToken
-  return headers
-}
-
-function isDiscoursePostLiked(post: any): boolean {
-  if (post?.current_user_reaction) return true
-  if (Array.isArray(post?.actions_summary)) {
-    const likeAction = post.actions_summary.find((a: any) => a.id === 2)
-    if (likeAction?.acted) return true
+  if (route.kind === 'feed') {
+    const data = await fetchDiscourseTopicList(baseUrl, route.strategy, 0)
+    return { success: true, source, route, context: mapTopicList(data) }
   }
-  return false
-}
 
-async function fetchDiscoursePost(baseUrl: string, postId: number): Promise<any> {
-  const postUrl = `${baseUrl}/posts/${postId}.json`
-  const postResp = await fetch(postUrl, {
-    credentials: 'include',
-    headers: { Accept: 'application/json' }
-  })
-  if (!postResp.ok) {
-    throw new Error(`获取帖子失败：HTTP ${postResp.status}`)
+  if (route.kind === 'search' && route.query) {
+    const params = new URLSearchParams({ q: route.query })
+    const data = await discourseRequest<any>(baseUrl, `/search.json?${params.toString()}`)
+    return {
+      success: true,
+      source,
+      route,
+      context: {
+        topics: (data?.topics || []).map(mapTopicSummary),
+        posts: (data?.posts || []).slice(0, maxPosts).map((post: any) => ({
+          id: post.id,
+          topic_id: post.topic_id,
+          post_number: post.post_number,
+          username: post.username,
+          created_at: post.created_at,
+          blurb: post.blurb,
+          like_count: post.like_count
+        }))
+      }
+    }
   }
-  return postResp.json()
+
+  const siteInfo = await getSiteInfoBundle(baseUrl)
+  return {
+    success: true,
+    source,
+    route,
+    context: siteInfo.basic
+      ? {
+          site: {
+            title: siteInfo.basic.title,
+            description: siteInfo.basic.description,
+            logo_url: siteInfo.basic.logo_url,
+            cache_hit: siteInfo.cacheHit
+          }
+        }
+      : { site: { detected: true, cache_hit: siteInfo.cacheHit } }
+  }
 }
 
-async function toggleDiscourseReaction(
-  baseUrl: string,
-  postId: number,
-  reactionId: string
-): Promise<{ ok: boolean; data?: any }> {
-  const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
-  const headers = await buildDiscourseHeaders(baseUrl, {
-    'X-Requested-With': 'XMLHttpRequest',
-    'Content-Type': 'application/json',
-    'Discourse-Logged-In': 'true'
-  })
-  const response = await fetch(url, {
-    method: 'PUT',
-    credentials: 'include',
-    headers
-  })
-  const data = await response.json().catch(() => null)
-  return { ok: response.ok, data }
+async function mapWithConcurrency<T, R>(
+  values: T[],
+  concurrency: number,
+  worker: (value: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(values.length)
+  let cursor = 0
+  const runners = Array.from(
+    { length: Math.min(Math.max(concurrency, 1), values.length) },
+    async () => {
+      while (true) {
+        const index = cursor++
+        if (index >= values.length) return
+        results[index] = await worker(values[index])
+      }
+    }
+  )
+  await Promise.all(runners)
+  return results
 }
 
 export async function handleDiscourseTool(
@@ -103,693 +384,646 @@ export async function handleDiscourseTool(
   args: Record<string, any>
 ): Promise<any> {
   switch (toolName) {
-    // ========== Discourse 工具 ==========
-
     case 'discourse.like_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
-      if (!postId) throw new Error('缺少 postId')
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const reactionId = String(args.reactionId || 'heart')
-
-      const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/${reactionId}/toggle.json`
-      const headers = await buildDiscourseHeaders(baseUrl, {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Discourse-Logged-In': 'true'
-      })
-      const response = await fetch(url, {
-        method: 'PUT',
-        credentials: 'include',
-        headers
-      })
-
-      if (!response.ok) {
-        throw new Error(`点赞失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      return { success: true, data }
+      const result = await ensureDiscoursePostLiked(baseUrl, postId, reactionId)
+      return { success: true, postId, ...result }
     }
 
+    case 'discourse.get_current_page':
+      return getCurrentPageContext(args)
+
     case 'discourse.get_topic_list': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const baseUrl = getBaseUrl(args)
       const strategy = (args.strategy || 'latest') as BrowseStrategy
-      const page = Number(args.page || 0)
-
-      const endpoints: Record<string, string> = {
-        latest: '/latest.json',
-        new: '/new.json',
-        unread: '/unread.json',
-        top: '/top.json'
-      }
-
-      const endpoint = endpoints[strategy] || endpoints.latest
-      const url = `${baseUrl}${endpoint}?page=${page}`
-
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`获取话题列表失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      const topics = data.topic_list?.topics || []
+      const page = optionalPage(args.page)
+      const data = await fetchDiscourseTopicList(baseUrl, strategy, page)
       return {
-        topics: topics.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          slug: t.slug,
-          posts_count: t.posts_count,
-          views: t.views,
-          like_count: t.like_count,
-          created_at: t.created_at,
-          last_posted_at: t.last_posted_at
-        }))
+        success: true,
+        strategy,
+        page,
+        ...mapTopicList(data)
+      }
+    }
+
+    case 'discourse.get_site_info': {
+      const baseUrl = getBaseUrl(args)
+      const { site, basic, cacheHit, expiresAt } = await getSiteInfoBundle(
+        baseUrl,
+        Boolean(args.forceRefresh)
+      )
+      const categories = Array.isArray(site?.categories) ? site.categories : []
+      return {
+        success: true,
+        cache: {
+          hit: cacheHit,
+          expires_at: expiresAt
+        },
+        basic: basic
+          ? {
+              title: basic.title,
+              description: basic.description,
+              logo_url: basic.logo_url,
+              logo_small_url: basic.logo_small_url,
+              mobile_logo_url: basic.mobile_logo_url,
+              apple_touch_icon_url: basic.apple_touch_icon_url,
+              favicon_url: basic.favicon_url
+            }
+          : null,
+        capabilities: {
+          can_create_tag: site?.can_create_tag,
+          can_tag_topics: site?.can_tag_topics,
+          can_create_topic: site?.can_create_topic,
+          can_create_post: site?.can_create_post,
+          tags_filter_regexp: site?.tags_filter_regexp
+        },
+        categories: categories.map((category: any) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          color: category.color,
+          text_color: category.text_color,
+          parent_category_id: category.parent_category_id,
+          topic_count: category.topic_count,
+          post_count: category.post_count,
+          read_restricted: category.read_restricted
+        })),
+        top_tags: site?.top_tags || [],
+        trust_levels: site?.trust_levels || [],
+        post_action_types: site?.post_action_types || [],
+        auth_providers: site?.auth_providers || []
       }
     }
 
     case 'discourse.get_topic': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
-      if (!topicId) throw new Error('缺少 topicId')
-
-      const url = `${baseUrl}/t/${topicId}.json`
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
+      const includeRaw = Boolean(args.includeRaw)
+      const maxPosts = Math.floor(boundedNumber(args.maxPosts, 200, 1, 2000))
+      const postOffset = Math.floor(boundedNumber(args.postOffset, 0, 0, 1_000_000))
+      const {
+        topic,
+        posts,
+        stream,
+        offset,
+        windowSize,
+        truncated,
+        hasMore,
+        hasPrevious,
+        nextOffset,
+        previousOffset
+      } = await fetchDiscourseTopicWithPosts(baseUrl, topicId, {
+        includeRaw,
+        maxPosts,
+        postOffset
       })
 
-      if (!response.ok) {
-        throw new Error(`获取话题失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
       return {
-        id: data.id,
-        title: data.title,
-        slug: data.slug,
-        posts_count: data.posts_count,
-        views: data.views,
-        like_count: data.like_count,
-        posts:
-          data.post_stream?.posts?.map((p: any) => ({
-            id: p.id,
-            post_number: p.post_number,
-            username: p.username,
-            created_at: p.created_at,
-            cooked: p.cooked,
-            liked: !!(
-              p.current_user_reaction || p.actions_summary?.find((a: any) => a.id === 2 && a.acted)
-            )
-          })) || []
+        success: true,
+        id: topic.id,
+        title: topic.title,
+        fancy_title: topic.fancy_title,
+        slug: topic.slug,
+        posts_count: topic.posts_count,
+        reply_count: topic.reply_count,
+        views: topic.views,
+        like_count: topic.like_count,
+        category_id: topic.category_id,
+        tags: topic.tags,
+        created_at: topic.created_at,
+        last_posted_at: topic.last_posted_at,
+        post_stream: {
+          total_ids: Math.max(stream.length, Number(topic.posts_count || 0)),
+          offset,
+          window_size: windowSize,
+          loaded: posts.length,
+          truncated,
+          has_more: hasMore,
+          has_previous: hasPrevious,
+          next_post_offset: nextOffset,
+          previous_post_offset: previousOffset
+        },
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
+        posts: posts.map(post => mapDiscoursePost(post, includeRaw))
       }
     }
 
     case 'discourse.get_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const includeRaw = Boolean(args.includeRaw)
-      if (!postId) throw new Error('缺少 postId')
-
       const data = await fetchDiscoursePost(baseUrl, postId)
-      return {
-        id: data.id,
-        topic_id: data.topic_id,
-        post_number: data.post_number,
-        username: data.username,
-        created_at: data.created_at,
-        cooked: data.cooked,
-        raw: includeRaw ? data.raw : undefined,
-        liked: isDiscoursePostLiked(data)
-      }
+      return { success: true, ...mapDiscoursePost(data, includeRaw) }
     }
 
     case 'discourse.get_topic_posts': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
       const includeRaw = Boolean(args.includeRaw)
-      const postNumbers = Array.isArray(args.postNumbers) ? args.postNumbers : []
-
-      if (!topicId) throw new Error('缺少 topicId')
+      const postNumbers = Array.isArray(args.postNumbers)
+        ? [
+            ...new Set(
+              args.postNumbers.map(Number).filter(value => Number.isFinite(value) && value > 0)
+            )
+          ]
+        : []
       if (postNumbers.length === 0) throw new Error('缺少 postNumbers')
+      if (postNumbers.length > 100) throw new Error('单次最多获取 100 个楼层')
 
-      const requests = postNumbers.map(async (postNumber: number) => {
-        const topicUrl = new URL(`${baseUrl}/t/${topicId}.json`)
-        topicUrl.searchParams.set('post_number', String(postNumber))
-        if (includeRaw) topicUrl.searchParams.set('include_raw', '1')
-
-        const response = await fetch(topicUrl.toString(), {
-          credentials: 'include',
-          headers: { Accept: 'application/json' }
-        })
-        if (!response.ok) {
-          throw new Error(`获取楼层 ${postNumber} 失败：HTTP ${response.status}`)
-        }
-        const data = await response.json()
-        const post = (data.post_stream?.posts || []).find((p: any) => p.post_number === postNumber)
-        if (!post) return null
-        return {
-          id: post.id,
-          post_number: post.post_number,
-          username: post.username,
-          created_at: post.created_at,
-          cooked: post.cooked,
-          raw: includeRaw ? post.raw : undefined,
-          liked: isDiscoursePostLiked(post)
-        }
+      const posts = await mapWithConcurrency(postNumbers, 4, async postNumber => {
+        const params = new URLSearchParams({ post_number: String(postNumber) })
+        if (includeRaw) params.set('include_raw', '1')
+        const data = await discourseRequest<any>(baseUrl, `/t/${topicId}.json?${params.toString()}`)
+        const post = (data?.post_stream?.posts || []).find(
+          (item: any) => item.post_number === postNumber
+        )
+        return post ? mapDiscoursePost(post, includeRaw) : null
       })
 
-      const posts = (await Promise.all(requests)).filter(Boolean)
-      return { success: true, topicId, posts }
+      const loaded = posts.filter(Boolean)
+      return {
+        success: true,
+        topicId,
+        reply_edges: buildReplyEdges(loaded),
+        participants: buildParticipants(loaded),
+        posts: loaded
+      }
     }
 
     case 'discourse.get_category_list': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const url = `${baseUrl}/categories.json`
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!response.ok) {
-        throw new Error(`获取分类失败：HTTP ${response.status}`)
-      }
-      const data = await response.json()
-      const categories = data.category_list?.categories || []
+      const baseUrl = getBaseUrl(args)
+      const data = await discourseRequest<any>(baseUrl, '/categories.json')
+      const categories = Array.isArray(data?.category_list?.categories)
+        ? data.category_list.categories
+        : []
       return {
-        categories: categories.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          topic_count: c.topic_count,
-          post_count: c.post_count
+        success: true,
+        categories: categories.map((category: any) => ({
+          id: category.id,
+          name: category.name,
+          color: category.color,
+          text_color: category.text_color,
+          slug: category.slug,
+          topic_count: category.topic_count,
+          post_count: category.post_count,
+          position: category.position,
+          parent_category_id: category.parent_category_id,
+          description_text: category.description_text,
+          read_restricted: category.read_restricted
         }))
+      }
+    }
+
+    case 'discourse.get_category_topics': {
+      const baseUrl = getBaseUrl(args)
+      const slug = pathSegment(args.slug || args.categorySlug, 'slug')
+      const categoryId = positiveInteger(args.categoryId, 'categoryId')
+      const page = optionalPage(args.page)
+      const filter = String(args.filter || '').trim()
+      const allowedFilters = new Set([
+        'latest',
+        'unread',
+        'new',
+        'unseen',
+        'top',
+        'read',
+        'posted',
+        'bookmarks'
+      ])
+      if (filter && !allowedFilters.has(filter)) throw new Error(`不支持的分类过滤器：${filter}`)
+
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const filterPath = filter ? `/l/${filter}` : ''
+      const data = await discourseRequest<any>(
+        baseUrl,
+        `/c/${slug}/${categoryId}${filterPath}.json${suffix}`
+      )
+
+      return {
+        success: true,
+        category: data?.category
+          ? {
+              id: data.category.id,
+              name: data.category.name,
+              slug: data.category.slug,
+              description_text: data.category.description_text,
+              parent_category_id: data.category.parent_category_id,
+              topic_count: data.category.topic_count
+            }
+          : { id: categoryId, slug: decodeURIComponent(slug) },
+        filter: filter || null,
+        page,
+        ...mapTopicList(data)
       }
     }
 
     case 'discourse.get_tag_list': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const url = `${baseUrl}/tags.json`
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!response.ok) {
-        throw new Error(`获取标签失败：HTTP ${response.status}`)
-      }
-      const data = await response.json()
-      const tags = data.tags || []
+      const baseUrl = getBaseUrl(args)
+      const data = await discourseRequest<any>(baseUrl, '/tags.json')
+      const tags = Array.isArray(data?.tags) ? data.tags : []
       return {
-        tags: tags.map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          topic_count: t.topic_count
+        success: true,
+        tags: tags.map((tag: any) => ({
+          id: tag.id,
+          name: tag.name || tag.text,
+          text: tag.text,
+          topic_count: tag.topic_count ?? tag.count,
+          count: tag.count,
+          pm_count: tag.pm_count,
+          target_tag: tag.target_tag,
+          staff: tag.staff
         }))
+      }
+    }
+
+    case 'discourse.get_tag_topics': {
+      const baseUrl = getBaseUrl(args)
+      const tag = pathSegment(args.tag || args.name, 'tag')
+      const page = optionalPage(args.page)
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const data = await discourseRequest<any>(baseUrl, `/tag/${tag}.json${suffix}`)
+      return {
+        success: true,
+        tag: decodeURIComponent(tag),
+        page,
+        ...mapTopicList(data)
       }
     }
 
     case 'discourse.search_user': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const baseUrl = getBaseUrl(args)
       const term = String(args.term || '').trim()
       if (!term) throw new Error('缺少 term')
-
-      const url = `${baseUrl}/u/search/users.json?term=${encodeURIComponent(term)}`
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!response.ok) {
-        throw new Error(`搜索用户失败：HTTP ${response.status}`)
-      }
-      const data = await response.json()
-      const users = data.users || []
+      const params = new URLSearchParams({ term })
+      const data = await discourseRequest<any>(baseUrl, `/u/search/users.json?${params.toString()}`)
       return {
-        users: users.map((u: any) => ({
-          id: u.id,
-          username: u.username,
-          name: u.name,
-          avatar_template: u.avatar_template
+        success: true,
+        users: (data?.users || []).map((user: any) => ({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          avatar_template: user.avatar_template,
+          trust_level: user.trust_level
         }))
       }
     }
 
-    case 'discourse.get_notifications': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const page = Number(args.page || 0)
-      const url = new URL(`${baseUrl}/notifications.json`)
-      if (page > 0) url.searchParams.set('page', String(page))
-      const response = await fetch(url.toString(), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!response.ok) {
-        throw new Error(`获取通知失败：HTTP ${response.status}`)
+    case 'discourse.get_user': {
+      const baseUrl = getBaseUrl(args)
+      const username = pathSegment(args.username, 'username')
+      const data = await discourseRequest<any>(baseUrl, `/u/${username}.json`)
+      const user = data?.user || data
+      return {
+        success: true,
+        user: {
+          id: user?.id,
+          username: user?.username,
+          name: user?.name,
+          avatar_template: user?.avatar_template,
+          title: user?.title,
+          trust_level: user?.trust_level,
+          moderator: user?.moderator,
+          admin: user?.admin,
+          staged: user?.staged,
+          created_at: user?.created_at,
+          last_seen_at: user?.last_seen_at,
+          last_posted_at: user?.last_posted_at,
+          post_count: user?.post_count,
+          topic_count: user?.topic_count,
+          time_read: user?.time_read,
+          recent_time_read: user?.recent_time_read,
+          likes_received: user?.likes_received,
+          likes_given: user?.likes_given,
+          bio_cooked: user?.bio_cooked,
+          location: user?.location,
+          website_name: user?.website_name,
+          website: user?.website,
+          primary_group_name: user?.primary_group_name,
+          flair_group_id: user?.flair_group_id,
+          featured_user_badge_ids: user?.featured_user_badge_ids,
+          user_fields: user?.user_fields
+        }
       }
-      const data = await response.json()
-      return { notifications: data.notifications || [] }
+    }
+
+    case 'discourse.get_notifications': {
+      const baseUrl = getBaseUrl(args)
+      const page = optionalPage(args.page)
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const data = await discourseRequest<any>(baseUrl, `/notifications.json${suffix}`)
+      return {
+        success: true,
+        page,
+        total_rows_notifications: data?.total_rows_notifications,
+        seen_notification_id: data?.seen_notification_id,
+        notifications: data?.notifications || []
+      }
     }
 
     case 'discourse.get_bookmarks': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const page = Number(args.page || 0)
-      const url = new URL(`${baseUrl}/bookmarks.json`)
-      if (page > 0) url.searchParams.set('page', String(page))
-      const response = await fetch(url.toString(), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!response.ok) {
-        throw new Error(`获取书签失败：HTTP ${response.status}`)
+      const baseUrl = getBaseUrl(args)
+      const page = optionalPage(args.page)
+      const params = new URLSearchParams()
+      if (page > 0) params.set('page', String(page))
+      const suffix = params.size ? `?${params.toString()}` : ''
+      const data = await discourseRequest<any>(baseUrl, `/bookmarks.json${suffix}`)
+      return {
+        success: true,
+        page,
+        bookmarks: data?.bookmarks || data?.user_bookmark_list?.bookmarks || []
       }
-      const data = await response.json()
-      return { bookmarks: data.bookmarks || [] }
     }
 
     case 'discourse.get_post_context': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const includeRaw = Boolean(args.includeRaw)
       let topicId = Number(args.topicId || 0)
       let postNumber = Number(args.postNumber || 0)
 
-      if (!postId) throw new Error('缺少 postId')
-
       if (!topicId || !postNumber) {
-        const postUrl = `${baseUrl}/posts/${postId}.json`
-        const postResp = await fetch(postUrl, {
-          credentials: 'include',
-          headers: { Accept: 'application/json' }
-        })
-        if (!postResp.ok) {
-          throw new Error(`获取帖子失败：HTTP ${postResp.status}`)
-        }
-        const postData = await postResp.json()
+        const postData = await fetchDiscoursePost(baseUrl, postId)
         topicId = Number(postData.topic_id || 0)
         postNumber = Number(postData.post_number || 0)
-        if (!topicId || !postNumber) {
-          throw new Error('无法解析 topicId 或 postNumber')
-        }
       }
+      if (!topicId || !postNumber) throw new Error('无法解析 topicId 或 postNumber')
 
-      const topicUrl = new URL(`${baseUrl}/t/${topicId}.json`)
-      topicUrl.searchParams.set('post_number', String(postNumber))
-      if (includeRaw) topicUrl.searchParams.set('include_raw', '1')
+      const params = new URLSearchParams({ post_number: String(postNumber) })
+      if (includeRaw) params.set('include_raw', '1')
+      const data = await discourseRequest<any>(baseUrl, `/t/${topicId}.json?${params.toString()}`)
+      const posts = Array.isArray(data?.post_stream?.posts) ? data.post_stream.posts : []
 
-      const topicResp = await fetch(topicUrl.toString(), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-
-      if (!topicResp.ok) {
-        throw new Error(`获取上下文失败：HTTP ${topicResp.status}`)
-      }
-
-      const data = await topicResp.json()
-      const posts = data.post_stream?.posts || []
       return {
         success: true,
         topic: {
           id: data.id,
           title: data.title,
           slug: data.slug,
-          posts_count: data.posts_count
+          posts_count: data.posts_count,
+          category_id: data.category_id,
+          tags: data.tags
         },
         anchor: { postId, postNumber, topicId },
-        posts: posts.map((p: any) => ({
-          id: p.id,
-          post_number: p.post_number,
-          username: p.username,
-          created_at: p.created_at,
-          cooked: p.cooked,
-          raw: includeRaw ? p.raw : undefined,
-          liked: !!(
-            p.current_user_reaction || p.actions_summary?.find((a: any) => a.id === 2 && a.acted)
-          )
-        }))
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
+        posts: posts.map((post: any) => mapDiscoursePost(post, includeRaw))
       }
     }
 
     case 'discourse.send_timings': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
-      const timeMs = Number(args.timeMs || 10000)
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
+      const timeMs = boundedNumber(args.timeMs, 10000, 1000, 30 * 60 * 1000)
       const postNumbers = Array.isArray(args.postNumbers) ? args.postNumbers : [1]
-
-      if (!topicId) throw new Error('缺少 topicId')
-
-      const timings: Record<string, number> = {}
-      postNumbers.forEach((pn: number) => {
-        timings[String(pn)] = timeMs
-      })
-
-      const url = `${baseUrl}/topics/timings`
-      const headers = await buildDiscourseHeaders(baseUrl, {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      })
-      const response = await fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: new URLSearchParams({
-          topic_id: String(topicId),
-          topic_time: String(timeMs),
-          timings: JSON.stringify(timings)
-        }).toString()
-      })
-
-      return { success: response.ok }
+      await sendDiscourseTimings(baseUrl, topicId, postNumbers, timeMs)
+      return { success: true, topicId, timeMs }
     }
 
     case 'discourse.create_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
       const raw = String(args.raw || '')
-      const replyToPostNumber = args.replyToPostNumber ? Number(args.replyToPostNumber) : undefined
-
-      if (!topicId) throw new Error('缺少 topicId')
+      const replyToPostNumber = args.replyToPostNumber
+        ? positiveInteger(args.replyToPostNumber, 'replyToPostNumber')
+        : undefined
       if (!raw.trim()) throw new Error('缺少回复内容 raw')
 
-      const url = `${baseUrl}/posts.json`
-      const body: Record<string, any> = {
-        topic_id: topicId,
-        raw: raw
-      }
-      if (replyToPostNumber) {
-        body.reply_to_post_number = replyToPostNumber
-      }
+      const body: Record<string, any> = { topic_id: topicId, raw }
+      if (replyToPostNumber) body.reply_to_post_number = replyToPostNumber
+      const data = await discourseRequest<any>(
+        baseUrl,
+        '/posts.json',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        },
+        { csrf: true }
+      )
 
-      const headers = await buildDiscourseHeaders(baseUrl, {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      })
-      const response = await fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: JSON.stringify(body)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.errors?.join(', ') || `回复失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
       return {
         success: true,
         post: {
-          id: data.id,
-          post_number: data.post_number,
-          topic_id: data.topic_id,
-          created_at: data.created_at
+          id: data?.id,
+          post_number: data?.post_number,
+          topic_id: data?.topic_id,
+          created_at: data?.created_at
         }
       }
     }
 
     case 'discourse.like_topic': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
       const reactionId = String(args.reactionId || 'heart')
-      if (!topicId) throw new Error('缺少 topicId')
-
-      const topicUrl = `${baseUrl}/t/${topicId}.json`
-      const topicResponse = await fetch(topicUrl, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-      if (!topicResponse.ok) {
-        throw new Error(`获取话题失败：HTTP ${topicResponse.status}`)
-      }
-
-      const topicData = await topicResponse.json()
-      const firstPost = topicData.post_stream?.posts?.[0]
+      const topic = await fetchDiscourseTopic(baseUrl, topicId)
+      const firstPost = topic?.post_stream?.posts?.[0]
       if (!firstPost?.id) throw new Error('未找到首帖')
-
-      if (isDiscoursePostLiked(firstPost)) {
-        return { success: true, liked: true, alreadyLiked: true, postId: firstPost.id }
-      }
-
-      const result = await toggleDiscourseReaction(baseUrl, firstPost.id, reactionId)
-      if (!result.ok) {
-        throw new Error('点赞失败')
-      }
-      return { success: true, liked: true, postId: firstPost.id, data: result.data }
+      const result = await ensureDiscoursePostLiked(baseUrl, Number(firstPost.id), reactionId)
+      return { success: true, topicId, postId: Number(firstPost.id), ...result }
     }
 
     case 'discourse.unlike_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const reactionId = String(args.reactionId || 'heart')
-      if (!postId) throw new Error('缺少 postId')
-
-      const postData = await fetchDiscoursePost(baseUrl, postId)
-      if (!isDiscoursePostLiked(postData)) {
-        return { success: true, liked: false, alreadyUnliked: true }
-      }
-
-      const result = await toggleDiscourseReaction(baseUrl, postId, reactionId)
-      if (!result.ok) {
-        throw new Error('取消点赞失败')
-      }
-      return { success: true, liked: false, data: result.data }
+      const result = await ensureDiscoursePostUnliked(baseUrl, postId, reactionId)
+      return { success: true, postId, ...result }
     }
 
     case 'discourse.bookmark_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const name = args.name ? String(args.name) : undefined
-      if (!postId) throw new Error('缺少 postId')
-
-      const headers = await buildDiscourseHeaders(baseUrl, {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      })
-
-      const response = await fetch(`${baseUrl}/bookmarks.json`, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: JSON.stringify({ post_id: postId, name })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.errors?.join(', ') || `书签失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
+      const data = await discourseRequest<any>(
+        baseUrl,
+        '/bookmarks.json',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ post_id: postId, name })
+        },
+        { csrf: true }
+      )
       return { success: true, bookmark: data }
     }
 
     case 'discourse.unbookmark_post': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const postId = Number(args.postId)
-      if (!postId) throw new Error('缺少 postId')
-
+      const baseUrl = getBaseUrl(args)
+      const postId = positiveInteger(args.postId, 'postId')
       const postData = await fetchDiscoursePost(baseUrl, postId)
       const bookmarkId = postData?.bookmark_id
-      if (!bookmarkId) {
-        return { success: true, alreadyUnbookmarked: true }
-      }
-
-      const headers = await buildDiscourseHeaders(baseUrl, {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      })
-
-      const response = await fetch(`${baseUrl}/bookmarks/${bookmarkId}.json`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers
-      })
-
-      if (!response.ok) {
-        throw new Error(`取消书签失败：HTTP ${response.status}`)
-      }
-
+      if (!bookmarkId) return { success: true, alreadyUnbookmarked: true }
+      await discourseRequest(
+        baseUrl,
+        `/bookmarks/${bookmarkId}.json`,
+        { method: 'DELETE' },
+        { csrf: true }
+      )
       return { success: true }
     }
 
     case 'discourse.get_user_activity': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const username = String(args.username || '')
+      const baseUrl = getBaseUrl(args)
+      const username = String(args.username || '').trim()
       const filter = String(args.filter || '4,5')
-      const limit = Number(args.limit || 20)
-      const offset = Number(args.offset || 0)
-
+      const limit = Math.floor(boundedNumber(args.limit, 20, 1, 100))
+      const offset = Math.floor(boundedNumber(args.offset, 0, 0, 100000))
       if (!username) throw new Error('缺少 username')
 
-      const url = new URL(`${baseUrl}/user_actions.json`)
-      url.searchParams.set('username', username)
-      url.searchParams.set('filter', filter)
-      url.searchParams.set('limit', String(limit))
-      if (offset > 0) url.searchParams.set('offset', String(offset))
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`获取用户活动失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
+      const params = new URLSearchParams({ username, filter, limit: String(limit) })
+      if (offset > 0) params.set('offset', String(offset))
+      const data = await discourseRequest<any>(baseUrl, `/user_actions.json?${params.toString()}`)
       return {
         success: true,
         offset,
         limit,
-        user_actions: (data.user_actions || []).map((a: any) => ({
-          post_id: a.post_id,
-          post_number: a.post_number,
-          topic_id: a.topic_id,
-          topic_title: a.title,
-          action_type: a.action_type,
-          created_at: a.created_at
+        cursor: {
+          next_offset: (data?.user_actions || []).length >= limit ? offset + limit : null,
+          has_more: (data?.user_actions || []).length >= limit
+        },
+        user_actions: (data?.user_actions || []).map((action: any) => ({
+          post_id: action.post_id,
+          post_number: action.post_number,
+          topic_id: action.topic_id,
+          topic_title: action.title,
+          action_type: action.action_type,
+          username: action.username,
+          acting_username: action.acting_username,
+          created_at: action.created_at,
+          excerpt: action.excerpt
         }))
       }
     }
 
     case 'discourse.browse_topic': {
-      // 综合浏览话题：获取详情 + 发送阅读时间 + 可选点赞
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
-      const topicId = Number(args.topicId)
-      const readTimeMs = Number(args.readTimeMs || 10000)
+      const baseUrl = getBaseUrl(args)
+      const topicId = positiveInteger(args.topicId, 'topicId')
+      const readTimeMs = boundedNumber(args.readTimeMs, 10000, 1000, 30 * 60 * 1000)
       const shouldLike = Boolean(args.like)
-
-      if (!topicId) throw new Error('缺少 topicId')
-
-      // 获取话题详情
-      const topicUrl = `${baseUrl}/t/${topicId}.json`
-      const topicResponse = await fetch(topicUrl, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
+      const maxPosts = Math.floor(boundedNumber(args.maxPosts, 200, 1, 2000))
+      const postOffset = Math.floor(boundedNumber(args.postOffset, 0, 0, 1_000_000))
+      const {
+        topic,
+        posts,
+        stream,
+        offset,
+        windowSize,
+        truncated,
+        hasMore,
+        hasPrevious,
+        nextOffset,
+        previousOffset
+      } = await fetchDiscourseTopicWithPosts(baseUrl, topicId, {
+        maxPosts,
+        postOffset
       })
 
-      if (!topicResponse.ok) {
-        throw new Error(`获取话题失败：HTTP ${topicResponse.status}`)
+      const postNumbers = posts
+        .map((post: any) => Number(post.post_number))
+        .filter((postNumber: number) => Number.isFinite(postNumber) && postNumber > 0)
+
+      let timingsSent = false
+      let timingError: string | undefined
+      try {
+        await sendDiscourseTimings(baseUrl, topicId, postNumbers, readTimeMs)
+        timingsSent = true
+      } catch (error) {
+        timingError = error instanceof Error ? error.message : String(error)
       }
 
-      const topicData = await topicResponse.json()
-      const posts = topicData.post_stream?.posts || []
-      const postNumbers = posts.map((p: any) => p.post_number)
-
-      // 发送阅读时间
-      const timings: Record<string, number> = {}
-      postNumbers.forEach((pn: number) => {
-        timings[String(pn)] = readTimeMs
-      })
-
-      const timingsHeaders = await buildDiscourseHeaders(baseUrl, {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      })
-      await fetch(`${baseUrl}/topics/timings`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: timingsHeaders,
-        body: new URLSearchParams({
-          topic_id: String(topicId),
-          topic_time: String(readTimeMs),
-          timings: JSON.stringify(timings)
-        }).toString()
-      })
-
       let liked = false
-      if (shouldLike && posts.length > 0) {
-        // 找一个未点赞的帖子
-        const unlikedPost = posts.find((p: any) => {
-          if (p.current_user_reaction) return false
-          if (Array.isArray(p.actions_summary)) {
-            const likeAction = p.actions_summary.find((a: any) => a.id === 2)
-            if (likeAction?.acted) return false
+      let likePostId: number | undefined
+      let likeError: string | undefined
+      if (shouldLike) {
+        const unlikedPost = posts.find((post: any) => !isDiscoursePostLiked(post))
+        if (unlikedPost?.id) {
+          try {
+            const result = await ensureDiscoursePostLiked(baseUrl, Number(unlikedPost.id), 'heart')
+            liked = result.liked
+            likePostId = Number(unlikedPost.id)
+          } catch (error) {
+            likeError = error instanceof Error ? error.message : String(error)
           }
-          return true
-        })
-
-        if (unlikedPost) {
-          const likeUrl = `${baseUrl}/discourse-reactions/posts/${unlikedPost.id}/custom-reactions/heart/toggle.json`
-          const likeHeaders = await buildDiscourseHeaders(baseUrl, {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json',
-            'Discourse-Logged-In': 'true'
-          })
-          const likeResponse = await fetch(likeUrl, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: likeHeaders
-          })
-          liked = likeResponse.ok
         }
       }
 
       return {
         success: true,
         topic: {
-          id: topicData.id,
-          title: topicData.title,
-          posts_count: topicData.posts_count
+          id: topic.id,
+          title: topic.title,
+          slug: topic.slug,
+          posts_count: topic.posts_count,
+          category_id: topic.category_id,
+          tags: topic.tags
         },
-        readTimeMs,
-        liked
+        browsing: {
+          readTimeMs,
+          postOffset: offset,
+          windowSize,
+          loadedPosts: posts.length,
+          totalPostIds: Math.max(stream.length, Number(topic.posts_count || 0)),
+          truncated,
+          hasMore,
+          hasPrevious,
+          nextPostOffset: nextOffset,
+          previousPostOffset: previousOffset,
+          timingsSent,
+          timingError
+        },
+        reply_edges: buildReplyEdges(posts),
+        participants: buildParticipants(posts),
+        liked,
+        likePostId,
+        likeError
       }
     }
 
     case 'discourse.search': {
-      const baseUrl = String(args.baseUrl || 'https://linux.do').replace(/\/$/, '')
+      const baseUrl = getBaseUrl(args)
       const query = String(args.q || args.query || '').trim()
-      const page = Number(args.page || 0)
+      const page = optionalPage(args.page)
       const type = args.type ? String(args.type) : ''
-
       if (!query) throw new Error('缺少搜索关键词 q')
 
-      const searchUrl = new URL(`${baseUrl}/search.json`)
-      searchUrl.searchParams.set('q', query)
-      if (page > 0) searchUrl.searchParams.set('page', String(page))
-      if (type) searchUrl.searchParams.set('type', type)
+      const params = new URLSearchParams({ q: query })
+      if (page > 0) params.set('page', String(page))
+      if (type) params.set('type', type)
+      const data = await discourseRequest<any>(baseUrl, `/search.json?${params.toString()}`)
 
-      const response = await fetch(searchUrl.toString(), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`搜索失败：HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-      const topics = (data.topics || []).map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        slug: t.slug,
-        posts_count: t.posts_count,
-        views: t.views,
-        like_count: t.like_count,
-        created_at: t.created_at,
-        last_posted_at: t.last_posted_at
-      }))
-      const posts = (data.posts || []).map((p: any) => ({
-        id: p.id,
-        topic_id: p.topic_id,
-        post_number: p.post_number,
-        username: p.username,
-        created_at: p.created_at,
-        blurb: p.blurb
-      }))
-
+      const grouped = data?.grouped_search_result || {}
       return {
         success: true,
         query,
         page,
-        topics,
-        posts
+        cursor: {
+          has_more: Boolean(grouped?.more_posts || grouped?.more_users || grouped?.more_categories),
+          next_page: grouped?.more_posts || grouped?.more_users ? page + 1 : null
+        },
+        grouped_search_result: grouped,
+        topics: (data?.topics || []).map(mapTopicSummary),
+        posts: (data?.posts || []).map((post: any) => ({
+          id: post.id,
+          topic_id: post.topic_id,
+          post_number: post.post_number,
+          username: post.username,
+          created_at: post.created_at,
+          blurb: post.blurb,
+          like_count: post.like_count
+        })),
+        users: data?.users || [],
+        categories: data?.categories || [],
+        tags: data?.tags || []
       }
     }
 

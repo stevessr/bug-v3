@@ -478,7 +478,7 @@ onMounted(() => {
             <a-switch
               :checked="Boolean(builtinMcpEnabled[server.id])"
               :disabled="!!server.requiresApiKey && !isMcpAvailable(server)"
-              @change="value => toggleBuiltinMcp(server.id, Boolean(value))"
+              @change="toggleBuiltinMcp(server.id, Boolean($event))"
             />
           </div>
         </div>
@@ -610,7 +610,7 @@ onMounted(() => {
                   <a-switch
                     :checked="skillsEnabled[skill.id] ?? skill.enabled"
                     size="small"
-                    @change="value => toggleSkill(skill.id, value as boolean)"
+                    @change="toggleSkill(skill.id, Boolean($event))"
                   />
                 </div>
               </div>
@@ -673,7 +673,7 @@ onMounted(() => {
               <a-switch
                 :checked="skillsEnabled[skill.id] ?? skill.enabled"
                 size="small"
-                @change="value => toggleSkill(skill.id, value as boolean)"
+                @change="toggleSkill(skill.id, Boolean($event))"
               />
               <a-button size="small" danger @click="deleteCustomSkill(skill.id)">删除</a-button>
             </div>

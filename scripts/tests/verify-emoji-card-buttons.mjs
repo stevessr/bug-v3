@@ -64,7 +64,7 @@ async function main() {
     bodySnippet: document.body.innerText.slice(0, 400)
   }))
   console.log('DEBUG:', JSON.stringify(debug))
-   await page.waitForTimeout(1000)
+  await page.waitForTimeout(1000)
 
   const card = page.locator('.options-emoji-item').first()
   await card.waitFor({ state: 'visible', timeout: 30000 })

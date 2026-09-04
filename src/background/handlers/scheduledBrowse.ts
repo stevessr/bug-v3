@@ -1,248 +1,126 @@
 import { getChromeAPI } from '../utils/main'
 
+import {
+  ensureDiscoursePostLiked,
+  fetchDiscourseTopicList,
+  fetchDiscourseTopicWithPosts,
+  isDiscoursePostLiked,
+  normalizeDiscourseBaseUrl,
+  sendDiscourseTimings
+} from './discourseClient'
+
 import * as storage from '@/utils/simpleStorage'
-import type { AppSettings, ScheduledBrowseTask, BrowseStrategy } from '@/types/type'
+import type { AppSettings, ScheduledBrowseTask } from '@/types/type'
 
 const SCHEDULED_BROWSE_ALARM_NAME = 'scheduled-browse-check'
 const CHECK_INTERVAL_MINUTES = 1
 const SCHEDULED_BROWSE_TOGGLE_KEY: keyof AppSettings = 'enableScheduledBrowse'
+const MAX_TOPIC_POSTS_PER_RUN = 200
 
-interface TopicListItem {
-  id: number
-  title: string
-  slug: string
-  posts_count: number
-  views: number
-  like_count: number
-  created_at: string
-  last_posted_at: string
+function randomBetween(min: number, max: number): number {
+  const low = Math.min(min, max)
+  const high = Math.max(min, max)
+  return Math.floor(Math.random() * (high - low + 1)) + low
 }
 
-interface TopicListResponse {
-  topic_list: {
-    topics: TopicListItem[]
-  }
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-interface TopicDetail {
-  id: number
-  post_stream: {
-    posts: Array<{
-      id: number
-      post_number: number
-      cooked: string
-      actions_summary?: Array<{ id: number; acted?: boolean }>
-      current_user_reaction?: string
-    }>
-  }
-}
-
-// 获取随机数
-const randomBetween = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-// 延迟函数
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-// 获取话题列表
-async function fetchTopicList(baseUrl: string, strategy: BrowseStrategy): Promise<TopicListItem[]> {
-  const endpoints: Record<BrowseStrategy, string> = {
-    latest: '/latest.json',
-    new: '/new.json',
-    unread: '/unread.json',
-    top: '/top.json'
-  }
-
-  const url = `${baseUrl}${endpoints[strategy]}`
-
-  const response = await fetch(url, {
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json'
-    }
-  })
-
-  if (!response.ok) {
-    throw new Error(`获取话题列表失败：${response.status}`)
-  }
-
-  const data: TopicListResponse = await response.json()
-  return data.topic_list?.topics || []
-}
-
-// 获取话题详情（模拟阅读）
-async function fetchTopicDetail(baseUrl: string, topicId: number): Promise<TopicDetail | null> {
-  const url = `${baseUrl}/t/${topicId}.json`
-
-  try {
-    const response = await fetch(url, {
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-
-    if (!response.ok) return null
-
-    return await response.json()
-  } catch {
-    return null
-  }
-}
-
-// 发送阅读时间（Discourse 计时）
-async function sendTimings(
-  baseUrl: string,
-  topicId: number,
-  postNumbers: number[],
-  readTime: number
-): Promise<void> {
-  const timings: Record<string, number> = {}
-  postNumbers.forEach(pn => {
-    timings[String(pn)] = readTime * 1000 // 毫秒
-  })
-
-  const url = `${baseUrl}/topics/timings`
-
-  try {
-    await fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Discourse-Logged-In': 'true'
-      },
-      body: new URLSearchParams({
-        topic_id: String(topicId),
-        topic_time: String(readTime * 1000),
-        timings: JSON.stringify(timings)
-      }).toString()
-    })
-  } catch {
-    // 忽略错误
-  }
-}
-
-// 点赞帖子
-async function likePost(baseUrl: string, postId: number): Promise<boolean> {
-  const url = `${baseUrl}/discourse-reactions/posts/${postId}/custom-reactions/heart/toggle.json`
-
-  try {
-    const response = await fetch(url, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Discourse-Logged-In': 'true'
-      }
-    })
-
-    return response.ok
-  } catch {
-    return false
-  }
-}
-
-// 检查帖子是否已点赞
-function isPostLiked(post: TopicDetail['post_stream']['posts'][number]): boolean {
-  if (post.current_user_reaction) return true
-  if (Array.isArray(post.actions_summary)) {
-    const likeAction = post.actions_summary.find(a => a.id === 2)
-    if (likeAction?.acted) return true
-  }
-  return false
-}
-
-// 执行单个浏览任务
 async function executeBrowseTask(
   task: ScheduledBrowseTask
 ): Promise<{ topicsRead: number; liked: number; errors: string[] }> {
   const errors: string[] = []
   let topicsRead = 0
   let liked = 0
-  let likesRemaining = task.maxLikesPerRun
+  let likesRemaining = Math.max(0, task.maxLikesPerRun)
+  const baseUrl = normalizeDiscourseBaseUrl(task.baseUrl)
 
   try {
-    // 获取话题列表
-    const topics = await fetchTopicList(task.baseUrl, task.browseStrategy)
+    const topicList = await fetchDiscourseTopicList(baseUrl, task.browseStrategy)
+    const topics = Array.isArray(topicList?.topic_list?.topics) ? topicList.topic_list.topics : []
 
     if (topics.length === 0) {
       errors.push('没有找到话题')
       return { topicsRead, liked, errors }
     }
 
-    // 确定要浏览的话题数量
     const topicsToRead = randomBetween(task.minTopicsPerRun, task.maxTopicsPerRun)
     const selectedTopics = topics.slice(0, Math.min(topicsToRead, topics.length))
-
     console.log(`[ScheduledBrowse] 将浏览 ${selectedTopics.length} 个话题`)
 
-    for (const topic of selectedTopics) {
+    for (let index = 0; index < selectedTopics.length; index++) {
+      const topic = selectedTopics[index]
       try {
-        // 获取话题详情
-        const detail = await fetchTopicDetail(task.baseUrl, topic.id)
-        if (!detail) {
-          errors.push(`话题 ${topic.id} 获取失败`)
+        const detail = await fetchDiscourseTopicWithPosts(baseUrl, Number(topic.id), {
+          maxPosts: MAX_TOPIC_POSTS_PER_RUN
+        })
+        if (detail.posts.length === 0) {
+          errors.push(`话题 ${topic.id} 没有可读取的帖子`)
           continue
         }
 
-        // 计算阅读时间
-        const readTime = randomBetween(task.minReadTime, task.maxReadTime)
+        const readTimeSeconds = randomBetween(task.minReadTime, task.maxReadTime)
+        const readTimeMs = Math.max(1000, readTimeSeconds * 1000)
+        const postNumbers = detail.posts
+          .map((post: any) => Number(post.post_number))
+          .filter((postNumber: number) => Number.isFinite(postNumber) && postNumber > 0)
 
-        // 获取帖子编号
-        const postNumbers = detail.post_stream.posts.map(p => p.post_number)
+        await delay(readTimeMs)
 
-        // 模拟阅读延迟
-        await delay(readTime * 1000)
-
-        // 发送阅读时间
-        await sendTimings(task.baseUrl, topic.id, postNumbers, readTime)
+        try {
+          await sendDiscourseTimings(baseUrl, Number(topic.id), postNumbers, readTimeMs)
+        } catch (error) {
+          errors.push(
+            `话题 ${topic.id} 阅读计时上报失败: ${error instanceof Error ? error.message : '未知错误'}`
+          )
+        }
 
         topicsRead++
-        console.log(`[ScheduledBrowse] 已阅读话题 ${topic.id}: ${topic.title}`)
+        console.log(
+          `[ScheduledBrowse] 已阅读话题 ${topic.id}: ${topic.title}（加载 ${detail.posts.length}/${detail.stream.length} 帖）`
+        )
 
-        // 随机点赞
-        if (task.enableRandomLike && likesRemaining > 0) {
-          const shouldLike = Math.random() * 100 < task.likeChance
-
-          if (shouldLike) {
-            // 找一个未点赞的帖子
-            const unlikedPost = detail.post_stream.posts.find(p => !isPostLiked(p))
-
-            if (unlikedPost) {
-              const success = await likePost(task.baseUrl, unlikedPost.id)
-              if (success) {
+        if (task.enableRandomLike && likesRemaining > 0 && Math.random() * 100 < task.likeChance) {
+          const unlikedPost = detail.posts.find((post: any) => !isDiscoursePostLiked(post))
+          if (unlikedPost?.id) {
+            try {
+              const result = await ensureDiscoursePostLiked(
+                baseUrl,
+                Number(unlikedPost.id),
+                'heart'
+              )
+              if (result.liked && !result.alreadyLiked) {
                 liked++
                 likesRemaining--
                 console.log(`[ScheduledBrowse] 已点赞帖子 ${unlikedPost.id}`)
               }
+            } catch (error) {
+              errors.push(
+                `话题 ${topic.id} 点赞失败: ${error instanceof Error ? error.message : '未知错误'}`
+              )
             }
           }
         }
 
-        // 话题间延迟
-        if (selectedTopics.indexOf(topic) < selectedTopics.length - 1) {
+        if (index < selectedTopics.length - 1) {
           const topicDelay = randomBetween(
             task.minDelayBetweenTopics * 1000,
             task.maxDelayBetweenTopics * 1000
           )
           await delay(topicDelay)
         }
-      } catch (err) {
-        errors.push(`话题 ${topic.id}: ${err instanceof Error ? err.message : '未知错误'}`)
+      } catch (error) {
+        errors.push(`话题 ${topic.id}: ${error instanceof Error ? error.message : '未知错误'}`)
       }
     }
-  } catch (err) {
-    errors.push(`获取话题列表失败: ${err instanceof Error ? err.message : '未知错误'}`)
+  } catch (error) {
+    errors.push(`获取话题列表失败: ${error instanceof Error ? error.message : '未知错误'}`)
   }
 
   return { topicsRead, liked, errors }
 }
 
-// 检查并执行到期的任务
 let isCheckingScheduledBrowse = false
 
 async function checkAndExecuteBrowseTasks() {
@@ -256,51 +134,44 @@ async function checkAndExecuteBrowseTasks() {
 
   try {
     const settings = await storage.getSettings()
-    if (!settings?.enableScheduledBrowse) {
-      return
-    }
+    if (!settings?.enableScheduledBrowse) return
 
     const tasks = settings.scheduledBrowseTasks || []
-    const now = Date.now()
     let updated = false
 
-    for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i]
-
+    for (let index = 0; index < tasks.length; index++) {
+      const task = tasks[index]
+      const now = Date.now()
       if (!task.enabled) continue
       if (task.nextRunAt && task.nextRunAt > now) continue
 
       console.log(`[ScheduledBrowse] 执行任务：${task.name}`)
-
       const result = await executeBrowseTask(task)
+      const completedAt = Date.now()
 
-      tasks[i] = {
+      tasks[index] = {
         ...task,
-        lastRunAt: now,
-        nextRunAt: now + task.intervalMinutes * 60 * 1000,
+        lastRunAt: completedAt,
+        nextRunAt: completedAt + Math.max(1, task.intervalMinutes) * 60 * 1000,
         totalTopicsRead: task.totalTopicsRead + result.topicsRead,
         totalLikes: task.totalLikes + result.liked,
-        updatedAt: now
+        updatedAt: completedAt
       }
       updated = true
 
       if (result.errors.length > 0) {
         console.warn(`[ScheduledBrowse] 任务 ${task.name} 有错误:`, result.errors)
       }
-
       console.log(
         `[ScheduledBrowse] 任务 ${task.name} 完成，浏览 ${result.topicsRead} 个话题，点赞 ${result.liked} 次`
       )
     }
 
     if (updated) {
-      await storage.setSettings({
-        ...settings,
-        scheduledBrowseTasks: tasks
-      })
+      await storage.setSettings({ ...settings, scheduledBrowseTasks: tasks })
     }
-  } catch (err) {
-    console.error('[ScheduledBrowse] 检查任务失败：', err)
+  } catch (error) {
+    console.error('[ScheduledBrowse] 检查任务失败：', error)
   } finally {
     isCheckingScheduledBrowse = false
   }
@@ -326,7 +197,6 @@ async function syncScheduledBrowseAlarm() {
     delayInMinutes: 1,
     periodInMinutes: CHECK_INTERVAL_MINUTES
   })
-
   console.log('[ScheduledBrowse] 自动浏览任务检查器已启动')
 }
 
@@ -344,19 +214,14 @@ export function setupScheduledBrowse() {
 
   chromeAPI.storage?.onChanged?.addListener(
     (changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => {
-      if (namespace !== 'local' || !changes['appSettings']) return
+      if (namespace !== 'local' || !changes.appSettings) return
 
-      const oldRaw = changes['appSettings'].oldValue as { data?: AppSettings } | undefined
-      const newRaw = changes['appSettings'].newValue as { data?: AppSettings } | undefined
-      const oldSettings = oldRaw?.data
-      const newSettings = newRaw?.data
+      const oldRaw = changes.appSettings.oldValue as { data?: AppSettings } | undefined
+      const newRaw = changes.appSettings.newValue as { data?: AppSettings } | undefined
+      const oldEnabled = Boolean(oldRaw?.data?.[SCHEDULED_BROWSE_TOGGLE_KEY])
+      const newEnabled = Boolean(newRaw?.data?.[SCHEDULED_BROWSE_TOGGLE_KEY])
 
-      const oldEnabled = Boolean(oldSettings?.[SCHEDULED_BROWSE_TOGGLE_KEY])
-      const newEnabled = Boolean(newSettings?.[SCHEDULED_BROWSE_TOGGLE_KEY])
-
-      if (oldEnabled !== newEnabled) {
-        void syncScheduledBrowseAlarm()
-      }
+      if (oldEnabled !== newEnabled) void syncScheduledBrowseAlarm()
     }
   )
 

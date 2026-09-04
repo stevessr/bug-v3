@@ -1804,7 +1804,12 @@ onUnmounted(() => {
         <div v-if="message.role === 'assistant' && timelines[message.id]" class="agent-timeline">
           <a-collapse
             :active-key="timelines[message.id].collapsed ? [] : ['flow']"
-            @change="keys => setTimelineCollapsed(message.id, (keys as string[]).length === 0)"
+            @change="
+              setTimelineCollapsed(
+                message.id,
+                (Array.isArray($event) ? $event : [$event]).length === 0
+              )
+            "
             ghost
           >
             <a-collapse-panel key="flow" header="过程">
