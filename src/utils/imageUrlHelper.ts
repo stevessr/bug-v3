@@ -34,6 +34,12 @@ function hashString(input: string): string {
 export function addCacheBustingParam(url: string, emoji: { id?: string; packet?: number }): string {
   if (!url) return url
 
+  // 不要给 data: / blob: URL 或带 #fragment 的 URL 追加缓存参数。
+  // - data: URI 中追加 `?v=` 会污染 base64 数据，导致图片无法解码（ERR_INVALID_URL）。
+  // - blob: URL 不接受 query string，追加后会失效。
+  // - `#` 后的 fragment 不该被追加参数破坏。
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('#')) return url
+
   // 检查缓存
   const safeId = emoji.id || ''
   const cacheKey = `${url}|${safeId || 'no-id'}|${emoji.packet || ''}`

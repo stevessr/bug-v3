@@ -377,10 +377,7 @@ const mcpServerStatus = reactive<Record<string, string>>({})
 const mcpServerLoading = reactive<Record<string, boolean>>({})
 const folderRootStatus = reactive<Record<string, string>>({})
 const folderRootLoading = reactive<Record<string, boolean>>({})
-const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
-const folderAccessSupported = supportsAgentFolderAccess()
-
-// file:// 主机权限：Chrome 不允许扩展在运行时请求 file 地址的访问权，只能由用户在
+// file:// 主机权限：Chrome 不允许运行时请求 file 地址的访问权，只能由用户在
 // chrome://extensions 的“允许访问文件网址”开关开启。此处检测开关状态并给出引导。
 const fileUrlAccessAllowed = ref(false)
 const fileUrlCheckDone = ref(false)
@@ -403,7 +400,8 @@ const openExtensionDetails = () => {
   const url = id ? `chrome://extensions/?id=${encodeURIComponent(id)}` : 'chrome://extensions'
   window.open(url, '_blank', 'noopener,noreferrer')
 }
-// 挂载时检测一次文件网址访问权限（开关可能在扩展详情页被切换）。
+// 挂载时检测一次文件网址访问权限（chrome.extension.isAllowedFileSchemeAccess
+// 可能随用户在扩展详情页切换开关而变化）。
 onMounted(() => {
   void checkFileUrlAccess()
 })
