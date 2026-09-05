@@ -114,7 +114,8 @@ export const OC_KEYWORDS = [
   'hy2',
   '科研喵',
   '群友',
-  'cadot'
+  'cadot',
+  '单主',
 ]
 
 export const game_keywords = [
@@ -163,12 +164,20 @@ export const anime_keywords = [
   '素晴',
   '赏花爱音',
   '超天酱',
+  '山田',
 ]
 
 export const 超时空辉夜姬_KEYWORDS = [
   '超时空辉夜姬',
   '超时空',
-  '辉夜姬'
+  '辉夜姬',
+  '月见八千代',
+  '酒寄彩叶'
 ]
 
 
+export const emote_lab_KEYWORDS = [
+  'emote lab',
+  '表情工坊',
+  'emote',
+]

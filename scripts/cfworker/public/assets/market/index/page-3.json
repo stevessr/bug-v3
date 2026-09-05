@@ -3,7 +3,7 @@
   "page": 3,
   "pageSize": 48,
   "totalPages": 7,
-  "totalGroups": 289,
+  "totalGroups": 299,
   "groups": [
     {
       "id": "group-1772067908043",
@@ -403,11 +403,21 @@
       "isArchived": false
     },
     {
+      "id": "group-1787824715181",
+      "name": "丸山彩大全套",
+      "icon": "https://cdn3.ldstatic.com/original/4X/d/0/3/d0390511d184a92ce315a204ce8213e766942a0c.gif?v=emoji-17",
+      "detail": "单主：芈白",
+      "topic": "OC",
+      "order": 140,
+      "emojiCount": 142,
+      "isArchived": false
+    },
+    {
       "id": "group-1765974153699",
       "name": "丸山彩表情包 | 素素祥祥子",
       "icon": "https://cdn3.ldstatic.com/original/4X/b/6/c/b6c8f427fa5d0f0cc0d4ec3d1f8ebf58c61f8c29.gif",
       "topic": "anime",
-      "order": 140,
+      "order": 141,
       "emojiCount": 25,
       "isArchived": false
     },
@@ -417,7 +427,7 @@
       "icon": "https://cdn3.ldstatic.com/original/4X/9/3/d/93d269214c185d209b7588f803d11715f3f388bd.webp?v=telegram",
       "detail": "Telegram 贴纸包：https://t.me/addstickers/in_CAHFEC_by_NaiDrawBot",
       "topic": "telegram",
-      "order": 141,
+      "order": 142,
       "emojiCount": 16,
       "isArchived": false
     },
@@ -426,18 +436,8 @@
       "name": "二阶堂希罗",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/6/a/76aef6c231f8b5032b1dee22685fbf6d39217296.gif",
       "topic": "magic_girl",
-      "order": 142,
-      "emojiCount": 45,
-      "isArchived": false
-    },
-    {
-      "id": "group-1768045118897",
-      "name": "二阶堂希罗 专题",
-      "icon": "⚔️",
-      "detail": "",
-      "topic": "magic_girl",
       "order": 143,
-      "emojiCount": 47,
+      "emojiCount": 45,
       "isArchived": false
     }
   ]

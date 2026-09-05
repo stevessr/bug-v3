@@ -13,6 +13,7 @@ import {
   anime_keywords,
   OC_KEYWORDS,
   超时空辉夜姬_KEYWORDS,
+  emote_lab_KEYWORDS,
   keyword_match
 } from './lib/constants.ts'
 
@@ -47,7 +48,8 @@ const MARKET_TOPICS = [
   { id: 'test', label: '测试' },
   { id: 'game', label: '游戏' },
   { id: 'anime', label: '动漫' },
-  { id: '超时空辉夜姬', label: '超时空辉夜姬' }
+  { id: '超时空辉夜姬', label: '超时空辉夜姬' },
+  { id: 'emote_lab', label: 'Emote Lab' }
 ]
 
 function resolveMarketTopic(group) {
@@ -66,6 +68,8 @@ function resolveMarketTopic(group) {
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba')) return 'tieba'
   if (name.includes('neuro') || detail.includes('neuron')) return 'neuro'
+  if (keyword_match(emote_lab_KEYWORDS, name) || keyword_match(emote_lab_KEYWORDS, detail))
+    return 'emote_lab'
 
   if (keyword_match(TOUHOU_KEYWORDS, name) || keyword_match(TOUHOU_KEYWORDS, detail))
     return 'touhou'
