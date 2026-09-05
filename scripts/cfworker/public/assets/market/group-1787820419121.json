@@ -1,0 +1,205 @@
+{
+  "version": "1.1",
+  "exportDate": "2026-08-27T09:41:21.703Z",
+  "group": {
+    "id": "group-1787820419121",
+    "name": "山田B",
+    "icon": "https://cdn3.ldstatic.com/original/4X/1/6/3/16340fbd44617da53b3ad285094802234a67546e.gif?v=emoji-17",
+    "detail": "",
+    "order": 15
+  },
+  "id": "group-1787820419121",
+  "name": "山田B",
+  "icon": "https://cdn3.ldstatic.com/original/4X/1/6/3/16340fbd44617da53b3ad285094802234a67546e.gif?v=emoji-17",
+  "detail": "",
+  "order": 15,
+  "emojis": [
+    {
+      "id": "emoji-1787822298920-vwpcna",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm5BNVBhaU1wRlRzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/1/6/3/16340fbd44617da53b3ad285094802234a67546e.gif",
+      "short_url": "upload://3aq2P8f1js5JZDUbw41gjI1T8zY.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/1/6/3/16340fbd44617da53b3ad285094802234a67546e.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787822299664-b5tkxs",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm9nNVBhcDRkN1RvIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/1/f/6/1f6dd7ff1f2516e122762ab564d6a021d8697d47.gif",
+      "short_url": "upload://4u28IRKF6dMu8iam94qs6JnSeCX.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/1/f/6/1f6dd7ff1f2516e122762ab564d6a021d8697d47.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787822300405-xskm94",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmxnNVBhdjJ4UnpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/e/4/7/e47bfe3d092e48eacbd3c0d246f6bf1ce03e6e20.gif",
+      "short_url": "upload://wBgw4tIpbPL3oxOOILGKP9KpYuQ.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/e/4/7/e47bfe3d092e48eacbd3c0d246f6bf1ce03e6e20.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787822300416-yigtkd",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm1BNVBhaFYzTURzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/0/0/8/0089c6c192f9b19377087236c1663d4d5d707009.gif",
+      "short_url": "upload://4Lbrr330gfGCoc2IFLMdiEK8Zj.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/0/0/8/0089c6c192f9b19377087236c1663d4d5d707009.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787822300424-agztwa",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmp3NVBhcy4yampzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/2/f/9/2f98819a7cebfb49d644731df94dd52bbd3e9aa6.gif",
+      "short_url": "upload://6N3bqlC81kJkwpkXS3kIoarIYjc.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/2/f/9/2f98819a7cebfb49d644731df94dd52bbd3e9aa6.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528280-wqbhry",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm1nNVBhaTNwTURzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/1/b/5/1b52ba2058ddd4f4e750543765fe7b5a843e3c22.gif",
+      "short_url": "upload://3TI8hzb4VP4MsaMBOoy6lZNbpyG.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/1/b/5/1b52ba2058ddd4f4e750543765fe7b5a843e3c22.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528280-7uw7fb",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm5RNVBhdXNCQnpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/0/6/1/0618fe5272a45bff9ff4b34289ade38b2412ed6b.gif",
+      "short_url": "upload://RWpBHhTXfhB4R9DXDvR5Kv8vOz.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/0/6/1/0618fe5272a45bff9ff4b34289ade38b2412ed6b.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528280-a1g1od",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm1RNVBhbWVwTURzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/c/5/e/c5e28a7b454d1ad91f14ba724b92253f5b831ea1.gif",
+      "short_url": "upload://sezqfAMBIEPbIjc3nBJ7CBD0ceZ.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/c/5/e/c5e28a7b454d1ad91f14ba724b92253f5b831ea1.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528280-w2ixns",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmtnNVBhbWE0ZVRzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/2/d/e/2deb18df32d9793b7f67d2a2a5d23f9ae0de911f.gif",
+      "short_url": "upload://6ydb80G9O4JyfC010V4REK8yBhZ.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/2/d/e/2deb18df32d9793b7f67d2a2a5d23f9ae0de911f.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528280-dhjxuw",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmxRNVBhaEh3UnpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/6/f/3/6f309b3edbd16a1e8d82bac5ead72a5f0c2b511a.gif",
+      "short_url": "upload://fRD8yvXNVp3gg4q9NROrV3mmxXY.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/6/f/3/6f309b3edbd16a1e8d82bac5ead72a5f0c2b511a.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823528281-p2kej0",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmtRNVBhcUFuZWpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/1/6/0/1604bf683848d9573c98f0b94623267c84c37ea1.gif",
+      "short_url": "upload://38MFVncuutxgSiAQPwtxKUxNRGp.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/1/6/0/1604bf683848d9573c98f0b94623267c84c37ea1.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823529016-vo53dr",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmx3NVBhcE03UmpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/8/0/7/807aec8cfef0a5df92e520a4fa120bbd9a2a151f.gif",
+      "short_url": "upload://ikAtK4XWv8hqALSNDX5RHzPzkIL.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/8/0/7/807aec8cfef0a5df92e520a4fa120bbd9a2a151f.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823529430-bxnls3",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMmxBNVBhaWowWFRzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/d/3/4/d34b058629371fb637d20736c1643e89e948608a.gif",
+      "short_url": "upload://u9btIfV4cjAxWJGEqWnbnlMMw7U.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/d/3/4/d34b058629371fb637d20736c1643e89e948608a.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823529846-egzkmx",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm13NVBhaEZuR3pzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/a/b/1/ab1c3035f41e7c9749f3b19d75a2aeb0e4ae44ca.gif",
+      "short_url": "upload://opI2wgeHMjR3g20iSkWGe4PYHEu.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/a/b/1/ab1c3035f41e7c9749f3b19d75a2aeb0e4ae44ca.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823529917-sxzsld",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm9BNVBhbVhINnpvIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/0/d/1/0d1471b07096dcc4dd7825934efbc0c929bd6ba0.gif",
+      "short_url": "upload://1RI0wgJAeSxCZVFTjxgTmVgZplK.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/0/d/1/0d1471b07096dcc4dd7825934efbc0c929bd6ba0.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823663525-uwye9r",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm9RNVBhclpJNnpvIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/2/9/b/29b80ab21539c53a7a6ee073057c2cddc3a73598.gif",
+      "short_url": "upload://5X3SO1WjC091lwNnVWjwY118Klq.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/2/9/b/29b80ab21539c53a7a6ee073057c2cddc3a73598.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    },
+    {
+      "id": "emoji-1787823663525-vek52n",
+      "packet": 0,
+      "name": "NR8AVjViQ2dBeE1ETTBNekk0T0RBMm5nNVBhbHFwQWpzIQUAcXVuZ3o!.gif",
+      "url": "https://cdn3.ldstatic.com/original/4X/d/e/f/def12e303f068c9a43d17c04902cb49d4287047e.gif",
+      "short_url": "upload://vOeIXl2zYXk1pZAGfb77fEgCgG2.gif",
+      "displayUrl": "https://cdn3.ldstatic.com/original/4X/d/e/f/def12e303f068c9a43d17c04902cb49d4287047e.gif",
+      "width": 500,
+      "height": 500,
+      "groupId": "group-1787820419121"
+    }
+  ]
+}
