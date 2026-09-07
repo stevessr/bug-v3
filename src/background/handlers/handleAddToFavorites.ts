@@ -2,6 +2,7 @@ import { getChromeAPI } from '../utils/main.ts'
 
 import * as storage from '@/utils/simpleStorage'
 import type { Emoji, EmojiGroup } from '@/types/type'
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
 
 export async function handleAddToFavorites(
   emoji: Partial<Emoji>,
@@ -10,6 +11,11 @@ export async function handleAddToFavorites(
   // mark callback as referenced to avoid unused-var lint
   void sendResponse
   try {
+    const uploadMetadata = extractDiscourseUploadMetadata(
+      emoji.short_url,
+      emoji.short_path,
+      emoji.url
+    )
     const favoritesGroup =
       (await storage.getEmojiGroup('favorites')) ||
       ({ id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] } as EmojiGroup)
@@ -24,6 +30,10 @@ export async function handleAddToFavorites(
 
     if (existingEmojiIndex !== -1) {
       const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
+      // A favorite may have been created before the upload response exposed
+      // Discourse's short fields. Merge them on duplicate-by-URL additions.
+      if (uploadMetadata.short_url) existingEmoji.short_url = uploadMetadata.short_url
+      if (uploadMetadata.short_path) existingEmoji.short_path = uploadMetadata.short_path
       const lastUsed = existingEmoji.lastUsed || 0
       const timeDiff = now - lastUsed
       const twelveHours = 12 * 60 * 60 * 1000
@@ -38,6 +48,9 @@ export async function handleAddToFavorites(
     } else {
       const favoriteEmoji: Emoji = {
         ...emoji,
+        ...uploadMetadata,
+        short_url: uploadMetadata.short_url,
+        short_path: uploadMetadata.short_path,
         id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         packet: emoji.packet ?? 0,
         name: emoji.name ?? '',

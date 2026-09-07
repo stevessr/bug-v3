@@ -352,6 +352,8 @@ const loadGroupDetails = async (groupId: string): Promise<EmojiGroup | null> => 
         packet: e.packet || Date.now(),
         name: e.name || t('unnamed'),
         url: e.url,
+        short_url: e.short_url,
+        short_path: e.short_path,
         displayUrl: e.displayUrl,
         width: e.width,
         height: e.height,

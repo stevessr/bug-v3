@@ -515,7 +515,8 @@ export class CollaborativeUploadClient {
             filename: data.filename,
             success: true,
             url: data.resultUrl,
-            short_url: data.shortUrl
+            short_url: data.shortUrl,
+            short_path: data.shortPath
           })
           // 从待处理列表中移除
           this.pendingRemoteFiles = this.pendingRemoteFiles.filter(f => f !== data.filename)
@@ -526,7 +527,12 @@ export class CollaborativeUploadClient {
           // 重置超时（有进展时）
           this.resetTaskTimeout()
           // 回调通知远程上传完成
-          this.config.onRemoteUploadComplete?.(data.filename, data.resultUrl, data.shortUrl)
+          this.config.onRemoteUploadComplete?.(
+            data.filename,
+            data.resultUrl,
+            data.shortUrl,
+            data.shortPath
+          )
           this.config.onProgress?.({
             completed:
               this.sessionResults.filter(r => r.success).length +
@@ -698,6 +704,7 @@ export class CollaborativeUploadClient {
         taskId,
         resultUrl,
         shortUrl: uploadResult.short_url,
+        shortPath: uploadResult.short_path,
         filename: meta.filename,
         workerId: this._status.workerId, // 工作者 ID
         workerUuid: this.uuid // 工作者 UUID
@@ -781,6 +788,7 @@ export class CollaborativeUploadClient {
         taskId: task.id,
         resultUrl,
         shortUrl: uploadResult.short_url,
+        shortPath: uploadResult.short_path,
         filename: task.filename
       })
 

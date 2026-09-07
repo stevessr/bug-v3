@@ -4,6 +4,8 @@ import { createE, DQSA } from '../../utils/dom/createEl'
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
 
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+
 declare const chrome: any
 
 // ========== 选择器 ==========
@@ -32,8 +34,24 @@ function extractEmojiDataFromLightbox(lightboxWrapper: Element): AddEmojiButtonD
   name = name.replace(/\.(webp|jpg|jpeg|png|gif)$/i, '').trim() || '表情'
 
   // 确定使用的 URL
-  const urlToUse = originalUrl || downloadUrl || imgSrc
-  if (urlToUse && urlToUse.startsWith('http')) results.push({ name, url: urlToUse })
+  const candidates = [originalUrl, downloadUrl, imgSrc].filter(Boolean)
+  const urlToUse =
+    candidates.find(candidate => /^https?:\/\//i.test(candidate)) || candidates[0] || ''
+  let absoluteUrl = urlToUse
+  if (urlToUse && urlToUse.startsWith('/')) {
+    try {
+      absoluteUrl = new URL(urlToUse, window.location.origin).href
+    } catch {
+      absoluteUrl = ''
+    }
+  }
+  if (absoluteUrl && /^https?:\/\//i.test(absoluteUrl)) {
+    results.push({
+      name,
+      url: absoluteUrl,
+      ...extractDiscourseUploadMetadata(originalUrl, downloadUrl, imgSrc)
+    })
+  }
 
   return results
 }

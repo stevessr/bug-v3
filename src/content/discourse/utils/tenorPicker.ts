@@ -64,6 +64,7 @@ function buildEmojiFromUpload(result: TenorResult, uploaded: DiscourseUploadResp
     name,
     url: uploaded.url,
     short_url: uploaded.short_url,
+    short_path: uploaded.short_path,
     originUrl: result.itemurl || result.url,
     width: uploaded.width,
     height: uploaded.height,

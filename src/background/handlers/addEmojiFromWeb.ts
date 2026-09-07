@@ -3,10 +3,18 @@ import { getChromeAPI } from '../utils/main.ts'
 
 import { downloadAndUploadDirect } from './downloadAndSend'
 
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+
 export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
   // reference the callback to avoid unused-var lint in some configurations
   void sendResponse
   try {
+    const inputUploadMetadata = extractDiscourseUploadMetadata(
+      emojiData?.short_url,
+      emojiData?.short_path,
+      emojiData?.url
+    )
+
     // If caller provided a sourceDomain (e.g. discourse hostname), ensure it's registered
     try {
       if (
@@ -72,6 +80,17 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     // 检查是否已存在相同 URL 的表情
     const existingEmoji = targetGroup.emojis.find((e: any) => e.url === emojiData.url)
     if (existingEmoji) {
+      const metadataUpdates: Record<string, string> = {}
+      if (inputUploadMetadata.short_url && !existingEmoji.short_url) {
+        metadataUpdates.short_url = inputUploadMetadata.short_url
+      }
+      if (inputUploadMetadata.short_path && !existingEmoji.short_path) {
+        metadataUpdates.short_path = inputUploadMetadata.short_path
+      }
+      if (Object.keys(metadataUpdates).length > 0) {
+        Object.assign(existingEmoji, metadataUpdates)
+        await storage.setAllEmojiGroups(groups)
+      }
       sendResponse({ success: false, error: '此表情已存在于目标分组中' })
       return
     }
@@ -133,15 +152,17 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
         ? Math.round(emojiData.height)
         : undefined
 
+    const uploadedUploadMetadata = extractDiscourseUploadMetadata(
+      uploadedShortUrl,
+      uploadedShortPath
+    )
     const newEmoji = {
       id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       packet: Date.now(),
       name: emojiData.name,
       url: finalUrl,
-      ...(uploadedShortUrl && { short_url: uploadedShortUrl }),
-      ...(uploadedShortPath && { short_path: uploadedShortPath }),
-      ...(emojiData.short_url && !uploadedShortUrl && { short_url: emojiData.short_url }),
-      ...(emojiData.short_path && !uploadedShortPath && { short_path: emojiData.short_path }),
+      ...inputUploadMetadata,
+      ...uploadedUploadMetadata,
       ...(emojiData.displayUrl && { displayUrl: emojiData.displayUrl }),
       ...(emojiData.customOutput && { customOutput: emojiData.customOutput }),
       ...(width ? { width } : {}),

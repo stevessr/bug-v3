@@ -10,6 +10,7 @@ import type { SaveControl } from './core/types'
 import type { Emoji, EmojiGroup } from '@/types/type'
 import * as storage from '@/utils/simpleStorage'
 import { createLogger } from '@/utils/logger'
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
 
 export interface FavoritesStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -106,11 +107,19 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
 
     const favoritesGroup = ensureFavoritesGroup(groups)
     const now = Date.now()
+    const uploadMetadata = extractDiscourseUploadMetadata(
+      emoji.short_url,
+      emoji.short_path,
+      emoji.url
+    )
     const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e && e.url === emoji.url)
 
     if (existingEmojiIndex !== -1) {
       // Update usage tracking for existing emoji
       const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
+      // Preserve short upload metadata when an older favorite is added again.
+      if (uploadMetadata.short_url) existingEmoji.short_url = uploadMetadata.short_url
+      if (uploadMetadata.short_path) existingEmoji.short_path = uploadMetadata.short_path
       const lastUsed = existingEmoji.lastUsed || 0
       const timeDiff = now - lastUsed
       const twelveHours = 12 * 60 * 60 * 1000
@@ -127,6 +136,9 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       // Add new emoji to favorites
       const favoriteEmoji: Emoji = {
         ...emoji,
+        ...uploadMetadata,
+        short_url: uploadMetadata.short_url,
+        short_path: uploadMetadata.short_path,
         id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         groupId: 'favorites',
         usageCount: 1,

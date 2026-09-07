@@ -4,6 +4,8 @@ import { createE, DQS, DQSA } from '../../utils/dom/createEl'
 import { setupButtonClickHandler } from './emoji-button'
 import { extractNameFromUrl } from './picture'
 
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+
 function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
   const button = createE('a', {
     class: 'emoji-add-link',
@@ -51,7 +53,15 @@ function addEmojiButtonToMfp(mfpContainer: Element) {
   }
   if (!name || name.length < 2) name = extractNameFromUrl(imgUrl)
   name = name.trim() || '表情'
-  const emojiData = { name, url: imgUrl }
+  const emojiData = {
+    name,
+    url: imgUrl,
+    ...extractDiscourseUploadMetadata(
+      imgUrl,
+      originalBtn?.getAttribute('href'),
+      downloadBtn?.getAttribute('href')
+    )
+  }
   const addButton = createMfpEmojiButton(emojiData)
   if (downloadBtn && downloadBtn.parentElement) {
     downloadBtn.parentElement.insertBefore(addButton, downloadBtn.nextSibling)

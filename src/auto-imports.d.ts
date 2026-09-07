@@ -68,6 +68,7 @@ declare global {
   const effectScope: typeof import('vue').effectScope
   const ensureDiscourseDomainExists: typeof import('./utils/simpleStorage').ensureDiscourseDomainExists
   const extractChanges: typeof import('./utils/typeGuards').extractChanges
+  const extractDiscourseUploadMetadata: typeof import('./utils/discourseUpload').extractDiscourseUploadMetadata
   const extractStickerSetName: typeof import('./utils/telegramResolver').extractStickerSetName
   const extractTimestamp: typeof import('./utils/typeGuards').extractTimestamp
   const fetchImageForPreview: typeof import('./utils/imageCache').fetchImageForPreview
@@ -116,6 +117,7 @@ declare global {
   const inject: typeof import('vue').inject
   const isChineseLocale: typeof import('./utils/i18n').isChineseLocale
   const isDeltaRecord: typeof import('./utils/typeGuards').isDeltaRecord
+  const isDiscourseShortPath: typeof import('./utils/discourseUpload').isDiscourseShortPath
   const isEmoji: typeof import('./utils/typeGuards').isEmoji
   const isEmojiArray: typeof import('./utils/typeGuards').isEmojiArray
   const isEmojiGroup: typeof import('./utils/typeGuards').isEmojiGroup
@@ -282,7 +284,7 @@ declare global {
   export type { CollaborativeUploadClient } from './utils/collab/CollaborativeUploadClient'
   import('./utils/collab/CollaborativeUploadClient')
   // @ts-ignore
-  export type { DiscourseUploadResponse, DiscourseUploadErrorDetails, DiscourseUploadFailure } from './utils/discourseUpload'
+  export type { DiscourseUploadResponse, DiscourseUploadErrorDetails, DiscourseUploadFailure, DiscourseUploadMetadata } from './utils/discourseUpload'
   import('./utils/discourseUpload')
   // @ts-ignore
   export type { EmojiMarkdownSource } from './utils/emojiMarkdown'
@@ -396,6 +398,7 @@ declare module 'vue' {
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly ensureDiscourseDomainExists: UnwrapRef<typeof import('./utils/simpleStorage')['ensureDiscourseDomainExists']>
     readonly extractChanges: UnwrapRef<typeof import('./utils/typeGuards')['extractChanges']>
+    readonly extractDiscourseUploadMetadata: UnwrapRef<typeof import('./utils/discourseUpload')['extractDiscourseUploadMetadata']>
     readonly extractStickerSetName: UnwrapRef<typeof import('./utils/telegramResolver')['extractStickerSetName']>
     readonly extractTimestamp: UnwrapRef<typeof import('./utils/typeGuards')['extractTimestamp']>
     readonly fetchImageForPreview: UnwrapRef<typeof import('./utils/imageCache')['fetchImageForPreview']>
@@ -444,6 +447,7 @@ declare module 'vue' {
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly isChineseLocale: UnwrapRef<typeof import('./utils/i18n')['isChineseLocale']>
     readonly isDeltaRecord: UnwrapRef<typeof import('./utils/typeGuards')['isDeltaRecord']>
+    readonly isDiscourseShortPath: UnwrapRef<typeof import('./utils/discourseUpload')['isDiscourseShortPath']>
     readonly isEmoji: UnwrapRef<typeof import('./utils/typeGuards')['isEmoji']>
     readonly isEmojiArray: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiArray']>
     readonly isEmojiGroup: UnwrapRef<typeof import('./utils/typeGuards')['isEmojiGroup']>

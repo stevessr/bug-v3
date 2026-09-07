@@ -8,6 +8,8 @@ import CachedImage from '../../components/CachedImage.vue'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+
 const props = defineProps<{ show: boolean; groups: unknown[]; defaultGroupId?: string }>()
 
 // expose props as refs for template and internal use
@@ -231,7 +233,7 @@ const parseMarkdownImages = (text: string): ImageVariant[] => {
     const item = reactive({
       name: nameVal,
       url: urlRaw,
-      ...(urlRaw.startsWith('upload://') && { short_url: urlRaw }),
+      ...extractDiscourseUploadMetadata(urlRaw),
       variants: [{ label: '默认', url: urlRaw }],
       selectedVariant: urlRaw
     })
@@ -244,6 +246,7 @@ interface ImageVariant {
   name: string
   url: string
   short_url?: string
+  short_path?: string
   variants: Array<{ label: string; url: string }>
   selectedVariant: string
   displayUrl?: string
@@ -338,6 +341,7 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
           const item = reactive({
             name: nameVal,
             url: original, // 保持 url 为原始资源链接
+            ...extractDiscourseUploadMetadata(originalUrl, downloadUrl, imgSrc),
             variants,
             selectedVariant: variants[0].url,
             displayUrl: displaySrc
@@ -381,6 +385,7 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
           const item = reactive({
             name: nameVal,
             url: href,
+            ...extractDiscourseUploadMetadata(href, img?.getAttribute('src')),
             variants,
             selectedVariant: variants[0].url,
             displayUrl: displaySrc
@@ -412,6 +417,7 @@ const parseHTMLImages = (text: string): ImageVariant[] => {
         const item = reactive({
           name: nameVal,
           url: src,
+          ...extractDiscourseUploadMetadata(src),
           variants,
           selectedVariant: variants[0].url,
           displayUrl: src
@@ -495,7 +501,7 @@ const add = async () => {
       packet: Date.now(),
       name: name.value.trim(),
       url: url.value.trim(),
-      ...(url.value.trim().startsWith('upload://') && { short_url: url.value.trim() }),
+      ...extractDiscourseUploadMetadata(url.value.trim()),
       ...(displayUrl.value.trim() && { displayUrl: displayUrl.value.trim() }),
       ...(customOutput.value.trim() && { customOutput: customOutput.value.trim() }),
       ...(tags.length > 0 && { tags }),
@@ -534,11 +540,8 @@ const importParsed = () => {
       const emojiData: any = {
         packet: Date.now(),
         name: it.name,
-        url: originalUrl
-      }
-      if (it.short_url) emojiData.short_url = it.short_url
-      else if (typeof originalUrl === 'string' && originalUrl.startsWith('upload://')) {
-        emojiData.short_url = originalUrl
+        url: originalUrl,
+        ...extractDiscourseUploadMetadata(originalUrl, it.short_url, it.short_path)
       }
       if (displayForEmoji) emojiData.displayUrl = displayForEmoji
 

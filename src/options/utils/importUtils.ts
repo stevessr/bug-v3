@@ -1,6 +1,8 @@
 import { useEmojiStore } from '../../stores/emojiStore'
 import type { EmojiGroup } from '../../types/type'
 
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+
 function generateEmojiName(emoji: any): string {
   const name = emoji.name || emoji.alt || '未命名'
   if (name.toLowerCase() === 'image') {
@@ -70,10 +72,7 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
       }
 
       const name = rawName || decodeURIComponent((url.split('/').pop() || '').split('?')[0])
-      const emojiData: any = { name, url }
-      if (url.startsWith('upload://')) {
-        emojiData.short_url = url
-      }
+      const emojiData: any = { name, url, ...extractDiscourseUploadMetadata(url) }
       if (displayUrl) {
         emojiData.displayUrl = displayUrl
       }
@@ -181,14 +180,18 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
 
     if (effectiveTargetGroupId) {
       items.forEach(emoji => {
+        const uploadMetadata = extractDiscourseUploadMetadata(
+          emoji.short_url,
+          emoji.short_path,
+          emoji.url || emoji.src
+        )
         const emojiData = {
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
-          ...(emoji.short_url && { short_url: emoji.short_url }),
-          ...(emoji.short_path && { short_path: emoji.short_path }),
+          ...uploadMetadata,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
           ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),
@@ -227,14 +230,18 @@ export async function importEmojisToStore(payload: any, targetGroupId?: string) 
             if (targetId) groupMap.set(groupName, targetId)
           }
         }
+        const uploadMetadata = extractDiscourseUploadMetadata(
+          emoji.short_url,
+          emoji.short_path,
+          emoji.url || emoji.src
+        )
         const emojiData = {
           packet: Number.isInteger(emoji.packet)
             ? emoji.packet
             : Date.now() + Math.floor(Math.random() * 1000),
           name: generateEmojiName(emoji),
           url: emoji.url || emoji.src,
-          ...(emoji.short_url && { short_url: emoji.short_url }),
-          ...(emoji.short_path && { short_path: emoji.short_path }),
+          ...uploadMetadata,
           ...(emoji.displayUrl && { displayUrl: emoji.displayUrl }),
           ...(emoji.originUrl && { originUrl: emoji.originUrl }),
           ...(emoji.width && { width: emoji.width }),

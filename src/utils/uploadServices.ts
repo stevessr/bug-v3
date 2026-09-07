@@ -700,7 +700,14 @@ export async function uploadAndAddEmoji(
   name?: string,
   originUrl?: string,
   options: UploadOptions = {}
-): Promise<{ success: boolean; url?: string; error?: string; added?: boolean }> {
+): Promise<{
+  success: boolean
+  url?: string
+  short_url?: string
+  short_path?: string
+  error?: string
+  added?: boolean
+}> {
   try {
     // Reconstruct blob
     const uint8 = new Uint8Array(arrayData)
@@ -781,7 +788,13 @@ export async function uploadAndAddEmoji(
     }
 
     console.log(`Added emoji to ${targetGroupId}`, newEmoji.name)
-    return { success: true, url: finalUrl, added: true }
+    return {
+      success: true,
+      url: finalUrl,
+      ...(shortUrl && { short_url: shortUrl }),
+      ...(shortPath && { short_path: shortPath }),
+      added: true
+    }
   } catch (error) {
     console.error('Upload and add emoji failed', error)
     return {

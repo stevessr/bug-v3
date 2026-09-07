@@ -26,6 +26,7 @@ import { defaultSettings } from '@/types/defaultSettings'
 import { createLogger } from '@/utils/logger'
 import { resolveImageCacheStrategy } from '@/utils/imageCachePolicy'
 import { getChromeAPI } from '@/utils/chrome'
+import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
 
 const log = createLogger('EmojiStore')
 
@@ -737,6 +738,8 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const addEmojiFromWeb = (emojiData: {
     name: string
     url: string
+    short_url?: string
+    short_path?: string
     width?: number
     height?: number
   }) => {
@@ -746,11 +749,17 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       if (!Array.isArray(ungroupedGroup.emojis)) {
         ungroupedGroup.emojis = []
       }
+      const uploadMetadata = extractDiscourseUploadMetadata(
+        emojiData.short_url,
+        emojiData.short_path,
+        emojiData.url
+      )
       const newEmoji: Emoji = {
         id: `emoji-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         packet: Date.now(),
         name: emojiData.name,
         url: emojiData.url,
+        ...uploadMetadata,
         ...(typeof emojiData.width === 'number' ? { width: emojiData.width } : {}),
         ...(typeof emojiData.height === 'number' ? { height: emojiData.height } : {}),
         groupId: 'ungrouped'
@@ -986,6 +995,18 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const applyUngroupedAddition = (payload: { emoji: Emoji; group?: EmojiGroup }) => {
     if (!payload || !payload.emoji) return
 
+    const uploadMetadata = extractDiscourseUploadMetadata(
+      payload.emoji.short_url,
+      payload.emoji.short_path,
+      payload.emoji.url
+    )
+    const emojiWithUploadMetadata: Emoji = {
+      ...payload.emoji,
+      ...uploadMetadata,
+      short_url: uploadMetadata.short_url,
+      short_path: uploadMetadata.short_path
+    }
+
     // Deduplication check: Skip if we recently processed this emoji
     const emojiKey = `${payload.emoji.id || ''}_${payload.emoji.url || ''}_${payload.emoji.addedAt || Date.now()}`
     if (processedEmojiIds.has(emojiKey)) {
@@ -1015,25 +1036,68 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       markGroupDirty(targetGroupId)
     }
 
-    const exists = targetGroup.emojis.some(
-      e => e.id === payload.emoji.id || e.url === payload.emoji.url
+    const existingIndex = targetGroup.emojis.findIndex(
+      e => e.id === emojiWithUploadMetadata.id || e.url === emojiWithUploadMetadata.url
     )
-    if (!exists) {
-      targetGroup.emojis.push(payload.emoji)
+    if (existingIndex === -1) {
+      targetGroup.emojis.push(emojiWithUploadMetadata)
       // Mark the target group as dirty for incremental save
       markGroupDirty(targetGroupId)
       // maintain consistency of favorites if necessary
-      if (payload.emoji.groupId === 'favorites') {
-        favorites.value.add(payload.emoji.id)
+      if (emojiWithUploadMetadata.groupId === 'favorites') {
+        favorites.value.add(emojiWithUploadMetadata.id)
         markFavoritesDirty()
       }
-      log.info('Applied emoji addition:', payload.emoji.id || payload.emoji.name)
+      log.info(
+        'Applied emoji addition:',
+        emojiWithUploadMetadata.id || emojiWithUploadMetadata.name
+      )
       // Only save if not already saving or loading
       if (!isSaving.value && !isLoading.value) {
         maybeSave()
       }
     } else {
-      log.debug('Emoji already exists, skipping:', payload.emoji.id || payload.emoji.name)
+      const existingEmoji = targetGroup.emojis[existingIndex]
+      const metadataUpdates: Partial<Emoji> = {}
+      if (
+        emojiWithUploadMetadata.short_url &&
+        emojiWithUploadMetadata.short_url !== existingEmoji.short_url
+      ) {
+        metadataUpdates.short_url = emojiWithUploadMetadata.short_url
+      }
+      if (
+        emojiWithUploadMetadata.short_path &&
+        emojiWithUploadMetadata.short_path !== existingEmoji.short_path
+      ) {
+        metadataUpdates.short_path = emojiWithUploadMetadata.short_path
+      }
+
+      if (Object.keys(metadataUpdates).length > 0) {
+        const updatedGroup: EmojiGroup = {
+          ...targetGroup,
+          emojis: [
+            ...targetGroup.emojis.slice(0, existingIndex),
+            { ...existingEmoji, ...metadataUpdates },
+            ...targetGroup.emojis.slice(existingIndex + 1)
+          ]
+        }
+        groups.value = groups.value.map(group =>
+          group.id === targetGroupId ? updatedGroup : group
+        )
+        markGroupDirty(targetGroupId)
+        if (!isSaving.value && !isLoading.value) {
+          maybeSave()
+        }
+        log.info(
+          'Merged upload metadata into existing emoji:',
+          emojiWithUploadMetadata.id || emojiWithUploadMetadata.name
+        )
+      } else {
+        log.debug(
+          'Emoji already exists, skipping:',
+          emojiWithUploadMetadata.id || emojiWithUploadMetadata.name
+        )
+      }
     }
   }
 

@@ -42,7 +42,9 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
   const collaborativeResults = ref<UploadResult[]>([])
   const disconnectedDuringUpload = ref(false)
   const failedByDisconnect = ref<string[]>([])
-  const pendingRemoteUploads = ref<Array<{ filename: string; url: string; short_url?: string }>>([])
+  const pendingRemoteUploads = ref<
+    Array<{ filename: string; url: string; short_url?: string; short_path?: string }>
+  >([])
 
   // 增量保存定时器
   let incrementalSaveTimer: NodeJS.Timeout | null = null
@@ -84,9 +86,19 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
         onProgress: progress => {
           collaborativeProgress.value = progress
         },
-        onRemoteUploadComplete: (filename: string, url: string, shortUrl?: string) => {
+        onRemoteUploadComplete: (
+          filename: string,
+          url: string,
+          shortUrl?: string,
+          shortPath?: string
+        ) => {
           // 远程上传完成，添加到待保存列表
-          pendingRemoteUploads.value.push({ filename, url, short_url: shortUrl })
+          pendingRemoteUploads.value.push({
+            filename,
+            url,
+            short_url: shortUrl,
+            short_path: shortPath
+          })
           console.log(`[useCollaborativeUpload] Remote upload complete: ${filename}, pending save`)
         },
         onDisconnect: pendingTasks => {
@@ -114,7 +126,13 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
   /**
    * 添加表情到缓冲区
    */
-  const addEmojiToBuffer = (filename: string, url: string, shortUrl?: string, skipSave = false) => {
+  const addEmojiToBuffer = (
+    filename: string,
+    url: string,
+    shortUrl?: string,
+    shortPath?: string,
+    skipSave = false
+  ) => {
     // 确保缓冲区存在
     let group = bufferGroup.value
     if (!group) {
@@ -134,6 +152,7 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
       name: filename,
       url: url,
       ...(shortUrl && { short_url: shortUrl }),
+      ...(shortPath && { short_path: shortPath }),
       displayUrl: url,
       packet: 0,
       tags: [] as string[],
@@ -163,12 +182,12 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
     // 使用批量模式添加到缓冲区，避免每个表情都触发保存
     emojiStore.beginBatch()
     try {
-      for (const { filename, url, short_url } of pendingRemoteUploads.value) {
+      for (const { filename, url, short_url, short_path } of pendingRemoteUploads.value) {
         const alreadyAdded = bufferGroup.value?.emojis.some(
           e => e.url === url || e.name === filename
         )
         if (!alreadyAdded) {
-          addEmojiToBuffer(filename, url, short_url, true) // skipSave = true
+          addEmojiToBuffer(filename, url, short_url, short_path, true) // skipSave = true
         }
       }
     } finally {
@@ -266,7 +285,13 @@ export function useCollaborativeUpload(options: UseCollaborativeUploadOptions) {
               e => e.url === result.url || e.name === result.filename
             )
             if (!alreadyAdded) {
-              addEmojiToBuffer(result.filename, result.url, result.short_url, true) // skipSave = true
+              addEmojiToBuffer(
+                result.filename,
+                result.url,
+                result.short_url,
+                result.short_path,
+                true
+              ) // skipSave = true
             }
           }
         }

@@ -246,6 +246,57 @@ export function isLinuxDoDiscourseBase(baseUrl: string): boolean {
   }
 }
 
+export interface DiscourseUploadMetadata {
+  short_url?: string
+  short_path?: string
+}
+
+/**
+ * Return whether a value is a Discourse short upload path. The path can be
+ * relative (the form returned by Discourse) or an absolute URL copied from a
+ * rendered page.
+ */
+export function isDiscourseShortPath(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const raw = value.trim()
+  if (!raw) return false
+
+  if (raw.startsWith('/uploads/short-url/')) return true
+
+  try {
+    return new URL(raw, getUrlBase()).pathname.startsWith('/uploads/short-url/')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Preserve upload:// and /uploads/short-url references when an upload is
+ * copied through Markdown/HTML or a page-level parser instead of returning
+ * the original API object.
+ */
+export function extractDiscourseUploadMetadata(...values: unknown[]): DiscourseUploadMetadata {
+  let short_url: string | undefined
+  let short_path: string | undefined
+
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const raw = value.trim()
+    if (!raw) continue
+
+    if (!short_url && raw.startsWith('upload://')) {
+      short_url = raw
+    } else if (!short_path && isDiscourseShortPath(raw)) {
+      short_path = raw
+    }
+  }
+
+  return {
+    ...(short_url ? { short_url } : {}),
+    ...(short_path ? { short_path } : {})
+  }
+}
+
 export function normalizeDiscourseUploadUrl(
   baseUrl: string | undefined,
   response:
