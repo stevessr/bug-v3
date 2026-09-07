@@ -92,7 +92,6 @@ export const mixed_keywords = [
 export const test_keywords = ['test', 'demo', '大召唤术', '存档喵', '未分组']
 
 export const OC_KEYWORDS = [
-  'steve',
   'OC',
   'oc',
   'original character',
@@ -180,4 +179,10 @@ export const emote_lab_KEYWORDS = [
   'emote lab',
   '表情工坊',
   'emote',
+]
+
+export const hololive_KEYWORDS = [
+  'hololive',
+  'Fuwamoco',
+  'gura',
 ]

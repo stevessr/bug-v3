@@ -3,7 +3,7 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 2,
+  "totalGroups": 3,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -19,8 +19,17 @@
       "name": "KJU",
       "icon": "https://cdn3.ldstatic.com/original/4X/b/9/6/b9613456c03f5ddb99af6c712246c5855575e21a.webp",
       "topic": "other",
-      "order": 20,
+      "order": 21,
       "emojiCount": 42,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761328497264",
+      "name": "Stevessr 搞来的 orange",
+      "icon": "🌿",
+      "topic": "other",
+      "order": 44,
+      "emojiCount": 69,
       "isArchived": false
     }
   ]

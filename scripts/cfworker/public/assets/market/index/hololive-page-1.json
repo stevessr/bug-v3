@@ -1,0 +1,28 @@
+{
+  "topic": "hololive",
+  "page": 1,
+  "pageSize": 48,
+  "totalPages": 1,
+  "totalGroups": 2,
+  "groups": [
+    {
+      "id": "group-1788774215996",
+      "name": "Fuwamoco",
+      "icon": "https://cdn3.ldstatic.com/original/4X/b/b/6/bb6cb1d33a302962d6c2ceff234f1ff8acdfa26c.png?v=emoji-17",
+      "detail": "https://hololive.wiki/wiki/Category:Emotes_-_Fuwamoco",
+      "topic": "hololive",
+      "order": 14,
+      "emojiCount": 27,
+      "isArchived": false
+    },
+    {
+      "id": "group-1755968404073",
+      "name": "鲨鱼 gura",
+      "icon": "https://cdn3.ldstatic.com/original/4X/6/2/8/628ac7a00ffc1f489a146e89dd1baf92db60577d.webp",
+      "topic": "hololive",
+      "order": 291,
+      "emojiCount": 175,
+      "isArchived": false
+    }
+  ]
+}

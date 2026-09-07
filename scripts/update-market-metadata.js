@@ -14,6 +14,7 @@ import {
   OC_KEYWORDS,
   超时空辉夜姬_KEYWORDS,
   emote_lab_KEYWORDS,
+  hololive_KEYWORDS,
   keyword_match
 } from './lib/constants.ts'
 
@@ -49,7 +50,8 @@ const MARKET_TOPICS = [
   { id: 'game', label: '游戏' },
   { id: 'anime', label: '动漫' },
   { id: '超时空辉夜姬', label: '超时空辉夜姬' },
-  { id: 'emote_lab', label: 'Emote Lab' }
+  { id: 'emote_lab', label: 'Emote Lab' },
+  { id: 'hololive', label: 'hololive' }
 ]
 
 function resolveMarketTopic(group) {
@@ -62,12 +64,13 @@ function resolveMarketTopic(group) {
   if (detail.includes('t.me') || detail.includes('telegram')) return 'telegram'
   if (detail.includes('bili')) return 'bilibili'
   if (name.startsWith('x')) return 'x'
-  if (keyword_match(OC_KEYWORDS, name) || keyword_match(OC_KEYWORDS, detail)) return 'OC'
   if (name.includes('emoji')) return 'emoji'
   if (name.includes('animated') || name.includes('动图')) return 'animated'
   if (name.includes('linux.do') || detail.includes('linux.do')) return 'linux.do'
   if (name.includes('tieba') || detail.includes('tieba')) return 'tieba'
   if (name.includes('neuro') || detail.includes('neuron')) return 'neuro'
+  if (keyword_match(hololive_KEYWORDS, name) || keyword_match(hololive_KEYWORDS, detail))
+    return 'hololive'
   if (keyword_match(emote_lab_KEYWORDS, name) || keyword_match(emote_lab_KEYWORDS, detail))
     return 'emote_lab'
 
@@ -88,6 +91,7 @@ function resolveMarketTopic(group) {
   if (keyword_match(anime_keywords, name) || keyword_match(anime_keywords, detail)) return 'anime'
   if (keyword_match(超时空辉夜姬_KEYWORDS, name) || keyword_match(超时空辉夜姬_KEYWORDS, detail))
     return '超时空辉夜姬'
+    if (keyword_match(OC_KEYWORDS, name) || keyword_match(OC_KEYWORDS, detail)) return 'OC'
   if (len > 100) return '100'
   return 'other'
 }

@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "exportDate": "2026-09-05T06:13:47.697Z",
-  "totalGroups": 299,
+  "exportDate": "2026-09-07T09:48:40.872Z",
+  "totalGroups": 300,
   "topics": [
     {
       "id": "all",
       "label": "全部",
-      "totalGroups": 299,
+      "totalGroups": 300,
       "totalPages": 7
     },
     {
@@ -30,13 +30,13 @@
     {
       "id": "other",
       "label": "其他",
-      "totalGroups": 2,
+      "totalGroups": 3,
       "totalPages": 1
     },
     {
       "id": "OC",
       "label": "OC",
-      "totalGroups": 30,
+      "totalGroups": 25,
       "totalPages": 1
     },
     {
@@ -66,7 +66,7 @@
     {
       "id": "100",
       "label": "100+",
-      "totalGroups": 17,
+      "totalGroups": 16,
       "totalPages": 1
     },
     {
@@ -102,7 +102,7 @@
     {
       "id": "术力口",
       "label": "术力口",
-      "totalGroups": 2,
+      "totalGroups": 4,
       "totalPages": 1
     },
     {
@@ -138,7 +138,7 @@
     {
       "id": "anime",
       "label": "动漫",
-      "totalGroups": 29,
+      "totalGroups": 30,
       "totalPages": 1
     },
     {
@@ -150,7 +150,13 @@
     {
       "id": "emote_lab",
       "label": "Emote Lab",
-      "totalGroups": 0,
+      "totalGroups": 1,
+      "totalPages": 1
+    },
+    {
+      "id": "hololive",
+      "label": "hololive",
+      "totalGroups": 2,
       "totalPages": 1
     }
   ]

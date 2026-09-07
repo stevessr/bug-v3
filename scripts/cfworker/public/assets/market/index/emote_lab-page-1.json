@@ -3,6 +3,17 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 0,
-  "groups": []
+  "totalGroups": 1,
+  "groups": [
+    {
+      "id": "group-1788585469878",
+      "name": "stevessr 的 emote lab",
+      "icon": "https://cdn.ldstatic.com/user_avatar/linux.do/stevessr/144/1589755_2.png",
+      "detail": "powered by emotelab",
+      "topic": "emote_lab",
+      "order": 45,
+      "emojiCount": 191,
+      "isArchived": false
+    }
+  ]
 }
