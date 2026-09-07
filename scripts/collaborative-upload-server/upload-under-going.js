@@ -248,6 +248,8 @@ class CollaborativeMasterClient {
         file,
         success: data.type === 'TASK_COMPLETED',
         url: data.resultUrl || null,
+        short_url: data.shortUrl || null,
+        short_path: data.shortPath || null,
         error: data.error || null
       })
 
@@ -314,6 +316,8 @@ async function main() {
         width,
         height,
         url: uploadedRecord?.url || null,
+        short_url: uploadedRecord?.short_url || null,
+        short_path: uploadedRecord?.short_path || null,
         attempts: 0
       }
     })
@@ -358,11 +362,15 @@ async function main() {
         meta.attempts += 1
         if (result.success) {
           meta.url = result.url
+          meta.short_url = result.short_url
+          meta.short_path = result.short_path
           appendProgress(args.progressLog, {
             type: 'upload',
             key: meta.key,
             outputName: meta.name,
             url: meta.url,
+            short_url: meta.short_url,
+            short_path: meta.short_path,
             size: meta.size,
             width: meta.width,
             height: meta.height
@@ -403,6 +411,8 @@ async function main() {
         packet,
         name: file.name,
         url: file.url,
+        short_url: file.short_url,
+        short_path: file.short_path,
         groupId
       }
       if (width && height) {

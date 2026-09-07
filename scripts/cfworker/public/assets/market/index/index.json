@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "exportDate": "2026-09-07T09:48:40.872Z",
-  "totalGroups": 300,
+  "exportDate": "2026-09-07T09:59:07.021Z",
+  "totalGroups": 301,
   "pageSize": 48,
   "totalPages": 7,
   "pages": [
@@ -44,15 +44,15 @@
     {
       "name": "page-7.json",
       "start": 289,
-      "end": 300,
-      "count": 12
+      "end": 301,
+      "count": 13
     }
   ],
   "topics": [
     {
       "id": "all",
       "label": "全部",
-      "totalGroups": 300,
+      "totalGroups": 301,
       "totalPages": 7,
       "pages": [
         {
@@ -94,8 +94,8 @@
         {
           "name": "page-7.json",
           "start": 289,
-          "end": 300,
-          "count": 12
+          "end": 301,
+          "count": 13
         }
       ]
     },
@@ -444,14 +444,14 @@
     {
       "id": "hololive",
       "label": "hololive",
-      "totalGroups": 2,
+      "totalGroups": 3,
       "totalPages": 1,
       "pages": [
         {
           "name": "hololive-page-1.json",
           "start": 1,
-          "end": 2,
-          "count": 2
+          "end": 3,
+          "count": 3
         }
       ]
     }

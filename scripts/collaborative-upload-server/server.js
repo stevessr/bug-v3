@@ -59,6 +59,8 @@ const sessions = new Map()
  * @property {string} status - 状态：pending, assigned, uploading, completed, failed
  * @property {string|null} assignedWorker - 分配的工作者 ID
  * @property {string|null} resultUrl - 上传结果 URL
+ * @property {string|null} shortUrl - Discourse 短 URL
+ * @property {string|null} shortPath - Discourse 短路径
  * @property {string|null} error - 错误信息
  * @property {number} retryCount - 重试次数
  * @property {number} createdAt - 创建时间
@@ -322,7 +324,7 @@ function scheduleNextTask() {
   )
 }
 
-function handleTaskComplete(workerId, taskId, resultUrl, shortUrl) {
+function handleTaskComplete(workerId, taskId, resultUrl, shortUrl, shortPath) {
   const task = activeTasks.get(taskId)
   if (!task) {
     log(`Warning: Task ${taskId} not found in active tasks`)
@@ -347,6 +349,7 @@ function handleTaskComplete(workerId, taskId, resultUrl, shortUrl) {
   task.status = 'completed'
   task.resultUrl = resultUrl
   task.shortUrl = shortUrl || null
+  task.shortPath = shortPath || null
   activeTasks.delete(taskId)
 
   log(`Task ${taskId} completed by worker ${workerId}: ${resultUrl}`)
@@ -361,6 +364,7 @@ function handleTaskComplete(workerId, taskId, resultUrl, shortUrl) {
       filename: task.filename,
       resultUrl: resultUrl,
       shortUrl: shortUrl || null,
+      shortPath: shortPath || null,
       workerId,
       progress: {
         completed: session.completedTasks,
@@ -847,7 +851,7 @@ function handleMessage(ws, clientId, message) {
 
       // 工作者报告任务完成
       case 'TASK_COMPLETED': {
-        handleTaskComplete(clientId, data.taskId, data.resultUrl, data.shortUrl)
+        handleTaskComplete(clientId, data.taskId, data.resultUrl, data.shortUrl, data.shortPath)
         break
       }
 

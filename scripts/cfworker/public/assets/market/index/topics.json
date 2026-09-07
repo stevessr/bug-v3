@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "exportDate": "2026-09-07T09:48:40.872Z",
-  "totalGroups": 300,
+  "exportDate": "2026-09-07T09:59:07.021Z",
+  "totalGroups": 301,
   "topics": [
     {
       "id": "all",
       "label": "全部",
-      "totalGroups": 300,
+      "totalGroups": 301,
       "totalPages": 7
     },
     {
@@ -156,7 +156,7 @@
     {
       "id": "hololive",
       "label": "hololive",
-      "totalGroups": 2,
+      "totalGroups": 3,
       "totalPages": 1
     }
   ]

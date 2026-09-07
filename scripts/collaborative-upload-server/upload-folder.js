@@ -467,7 +467,11 @@ class UploadClient {
         displayUrl = result.thumbnail
       } else if (result.thumbnail_width && result.thumbnail_height) {
         displayUrl =
-          result.short_url || result.short_path || getThumbnailUrl(url, this.thumbnailSize)
+          result.short_url ||
+          result.short_path ||
+          data.shortUrl ||
+          data.shortPath ||
+          getThumbnailUrl(url, this.thumbnailSize)
       } else {
         displayUrl = getThumbnailUrl(url, this.thumbnailSize)
       }
@@ -484,8 +488,8 @@ class UploadClient {
         filesize: result.filesize || task.size,
         human_filesize: result.human_filesize || formatFileSize(task.size),
         extension: result.extension || task.ext.substring(1),
-        short_url: result.short_url || null,
-        short_path: result.short_path || null,
+        short_url: result.short_url || data.shortUrl || null,
+        short_path: result.short_path || data.shortPath || null,
         dominant_color: result.dominant_color || null,
         groupId: task.groupId,
         packet: task.packet
