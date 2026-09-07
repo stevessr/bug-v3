@@ -3,7 +3,7 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 8,
+  "totalGroups": 7,
   "groups": [
     {
       "id": "group-1761182392763",
@@ -34,15 +34,6 @@
       "isArchived": false
     },
     {
-      "id": "group-1767644234348",
-      "name": "佑天寺若麦 (明日方舟)｜Nyamu Yūtenji(Arknights)",
-      "icon": "https://cdn3.ldstatic.com/original/4X/9/7/6/97634d97c36b0d62cbe4ee76bdcbd5f36aac1d71.avif",
-      "topic": "game",
-      "order": 154,
-      "emojiCount": 20,
-      "isArchived": false
-    },
-    {
       "id": "group-1767644842489",
       "name": "明日方舟联动",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/d/b/4db00a35c16a841dbd006dcb4f0c67d0f44f988e.avif",
@@ -61,21 +52,21 @@
       "isArchived": false
     },
     {
-      "id": "group-1767645336767",
-      "name": "芙宁娜｜Furina",
-      "icon": "https://cdn3.ldstatic.com/original/4X/2/0/7/207d7ae3fb606f8d2068854f715e93822a9aa34e.avif",
-      "topic": "game",
-      "order": 253,
-      "emojiCount": 36,
-      "isArchived": false
-    },
-    {
       "id": "group-1755964482153",
       "name": "菲比",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/b/9/cb9e72b10478eda89324d505f8597b6520516cc9.webp",
       "topic": "game",
       "order": 257,
       "emojiCount": 54,
+      "isArchived": false
+    },
+    {
+      "id": "group-1761569314695",
+      "name": "雪风",
+      "icon": "https://cdn3.ldstatic.com/original/4X/e/f/9/ef93745624313add1dc703cf16c024517832f713.webp",
+      "topic": "game",
+      "order": 284,
+      "emojiCount": 120,
       "isArchived": false
     }
   ]

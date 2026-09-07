@@ -15,6 +15,8 @@ import {
   超时空辉夜姬_KEYWORDS,
   emote_lab_KEYWORDS,
   hololive_KEYWORDS,
+  vtuber_keywords,
+  丸山彩_KEYWORDS,
   keyword_match
 } from './lib/constants.ts'
 
@@ -51,7 +53,9 @@ const MARKET_TOPICS = [
   { id: 'anime', label: '动漫' },
   { id: '超时空辉夜姬', label: '超时空辉夜姬' },
   { id: 'emote_lab', label: 'Emote Lab' },
-  { id: 'hololive', label: 'hololive' }
+  { id: 'hololive', label: 'hololive' },
+  { id: 'vtuber', label: 'Vtuber' },
+  { id: '丸山彩', label: '丸山彩' }
 ]
 
 function resolveMarketTopic(group) {
@@ -73,7 +77,10 @@ function resolveMarketTopic(group) {
     return 'hololive'
   if (keyword_match(emote_lab_KEYWORDS, name) || keyword_match(emote_lab_KEYWORDS, detail))
     return 'emote_lab'
-
+  if (keyword_match(丸山彩_KEYWORDS, name) || keyword_match(丸山彩_KEYWORDS, detail))
+    return '丸山彩'
+  if (keyword_match(vtuber_keywords, name) || keyword_match(vtuber_keywords, detail))
+    return 'vtuber'
   if (keyword_match(TOUHOU_KEYWORDS, name) || keyword_match(TOUHOU_KEYWORDS, detail))
     return 'touhou'
   if (name.includes('neko')) return 'neko'
@@ -91,7 +98,7 @@ function resolveMarketTopic(group) {
   if (keyword_match(anime_keywords, name) || keyword_match(anime_keywords, detail)) return 'anime'
   if (keyword_match(超时空辉夜姬_KEYWORDS, name) || keyword_match(超时空辉夜姬_KEYWORDS, detail))
     return '超时空辉夜姬'
-    if (keyword_match(OC_KEYWORDS, name) || keyword_match(OC_KEYWORDS, detail)) return 'OC'
+  if (keyword_match(OC_KEYWORDS, name) || keyword_match(OC_KEYWORDS, detail)) return 'OC'
   if (len > 100) return '100'
   return 'other'
 }

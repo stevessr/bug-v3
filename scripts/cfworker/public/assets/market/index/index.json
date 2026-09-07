@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-09-07T09:59:07.021Z",
+  "exportDate": "2026-09-07T10:10:02.301Z",
   "totalGroups": 301,
   "pageSize": 48,
   "totalPages": 7,
@@ -164,14 +164,14 @@
     {
       "id": "OC",
       "label": "OC",
-      "totalGroups": 25,
+      "totalGroups": 24,
       "totalPages": 1,
       "pages": [
         {
           "name": "OC-page-1.json",
           "start": 1,
-          "end": 25,
-          "count": 25
+          "end": 24,
+          "count": 24
         }
       ]
     },
@@ -234,14 +234,14 @@
     {
       "id": "100",
       "label": "100+",
-      "totalGroups": 16,
+      "totalGroups": 7,
       "totalPages": 1,
       "pages": [
         {
           "name": "100-page-1.json",
           "start": 1,
-          "end": 16,
-          "count": 16
+          "end": 7,
+          "count": 7
         }
       ]
     },
@@ -262,14 +262,14 @@
     {
       "id": "touhou",
       "label": "东方",
-      "totalGroups": 14,
+      "totalGroups": 5,
       "totalPages": 1,
       "pages": [
         {
           "name": "touhou-page-1.json",
           "start": 1,
-          "end": 14,
-          "count": 14
+          "end": 5,
+          "count": 5
         }
       ]
     },
@@ -318,28 +318,28 @@
     {
       "id": "术力口",
       "label": "术力口",
-      "totalGroups": 4,
+      "totalGroups": 1,
       "totalPages": 1,
       "pages": [
         {
           "name": "术力口-page-1.json",
           "start": 1,
-          "end": 4,
-          "count": 4
+          "end": 1,
+          "count": 1
         }
       ]
     },
     {
       "id": "galgame",
       "label": "galgame",
-      "totalGroups": 7,
+      "totalGroups": 6,
       "totalPages": 1,
       "pages": [
         {
           "name": "galgame-page-1.json",
           "start": 1,
-          "end": 7,
-          "count": 7
+          "end": 6,
+          "count": 6
         }
       ]
     },
@@ -360,14 +360,14 @@
     {
       "id": "miexed",
       "label": "mixed",
-      "totalGroups": 15,
+      "totalGroups": 17,
       "totalPages": 1,
       "pages": [
         {
           "name": "miexed-page-1.json",
           "start": 1,
-          "end": 15,
-          "count": 15
+          "end": 17,
+          "count": 17
         }
       ]
     },
@@ -388,28 +388,28 @@
     {
       "id": "game",
       "label": "游戏",
-      "totalGroups": 8,
+      "totalGroups": 7,
       "totalPages": 1,
       "pages": [
         {
           "name": "game-page-1.json",
           "start": 1,
-          "end": 8,
-          "count": 8
+          "end": 7,
+          "count": 7
         }
       ]
     },
     {
       "id": "anime",
       "label": "动漫",
-      "totalGroups": 30,
+      "totalGroups": 8,
       "totalPages": 1,
       "pages": [
         {
           "name": "anime-page-1.json",
           "start": 1,
-          "end": 30,
-          "count": 30
+          "end": 8,
+          "count": 8
         }
       ]
     },
@@ -452,6 +452,34 @@
           "start": 1,
           "end": 3,
           "count": 3
+        }
+      ]
+    },
+    {
+      "id": "vtuber",
+      "label": "Vtuber",
+      "totalGroups": 2,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "vtuber-page-1.json",
+          "start": 1,
+          "end": 2,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "丸山彩",
+      "label": "丸山彩",
+      "totalGroups": 42,
+      "totalPages": 1,
+      "pages": [
+        {
+          "name": "丸山彩-page-1.json",
+          "start": 1,
+          "end": 42,
+          "count": 42
         }
       ]
     }

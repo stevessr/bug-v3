@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-09-07T09:59:07.021Z",
+  "exportDate": "2026-09-07T10:10:02.301Z",
   "totalGroups": 301,
   "topics": [
     {
@@ -36,7 +36,7 @@
     {
       "id": "OC",
       "label": "OC",
-      "totalGroups": 25,
+      "totalGroups": 24,
       "totalPages": 1
     },
     {
@@ -66,7 +66,7 @@
     {
       "id": "100",
       "label": "100+",
-      "totalGroups": 16,
+      "totalGroups": 7,
       "totalPages": 1
     },
     {
@@ -78,7 +78,7 @@
     {
       "id": "touhou",
       "label": "东方",
-      "totalGroups": 14,
+      "totalGroups": 5,
       "totalPages": 1
     },
     {
@@ -102,13 +102,13 @@
     {
       "id": "术力口",
       "label": "术力口",
-      "totalGroups": 4,
+      "totalGroups": 1,
       "totalPages": 1
     },
     {
       "id": "galgame",
       "label": "galgame",
-      "totalGroups": 7,
+      "totalGroups": 6,
       "totalPages": 1
     },
     {
@@ -120,7 +120,7 @@
     {
       "id": "miexed",
       "label": "mixed",
-      "totalGroups": 15,
+      "totalGroups": 17,
       "totalPages": 1
     },
     {
@@ -132,13 +132,13 @@
     {
       "id": "game",
       "label": "游戏",
-      "totalGroups": 8,
+      "totalGroups": 7,
       "totalPages": 1
     },
     {
       "id": "anime",
       "label": "动漫",
-      "totalGroups": 30,
+      "totalGroups": 8,
       "totalPages": 1
     },
     {
@@ -157,6 +157,18 @@
       "id": "hololive",
       "label": "hololive",
       "totalGroups": 3,
+      "totalPages": 1
+    },
+    {
+      "id": "vtuber",
+      "label": "Vtuber",
+      "totalGroups": 2,
+      "totalPages": 1
+    },
+    {
+      "id": "丸山彩",
+      "label": "丸山彩",
+      "totalGroups": 42,
       "totalPages": 1
     }
   ]

@@ -26,7 +26,8 @@ export const TOUHOU_KEYWORDS = [
   '琪露诺',
   '铃仙',
   '幽幽子',
-  '古明地觉'
+  '古明地觉',
+  '妹红'
 ]
 
 export const MAGIC_GIRL_KEYWORDS = [
@@ -68,7 +69,8 @@ export const galgame_keywords = [
   '糖糖',
   'アマカノ',
   'あきゅー',
-  '从雨'
+  '从雨',
+  '仙狐'
 ]
 
 export const mixed_keywords = [
@@ -86,7 +88,9 @@ export const mixed_keywords = [
   'husband',
   '软件工程师',
   '企鹅',
-  '天哪'
+  '天哪',
+  '铸币大头',
+  'doro'
 ]
 
 export const test_keywords = ['test', 'demo', '大召唤术', '存档喵', '未分组']
@@ -114,7 +118,8 @@ export const OC_KEYWORDS = [
   '科研喵',
   '群友',
   'cadot',
-  '单主',
+  '狼狼',
+  '茳枫'
 ]
 
 export const game_keywords = [
@@ -129,7 +134,8 @@ export const game_keywords = [
   '明日方舟',
   '舞萌',
   '芙宁娜',
-  '菲比'
+  '菲比',
+  '雪风'
 ]
 
 export const anime_keywords = [
@@ -138,10 +144,39 @@ export const anime_keywords = [
   'アニメ',
   '動畫',
   'アニメーション',
-  '丸山彩',
-  '纪念收藏集',
   'yauyau',
   '伊蕾娜',
+  '朝日六花',
+  '爱丽丝',
+  '疯传箱子',
+  '素世',
+  '遥奈',
+  '鳰原令王那',
+  '黄',
+  '墨提斯',
+  '素晴',
+
+  "There's No Freaking Way I'll be Your Lover"
+]
+
+export const 超时空辉夜姬_KEYWORDS = ['超时空辉夜姬', '超时空', '辉夜姬', '月见八千代', '酒寄彩叶']
+
+export const emote_lab_KEYWORDS = ['emote lab', '表情工坊', 'emote']
+
+export const hololive_KEYWORDS = ['hololive', 'Fuwamoco', 'gura']
+
+export const vtuber_keywords = ['taffy', '永雏塔菲', '堕天みろ']
+
+export const 丸山彩_KEYWORDS = [
+  '丸山彩',
+  '纪念收藏集',
+  '单主',
+  'Satō',
+  '｜',
+  '春也',
+  '赏花爱音',
+  '超天酱',
+  '山田',
   '佐藤益木',
   '千早爱音',
   '凑友希那',
@@ -150,39 +185,6 @@ export const anime_keywords = [
   '安和昴',
   '平泽唯',
   '春也',
-  '朝日六花',
-  '永雏塔菲',
-  '爱丽丝',
-  '疯传箱子',
-  '素世',
-  '遥奈',
-  '鳰原令王那',
-  '黄',
-  '墨提斯',
-  '藤田言音',
-  '素晴',
-  '赏花爱音',
-  '超天酱',
-  '山田',
-]
-
-export const 超时空辉夜姬_KEYWORDS = [
-  '超时空辉夜姬',
-  '超时空',
-  '辉夜姬',
-  '月见八千代',
-  '酒寄彩叶'
-]
-
-
-export const emote_lab_KEYWORDS = [
-  'emote lab',
-  '表情工坊',
-  'emote',
-]
-
-export const hololive_KEYWORDS = [
-  'hololive',
-  'Fuwamoco',
-  'gura',
+  '礼服素世',
+  '藤田言音'
 ]
