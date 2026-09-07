@@ -466,6 +466,7 @@ export default function useOptions() {
           name: payload.emoji.name,
           url: payload.emoji.url,
           short_url: payload.emoji.short_url,
+          short_path: payload.emoji.short_path,
           displayUrl: payload.emoji.displayUrl,
           customOutput: payload.emoji.customOutput,
           width: payload.emoji.width,

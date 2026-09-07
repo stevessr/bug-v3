@@ -80,6 +80,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
     // If pixiv original image, try downloading and uploading to recent Discourse
     let finalUrl = emojiData.url
     let uploadedShortUrl: string | undefined
+    let uploadedShortPath: string | undefined
     try {
       if (finalUrl && finalUrl.includes('i.pximg.net')) {
         // read last used discourse config from storage key 'lastDiscourse' if available
@@ -107,6 +108,7 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
             if (uploadResult && uploadResult.url) {
               finalUrl = uploadResult.url
               uploadedShortUrl = uploadResult.short_url || undefined
+              uploadedShortPath = uploadResult.short_path || undefined
             }
           } catch (e) {
             // ignore upload errors and fallback to original url
@@ -137,7 +139,9 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       name: emojiData.name,
       url: finalUrl,
       ...(uploadedShortUrl && { short_url: uploadedShortUrl }),
+      ...(uploadedShortPath && { short_path: uploadedShortPath }),
       ...(emojiData.short_url && !uploadedShortUrl && { short_url: emojiData.short_url }),
+      ...(emojiData.short_path && !uploadedShortPath && { short_path: emojiData.short_path }),
       ...(emojiData.displayUrl && { displayUrl: emojiData.displayUrl }),
       ...(emojiData.customOutput && { customOutput: emojiData.customOutput }),
       ...(width ? { width } : {}),

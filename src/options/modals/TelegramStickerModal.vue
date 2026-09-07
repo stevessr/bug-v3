@@ -308,6 +308,7 @@ const doImport = async () => {
           name: filename,
           url: uploadUrl,
           ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
+          ...(uploadResult.short_path && { short_path: uploadResult.short_path }),
           displayUrl: uploadUrl,
           groupId: targetGroup!.id
         })

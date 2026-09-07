@@ -18,6 +18,7 @@ export function buildEmojiExportItem(emoji: any, groupId?: string): any {
     name: emoji?.name,
     url,
     short_url: emoji?.short_url,
+    short_path: emoji?.short_path,
     originUrl: emoji?.originUrl,
     displayUrl: emoji?.displayUrl,
     width: emoji?.width,

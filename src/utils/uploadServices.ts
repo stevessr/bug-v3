@@ -710,6 +710,7 @@ export async function uploadAndAddEmoji(
     // Try to upload to linux.do first
     let finalUrl: string | null = null
     let shortUrl: string | undefined
+    let shortPath: string | undefined
     try {
       const linuxDoService = uploadServices['linux.do']
       const result = linuxDoService.uploadFileDetailed
@@ -719,6 +720,7 @@ export async function uploadAndAddEmoji(
           }
       finalUrl = result.url
       shortUrl = result.short_url
+      shortPath = result.short_path
     } catch (e) {
       console.warn('Upload to linux.do failed, will fallback to data/object URL', e)
     }
@@ -751,6 +753,7 @@ export async function uploadAndAddEmoji(
         name: name || filename || 'image',
         url: finalUrl,
         ...(shortUrl && { short_url: shortUrl }),
+        ...(shortPath && { short_path: shortPath }),
         displayUrl: finalUrl,
         originUrl: originUrl || undefined,
         addedAt: Date.now()

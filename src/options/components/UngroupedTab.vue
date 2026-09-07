@@ -172,7 +172,8 @@ const uploadSingleEmoji = async (emoji: Emoji, index: number) => {
         emojiStore.updateEmojiInGroup('ungrouped', index, {
           url: resp.url,
           displayUrl: resp.url,
-          short_url: resp.short_url || undefined
+          short_url: resp.short_url || undefined,
+          short_path: resp.short_path || undefined
         })
       }
     } finally {
@@ -219,7 +220,8 @@ const uploadSelectedEmojis = async () => {
           emojiStore.updateEmojiInGroup('ungrouped', index, {
             url: resp.url,
             displayUrl: resp.url,
-            short_url: resp.short_url || undefined
+            short_url: resp.short_url || undefined,
+            short_path: resp.short_path || undefined
           })
         }
         return resp
@@ -262,7 +264,12 @@ const uploadAllEmojis = async () => {
         const file = new File([blob], fileName, { type: blob.type })
         const resp = await emojiPreviewUploader.uploadEmojiImage(file, emoji.name || 'emoji')
         if (resp && resp.url) {
-          emojiStore.updateEmojiInGroup('ungrouped', index, { url: resp.url })
+          emojiStore.updateEmojiInGroup('ungrouped', index, {
+            url: resp.url,
+            displayUrl: resp.url,
+            short_url: resp.short_url || undefined,
+            short_path: resp.short_path || undefined
+          })
         }
         return resp
       } catch (error) {

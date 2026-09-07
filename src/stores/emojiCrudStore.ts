@@ -646,6 +646,7 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
           ...emoji,
           url: referenced.url,
           short_url: referenced.short_url || emoji.short_url,
+          short_path: referenced.short_path || emoji.short_path,
           displayUrl: referenced.displayUrl || referenced.url
         }
       }
@@ -719,7 +720,8 @@ export function useEmojiCrudStore(options: EmojiCrudStoreOptions) {
               ...duplicate.emoji,
               referenceId: original.emoji.id,
               url: original.emoji.url,
-              short_url: original.emoji.short_url
+              short_url: original.emoji.short_url,
+              short_path: original.emoji.short_path
             }
             newEmojis = [...emojis.slice(0, index), referencedEmoji, ...emojis.slice(index + 1)]
           } else {

@@ -281,6 +281,7 @@ export function useUpload(options: UseUploadOptions) {
               name: file.name,
               url: uploadUrl,
               ...(uploadResult.short_url && { short_url: uploadResult.short_url }),
+              ...(uploadResult.short_path && { short_path: uploadResult.short_path }),
               displayUrl: uploadUrl,
               packet: 0,
               width,

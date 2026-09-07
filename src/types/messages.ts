@@ -363,6 +363,7 @@ export interface AddEmojiFromWebTypedMessage extends BaseMessage {
       height?: number
       displayUrl?: string
       short_url?: string
+      short_path?: string
       customOutput?: string
       sourceDomain?: string
       targetGroupId?: string
