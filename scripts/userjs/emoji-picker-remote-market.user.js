@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Market Emoji Picker for Linux.do
 // @namespace    https://linux.do/
-// @version      2.1.1
+// @version      2.1.2
 // @description  从云端市场加载表情包并允许用户组合分组，注入表情选择器到 Linux.do 论坛
 // @author       stevessr
 // @match        https://linux.do/*
@@ -201,6 +201,15 @@
     return fetchRemoteConfig(pageUrl)
   }
 
+  // 市场文件名：已有 group- 前缀的 ID 不再重复添加前缀。
+  // 同时兼容旧缓存中遗留的 group-group- ID。
+  function getMarketGroupFileName(groupId) {
+    const normalizedGroupId = String(groupId).replace(/^group-group-/, 'group-')
+    return normalizedGroupId.startsWith('group-')
+      ? `${normalizedGroupId}.json`
+      : `group-${normalizedGroupId}.json`
+  }
+
   async function loadMarketFromIndex() {
     const indexData = await fetchMarketIndex()
     const totalPages = Math.max(1, Number(indexData.totalPages || 1))
@@ -319,7 +328,7 @@
 
       for (const groupId of CONFIG.selectedGroupIds) {
         try {
-          const groupUrl = `${CONFIG.marketBaseUrl}/assets/market/group-${groupId}.json`
+          const groupUrl = `${CONFIG.marketBaseUrl}/assets/market/${getMarketGroupFileName(groupId)}`
           const groupData = await fetchRemoteConfig(groupUrl)
 
           const emojiGroup = {
@@ -435,7 +444,7 @@
     const groups = []
     const loadPromises = CONFIG.selectedGroupIds.map(async groupId => {
       try {
-        const groupUrl = `${CONFIG.marketBaseUrl}/assets/market/group-${groupId}.json`
+        const groupUrl = `${CONFIG.marketBaseUrl}/assets/market/${getMarketGroupFileName(groupId)}`
         const groupData = await fetchRemoteConfig(groupUrl)
 
         const emojiGroup = {
