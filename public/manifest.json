@@ -28,6 +28,15 @@
   "side_panel": {
     "default_path": "index.html?mode=sidebar"
   },
+  "sidebar_action": {
+    "default_panel": "index.html?type=sidebar",
+    "default_title": "__MSG_extensionName__",
+    "default_icon": {
+      "48": "img/48.png",
+      "64": "img/64.png",
+      "128": "img/128.png"
+    }
+  },
   "action": {
     "default_popup": "index.html?mode=popup",
     "default_title": "__MSG_extensionName__",
@@ -43,6 +52,7 @@
     "open_in_tab": true
   },
   "background": {
+    "scripts": ["js/background.js"],
     "service_worker": "js/background.js",
     "type": "module"
   },
@@ -69,7 +79,11 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "emoji-extension@pwsh.us.kg"
+      "id": "emoji-extension@pwsh.us.kg",
+      "update_url": "https://s.pwsh.us.kg/updates.json",
+      "data_collection_permissions": {
+        "required": ["websiteActivity", "websiteContent"]
+      }
     }
   }
 }
