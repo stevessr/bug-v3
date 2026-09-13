@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Market Emoji Picker for Linux.do
 // @namespace    https://linux.do/
-// @version      2.1.2
+// @version      2.2.0
 // @description  从云端市场加载表情包并允许用户组合分组，注入表情选择器到 Linux.do 论坛
 // @author       stevessr
 // @match        https://linux.do/*
@@ -73,6 +73,8 @@
       GM_setValue('marketBaseUrl', fullUrl)
       CONFIG.marketBaseUrl = fullUrl
       localStorage.removeItem('emoji_market_cache_timestamp')
+      localStorage.removeItem('emoji_market_tags_cache')
+      localStorage.removeItem('emoji_market_tags_cache_timestamp')
       localStorage.removeItem('emoji_groups_cache_timestamp')
       alert('市场域名已设置，请刷新页面加载新配置')
     }
@@ -104,6 +106,8 @@
   GM_registerMenuCommand('清除缓存', () => {
     localStorage.removeItem('emoji_market_cache')
     localStorage.removeItem('emoji_market_cache_timestamp')
+    localStorage.removeItem('emoji_market_tags_cache')
+    localStorage.removeItem('emoji_market_tags_cache_timestamp')
     localStorage.removeItem('emoji_groups_cache')
     localStorage.removeItem('emoji_groups_cache_timestamp')
     alert('缓存已清除，请刷新页面')
@@ -133,6 +137,8 @@
   // ============== 存储工具 ==============
   const MARKET_CACHE_KEY = 'emoji_market_cache'
   const MARKET_CACHE_TIME_KEY = 'emoji_market_cache_timestamp'
+  const MARKET_TAGS_CACHE_KEY = 'emoji_market_tags_cache'
+  const MARKET_TAGS_CACHE_TIME_KEY = 'emoji_market_tags_cache_timestamp'
   const GROUPS_CACHE_KEY = 'emoji_groups_cache'
   const GROUPS_CACHE_TIME_KEY = 'emoji_groups_cache_timestamp'
 
@@ -210,6 +216,186 @@
       : `group-${normalizedGroupId}.json`
   }
 
+  function normalizeMarketGroupSummary(group) {
+    if (typeof group === 'string' || typeof group === 'number') {
+      const id = String(group).replace(/^group-group-/, 'group-')
+      return { id, name: id, idOnly: true }
+    }
+    if (!group || typeof group !== 'object') return null
+
+    const id = group.id ?? group.groupId ?? group.group_id
+    if (id === undefined || id === null || id === '') return null
+    const normalizedId = String(id).replace(/^group-group-/, 'group-')
+    const hasDetails = Boolean(
+      group.name ||
+      group.title ||
+      group.icon ||
+      group.detail ||
+      group.description ||
+      group.emojiCount ||
+      group.emoji_count ||
+      group.count
+    )
+
+    return {
+      id: normalizedId,
+      name: group.name || group.title || normalizedId,
+      idOnly: !hasDetails,
+      icon: group.icon,
+      detail: group.detail || group.description || '',
+      emojiCount: Number(group.emojiCount ?? group.emoji_count ?? group.count ?? 0) || 0,
+      tags: Array.isArray(group.tags) ? group.tags : []
+    }
+  }
+
+  function normalizeMarketTagName(tag, fallback = '') {
+    if (typeof tag === 'string' || typeof tag === 'number') return String(tag).trim()
+    if (!tag || typeof tag !== 'object') return fallback
+    return String(
+      tag.name ?? tag.label ?? tag.text ?? tag.tag ?? tag.title ?? tag.id ?? fallback
+    ).trim()
+  }
+
+  function normalizeMarketTagGroups(groups) {
+    if (!Array.isArray(groups)) return []
+    return groups.map(normalizeMarketGroupSummary).filter(Boolean)
+  }
+
+  function normalizeMarketTags(payload) {
+    const tagsById = new Map()
+
+    const addTag = (rawTag, rawGroups = []) => {
+      const tagObject = rawTag && typeof rawTag === 'object' ? rawTag : null
+      const label = normalizeMarketTagName(rawTag)
+      if (!label) return
+
+      const id = String(
+        tagObject?.id ?? tagObject?.name ?? tagObject?.label ?? tagObject?.text ?? label
+      )
+      const key = id.toLowerCase()
+      let tag = tagsById.get(key)
+      if (!tag) {
+        tag = { id, label, groupIds: [], groups: [] }
+        tagsById.set(key, tag)
+      }
+
+      const sourceGroups = tagObject
+        ? (tagObject.groups ??
+          tagObject.groupIds ??
+          tagObject.group_ids ??
+          tagObject.group ??
+          rawGroups)
+        : rawGroups
+      normalizeMarketTagGroups(
+        Array.isArray(sourceGroups) ? sourceGroups : sourceGroups ? [sourceGroups] : []
+      ).forEach(group => {
+        if (!tag.groupIds.includes(group.id)) tag.groupIds.push(group.id)
+        const existing = tag.groups.find(item => item.id === group.id)
+        if (!existing || (!existing.name && group.name)) {
+          if (existing) Object.assign(existing, group)
+          else tag.groups.push(group)
+        }
+      })
+    }
+
+    const addGroupTags = (group, groupTags) => {
+      const tags = Array.isArray(groupTags) ? groupTags : groupTags ? [groupTags] : []
+      tags.forEach(tag => addTag(tag, [group]))
+    }
+
+    const addTagCollection = collection => {
+      if (Array.isArray(collection)) {
+        collection.forEach(item => {
+          if (item && typeof item === 'object' && Array.isArray(item.tags)) {
+            addGroupTags(item, item.tags)
+          } else {
+            addTag(item)
+          }
+        })
+        return
+      }
+
+      if (collection && typeof collection === 'object') {
+        Object.entries(collection).forEach(([name, groups]) => {
+          const groupValues =
+            groups && typeof groups === 'object' && !Array.isArray(groups)
+              ? (groups.groups ?? groups.groupIds ?? groups.group_ids ?? groups.group ?? groups)
+              : groups
+          addTag({ name }, groupValues)
+        })
+      }
+    }
+
+    if (Array.isArray(payload)) {
+      addTagCollection(payload)
+    }
+
+    if (payload && typeof payload === 'object') {
+      addTagCollection(payload.tags)
+
+      ;['tagGroups', 'tag_groups', 'byTag', 'by_tag', 'tagMap', 'tag_map'].forEach(key => {
+        addTagCollection(payload[key])
+      })
+
+      if (Array.isArray(payload.groups)) {
+        payload.groups.forEach(group => {
+          const normalizedGroup = normalizeMarketGroupSummary(group)
+          addGroupTags(group, group?.tags)
+          if (normalizedGroup) addGroupTags(normalizedGroup, normalizedGroup.tags)
+        })
+      } else if (payload.groups && typeof payload.groups === 'object') {
+        Object.entries(payload.groups).forEach(([id, group]) => {
+          const normalizedGroup = normalizeMarketGroupSummary({ id, ...group })
+          addGroupTags(group, group?.tags)
+          if (normalizedGroup) addGroupTags(normalizedGroup, normalizedGroup.tags)
+        })
+      }
+
+      // 兼容以标签名为 key 的简化映射格式：{ "tag": ["group-id"] }。
+      const reservedKeys = new Set([
+        'tags',
+        'groups',
+        'version',
+        'exportDate',
+        'totalGroups',
+        'totalTags'
+      ])
+      Object.entries(payload).forEach(([name, groups]) => {
+        if (reservedKeys.has(name) || !groups || typeof groups !== 'object') return
+        if (Array.isArray(groups) || groups.groups || groups.groupIds || groups.group_ids) {
+          addTag({ name }, groups.groups ?? groups.groupIds ?? groups.group_ids ?? groups)
+        }
+      })
+    }
+
+    return [...tagsById.values()]
+      .filter(tag => tag.groupIds.length > 0 || tag.groups.length > 0)
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
+  }
+
+  async function fetchMarketTags() {
+    const tagUrls = [
+      `${CONFIG.marketBaseUrl}/assets/market/tags.json`,
+      `${CONFIG.marketBaseUrl}/assets/market/index/tags.json`,
+      `${CONFIG.marketBaseUrl}/assets/tags.json`,
+      `${CONFIG.marketBaseUrl}/tags.json`
+    ]
+    let lastError = null
+
+    for (const url of tagUrls) {
+      try {
+        const data = await fetchRemoteConfig(url)
+        const tags = normalizeMarketTags(data)
+        if (tags.length > 0) return tags
+        lastError = new Error('标签数据为空或格式无法识别')
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    throw lastError || new Error('市场标签加载失败')
+  }
+
   async function loadMarketFromIndex() {
     const indexData = await fetchMarketIndex()
     const totalPages = Math.max(1, Number(indexData.totalPages || 1))
@@ -233,6 +419,84 @@
   let currentMarketPage = 1
   const marketPageCache = new Map()
   let selectedEmojiGroups = []
+  let marketTags = []
+  let marketFullGroups = null
+
+  function loadCachedMarketTags() {
+    const cached = loadCache(MARKET_TAGS_CACHE_KEY)
+    if (!cached || cached.marketBaseUrl !== CONFIG.marketBaseUrl) return []
+    return normalizeMarketTags(cached)
+  }
+
+  async function loadMarketTags(forceRefresh = false) {
+    if (!forceRefresh && isCacheValid(MARKET_TAGS_CACHE_TIME_KEY)) {
+      const cachedTags = loadCachedMarketTags()
+      if (cachedTags.length > 0) {
+        marketTags = cachedTags
+        return marketTags
+      }
+    }
+
+    try {
+      marketTags = await fetchMarketTags()
+      saveCache(MARKET_TAGS_CACHE_KEY, {
+        marketBaseUrl: CONFIG.marketBaseUrl,
+        tags: marketTags
+      })
+      return marketTags
+    } catch (error) {
+      const cachedTags = loadCachedMarketTags()
+      marketTags = cachedTags
+      if (cachedTags.length > 0) {
+        console.warn('[Market Emoji] 标签加载失败，使用当前域名的过期标签缓存：', error)
+      } else {
+        console.warn('[Market Emoji] 市场标签加载失败，继续使用未分类列表：', error)
+      }
+      return marketTags
+    }
+  }
+
+  async function loadFullMarketGroups() {
+    if (Array.isArray(marketFullGroups)) return marketFullGroups
+
+    try {
+      const metadataUrl = `${CONFIG.marketBaseUrl}/assets/market/metadata.json`
+      const data = await fetchRemoteConfig(metadataUrl)
+      marketFullGroups = Array.isArray(data.groups) ? data.groups : []
+    } catch (error) {
+      marketFullGroups = null
+      console.warn('[Market Emoji] 加载标签分组概要失败：', error)
+    }
+
+    return marketFullGroups || []
+  }
+
+  async function loadMarketGroupsForTag(tagId) {
+    const tag = marketTags.find(item => item.id === tagId)
+    if (!tag) return []
+
+    const summaries = new Map()
+    const addGroups = groups => {
+      groups.forEach(group => {
+        const normalized = normalizeMarketGroupSummary(group)
+        if (normalized) summaries.set(normalized.id, normalized)
+      })
+    }
+
+    addGroups(tag.groups)
+    addGroups(marketGroups)
+    addGroups(selectedEmojiGroups)
+
+    const missingIds = tag.groupIds.filter(groupId => {
+      const summary = summaries.get(groupId)
+      return !summary || summary.idOnly
+    })
+    if (missingIds.length > 0) {
+      addGroups(await loadFullMarketGroups())
+    }
+
+    return tag.groupIds.map(groupId => summaries.get(groupId)).filter(Boolean)
+  }
 
   // 加载市场元数据
   async function loadMarketMetadata() {
@@ -403,6 +667,9 @@
   }
 
   function refreshMarketInBackground() {
+    marketFullGroups = null
+    loadMarketTags().catch(() => {})
+
     if (marketUsePagedIndex) {
       loadMarketFromIndex()
         .then(({ metadata }) => {
@@ -471,11 +738,15 @@
       }
     })
 
-    Promise.all(loadPromises).then(() => {
-      selectedEmojiGroups = groups
-      saveCache(GROUPS_CACHE_KEY, groups)
-      console.log('[Market Emoji] 分组后台刷新完成')
-    })
+    Promise.all(loadPromises)
+      .then(() => {
+        selectedEmojiGroups = groups
+        saveCache(GROUPS_CACHE_KEY, groups)
+        console.log('[Market Emoji] 分组后台刷新完成')
+      })
+      .catch(error => {
+        console.error('[Market Emoji] 分组后台刷新失败：', error)
+      })
   }
 
   // ============== 分组管理器 ==============
@@ -484,6 +755,11 @@
       alert('市场数据尚未加载，请稍后再试')
       return
     }
+
+    let selectedTagId = ''
+    let tagGroups = []
+    let tagPage = 1
+    const managerPageSize = Math.max(1, Number(marketIndexInfo?.pageSize || 48))
 
     // 创建遮罩
     const backdrop = document.createElement('div')
@@ -515,6 +791,61 @@
     header.appendChild(closeBtn)
 
     modal.appendChild(header)
+
+    // 标签筛选。标签资源不可用时保留原有分组管理流程。
+    const tagContainer = document.createElement('div')
+    tagContainer.style.padding = '10px 16px'
+    tagContainer.style.borderBottom = '1px solid var(--primary-low, #eee)'
+    tagContainer.style.display = 'flex'
+    tagContainer.style.alignItems = 'center'
+    tagContainer.style.gap = '8px'
+
+    const tagLabel = document.createElement('label')
+    tagLabel.textContent = '按标签显示：'
+    tagLabel.style.fontSize = '13px'
+    tagLabel.style.color = 'var(--primary-medium, #666)'
+    tagLabel.htmlFor = 'market-emoji-tag-filter'
+
+    const tagSelect = document.createElement('select')
+    tagSelect.id = 'market-emoji-tag-filter'
+    tagSelect.style.flex = '1'
+    tagSelect.style.minWidth = '0'
+    tagSelect.style.padding = '6px 8px'
+    tagSelect.style.border = '1px solid var(--primary-low, #ddd)'
+    tagSelect.style.borderRadius = '6px'
+    tagSelect.style.background = 'var(--secondary, #fff)'
+    tagSelect.style.color = 'var(--primary, #333)'
+
+    const allTagsOption = document.createElement('option')
+    allTagsOption.value = ''
+    allTagsOption.textContent = '全部标签'
+    tagSelect.appendChild(allTagsOption)
+
+    marketTags.forEach(tag => {
+      const option = document.createElement('option')
+      option.value = tag.id
+      option.textContent = `${tag.label} (${tag.groupIds.length})`
+      tagSelect.appendChild(option)
+    })
+
+    if (marketTags.length > 0) {
+      tagContainer.appendChild(tagLabel)
+      tagContainer.appendChild(tagSelect)
+      modal.appendChild(tagContainer)
+    }
+
+    tagSelect.onchange = async () => {
+      selectedTagId = tagSelect.value
+      tagPage = 1
+      tagSelect.disabled = true
+      try {
+        tagGroups = selectedTagId ? await loadMarketGroupsForTag(selectedTagId) : []
+      } finally {
+        tagSelect.disabled = false
+      }
+      renderGroupLists()
+      updatePagination()
+    }
 
     // 搜索栏
     const searchContainer = document.createElement('div')
@@ -636,49 +967,63 @@
     nextBtn.style.background = 'var(--secondary, #fff)'
     nextBtn.style.cursor = 'pointer'
 
+    function groupMatchesQuery(group, query) {
+      const groupName = (group.name || '').toLowerCase()
+      const groupDetail = (group.detail || '').toLowerCase()
+      return !query || groupName.includes(query) || groupDetail.includes(query)
+    }
+
+    function getManagerGroupCatalog() {
+      const catalog = new Map()
+      const addGroups = groups => {
+        groups.forEach(group => {
+          if (group && group.id !== undefined) catalog.set(String(group.id), group)
+        })
+      }
+
+      addGroups(marketGroups)
+      addGroups(tagGroups)
+      addGroups(selectedEmojiGroups)
+      if (Array.isArray(marketFullGroups)) addGroups(marketFullGroups)
+      return catalog
+    }
+
+    function getFilteredTagGroups(query) {
+      const selectedIds = new Set(CONFIG.selectedGroupIds.map(id => String(id)))
+      return tagGroups.filter(
+        group => !selectedIds.has(String(group.id)) && groupMatchesQuery(group, query)
+      )
+    }
+
+    function getTagGroupsForPage(query) {
+      const filteredGroups = getFilteredTagGroups(query)
+      const start = (tagPage - 1) * managerPageSize
+      return filteredGroups.slice(start, start + managerPageSize)
+    }
+
     // 渲染分组列表
     function renderGroupLists() {
-      const selectedIds = new Set(CONFIG.selectedGroupIds)
-      const query = searchInput.value.toLowerCase()
-      const selectedGroupMap = new Map()
-
-      // 优先使用已加载的分组详情，确保跨页显示
-      selectedEmojiGroups.forEach(group => {
-        selectedGroupMap.set(group.id, {
-          id: group.id,
-          name: group.name,
-          icon: group.icon,
-          detail: group.detail,
-          emojiCount: (group.emojis || []).length
-        })
-      })
+      const selectedIds = new Set(CONFIG.selectedGroupIds.map(id => String(id)))
+      const query = searchInput.value.trim().toLowerCase()
+      const groupCatalog = getManagerGroupCatalog()
 
       // 清空列表
       selectedList.innerHTML = ''
       availableList.innerHTML = ''
 
-      // 渲染已选择的分组
+      // 渲染已选择的分组；切换标签时仍保留所有已选择项。
       CONFIG.selectedGroupIds.forEach(groupId => {
-        const group =
-          selectedGroupMap.get(groupId) || marketGroups.find(item => item.id === groupId)
-        if (!group) return
-        const groupName = (group.name || '').toLowerCase()
-        const groupDetail = (group.detail || '').toLowerCase()
-        if (query && !groupName.includes(query) && !groupDetail.includes(query)) return
+        const group = groupCatalog.get(String(groupId))
+        if (!group || !groupMatchesQuery(group, query)) return
 
         const item = createGroupItem(group, true)
         selectedList.appendChild(item)
       })
 
-      // 渲染可选择的分组
-      marketGroups
-        .filter(group => {
-          const groupName = (group.name || '').toLowerCase()
-          const groupDetail = (group.detail || '').toLowerCase()
-          return (
-            !selectedIds.has(group.id) && (groupName.includes(query) || groupDetail.includes(query))
-          )
-        })
+      // 标签筛选使用已加载的标签分组；未筛选时保持现有的服务端分页。
+      const availableGroups = selectedTagId ? getTagGroupsForPage(query) : marketGroups
+      availableGroups
+        .filter(group => !selectedIds.has(String(group.id)) && groupMatchesQuery(group, query))
         .forEach(group => {
           const item = createGroupItem(group, false)
           availableList.appendChild(item)
@@ -697,7 +1042,10 @@
     }
 
     async function updatePagination() {
-      if (!marketUsePagedIndex || !marketIndexInfo) return
+      if (!selectedTagId && (!marketUsePagedIndex || !marketIndexInfo)) {
+        if (pagination) pagination.style.display = 'none'
+        return
+      }
 
       if (!pagination) {
         pagination = document.createElement('div')
@@ -709,6 +1057,14 @@
         pagination.style.borderTop = '1px solid var(--primary-low, #eee)'
 
         prevBtn.onclick = async () => {
+          if (selectedTagId) {
+            if (tagPage <= 1) return
+            tagPage--
+            renderGroupLists()
+            updatePaginationInfo()
+            return
+          }
+
           if (currentMarketPage <= 1) return
           try {
             await loadMarketPageData(currentMarketPage - 1, true)
@@ -720,7 +1076,22 @@
         }
 
         nextBtn.onclick = async () => {
-          if (currentMarketPage >= marketIndexInfo.totalPages) return
+          if (selectedTagId) {
+            const totalPages = Math.max(
+              1,
+              Math.ceil(
+                getFilteredTagGroups(searchInput.value.trim().toLowerCase()).length /
+                  managerPageSize
+              )
+            )
+            if (tagPage >= totalPages) return
+            tagPage++
+            renderGroupLists()
+            updatePaginationInfo()
+            return
+          }
+
+          if (!marketIndexInfo || currentMarketPage >= marketIndexInfo.totalPages) return
           try {
             await loadMarketPageData(currentMarketPage + 1, true)
             renderGroupLists()
@@ -736,14 +1107,27 @@
         modal.appendChild(pagination)
       }
 
+      pagination.style.display = 'flex'
       updatePaginationInfo()
     }
 
     function updatePaginationInfo() {
-      if (!marketIndexInfo) return
-      paginationInfo.textContent = `第 ${currentMarketPage} / ${marketIndexInfo.totalPages} 页`
-      prevBtn.disabled = currentMarketPage <= 1
-      nextBtn.disabled = currentMarketPage >= marketIndexInfo.totalPages
+      if (selectedTagId) {
+        const query = searchInput.value.trim().toLowerCase()
+        const totalGroups = getFilteredTagGroups(query).length
+        const totalPages = Math.max(1, Math.ceil(totalGroups / managerPageSize))
+        tagPage = Math.min(tagPage, totalPages)
+        const tag = marketTags.find(item => item.id === selectedTagId)
+        paginationInfo.textContent = `${tag?.label || '标签'}：第 ${tagPage} / ${totalPages} 页`
+        prevBtn.disabled = tagPage <= 1
+        nextBtn.disabled = tagPage >= totalPages
+      } else {
+        if (!marketIndexInfo) return
+        paginationInfo.textContent = `第 ${currentMarketPage} / ${marketIndexInfo.totalPages} 页`
+        prevBtn.disabled = currentMarketPage <= 1
+        nextBtn.disabled = currentMarketPage >= marketIndexInfo.totalPages
+      }
+
       prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1'
       nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1'
       prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer'
@@ -835,14 +1219,18 @@
 
       actionBtn.onclick = () => {
         if (isSelected) {
-          const index = CONFIG.selectedGroupIds.indexOf(group.id)
+          const index = CONFIG.selectedGroupIds.findIndex(
+            groupId => String(groupId) === String(group.id)
+          )
           if (index > -1) {
             CONFIG.selectedGroupIds.splice(index, 1)
           }
         } else {
           CONFIG.selectedGroupIds.push(group.id)
         }
+        if (selectedTagId) tagPage = 1
         renderGroupLists()
+        updatePaginationInfo()
       }
 
       header.appendChild(actionBtn)
@@ -895,7 +1283,11 @@
     }
 
     // 搜索功能
-    searchInput.addEventListener('input', renderGroupLists)
+    searchInput.addEventListener('input', () => {
+      if (selectedTagId) tagPage = 1
+      renderGroupLists()
+      updatePaginationInfo()
+    })
 
     // 初始渲染
     renderGroupLists()
@@ -2073,6 +2465,7 @@
     console.log('[Market Emoji] 初始化...')
 
     injectStyles()
+    await loadMarketTags()
     await loadMarketMetadata()
     await loadSelectedGroups()
 
