@@ -374,26 +374,54 @@
   }
 
   async function fetchMarketTags() {
-    const tagUrls = [
-      `${CONFIG.marketBaseUrl}/assets/market/tags.json`,
-      `${CONFIG.marketBaseUrl}/assets/market/index/tags.json`,
-      `${CONFIG.marketBaseUrl}/assets/tags.json`,
-      `${CONFIG.marketBaseUrl}/tags.json`
-    ]
-    let lastError = null
-
-    for (const url of tagUrls) {
-      try {
-        const data = await fetchRemoteConfig(url)
-        const tags = normalizeMarketTags(data)
-        if (tags.length > 0) return tags
-        lastError = new Error('标签数据为空或格式无法识别')
-      } catch (error) {
-        lastError = error
-      }
+    const topicsUrl = `${CONFIG.marketBaseUrl}/assets/market/index/topics.json`
+    const indexData = await fetchRemoteConfig(topicsUrl)
+    if (!Array.isArray(indexData.topics)) {
+      throw new Error('topics.json 缺少 topics 数组')
     }
 
-    throw lastError || new Error('市场标签加载失败')
+    const topicTags = await Promise.all(
+      indexData.topics
+        .filter(topic => topic && topic.id && topic.id !== 'all')
+        .map(async topic => {
+          const pageNames = Array.isArray(topic.pages)
+            ? topic.pages.map(page => page.name).filter(Boolean)
+            : Array.from(
+                { length: Number(topic.totalPages || 0) },
+                (_, index) => `${topic.id}-page-${index + 1}.json`
+              )
+
+          const pageResults = await Promise.all(
+            pageNames.map(async pageName => {
+              try {
+                const pageUrl = `${CONFIG.marketBaseUrl}/assets/market/index/${encodeURIComponent(pageName)}`
+                return await fetchRemoteConfig(pageUrl)
+              } catch (error) {
+                console.warn(`[Market Emoji] 加载标签分页 ${pageName} 失败：`, error)
+                return null
+              }
+            })
+          )
+
+          const groups = pageResults
+            .filter(Boolean)
+            .flatMap(page => (Array.isArray(page.groups) ? page.groups : []))
+            .map(normalizeMarketGroupSummary)
+            .filter(Boolean)
+          const groupIds = [...new Set(groups.map(group => group.id))]
+
+          return {
+            id: String(topic.id),
+            label: topic.label || String(topic.id),
+            groupIds,
+            groups
+          }
+        })
+    )
+
+    const tags = topicTags.filter(tag => tag.groupIds.length > 0)
+    if (tags.length === 0) throw new Error('topics.json 没有可用的标签分组')
+    return tags
   }
 
   async function loadMarketFromIndex() {
