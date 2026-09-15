@@ -44,7 +44,7 @@
 - `downloads`：导入、导出和下载用户选择的文件；
 - `sidePanel`、`tabs` 和 `notifications`：提供侧边栏、跨标签页功能和状态提示；
 - `cookies`（可选）：在用户主动使用需要登录的站点功能时完成站点请求；
-- `identity`、`nativeMessaging` 和其他辅助权限：仅用于用户主动启用的 Agent、MCP 或本地连接功能。
+- `identity` 和其他辅助权限：仅用于用户主动启用的 Agent、MCP 或本地连接功能。
 
 ## 政策变更和联系我们
 
@@ -98,7 +98,7 @@ The requested permissions support emoji management and user-initiated helper fea
 - `downloads`: import, export, and download files selected by the user;
 - `sidePanel`, `tabs`, and `notifications`: provide the sidebar, cross-tab features, and status messages;
 - optional `cookies`: complete requests to logged-in sites when the user invokes those features;
-- `identity`, `nativeMessaging`, and other helper permissions: user-enabled Agent, MCP, or local-connection features only.
+- `identity` and other helper permissions: user-enabled Agent, MCP, or local-connection features only.
 
 ## Changes and contact
 

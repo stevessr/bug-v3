@@ -1232,7 +1232,7 @@ async function connect(force = false, transportOverride?: 'native' | 'websocket'
 
   const shouldUseNative = transportOverride
     ? transportOverride === 'native'
-    : settings.transport !== 'websocket'
+    : settings.transport === 'native'
 
   if (shouldUseNative) {
     const nativeConnection = connectNativeBridge(chromeAPI, settings)

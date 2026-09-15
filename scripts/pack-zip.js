@@ -4,7 +4,7 @@ import { spawnSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -52,7 +52,7 @@ async function createZip(outputPath) {
     console.log(`📦 Creating ZIP: ${outputPath}`)
 
     const output = fs.createWriteStream(outputPath)
-    const archive = archiver('zip', { zlib: { level: 9 } })
+    const archive = new ZipArchive({ zlib: { level: 9 } })
 
     output.on('close', () => {
       console.log(`✅ ZIP created: ${archive.pointer()} bytes`)

@@ -49,7 +49,7 @@ const bridgeSettings = ref<BridgeSettings>({
   port: 7465,
   path: '/ws',
   protocol: 'auto',
-  transport: 'auto',
+  transport: 'websocket',
   nativeHostName: 'com.bugv3.mcp',
   localDiscovery: true,
   autoConnect: false,
@@ -321,8 +321,8 @@ const statusColor: Record<ConnectionStatus, string> = {
 }
 
 const transportLabel: Record<BridgeTransport, string> = {
-  auto: 'Native Messaging 优先，WebSocket 回退',
-  native: 'Native Messaging',
+  auto: 'WebSocket（默认）',
+  native: 'Native Messaging（需补回 nativeMessaging 权限）',
   websocket: 'WebSocket'
 }
 
@@ -419,24 +419,18 @@ onUnmounted(() => {
           <code class="flex-1 px-3 py-2 bg-gray-800 text-green-400 rounded font-mono text-sm">
             {{
               bridgeSettings.transport === 'native'
-                ? 'Native host + 扩展自动启动'
-                : bridgeSettings.transport === 'auto'
-                  ? 'Native host（未安装时运行 pnpm mcp）'
-                  : 'pnpm mcp'
+                ? 'Native host + 扩展自动启动（需 nativeMessaging 权限）'
+                : 'pnpm mcp'
             }}
           </code>
-          <a-button
-            v-if="bridgeSettings.transport !== 'native'"
-            size="small"
-            @click="copyCommand('pnpm mcp')"
-          >
+          <a-button size="small" @click="copyCommand('pnpm mcp')">
             <template #icon>
               <CopyOutlined />
             </template>
           </a-button>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          HTTP 端点：{{ httpUrl }}；Native host 不需要额外启动 pnpm 进程。
+          HTTP 端点：{{ httpUrl }}；WebSocket 模式需额外运行 pnpm mcp 进程。
         </p>
       </div>
 
@@ -445,16 +439,16 @@ onUnmounted(() => {
         <ol class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
           <li>
             <template v-if="bridgeSettings.transport === 'native'">
-              先按文档安装 Native host，扩展连接时会自动启动服务器
+              需先在 manifest 中补回 nativeMessaging 权限，并按文档安装 Native host；扩展连接时会自动启动服务器
             </template>
             <template v-else>
               运行
               <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">pnpm mcp</code>
-              启动 WebSocket 回退服务器
+              启动 WebSocket 服务器
             </template>
           </li>
           <li>
-            点击“重连”后按设置选择 Native Messaging 或 WebSocket
+            点击"重连"，扩展将按设置选择 WebSocket 或 Native Messaging 连接
             <code class="px-1 bg-gray-200 dark:bg-gray-600 rounded">{{ wsUrl }}</code>
           </li>
           <li>
@@ -470,12 +464,12 @@ onUnmounted(() => {
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-white">连接方式</label>
             <a-radio-group v-model:value="bridgeSettings.transport" button-style="solid">
-              <a-radio-button value="auto">自动（推荐）</a-radio-button>
-              <a-radio-button value="native">Native host</a-radio-button>
-              <a-radio-button value="websocket">WebSocket</a-radio-button>
+              <a-radio-button value="websocket">WebSocket（推荐）</a-radio-button>
+              <a-radio-button value="native">Native host（需补权限）</a-radio-button>
+              <a-radio-button value="auto">自动</a-radio-button>
             </a-radio-group>
             <p class="text-xs text-gray-500 mt-1">
-              自动模式先尝试 Native Messaging，未安装 host 时才回退到本地 WebSocket。
+              默认走 WebSocket；Native host 模式需在 manifest 中补回 nativeMessaging 权限。
             </p>
           </div>
           <div v-if="bridgeSettings.transport !== 'websocket'">

@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -24,7 +24,7 @@ function createXPI() {
 
   // 创建 ZIP 文件（XPI 本质上就是 ZIP）
   const output = fs.createWriteStream(outputPath)
-  const archive = archiver('zip', {
+  const archive = new ZipArchive({
     zlib: { level: 9 } // 最高压缩级别
   })
 
