@@ -193,6 +193,8 @@ export function setupMessageListener() {
           case 'AGENT_DEBUG_READ_CONSOLE':
           case 'AGENT_DEBUG_READ_NETWORK':
           case 'AGENT_DEBUG_STOP':
+          case 'AGENT_DEBUG_ENSURE_PERMISSION':
+          case 'AGENT_DEBUG_HAS_PERMISSION':
             void handleAgentDebugRequest(typedMsg as any, sendResponse as any)
             return true
           case 'AGENT_RECORDING_START':

@@ -44,6 +44,8 @@
 - `downloads`：导入、导出和下载用户选择的文件；
 - `sidePanel`、`tabs` 和 `notifications`：提供侧边栏、跨标签页功能和状态提示；
 - `cookies`（可选）：在用户主动使用需要登录的站点功能时完成站点请求；
+- `debugger`（可选）：仅当用户在 Agent 设置中主动开启"开发者观测"并执行调试动作时授予，用于读取当前标签页的控制台日志和网络请求以辅助诊断；
+- `alarms`：用于定时执行用户配置的周期性任务（缓存清理、定时浏览、定时点赞、Agent 工作流调度），service worker 休眠后需此 API 唤醒；
 - `identity` 和其他辅助权限：仅用于用户主动启用的 Agent、MCP 或本地连接功能。
 
 ## 政策变更和联系我们
@@ -98,6 +100,8 @@ The requested permissions support emoji management and user-initiated helper fea
 - `downloads`: import, export, and download files selected by the user;
 - `sidePanel`, `tabs`, and `notifications`: provide the sidebar, cross-tab features, and status messages;
 - optional `cookies`: complete requests to logged-in sites when the user invokes those features;
+- optional `debugger`: granted only when the user enables "developer observation" in Agent settings and runs a debug action; used to read the active tab's console logs and network requests for diagnostics;
+- `alarms`: used to run user-configured periodic tasks (cache cleanup, scheduled browse, scheduled likes, Agent workflow scheduling); the service worker needs this API to wake after sleeping;
 - `identity` and other helper permissions: user-enabled Agent, MCP, or local-connection features only.
 
 ## Changes and contact

@@ -15,14 +15,13 @@
     "sidePanel",
     "tabs",
     "tabGroups",
-    "debugger",
     "alarms",
     "downloads.shelf",
     "downloads.ui",
     "notifications",
     "identity"
   ],
-  "optional_permissions": ["cookies"],
+  "optional_permissions": ["cookies", "debugger"],
   "host_permissions": ["<all_urls>", "file:///*"],
   "side_panel": {
     "default_path": "index.html?mode=sidebar"

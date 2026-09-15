@@ -255,8 +255,45 @@ const ensureDebuggerListeners = (chromeAPI: typeof chrome) => {
 }
 
 const requireDebugger = (chromeAPI: typeof chrome | undefined): typeof chrome => {
-  if (!chromeAPI?.debugger) throw new Error('chrome.debugger 不可用，请确认扩展已授予调试权限')
+  if (!chromeAPI?.debugger) {
+    throw new Error(
+      'chrome.debugger 不可用。请在 Agent 设置中开启"开发者观测"并授予调试权限（optional permission）。'
+    )
+  }
   return chromeAPI
+}
+
+/**
+ * 请求可选的 debugger 权限。在用户于 Agent 设置中开启"开发者观测"时调用。
+ * 首次请求会弹窗；已授权则直接 resolve(true)。
+ */
+export async function ensureDebuggerPermission(
+  chromeOverride?: typeof chrome
+): Promise<boolean> {
+  const chromeAPI = chromeOverride || getChromeAPI()
+  const permissions = chromeAPI?.permissions
+  if (!permissions?.request) return false
+
+  try {
+    const granted = await permissions.request({ permissions: ['debugger'] })
+    return granted === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 查询 debugger 权限是否已授予。
+ */
+export function hasDebuggerPermission(chromeOverride?: typeof chrome): boolean {
+  const chromeAPI = chromeOverride || getChromeAPI()
+  const permissions = chromeAPI?.permissions
+  if (!permissions?.contains) return false
+  try {
+    return permissions.contains({ permissions: ['debugger'] }) === true
+  } catch {
+    return false
+  }
 }
 
 const sessionSummary = (session: AgentDebugSession) => ({
@@ -364,6 +401,8 @@ export type AgentDebugRequest =
   | ({ type: 'AGENT_DEBUG_READ_CONSOLE'; tabId: number } & AgentDebugReadOptions)
   | ({ type: 'AGENT_DEBUG_READ_NETWORK'; tabId: number } & AgentDebugReadOptions)
   | { type: 'AGENT_DEBUG_STOP'; tabId: number }
+  | { type: 'AGENT_DEBUG_ENSURE_PERMISSION' }
+  | { type: 'AGENT_DEBUG_HAS_PERMISSION' }
 
 export async function handleAgentDebugRequest(
   message: AgentDebugRequest,
@@ -373,6 +412,13 @@ export async function handleAgentDebugRequest(
     let data: unknown
     switch (message.type) {
       case 'AGENT_DEBUG_START':
+        // debugger 是可选权限；首次启动调试会话前确保已授予。
+        if (!hasDebuggerPermission()) {
+          const granted = await ensureDebuggerPermission()
+          if (!granted) {
+            throw new Error('开发者观测需要调试权限，用户未授予')
+          }
+        }
         data = await startAgentDebugSession(message.tabId, message)
         break
       case 'AGENT_DEBUG_READ_CONSOLE':
@@ -383,6 +429,12 @@ export async function handleAgentDebugRequest(
         break
       case 'AGENT_DEBUG_STOP':
         data = await stopAgentDebugSession(message.tabId)
+        break
+      case 'AGENT_DEBUG_ENSURE_PERMISSION':
+        data = { granted: await ensureDebuggerPermission() }
+        break
+      case 'AGENT_DEBUG_HAS_PERMISSION':
+        data = { granted: hasDebuggerPermission() }
         break
     }
     sendResponse({ success: true, data })

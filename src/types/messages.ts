@@ -198,6 +198,22 @@ export interface AgentDebugStopMessage extends BaseMessage {
   tabId: number
 }
 
+export interface AgentDebugEnsurePermissionMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_ENSURE_PERMISSION'
+}
+
+export interface AgentDebugHasPermissionMessage extends BaseMessage {
+  type: 'AGENT_DEBUG_HAS_PERMISSION'
+}
+
+export type AgentDebugMessage =
+  | AgentDebugStartMessage
+  | AgentDebugReadConsoleMessage
+  | AgentDebugReadNetworkMessage
+  | AgentDebugStopMessage
+  | AgentDebugEnsurePermissionMessage
+  | AgentDebugHasPermissionMessage
+
 export interface AgentRecordingStartMessage extends BaseMessage {
   type: 'AGENT_RECORDING_START'
   tabId: number
@@ -420,6 +436,8 @@ export type TypedMessage =
   | AgentDebugReadConsoleMessage
   | AgentDebugReadNetworkMessage
   | AgentDebugStopMessage
+  | AgentDebugEnsurePermissionMessage
+  | AgentDebugHasPermissionMessage
   | AgentRecordingStartMessage
   | AgentRecordingStopMessage
   | AgentRecordingStatusMessage
