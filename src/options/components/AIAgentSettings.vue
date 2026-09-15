@@ -377,6 +377,9 @@ const mcpServerStatus = reactive<Record<string, string>>({})
 const mcpServerLoading = reactive<Record<string, boolean>>({})
 const folderRootStatus = reactive<Record<string, string>>({})
 const folderRootLoading = reactive<Record<string, boolean>>({})
+const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
+const folderAccessSupported = supportsAgentFolderAccess()
+
 // file:// 主机权限：Chrome 不允许运行时请求 file 地址的访问权，只能由用户在
 // chrome://extensions 的“允许访问文件网址”开关开启。此处检测开关状态并给出引导。
 const fileUrlAccessAllowed = ref(false)
@@ -384,15 +387,15 @@ const fileUrlCheckDone = ref(false)
 const checkFileUrlAccess = () => {
   const ext = (chrome as typeof chrome | undefined)?.extension
   if (!ext?.isAllowedFileSchemeAccess) return
-  ext.isAllowedFileSchemeAccess().then(
-    allowed => {
+  ext
+    .isAllowedFileSchemeAccess()
+    .then(allowed => {
       fileUrlAccessAllowed.value = Boolean(allowed)
       fileUrlCheckDone.value = true
-    },
-    () => {
+    })
+    .catch(() => {
       fileUrlCheckDone.value = true
-    }
-  )
+    })
 }
 // 打开 chrome://extensions 详情页，引导用户开启“允许访问文件网址”开关。
 const openExtensionDetails = () => {
@@ -485,6 +488,35 @@ const addPresetSubagent = () => {
 
 const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, value: boolean) => {
   agent.permissions[key] = value
+}
+
+// debugger 是 Chrome optional_permission：开启“开发者观测”开关时申请；
+// 撤销需用户到扩展详情页移除权限，此处只负责授予。
+const onDebuggerPermissionChange = async (agent: SubAgentConfig, value: boolean): Promise<void> => {
+  if (!value) {
+    updatePermission(agent, 'debugger', false)
+    return
+  }
+  if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+    updatePermission(agent, 'debugger', value)
+    return
+  }
+  const granted = await new Promise<boolean>(resolve => {
+    chrome.runtime?.sendMessage({ type: 'AGENT_DEBUG_ENSURE_PERMISSION' }, resp => {
+      if (chrome.runtime?.lastError) {
+        resolve(false)
+        return
+      }
+      const payload = resp as { success?: boolean; data?: { granted?: boolean } } | undefined
+      resolve(payload?.success === true && payload?.data?.granted === true)
+    })
+  })
+  if (granted) {
+    updatePermission(agent, 'debugger', true)
+  } else {
+    message.warning('未授予调试权限（Chrome optional permission），开发者观测保持关闭')
+    updatePermission(agent, 'debugger', false)
+  }
 }
 
 const normalizeFolderAliasValue = (value: string) =>
@@ -1632,7 +1664,7 @@ watch(
             />
             <a-switch
               :checked="agent.permissions.debugger"
-              @change="value => updatePermission(agent, 'debugger', value as boolean)"
+              @change="value => onDebuggerPermissionChange(agent, value as boolean)"
               checked-children="开发者观测"
               un-checked-children="开发者观测"
             />

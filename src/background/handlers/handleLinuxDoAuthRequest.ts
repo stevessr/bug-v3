@@ -1,5 +1,7 @@
 import { getChromeAPI } from '../utils/main.ts'
 
+import { hasSiteCookiesPermission, ensureSiteCookiesPermission } from './siteCookiesPermission'
+
 export async function handleLinuxDoAuthRequest(_sendResponse: (resp: any) => void) {
   // Handler for requesting linux.do cookies and CSRF token from the options page
   // _sendResponse 用于响应消息
@@ -7,6 +9,11 @@ export async function handleLinuxDoAuthRequest(_sendResponse: (resp: any) => voi
   if (!chromeAPI || !chromeAPI.tabs || !chromeAPI.cookies) {
     _sendResponse({ success: false, error: 'Chrome API not available' })
     return
+  }
+
+  // cookies 是可选权限：用户主动触发登录站点功能时才申请；首次会弹窗。
+  if (!(await hasSiteCookiesPermission())) {
+    await ensureSiteCookiesPermission()
   }
 
   try {

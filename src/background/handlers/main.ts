@@ -14,6 +14,7 @@ export { handleSyncSettings } from './handleSyncSettings'
 export { handleDownloadImage } from './handleDownloadImage'
 export { handleCaptureScreenshot } from './handleCaptureScreenshot'
 export { handleAgentDebugRequest } from './agentDebugger'
+export { handleSiteCookiesRequest } from './siteCookiesPermission'
 export { handleAgentWorkflowRequest, setupAgentWorkflows } from './agentWorkflows'
 export {
   handleGetEmojiData,

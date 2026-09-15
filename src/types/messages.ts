@@ -24,6 +24,20 @@ export interface GetEmojiDataMessage extends BaseMessage {
 }
 
 /**
+ * SITE_COOKIES_HAS_PERMISSION / SITE_COOKIES_ENSURE_PERMISSION 消息
+ * 查询或请求可选的 cookies 权限（用于用户主动使用的登录站点功能）。
+ */
+export interface SiteCookiesHasPermissionMessage extends BaseMessage {
+  type: 'SITE_COOKIES_HAS_PERMISSION'
+  origins?: string[]
+}
+
+export interface SiteCookiesEnsurePermissionMessage extends BaseMessage {
+  type: 'SITE_COOKIES_ENSURE_PERMISSION'
+  origins?: string[]
+}
+
+/**
  * GET_EMOJI_SETTING 消息
  */
 export interface GetEmojiSettingMessage extends BaseMessage {
@@ -423,6 +437,9 @@ export type TypedMessage =
   | SaveEmojiDataMessage
   | SyncSettingsMessage
   | RequestLinuxDoAuthMessage
+  | SiteCookiesHasPermissionMessage
+  | SiteCookiesEnsurePermissionMessage
+  | AgentDebugStartMessage
   | GetLinuxDoUserMessage
   | GetDiscourseSiteSettingsMessage
   | LinuxDoPageFetchMessage

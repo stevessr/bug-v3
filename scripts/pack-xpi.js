@@ -8,6 +8,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import { ZipArchive } from 'archiver'
+import { createFirefoxManifest } from './firefox-manifest.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -38,7 +39,14 @@ function createXPI() {
     throw err
   })
 
-  // 将 dist 目录内容添加到 ZIP
+  // Firefox 变体 manifest：剔除 Chromium-only 权限（sidePanel 等），
+  // 打包时应用 sidebar_action / event page 归一化。
+  const manifestSource = path.join(distPath, 'manifest.json')
+  if (fs.existsSync(manifestSource)) {
+    const sourceManifest = JSON.parse(fs.readFileSync(manifestSource, 'utf8'))
+    fs.writeFileSync(manifestSource, JSON.stringify(createFirefoxManifest(sourceManifest), null, 2))
+    console.log('✅ 已应用 Firefox manifest 归一化（剔除 Chromium-only 权限）')
+  }
   archive.directory(distPath, false)
   archive.finalize()
 }

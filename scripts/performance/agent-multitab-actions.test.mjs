@@ -367,6 +367,25 @@ test('browser action schema and manifest expose the multi-tab contract', () => {
   }
   assert.ok(manifest.permissions.includes('tabs'))
   assert.ok(manifest.permissions.includes('tabGroups'))
-  assert.ok(manifest.permissions.includes('debugger'))
+  assert.ok(manifest.optional_permissions.includes('debugger'))
   assert.ok(manifest.permissions.includes('alarms'))
+})
+
+test('firefox manifest variant strips chromium-only permissions at packaging time', async () => {
+  const { createFirefoxManifest, FIREFOX_UNSUPPORTED_PERMISSIONS } =
+    await import('../../scripts/firefox-manifest.js')
+  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'public/manifest.json'), 'utf8'))
+  const firefox = createFirefoxManifest(manifest)
+
+  for (const permission of FIREFOX_UNSUPPORTED_PERMISSIONS) {
+    assert.ok(
+      !firefox.permissions.includes(permission),
+      `firefox permissions must not include ${permission}`
+    )
+  }
+  assert.ok(!('side_panel' in firefox))
+  assert.ok(firefox.sidebar_action)
+  assert.ok(firefox.sidebar_action.default_panel)
+  // Firefox 支持的可选权限保留：cookies / debugger 按需申请
+  assert.deepEqual(firefox.optional_permissions, manifest.optional_permissions)
 })

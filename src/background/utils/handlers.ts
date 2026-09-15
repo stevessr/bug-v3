@@ -15,6 +15,7 @@ import {
   handleDownloadImage,
   handleCaptureScreenshot,
   handleAgentDebugRequest,
+  handleSiteCookiesRequest,
   handleAgentWorkflowRequest,
   setupAgentWorkflows,
   setupStorageChangeListener,
@@ -196,6 +197,19 @@ export function setupMessageListener() {
           case 'AGENT_DEBUG_ENSURE_PERMISSION':
           case 'AGENT_DEBUG_HAS_PERMISSION':
             void handleAgentDebugRequest(typedMsg as any, sendResponse as any)
+            return true
+          case 'SITE_COOKIES_HAS_PERMISSION':
+          case 'SITE_COOKIES_ENSURE_PERMISSION':
+            void handleSiteCookiesRequest(
+              {
+                type: typedMsg.type,
+                origins:
+                  'origins' in typedMsg && Array.isArray(typedMsg.origins)
+                    ? typedMsg.origins.filter((item): item is string => typeof item === 'string')
+                    : undefined
+              },
+              sendResponse as (response: { success: boolean; granted?: boolean }) => void
+            )
             return true
           case 'AGENT_RECORDING_START':
           case 'AGENT_RECORDING_STOP':
