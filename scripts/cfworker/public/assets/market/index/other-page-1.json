@@ -3,7 +3,7 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 1,
-  "totalGroups": 3,
+  "totalGroups": 4,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -24,11 +24,21 @@
       "isArchived": false
     },
     {
+      "id": "group-1789610895501",
+      "name": "Sakura-ba Ema",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/2/6/126e99795660f6ebf39c3857196d43bc701c0642.gif?v=emoji-17",
+      "detail": "https://x.com/Zzul0714/status/2100243549946327455",
+      "topic": "other",
+      "order": 42,
+      "emojiCount": 19,
+      "isArchived": false
+    },
+    {
       "id": "group-1761328497264",
       "name": "Stevessr 搞来的 orange",
       "icon": "🌿",
       "topic": "other",
-      "order": 45,
+      "order": 46,
       "emojiCount": 69,
       "isArchived": false
     }

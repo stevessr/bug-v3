@@ -19,7 +19,7 @@
       "name": "东方大头",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
       "topic": "touhou",
-      "order": 141,
+      "order": 142,
       "emojiCount": 30,
       "isArchived": false
     },
@@ -28,7 +28,7 @@
       "name": "可爱东方 1",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/a/3/1a3be398e1b0de1e3884f88a34b7252065aa3474.webp",
       "topic": "touhou",
-      "order": 171,
+      "order": 172,
       "emojiCount": 63,
       "isArchived": false
     },
@@ -37,7 +37,7 @@
       "name": "妹红 · 上官绯樱",
       "icon": "https://cdn3.ldstatic.com/original/4X/0/f/6/0f64b7be701d1cd06fe53641f93116d5482a9c5b.avif",
       "topic": "touhou",
-      "order": 183,
+      "order": 184,
       "emojiCount": 1057,
       "isArchived": false
     },
@@ -46,7 +46,7 @@
       "name": "玻璃灵梦",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/b/3/1b342c2f7ab19e979d5f98a53840dd3e20cc7491.webp",
       "topic": "touhou",
-      "order": 234,
+      "order": 235,
       "emojiCount": 29,
       "isArchived": false
     }

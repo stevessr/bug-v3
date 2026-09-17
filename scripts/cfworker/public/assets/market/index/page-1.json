@@ -3,7 +3,7 @@
   "page": 1,
   "pageSize": 48,
   "totalPages": 7,
-  "totalGroups": 301,
+  "totalGroups": 302,
   "groups": [
     {
       "id": "group-1761182869790",
@@ -395,11 +395,21 @@
       "isArchived": false
     },
     {
+      "id": "group-1789610895501",
+      "name": "Sakura-ba Ema",
+      "icon": "https://cdn3.ldstatic.com/original/4X/1/2/6/126e99795660f6ebf39c3857196d43bc701c0642.gif?v=emoji-17",
+      "detail": "https://x.com/Zzul0714/status/2100243549946327455",
+      "topic": "other",
+      "order": 42,
+      "emojiCount": 19,
+      "isArchived": false
+    },
+    {
       "id": "group-1769003966293",
       "name": "steve 的 OC",
       "icon": "S",
       "topic": "OC",
-      "order": 42,
+      "order": 43,
       "emojiCount": 49,
       "isArchived": false
     },
@@ -408,7 +418,7 @@
       "name": "steve 的 OC 表情包",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/a/e/7ae79c2cc6c90287f2ffcdfb26578b4ce95c1ec0.jpeg",
       "topic": "OC",
-      "order": 43,
+      "order": 44,
       "emojiCount": 54,
       "isArchived": false
     },
@@ -417,7 +427,7 @@
       "name": "steve 的 OC？",
       "icon": "😮",
       "topic": "OC",
-      "order": 44,
+      "order": 45,
       "emojiCount": 111,
       "isArchived": false
     },
@@ -426,7 +436,7 @@
       "name": "Stevessr 搞来的 orange",
       "icon": "🌿",
       "topic": "other",
-      "order": 45,
+      "order": 46,
       "emojiCount": 69,
       "isArchived": false
     },
@@ -436,17 +446,8 @@
       "icon": "https://cdn.ldstatic.com/user_avatar/linux.do/stevessr/144/1589755_2.png",
       "detail": "powered by emotelab",
       "topic": "emote_lab",
-      "order": 46,
-      "emojiCount": 191,
-      "isArchived": false
-    },
-    {
-      "id": "group-1760717207846",
-      "name": "taffy",
-      "icon": "https://cdn3.ldstatic.com/original/4X/5/2/c/52ce33243c77626ade1b60b2d12c201ebd964e43.webp",
-      "topic": "vtuber",
       "order": 47,
-      "emojiCount": 134,
+      "emojiCount": 191,
       "isArchived": false
     }
   ]
