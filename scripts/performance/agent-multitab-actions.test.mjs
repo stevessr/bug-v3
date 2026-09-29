@@ -367,6 +367,9 @@ test('browser action schema and manifest expose the multi-tab contract', () => {
   }
   assert.ok(manifest.permissions.includes('tabs'))
   assert.ok(manifest.permissions.includes('tabGroups'))
-  assert.ok(manifest.permissions.includes('debugger'))
+  // Debugger access is optional and requested only for explicit debugging actions.
+  assert.ok(
+    [...(manifest.permissions || []), ...(manifest.optional_permissions || [])].includes('debugger')
+  )
   assert.ok(manifest.permissions.includes('alarms'))
 })

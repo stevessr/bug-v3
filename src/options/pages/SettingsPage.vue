@@ -19,6 +19,7 @@ const EmojiUrlRewriteSettings = defineAsyncComponent(
   () => import('../components/EmojiUrlRewriteSettings.vue')
 )
 const AISettings = defineAsyncComponent(() => import('../components/AISettings.vue'))
+const SemanticEmojiSettings = defineAsyncComponent(() => import('../components/SemanticEmojiSettings.vue'))
 const AIAgentSettings = defineAsyncComponent(() => import('../components/AIAgentSettings.vue'))
 const ImgbedSettings = defineAsyncComponent(() => import('../components/ImgbedSettings.vue'))
 const SyncSettings = defineAsyncComponent(() => import('../components/SyncSettings.vue'))
@@ -225,6 +226,7 @@ onMounted(async () => {
               @update:customOpenAIKey="updateCustomOpenAIKey"
               @update:customOpenAIModel="updateCustomOpenAIModel"
             />
+            <SemanticEmojiSettings :settings="emojiStore.settings" />
           </div>
         </a-tab-pane>
 

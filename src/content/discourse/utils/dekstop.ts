@@ -17,6 +17,7 @@ import {
   rafThrottle
 } from './pickerPerformance'
 import { createTenorSection, isTenorEnabled } from './tenorPicker'
+import { attachSemanticPickerSearch } from './semanticPicker'
 
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
@@ -212,7 +213,9 @@ export async function createDesktopEmojiPicker(
     })
   })
 
+  let cleanupSemanticSearch = () => {}
   const cleanupPickerResources = () => {
+    cleanupSemanticSearch()
     imageObserver.disconnect()
     removePreview()
     tenorHandle?.destroy()
@@ -319,6 +322,18 @@ export async function createDesktopEmojiPicker(
   content.appendChild(scrollableContent)
   emojiPickerDiv.appendChild(filterContainer)
   emojiPickerDiv.appendChild(content)
+  cleanupSemanticSearch = attachSemanticPickerSearch({
+    input: searchInput as HTMLInputElement,
+    parent: emojiPickerDiv as HTMLElement,
+    before: content as HTMLElement,
+    groups: groupsToUse,
+    settings: cachedState.settings,
+    onSelect: emoji => {
+      void insertEmojiIntoEditor(emoji, context)
+      cleanupPickerResources()
+      animateExit(picker as HTMLElement, 'picker')
+    }
+  })
   innerContent.appendChild(emojiPickerDiv)
   picker.appendChild(innerContent)
   // --- hover preview helpers (desktop picker) ---

@@ -28,6 +28,14 @@ export interface AppSettings {
   customOpenAIKey?: string
   customOpenAIModel?: string
   aiConcurrency?: number // AI 请求并发数（1-10，默认 5）
+  // Opt-in semantic sticker recommendations; metadata and explicit search text
+  // are sent to the configured embeddings provider only when enabled.
+  semanticSearchEnabled?: boolean
+  /** Independently opt in to observing the last phrase in an active Discourse composer. */
+  semanticContextSuggestionsEnabled?: boolean
+  semanticEmbeddingEndpoint?: string
+  semanticEmbeddingApiKey?: string
+  semanticEmbeddingModel?: string
   theme?: 'system' | 'light' | 'dark'
   // MD3 theme colors
   md3SeedColor?: string // MD3 种子色

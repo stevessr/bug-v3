@@ -16,6 +16,7 @@ import {
   rafThrottle
 } from './pickerPerformance'
 import { createTenorSection, isTenorEnabled } from './tenorPicker'
+import { attachSemanticPickerSearch } from './semanticPicker'
 
 import { isImageUrl } from '@/utils/isImageUrl'
 import type { Emoji } from '@/types/type'
@@ -83,7 +84,9 @@ export async function createMobileEmojiPicker(
 
   // Helper to close modal and also remove sibling backdrop with animation
   let tenorHandle: ReturnType<typeof createTenorSection> | null = null
+  let cleanupSemanticSearch = () => {}
   const cleanupPickerResources = () => {
+    cleanupSemanticSearch()
     imageObserver.disconnect()
     tenorHandle?.destroy()
   }
@@ -350,6 +353,17 @@ export async function createMobileEmojiPicker(
   content.appendChild(scrollableContent)
   emojiPickerDiv.appendChild(filterContainer)
   emojiPickerDiv.appendChild(content)
+  cleanupSemanticSearch = attachSemanticPickerSearch({
+    input: searchInput as HTMLInputElement,
+    parent: emojiPickerDiv as HTMLElement,
+    before: content as HTMLElement,
+    groups: groupsToUse,
+    settings: cachedState.settings,
+    onSelect: emoji => {
+      void insertEmojiIntoEditor(emoji, context)
+      closeModal()
+    }
+  })
   modalBody.appendChild(emojiPickerDiv)
   modalContainerDiv.appendChild(modalBody)
   modal.appendChild(modalContainerDiv)

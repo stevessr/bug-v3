@@ -1,0 +1,52 @@
+name: Semantic emoji validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/utils/semantic*.ts'
+      - 'src/background/handlers/semanticEmojiSearch.ts'
+      - 'src/content/discourse/utils/*semantic*.ts'
+      - 'src/content/discourse/utils/contextSuggestions.ts'
+      - 'src/content/discourse/utils/dekstop.ts'
+      - 'src/content/discourse/utils/mobile.ts'
+      - 'src/content/utils/init.ts'
+      - 'src/popup/Popup.vue'
+      - 'src/options/components/SemanticEmojiSettings.vue'
+      - 'src/options/pages/SettingsPage.vue'
+      - 'src/types/**'
+      - 'scripts/tests/semantic-emoji-suggestions.spec.ts'
+      - '.github/workflows/semantic-emoji.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.3.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Type check (track existing repo-wide failures)
+        shell: bash
+        run: |
+          set +e
+          pnpm type-check 2>&1 | tee typecheck.log
+          result=${PIPESTATUS[0]}
+          set -e
+          if [ "$result" -ne 0 ]; then
+            echo "::warning::Repository-wide type-check currently has unrelated errors; checking touched semantic files."
+            if grep -E '^src/(utils/semantic[^(:]*|background/(handlers/semanticEmojiSearch|utils/handlers)\.ts|content/discourse/utils/(contextSuggestions|semanticPicker|dekstop|mobile)\.ts|content/utils/init\.ts|options/components/SemanticEmojiSettings\.vue|options/pages/SettingsPage\.vue|popup/Popup\.vue|types/(type|defaultSettings|messages)\.ts)' typecheck.log; then
+              echo "::error::Type errors found in files touched by semantic suggestions."
+              exit 1
+            fi
+            echo "Global type-check has baseline errors in unrelated files (see job log)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Build extension
+        run: pnpm build
+      - name: Test semantic ranking and context scope
+        run: pnpm exec playwright test scripts/tests/semantic-emoji-suggestions.spec.ts --reporter=line
