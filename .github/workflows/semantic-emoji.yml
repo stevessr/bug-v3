@@ -1,0 +1,39 @@
+name: Semantic emoji validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/utils/semantic*.ts'
+      - 'src/background/handlers/semanticEmojiSearch.ts'
+      - 'src/content/discourse/utils/*semantic*.ts'
+      - 'src/content/discourse/utils/contextSuggestions.ts'
+      - 'src/content/discourse/utils/dekstop.ts'
+      - 'src/content/discourse/utils/mobile.ts'
+      - 'src/content/utils/init.ts'
+      - 'src/popup/Popup.vue'
+      - 'src/options/components/SemanticEmojiSettings.vue'
+      - 'src/options/pages/SettingsPage.vue'
+      - 'src/types/**'
+      - 'scripts/tests/semantic-emoji-suggestions.spec.ts'
+      - '.github/workflows/semantic-emoji.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.3.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Type check
+        run: pnpm type-check
+      - name: Build extension
+        run: pnpm build
+      - name: Test semantic ranking and context scope
+        run: pnpm exec playwright test scripts/tests/semantic-emoji-suggestions.spec.ts --reporter=line
