@@ -31,6 +31,8 @@ export interface AppSettings {
   // Opt-in semantic sticker recommendations; metadata and explicit search text
   // are sent to the configured embeddings provider only when enabled.
   semanticSearchEnabled?: boolean
+  /** Independently opt in to observing the last phrase in an active Discourse composer. */
+  semanticContextSuggestionsEnabled?: boolean
   semanticEmbeddingEndpoint?: string
   semanticEmbeddingApiKey?: string
   semanticEmbeddingModel?: string
