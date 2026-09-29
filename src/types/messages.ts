@@ -413,6 +413,13 @@ export interface FavoritesUpdatedMessage extends BaseMessage {
   }
 }
 
+/** Explicit semantic lookup from a picker or popup search field. */
+export interface SemanticEmojiSearchMessage extends BaseMessage {
+  type: 'SEMANTIC_EMOJI_SEARCH'
+  query: string
+  items: Array<{ id: string; text: string; usageCount?: number }>
+}
+
 /**
  * 所有基于 type 的消息联合类型
  */
@@ -465,6 +472,7 @@ export type TypedMessage =
   | AddEmojiFromWebTypedMessage
   | UploadAndAddEmojiTypedMessage
   | FavoritesUpdatedMessage
+  | SemanticEmojiSearchMessage
 
 /**
  * 所有消息的联合类型
