@@ -40,7 +40,7 @@ jobs:
           set -e
           if [ "$result" -ne 0 ]; then
             echo "::warning::Repository-wide type-check currently has unrelated errors; checking touched semantic files."
-            if grep -E '^src/(utils/semantic[^(:]*|background/(handlers/semanticEmojiSearch|utils/handlers)\\.ts|content/discourse/utils/(contextSuggestions|semanticPicker|dekstop|mobile)\\.ts|content/utils/init\\.ts|options/components/SemanticEmojiSettings\\.vue|options/pages/SettingsPage\\.vue|popup/Popup\\.vue|types/(type|defaultSettings|messages)\\.ts)' typecheck.log; then
+            if grep -E '^src/(utils/semantic[^(:]*|background/(handlers/semanticEmojiSearch|utils/handlers)\.ts|content/discourse/utils/(contextSuggestions|semanticPicker|dekstop|mobile)\.ts|content/utils/init\.ts|options/components/SemanticEmojiSettings\.vue|options/pages/SettingsPage\.vue|popup/Popup\.vue|types/(type|defaultSettings|messages)\.ts)' typecheck.log; then
               echo "::error::Type errors found in files touched by semantic suggestions."
               exit 1
             fi
