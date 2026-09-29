@@ -1,5 +1,6 @@
 import { loadDataFromStorage } from '../data/storage'
 import { startReadTracker, stopReadTracker } from '../discourse/utils/readTracker'
+import { initSemanticContextSuggestions } from '../discourse/utils/contextSuggestions'
 
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
@@ -25,6 +26,7 @@ let storageChangeHandler: ((changes: Record<string, unknown>, namespace: string)
   null
 let visibilityChangeHandler: (() => void) | null = null
 let initialized = false
+let stopSemanticContextSuggestions: (() => void) | null = null
 
 const clearTimeoutHandle = (handle: number | null): number | null => {
   if (handle !== null) window.clearTimeout(handle)
@@ -74,6 +76,8 @@ export function cleanupEmojiFeature(): void {
 
   stopReadTracker()
   stopEditorFocusTracking()
+  stopSemanticContextSuggestions?.()
+  stopSemanticContextSuggestions = null
 
   // 清理浮动按钮
   cleanupFloatingButton()
@@ -229,6 +233,8 @@ export async function initializeEmojiFeature(
   // takes focus. Non-editor controls never replace this remembered target.
   startEditorFocusTracking()
   await loadDataFromStorage()
+  stopSemanticContextSuggestions?.()
+  stopSemanticContextSuggestions = initSemanticContextSuggestions()
   try {
     applyCustomCssFromCache()
   } catch (_e) {
@@ -347,7 +353,10 @@ export async function initializeEmojiFeature(
           // Set new timer
           storageDebounceTimeoutId = window.setTimeout(() => {
             console.log('[Emoji Extension] Storage change detected (module), reloading data')
-            void loadDataFromStorage()
+            void loadDataFromStorage().then(() => {
+              stopSemanticContextSuggestions?.()
+              stopSemanticContextSuggestions = initSemanticContextSuggestions()
+            })
             // re-apply custom css after storage changes
             try {
               applyCustomCssFromCache()
