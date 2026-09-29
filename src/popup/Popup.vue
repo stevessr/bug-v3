@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ConfigProvider as AConfigProvider } from 'ant-design-vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 
 import GroupTabs from './components/GroupTabs.vue'
 import LazyEmojiGrid from './components/LazyEmojiGrid.vue'
 import { usePopup } from './usePopup'
 
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import { suggestEmojis, semanticEmojiId } from '@/utils/semanticEmoji'
+import type { Emoji } from '@/types/type'
 
 const { t, initI18n } = useI18n()
 const enableForumBrowser = __ENABLE_FORUM_BROWSER__
@@ -22,6 +25,52 @@ const {
   openOptions,
   openSidebar
 } = usePopup()
+
+// Keep lexical results immediately; model suggestions arrive after a quiet period.
+const semanticIds = ref<string[]>([])
+const semanticBusy = ref(false)
+const semanticError = ref('')
+let semanticTimer: ReturnType<typeof setTimeout> | undefined
+let semanticGeneration = 0
+
+watch(
+  () => [emojiStore.searchQuery, emojiStore.groups, emojiStore.settings.semanticSearchEnabled] as const,
+  ([query]) => {
+    const generation = ++semanticGeneration
+    if (semanticTimer) clearTimeout(semanticTimer)
+    semanticIds.value = []
+    semanticBusy.value = false
+    semanticError.value = ''
+    if (!emojiStore.settings.semanticSearchEnabled || query.trim().length < 2) return
+    semanticTimer = setTimeout(async () => {
+      semanticBusy.value = true
+      const result = await suggestEmojis(query, emojiStore.groups, emojiStore.settings)
+      if (generation !== semanticGeneration) return
+      semanticIds.value = result.matches.map(match => match.id)
+      semanticError.value = result.error || ''
+      semanticBusy.value = false
+    }, 500)
+  }
+)
+
+onBeforeUnmount(() => {
+  ++semanticGeneration
+  if (semanticTimer) clearTimeout(semanticTimer)
+})
+
+const searchResults = computed<Emoji[]>(() => {
+  const regular = emojiStore.filteredEmojis
+  if (!semanticIds.value.length) return regular
+  const all = new Map<string, Emoji>()
+  for (const group of emojiStore.groups) {
+    for (const emoji of group.emojis || []) all.set(semanticEmojiId(emoji), emoji)
+  }
+  const suggested = semanticIds.value
+    .map(id => all.get(id))
+    .filter((emoji): emoji is Emoji => Boolean(emoji))
+  const seen = new Set(suggested.map(semanticEmojiId))
+  return [...suggested, ...regular.filter(emoji => !seen.has(semanticEmojiId(emoji)))]
+})
 
 const setActiveHandler = (id: string) => {
   emojiStore.activeGroupId = id
@@ -163,10 +212,14 @@ const openDiscourseBrowser = () => {
 
       <!-- Lazy Emoji Grids: 只渲染当前活动分组，真正的虚拟化 -->
       <div class="popup-body">
-        <!-- 搜索模式：使用过滤后的表情 -->
+        <!-- Search stays usable before / without an embedding service. -->
         <template v-if="emojiStore.searchQuery">
+          <div v-if="emojiStore.settings.semanticSearchEnabled && emojiStore.searchQuery.trim().length >= 2"
+               class="semantic-search-status" role="status" aria-live="polite">
+            {{ semanticBusy ? '正在进行 AI 语义联想…' : semanticError ? semanticError : semanticIds.length ? '✨ 已按语义关联优先排列' : '关键词搜索' }}
+          </div>
           <LazyEmojiGrid
-            :emojis="emojiStore.filteredEmojis"
+            :emojis="searchResults"
             :isLoading="emojiStore.isLoading"
             :favorites="emojiStore.favorites"
             :gridColumns="emojiStore.settings.gridColumns"
@@ -366,6 +419,14 @@ body,
   width: 1rem;
   height: 1rem;
   color: var(--md3-on-surface-variant);
+}
+
+/* Semantic search status */
+.semantic-search-status {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  color: var(--md3-on-surface-variant);
+  flex: 0 0 auto !important;
 }
 
 /* Toast - MD3 themed */
