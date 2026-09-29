@@ -40,7 +40,7 @@ export function rankSemanticMatches(
         id: item.id,
         score: similarity + (lexical ? 0.18 : 0) +
           Math.min(Math.log1p(Math.max(0, item.usageCount || 0)) / 70, 0.07),
-        eligible: similarity >= 0.2 || lexical
+        eligible: item.vector.length === queryVector.length && (similarity >= 0.2 || lexical)
       }
     })
     .filter(result => result.eligible)
