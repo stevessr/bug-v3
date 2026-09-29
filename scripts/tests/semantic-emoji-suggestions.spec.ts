@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 
 import { cosineSimilarity, normalizeEmbedding, rankSemanticMatches } from '../../src/utils/semanticRanking'
 import { semanticEmojiCandidates, semanticEmojiId } from '../../src/utils/semanticEmoji'
+import { extractSemanticContext } from '../../src/utils/semanticContext'
 import type { EmojiGroup } from '../../src/types/type'
 
 test('validates embeddings and normalizes their length', () => {
@@ -41,4 +42,13 @@ test('uses emoji name, tags and group description without collecting image bytes
   expect(items[0].text).toContain('尴尬')
   expect(items[0].text).toContain('猫猫')
   expect(items[0].text).not.toContain('https://')
+})
+
+test('automatic context uses only the last phrase of the active draft', () => {
+  expect(extractSemanticContext('昨天发生了很多事。今天好累')).toBe('今天好累')
+  expect(extractSemanticContext('不要发这句给模型！开心')).toBe('开心')
+  expect(extractSemanticContext('https://example.com/a')).toBe('')
+  expect(extractSemanticContext('代码：\`hello\`')).toBe('')
+  expect(extractSemanticContext('a')).toBe('')
+  expect(extractSemanticContext('旧句。' + '喜'.repeat(120))).toHaveLength(80)
 })
