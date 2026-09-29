@@ -26,6 +26,7 @@ import {
   handleProxyImageRequest
 } from '../handlers/main.ts'
 import * as mcpBridgeModule from '../handlers/mcpBridge.ts'
+import { handleSemanticEmojiSearch } from '../handlers/semanticEmojiSearch'
 
 import { getChromeAPI } from './main.ts'
 
@@ -73,6 +74,10 @@ export function setupMessageListener() {
         const typedMsg = message as TypedMessage
 
         switch (typedMsg.type) {
+          case 'SEMANTIC_EMOJI_SEARCH':
+            void handleSemanticEmojiSearch(typedMsg as any, sendResponse as any)
+            return true
+
           case 'GET_EMOJI_DATA':
             handleGetEmojiData(typedMsg as any, sendResponse as any)
             return true
