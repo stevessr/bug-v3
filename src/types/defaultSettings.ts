@@ -32,6 +32,10 @@ export const defaultSettings: AppSettings = {
   chatMultiReactorEmojis: [], // 默认空数组，使用模块内置的默认表情列表
   geminiApiUrl: '', // Default empty (uses official API)
   geminiLanguage: 'Chinese', // 默认 AI 命名语言
+  semanticSearchEnabled: false,
+  semanticEmbeddingEndpoint: 'https://api.openai.com/v1',
+  semanticEmbeddingApiKey: '',
+  semanticEmbeddingModel: 'text-embedding-3-small',
   md3ColorScheme: 'default', // 默认 MD3 配色方案
   md3SeedColor: '#1890ff', // 默认 MD3 种子色
   // Default: keep legacy conservative behavior for backward compatibility
