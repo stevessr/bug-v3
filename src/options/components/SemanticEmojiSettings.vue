@@ -7,6 +7,7 @@ import { useEmojiStore } from '@/stores/emojiStore'
 const props = defineProps<{ settings: AppSettings }>()
 const store = useEmojiStore()
 const enabled = ref(false)
+const contextEnabled = ref(false)
 const endpoint = ref('')
 const apiKey = ref('')
 const model = ref('')
@@ -16,6 +17,7 @@ watch(
   () => props.settings,
   value => {
     enabled.value = Boolean(value.semanticSearchEnabled)
+    contextEnabled.value = Boolean(value.semanticContextSuggestionsEnabled)
     endpoint.value = value.semanticEmbeddingEndpoint || 'https://api.openai.com/v1'
     apiKey.value = value.semanticEmbeddingApiKey || ''
     model.value = value.semanticEmbeddingModel || 'text-embedding-3-small'
@@ -38,6 +40,7 @@ function save() {
     }
     store.updateSettings({
       semanticSearchEnabled: enabled.value,
+      semanticContextSuggestionsEnabled: enabled.value && contextEnabled.value,
       semanticEmbeddingEndpoint: url.toString(),
       semanticEmbeddingApiKey: apiKey.value.trim(),
       semanticEmbeddingModel: model.value.trim()
@@ -61,10 +64,21 @@ function save() {
       <a-switch v-model:checked="enabled" />
     </div>
     <p class="text-xs text-amber-700 dark:text-amber-300">
-      默认关闭。开启后，仅在表情搜索框中输入至少 2 个字符才会请求服务；
-      输入的查询文字及表情名称、标签和分组名会传给你指定的提供商。
-      不会自动读取或发送网页聊天记录、图片或 API Key 给网页。服务可能计费。
+      默认关闭。基础模式仅在表情搜索框中输入至少 2 个字符时请求服务。
+      查询文字和表情名称/标签/分组名会发送给配置的提供商，不上传图片。
+      不会自动发送聊天历史。API 请求可能计费。
     </p>
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-sm dark:text-white">Discourse 聊天/帖子输入时自动联想（单独授权）</div>
+        <p class="text-xs text-amber-700 dark:text-amber-300">
+          启用后监听当前正在输入的编辑器，停止输入约 900 ms 后，
+          仅将最后一段文字（最多 80 字符）发送给配置的 Embedding 提供商；
+          不读取既有消息或其他网页输入框。可以随时关闭。
+        </p>
+      </div>
+      <a-switch v-model:checked="contextEnabled" :disabled="!enabled" />
+    </div>
     <div>
       <label class="block text-sm mb-1 dark:text-white">Embedding API Base URL</label>
       <a-input v-model:value="endpoint" placeholder="https://api.openai.com/v1" />
