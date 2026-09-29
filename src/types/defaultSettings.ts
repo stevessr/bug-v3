@@ -33,6 +33,7 @@ export const defaultSettings: AppSettings = {
   geminiApiUrl: '', // Default empty (uses official API)
   geminiLanguage: 'Chinese', // 默认 AI 命名语言
   semanticSearchEnabled: false,
+  semanticContextSuggestionsEnabled: false,
   semanticEmbeddingEndpoint: 'https://api.openai.com/v1',
   semanticEmbeddingApiKey: '',
   semanticEmbeddingModel: 'text-embedding-3-small',
