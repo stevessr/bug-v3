@@ -1,8 +1,12 @@
 import { DOA, createE } from '../../utils/dom/createEl'
+import type { DownloadImageMessage } from '../../../types/messages'
+
+import { decodeHistory, decodeSettings, encodeHistory, encodeSettings } from './storageCodec'
 
 /**
  * X.com 图片自动下载管理器
  * 根据配置的 URL 后缀自动下载图片
+ * 历史与设置使用高压缩率存储格式（见 storageCodec.ts）
  */
 
 const STORAGE_KEY = 'x-autodownload-settings'
@@ -22,24 +26,34 @@ const DEFAULT_SETTINGS: AutoDownloadSettings = {
 /**
  * 发送消息到 background script
  */
-function sendMessageToBackground(message: any): Promise<any> {
-  return new Promise(resolve => {
-    try {
-      if (
-        (window as any).chrome &&
-        (window as any).chrome.runtime &&
-        (window as any).chrome.runtime.sendMessage
-      ) {
-        ;(window as any).chrome.runtime.sendMessage(message, (response: any) => {
-          resolve(response)
-        })
-      } else {
-        resolve({ success: false, error: 'chrome.runtime.sendMessage not available' })
-      }
-    } catch (e) {
-      resolve({ success: false, error: e instanceof Error ? e.message : String(e) })
+interface DownloadImageResponse {
+  success: boolean
+  error?: string
+}
+
+function sendMessageToBackground(message: DownloadImageMessage): Promise<DownloadImageResponse> {
+  const { promise, resolve } = Promise.withResolvers<DownloadImageResponse>()
+  try {
+    const runtime = (window as unknown as { chrome?: typeof globalThis.chrome }).chrome?.runtime
+    if (runtime?.sendMessage) {
+      runtime.sendMessage(message, (response: unknown) => {
+        if (
+          response &&
+          typeof response === 'object' &&
+          typeof (response as { success: unknown }).success === 'boolean'
+        ) {
+          resolve(response as DownloadImageResponse)
+        } else {
+          resolve({ success: false, error: 'Invalid response from background' })
+        }
+      })
+    } else {
+      resolve({ success: false, error: 'chrome.runtime.sendMessage not available' })
     }
-  })
+  } catch (e) {
+    resolve({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+  return promise
 }
 
 /**
@@ -193,17 +207,8 @@ export class AutoDownloadManager {
   private async loadSettings(): Promise<void> {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // 支持新格式 { data: {...}, timestamp } 和旧格式
-        const data = parsed.data || parsed
-        this.settings = {
-          enableAutoDownload: data.enableAutoDownload ?? DEFAULT_SETTINGS.enableAutoDownload,
-          autoDownloadSuffixes: Array.isArray(data.autoDownloadSuffixes)
-            ? data.autoDownloadSuffixes
-            : DEFAULT_SETTINGS.autoDownloadSuffixes
-        }
-      }
+      const parsed = decodeSettings(stored, DEFAULT_SETTINGS)
+      this.settings = parsed
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to load settings:', error)
     }
@@ -212,13 +217,7 @@ export class AutoDownloadManager {
   private async loadHistory(): Promise<void> {
     try {
       const stored = localStorage.getItem(HISTORY_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const data = parsed.data || parsed
-        if (typeof data === 'object') {
-          this.history = new Map(Object.entries(data))
-        }
-      }
+      this.history = await decodeHistory(stored ?? '')
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to load history:', error)
     }
@@ -226,13 +225,7 @@ export class AutoDownloadManager {
 
   private async saveSettings(): Promise<void> {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          data: this.settings,
-          timestamp: Date.now()
-        })
-      )
+      localStorage.setItem(STORAGE_KEY, encodeSettings(this.settings))
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to save settings:', error)
     }
@@ -240,13 +233,7 @@ export class AutoDownloadManager {
 
   private async saveHistory(): Promise<void> {
     try {
-      localStorage.setItem(
-        HISTORY_KEY,
-        JSON.stringify({
-          data: Object.fromEntries(this.history),
-          timestamp: Date.now()
-        })
-      )
+      localStorage.setItem(HISTORY_KEY, await encodeHistory(this.history))
     } catch (error) {
       console.warn('[AutoDownloadManager] Failed to save history:', error)
     }
@@ -290,8 +277,16 @@ export class AutoDownloadManager {
     return { ...this.settings }
   }
 
-  async updateSettings(key: keyof AutoDownloadSettings, value: any): Promise<void> {
-    ;(this.settings as any)[key] = value
+  async updateSettings(key: 'enableAutoDownload', value: boolean): Promise<void>
+  async updateSettings(key: 'autoDownloadSuffixes', value: string[]): Promise<void>
+  async updateSettings(key: keyof AutoDownloadSettings, value: boolean | string[]): Promise<void> {
+    if (key === 'autoDownloadSuffixes') {
+      this.settings.autoDownloadSuffixes = Array.isArray(value)
+        ? value
+        : this.settings.autoDownloadSuffixes
+    } else {
+      this.settings.enableAutoDownload = value === true
+    }
     await this.saveSettings()
   }
 
@@ -312,11 +307,10 @@ export class AutoDownloadManager {
     console.log(`[AutoDownloadManager] Triggering download for: ${imageUrl}`)
     this.addToHistory(imageUrl)
 
-    // 发送消息给 background 处理下载
+    // 发送消息给 background 处理下载（source 仅用于后台日志，非类型化字段）
     const response = await sendMessageToBackground({
       type: 'DOWNLOAD_IMAGE',
-      url: imageUrl,
-      source: 'x-auto-download'
+      url: imageUrl
     })
 
     if (response?.success) {

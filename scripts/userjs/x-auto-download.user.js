@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X.com Auto Download
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.5
 // @description  Automatically download images from X.com based on configured suffixes
 // @author       Code
 // @match        https://x.com/*
@@ -43,20 +43,440 @@
     return raw
   }
 
+  // --- Storage codec (与扩展 storageCodec.ts 相同的 v3 格式) ---
+  // twimg URL 缩减 + 时间戳差值；v3 bit-packed（90-bit ID + 6-bit tag + varint delta）
+  // 直接 pack15；v2 行式 deflate + pack15 兜底；再退 v1 base64url、明文行。
+  const TWIMG_URL_RE =
+    /^https:\/\/pbs\.twimg\.com\/media\/([A-Za-z0-9_-]+)\?format=([a-z0-9]+)&name=([a-z0-9x]+)$/
+  const COMPRESSED_HISTORY_PREFIX = 'AD1 '
+  const PACKED_HISTORY_PREFIX = 'AD2 '
+  const BITPACKED_HISTORY_PREFIX = 'AD3 '
+  const PLAIN_SETTINGS_PREFIX = 'ADS1 '
+  const ENTRY_SEP = '\u0001'
+  const LINE_SEP = '\n'
+  const PACK15_BASE = 0x20
+  const PACK15_CHUNK_UNITS = 8192
+  // v3 常量
+  const V3_FMT_LIST = ['jpg', 'png', 'gif', 'webp']
+  const V3_NAME_LIST = ['large', 'orig', '4096x4096', 'small', 'medium', 'thumb']
+  const V3_ID_CHARS = 15
+  const V3_ID_BITS = V3_ID_CHARS * 6
+  const V3_TAG_BITS = 6
+  const V3_ESCAPE_BITS = 96
+  const V3_MAX_BODY_BYTES = 1024 * 1024
+  const V3_B64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+  const V3_FMT_INDEX = { jpg: 0, png: 1, gif: 2, webp: 3 }
+  const V3_NAME_INDEX = { large: 0, orig: 1, '4096x4096': 2, small: 3, medium: 4, thumb: 5 }
+
+  function shortenTwimgUrl(url) {
+    const m = url.match(TWIMG_URL_RE)
+    if (!m) return url
+    return `${m[1]}~${m[2]}~${m[3]}`
+  }
+
+  function expandTwimgToken(token) {
+    const parts = token.split('~')
+    if (parts.length !== 3 || !/^[A-Za-z0-9_-]+$/.test(parts[0])) return token
+    return `https://pbs.twimg.com/media/${parts[0]}?format=${parts[1]}&name=${parts[2]}`
+  }
+
+  function bytesToBase64Url(bytes) {
+    let binary = ''
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+
+  function base64UrlToBytes(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/')
+    while (s.length % 4) s += '='
+    const binary = atob(s)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return bytes
+  }
+
+  async function readAllBytes(stream) {
+    const chunks = []
+    let total = 0
+    const reader = stream.getReader()
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      total += value.byteLength
+    }
+    const out = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      out.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return out
+  }
+
+  async function deflateRawBytes(bytes) {
+    const cs = new CompressionStream('deflate-raw')
+    const writer = cs.writable.getWriter()
+    writer.write(bytes)
+    writer.close()
+    return readAllBytes(cs.readable)
+  }
+
+  async function inflateRawBytes(bytes) {
+    const ds = new DecompressionStream('deflate-raw')
+    const writer = ds.writable.getWriter()
+    writer.write(bytes)
+    writer.close()
+    return readAllBytes(ds.readable)
+  }
+
+  function parseHistoryLines(body) {
+    const map = {}
+    let prev = 0
+    for (const line of body.split(LINE_SEP)) {
+      if (!line) continue
+      const sepIdx = line.indexOf(ENTRY_SEP)
+      if (sepIdx <= 0) continue
+      const token = line.slice(0, sepIdx)
+      const ts = Number(line.slice(sepIdx + 1))
+      if (!Number.isFinite(ts)) continue
+      const absolute = prev + ts
+      prev = absolute
+      map[expandTwimgToken(token)] = absolute
+    }
+    return map
+  }
+
+  function pack15(bytes) {
+    const parts = []
+    let units = []
+    let acc = 0
+    let bits = 0
+    for (let i = 0; i < bytes.length; i++) {
+      acc |= bytes[i] << bits
+      bits += 8
+      while (bits >= 15) {
+        units.push(PACK15_BASE + (acc & 0x7fff))
+        acc >>>= 15
+        bits -= 15
+        if (units.length >= PACK15_CHUNK_UNITS) {
+          parts.push(String.fromCharCode(...units))
+          units = []
+        }
+      }
+    }
+    if (bits > 0) units.push(PACK15_BASE + (acc & 0x7fff))
+    if (units.length > 0) parts.push(String.fromCharCode(...units))
+    return parts.join('')
+  }
+
+  function unpack15(s) {
+    const out = new Uint8Array(Math.floor((s.length * 15) / 8))
+    let written = 0
+    let acc = 0
+    let bits = 0
+    for (let i = 0; i < s.length; i++) {
+      acc |= (s.charCodeAt(i) - PACK15_BASE) << bits
+      bits += 15
+      while (bits >= 8) {
+        out[written++] = acc & 0xff
+        acc >>>= 8
+        bits -= 8
+      }
+    }
+    return written === out.length ? out : out.slice(0, written)
+  }
+
+  // --- v3 bit-packed helpers ---
+  function appendBits(target, value, count) {
+    for (let i = count - 1; i >= 0; i--) target.push((value >> i) & 1)
+  }
+
+  function mediaIdBits(id) {
+    if (id.length !== V3_ID_CHARS) return null
+    const bits = []
+    for (let i = 0; i < id.length; i++) {
+      const idx = V3_B64URL.indexOf(id[i])
+      if (idx < 0) return null
+      appendBits(bits, idx, 6)
+    }
+    return bits
+  }
+
+  function bitsToMediaId(bits, offset) {
+    if (offset + V3_ID_BITS > bits.length) return null
+    let out = ''
+    for (let c = 0; c < V3_ID_CHARS; c++) {
+      let idx = 0
+      for (let b = 0; b < 6; b++) idx = (idx << 1) | bits[offset + c * 6 + b]
+      out += V3_B64URL[idx]
+    }
+    return out
+  }
+
+  function varintBytes(value) {
+    const out = []
+    let n = value
+    do {
+      let byte = n % 128
+      n = Math.floor(n / 128)
+      if (n) byte += 128
+      out.push(byte)
+    } while (n)
+    return out
+  }
+
+  function readVarint(bytes, offset) {
+    let n = 0
+    let shift = 0
+    let i = offset
+    for (;;) {
+      if (i >= bytes.length) return null
+      const byte = bytes[i++]
+      n += (byte % 128) * Math.pow(2, shift)
+      if (byte < 128) return [n, i]
+      shift += 7
+      if (shift > 63) return null
+    }
+  }
+
+  function bitsToBytes(bits) {
+    const out = new Uint8Array(Math.ceil(bits.length / 8))
+    for (let i = 0; i < bits.length; i++) {
+      if (bits[i]) out[i >> 3] |= 1 << (7 - (i & 7))
+    }
+    return out
+  }
+
+  function bytesToBits(bytes) {
+    const bits = []
+    for (let i = 0; i < bytes.length; i++) {
+      for (let b = 7; b >= 0; b--) bits.push((bytes[i] >> b) & 1)
+    }
+    return bits
+  }
+
+  function encodeBitPackedBody(entries) {
+    const bits = []
+    const tail = []
+    let prev = 0
+
+    for (const [url, ts] of entries) {
+      const delta = ts - prev
+      prev = ts
+
+      const m = url.match(TWIMG_URL_RE)
+      if (m) {
+        const idBitsArr = mediaIdBits(m[1])
+        const fmtIdx = V3_FMT_INDEX[m[2]]
+        const nameIdx = V3_NAME_INDEX[m[3]]
+        if (idBitsArr && fmtIdx !== undefined && nameIdx !== undefined) {
+          bits.push(...idBitsArr)
+          appendBits(bits, fmtIdx, 3)
+          appendBits(bits, nameIdx, 3)
+          tail.push(...varintBytes(delta))
+          continue
+        }
+      }
+
+      // 非 twimg / 非规范形态：96-bit 全零转义标记 + [urlLen][utf8 url][varint delta]
+      appendBits(bits, 0, V3_ESCAPE_BITS)
+      const urlBytes = new TextEncoder().encode(url)
+      tail.push(urlBytes.length, ...urlBytes, ...varintBytes(delta))
+    }
+
+    return new Uint8Array([...bitsToBytes(bits), ...tail])
+  }
+
+  function tryParseBitPackedEntries(bits, bytes, entryCount) {
+    const headEntryBits = V3_ID_BITS + V3_TAG_BITS
+    const headBitsLen = entryCount * headEntryBits
+    const map = {}
+    let prev = 0
+    let byteOffset = headBitsLen / 8
+
+    for (let e = 0; e < entryCount; e++) {
+      const bitOffset = e * headEntryBits
+
+      let allZero = true
+      for (let b = 0; b < V3_ESCAPE_BITS; b++) {
+        if (bits[bitOffset + b]) {
+          allZero = false
+          break
+        }
+      }
+
+      if (allZero) {
+        // 非 twimg：[1 字节 urlLen][utf8 url][varint delta]
+        if (byteOffset >= bytes.length) return null
+        const urlLen = bytes[byteOffset]
+        if (byteOffset + 1 + urlLen > bytes.length) return null
+        const url = new TextDecoder().decode(bytes.slice(byteOffset + 1, byteOffset + 1 + urlLen))
+        const r = readVarint(bytes, byteOffset + 1 + urlLen)
+        if (!r) return null
+        prev += r[0]
+        map[url] = prev
+        byteOffset = r[1]
+      } else {
+        const r = readVarint(bytes, byteOffset)
+        if (!r) return null
+        const delta = r[0]
+        byteOffset = r[1]
+        prev += delta
+
+        const id = bitsToMediaId(bits, bitOffset)
+        if (!id) return null
+        let fmtIdx = 0
+        let nameIdx = 0
+        for (let b = 0; b < 3; b++) {
+          fmtIdx = (fmtIdx << 1) | bits[bitOffset + V3_ID_BITS + b]
+          nameIdx = (nameIdx << 1) | bits[bitOffset + V3_ID_BITS + 3 + b]
+        }
+        const fmt = V3_FMT_LIST[fmtIdx]
+        const name = V3_NAME_LIST[nameIdx]
+        if (!fmt || !name) return null
+        map[`https://pbs.twimg.com/media/${id}?format=${fmt}&name=${name}`] = prev
+      }
+    }
+
+    // tail 必须恰好消费到末尾（pack15 位填充可能多出 1 个尾部 0x00 字节）
+    if (byteOffset !== bytes.length) {
+      const padded = bytes.length - 1
+      if (byteOffset !== padded || bytes[padded] !== 0) return null
+    }
+    return map
+  }
+
+  function parseBitPackedBody(bytes) {
+    if (bytes.length === 0 || bytes.length > V3_MAX_BODY_BYTES) return {}
+    const bits = bytesToBits(bytes)
+    const headEntryBits = V3_ID_BITS + V3_TAG_BITS
+    const maxEntries = Math.floor(bits.length / headEntryBits)
+    for (let candidate = maxEntries; candidate >= 0; candidate--) {
+      const result = tryParseBitPackedEntries(bits, bytes, candidate)
+      if (result) return result
+    }
+    return {}
+  }
+
+  async function encodeHistoryAsync(historyObj) {
+    const entries = Object.entries(historyObj).sort((a, b) => a[1] - b[1])
+
+    // v3 bit-packed（无 deflate：熵已榨干，deflate 反而膨胀）
+    const v3 = BITPACKED_HISTORY_PREFIX + pack15(encodeBitPackedBody(entries))
+    let plainLen = 0
+    let pv = 0
+    for (const [url, ts] of entries) {
+      const delta = ts - pv
+      pv = ts
+      plainLen += shortenTwimgUrl(url).length + 1 + String(delta).length + 1
+    }
+    plainLen = Math.max(plainLen - 1, 0)
+    if (v3.length < plainLen) return v3
+
+    let prev = 0
+    const lines = entries.map(([url, ts]) => {
+      const delta = ts - prev
+      prev = ts
+      return `${shortenTwimgUrl(url)}${ENTRY_SEP}${delta}`
+    })
+    const body = lines.join(LINE_SEP)
+    if (typeof CompressionStream === 'undefined') return body
+    try {
+      const deflated = await deflateRawBytes(new TextEncoder().encode(body))
+      // v2 UTF-16 15-bit 打包（每字符 2 字节存储，15 bit 数据）
+      const packed = PACKED_HISTORY_PREFIX + pack15(deflated)
+      if (packed.length < body.length) return packed
+      // v1 base64url 兜底对比
+      const v1 = COMPRESSED_HISTORY_PREFIX + bytesToBase64Url(deflated)
+      return v1.length < body.length ? v1 : body
+    } catch {
+      return body
+    }
+  }
+
+  async function decodeHistoryAsync(stored) {
+    if (!stored) return {}
+    if (stored.startsWith(BITPACKED_HISTORY_PREFIX)) {
+      try {
+        const bytes = unpack15(stored.slice(BITPACKED_HISTORY_PREFIX.length))
+        return parseBitPackedBody(bytes)
+      } catch {
+        return {}
+      }
+    }
+    if (stored.startsWith(PACKED_HISTORY_PREFIX)) {
+      try {
+        const bytes = unpack15(stored.slice(PACKED_HISTORY_PREFIX.length))
+        const body = new TextDecoder().decode(await inflateRawBytes(bytes))
+        return parseHistoryLines(body)
+      } catch {
+        return {}
+      }
+    }
+    if (stored.startsWith(COMPRESSED_HISTORY_PREFIX)) {
+      try {
+        const bytes = base64UrlToBytes(stored.slice(COMPRESSED_HISTORY_PREFIX.length))
+        const body = new TextDecoder().decode(await inflateRawBytes(bytes))
+        return parseHistoryLines(body)
+      } catch {
+        return {}
+      }
+    }
+    if (!stored.startsWith('{') && stored.includes(ENTRY_SEP)) {
+      return parseHistoryLines(stored)
+    }
+    try {
+      const parsed = JSON.parse(stored)
+      const data = parsed && typeof parsed === 'object' ? (parsed.data ?? parsed) : null
+      if (typeof data !== 'object' || data === null) return {}
+      const map = {}
+      for (const [url, ts] of Object.entries(data)) {
+        if (typeof ts === 'number') map[url] = ts
+      }
+      return map
+    } catch {
+      return {}
+    }
+  }
+
   // --- AutoDownloadManager ---
   class AutoDownloadManager {
     constructor() {
       this.DOWNLOAD_HISTORY_KEY = 'x-autodownload-history'
       this.HISTORY_EXPIRY_TIME = 24 * 60 * 60 * 1000 // 24 hours
       this.settings = this.loadSettings()
+      this.historyReady = this.loadHistory()
       this.cleanExpiredHistory()
+    }
+
+    async loadHistory() {
+      try {
+        const stored = GM_getValue(this.DOWNLOAD_HISTORY_KEY, '')
+        this.historyObj = await decodeHistoryAsync(stored)
+        this.cleanExpiredHistory()
+      } catch (error) {
+        console.error('[AutoDownloadManager] Failed to load history:', error)
+        this.historyObj = {}
+      }
     }
 
     loadSettings() {
       const defaults = ['name=large', 'name=4096x4096']
-      let suffixes = GM_getValue('autoDownloadSuffixes', defaults)
+      const stored = GM_getValue('x-autodownload-settings', '')
+      if (stored && stored.startsWith(PLAIN_SETTINGS_PREFIX)) {
+        const payload = stored.slice(PLAIN_SETTINGS_PREFIX.length)
+        const sepIdx = payload.indexOf(ENTRY_SEP)
+        if (sepIdx >= 0) {
+          return {
+            enableAutoDownload: payload.slice(0, sepIdx) === '1',
+            autoDownloadSuffixes: this.parseSuffixList(payload.slice(sepIdx + 1), defaults)
+          }
+        }
+      }
 
-      // 防呆：確保讀出來的一定是陣列
+      // 旧分离存储（GM keys）与新 JSON 格式兼容读取
+      let suffixes = GM_getValue('autoDownloadSuffixes', defaults)
       if (typeof suffixes === 'string') {
         try {
           suffixes = JSON.parse(suffixes)
@@ -72,36 +492,65 @@
       }
     }
 
+    parseSuffixList(raw, defaults) {
+      let suffixes = raw
+      if (typeof suffixes === 'string') {
+        try {
+          suffixes = JSON.parse(suffixes)
+        } catch {
+          suffixes = suffixes.split(',').map(s => s.trim())
+        }
+      }
+      if (Array.isArray(suffixes)) {
+        const list = suffixes.filter(s => typeof s === 'string' && !!s)
+        if (list.length > 0) return list
+      }
+      return [...defaults]
+    }
+
     updateSettings(key, value) {
-      GM_setValue(key, value)
       this.settings[key] = value
+      // v1 明文紧凑格式：ADS1 <enable>\u0001<suffixes 逗号连接>
+      const suffixes = Array.isArray(this.settings.autoDownloadSuffixes)
+        ? this.settings.autoDownloadSuffixes.filter(Boolean)
+        : []
+      const encoded = `${PLAIN_SETTINGS_PREFIX}${this.settings.enableAutoDownload ? 1 : 0}${ENTRY_SEP}${suffixes.join(',')}`
+      GM_setValue('x-autodownload-settings', encoded)
     }
 
     cleanExpiredHistory() {
       try {
-        const historyData = GM_getValue(this.DOWNLOAD_HISTORY_KEY, '{}')
-        const history = JSON.parse(historyData)
+        const history = this.historyObj || {}
         const now = Date.now()
-        const cleanedHistory = {}
+        let changed = false
 
         for (const [url, timestamp] of Object.entries(history)) {
-          if (now - timestamp < this.HISTORY_EXPIRY_TIME) {
-            cleanedHistory[url] = timestamp
+          if (now - timestamp >= this.HISTORY_EXPIRY_TIME) {
+            delete history[url]
+            changed = true
           }
         }
 
-        GM_setValue(this.DOWNLOAD_HISTORY_KEY, JSON.stringify(cleanedHistory))
+        if (changed) this.saveHistoryObj(history)
       } catch (error) {
         console.error('[AutoDownloadManager] Failed to clean history:', error)
       }
     }
 
+    async saveHistoryObj(historyObj) {
+      try {
+        this.historyObj = historyObj
+        GM_setValue(this.DOWNLOAD_HISTORY_KEY, await encodeHistoryAsync(historyObj))
+      } catch (error) {
+        console.error('[AutoDownloadManager] Failed to save history:', error)
+      }
+    }
+
     addToHistory(url) {
       try {
-        const historyData = GM_getValue(this.DOWNLOAD_HISTORY_KEY, '{}')
-        const history = JSON.parse(historyData)
+        const history = this.historyObj || {}
         history[url] = Date.now()
-        GM_setValue(this.DOWNLOAD_HISTORY_KEY, JSON.stringify(history))
+        this.saveHistoryObj(history)
       } catch (error) {
         console.error('[AutoDownloadManager] Failed to add to history:', error)
       }
@@ -109,8 +558,7 @@
 
     isInHistory(url) {
       try {
-        const historyData = GM_getValue(this.DOWNLOAD_HISTORY_KEY, '{}')
-        const history = JSON.parse(historyData)
+        const history = this.historyObj || {}
         const timestamp = history[url]
         if (!timestamp) return false
 
@@ -119,7 +567,7 @@
           return true
         } else {
           delete history[url]
-          GM_setValue(this.DOWNLOAD_HISTORY_KEY, JSON.stringify(history))
+          this.saveHistoryObj(history)
           return false
         }
       } catch (error) {
