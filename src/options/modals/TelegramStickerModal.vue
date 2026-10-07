@@ -36,12 +36,21 @@ const emit = defineEmits(['update:modelValue', 'imported'])
 const store = useEmojiStore()
 const safeSettings = computed(() => store.settings || defaultSettings)
 
+const nativeWebmFormat = computed({
+  get: () => safeSettings.value.telegramNativeWebmFormat ?? 'webp',
+  set: value => store.updateSettings({ telegramNativeWebmFormat: value })
+})
+
 const localAvifEnabled = computed(() => !!safeSettings.value.telegramLocalAvifEnabled)
 
 const allowVideoStickers = computed(() => {
   const enabled = !!safeSettings.value.telegramWebmToAvifEnabled
   const backend = safeSettings.value.telegramWebmToAvifBackend || ''
-  return localAvifEnabled.value || (enabled && backend.trim().length > 0)
+  return (
+    nativeWebmFormat.value !== 'disabled' ||
+    localAvifEnabled.value ||
+    (enabled && backend.trim().length > 0)
+  )
 })
 
 const webmToAvifBackend = computed(() => safeSettings.value.telegramWebmToAvifBackend || '')
@@ -249,6 +258,7 @@ const doImport = async () => {
               blob,
               extension,
               {
+                nativeWebmFormat: nativeWebmFormat.value,
                 localAvifEnabled: localAvifEnabled.value,
                 backendEnabled: !!safeSettings.value.telegramWebmToAvifEnabled,
                 backendUrl: webmToAvifBackend.value,
@@ -426,11 +436,19 @@ const doImport = async () => {
       <div
         class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800"
       >
-        <h4 class="font-medium mb-2 dark:text-amber-100">Telegram AVIF 转换</h4>
+        <h4 class="font-medium mb-2 dark:text-amber-100">Telegram 本地转换</h4>
         <p class="text-xs text-amber-700 dark:text-amber-300">
-          本地离线 AVIF 开关在设置页生效。启用后会优先尝试在扩展内转换 webm /
-          tgs，失败时如果已配置后端则自动兜底。
+          WebM 默认转为浏览器原生动画 WebP，无需 FFmpeg 或转换服务器。AVIF 首帧不保留动画，
+          原生编码不可用时使用本地 WASM。TGS 需要在导入页启用离线 AVIF。
         </p>
+        <a-select v-model:value="nativeWebmFormat" class="w-full mt-2">
+          <a-select-option value="webp">原生动画 WebP（推荐）</a-select-option>
+          <a-select-option value="animated-avif">
+            浏览器内动画 AVIF（WASM，无需安装）
+          </a-select-option>
+          <a-select-option value="avif">AVIF 静态首帧（原生或本地 WASM）</a-select-option>
+          <a-select-option value="disabled">旧版转换设置（可选后端）</a-select-option>
+        </a-select>
       </div>
 
       <!-- 贴纸包输入 -->
@@ -588,7 +606,7 @@ const doImport = async () => {
         <ul class="list-disc pl-4 space-y-1">
           <li>导入将会把贴纸直接上传到选定的图床服务。</li>
           <li>
-            支持静态图片贴纸。WebM / TGS 会优先尝试本地离线 AVIF，失败时再走已配置的后端兜底。
+            支持静态图片及 WebM 原生动画 WebP。TGS 需要离线 AVIF；浏览器模式不调用转换服务器。
           </li>
           <li>如果遇到 "Too Many Requests" 错误，请稍后重试。</li>
         </ul>
