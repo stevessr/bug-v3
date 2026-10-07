@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportDate": "2026-10-07T07:40:12.211Z",
+  "exportDate": "2026-10-07T13:20:50.160Z",
   "totalGroups": 305,
   "includeArchived": true,
   "groups": [
@@ -1475,7 +1475,7 @@
     },
     {
       "id": "group-1787826176781",
-      "name": "初音 NT 服",
+      "name": "初音NT服",
       "icon": "https://cdn3.ldstatic.com/original/4X/7/1/d/71dee0a9bfaee8ff0ec842944448bb76acbea375.gif?v=emoji-17",
       "detail": "单主：初桑さん",
       "topic": "丸山彩",
@@ -1753,7 +1753,7 @@
     },
     {
       "id": "group-1787820419121",
-      "name": "山田 B",
+      "name": "山田B",
       "icon": "https://cdn3.ldstatic.com/original/4X/1/6/3/16340fbd44617da53b3ad285094802234a67546e.gif?v=emoji-17",
       "detail": "",
       "topic": "丸山彩",
@@ -2588,7 +2588,7 @@
     },
     {
       "id": "telegram_1791353472387_fioduh9ui",
-      "name": "酒狐 v3 @zhaxia_cn",
+      "name": "酒狐v3 @zhaxia_cn",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/6/6/4668b6e5e007d13fad365ec95cbb62d3deaff73a.webp",
       "detail": "Telegram 贴纸包：in_BJIFEC_by_NaiDrawBot",
       "topic": "telegram",
