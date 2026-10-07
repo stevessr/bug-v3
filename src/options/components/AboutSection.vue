@@ -85,33 +85,33 @@ const stats = ref([
   { label: '支持网站', value: '10+', icon: '🌐' },
   { label: '表情管理', value: '无限制', icon: '😀' },
   { label: '分组支持', value: '自定义', icon: '📁' },
-  { label: '存储方式', value: '本地 + 云端', icon: '☁️' }
+  { label: '数据安全', value: '本地优先', icon: '🔒' }
 ])
 
 const features = ref([
   {
-    title: '🎯 精准插入',
-    desc: '一键插入表情到任意输入框，支持多种插入模式'
+    title: '🎯 随处使用',
+    desc: '通过弹出页、侧边栏和论坛编辑器快速查找并插入自定义表情'
   },
   {
     title: '📚 分组管理',
-    desc: '智能分组管理，支持拖拽排序和批量操作'
+    desc: '创建、排序、归档和整理表情分组；常用表情按使用次数关联来源分组'
   },
   {
-    title: '🔄 数据同步',
-    desc: 'Chrome 账户同步，多设备无缝体验'
+    title: '🔄 灵活同步',
+    desc: '可配置 Cloudflare Worker、WebDAV 或 Amazon S3 同步自己的表情数据'
   },
   {
-    title: '🎨 自定义界面',
-    desc: '响应式设计，支持深色模式和触屏操作'
+    title: '🎨 主题与界面',
+    desc: '弹出页、设置页和侧边栏适配深色主题与不同窗口尺寸'
   },
   {
-    title: '🔍 智能搜索',
-    desc: '实时搜索过滤，快速找到所需表情'
+    title: '🔍 快速搜索',
+    desc: '按名称、标签或分组筛选表情；Discourse 可选启用斜杠快捷选择'
   },
   {
-    title: '📤 云端存储',
-    desc: '支持上传到 linux.do，永久保存表情链接'
+    title: '📦 导入与上传',
+    desc: '支持表情包导入、浏览器内媒体转换及 Discourse 上传；可选使用论坛原生上传器'
   }
 ])
 
@@ -141,7 +141,7 @@ const supportedSites = ref([
 ])
 // 使用 TypeIt 实现打字机效果
 const fullText =
-  '一个功能强大的浏览器扩展，让您能够在任何网站上轻松插入和管理自定义表情。支持多平台同步，智能分组管理，让表情使用更加便捷高效。'
+  'emoji-extension 是一款以本地数据为主的自定义表情管理扩展。你可以导入、整理表情分组，并在支持的网站中快速搜索和插入；同步与论坛上传服务均由你自行配置。'
 const typeEl = ref<HTMLElement | null>(null)
 let typeItInstance: any = null
 
