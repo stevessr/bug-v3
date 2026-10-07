@@ -1,3 +1,5 @@
+import type { NativeWebmFormat } from './nativeWebmConversion'
+
 import type { LocalAvifProgress } from '@/utils/avif/localAvifService'
 import { convertWebmToAvifViaBackend } from '@/utils/webmToAvifBackend'
 
@@ -12,6 +14,7 @@ const loadTgsRenderer = () =>
   import('@/utils/telegram/tgsToFrames').then(m => m.renderTgsToPngFrames)
 
 export interface TelegramStickerConversionSettings {
+  nativeWebmFormat?: NativeWebmFormat
   localAvifEnabled: boolean
   backendEnabled: boolean
   backendUrl: string
@@ -23,7 +26,13 @@ export interface TelegramStickerConversionResult {
   blob: Blob
   extension: string
   mimeType: string
-  mode: 'original' | 'local-animated-avif' | 'local-static-avif' | 'backend-avif'
+  mode:
+    | 'native-animated-webp'
+    | 'browser-static-avif'
+    | 'original'
+    | 'local-animated-avif'
+    | 'local-static-avif'
+    | 'backend-avif'
   warning?: string
 }
 
@@ -39,7 +48,9 @@ export const TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS = 45000
 
 const modeLabelMap: Record<TelegramStickerConversionResult['mode'], string> = {
   original: '原始格式',
-  'local-animated-avif': '本地动画 AVIF',
+  'native-animated-webp': '浏览器原生动画 WebP',
+  'browser-static-avif': '浏览器解码静态 AVIF',
+  'local-animated-avif': '浏览器内动画 AVIF（WASM）',
   'local-static-avif': '本地静态 AVIF',
   'backend-avif': '后端 AVIF'
 }
@@ -103,7 +114,38 @@ export async function convertTelegramStickerBlob(
 ): Promise<TelegramStickerConversionResult> {
   const animatedTimeoutMs = getAnimatedTimeoutMs(settings.animatedTimeoutMs)
 
+  settings.signal?.throwIfAborted()
   if (extension === 'webm') {
+    const format = settings.nativeWebmFormat
+    // Explicit browser modes never call a conversion server or silently drop animation.
+    if (format === 'animated-avif') {
+      onProgress?.({ message: '正在浏览器内编码动画 AVIF（WASM，无需安装本机工具）...' })
+      const { convertWebmInBrowser } = await import('./nativeWebmConversion')
+      const result = await convertWebmInBrowser(blob, 'animated-avif', {
+        signal: settings.signal,
+        onProgress
+      })
+      return {
+        ...result,
+        extension: 'avif',
+        mimeType: 'image/avif',
+        mode: 'local-animated-avif'
+      }
+    }
+    if (format && format !== 'disabled') {
+      const { convertWebmInBrowser } = await import('./nativeWebmConversion')
+      const result = await convertWebmInBrowser(blob, format, {
+        signal: settings.signal,
+        onProgress
+      })
+      return {
+        ...result,
+        extension: format,
+        mimeType: `image/${format}`,
+        mode: format === 'webp' ? 'native-animated-webp' : 'browser-static-avif'
+      }
+    }
+
     if (settings.localAvifEnabled) {
       try {
         onProgress?.({ message: TELEGRAM_STAGE_HINTS.localAnimated })
@@ -123,6 +165,7 @@ export async function convertTelegramStickerBlob(
           mode: 'local-animated-avif'
         }
       } catch (localAnimatedError) {
+        settings.signal?.throwIfAborted()
         try {
           onProgress?.({ message: TELEGRAM_STAGE_HINTS.localStatic })
           const localAvifService = await loadLocalAvifService()
@@ -137,6 +180,7 @@ export async function convertTelegramStickerBlob(
             warning: `本地动画 AVIF 转换失败，已降级为静态 AVIF：${getTelegramStickerErrorMessage(localAnimatedError)}`
           }
         } catch {
+          settings.signal?.throwIfAborted()
           // continue to backend fallback
         }
       }

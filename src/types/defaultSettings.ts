@@ -52,6 +52,7 @@ export const defaultSettings: AppSettings = {
   linuxDoSeekingActionFilter: '1,5', // 默认互动 + 回复
   telegramWebmToAvifEnabled: false,
   telegramWebmToAvifBackend: '',
+  telegramNativeWebmFormat: 'webp',
   telegramLocalAvifEnabled: false,
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新

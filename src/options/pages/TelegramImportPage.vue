@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import CachedImage from '@/components/CachedImage.vue'
 import { useEmojiStore } from '@/stores/emojiStore'
@@ -29,6 +29,7 @@ import * as storage from '@/utils/simpleStorage'
 
 const store = useEmojiStore()
 const route = useRoute()
+const router = useRouter()
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
   embedded: false
 })
@@ -95,6 +96,11 @@ const webmToAvifBackend = computed({
   set: value => store.updateSettings({ telegramWebmToAvifBackend: value })
 })
 
+const nativeWebmFormat = computed({
+  get: () => safeSettings.value.telegramNativeWebmFormat ?? 'webp',
+  set: value => store.updateSettings({ telegramNativeWebmFormat: value })
+})
+
 const localAvifEnabled = computed({
   get: () => !!safeSettings.value.telegramLocalAvifEnabled,
   set: value => store.updateSettings({ telegramLocalAvifEnabled: value })
@@ -102,7 +108,9 @@ const localAvifEnabled = computed({
 
 const allowVideoStickers = computed(
   () =>
-    localAvifEnabled.value || (webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0)
+    nativeWebmFormat.value !== 'disabled' ||
+    localAvifEnabled.value ||
+    (webmToAvifEnabled.value && webmToAvifBackend.value.trim().length > 0)
 )
 
 // 导入选项
@@ -636,6 +644,7 @@ const doImport = async (): Promise<boolean> => {
               blob,
               extension,
               {
+                nativeWebmFormat: nativeWebmFormat.value,
                 localAvifEnabled: localAvifEnabled.value,
                 backendEnabled: webmToAvifEnabled.value,
                 backendUrl: webmToAvifBackend.value,
@@ -806,6 +815,13 @@ const doImport = async (): Promise<boolean> => {
       }
     }
 
+    // Only group-triggered updates return; manual imports and queues stay here.
+    const returnToGroups =
+      importMode.value === 'update' &&
+      route.query.tgGroupId === targetGroup!.id &&
+      !isQueueRunning.value &&
+      webmConvertFailures === 0
+
     // 重置状态
     stickerSetInfo.value = null
     telegramInput.value = ''
@@ -815,6 +831,7 @@ const doImport = async (): Promise<boolean> => {
     if (webmConvertFailures > 0) {
       message.warning(`WebM/TGS 转换失败 ${webmConvertFailures} 个，已跳过或降级`)
     }
+    if (returnToGroups) await router.replace('/groups')
     return true
   } catch (error: any) {
     console.error('导入失败：', error)
@@ -889,28 +906,40 @@ const doImport = async (): Promise<boolean> => {
           class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
         >
           <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-3">
-            2️⃣-A Telegram AVIF 转换
+            2️⃣-A Telegram 本地转换
           </h4>
           <div class="space-y-3">
             <div class="flex items-center gap-3">
+              <span class="text-sm">WebM 浏览器转换</span>
+              <a-select v-model:value="nativeWebmFormat" class="w-72">
+                <a-select-option value="webp">原生动画 WebP（推荐，无 FFmpeg）</a-select-option>
+                <a-select-option value="animated-avif">
+                  浏览器内动画 AVIF（WASM，无需安装）
+                </a-select-option>
+                <a-select-option value="avif">AVIF 静态首帧（不支持原生时用 WASM）</a-select-option>
+                <a-select-option value="disabled">旧版转换设置（可选后端）</a-select-option>
+              </a-select>
+            </div>
+            <div class="flex items-center gap-3">
               <a-switch v-model:checked="localAvifEnabled" />
               <span class="text-sm text-amber-900 dark:text-amber-100">
-                启用本地离线 AVIF（实验性，优先保留 webm/tgs 动画）
+                TGS / 旧版浏览器内 AVIF（WASM，实验性）
               </span>
             </div>
             <div class="flex items-center gap-3">
               <a-switch v-model:checked="webmToAvifEnabled" />
               <a-input
                 v-model:value="webmToAvifBackend"
-                placeholder="https://example.com/api/webm-to-avif"
+                placeholder="可选旧版转换后端（浏览器模式不使用）"
                 class="flex-1"
-                :disabled="!webmToAvifEnabled"
+                :disabled="!webmToAvifEnabled || nativeWebmFormat !== 'disabled'"
               />
             </div>
           </div>
           <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
-            本地模式会优先尝试在扩展内把 webm / tgs 转为
-            AVIF；若启用了后端地址，本地失败时会继续走后端兜底。
+            WebM 默认由浏览器解码并编码为动画 WebP（20fps，最长 10 秒、最大
+            512px），无需转换服务器。 AVIF 首帧为静态图片；原生编码不可用时使用本地 WASM。TGS
+            仍需启用离线动画 AVIF。 上述浏览器模式不调用转换服务器，动画 AVIF 失败不会降级为静态。
           </p>
         </div>
 

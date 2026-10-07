@@ -1,7 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
 import { encode as encodeAvif } from '@jsquash/avif'
-import classWorkerURL from '@ffmpeg/ffmpeg/worker?url'
+import classWorkerURL from '@ffmpeg/ffmpeg/worker?worker&url'
 import coreURL from '@ffmpeg/core?url'
 import wasmURL from '@ffmpeg/core/wasm?url'
 // 多线程 FFmpeg 核心需要 cross-origin isolation（manifest 未启用
@@ -21,6 +21,61 @@ const uint8ArrayToBlob = (bytes: Uint8Array, type: string): Blob => {
   const copied = new Uint8Array(bytes.byteLength)
   copied.set(bytes)
   return new Blob([copied], { type })
+}
+
+// FFmpeg 5's copy muxer emits an invalid optional still-image pixi property
+// (zero planes). Keep the valid sequence track only, and fix absolute offsets.
+// Sequence-only AVIF is defined by the avis brand; no primary still item is required.
+const normalizeAvifSequence = (input: Uint8Array): Uint8Array => {
+  const bytes = input.slice()
+  const view = new DataView(bytes.buffer)
+  const tag = (offset: number) => new TextDecoder().decode(bytes.subarray(offset, offset + 4))
+  let removed = 0
+  const top: { offset: number; size: number; type: string }[] = []
+  for (let offset = 0; offset + 8 <= bytes.length;) {
+    const size = view.getUint32(offset)
+    if (size < 8 || offset + size > bytes.length) throw new Error('Invalid AVIF sequence container')
+    const type = tag(offset + 4)
+    top.push({ offset, size, type })
+    if (type === 'meta') removed += size
+    offset += size
+  }
+  const fixOffsets = (start: number, end: number) => {
+    for (let offset = start; offset + 8 <= end;) {
+      const size = view.getUint32(offset)
+      if (size < 8 || offset + size > end) throw new Error('Invalid AVIF track box')
+      const type = tag(offset + 4)
+      if (type === 'stco') {
+        const count = view.getUint32(offset + 12)
+        for (let i = 0; i < count; i++) {
+          const position = offset + 16 + i * 4
+          if (position + 4 > offset + size) throw new Error('Invalid AVIF chunk offsets')
+          view.setUint32(position, view.getUint32(position) - removed)
+        }
+      } else if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
+        fixOffsets(offset + 8, offset + size)
+      }
+      offset += size
+    }
+  }
+  for (const box of top) {
+    if (box.type === 'moov') fixOffsets(box.offset, box.offset + box.size)
+    if (box.type === 'ftyp') {
+      for (let offset = box.offset + 8; offset + 4 <= box.offset + box.size; offset += 4) {
+        const brand = tag(offset)
+        if (brand === 'avif') bytes.set(new TextEncoder().encode('avis'), offset)
+        if (brand === 'mif1') bytes.set(new TextEncoder().encode('msf1'), offset)
+      }
+    }
+  }
+  const output = new Uint8Array(bytes.length - removed)
+  let position = 0
+  for (const box of top) {
+    if (box.type === 'meta') continue
+    output.set(bytes.subarray(box.offset, box.offset + box.size), position)
+    position += box.size
+  }
+  return output
 }
 
 const encodeBufferToBlob = (buffer: ArrayBuffer, type: string): Blob => new Blob([buffer], { type })
@@ -177,37 +232,32 @@ class LocalAvifService {
       onProgress?: (event: LocalAvifProgress) => void
     } = {}
   ): Promise<Blob> {
+    const { convertWebmInBrowser } = await import('@/utils/telegram/nativeWebmConversion')
+    return (await convertWebmInBrowser(blob, 'animated-avif', options)).blob
+  }
+
+  async muxAv1ToAnimatedAvif(
+    blob: Blob,
+    options: {
+      signal?: AbortSignal
+      timeoutMs?: number
+      onProgress?: (event: LocalAvifProgress) => void
+    } = {}
+  ): Promise<Blob> {
     await this.ensureFfmpegLoaded()
 
     const ffmpeg = this.getFfmpeg()
     const jobId = createJobId()
-    const inputPath = `${jobId}-input.webm`
+    const inputPath = `${jobId}-input.ivf`
     const outputPath = `${jobId}-output.avif`
 
-    options.onProgress?.({ message: '正在初始化本地 AVIF 编码器...' })
+    options.onProgress?.({ message: '正在初始化浏览器内 AVIF 封装器...' })
     await ffmpeg.writeFile(inputPath, await fetchFile(blob), { signal: options.signal })
 
     try {
-      options.onProgress?.({ message: '正在本地转换 WebM 为动画 AVIF...' })
+      options.onProgress?.({ message: '正在浏览器内封装动画 AVIF...' })
       const exitCode = await ffmpeg.exec(
-        [
-          '-i',
-          inputPath,
-          '-an',
-          '-map',
-          '0:v:0',
-          '-c:v',
-          'libaom-av1',
-          '-pix_fmt',
-          'yuv420p',
-          '-crf',
-          '32',
-          '-b:v',
-          '0',
-          '-f',
-          'avif',
-          outputPath
-        ],
+        ['-i', inputPath, '-c:v', 'copy', '-f', 'avif', outputPath],
         options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         { signal: options.signal }
       )
@@ -222,7 +272,7 @@ class LocalAvifService {
         throw new Error('Local animated AVIF output is empty')
       }
 
-      return uint8ArrayToBlob(bytes, 'image/avif')
+      return uint8ArrayToBlob(normalizeAvifSequence(bytes), 'image/avif')
     } finally {
       await this.safeDeleteFile(inputPath, options.signal)
       await this.safeDeleteFile(outputPath, options.signal)
@@ -249,14 +299,14 @@ class LocalAvifService {
     const inputNames: string[] = []
 
     try {
-      options.onProgress?.({ message: '正在写入 TGS 帧到本地编码器...' })
+      options.onProgress?.({ message: '正在写入 TGS 帧到浏览器内 WASM 编码器...' })
       for (let i = 0; i < frames.length; i++) {
         const frameName = `${jobId}-frame_${String(i).padStart(4, '0')}.png`
         inputNames.push(frameName)
         await ffmpeg.writeFile(frameName, await fetchFile(frames[i]), { signal: options.signal })
       }
 
-      options.onProgress?.({ message: '正在本地转换 TGS 为动画 AVIF...' })
+      options.onProgress?.({ message: '正在浏览器内转换 TGS 为动画 AVIF...' })
       const exitCode = await ffmpeg.exec(
         [
           '-framerate',

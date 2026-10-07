@@ -69,6 +69,7 @@ export interface AppSettings {
   // Telegram sticker local/backend AVIF conversion
   telegramWebmToAvifEnabled?: boolean
   telegramWebmToAvifBackend?: string
+  telegramNativeWebmFormat?: 'webp' | 'avif' | 'animated-avif' | 'disabled'
   telegramLocalAvifEnabled?: boolean
   // LinuxDo Credit 积分显示
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
