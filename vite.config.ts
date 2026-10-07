@@ -240,6 +240,14 @@ export default defineConfig(({ mode }) => {
     {
       find: '@',
       replacement: fileURLToPath(new URL('./src', import.meta.url))
+    },
+    {
+      // Telegram TGS uses basic vector/canvas features only. The light canvas
+      // player omits Lottie's expression engine (and its runtime eval).
+      find: 'lottie-web',
+      replacement: fileURLToPath(
+        new URL('./node_modules/lottie-web/build/player/lottie_light_canvas.js', import.meta.url)
+      )
     }
   ]
 
@@ -454,7 +462,8 @@ export default defineConfig(({ mode }) => {
                     {
                       name: 'vendor-editor',
                       test: /[\\/]node_modules[\\/](?:prosemirror-[^\\/]+|@bbob|marked|rehype|rehype-parse|rehype-stringify|unified|unist-util-visit|dompurify|highlight\.js)[\\/]/,
-                      priority: 18
+                      priority: 18,
+                      maxSize: 850 * 1024
                     },
                     {
                       name: 'vendor-image',
@@ -465,12 +474,9 @@ export default defineConfig(({ mode }) => {
                       name: 'vendor-utils',
                       test: /[\\/]node_modules[\\/](?:katex|dayjs|lodash|dexie|zod|nanoid|typeit)[\\/]/,
                       priority: 10
-                    },
-                    {
-                      name: 'vendor-libs',
-                      test: /[\\/]node_modules[\\/]/,
-                      priority: 0
                     }
+                    // Modules not captured above are split by Rolldown's
+                    // automatic chunking instead of a monolithic vendor chunk.
                   ]
                 }
               })
