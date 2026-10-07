@@ -78,10 +78,10 @@ function createSingleEmojiButton(data: AddEmojiButtonData): HTMLElement {
       cursor: pointer;
       text-decoration: none;
     `,
-    'aria-label': '添加表情',
     ti: '添加到未分组表情',
     in: '＋'
   })
+  button.setAttribute('aria-label', '添加表情')
   setupButtonClickHandler(button, data)
   return button
 }

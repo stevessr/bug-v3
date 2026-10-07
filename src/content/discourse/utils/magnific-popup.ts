@@ -10,10 +10,10 @@ function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
   const button = createE('a', {
     class: 'emoji-add-link',
     style: `color:var(--tertiary,#2563eb);background:var(--secondary,#fff);border:1px solid var(--primary-low,#ddd);border-radius:50%;width:32px;height:32px;padding:0;margin:0 2px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1;`,
-    'aria-label': '添加表情',
     ti: '添加到未分组表情',
     in: '＋'
   })
+  button.setAttribute('aria-label', '添加表情')
   setupButtonClickHandler(button, data)
   return button
 }

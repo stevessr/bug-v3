@@ -276,10 +276,8 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
         <a-tabs v-model:activeKey="activeImportMethod" class="bilibili-method-tabs">
           <a-tab-pane key="search" tab="搜索表情包">
             <!-- 搜索区域 -->
-            <div
-              class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
-            >
-              <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-md p-4">
+              <h4 class="font-medium text-gray-900 dark:text-white mb-3">
                 {{ t('searchEmotePackages') }}
               </h4>
               <div class="flex gap-2 mb-3">
@@ -301,12 +299,12 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
               <!-- 搜索结果列表 -->
               <div
                 v-if="searchResults.length > 0"
-                class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
+                class="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-black/20"
               >
                 <div
                   v-for="result in searchResults"
                   :key="result.id"
-                  class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
+                  class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b last:border-b-0 border-gray-100 dark:border-gray-700"
                   @click="selectSearchResult(result)"
                 >
                   <CachedImage :src="result.url" class="w-8 h-8 rounded object-cover" />
@@ -335,16 +333,10 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
 
           <a-tab-pane key="id" tab="通过 ID 导入">
             <!-- ID 导入区域 -->
-            <div
-              class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-            >
-              <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">
+            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-md">
+              <h4 class="font-medium text-gray-900 dark:text-white mb-3">
                 {{ t('importById') }}
               </h4>
-
-              <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
-                {{ t('importByIdDescription') }}
-              </p>
 
               <div class="flex gap-2">
                 <a-input-number

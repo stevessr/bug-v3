@@ -212,22 +212,20 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
         <!-- 搜索与 ID 导入 Tab 区域 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- 搜索区域 -->
-          <div
-            class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
-          >
-            <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">搜索表情包</h4>
+          <div class="border border-gray-200 dark:border-gray-700 rounded-md p-4">
+            <h4 class="font-medium text-gray-900 dark:text-white mb-3">搜索表情包</h4>
             <div class="flex gap-2 mb-3">
               <input
                 v-model="searchInput"
                 type="text"
                 placeholder="输入关键词搜索 (如: 小黄脸)"
-                class="flex-1 px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-md bg-white dark:bg-black text-purple-900 dark:text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 @keyup.enter="handleSearch"
               />
               <button
                 @click="handleSearch"
                 :disabled="!searchInput || !searchInput.trim() || searchLoading"
-                class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-primary text-white rounded hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span v-if="searchLoading">搜索中...</span>
                 <span v-else>搜索</span>
@@ -237,12 +235,12 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
             <!-- 搜索结果列表 -->
             <div
               v-if="searchResults.length > 0"
-              class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
+              class="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-black/20"
             >
               <div
                 v-for="result in searchResults"
                 :key="result.id"
-                class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
+                class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b last:border-b-0 border-gray-100 dark:border-gray-700"
                 @click="selectSearchResult(result)"
               >
                 <CachedImage :src="result.url" class="w-8 h-8 rounded object-cover" />
@@ -253,7 +251,7 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
                   <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
                 </div>
                 <button
-                  class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200 rounded"
+                  class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded"
                 >
                   选择
                 </button>
@@ -273,14 +271,8 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
           </div>
 
           <!-- ID 导入区域 -->
-          <div
-            class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-          >
-            <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">通过 ID 导入</h4>
-
-            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
-              直接输入 Bilibili 表情包 ID 导入。
-            </p>
+          <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-md">
+            <h4 class="font-medium text-gray-900 dark:text-white mb-3">通过 ID 导入</h4>
 
             <div class="flex gap-2">
               <input
