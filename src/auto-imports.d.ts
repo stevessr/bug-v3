@@ -42,6 +42,7 @@ declare global {
   const cacheImage: typeof import('./utils/imageCache').cacheImage
   const cacheImages: typeof import('./utils/imageCache').cacheImages
   const checkStorageHealth: typeof import('./utils/simpleStorage').checkStorageHealth
+  const cleanupArchivedGroupStorage: typeof import('./utils/simpleStorage').cleanupArchivedGroupStorage
   const cleanupLRU: typeof import('./utils/imageCache').cleanupLRU
   const clearCache: typeof import('./utils/imageCache').clearCache
   const clearSyncConfig: typeof import('./utils/syncConfigStorage').clearSyncConfig
@@ -375,6 +376,7 @@ declare module 'vue' {
     readonly cacheImage: UnwrapRef<typeof import('./utils/imageCache')['cacheImage']>
     readonly cacheImages: UnwrapRef<typeof import('./utils/imageCache')['cacheImages']>
     readonly checkStorageHealth: UnwrapRef<typeof import('./utils/simpleStorage')['checkStorageHealth']>
+    readonly cleanupArchivedGroupStorage: UnwrapRef<typeof import('./utils/simpleStorage')['cleanupArchivedGroupStorage']>
     readonly cleanupLRU: UnwrapRef<typeof import('./utils/imageCache')['cleanupLRU']>
     readonly clearCache: UnwrapRef<typeof import('./utils/imageCache')['clearCache']>
     readonly clearSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['clearSyncConfig']>

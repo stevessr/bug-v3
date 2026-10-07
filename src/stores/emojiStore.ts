@@ -1132,10 +1132,11 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       // 从主列表移除
       groups.value = groups.value.filter(g => g.id !== groupId)
       // 添加到归档列表 - 使用数组替换以触发 shallowRef 响应式更新
-      archivedGroups.value = [...archivedGroups.value, group]
+      archivedGroups.value = [...archivedGroups.value.filter(g => g.id !== groupId), group]
       log.info('Group archived:', groupId)
     } catch (err) {
       log.error('Failed to archive group:', err)
+      throw err
     }
   }
 
@@ -1147,11 +1148,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         // 从归档列表移除
         archivedGroups.value = archivedGroups.value.filter(g => g.id !== groupId)
         // 添加到主列表 - 使用数组替换以触发 shallowRef 响应式更新
-        groups.value = [...groups.value, group]
+        groups.value = [...groups.value.filter(g => g.id !== groupId), group]
         log.info('Group unarchived:', groupId)
       }
     } catch (err) {
       log.error('Failed to unarchive group:', err)
+      throw err
     }
   }
 
@@ -1163,6 +1165,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       log.info('Archived group deleted:', groupId)
     } catch (err) {
       log.error('Failed to delete archived group:', err)
+      throw err
     }
   }
 

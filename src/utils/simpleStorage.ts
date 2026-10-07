@@ -9,6 +9,11 @@
  * 5. 运行时类型验证提高数据可靠性
  */
 
+import {
+  decodeStorageValue,
+  encodeStorageValue,
+  isEmojiGroupStorageKey
+} from './storage/emojiGroupCodec'
 import { sanitizeEmojiGroup, isSettings } from './typeGuards'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
@@ -52,27 +57,23 @@ const localStorageGet = <T = unknown>(key: string): T | null => {
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as { data?: T } | T | null
-    if (parsed && typeof parsed === 'object' && 'data' in parsed) {
-      return (parsed as { data?: T }).data ?? null
+    const parsed: unknown = JSON.parse(raw)
+    const value = decodeStorageValue(key, parsed)
+    if (isEmojiGroupStorageKey(key)) {
+      const upgraded = JSON.stringify(encodeStorageValue(key, value))
+      if (upgraded !== raw) {
+        try {
+          localStorage.setItem(key, upgraded)
+        } catch (error) {
+          log.warn('Group storage upgrade failed; preserving original value', key, error)
+        }
+      }
     }
-    return parsed as T | null
+    return value as T | null
   } catch (error) {
     log.error('localStorage get failed:', key, error)
+    if (isEmojiGroupStorageKey(key)) throw error
     return null
-  }
-}
-
-const localStorageSet = (key: string, value: unknown) => {
-  if (!isLocalStorageAvailable()) return
-  try {
-    const wrappedValue = {
-      data: ensureSerializable(value),
-      timestamp: Date.now()
-    }
-    localStorage.setItem(key, JSON.stringify(wrappedValue))
-  } catch (error) {
-    log.error('localStorage set failed:', key, error)
   }
 }
 
@@ -82,12 +83,94 @@ const localStorageRemove = (key: string) => {
     localStorage.removeItem(key)
   } catch (error) {
     log.error('localStorage remove failed:', key, error)
+    throw error
   }
 }
 
 // ========================================
 // Core Storage Functions (Pure I/O)
 // ========================================
+
+let writeQueue: Promise<unknown> = Promise.resolve()
+const serializeStorageWrite = <T>(task: () => Promise<T>): Promise<T> => {
+  const run = async (): Promise<T> =>
+    typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('emoji-extension-storage-write', task)
+      : task()
+  const pending = writeQueue.then(run, run)
+  writeQueue = pending.catch(() => {})
+  return pending
+}
+
+// A delayed save from another surface must not resurrect a group already archived.
+async function filterArchivedWrites(values: Record<string, unknown>, restoringId?: string) {
+  if (
+    typeof indexedDB === 'undefined' ||
+    !Object.keys(values).some(
+      key => isEmojiGroupStorageKey(key) || key === STORAGE_KEYS.GROUP_INDEX
+    )
+  )
+    return values
+  const ids = new Set(await getDurableArchivedGroupIds())
+  if (restoringId) ids.delete(restoringId)
+  const safe = { ...values }
+  for (const id of ids) delete safe[STORAGE_KEYS.GROUP_PREFIX + id]
+  if (safe[STORAGE_KEYS.GROUP_INDEX]) {
+    const index = decodeStorageValue(STORAGE_KEYS.GROUP_INDEX, safe[STORAGE_KEYS.GROUP_INDEX])
+    safe[STORAGE_KEYS.GROUP_INDEX] = encodeStorageValue(
+      STORAGE_KEYS.GROUP_INDEX,
+      index.filter((item: { id: string }) => !ids.has(item.id))
+    )
+  }
+  return safe
+}
+
+const writeExtensionValues = async (
+  api: NonNullable<typeof chrome>,
+  values: Record<string, unknown>,
+  restoringId?: string
+): Promise<void> => {
+  const safe = await filterArchivedWrites(values, restoringId)
+  if (!Object.keys(safe).length) return
+  await new Promise<void>((resolve, reject) =>
+    api.storage.local.set(safe, () => {
+      const error = api.runtime.lastError
+      if (error) reject(new Error(error.message || 'Storage write failed'))
+      else resolve()
+    })
+  )
+}
+
+const upgradeGroupSnapshots = async (
+  api: NonNullable<typeof chrome>,
+  snapshots: Record<string, unknown>
+) => {
+  const candidates: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(snapshots)) {
+    if (!isEmojiGroupStorageKey(key) || value == null) continue
+    const upgraded = encodeStorageValue(key, value)
+    if (JSON.stringify(upgraded) !== JSON.stringify(value)) candidates[key] = upgraded
+  }
+  if (!Object.keys(candidates).length) return
+  try {
+    await serializeStorageWrite(async () => {
+      const current = await new Promise<Record<string, unknown>>((resolve, reject) => {
+        api.storage.local.get(Object.keys(candidates), values => {
+          const error = api.runtime.lastError
+          if (error) reject(new Error(error.message || 'Storage read failed'))
+          else resolve(values)
+        })
+      })
+      const safe: Record<string, unknown> = {}
+      for (const [key, upgraded] of Object.entries(candidates)) {
+        if (JSON.stringify(current[key]) === JSON.stringify(snapshots[key])) safe[key] = upgraded
+      }
+      if (Object.keys(safe).length) await writeExtensionValues(api, safe)
+    })
+  } catch (error) {
+    log.warn('Group storage upgrade failed; preserving original values', error)
+  }
+}
 
 /**
  * 从 chrome.storage.local 读取数据
@@ -99,140 +182,83 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
     return localStorageGet<T>(key)
   }
 
-  return new Promise(resolve => {
-    api.storage.local.get({ [key]: null }, result => {
-      if (api.runtime.lastError) {
-        log.error('Get failed:', key, api.runtime.lastError)
-        resolve(null)
-      } else {
-        const value = result[key] as { data?: T; timestamp?: number } | T | null
-        // 解包包装格式 { data, timestamp }
-        const data =
-          (value && typeof value === 'object' && 'data' in value ? value.data : value) ?? null
-
-        // 添加调试信息
-        if (
-          key === STORAGE_KEYS.GROUP_INDEX ||
-          key === STORAGE_KEYS.SETTINGS ||
-          key.startsWith('emojiGroup_')
-        ) {
-          log.info(`Get ${key}:`, {
-            hasData: !!data,
-            dataType: typeof data,
-            isArray: Array.isArray(data),
-            length: Array.isArray(data) ? data.length : undefined,
-            keys:
-              data && typeof data === 'object' && !Array.isArray(data)
-                ? Object.keys(data)
-                : undefined,
-            rawValue: value
-          })
-        }
-
-        resolve(data as T | null)
-      }
+  const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
+    api.storage.local.get({ [key]: null }, values => {
+      const error = api.runtime.lastError
+      if (error) reject(new Error(error.message || 'Storage read failed'))
+      else resolve(values)
     })
   })
+  const value = decodeStorageValue(key, result[key]) as T | null
+  if (isEmojiGroupStorageKey(key)) await upgradeGroupSnapshots(api, result)
+  return value
 }
 
 /**
  * 写入数据到 chrome.storage.local
  */
 export async function storageSet(key: string, value: unknown): Promise<void> {
-  const api = getChromeAPI()
-  if (!api?.storage?.local) {
-    warnNoChromeStorage()
-    localStorageSet(key, value)
-    return
-  }
-
-  const cleanValue = ensureSerializable(value)
-  const wrappedValue = {
-    data: cleanValue,
-    timestamp: Date.now()
-  }
-
-  return new Promise((resolve, reject) => {
-    api.storage.local.set({ [key]: wrappedValue }, () => {
-      if (api.runtime.lastError) {
-        log.error('Set failed:', key, api.runtime.lastError)
-        reject(api.runtime.lastError)
-      } else {
-        resolve()
-      }
-    })
-  })
+  await storageBatchSet({ [key]: value })
 }
 
-/**
- * 批量写入
- */
-export async function storageBatchSet(items: Record<string, unknown>): Promise<void> {
+async function writeStorageItems(
+  items: Record<string, unknown>,
+  restoringId?: string
+): Promise<void> {
   const api = getChromeAPI()
-  if (!api?.storage?.local) {
-    warnNoChromeStorage()
-    for (const [key, value] of Object.entries(items)) {
-      localStorageSet(key, value)
-    }
-    return
-  }
-
   const timestamp = Date.now()
-  const wrappedItems: Record<string, { data: unknown; timestamp: number }> = {}
-
+  const storedItems: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(items)) {
-    wrappedItems[key] = {
-      data: ensureSerializable(value),
-      timestamp
+    storedItems[key] = encodeStorageValue(key, ensureSerializable(value), timestamp)
+  }
+  if (api?.storage?.local) {
+    await writeExtensionValues(api, storedItems, restoringId)
+  } else {
+    warnNoChromeStorage()
+    const safe = await filterArchivedWrites(storedItems, restoringId)
+    if (!isLocalStorageAvailable()) throw new Error('No writable storage available')
+    const originals = Object.fromEntries(
+      Object.keys(safe).map(key => [key, localStorage.getItem(key)])
+    )
+    try {
+      for (const [key, value] of Object.entries(safe))
+        localStorage.setItem(key, JSON.stringify(value))
+    } catch (error) {
+      // localStorage has no atomic batch API. Roll back a partially restored group.
+      for (const [key, value] of Object.entries(originals)) {
+        if (value === null) localStorage.removeItem(key)
+        else localStorage.setItem(key, value)
+      }
+      throw error
     }
   }
-
-  return new Promise((resolve, reject) => {
-    api.storage.local.set(wrappedItems, () => {
-      if (api.runtime.lastError) {
-        log.error('Batch set failed:', api.runtime.lastError)
-        reject(api.runtime.lastError)
-      } else {
-        resolve()
-      }
-    })
-  })
 }
 
-/**
- * 删除数据
- */
-export async function storageRemove(key: string): Promise<void> {
-  const api = getChromeAPI()
-  if (!api?.storage?.local) {
-    warnNoChromeStorage()
-    localStorageRemove(key)
-    return
-  }
-
-  return new Promise(resolve => {
-    api.storage.local.remove([key], () => {
-      resolve()
-    })
-  })
+export async function storageBatchSet(items: Record<string, unknown>): Promise<void> {
+  await serializeStorageWrite(() => writeStorageItems(items))
 }
 
-/**
- * 批量删除
- */
-export async function storageBatchRemove(keys: string[]): Promise<void> {
+async function removeStorageValues(keys: string[]): Promise<void> {
   const api = getChromeAPI()
   if (!api?.storage?.local) {
-    warnNoChromeStorage()
     keys.forEach(key => localStorageRemove(key))
     return
   }
-
-  return new Promise(resolve => {
+  await new Promise<void>((resolve, reject) => {
     api.storage.local.remove(keys, () => {
-      resolve()
+      const error = api.runtime.lastError
+      if (error) reject(new Error(error.message || 'Storage removal failed'))
+      else resolve()
     })
   })
+}
+
+export async function storageRemove(key: string): Promise<void> {
+  await storageBatchRemove([key])
+}
+
+export async function storageBatchRemove(keys: string[]): Promise<void> {
+  await serializeStorageWrite(() => removeStorageValues(keys))
 }
 
 /**
@@ -241,32 +267,23 @@ export async function storageBatchRemove(keys: string[]): Promise<void> {
  * @returns 包含所有数据的对象
  */
 export async function storageBatchGet(keys: string[]): Promise<Record<string, any>> {
-  return new Promise((resolve, reject) => {
-    const api = getChromeAPI()
-    if (!api?.storage?.local) {
-      warnNoChromeStorage()
-      const unpacked: Record<string, any> = {}
-      for (const key of keys) {
-        unpacked[key] = localStorageGet(key)
-      }
-      resolve(unpacked)
-      return
-    }
+  const api = getChromeAPI()
+  if (!api?.storage?.local) {
+    warnNoChromeStorage()
+    return Object.fromEntries(keys.map(key => [key, localStorageGet(key)]))
+  }
+  const values = await new Promise<Record<string, unknown>>((resolve, reject) => {
     api.storage.local.get(keys, result => {
-      if (api.runtime.lastError) {
-        reject(new Error(api.runtime.lastError.message))
-      } else {
-        // 解包包装格式 { data, timestamp }
-        const unpacked: Record<string, any> = {}
-        for (const [key, value] of Object.entries(result)) {
-          const data =
-            (value && typeof value === 'object' && 'data' in value ? value.data : value) ?? null
-          unpacked[key] = data
-        }
-        resolve(unpacked)
-      }
+      const error = api.runtime.lastError
+      if (error) reject(new Error(error.message || 'Storage read failed'))
+      else resolve(result)
     })
   })
+  const unpacked = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, decodeStorageValue(key, value)])
+  )
+  await upgradeGroupSnapshots(api, values)
+  return unpacked
 }
 
 // ========================================
@@ -400,6 +417,18 @@ async function getArchiveDb(): Promise<IDBDatabase> {
 // ========================================
 // Storage Health Check
 // ========================================
+
+// Query keys only: saves should not deserialize all potentially large archived packs.
+async function getDurableArchivedGroupIds(): Promise<string[]> {
+  const db = await getArchiveDb()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readonly')
+    const request = transaction.objectStore(ARCHIVE_STORE_NAME).getAllKeys()
+    request.onsuccess = () =>
+      resolve(request.result.filter((id): id is string => typeof id === 'string'))
+    request.onerror = () => reject(request.error || new Error('Failed to read archive IDs'))
+  })
+}
 
 /**
  * 检查存储数据的完整性
@@ -651,6 +680,24 @@ export async function saveAllData(data: {
  * 优化：使用批量读取，将 N+1 次查询优化为 2 次
  */
 export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
+  if (typeof indexedDB !== 'undefined') {
+    await cleanupArchivedGroupStorage()
+  }
+  // Upgrade every existing group key, including legacy keys not referenced by the index.
+  const api = getChromeAPI()
+  if (api?.storage?.local) {
+    const snapshots = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      api.storage.local.get(null, values => {
+        const error = api.runtime.lastError
+        if (error) reject(new Error(error.message || 'Storage read failed'))
+        else resolve(values)
+      })
+    })
+    await upgradeGroupSnapshots(api, snapshots)
+  } else if (isLocalStorageAvailable()) {
+    const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
+    for (const key of keys) if (key && isEmojiGroupStorageKey(key)) localStorageGet(key)
+  }
   const index = await getEmojiGroupIndex()
   if (index.length === 0) {
     return []
@@ -702,84 +749,71 @@ export async function setArchivedGroupIds(ids: string[]): Promise<void> {
 /**
  * 归档一个分组（存储到 IndexedDB）
  */
-export async function archiveGroup(group: EmojiGroup): Promise<void> {
+// Resolve only after the transaction commits, not after an individual request.
+async function mutateArchive(action: (store: IDBObjectStore) => void): Promise<void> {
   const db = await getArchiveDb()
-
-  return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
-      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
-
-      const request = store.put(group)
-
-      request.onsuccess = async () => {
-        try {
-          const archivedIds = await getArchivedGroupIds()
-          if (!archivedIds.includes(group.id)) {
-            archivedIds.push(group.id)
-            await setArchivedGroupIds(archivedIds)
-          }
-          resolve()
-        } catch (error) {
-          reject(error)
-        }
-      }
-
-      request.onerror = () => {
-        reject(new Error('Failed to archive group'))
-      }
-    } catch (error) {
-      reject(error)
-    }
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
+    transaction.oncomplete = () => resolve()
+    transaction.onabort = transaction.onerror = () =>
+      reject(transaction.error || new Error('Archive transaction failed'))
+    action(transaction.objectStore(ARCHIVE_STORE_NAME))
   })
 }
 
-/**
- * 取消归档并返回分组数据
- */
+/** Clean only IDs with an actual durable archive record; never guess from the index. */
+export async function cleanupArchivedGroupStorage(): Promise<void> {
+  await serializeStorageWrite(cleanupArchivedGroupStorageUnlocked)
+}
+
+async function cleanupArchivedGroupStorageUnlocked(): Promise<void> {
+  const archivedIds = await getDurableArchivedGroupIds()
+  if (!archivedIds.length) return
+  const ids = new Set(archivedIds)
+  // Free the large values FIRST, so even an already-full storage can update metadata.
+  await removeStorageValues([...ids].map(id => STORAGE_KEYS.GROUP_PREFIX + id))
+  if (isLocalStorageAvailable()) {
+    for (const id of ids) localStorageRemove(STORAGE_KEYS.GROUP_PREFIX + id)
+  }
+  const index = await getEmojiGroupIndex()
+  const active = index.filter(item => !ids.has(item.id))
+  const previousIds = await getArchivedGroupIds()
+  const items: Record<string, unknown> = {}
+  if (active.length !== index.length) items[STORAGE_KEYS.GROUP_INDEX] = active
+  if (JSON.stringify(previousIds) !== JSON.stringify([...ids]))
+    items[STORAGE_KEYS.ARCHIVED_GROUPS] = [...ids]
+  if (Object.keys(items).length) await writeStorageItems(items)
+}
+
+export async function archiveGroup(group: EmojiGroup): Promise<void> {
+  await serializeStorageWrite(async () => {
+    await mutateArchive(store => {
+      store.put(ensureSerializable(group))
+    })
+    await cleanupArchivedGroupStorageUnlocked()
+  })
+}
+
+/** Restore the active copy BEFORE deleting the archive. Quota errors keep it recoverable. */
 export async function unarchiveGroup(groupId: string): Promise<EmojiGroup | null> {
-  const db = await getArchiveDb()
-
-  return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
-      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
-
-      const getRequest = store.get(groupId)
-
-      getRequest.onsuccess = async () => {
-        const group = getRequest.result as EmojiGroup | undefined
-
-        if (group) {
-          // 从 IndexedDB 删除
-          const deleteRequest = store.delete(groupId)
-
-          deleteRequest.onsuccess = async () => {
-            try {
-              // 从归档 ID 列表移除
-              const archivedIds = await getArchivedGroupIds()
-              const newIds = archivedIds.filter(id => id !== groupId)
-              await setArchivedGroupIds(newIds)
-              resolve(group)
-            } catch (error) {
-              reject(error)
-            }
-          }
-
-          deleteRequest.onerror = () => {
-            reject(new Error('Failed to delete from archive'))
-          }
-        } else {
-          resolve(null)
-        }
-      }
-
-      getRequest.onerror = () => {
-        reject(new Error('Failed to get archived group'))
-      }
-    } catch (error) {
-      reject(error)
-    }
+  return serializeStorageWrite(async () => {
+    const group = await getArchivedGroup(groupId)
+    if (!group) return null
+    const index = await getEmojiGroupIndex()
+    if (!index.some(item => item.id === groupId)) index.push({ id: groupId, order: index.length })
+    const archivedIds = (await getArchivedGroupIds()).filter(id => id !== groupId)
+    await writeStorageItems(
+      {
+        [STORAGE_KEYS.GROUP_PREFIX + groupId]: group,
+        [STORAGE_KEYS.GROUP_INDEX]: index,
+        [STORAGE_KEYS.ARCHIVED_GROUPS]: archivedIds
+      },
+      groupId
+    )
+    await mutateArchive(store => {
+      store.delete(groupId)
+    })
+    return group
   })
 }
 
@@ -837,31 +871,15 @@ export async function getAllArchivedGroups(): Promise<EmojiGroup[]> {
  * 永久删除归档分组
  */
 export async function deleteArchivedGroup(groupId: string): Promise<void> {
-  const db = await getArchiveDb()
-
-  return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction([ARCHIVE_STORE_NAME], 'readwrite')
-      const store = transaction.objectStore(ARCHIVE_STORE_NAME)
-      const request = store.delete(groupId)
-
-      request.onsuccess = async () => {
-        try {
-          const archivedIds = await getArchivedGroupIds()
-          const newIds = archivedIds.filter(id => id !== groupId)
-          await setArchivedGroupIds(newIds)
-          resolve()
-        } catch (error) {
-          reject(error)
-        }
-      }
-
-      request.onerror = () => {
-        reject(new Error('Failed to delete archived group'))
-      }
-    } catch (error) {
-      reject(error)
-    }
+  await serializeStorageWrite(async () => {
+    // Remove obsolete active duplicates while the durable archive still exists.
+    await cleanupArchivedGroupStorageUnlocked()
+    await mutateArchive(store => {
+      store.delete(groupId)
+    })
+    await writeStorageItems({
+      [STORAGE_KEYS.ARCHIVED_GROUPS]: (await getArchivedGroupIds()).filter(id => id !== groupId)
+    })
   })
 }
 

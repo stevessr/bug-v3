@@ -41,6 +41,10 @@ const handleUnarchive = async (groupId: string) => {
   loading.value = true
   try {
     await emojiStore.unarchiveGroup(groupId)
+  } catch (error) {
+    message.error(
+      `取消归档失败，归档副本已保留：${error instanceof Error ? error.message : String(error)}`
+    )
   } finally {
     loading.value = false
   }
@@ -50,6 +54,8 @@ const handleDelete = async (groupId: string) => {
   loading.value = true
   try {
     await emojiStore.deleteArchivedGroup(groupId)
+  } catch (error) {
+    message.error(`删除失败：${error instanceof Error ? error.message : String(error)}`)
   } finally {
     loading.value = false
   }

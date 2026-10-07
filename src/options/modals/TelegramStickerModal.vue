@@ -26,6 +26,7 @@ import {
   TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS,
   TELEGRAM_STAGE_HINTS
 } from '@/utils/telegram/telegramStickerConversion'
+import { withTelegramGroupSource } from '@/utils/telegram/groupSource'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -224,6 +225,7 @@ const doImport = async () => {
         id: newGroupId,
         name: newGroupName.value.trim(),
         icon: newGroupIcon.value,
+        detail: withTelegramGroupSource(undefined, stickerSetInfo.value.name),
         order: store.groups.length,
         emojis: []
       }
@@ -235,6 +237,8 @@ const doImport = async () => {
         throw new Error('未找到目标分组')
       }
     }
+
+    targetGroup.detail = withTelegramGroupSource(targetGroup.detail, stickerSetInfo.value.name)
 
     const newEmojis: any[] = []
     const service = uploadServices[uploadService.value]
@@ -373,6 +377,8 @@ const doImport = async () => {
       }
     }
 
+    // Persist pack provenance along with the emojis, including update-mode imports.
+    await store.saveGroup(targetGroup.id)
     // 结束批量操作并保存
     await store.endBatch()
 

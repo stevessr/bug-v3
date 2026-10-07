@@ -214,7 +214,7 @@ test('group-triggered successful update returns to groups after persistence', as
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('emojiGroup_telegram_fixture')!)
   )
-  expect(saved.data.id).toBe('telegram_fixture')
+  expect((saved.data || saved).id).toBe('telegram_fixture')
 })
 
 test('failed group update stays on the import page', async ({ page }) => {

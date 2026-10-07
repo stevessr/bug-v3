@@ -21,6 +21,7 @@ import {
   TELEGRAM_DEFAULT_ANIMATED_TIMEOUT_MS,
   TELEGRAM_STAGE_HINTS
 } from '@/utils/telegram/telegramStickerConversion'
+import { getTelegramGroupSource, withTelegramGroupSource } from '@/utils/telegram/groupSource'
 import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
@@ -38,43 +39,16 @@ const safeSettings = computed(() => store.settings || defaultSettings)
 // --- 状态 ---
 const telegramBotToken = ref('')
 
-// Initialize asynchronously
+const initialized = ref(false)
+const autoTokenVersion = ref(0)
+const queryValue = (key: string) => {
+  const value = route.query[key]
+  return String((Array.isArray(value) ? value[0] : value) || '')
+}
 onMounted(async () => {
-  const token = await getTelegramBotToken()
-  if (token) {
-    telegramBotToken.value = token
-  }
-
-  const tgAuto = Array.isArray(route.query.tgAuto) ? route.query.tgAuto[0] : route.query.tgAuto
-  const tgInput = Array.isArray(route.query.tgInput) ? route.query.tgInput[0] : route.query.tgInput
-  if (tgInput) {
-    telegramInput.value = String(tgInput)
-  }
-
-  const tgGroupId = Array.isArray(route.query.tgGroupId)
-    ? route.query.tgGroupId[0]
-    : route.query.tgGroupId
-  if (tgGroupId) {
-    importMode.value = 'update'
-    await nextTick()
-    selectedGroupId.value = String(tgGroupId)
-  }
-
-  if (tgAuto === '1') {
-    await nextTick()
-    if (!telegramBotToken.value) {
-      message.warning('未检测到 Telegram Bot Token，请先设置后再导入')
-      return
-    }
-    if (!telegramInput.value) {
-      message.warning('未检测到贴纸包链接或名称')
-      return
-    }
-    await previewStickerSet()
-    if (stickerSetInfo.value) {
-      await doImport()
-    }
-  }
+  telegramBotToken.value = (await getTelegramBotToken()) || ''
+  if (telegramBotToken.value) autoTokenVersion.value++
+  initialized.value = true
 })
 const telegramInput = ref('')
 const queueInput = ref('')
@@ -230,6 +204,17 @@ const applyStickerSetDefaults = async (
   // 自动设置分组名称为贴纸包标题
   if (options.forceName || !newGroupName.value) {
     newGroupName.value = stickerSet.title
+  }
+
+  // Group-menu updates must never be redirected by the sticker pack's display title.
+  const requestedId = queryValue('tgGroupId')
+  if (requestedId) {
+    const requested = store.groups.find(group => group.id === requestedId)
+    if (!requested) throw new Error('未找到要更新的分组，请返回分组页重试')
+    importMode.value = 'update'
+    await nextTick()
+    selectedGroupId.value = requested.id
+    return
   }
 
   // 检查是否已存在同名分组
@@ -465,8 +450,9 @@ const waitForUploadRateLimit = async (waitTime: number) => {
 /**
  * 保存 Bot Token
  */
-const saveBotToken = () => {
-  setTelegramBotToken(telegramBotToken.value)
+const saveBotToken = async () => {
+  await setTelegramBotToken(telegramBotToken.value)
+  autoTokenVersion.value++
   message.success('Telegram Bot Token 已保存')
 }
 
@@ -499,7 +485,9 @@ const previewStickerSet = async () => {
   progress.value = { processed: 0, total: 0, message: '正在获取贴纸包信息...' }
 
   try {
+    const requestedGroupId = queryValue('tgGroupId')
     const stickerSet = await getStickerSet(setName, telegramBotToken.value)
+    if (requestedGroupId && requestedGroupId !== queryValue('tgGroupId')) return
     stickerSetInfo.value = stickerSet
 
     await applyStickerSetDefaults(stickerSet, { forceName: true })
@@ -508,6 +496,9 @@ const previewStickerSet = async () => {
       message.info(`检测到已存在分组「${stickerSet.title}」，已自动切换到更新模式并选择该分组`)
     } else {
       message.success(`成功获取贴纸包：${stickerSet.title}（${stickerSet.stickers.length} 个贴纸）`)
+    }
+    if (queryValue('tgAuto') === '1' && queryValue('tgGroupId') && !isCancelling.value) {
+      await doImport()
     }
   } catch (error: any) {
     console.error('获取贴纸包失败：', error)
@@ -583,7 +574,7 @@ const doImport = async (): Promise<boolean> => {
         id: newGroupId,
         name: newGroupName.value.trim(),
         icon: newGroupIcon.value,
-        detail: `Telegram 贴纸包：${telegramInput.value}`,
+        detail: withTelegramGroupSource(undefined, stickerSetInfo.value.name),
         order: store.groups.length,
         emojis: []
       }
@@ -595,6 +586,8 @@ const doImport = async (): Promise<boolean> => {
         throw new Error('未找到目标分组')
       }
     }
+
+    targetGroup.detail = withTelegramGroupSource(targetGroup.detail, stickerSetInfo.value.name)
 
     const newEmojis: any[] = []
     const service = uploadServices[uploadService.value]
@@ -882,6 +875,47 @@ const doImport = async (): Promise<boolean> => {
     abortController = null
   }
 }
+// Watch route requests as well as initialization: the tab component can be reused.
+let lastAutoRequest = ''
+watch(
+  () => [
+    initialized.value,
+    store.isLoading,
+    isProcessing.value,
+    autoTokenVersion.value,
+    queryValue('source'),
+    queryValue('tgAuto'),
+    queryValue('tgGroupId'),
+    queryValue('tgInput')
+  ],
+  async () => {
+    const groupId = queryValue('tgGroupId')
+    if (queryValue('tgAuto') !== '1' || !groupId || queryValue('source') === 'bilibili') {
+      lastAutoRequest = ''
+      return
+    }
+    if (!initialized.value || store.isLoading || isProcessing.value || isQueueRunning.value) return
+    const group = store.groups.find(item => item.id === groupId)
+    const input = queryValue('tgInput') || getTelegramGroupSource(group?.detail)
+    const requestKey = `${autoTokenVersion.value}:${groupId}:${input}`
+    if (lastAutoRequest === requestKey) return
+    importMode.value = 'update'
+    await nextTick()
+    selectedGroupId.value = groupId
+    telegramInput.value = input
+    if (!autoTokenVersion.value || !telegramBotToken.value) {
+      message.warning('未检测到 Telegram Bot Token，请先保存 Token，随后会自动更新')
+      return
+    }
+    if (!input) {
+      message.warning('此旧分组未保存贴纸包来源，请输入链接并预览；本次会自动更新并保存来源')
+      return
+    }
+    lastAutoRequest = requestKey
+    await previewStickerSet()
+  },
+  { immediate: true, flush: 'post' }
+)
 </script>
 
 <template>

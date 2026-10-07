@@ -266,9 +266,10 @@ test('TG options shows the upload countdown and then returns after saving the sa
   await startWaitingImport(page)
   await expect(page.getByText('上传限流，等待 2 秒后重试当前贴纸...')).toBeVisible()
   await expect(page).toHaveURL(/#\/groups$/, { timeout: 10000 })
-  const group = await page.evaluate(
-    () => JSON.parse(localStorage.getItem('emojiGroup_telegram_wait')!).data
-  )
+  const group = await page.evaluate(() => {
+    const value = JSON.parse(localStorage.getItem('emojiGroup_telegram_wait')!)
+    return value.data || value
+  })
   expect(group.emojis).toHaveLength(1)
   expect(group.emojis[0].short_url).toBe('upload://fixture.png')
 })
@@ -281,4 +282,176 @@ test('cancelling the TG upload countdown resolves the pending wait without succe
   await page.getByRole('button', { name: '取消导入' }).click()
   await expect(page.getByText('已取消导入（已处理 0 个贴纸）')).toBeVisible()
   expect(page.url()).toContain('#/import?')
+})
+
+async function seedAutoUpdate(page: import('@playwright/test').Page, token = true) {
+  await page.addInitScript(
+    ({ token }) => {
+      if (token) localStorage.setItem('telegramBotToken', JSON.stringify('fixture-token'))
+      localStorage.setItem(
+        'emojiGroupIndex',
+        JSON.stringify([
+          { id: 'telegram_renamed', order: 0 },
+          { id: 'telegram_title_match', order: 1 }
+        ])
+      )
+      localStorage.setItem(
+        'emojiGroup_telegram_renamed',
+        JSON.stringify({
+          id: 'telegram_renamed',
+          name: 'Renamed fixture',
+          icon: '📦',
+          order: 0,
+          emojis: [],
+          detail: 'My notes\n\nTelegram 贴纸包：https://t.me/addstickers/CanonicalPack'
+        })
+      )
+      localStorage.setItem(
+        'emojiGroup_telegram_title_match',
+        JSON.stringify({
+          id: 'telegram_title_match',
+          name: 'Original pack title',
+          icon: '📦',
+          order: 1,
+          emojis: [],
+          detail: 'Untouched'
+        })
+      )
+    },
+    { token }
+  )
+  await page.route('https://s.pwsh.us.kg/**', route => route.fulfill({ status: 404 }))
+  let requests = 0
+  await page.route('https://api.telegram.org/**', route => {
+    requests++
+    return route.fulfill({
+      json: {
+        ok: true,
+        result: { name: 'CanonicalPack', title: 'Original pack title', stickers: [] }
+      }
+    })
+  })
+  return () => requests
+}
+
+async function verifyCorrectTarget(page: import('@playwright/test').Page) {
+  await expect(page).toHaveURL(/#\/groups$/, { timeout: 10000 })
+  const groups = await page.evaluate(() =>
+    ['telegram_renamed', 'telegram_title_match'].map(id => {
+      const value = JSON.parse(localStorage.getItem(`emojiGroup_${id}`)!)
+      return value.data || value
+    })
+  )
+  expect(groups[0].name).toBe('Renamed fixture')
+  expect(groups[0].detail).toBe('My notes\n\nTelegram 贴纸包：CanonicalPack')
+  expect(groups[1].detail).toBe('Untouched')
+}
+
+test('actual group update menu automatically updates the clicked renamed group, not a title match', async ({
+  page
+}) => {
+  const requests = await seedAutoUpdate(page)
+  await page.goto('http://localhost:4189/?mode=options#/groups')
+  const group = page.locator('.group-item').filter({ hasText: 'Renamed fixture' })
+  await group.getByRole('button', { name: '更多操作' }).click()
+  await page.getByText('更新（Telegram）', { exact: true }).click()
+  await verifyCorrectTarget(page)
+  expect(requests()).toBe(1)
+})
+
+test('same import component responds to a later automatic-update route request', async ({
+  page
+}) => {
+  const requests = await seedAutoUpdate(page)
+  await page.goto('http://localhost:4189/?mode=options#/import?source=telegram')
+  await expect(page.getByPlaceholder('输入 Telegram Bot Token')).toHaveValue('fixture-token')
+  await page.evaluate(() => {
+    location.hash =
+      '/import?source=telegram&tgAuto=1&tgGroupId=telegram_renamed&tgInput=CanonicalPack'
+  })
+  await verifyCorrectTarget(page)
+  expect(requests()).toBe(1)
+})
+
+test('saving a missing Bot Token resumes automatic update, without fetching on each keystroke', async ({
+  page
+}) => {
+  const requests = await seedAutoUpdate(page, false)
+  await page.goto(
+    'http://localhost:4189/?mode=options#/import?source=telegram&tgAuto=1&tgGroupId=telegram_renamed&tgInput=CanonicalPack'
+  )
+  await expect(
+    page.getByText('未检测到 Telegram Bot Token，请先保存 Token，随后会自动更新')
+  ).toBeVisible()
+  await page.getByPlaceholder('输入 Telegram Bot Token').fill('fixture-token')
+  expect(requests()).toBe(0)
+  await page.getByRole('button', { name: /^保\s*存$/ }).click()
+  await verifyCorrectTarget(page)
+  expect(requests()).toBe(1)
+})
+
+test('buffer modal persists pack provenance for the next group-menu auto update', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('telegramBotToken', JSON.stringify('fixture-token'))
+    if (!localStorage.getItem('emojiGroupIndex'))
+      localStorage.setItem('emojiGroupIndex', JSON.stringify([]))
+  })
+  await page.route('https://s.pwsh.us.kg/**', route => route.fulfill({ status: 404 }))
+  await page.route('https://api.telegram.org/**', route =>
+    route.fulfill({
+      json: {
+        ok: true,
+        result: { name: 'CanonicalPack', title: 'Buffer fixture pack', stickers: [] }
+      }
+    })
+  )
+  await page.goto('http://localhost:4189/?mode=options#/buffer')
+  await page.getByRole('button', { name: 'Telegram 贴纸导入' }).click()
+  const modal = page.getByRole('dialog')
+  await modal
+    .getByPlaceholder('例如：https://t.me/addstickers/xxx 或 xxx')
+    .fill('https://t.me/addstickers/CanonicalPack')
+  await modal.getByRole('button', { name: /预\s*览/ }).click()
+  await modal.getByRole('button', { name: '开始导入' }).click()
+  await expect(modal).not.toBeVisible()
+  const detail = await page.evaluate(() => {
+    const values = Object.keys(localStorage)
+      .filter(key => key.startsWith('emojiGroup_'))
+      .map(key => {
+        const value = JSON.parse(localStorage.getItem(key)!)
+        return value.data || value
+      })
+    return values.find(group => group.name === 'Buffer fixture pack')?.detail
+  })
+  expect(detail).toBe('Telegram 贴纸包：CanonicalPack')
+  await page.goto('http://localhost:4189/?mode=options#/groups')
+  const group = page.locator('.group-item').filter({ hasText: 'Buffer fixture pack' })
+  await group.getByRole('button', { name: '更多操作' }).click()
+  await page.getByText('更新（Telegram）', { exact: true }).click()
+  await expect(page).toHaveURL(/#\/groups$/, { timeout: 10000 })
+})
+
+test('legacy group without source can supply it once and immediately finish the requested update', async ({
+  page
+}) => {
+  const requests = await seedAutoUpdate(page)
+  await page.addInitScript(() => {
+    const group = JSON.parse(localStorage.getItem('emojiGroup_telegram_renamed')!)
+    group.detail = 'My notes'
+    localStorage.setItem('emojiGroup_telegram_renamed', JSON.stringify(group))
+  })
+  await page.goto(
+    'http://localhost:4189/?mode=options#/import?source=telegram&tgAuto=1&tgGroupId=telegram_renamed'
+  )
+  await expect(
+    page.getByText('此旧分组未保存贴纸包来源，请输入链接并预览；本次会自动更新并保存来源')
+  ).toBeVisible()
+  await page
+    .getByPlaceholder('例如：https://t.me/addstickers/xxx 或 xxx', { exact: true })
+    .fill('https://t.me/addstickers/CanonicalPack')
+  await page.getByRole('button', { name: /预\s*览/ }).click()
+  await verifyCorrectTarget(page)
+  expect(requests()).toBe(1)
 })

@@ -1,3 +1,4 @@
+import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 export class ContentStorageAdapter {
@@ -10,11 +11,7 @@ export class ContentStorageAdapter {
         const value = result[key]
         if (value !== null && value !== undefined) {
           console.log(`[Content Storage] Found ${key} in extension storage`)
-          // Handle both new storage format (with .data) and legacy format
-          if (value && typeof value === 'object' && (value as { data: any }).data !== undefined) {
-            return (value as { data: any }).data
-          }
-          return value
+          return decodeStorageValue(key, value)
         }
       } catch (error) {
         console.warn(`[Content Storage] Extension storage failed for ${key}:`, error)
@@ -29,15 +26,7 @@ export class ContentStorageAdapter {
           const parsed = JSON.parse(value)
           if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in localStorage`)
-            // Handle both new storage format (with .data) and legacy format
-            if (
-              parsed &&
-              typeof parsed === 'object' &&
-              (parsed as { data: any }).data !== undefined
-            ) {
-              return (parsed as { data: any }).data
-            }
-            return parsed
+            return decodeStorageValue(key, parsed)
           }
         }
       }
@@ -53,15 +42,7 @@ export class ContentStorageAdapter {
           const parsed = JSON.parse(value)
           if (parsed !== null && parsed !== undefined) {
             console.log(`[Content Storage] Found ${key} in sessionStorage`)
-            // Handle both new storage format (with .data) and legacy format
-            if (
-              parsed &&
-              typeof parsed === 'object' &&
-              (parsed as { data: any }).data !== undefined
-            ) {
-              return (parsed as { data: any }).data
-            }
-            return parsed
+            return decodeStorageValue(key, parsed)
           }
         }
       }

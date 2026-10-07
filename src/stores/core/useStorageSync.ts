@@ -1,5 +1,6 @@
 import { type ShallowRef, type Ref } from 'vue'
 
+import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
 import { STORAGE_KEYS } from '@/utils/simpleStorage'
 import * as storage from '@/utils/simpleStorage'
 import type { EmojiGroup, AppSettings, Emoji } from '@/types/type'
@@ -57,8 +58,11 @@ export function useStorageSync({
   ): Promise<EmojiGroup | null> => {
     // 尝试从 change payload 获取新数据
     let newGroup: EmojiGroup | null = null
-    if (change?.newValue && typeof change.newValue === 'object') {
-      newGroup = (change.newValue as { data?: EmojiGroup }).data || null
+    if (change?.newValue !== undefined) {
+      newGroup = decodeStorageValue(
+        STORAGE_KEYS.GROUP_PREFIX + groupId,
+        change.newValue
+      ) as EmojiGroup | null
     }
 
     // 如果 payload 中没有，回退到存储读取
@@ -351,7 +355,11 @@ export function useStorageSync({
           }
 
           // If incoming changes are older or equal to the last processed one, skip
-          if (maxIncomingTs && maxIncomingTs <= lastExternalChangeTs) {
+          if (
+            !changedKeys.some(key => key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) &&
+            maxIncomingTs &&
+            maxIncomingTs <= lastExternalChangeTs
+          ) {
             log.info('Ignored storage change - older timestamp', {
               maxIncomingTs,
               lastExternalChangeTs

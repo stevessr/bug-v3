@@ -1,6 +1,7 @@
 import { getChromeAPI } from '../utils/main.ts'
 
 import * as storage from '@/utils/simpleStorage'
+import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
 import type { EmojiGroup, AppSettings } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 
@@ -194,7 +195,22 @@ export async function handleSaveEmojiData(
   }
 
   try {
-    await chromeAPI.storage.local.set(data)
+    if (Array.isArray(data.groups) || data.settings || data.favorites) {
+      await storage.saveAllData({
+        groups: data.groups as EmojiGroup[] | undefined,
+        groupIndex: Array.isArray(data.groups)
+          ? data.groups.map((group: any, order: number) => ({ id: group.id, order }))
+          : undefined,
+        settings: data.settings as AppSettings | undefined,
+        favorites: data.favorites as string[] | undefined
+      })
+    } else {
+      await storage.storageBatchSet(
+        Object.fromEntries(
+          Object.entries(data).map(([key, value]) => [key, decodeStorageValue(key, value)])
+        )
+      )
+    }
     // 清除缓存以确保下次读取获取最新数据
     invalidateCache()
     _sendResponse({ success: true })
@@ -216,9 +232,10 @@ export function setupStorageChangeListener() {
 
         // 优化：当相关存储键变化时，立即失效缓存确保数据一致性
         if (
-          changes['settings'] ||
+          changes[storage.STORAGE_KEYS.SETTINGS] ||
+          changes[storage.STORAGE_KEYS.GROUP_INDEX] ||
           changes['favorites'] ||
-          Object.keys(changes).some(key => key.startsWith('group_'))
+          Object.keys(changes).some(key => key.startsWith(storage.STORAGE_KEYS.GROUP_PREFIX))
         ) {
           console.log('[Background] Cache invalidated due to storage change')
           invalidateCache()

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import type { OptionsInject } from '../types'
 import GroupsTab from '../components/GroupsTab.vue'
 
+import { getTelegramGroupSource } from '@/utils/telegram/groupSource'
 import { useEmojiStore } from '@/stores/emojiStore'
 
 const options = inject<OptionsInject>('options')!
@@ -35,21 +36,17 @@ const {
 
 const handleArchiveGroup = async (group: any) => {
   if (group && group.id) {
-    await emojiStore.archiveGroup(group.id)
+    try {
+      await emojiStore.archiveGroup(group.id)
+    } catch (error) {
+      message.error(`归档失败：${error instanceof Error ? error.message : String(error)}`)
+    }
   }
-}
-
-const getTelegramInputFromGroup = (group: any): string => {
-  const detail = String(group?.detail ?? '')
-  const prefix = 'Telegram 贴纸包：'
-  const index = detail.indexOf(prefix)
-  if (index === -1) return ''
-  return detail.slice(index + prefix.length).trim()
 }
 
 const handleTelegramUpdate = (group: any) => {
   if (!group || !group.id) return
-  const input = getTelegramInputFromGroup(group)
+  const input = getTelegramGroupSource(group.detail)
   router.push({
     path: '/import',
     query: {

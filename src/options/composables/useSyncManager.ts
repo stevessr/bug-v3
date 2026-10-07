@@ -1,4 +1,5 @@
-import { STORAGE_KEYS } from '@/utils/simpleStorage'
+import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
+import { STORAGE_KEYS, storageBatchSet } from '@/utils/simpleStorage'
 
 /**
  * Chrome 同步管理 Composable
@@ -76,7 +77,7 @@ export function useSyncManager(options: {
             } catch {
               parsed = rawValue
             }
-            batch[key] = parsed
+            batch[key] = decodeStorageValue(key, parsed)
             copied++
           }
         } catch (err) {
@@ -85,7 +86,7 @@ export function useSyncManager(options: {
       }
 
       if (copied > 0) {
-        await chromeAPI.storage.local.set(batch)
+        await storageBatchSet(batch)
         showSuccess(`已复制 ${copied} 项数据到扩展存储`)
       } else {
         showError('没有数据被复制')
