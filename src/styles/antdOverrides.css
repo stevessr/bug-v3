@@ -1328,6 +1328,33 @@
   background: var(--md3-surface-container) !important;
 }
 
+.ant-segmented-item:not(.ant-segmented-item-selected) {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+}
+
+.ant-tabs-tab-btn {
+  color: var(--theme-on-surface-variant, var(--md3-on-surface-variant)) !important;
+}
+
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--theme-primary, var(--md3-primary)) !important;
+}
+
+.ant-tabs-ink-bar {
+  background: var(--theme-primary, var(--md3-primary)) !important;
+}
+
+.ant-radio-button-wrapper {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+  background: var(--theme-surface-container, var(--md3-surface-container)) !important;
+}
+
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  color: var(--theme-on-primary-container, var(--md3-on-primary-container)) !important;
+  background: var(--theme-primary-container, var(--md3-primary-container)) !important;
+  border-color: var(--theme-primary, var(--md3-primary)) !important;
+}
+
 .ant-segmented-item-selected {
   background: var(--md3-primary-container) !important;
   color: var(--md3-on-primary-container) !important;

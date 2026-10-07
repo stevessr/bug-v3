@@ -120,7 +120,9 @@ const localAiConcurrency = computed({
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+  <div
+    class="ai-settings bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700"
+  >
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-lg font-semibold dark:text-white">AI 配置</h2>
       <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -128,9 +130,11 @@ const localAiConcurrency = computed({
       </p>
     </div>
 
-    <div class="p-6 space-y-6">
+    <div class="p-6 space-y-5">
       <!-- Gemini API Configuration -->
-      <div class="space-y-4">
+      <div
+        class="ai-provider-section space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+      >
         <h3 class="text-md font-medium dark:text-white">Google Gemini API</h3>
 
         <div class="space-y-3">

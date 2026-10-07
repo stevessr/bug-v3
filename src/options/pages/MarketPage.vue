@@ -522,11 +522,8 @@ onMounted(() => {
     <div class="mb-4 flex items-center justify-between">
       <div>
         <h2 class="text-xl font-semibold dark:text-white">{{ t('cloudMarket') }}</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ t('cloudMarketDescription') }}
-          <template v-if="marketMetadata">
-            {{ t('totalPackages', { count: marketMetadata.totalGroups }) }}
-          </template>
+        <p v-if="marketMetadata" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {{ t('totalPackages', { count: marketMetadata.totalGroups }) }}
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -536,12 +533,16 @@ onMounted(() => {
 
     <!-- 搜索栏 -->
     <div class="mb-4 space-y-3">
-      <a-segmented
+      <a-select
         v-model:value="selectedTopic"
+        class="market-topic-select w-full max-w-md"
+        show-search
+        option-filter-prop="label"
+        aria-label="选择表情包分类"
         :options="
           marketTopics.map(topic => ({
             value: topic.id,
-            label: `${topic.label} (${topicCounts.get(topic.id) || 0})`
+            label: `${topic.label} · ${topicCounts.get(topic.id) || 0}`
           }))
         "
       />
@@ -584,7 +585,7 @@ onMounted(() => {
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 {{ t('emotesCount', { count: group.emojiCount }) }}
                 <span v-if="group.isArchived" class="ml-2 text-xs text-orange-500">
-                  {{ t('archived') }}
+                  {{ t('archived').replace(/[()（）]/g, '') }}
                 </span>
               </p>
             </div>

@@ -136,7 +136,7 @@ onMounted(async () => {
   <div class="space-y-4">
     <!-- Sub-tabs for settings -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
-      <a-tabs v-model:activeKey="activeTab" class="px-4">
+      <a-tabs v-model:activeKey="activeTab" class="settings-tabs px-4">
         <a-tab-pane key="theme" tab="主题">
           <div class="py-4">
             <ThemeSettings

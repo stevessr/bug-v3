@@ -4,7 +4,13 @@ import TypeIt from 'typeit'
 
 // 从 package.json 读取版本信息（相对路径从当前文件到项目根）
 import pkg from '../../../package.json'
-const changelogMarkdown = ''
+const changelogMarkdown = `
+## [1.2.9-patch-4] - 2026-10-07
+### 更新
+- 新增可搜索的分组快捷表情选择与常用表情引用统计
+- 增加后台 Discourse 原生上传器选项与 429 自动等待重试
+- 优化分组、Telegram 导入和浏览器侧栏的显示与主题适配
+`
 
 const version = pkg?.version || 'dev'
 const extensionName = pkg?.name || 'Emoji Extension'

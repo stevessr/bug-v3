@@ -26,7 +26,7 @@ export default defineComponent({
     return () => (
       <div
         class={[
-          'relative h-full rounded-2xl border transition-all duration-200 cursor-pointer',
+          'ai-rename-card relative h-full rounded-2xl border transition-all duration-200 cursor-pointer',
           'bg-white/90 dark:bg-gray-900/60 backdrop-blur',
           'hover:-translate-y-0.5 hover:shadow-lg',
           props.selected
@@ -37,11 +37,11 @@ export default defineComponent({
       >
         <div class="h-1 w-full rounded-t-2xl bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-300" />
         <div class="flex h-full flex-col items-center justify-between p-3">
-          <div class="h-24 w-full flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 dark:bg-gray-800">
+          <div class="ai-rename-card-image h-24 w-full flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 dark:bg-gray-800">
             <CachedImage
               src={getEmojiImageUrlSync(props.emoji, { preferCache: true })}
               alt={props.emoji.name}
-              class="max-h-full max-w-full object-contain"
+              class="h-full w-full object-contain"
               loading="lazy"
             />
           </div>

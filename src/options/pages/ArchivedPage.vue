@@ -167,7 +167,9 @@ onMounted(async () => {
           <div class="flex gap-2">
             <a-button size="small" @click="handleViewDetail(group)">详情</a-button>
             <a-button size="small" @click="handleExport(group)">导出</a-button>
-            <a-button type="primary" size="small" @click="handleUnarchive(group.id)">恢复</a-button>
+            <a-button type="primary" size="small" @click="handleUnarchive(group.id)">
+              取消归档
+            </a-button>
             <a-popconfirm
               title="确定永久删除此分组？"
               ok-text="删除"

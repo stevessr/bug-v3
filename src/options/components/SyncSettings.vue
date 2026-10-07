@@ -370,11 +370,16 @@ defineExpose({
       <!-- Sync Type Selection -->
       <div class="mb-4">
         <label class="block text-sm font-medium dark:text-white mb-2">同步类型</label>
-        <a-radio-group v-model:value="syncType" :disabled="isSyncing" button-style="solid">
-          <a-radio-button value="cloudflare">☁️ Cloudflare Worker</a-radio-button>
-          <a-radio-button value="webdav">📁 WebDAV</a-radio-button>
-          <a-radio-button value="s3">🪣 Amazon S3</a-radio-button>
-        </a-radio-group>
+        <a-select
+          v-model:value="syncType"
+          :disabled="isSyncing"
+          class="w-full max-w-md"
+          aria-label="选择同步类型"
+        >
+          <a-select-option value="cloudflare">☁️ Cloudflare Worker</a-select-option>
+          <a-select-option value="webdav">📁 WebDAV</a-select-option>
+          <a-select-option value="s3">🪣 Amazon S3</a-select-option>
+        </a-select>
       </div>
 
       <!-- Cloudflare Configuration -->

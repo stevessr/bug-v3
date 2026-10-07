@@ -512,7 +512,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
               <div
                 v-for="group in displayGroups"
                 :key="group.id"
-                class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                class="group-item border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-200"
                 :draggable="group.id !== 'favorites'"
                 @dragstart="e => onGroupDragStartLocal(group, e)"
                 @dragover.prevent
@@ -542,9 +542,7 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
                       </template>
                     </div>
                     <div>
-                      <h3 class="font-medium text-gray-900 dark:text-white">
-                        {{ group.name }}
-                      </h3>
+                      <h3 class="group-name font-medium">{{ group.name }}</h3>
                       <p class="text-sm text-gray-500 dark:text-white">
                         {{ group.emojis?.length || 0 }} 个表情
                       </p>
@@ -775,5 +773,23 @@ const addGroupTouchEvents = (element: HTMLElement | null, group: any) => {
   .emoji-item button {
     opacity: 1; /* Always show buttons on mobile */
   }
+}
+</style>
+
+<style scoped>
+.group-item {
+  color: var(--theme-on-surface, #1a1c1e);
+  border-color: var(--theme-outline-variant, #c3c6cf);
+}
+.group-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--theme-primary, #6750a4);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 10%);
+}
+.group-item .group-name {
+  color: var(--theme-on-surface, #1a1c1e);
+}
+.group-item p {
+  color: var(--theme-on-surface-variant, #43474e);
 }
 </style>

@@ -526,3 +526,10 @@ html.dark .telegram-upload-radio .ant-radio-button-wrapper-checked {
 html.dark .telegram-upload-radio .ant-radio-button-wrapper:not(:first-child)::before {
   background-color: #52525b !important;
 }
+
+/* Emoji preview cards must size the CachedImage wrapper and its nested img alike. */
+.ai-rename-card-image .cached-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain !important;
+}

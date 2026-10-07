@@ -137,6 +137,7 @@ test.describe('PI agent permission controls', () => {
     })
     await page.goto('/?type=options&tabs=settings&subtab=ai-agent')
 
+    await page.getByRole('tab', { name: '站点权限' }).click()
     const settings = page.getByTestId('agent-site-permission-settings')
     await expect(settings).toBeVisible()
     await expect(settings.getByTestId('managed-agent-approval-mode')).toContainText('手动批准')
@@ -149,4 +150,16 @@ test.describe('PI agent permission controls', () => {
       )
     ).toBe('block')
   })
+})
+
+test('AI Agent settings are organized into focused sub-tabs', async ({ page }) => {
+  await page.goto('/?type=options&tabs=settings&subtab=ai-agent')
+  await expect(page.getByRole('tab', { name: '连接与模型' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'MCP 服务' })).toBeVisible()
+  await expect(page.getByText('AI Agent 连接', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('agent-site-permission-settings')).toBeHidden()
+  await page.getByRole('tab', { name: '文件夹' }).click()
+  await expect(page.getByText('文件夹访问', { exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'MCP 服务' }).click()
+  await expect(page.getByText('MCP 配置', { exact: true })).toBeVisible()
 })

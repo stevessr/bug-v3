@@ -124,7 +124,7 @@ const formatDate = (timestamp: number) => {
           </p>
         </div>
         <div>
-          <a-button @click="openBlockManager" title="打开 CSS 块管理器">
+          <a-button class="css-manager-button" @click="openBlockManager" title="打开 CSS 块管理器">
             管理 CSS 块 ({{ cssBlocks.length }})
           </a-button>
         </div>
@@ -295,3 +295,16 @@ const formatDate = (timestamp: number) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.css-manager-button {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+.css-manager-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+</style>

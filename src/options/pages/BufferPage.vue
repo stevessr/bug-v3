@@ -859,9 +859,6 @@ onBeforeUnmount(() => {
           <CheckCircleOutlined class="text-green-500" />
         </a-tooltip>
       </div>
-      <p class="text-gray-600 dark:text-gray-400">
-        普通上传进入缓冲区；从文件夹导入时自动归入同名表情包
-      </p>
     </div>
 
     <!-- Upload Service Selection -->
@@ -900,7 +897,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <a-tabs v-model:activeKey="activeBufferTab" type="card" class="mt-6 buffer-page-tabs">
+    <a-tabs v-model:activeKey="activeBufferTab" type="line" class="mt-6 buffer-page-tabs">
       <a-tab-pane key="upload" tab="普通上传">
         <!-- File Upload Area -->
         <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">

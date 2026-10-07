@@ -609,7 +609,7 @@ const handleGeminiNameSelected = (selectedName: string) => {
                     输入模式
                   </label>
                   <div>
-                    <a-tabs v-model:activeKey="inputMode" type="card">
+                    <a-tabs v-model:activeKey="inputMode" type="line">
                       <a-tab-pane key="url" tab="单个 URL" />
                       <a-tab-pane key="markdown" tab="Markdown (批量)" />
                       <a-tab-pane key="html" tab="HTML (批量)" />

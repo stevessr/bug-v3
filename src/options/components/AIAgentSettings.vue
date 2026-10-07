@@ -55,6 +55,8 @@ import type {
   SubAgentConfig
 } from '@/agent/types'
 
+const activeAgentTab = ref('connection')
+
 const {
   settings,
   addSubagent,
@@ -948,7 +950,22 @@ watch(
 
 <template>
   <div class="space-y-6">
-    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+    <a-tabs
+      v-model:activeKey="activeAgentTab"
+      class="agent-settings-tabs"
+      :destroy-inactive-tab-pane="false"
+    >
+      <a-tab-pane key="connection" tab="连接与模型" />
+      <a-tab-pane key="permissions" tab="站点权限" />
+      <a-tab-pane key="mcp" tab="MCP 服务" />
+      <a-tab-pane key="plugins" tab="插件" />
+      <a-tab-pane key="folders" tab="文件夹" />
+      <a-tab-pane key="presets" tab="代理预设" />
+    </a-tabs>
+    <div
+      v-show="activeAgentTab === 'connection'"
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+    >
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-medium dark:text-white">AI Agent 连接</h3>
@@ -1104,6 +1121,7 @@ watch(
 
     <div
       class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+      v-show="activeAgentTab === 'permissions'"
       data-testid="agent-site-permission-settings"
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -1188,7 +1206,10 @@ watch(
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+    <div
+      v-show="activeAgentTab === 'mcp'"
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+    >
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-medium dark:text-white">MCP 配置</h3>
@@ -1361,7 +1382,10 @@ watch(
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+    <div
+      v-show="activeAgentTab === 'plugins'"
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+    >
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-medium dark:text-white">可选插件</h3>
@@ -1466,7 +1490,10 @@ watch(
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+    <div
+      v-show="activeAgentTab === 'folders'"
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+    >
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-medium dark:text-white">文件夹访问</h3>
@@ -1561,7 +1588,10 @@ watch(
       </template>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4">
+    <div
+      v-show="activeAgentTab === 'presets'"
+      class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4 space-y-4"
+    >
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-medium dark:text-white">代理预设</h3>
