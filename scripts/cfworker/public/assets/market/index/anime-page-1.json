@@ -37,7 +37,7 @@
       "name": "爱丽丝",
       "icon": "https://cdn3.ldstatic.com/original/4X/9/6/6/966615f73c28f39828580b82c095acc6fb121568.webp",
       "topic": "anime",
-      "order": 227,
+      "order": 229,
       "emojiCount": 89,
       "isArchived": false
     },
@@ -46,7 +46,7 @@
       "name": "疯传箱子",
       "icon": "https://cdn3.ldstatic.com/optimized/4X/8/a/6/8a6b7ff534a2c8b7ac0674f84089388d148749c9_2_375x500.jpeg",
       "topic": "anime",
-      "order": 238,
+      "order": 240,
       "emojiCount": 24,
       "isArchived": false
     },
@@ -55,7 +55,7 @@
       "name": "素晴",
       "icon": "https://cdn3.ldstatic.com/original/4X/e/2/d/e2d0303b6833d8df9097e30001f47e4c56c5e7e2.png",
       "topic": "anime",
-      "order": 248,
+      "order": 250,
       "emojiCount": 23,
       "isArchived": false
     },
@@ -64,7 +64,7 @@
       "name": "遥奈",
       "icon": "https://cdn3.ldstatic.com/original/4X/4/5/4/4547b563f1d912bd117558d62840df1ceb81246c.avif",
       "topic": "anime",
-      "order": 274,
+      "order": 276,
       "emojiCount": 20,
       "isArchived": false
     },
@@ -73,7 +73,7 @@
       "name": "黄",
       "icon": "https://cdn3.ldstatic.com/original/4X/c/3/8/c38f18581aafd9d9eae31b67c91261cc336072b6.webp",
       "topic": "anime",
-      "order": 299,
+      "order": 302,
       "emojiCount": 85,
       "isArchived": false
     }
