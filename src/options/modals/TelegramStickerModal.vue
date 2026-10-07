@@ -30,6 +30,14 @@ import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 
+const waitForUploadRateLimit = async (waitTime: number) => {
+  const deadline = Date.now() + waitTime
+  while (Date.now() < deadline) {
+    progress.value.message = `上传限流，等待 ${Math.ceil((deadline - Date.now()) / 1000)} 秒后重试当前贴纸...`
+    await new Promise(resolve => setTimeout(resolve, Math.min(1000, deadline - Date.now())))
+  }
+}
+
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'imported'])
 
@@ -196,6 +204,7 @@ const doImport = async () => {
   isProcessing.value = true
   errorMessage.value = ''
 
+  let uploadStopped = false
   try {
     const stickers = stickerSetInfo.value.stickers
     const validStickers = stickers.filter(s => allowVideoStickers.value || !s.is_video)
@@ -302,13 +311,21 @@ const doImport = async () => {
         // 上传到托管服务
         progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
         const uploadResult = service.uploadFileDetailed
-          ? await service.uploadFileDetailed(file, () => {
-              // console.log(`Upload progress: ${percent}%`)
-            })
-          : {
-              url: await service.uploadFile(file, () => {
+          ? await service.uploadFileDetailed(
+              file,
+              () => {
                 // console.log(`Upload progress: ${percent}%`)
-              })
+              },
+              waitForUploadRateLimit
+            )
+          : {
+              url: await service.uploadFile(
+                file,
+                () => {
+                  // console.log(`Upload progress: ${percent}%`)
+                },
+                waitForUploadRateLimit
+              )
             }
         const uploadUrl = uploadResult.url
 
@@ -327,7 +344,9 @@ const doImport = async () => {
       } catch (err) {
         console.error(`处理贴纸失败：`, err)
         if ((err as any)?.shouldTerminateUploadFlow === true) {
-          message.error('检测到无等待信息的 429，已终止剩余上传以避免继续请求。')
+          uploadStopped = true
+          errorMessage.value = `上传已暂停：${(err as Error).message}。已保留已完成的贴纸，请稍后重试。`
+          message.error(errorMessage.value)
           break
         }
         // message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
@@ -356,6 +375,8 @@ const doImport = async () => {
 
     // 结束批量操作并保存
     await store.endBatch()
+
+    if (uploadStopped) return
 
     message.success(
       `成功${importMode.value === 'new' ? '导入' : '更新'}分组：${targetGroup!.name}（${newEmojis.length} 个贴纸）`

@@ -78,7 +78,7 @@ async function probeChallengeTab(
         XPathResult.FIRST_ORDERED_NODE_TYPE,
         null
       ).singleNodeValue as HTMLElement | null
-      const h1 = xpathNode || (document.querySelector('h1.title') as HTMLElement | null)
+      const h1 = xpathNode || (document.querySelector('h1.title, h1') as HTMLElement | null)
       const h1Text = normalize(h1?.textContent)
       const expectedText = normalize(expected)
 
@@ -87,7 +87,14 @@ async function probeChallengeTab(
         title: document.title,
         readyState: document.readyState,
         h1Text,
-        matched: Boolean(h1Text && (h1Text === expectedText || h1Text.includes(expectedText)))
+        matched: Boolean(
+          location.hostname === 'linux.do' &&
+          !/just a moment|verify you are human/i.test(document.title) &&
+          h1Text &&
+          (h1Text === expectedText ||
+            h1Text.includes(expectedText) ||
+            /that page.*(?:exist|private)/i.test(h1Text))
+        )
       }
     }
   })
