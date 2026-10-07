@@ -359,11 +359,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
       />
 
       <!-- 论坛上传并发数配置 -->
-      <div class="ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+      <div
+        class="upload-concurrency-setting ml-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+      >
         <div class="flex items-start justify-between">
           <div>
-            <label class="text-sm font-medium dark:text-white">论坛上传并发数</label>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <label class="text-sm font-medium">论坛上传并发数</label>
+            <p class="text-sm">
               同时上传到论坛的文件数量（1-20，默认 3）。数值越大上传越快，但可能触发论坛限流
             </p>
           </div>
@@ -550,3 +552,22 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.upload-concurrency-setting label {
+  color: var(--theme-on-surface, #202124);
+}
+
+.upload-concurrency-setting p {
+  color: var(--theme-on-surface-variant, #5f6368);
+}
+
+.upload-concurrency-setting :deep(.ant-input-number) {
+  color: var(--theme-on-surface, #202124);
+  background: var(--theme-surface-container, #fff);
+}
+
+.upload-concurrency-setting :deep(.ant-input-number-input) {
+  color: var(--theme-on-surface, #202124);
+}
+</style>
