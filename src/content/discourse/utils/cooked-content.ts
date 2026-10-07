@@ -64,19 +64,23 @@ function createSingleEmojiButton(data: AddEmojiButtonData): HTMLElement {
     style: `
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: #fff;
-      border-radius: 6px;
-      padding: 4px 8px;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--secondary, #fff);
+      color: var(--tertiary, #2563eb);
+      border: 1px solid var(--primary-low, #ddd);
+      border-radius: 50%;
+      padding: 0;
       margin: 4px 0;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 20px;
+      line-height: 1;
       cursor: pointer;
       text-decoration: none;
     `,
+    'aria-label': '添加表情',
     ti: '添加到未分组表情',
-    in: '📥 添加表情'
+    in: '＋'
   })
   setupButtonClickHandler(button, data)
   return button

@@ -9,9 +9,10 @@ import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
 function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
   const button = createE('a', {
     class: 'emoji-add-link',
-    style: `color:#fff;border-radius:6px;padding:4px 8px;margin:0 2px;display:inline-flex;align-items:center;font-weight:600;`,
+    style: `color:var(--tertiary,#2563eb);background:var(--secondary,#fff);border:1px solid var(--primary-low,#ddd);border-radius:50%;width:32px;height:32px;padding:0;margin:0 2px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1;`,
+    'aria-label': '添加表情',
     ti: '添加到未分组表情',
-    in: '添加表情'
+    in: '＋'
   })
   setupButtonClickHandler(button, data)
   return button
