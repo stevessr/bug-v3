@@ -16,7 +16,6 @@ type Editor = HTMLTextAreaElement | HTMLElement
 const SELECTOR =
   'textarea.d-editor-input, textarea.chat-composer__input, textarea#channel-composer, .ProseMirror.d-editor-input[contenteditable="true"]'
 const ID = 'emoji-extension-slash-picker'
-const COLUMNS = 3
 
 /** Delegated listeners survive Discourse SPA editor replacement. Returns a cleanup for tests/uninject. */
 export function initSlashEmojiPicker(): () => void {
@@ -24,20 +23,22 @@ export function initSlashEmojiPicker(): () => void {
   const styles = document.createElement('style')
   styles.id = `${ID}-styles`
   styles.textContent = `
-#${ID}{position:fixed;z-index:2147483646;width:min(360px,calc(100vw - 16px));background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 30px #0004;padding:8px;font:14px/1.5 system-ui;box-sizing:border-box}
-#${ID} .slash-items{max-height:220px;overflow:auto;display:grid;gap:4px}
+#${ID}{position:fixed;z-index:2147483646;width:min(820px,calc(100vw - 16px));background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 30px #0004;padding:10px;font:14px/1.5 system-ui;box-sizing:border-box}
+#${ID} .slash-content{display:grid;grid-template-columns:minmax(150px,.62fr) minmax(0,1.38fr);gap:10px;min-width:0}
+#${ID} .slash-items{max-height:280px;overflow:auto;display:grid;align-content:start;gap:4px;min-width:0}
+#${ID} .slash-grid{grid-template-columns:repeat(var(--slash-columns,4),minmax(0,1fr));gap:6px}
 #${ID} .slash-group{display:flex;align-items:center;gap:8px;overflow:hidden}
 #${ID} .slash-group-icon{width:28px;height:28px;flex:0 0 28px}
 #${ID} .slash-group-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#${ID} .slash-grid{grid-template-columns:repeat(${COLUMNS},minmax(0,1fr))}
 #${ID} button{font:inherit;color:inherit;border:0;background:transparent;border-radius:6px;padding:8px;text-align:left;cursor:pointer;min-width:0}
 #${ID} button[aria-selected=true],#${ID} button[aria-current=true]{background:var(--tertiary-low,#dbeafe);outline:2px solid var(--tertiary,#2563eb);outline-offset:-2px}
-#${ID} .slash-grid button{display:flex;align-items:center;justify-content:center;min-height:52px;padding:4px}
-#${ID} img,#${ID} canvas{object-fit:contain;max-width:100%;max-height:64px}
+#${ID} .slash-grid button{display:flex;align-items:center;justify-content:center;min-height:68px;padding:5px}
+#${ID} img,#${ID} canvas{object-fit:contain;max-width:100%;max-height:56px}
 #${ID} .slash-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 #${ID} .slash-hint{font-size:11px;opacity:.7;margin-top:6px}
 #${ID} .slash-preview{display:flex;align-items:center;gap:8px;height:64px;margin-top:6px;overflow:hidden}
 #${ID} .slash-preview img{width:64px;height:64px}
+@media(max-width:520px){#${ID} .slash-content{grid-template-columns:minmax(110px,.6fr) minmax(0,1.4fr);gap:6px}#${ID} .slash-group{gap:4px;padding:6px}}
 @media(prefers-color-scheme:dark){#${ID}{background:var(--secondary,#202124);color:var(--primary,#eee);border-color:var(--primary-low,#555)}}`
   document.head.append(styles)
   let editor: Editor | null = null
@@ -48,11 +49,13 @@ export function initSlashEmojiPicker(): () => void {
   let groupEnd = 0
   let index = 0
   let items: (EmojiGroup | Emoji)[] = []
+  let groupItems: EmojiGroup[] = []
+  let emojiItems: Emoji[] = []
+  let activePane: 'groups' | 'emojis' = 'groups'
   let box: HTMLDivElement | null = null
   let observer: ReturnType<typeof createPickerImageObserver> | null = null
   let composing = false
   let inputAtOpen = ''
-  let searchQuery = ''
   let previousControls: string | null = null
   let previousActive: string | null = null
 
@@ -71,6 +74,9 @@ export function initSlashEmojiPicker(): () => void {
     editor = null
     selectedGroup = null
     items = []
+    groupItems = []
+    emojiItems = []
+    activePane = 'groups'
     textNode = null
   }
   const caret = (target: Editor) => {
@@ -103,8 +109,12 @@ export function initSlashEmojiPicker(): () => void {
   }
   const highlight = () => {
     if (!box || !editor) return
-    const buttons = box.querySelectorAll<HTMLButtonElement>('[role=option]')
+    const pane = box.querySelector(`[data-pane="${activePane}"]`)
+    const buttons = pane?.querySelectorAll<HTMLButtonElement>('[role=option]') ?? []
     buttons.forEach((button, i) => button.setAttribute('aria-selected', String(i === index)))
+    box.querySelectorAll<HTMLButtonElement>('[data-group-id]').forEach(button => {
+      button.setAttribute('aria-current', String(button.dataset.groupId === selectedGroup?.id))
+    })
     const active = buttons[index]
     if (active) {
       editor.setAttribute('aria-activedescendant', active.id)
@@ -113,8 +123,8 @@ export function initSlashEmojiPicker(): () => void {
     const preview = box.querySelector('.slash-preview')
     if (!preview) return
     preview.replaceChildren()
-    if (selectedGroup && items[index]) {
-      const emoji = items[index] as Emoji
+    if (activePane === 'emojis' && selectedGroup && emojiItems[index]) {
+      const emoji = emojiItems[index]
       const image = document.createElement('img')
       image.src = getEmojiPickerPreviewUrl(emoji)
       image.alt = emoji.name
@@ -125,27 +135,22 @@ export function initSlashEmojiPicker(): () => void {
   }
   const choose = () => {
     if (!editor || !items[index] || !enabled()) return close()
+    if (activePane === 'groups') {
+      const group = items[index] as EmojiGroup
+      const query = caret(editor)?.before.slice(start + 1, end) || ''
+      openGroup(group, query)
+      return
+    }
     if (
       selectedGroup &&
       !cachedState.emojiGroups.some(
         (group: EmojiGroup) =>
           group.id === selectedGroup?.id &&
-          group.emojis?.some(emoji => emoji.id === items[index].id)
+          group.emojis?.some(emoji => emoji.id === emojiItems[index]?.id)
       )
     )
       return close()
-    if (!selectedGroup) {
-      if (!cachedState.emojiGroups.some((group: EmojiGroup) => group.id === items[index].id))
-        return close()
-      selectedGroup = items[index] as EmojiGroup
-      groupEnd = end
-      index = 0
-      const query = selectedGroup.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())
-        ? ''
-        : searchQuery
-      render(query)
-      return
-    }
+    if (!selectedGroup) return close()
     // Revalidate the pinned caret/token: never insert in another editor or stale range.
     const current = caret(editor)
     if (
@@ -155,7 +160,7 @@ export function initSlashEmojiPicker(): () => void {
       current.before.slice(start, end) !== inputAtOpen
     )
       return close()
-    const emoji = items[index] as Emoji
+    const emoji = emojiItems[index]
     const scale = cachedState.settings.imageScale || 100
     const output = emoji.customOutput?.trim()
       ? emoji.customOutput
@@ -209,9 +214,17 @@ export function initSlashEmojiPicker(): () => void {
     [emoji.name, ...(emoji.tags || [])].some(value =>
       value.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())
     )
+  const openGroup = (group: EmojiGroup, query: string) => {
+    selectedGroup = group
+    groupEnd = start + 1
+    activePane = 'emojis'
+    index = 0
+    const normalized = query.toLocaleLowerCase().trim()
+    render(normalized && group.name.toLocaleLowerCase().includes(normalized) ? '' : query)
+  }
   const createEmojiImage = (emoji: Emoji, eager: boolean) => {
     const image = document.createElement('img')
-    const size = isMotionHeavyEmoji(emoji) ? 64 : 32
+    const size = isMotionHeavyEmoji(emoji) ? 64 : 48
     image.alt = emoji.name
     image.onload = () => {
       // Freeze the first decoded frame in the grid; the selected preview stays animated.
@@ -238,40 +251,110 @@ export function initSlashEmojiPicker(): () => void {
   const render = (query: string) => {
     if (!box || !editor) return
     observer?.disconnect()
-    searchQuery = query
     box.replaceChildren()
+    const columns = Math.max(1, Math.min(12, Math.floor(cachedState.settings.gridColumns || 4)))
+    box.style.setProperty('--slash-columns', String(columns))
     const header = document.createElement('div')
     header.className = 'slash-header'
-    if (selectedGroup) {
-      const back = document.createElement('button')
-      back.textContent = '‹ 返回分组'
-      back.onclick = () => {
-        selectedGroup = null
-        index = 0
-        render((editor && caret(editor)?.before.slice(start + 1, end)) || '')
-      }
-      header.append(back)
-    }
     const title = document.createElement('strong')
-    title.textContent = selectedGroup?.name || '选择表情分组'
+    title.textContent = '选择表情'
     header.append(title)
-    const list = document.createElement('div')
-    list.className = `slash-items${selectedGroup ? ' slash-grid' : ''}`
-    list.setAttribute('role', 'listbox')
-    list.id = `${ID}-list`
-    list.setAttribute('aria-label', selectedGroup ? '选择表情' : '选择分组')
-    const source = selectedGroup
-      ? selectedGroup.emojis
-      : cachedState.emojiGroups.filter((group: EmojiGroup) => group.emojis?.length)
-    items = source.filter((item: Emoji | EmojiGroup) =>
-      selectedGroup
-        ? matchesEmoji(item as Emoji, query)
-        : item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim()) ||
-          (item as EmojiGroup).emojis.some(emoji => matchesEmoji(emoji, query))
-    )
+    const content = document.createElement('div')
+    content.className = 'slash-content'
+    const groupsList = document.createElement('div')
+    groupsList.className = 'slash-items slash-groups'
+    groupsList.dataset.pane = 'groups'
+    groupsList.setAttribute('role', 'listbox')
+    groupsList.id = `${ID}-groups`
+    groupsList.setAttribute('aria-label', '候选分组')
+    const emojisList = document.createElement('div')
+    emojisList.className = 'slash-items slash-grid slash-emojis'
+    emojisList.dataset.pane = 'emojis'
+    emojisList.setAttribute('role', 'listbox')
+    emojisList.id = `${ID}-emojis`
+    emojisList.setAttribute('aria-label', selectedGroup ? `${selectedGroup.name} 表情` : '分组表情')
+    const normalizedQuery = query.toLocaleLowerCase().trim()
+    groupItems = cachedState.emojiGroups.filter((group: EmojiGroup) => {
+      if (!group.emojis?.length) return false
+      // Once a submenu is active, keep all groups visible so the user can switch groups.
+      if (selectedGroup) return true
+      return (
+        group.name.toLocaleLowerCase().includes(normalizedQuery) ||
+        group.emojis.some(emoji => matchesEmoji(emoji, query))
+      )
+    })
+    if (selectedGroup && !groupItems.some(group => group.id === selectedGroup?.id)) {
+      selectedGroup = null
+      activePane = 'groups'
+    }
+    if (!selectedGroup && groupItems.length) selectedGroup = groupItems[0]
+    const normalizedGroupName = selectedGroup?.name.toLocaleLowerCase() || ''
+    const emojiQuery =
+      selectedGroup && normalizedQuery.startsWith(`${normalizedGroupName} `)
+        ? query.trim().slice(selectedGroup.name.length).trim()
+        : selectedGroup && normalizedQuery === normalizedGroupName
+          ? ''
+          : selectedGroup &&
+              normalizedQuery &&
+              !selectedGroup.name.toLocaleLowerCase().includes(normalizedQuery)
+            ? query
+            : ''
+    emojiItems = selectedGroup
+      ? selectedGroup.emojis.filter(emoji => !emojiQuery || matchesEmoji(emoji, emojiQuery))
+      : []
+    items = activePane === 'groups' ? groupItems : emojiItems
     index = Math.min(index, Math.max(0, items.length - 1))
     observer = createPickerImageObserver(box)
-    items.forEach((item, i) => {
+    groupItems.forEach((item, i) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.tabIndex = -1
+      button.id = `${ID}-group-${i}`
+      button.setAttribute('role', 'option')
+      button.setAttribute('aria-label', item.name)
+      button.title = item.name
+      button.className = 'slash-group'
+      button.dataset.groupId = item.id
+      const icon = item.icon || '📁'
+      if (isImageUrl(icon)) {
+        const image = document.createElement('img')
+        image.className = 'slash-group-icon'
+        image.alt = ''
+        image.loading = 'lazy'
+        image.src = normalizeImageUrl(icon)
+        image.onerror = () => {
+          const fallback = document.createElement('span')
+          fallback.className = 'slash-group-icon'
+          fallback.textContent = '📁'
+          image.replaceWith(fallback)
+        }
+        button.append(image)
+      } else {
+        const symbol = document.createElement('span')
+        symbol.className = 'slash-group-icon'
+        symbol.textContent = icon
+        button.append(symbol)
+      }
+      const label = document.createElement('span')
+      label.className = 'slash-group-name'
+      label.textContent = item.name
+      button.append(label)
+      button.onmouseenter = () => {
+        activePane = 'groups'
+        index = i
+        if (selectedGroup?.id !== item.id) {
+          selectedGroup = item
+          groupEnd = end
+          render('')
+        } else highlight()
+      }
+      button.onclick = () => {
+        const query = editor ? caret(editor)?.before.slice(start + 1, end) || '' : ''
+        openGroup(item, query)
+      }
+      groupsList.append(button)
+    })
+    emojiItems.forEach((item, i) => {
       const button = document.createElement('button')
       button.type = 'button'
       button.tabIndex = -1
@@ -279,55 +362,33 @@ export function initSlashEmojiPicker(): () => void {
       button.setAttribute('role', 'option')
       button.setAttribute('aria-label', item.name)
       button.title = item.name
-      if (selectedGroup) {
-        const emoji = item as Emoji
-        button.append(createEmojiImage(emoji, i < 18))
-      } else {
-        button.className = 'slash-group'
-        const icon = (item as EmojiGroup).icon || '📁'
-        if (isImageUrl(icon)) {
-          const image = document.createElement('img')
-          image.className = 'slash-group-icon'
-          image.alt = ''
-          image.loading = 'lazy'
-          image.src = normalizeImageUrl(icon)
-          image.onerror = () => {
-            const fallback = document.createElement('span')
-            fallback.className = 'slash-group-icon'
-            fallback.textContent = '📁'
-            image.replaceWith(fallback)
-          }
-          button.append(image)
-        } else {
-          const symbol = document.createElement('span')
-          symbol.className = 'slash-group-icon'
-          symbol.textContent = icon
-          button.append(symbol)
-        }
-        const label = document.createElement('span')
-        label.className = 'slash-group-name'
-        label.textContent = item.name
-        button.append(label)
-      }
+      button.append(createEmojiImage(item, i < columns * 2))
       button.onmouseenter = () => {
+        activePane = 'emojis'
         index = i
+        items = emojiItems
         highlight()
       }
       button.onclick = () => {
+        activePane = 'emojis'
         index = i
+        items = emojiItems
         choose()
       }
-      list.append(button)
+      emojisList.append(button)
     })
-    if (!items.length) list.textContent = '没有匹配的表情或分组'
+    if (!groupItems.length) groupsList.textContent = '没有匹配分组'
+    if (!emojiItems.length)
+      emojisList.textContent = selectedGroup ? '分组内没有匹配表情' : '选择一个分组'
+    content.append(groupsList, emojisList)
+    box.setAttribute('aria-controls', `${ID}-groups ${ID}-emojis`)
     const preview = document.createElement('div')
     preview.className = 'slash-preview'
-    preview.hidden = !selectedGroup
+    preview.hidden = activePane !== 'emojis'
     const hint = document.createElement('div')
     hint.className = 'slash-hint'
-    hint.textContent =
-      '输入分组/表情名或标签搜索 · → 进入分组 · Backspace 返回 · Enter 确认 · Esc 取消'
-    box.append(header, list, preview, hint)
+    hint.textContent = '悬停/选择分组查看子菜单 · ↑↓ 切换 · → 展开 · ← 返回 · Enter 插入 · Esc 取消'
+    box.append(header, content, preview, hint)
     highlight()
     position()
   }
@@ -359,7 +420,7 @@ export function initSlashEmojiPicker(): () => void {
       box.id = ID
       box.onmousedown = e => e.preventDefault()
       document.body.append(box)
-      target.setAttribute('aria-controls', `${ID}-list`)
+      target.setAttribute('aria-controls', `${ID}-groups ${ID}-emojis`)
       selectedGroup = null
       index = 0
     }
@@ -373,25 +434,32 @@ export function initSlashEmojiPicker(): () => void {
     end = current.pos
     inputAtOpen = current.before.slice(start, end)
     if (inputAtOpen.includes('\n') || inputAtOpen.slice(1).includes('/')) return close()
-    if (selectedGroup && end < groupEnd) {
+    if (activePane === 'emojis' && end <= groupEnd) {
       selectedGroup = null
+      activePane = 'groups'
       index = 0
     }
-    if (!selectedGroup) {
-      const query = current.before.slice(start + 1, end)
+    const fullQuery = current.before.slice(start + 1, end)
+    if (activePane === 'groups') {
+      selectedGroup = null
       const group = cachedState.emojiGroups
         .filter((group: EmojiGroup) => group.emojis?.length)
         .sort((a: EmojiGroup, b: EmojiGroup) => b.name.length - a.name.length)
         .find((group: EmojiGroup) =>
-          query.toLocaleLowerCase().startsWith(group.name.toLocaleLowerCase() + ' ')
+          fullQuery.toLocaleLowerCase().startsWith(group.name.toLocaleLowerCase() + ' ')
         )
       if (group) {
         selectedGroup = group
         groupEnd = start + 1 + group.name.length + 1
+        activePane = 'emojis'
         index = 0
+        render(current.before.slice(groupEnd, end))
+        return
       }
+      render(fullQuery)
+      return
     }
-    render(current.before.slice(selectedGroup ? groupEnd : start + 1, end))
+    render(current.before.slice(groupEnd, end))
   }
   const onKey = (event: KeyboardEvent) => {
     if (!box || !editor) return
@@ -402,21 +470,37 @@ export function initSlashEmojiPicker(): () => void {
     if (!current || current.pos !== end || current.node !== textNode) return close()
     let handled = true
     if (event.key === 'Escape') close()
-    else if (event.key === 'Enter' || (!selectedGroup && event.key === 'ArrowRight')) choose()
-    else if (event.key === 'ArrowDown') {
-      index = Math.min(items.length - 1, index + (selectedGroup ? COLUMNS : 1))
-      highlight()
-    } else if (event.key === 'ArrowUp') {
-      index = Math.max(0, index - (selectedGroup ? COLUMNS : 1))
-      highlight()
-    } else if (selectedGroup && event.key === 'ArrowRight') {
+    else if (event.key === 'Enter') choose()
+    else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      const columns = Math.max(1, Math.min(12, Math.floor(cachedState.settings.gridColumns || 4)))
+      const step = activePane === 'emojis' ? direction * columns : direction
+      index = Math.max(0, Math.min(items.length - 1, index + step))
+      if (activePane === 'groups') {
+        selectedGroup = groupItems[index] || null
+        groupEnd = end
+        render('')
+      } else highlight()
+    } else if (activePane === 'groups' && event.key === 'ArrowRight') {
+      const group = groupItems[index] || selectedGroup
+      if (group) openGroup(group, current.before.slice(start + 1, end))
+    } else if (activePane === 'emojis' && event.key === 'ArrowRight') {
       index = Math.min(items.length - 1, index + 1)
       highlight()
-    } else if (selectedGroup && event.key === 'ArrowLeft') {
-      index = Math.max(0, index - 1)
-      highlight()
-    } else if (selectedGroup && event.key === 'Backspace' && end === groupEnd) {
+    } else if (activePane === 'emojis' && event.key === 'ArrowLeft') {
+      const columns = Math.max(1, Math.min(12, Math.floor(cachedState.settings.gridColumns || 4)))
+      if (index % columns === 0) {
+        activePane = 'groups'
+        selectedGroup = null
+        index = 0
+        render(current.before.slice(start + 1, end))
+      } else {
+        index = Math.max(0, index - 1)
+        highlight()
+      }
+    } else if (activePane === 'emojis' && event.key === 'Backspace' && end === groupEnd) {
       selectedGroup = null
+      activePane = 'groups'
       index = 0
       render(current.before.slice(start + 1, end))
     } else {

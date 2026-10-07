@@ -45,7 +45,11 @@ async function fixture(page: Page, enabled = true) {
     const module = await import('/slash-fixture/entry.js')
     const w = window as any
     w.slash = module
-    module.cachedState.settings = { enableSlashEmojiPicker: enabled, imageScale: 50 }
+    module.cachedState.settings = {
+      enableSlashEmojiPicker: enabled,
+      imageScale: 50,
+      gridColumns: 4
+    }
     module.cachedState.emojiGroups = [
       {
         id: 'cats',
@@ -109,11 +113,16 @@ test('keyboard chooses group then emoji and inserts only in the active forum edi
   await fixture(page)
   const editor = page.locator('.chat-composer__input')
   await editor.pressSequentially('hello /')
-  await expect(page.locator(`${picker} [role=option]`)).toHaveCount(2)
+  await expect(page.locator(`${picker} .slash-groups [role=option]`)).toHaveCount(2)
+  await expect(page.locator(`${picker} .slash-emojis [role=option]`)).toHaveCount(2)
+  await expect(page.locator(picker)).toHaveCSS('width', '820px')
   await editor.press('ArrowDown')
   await editor.press('Enter')
-  await expect(page.locator(`${picker} [role=listbox]`)).toHaveAttribute('aria-label', '选择表情')
-  await expect(page.locator(`${picker} [role=option]`)).toHaveAttribute('aria-label', '旺旺')
+  await expect(page.locator(`${picker} .slash-emojis`)).toHaveAttribute('aria-label', '狗狗 表情')
+  await expect(page.locator(`${picker} .slash-emojis [role=option]`)).toHaveAttribute(
+    'aria-label',
+    '旺旺'
+  )
   await editor.press('Enter')
   await expect(editor).toHaveValue('hello ![旺旺|500x500,50%](upload://dog.webp) ')
   await expect(page.locator('textarea.d-editor-input')).toHaveValue('')
@@ -130,6 +139,7 @@ test('emoji grid supports arrows, custom output and a native input event', async
   await editor.pressSequentially('/')
   await editor.press('Enter')
   await editor.press('ArrowRight')
+  await editor.press('ArrowRight')
   await expect(editor).toHaveAttribute(
     'aria-activedescendant',
     'emoji-extension-slash-picker-option-1'
@@ -139,21 +149,21 @@ test('emoji grid supports arrows, custom output and a native input event', async
   expect(await page.evaluate(() => (window as any).inserted)).toBeGreaterThan(1)
 })
 
-test('filters both stages; Backspace returns to groups and Escape preserves typed text', async ({
+test('filters both stages; Backspace returns to groups and Escape preserves the remaining trigger', async ({
   page
 }) => {
   await fixture(page)
   const editor = page.locator('textarea.d-editor-input')
   await editor.pressSequentially('/狗')
-  await expect(page.locator(`${picker} [role=option]`)).toHaveCount(1)
+  await expect(page.locator(`${picker} .slash-groups [role=option]`)).toHaveCount(1)
   await editor.press('Enter')
   await editor.pressSequentially('不存在')
   await expect(page.locator(picker)).toContainText('没有匹配')
   for (let i = 0; i < 3; i++) await editor.press('Backspace')
   await editor.press('Backspace')
-  await expect(page.locator(`${picker} [role=listbox]`)).toHaveAttribute('aria-label', '选择分组')
+  await expect(page.locator(`${picker} .slash-groups`)).toHaveAttribute('aria-label', '候选分组')
   await editor.press('Escape')
-  await expect(editor).toHaveValue('/狗')
+  await expect(editor).toHaveValue('/')
   await expect(page.locator(picker)).toHaveCount(0)
 })
 
@@ -286,26 +296,28 @@ test('group image icons render as bounded images with a fallback on failure', as
   expect(overflow).toBe(false)
 })
 
-test('group and emoji views are separate, with search and keyboard navigation', async ({
-  page
-}) => {
+test('group candidates and selected group emojis stay visible together', async ({ page }) => {
   await fixture(page)
   await page.evaluate(() => {
     ;(window as any).slash.cachedState.emojiGroups[1].emojis[0].tags = ['小狗']
   })
   const editor = page.locator('textarea.d-editor-input')
   await editor.pressSequentially('/')
-  await expect(page.locator(picker).getByRole('option', { name: '猫猫' })).toBeVisible()
-  await expect(page.locator(picker).locator('.slash-grid')).toHaveCount(0)
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveCount(2)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveCount(2)
+  await expect(page.locator(picker).locator('.slash-grid')).toBeVisible()
   await editor.press('ArrowDown')
   await editor.press('ArrowRight')
-  await expect(page.locator(picker).getByRole('option', { name: '旺旺' })).toBeVisible()
-  await expect(page.locator(picker).locator('.slash-group-nav')).toHaveCount(0)
-  await expect(page.locator(picker).locator('.slash-grid')).toBeVisible()
-  await page.locator(picker).getByRole('button', { name: '‹ 返回分组' }).click()
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveCount(2)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveAttribute(
+    'aria-label',
+    '旺旺'
+  )
+  await editor.press('ArrowLeft')
   await editor.pressSequentially('小狗')
-  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
-  await expect(page.locator(picker).getByRole('option')).toHaveText('📁狗狗')
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveCount(1)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveCount(1)
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveText('📁狗狗')
   await editor.press('ArrowRight')
   await editor.press('Enter')
   await expect(editor).toHaveValue(/!\[旺旺/)
@@ -315,7 +327,8 @@ test('group and emoji views are separate, with search and keyboard navigation', 
 test('root emoji search preview can insert a result directly', async ({ page }) => {
   await fixture(page)
   await page.locator('textarea.d-editor-input').pressSequentially('/害羞')
-  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveCount(1)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveCount(1)
   await page.locator('textarea.d-editor-input').press('ArrowRight')
   await expect(page.locator(picker).getByRole('option', { name: '害羞' })).toBeVisible()
   await page.locator('textarea.d-editor-input').press('Enter')
@@ -326,9 +339,12 @@ test('typing group name and a space jumps straight to emoji search', async ({ pa
   await fixture(page)
   const editor = page.locator('textarea.d-editor-input')
   await editor.pressSequentially('/猫猫 害羞')
-  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
-  await expect(page.locator(picker).getByRole('option')).toHaveAttribute('aria-label', '害羞')
-  await expect(page.locator('.slash-group-nav')).toHaveCount(0)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveCount(1)
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveAttribute(
+    'aria-label',
+    '害羞'
+  )
+  await expect(page.locator(picker).locator('.slash-groups [role=option]')).toHaveCount(2)
   await editor.press('Enter')
   await expect(editor).toHaveValue(':shy:')
 })
