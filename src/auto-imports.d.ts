@@ -16,6 +16,7 @@ declare global {
   const CollaborativeUploadClient: typeof import('./utils/collab/CollaborativeUploadClient').CollaborativeUploadClient
   const DEFAULT_RECONNECT_DELAY_MS: typeof import('./utils/collab/constants').DEFAULT_RECONNECT_DELAY_MS
   const DEFAULT_TASK_TIMEOUT_MS: typeof import('./utils/collab/constants').DEFAULT_TASK_TIMEOUT_MS
+  const DEFAULT_UPLOAD_RETRY_MS: typeof import('./utils/uploadRetry').DEFAULT_UPLOAD_RETRY_MS
   const EMOJI: typeof import('./utils/constants').EMOJI
   const EffectScope: typeof import('vue').EffectScope
   const ImageCache: typeof import('./utils/imageCache').ImageCache
@@ -109,6 +110,7 @@ declare global {
   const getStickerSet: typeof import('./utils/telegramResolver').getStickerSet
   const getTelegramBotToken: typeof import('./utils/telegramResolver').getTelegramBotToken
   const getUILanguage: typeof import('./utils/i18n').getUILanguage
+  const getUploadRetryDelay: typeof import('./utils/uploadRetry').getUploadRetryDelay
   const getWorkerClient: typeof import('./utils/collab/index').getWorkerClient
   const h: typeof import('vue').h
   const hasEmojiMapping: typeof import('./utils/emojiShortcode').hasEmojiMapping
@@ -135,6 +137,7 @@ declare global {
   const isSettings: typeof import('./utils/typeGuards').isSettings
   const isShallow: typeof import('vue').isShallow
   const isTelegramStickerUrl: typeof import('./utils/telegramResolver').isTelegramStickerUrl
+  const isUploadChallenge: typeof import('./utils/uploadRetry').isUploadChallenge
   const loadDeviceInfo: typeof import('./utils/device').loadDeviceInfo
   const loadSyncConfig: typeof import('./utils/syncConfigStorage').loadSyncConfig
   const logger: typeof import('./utils/logger').logger
@@ -346,6 +349,7 @@ declare module 'vue' {
     readonly CollaborativeUploadClient: UnwrapRef<typeof import('./utils/collab/CollaborativeUploadClient')['CollaborativeUploadClient']>
     readonly DEFAULT_RECONNECT_DELAY_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_RECONNECT_DELAY_MS']>
     readonly DEFAULT_TASK_TIMEOUT_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_TASK_TIMEOUT_MS']>
+    readonly DEFAULT_UPLOAD_RETRY_MS: UnwrapRef<typeof import('./utils/uploadRetry')['DEFAULT_UPLOAD_RETRY_MS']>
     readonly EMOJI: UnwrapRef<typeof import('./utils/constants')['EMOJI']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly ImageCache: UnwrapRef<typeof import('./utils/imageCache')['ImageCache']>
@@ -439,6 +443,7 @@ declare module 'vue' {
     readonly getStickerSet: UnwrapRef<typeof import('./utils/telegramResolver')['getStickerSet']>
     readonly getTelegramBotToken: UnwrapRef<typeof import('./utils/telegramResolver')['getTelegramBotToken']>
     readonly getUILanguage: UnwrapRef<typeof import('./utils/i18n')['getUILanguage']>
+    readonly getUploadRetryDelay: UnwrapRef<typeof import('./utils/uploadRetry')['getUploadRetryDelay']>
     readonly getWorkerClient: UnwrapRef<typeof import('./utils/collab/index')['getWorkerClient']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasEmojiMapping: UnwrapRef<typeof import('./utils/emojiShortcode')['hasEmojiMapping']>
@@ -465,6 +470,7 @@ declare module 'vue' {
     readonly isSettings: UnwrapRef<typeof import('./utils/typeGuards')['isSettings']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
     readonly isTelegramStickerUrl: UnwrapRef<typeof import('./utils/telegramResolver')['isTelegramStickerUrl']>
+    readonly isUploadChallenge: UnwrapRef<typeof import('./utils/uploadRetry')['isUploadChallenge']>
     readonly loadDeviceInfo: UnwrapRef<typeof import('./utils/device')['loadDeviceInfo']>
     readonly loadSyncConfig: UnwrapRef<typeof import('./utils/syncConfigStorage')['loadSyncConfig']>
     readonly logger: UnwrapRef<typeof import('./utils/logger')['logger']>

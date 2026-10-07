@@ -1,3 +1,5 @@
+import { DEFAULT_UPLOAD_RETRY_MS, getUploadRetryDelay } from './uploadRetry'
+
 export interface DiscourseUploadResponse {
   id: number
   url: string
@@ -29,6 +31,7 @@ export interface DiscourseUploadErrorDetails {
 
 export type DiscourseUploadFailure = Error &
   DiscourseUploadErrorDetails & {
+    retryHeaders?: Record<string, string>
     status?: number
     details?: DiscourseUploadErrorDetails | { message: string }
     isRateLimitError?: boolean
@@ -129,7 +132,8 @@ function getUrlBase(): string {
 function createUploadError(
   status: number,
   details: unknown,
-  fallbackMessage: string
+  fallbackMessage: string,
+  headers?: Headers
 ): DiscourseUploadFailure {
   const detailObject =
     details && typeof details === 'object' ? (details as UploadResponseBody) : null
@@ -150,6 +154,12 @@ function createUploadError(
 
   const error = new Error(message) as DiscourseUploadFailure
   error.status = status
+  error.retryHeaders = Object.fromEntries(
+    ['retry-after', 'cf-mitigated'].flatMap(name => {
+      const value = headers?.get(name)
+      return value ? [[name, value]] : []
+    })
+  )
   error.details = (detailObject as DiscourseUploadFailure['details']) || {
     message: fallbackMessage
   }
@@ -162,11 +172,10 @@ function createUploadError(
     error.extras = detailObject.extras as DiscourseUploadErrorDetails['extras']
   }
 
-  if (status === 429 && error.extras?.wait_seconds) {
+  if (status === 429) {
     error.isRateLimitError = true
-    error.waitTime = error.extras.wait_seconds * 1000
-  } else if (status === 429) {
-    error.shouldTerminateUploadFlow = true
+    error.waitTime =
+      getUploadRetryDelay(detailObject, headers?.get('retry-after')) ?? DEFAULT_UPLOAD_RETRY_MS
   }
 
   return error
@@ -383,7 +392,12 @@ async function abortLinuxDoMultipartUpload(
 
   if (!response.ok) {
     const details = await parseUploadResponseBody(response)
-    throw createUploadError(response.status, details, 'Abort multipart upload failed')
+    throw createUploadError(
+      response.status,
+      details,
+      'Abort multipart upload failed',
+      response.headers
+    )
   }
 }
 
@@ -423,7 +437,12 @@ export async function uploadLinuxDoMultipart(
     )) as LinuxDoMultipartCreateResponse | null
 
     if (!createResponse.ok) {
-      throw createUploadError(createResponse.status, createData, 'Create multipart upload failed')
+      throw createUploadError(
+        createResponse.status,
+        createData,
+        'Create multipart upload failed',
+        createResponse.headers
+      )
     }
 
     if (!createData?.external_upload_identifier || !createData.unique_identifier) {
@@ -461,7 +480,12 @@ export async function uploadLinuxDoMultipart(
     )) as LinuxDoMultipartPresignResponse | null
 
     if (!presignResponse.ok) {
-      throw createUploadError(presignResponse.status, presignData, 'Presign multipart parts failed')
+      throw createUploadError(
+        presignResponse.status,
+        presignData,
+        'Presign multipart parts failed',
+        presignResponse.headers
+      )
     }
 
     const parts: LinuxDoMultipartPart[] = []
@@ -483,7 +507,12 @@ export async function uploadLinuxDoMultipart(
 
       if (!uploadResponse.ok) {
         const details = await parseUploadResponseBody(uploadResponse)
-        throw createUploadError(uploadResponse.status, details, `Upload part ${partNumber} failed`)
+        throw createUploadError(
+          uploadResponse.status,
+          details,
+          `Upload part ${partNumber} failed`,
+          uploadResponse.headers
+        )
       }
 
       const etag = uploadResponse.headers.get('etag') || uploadResponse.headers.get('ETag')
@@ -515,7 +544,8 @@ export async function uploadLinuxDoMultipart(
       throw createUploadError(
         completeResponse.status,
         completeData,
-        'Complete multipart upload failed'
+        'Complete multipart upload failed',
+        completeResponse.headers
       )
     }
 

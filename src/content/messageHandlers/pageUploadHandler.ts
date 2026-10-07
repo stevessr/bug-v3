@@ -53,6 +53,7 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
             data: {
               status: error?.status || 0,
               ok: false,
+              headers: error?.retryHeaders || {},
               data: error?.details || {
                 message: error?.message || 'Page upload failed'
               }
@@ -79,16 +80,24 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
       credentials: 'include'
     })
       .then(async res => {
-        const data = await res.json().catch(async () => {
-          try {
-            return { message: await res.text() }
-          } catch {
-            return null
-          }
-        })
+        const text = await res.text()
+        let data: unknown
+        try {
+          data = JSON.parse(text)
+        } catch {
+          data = { message: text }
+        }
         const response: MessageResponse = {
           success: true,
-          data: { status: res.status, ok: res.ok, data }
+          data: {
+            status: res.status,
+            ok: res.ok,
+            data,
+            headers: {
+              'retry-after': res.headers.get('retry-after'),
+              'cf-mitigated': res.headers.get('cf-mitigated')
+            }
+          }
         }
         sendResponse(response)
       })

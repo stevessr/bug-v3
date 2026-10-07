@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import CachedImage from '@/components/CachedImage.vue'
@@ -82,6 +82,7 @@ const isProcessing = ref(false)
 const progress = ref({ processed: 0, total: 0, message: '' })
 const errorMessage = ref('')
 const isQueueRunning = ref(false)
+const uploadRecoveryStopped = ref(false)
 
 // 上传服务选择
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
@@ -126,6 +127,7 @@ const stickerSetInfo = ref<TelegramStickerSet | null>(null)
 const isWaitingFor429 = ref(false)
 const retryAfterSeconds = ref(0)
 const retryCountdown = ref(0)
+let countdown429Resolve: (() => void) | null = null
 let countdown429Interval: ReturnType<typeof setInterval> | null = null
 
 // 导入取消控制
@@ -330,6 +332,7 @@ const startQueueImport = async () => {
         item.message = '导入失败'
       }
     }
+    if (uploadRecoveryStopped.value) break
   }
 
   isQueueRunning.value = false
@@ -400,6 +403,7 @@ const handle429Error = async (retryAfter: number): Promise<void> => {
   }
 
   return new Promise(resolve => {
+    countdown429Resolve = resolve
     countdown429Interval = setInterval(() => {
       retryCountdown.value--
       // 检查是否被取消
@@ -409,6 +413,7 @@ const handle429Error = async (retryAfter: number): Promise<void> => {
           countdown429Interval = null
         }
         isWaitingFor429.value = false
+        countdown429Resolve = null
         resolve()
         return
       }
@@ -418,6 +423,7 @@ const handle429Error = async (retryAfter: number): Promise<void> => {
           countdown429Interval = null
         }
         isWaitingFor429.value = false
+        countdown429Resolve = null
         resolve()
       }
     }, 1000)
@@ -437,7 +443,23 @@ const cancelImport = () => {
     countdown429Interval = null
   }
   isWaitingFor429.value = false
+  countdown429Resolve?.()
+  countdown429Resolve = null
   message.warning('导入已取消')
+}
+
+onUnmounted(() => {
+  abortController?.abort()
+  if (countdown429Interval) clearInterval(countdown429Interval)
+  countdown429Resolve?.()
+  countdown429Resolve = null
+})
+
+const waitForUploadRateLimit = async (waitTime: number) => {
+  progress.value.message = `上传限流，等待 ${Math.ceil(waitTime / 1000)} 秒后重试当前贴纸...`
+  await handle429Error(Math.ceil(waitTime / 1000))
+  abortController?.signal.throwIfAborted()
+  if (isCancelling.value) throw new DOMException('Upload cancelled', 'AbortError')
 }
 
 /**
@@ -539,6 +561,7 @@ const doImport = async (): Promise<boolean> => {
   }
   showImportPreview.value = true
 
+  uploadRecoveryStopped.value = false
   let wasCancelled = false
 
   try {
@@ -696,13 +719,21 @@ const doImport = async (): Promise<boolean> => {
         // 上传到托管服务
         progress.value.message = `${TELEGRAM_STAGE_HINTS.upload} ${i + 1}/${total}...`
         const uploadResult = service.uploadFileDetailed
-          ? await service.uploadFileDetailed(file, () => {
-              // 上传进度回调（可用于更精细的进度显示）
-            })
-          : {
-              url: await service.uploadFile(file, () => {
+          ? await service.uploadFileDetailed(
+              file,
+              () => {
                 // 上传进度回调（可用于更精细的进度显示）
-              })
+              },
+              waitForUploadRateLimit
+            )
+          : {
+              url: await service.uploadFile(
+                file,
+                () => {
+                  // 上传进度回调（可用于更精细的进度显示）
+                },
+                waitForUploadRateLimit
+              )
             }
         const uploadUrl = uploadResult.url
 
@@ -753,13 +784,17 @@ const doImport = async (): Promise<boolean> => {
         }
 
         if (err?.shouldTerminateUploadFlow === true) {
-          message.error('检测到无等待信息的 429，已终止剩余上传以避免继续请求。')
+          uploadRecoveryStopped.value = true
+          errorMessage.value = `上传已暂停：${err.message || '限流或站点验证未恢复'}。已保存已完成的贴纸，请稍后重试。`
+          message.error(errorMessage.value)
           break
         }
 
         message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
       }
     }
+
+    wasCancelled = wasCancelled || isCancelling.value
 
     // 统计导入结果
     const addedCount = newEmojis.length
@@ -796,6 +831,8 @@ const doImport = async (): Promise<boolean> => {
 
     // 结束批量操作
     await store.endBatch()
+
+    if (uploadRecoveryStopped.value) return false
 
     if (wasCancelled) {
       message.warning(`已取消导入（已处理 ${addedCount} 个贴纸）`)

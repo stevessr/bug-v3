@@ -1,3 +1,8 @@
+import {
+  DEFAULT_UPLOAD_RETRY_MS,
+  getUploadRetryDelay,
+  isUploadChallenge
+} from '@/utils/uploadRetry'
 import type { Emoji, EmojiGroup } from '@/types/type'
 import { normalizeDiscourseUploadUrl } from '@/utils/discourseUpload'
 import {
@@ -117,44 +122,18 @@ const DISCOURSE_UPLOAD_CONFIGS: Record<string, { domain: string; clientId: strin
   }
 }
 
-function createTerminal429Error(message?: string): UploadFlowError {
-  const error = new Error(
-    message || 'Upload terminated after receiving a bare 429 response without retry metadata.'
-  ) as UploadFlowError
+function createRateLimitError(payload: unknown, retryAfter?: unknown): UploadFlowError {
+  const error = new Error('上传请求过于频繁，等待后重试') as UploadFlowError
   error.status = 429
-  error.shouldTerminateUploadFlow = true
+  error.isRateLimitError = true
+  error.waitTime = getUploadRetryDelay(payload, retryAfter) ?? DEFAULT_UPLOAD_RETRY_MS
+  error.details = payload
   return error
 }
 
-function stringifyUploadErrorPayload(payload: unknown): string {
-  if (typeof payload === 'string') return payload
-  if (!payload || typeof payload !== 'object') return ''
-
-  const fields = [
-    (payload as any).message,
-    (payload as any).error,
-    Array.isArray((payload as any).errors) ? (payload as any).errors.join('\n') : ''
-  ]
-
-  try {
-    fields.push(JSON.stringify(payload))
-  } catch {
-    // ignore stringify errors
-  }
-
-  return fields.filter(Boolean).join('\n')
-}
-
-function isLinuxDoJustAMomentResponse(status: number | undefined, payload: unknown) {
-  if (status !== 403) return false
-  return stringifyUploadErrorPayload(payload).includes('Just a moment')
-}
-
-function createLinuxDoChallengeError(payload: unknown): UploadFlowError {
-  const error = new Error(
-    'linux.do returned 403 Just a moment. Waiting for challenge page before retrying upload.'
-  ) as UploadFlowError
-  error.status = 403
+function createLinuxDoChallengeError(payload: unknown, status = 403): UploadFlowError {
+  const error = new Error('linux.do 返回验证页面，等待正常访问恢复后重试上传。') as UploadFlowError
+  error.status = status
   error.isLinuxDoChallengeError = true
   error.details = payload
   return error
@@ -411,21 +390,33 @@ class DiscourseUploadService implements UploadService {
           console.warn(
             `linux.do challenge detected for ${file.name}. Visiting /challenge before retry ${challengeRecoveries}/${maxChallengeRecoveries}...`
           )
-          await requestLinuxDoChallengeRecovery()
+          try {
+            await requestLinuxDoChallengeRecovery()
+          } catch (recoveryError) {
+            const failure = recoveryError as UploadFlowError
+            failure.shouldTerminateUploadFlow = true
+            throw failure
+          }
           continue
         }
 
         // If the error indicates a 429 status, wait and retry
         if (error.isRateLimitError && attempt < maxRetries - 1) {
           const waitTime = error.waitTime || delay
+          const waitStarted = Date.now()
           if (onRateLimitWait) {
             await onRateLimitWait(waitTime)
           }
           console.warn(`Attempt ${attempt + 1} failed with 429. Retrying in ${waitTime / 1000}s...`)
-          await new Promise(resolve => setTimeout(resolve, waitTime))
+          // Some consumers show a countdown by awaiting the callback; do not wait twice.
+          const remaining = Math.max(0, waitTime - (Date.now() - waitStarted))
+          if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining))
           delay *= 2 // Exponential backoff for subsequent fallbacks
           attempt++
         } else {
+          if (error.isRateLimitError || error.isLinuxDoChallengeError) {
+            error.shouldTerminateUploadFlow = true
+          }
           // For other errors or if max retries reached, rethrow
           console.error(`${this.domain} upload failed after ${attempt + 1} attempts:`, error)
           throw error
@@ -486,25 +477,16 @@ class DiscourseUploadService implements UploadService {
         const errorData = await readResponseErrorPayload(response)
         if (
           this.domain === 'linux.do' &&
-          isLinuxDoJustAMomentResponse(response.status, errorData)
+          isUploadChallenge(
+            response.status,
+            errorData,
+            response.headers.get('cf-mitigated') || undefined
+          )
         ) {
-          throw createLinuxDoChallengeError(errorData)
-        }
-        if (response.status === 429 && errorData?.extras?.wait_seconds) {
-          const waitTime = errorData.extras.wait_seconds * 1000
-          const rateLimitError = new Error(
-            `Upload failed: 429 Too Many Requests. Please wait ${
-              errorData.extras.wait_seconds
-            } seconds.`
-          ) as UploadFlowError
-          rateLimitError.isRateLimitError = true
-          rateLimitError.waitTime = waitTime
-          throw rateLimitError
+          throw createLinuxDoChallengeError(errorData, response.status)
         }
         if (response.status === 429) {
-          throw createTerminal429Error(
-            'Upload terminated: server returned 429 without usable retry metadata.'
-          )
+          throw createRateLimitError(errorData, response.headers.get('retry-after'))
         }
         throw new Error(
           `Upload failed: ${response.status} ${
@@ -610,22 +592,12 @@ class DiscourseUploadService implements UploadService {
     }
 
     const errorData = proxyPayload
-    if (isLinuxDoJustAMomentResponse(proxyStatus, errorData)) {
-      throw createLinuxDoChallengeError(errorData)
-    }
-    if (proxyStatus === 429 && errorData?.extras?.wait_seconds) {
-      const waitTime = errorData.extras.wait_seconds * 1000
-      const rateLimitError = new Error(
-        `Upload failed: 429 Too Many Requests. Please wait ${errorData.extras.wait_seconds} seconds.`
-      ) as UploadFlowError
-      rateLimitError.isRateLimitError = true
-      rateLimitError.waitTime = waitTime
-      throw rateLimitError
+    const proxyHeaders = (response as any)?.data?.headers ?? (response as any)?.headers ?? {}
+    if (isUploadChallenge(proxyStatus, errorData, proxyHeaders['cf-mitigated'])) {
+      throw createLinuxDoChallengeError(errorData, proxyStatus)
     }
     if (proxyStatus === 429) {
-      throw createTerminal429Error(
-        'Upload terminated: page proxy returned 429 without usable retry metadata.'
-      )
+      throw createRateLimitError(errorData, proxyHeaders['retry-after'])
     }
 
     throw new Error(

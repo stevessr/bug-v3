@@ -19,3 +19,11 @@ pnpm exec playwright test --config scripts/tests/telegram-native-conversion.conf
 ```
 
 回归使用本地生成的 32×32 红/蓝 WebM、模拟 Telegram API 和本地存储，不访问真实 Telegram / 图床。涵盖动画颜色/时长、格式检查、取消和 URL 回收、真实静态/动画 AVIF 解码、动画 AVIF 帧数/颜色/时长以及不请求外部转换服务、更新成功/失败跳转。实际浏览器扩展权限与真实服务上传仍需另外验收。
+
+## Linux DO 上传限流与验证页恢复
+
+- `429` 优先使用 Discourse `extras.wait_seconds` / `wait_seconds`，其次读取 `Retry-After`（秒或 HTTP 日期）；没有可用时间时等待 60 秒，不立即丢弃整包。
+- 验证页只依据 `cf-mitigated: challenge` 或明确的验证页面标记识别，支持 `403` 和 `429`。普通限流不打开验证页；验证页面会打开/复用 `https://linux.do/challenge`，等待站点正常页面恢复后重试。需要验证码时由用户完成，不自动点击或破解验证码。
+- 等待回调和上传服务共用同一段等待时间，避免重复等待。TG 导入页和缓冲区弹窗展示等待状态；TG 导入页取消等待会立即解除挂起，不继续重试当前贴纸。
+- 普通限流最多尝试 3 次；验证页最多恢复 2 次。重试耗尽或验证恢复超时会保存已完成的贴纸并暂停后续导入/队列，不显示整包成功或跳回分组页。
+- 回归通过模拟响应验证，不代表真实 Linux DO 验证或限流已现场验收。
