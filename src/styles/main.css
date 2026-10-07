@@ -505,3 +505,24 @@ body.sidebar-mode {
     box-shadow: 0 1px 3px 1px var(--md3-shadow);
   }
 }
+
+/* Ant Design radio buttons use a fixed white surface; explicitly theme the Telegram uploader control. */
+html.dark .telegram-upload-radio .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked) {
+  color: #e5e7eb !important;
+  background-color: #18181b !important;
+  border-color: #52525b !important;
+}
+html.dark
+  .telegram-upload-radio
+  .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked):hover {
+  color: #c4b5fd !important;
+  background-color: #27272a !important;
+}
+html.dark .telegram-upload-radio .ant-radio-button-wrapper-checked {
+  color: #fff !important;
+  background-color: #4c1d95 !important;
+  border-color: #8b5cf6 !important;
+}
+html.dark .telegram-upload-radio .ant-radio-button-wrapper:not(:first-child)::before {
+  background-color: #52525b !important;
+}

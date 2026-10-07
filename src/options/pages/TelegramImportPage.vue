@@ -22,7 +22,8 @@ import {
   TELEGRAM_STAGE_HINTS
 } from '@/utils/telegram/telegramStickerConversion'
 import { getTelegramGroupSource, withTelegramGroupSource } from '@/utils/telegram/groupSource'
-import { uploadServices } from '@/utils/uploadServices'
+import { normalizeDiscourseUploadOrigin } from '@/utils/discourseInstance'
+import { createDiscourseUploadService, uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 import GroupSelector from '@/options/components/GroupSelector.vue'
@@ -47,6 +48,7 @@ const queryValue = (key: string) => {
 }
 onMounted(async () => {
   telegramBotToken.value = (await getTelegramBotToken()) || ''
+  customUploadOrigin.value = safeSettings.value.telegramCustomDiscourseOrigin || ''
   if (telegramBotToken.value) autoTokenVersion.value++
   initialized.value = true
 })
@@ -59,7 +61,52 @@ const isQueueRunning = ref(false)
 const uploadRecoveryStopped = ref(false)
 
 // 上传服务选择
-const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
+const activeTelegramTab = ref<'import' | 'update' | 'config'>('import')
+const uploadService = computed({
+  get: () => safeSettings.value.telegramUploadService ?? 'linux.do',
+  set: value => store.updateSettings({ telegramUploadService: value })
+})
+const customUploadOrigin = ref('')
+const customUploadError = ref('')
+const customUploadOriginSaved = computed(
+  () => safeSettings.value.telegramCustomDiscourseOrigin || ''
+)
+const uploadServiceLabel = computed(() =>
+  uploadService.value === 'customDiscourse'
+    ? customUploadOriginSaved.value || '自定义 Discourse'
+    : uploadService.value
+)
+const telegramGroupsForUpdate = computed(() =>
+  store.groups
+    .map(group => ({
+      group,
+      source: getTelegramGroupSource(group.detail)
+    }))
+    .filter(entry => entry.source)
+)
+
+const applyCustomUploadOrigin = () => {
+  try {
+    const origin = normalizeDiscourseUploadOrigin(customUploadOrigin.value)
+    customUploadError.value = ''
+    store.updateSettings({
+      telegramCustomDiscourseOrigin: origin,
+      telegramUploadService: 'customDiscourse'
+    })
+    customUploadOrigin.value = origin
+    message.success(`已使用 Discourse 实例：${origin}`)
+  } catch (error) {
+    customUploadError.value = error instanceof Error ? error.message : String(error)
+  }
+}
+
+const updateExistingTelegramGroup = async (group: EmojiGroup, source: string) => {
+  activeTelegramTab.value = 'import'
+  await router.replace({
+    path: '/import',
+    query: { source: 'telegram', tgGroupId: group.id, tgInput: source, tgAuto: '1' }
+  })
+}
 
 const webmToAvifEnabled = computed({
   get: () => !!safeSettings.value.telegramWebmToAvifEnabled,
@@ -230,7 +277,13 @@ const applyStickerSetDefaults = async (
 }
 
 const startQueueImport = async () => {
+  if (uploadService.value === 'customDiscourse' && !customUploadOriginSaved.value) {
+    activeTelegramTab.value = 'config'
+    message.error('请先添加自定义 Discourse 实例')
+    return
+  }
   if (!telegramBotToken.value) {
+    activeTelegramTab.value = 'config'
     message.error('请先设置 Telegram Bot Token')
     return
   }
@@ -465,6 +518,7 @@ const previewStickerSet = async () => {
     return
   }
   if (!telegramBotToken.value) {
+    activeTelegramTab.value = 'config'
     message.error('请先设置 Telegram Bot Token')
     return
   }
@@ -523,6 +577,11 @@ const previewStickerSet = async () => {
  * 执行导入
  */
 const doImport = async (): Promise<boolean> => {
+  if (uploadService.value === 'customDiscourse' && !customUploadOriginSaved.value) {
+    activeTelegramTab.value = 'config'
+    message.error('请先添加自定义 Discourse 实例')
+    return false
+  }
   if (!stickerSetInfo.value) {
     message.error('请先预览贴纸包')
     return false
@@ -590,7 +649,10 @@ const doImport = async (): Promise<boolean> => {
     targetGroup.detail = withTelegramGroupSource(targetGroup.detail, stickerSetInfo.value.name)
 
     const newEmojis: any[] = []
-    const service = uploadServices[uploadService.value]
+    const service =
+      uploadService.value === 'customDiscourse'
+        ? createDiscourseUploadService(customUploadOriginSaved.value)
+        : uploadServices[uploadService.value]
 
     // 构建已有表情名称集合（用于去重检查）
     const existingEmojiNames = new Set<string>()
@@ -904,6 +966,7 @@ watch(
     selectedGroupId.value = groupId
     telegramInput.value = input
     if (!autoTokenVersion.value || !telegramBotToken.value) {
+      activeTelegramTab.value = 'config'
       message.warning('未检测到 Telegram Bot Token，请先保存 Token，随后会自动更新')
       return
     }
@@ -911,6 +974,7 @@ watch(
       message.warning('此旧分组未保存贴纸包来源，请输入链接并预览；本次会自动更新并保存来源')
       return
     }
+    activeTelegramTab.value = 'import'
     lastAutoRequest = requestKey
     await previewStickerSet()
   },
@@ -936,380 +1000,473 @@ watch(
       </div>
 
       <!-- 主要内容区域 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
-        <!-- Bot Token 设置 -->
-        <div
-          class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-        >
-          <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">1️⃣ Bot Token 设置</h4>
-          <div class="flex gap-2">
-            <a-input-password
-              v-model:value="telegramBotToken"
-              placeholder="输入 Telegram Bot Token"
-              class="flex-1"
-            />
-            <a-button type="primary" @click="saveBotToken" :disabled="!telegramBotToken">
-              保存
-            </a-button>
-          </div>
-          <p class="text-xs text-blue-700 dark:text-blue-300 mt-2">
-            在 Telegram 中搜索 @BotFather，发送 /newbot 创建机器人获取 Token
-          </p>
-        </div>
-
-        <!-- 上传服务选择 -->
-        <div
-          class="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md"
-        >
-          <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">2️⃣ 选择上传服务</h4>
-          <a-radio-group v-model:value="uploadService">
-            <a-radio-button value="linux.do">linux.do</a-radio-button>
-            <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
-            <a-radio-button value="imgbed">imgbed</a-radio-button>
-          </a-radio-group>
-          <p class="text-xs text-purple-700 dark:text-purple-300 mt-2">
-            贴纸将自动上传到所选服务并保存托管链接
-          </p>
-        </div>
-
-        <!-- WebM / TGS 转 AVIF -->
-        <div
-          class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
-        >
-          <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-3">
-            2️⃣-A Telegram 本地转换
-          </h4>
-          <div class="space-y-3">
-            <div class="flex items-center gap-3">
-              <span class="text-sm">WebM 浏览器转换</span>
-              <a-select v-model:value="nativeWebmFormat" class="w-72">
-                <a-select-option value="webp">原生动画 WebP（推荐，无 FFmpeg）</a-select-option>
-                <a-select-option value="animated-avif">
-                  浏览器内动画 AVIF（WASM，无需安装）
-                </a-select-option>
-                <a-select-option value="avif">AVIF 静态首帧（不支持原生时用 WASM）</a-select-option>
-                <a-select-option value="disabled">旧版转换设置（可选后端）</a-select-option>
-              </a-select>
-            </div>
-            <div class="flex items-center gap-3">
-              <a-switch v-model:checked="localAvifEnabled" />
-              <span class="text-sm text-amber-900 dark:text-amber-100">
-                TGS / 旧版浏览器内 AVIF（WASM，实验性）
+      <a-tabs v-model:activeKey="activeTelegramTab" class="telegram-subtabs">
+        <a-tab-pane key="import" tab="贴纸导入">
+          <div
+            class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/30"
+          >
+            <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <a-tag :color="telegramBotToken ? 'green' : 'orange'">
+                {{ telegramBotToken ? 'Token 已配置' : 'Token 未配置' }}
+              </a-tag>
+              <span>上传到 {{ uploadServiceLabel }}</span>
+              <span class="text-gray-400">·</span>
+              <span>
+                {{
+                  nativeWebmFormat === 'animated-avif'
+                    ? '动画 AVIF'
+                    : nativeWebmFormat === 'webp'
+                      ? '动画 WebP'
+                      : nativeWebmFormat === 'avif'
+                        ? '静态 AVIF'
+                        : '旧版转换'
+                }}
               </span>
             </div>
-            <div class="flex items-center gap-3">
-              <a-switch v-model:checked="webmToAvifEnabled" />
-              <a-input
-                v-model:value="webmToAvifBackend"
-                placeholder="可选旧版转换后端（浏览器模式不使用）"
-                class="flex-1"
-                :disabled="!webmToAvifEnabled || nativeWebmFormat !== 'disabled'"
-              />
-            </div>
+            <a-button size="small" @click="activeTelegramTab = 'config'">配置</a-button>
           </div>
-          <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
-            WebM 默认由浏览器解码并编码为动画 WebP（20fps，最长 10 秒、最大
-            512px），无需转换服务器。 AVIF 首帧为静态图片；原生编码不可用时使用本地 WASM。TGS
-            仍需启用离线动画 AVIF。 上述浏览器模式不调用转换服务器，动画 AVIF 失败不会降级为静态。
-          </p>
-        </div>
-
-        <!-- 贴纸包输入 -->
-        <div>
-          <h4 class="font-medium text-gray-900 dark:text-white mb-3">3️⃣ 输入贴纸包链接或名称</h4>
-          <div class="flex gap-2">
-            <a-input
-              v-model:value="telegramInput"
-              placeholder="例如：https://t.me/addstickers/xxx 或 xxx"
-              @pressEnter="previewStickerSet"
-            />
-            <a-button
-              type="primary"
-              @click="previewStickerSet"
-              :disabled="!telegramInput || isProcessing || isQueueRunning"
-              :loading="isProcessing"
-            >
-              预览
-            </a-button>
-          </div>
-        </div>
-
-        <!-- 队列导入 -->
-        <div
-          class="p-4 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-md"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="font-medium text-gray-900 dark:text-white">3️⃣-A 批量队列导入</h4>
-            <div class="flex gap-2">
-              <a-button
-                size="small"
-                @click="enqueueInputs"
-                :disabled="isProcessing || isQueueRunning"
-              >
-                加入队列
-              </a-button>
-              <a-button
-                size="small"
-                type="primary"
-                @click="startQueueImport"
-                :disabled="isProcessing || isQueueRunning"
-                :loading="isQueueRunning"
-              >
-                开始队列导入
-              </a-button>
-              <a-button size="small" danger @click="clearQueue" :disabled="isQueueRunning">
-                清空队列
-              </a-button>
-            </div>
-          </div>
-          <a-textarea
-            v-model:value="queueInput"
-            :rows="3"
-            placeholder="多行输入，每行一个贴纸包链接或名称，例如：https://t.me/addstickers/xxx"
-          />
-          <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-            队列会按顺序依次导入；同名分组会自动切换到更新模式
-          </p>
-
-          <div v-if="importQueue.length > 0" class="mt-3 space-y-2">
-            <div
-              v-for="item in importQueue"
-              :key="item.id"
-              class="flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded"
-            >
-              <div class="flex-1 truncate text-sm text-gray-800 dark:text-gray-200">
-                {{ item.input }}
-              </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">{{ item.message }}</div>
-              <a-tag
-                :color="
-                  item.status === 'done'
-                    ? 'green'
-                    : item.status === 'running'
-                      ? 'blue'
-                      : item.status === 'error'
-                        ? 'red'
-                        : item.status === 'cancelled'
-                          ? 'orange'
-                          : 'default'
-                "
-              >
-                {{
-                  item.status === 'done'
-                    ? '完成'
-                    : item.status === 'running'
-                      ? '进行中'
-                      : item.status === 'error'
-                        ? '失败'
-                        : item.status === 'cancelled'
-                          ? '已取消'
-                          : '待处理'
-                }}
-              </a-tag>
-            </div>
-          </div>
-        </div>
-
-        <!-- 进度显示 -->
-        <div
-          v-if="isProcessing && progress.message"
-          class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-sm text-gray-700 dark:text-gray-300">{{ progress.message }}</p>
-            <a-button size="small" danger @click="cancelImport" :disabled="isCancelling">
-              {{ isCancelling ? '取消中...' : '取消导入' }}
-            </a-button>
-          </div>
-          <p
-            v-if="progress.message.includes('本地编码动画 AVIF')"
-            class="text-xs text-gray-500 dark:text-gray-400 mb-2"
-          >
-            当前主要在本地 CPU 上做编码，网络面板暂时不变化是正常现象；若超过 45 秒会自动降级。
-          </p>
-          <div v-if="progress.total > 0" class="flex items-center gap-2">
-            <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-full h-2">
-              <div
-                class="bg-blue-600 h-2 rounded-full transition-all"
-                :style="{ width: `${(progress.processed / progress.total) * 100}%` }"
-              ></div>
-            </div>
-            <span class="text-xs text-gray-600 dark:text-gray-400">
-              {{ progress.processed }}/{{ progress.total }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 429 等待进度条 -->
-        <div
-          v-if="isWaitingFor429"
-          class="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md"
-        >
-          <div class="flex items-center gap-2 mb-3">
-            <svg
-              class="animate-spin h-5 w-5 text-orange-500"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            <p class="text-sm font-medium text-orange-900 dark:text-orange-100">
-              请求过于频繁，等待中...
-            </p>
-          </div>
-          <div class="space-y-2">
-            <div class="flex justify-between text-xs text-orange-700 dark:text-orange-300">
-              <span>剩余时间：{{ retryCountdown }} 秒</span>
-              <span>总计：{{ retryAfterSeconds }} 秒</span>
-            </div>
-            <a-progress
-              :percent="((retryAfterSeconds - retryCountdown) / retryAfterSeconds) * 100"
-              :show-info="false"
-              status="active"
-              stroke-color="#f97316"
-            />
-          </div>
-        </div>
-
-        <!-- 贴纸包预览 -->
-        <div v-if="stickerSetInfo" class="space-y-4">
-          <div
-            class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md"
-          >
-            <h4 class="font-medium text-green-900 dark:text-green-100 mb-2">
-              {{ stickerSetInfo.title }}
-            </h4>
-            <p class="text-sm text-green-800 dark:text-green-200">
-              {{ stickerSetInfo.stickers.length }} 个贴纸
-              <span v-if="stickerSetInfo.is_animated">(包含动画贴纸/TGS)</span>
-              <span v-if="stickerSetInfo.is_video">(包含视频贴纸/WebM)</span>
-            </p>
-          </div>
-
-          <!-- 导入选项 -->
-          <div>
-            <h4 class="font-medium text-gray-900 dark:text-white mb-3">4️⃣ 导入模式</h4>
-            <a-radio-group v-model:value="importMode" class="mb-4">
-              <a-radio value="new">新建分组</a-radio>
-              <a-radio value="update">更新已有分组</a-radio>
-            </a-radio-group>
-
-            <!-- 新建分组选项 -->
-            <div v-if="importMode === 'new'" class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-                  分组名称
-                </label>
-                <a-input v-model:value="newGroupName" placeholder="输入分组名称" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-                  分组图标
-                </label>
-                <a-input v-model:value="newGroupIcon" placeholder="留空则使用第一张贴纸作为图标" />
-              </div>
-            </div>
-
-            <!-- 更新分组选项 -->
-            <div v-if="importMode === 'update'" class="space-y-2">
-              <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
-                选择要更新的分组
-              </label>
-              <GroupSelector
-                v-model="selectedGroupId"
-                :groups="availableGroups"
-                placeholder="请选择分组"
-              />
-              <!-- 显示将要新增的表情数量 -->
-              <div
-                v-if="selectedGroupId && willAddCount > 0"
-                class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-800 dark:text-blue-200"
-              >
-                <span class="font-medium">即将新增 {{ willAddCount }} 个表情</span>
-                <span class="text-xs ml-1">(已自动过滤重复)</span>
-              </div>
-              <div
-                v-else-if="selectedGroupId && willAddCount === 0"
-                class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-200"
-              >
-                <span>该分组已包含所有贴纸，无需重复导入</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 导入按钮 -->
-          <div class="flex justify-end">
-            <a-button
-              type="primary"
-              size="large"
-              @click="doImport"
-              :disabled="
-                !stickerSetInfo ||
-                isProcessing ||
-                isQueueRunning ||
-                (importMode === 'new' && !newGroupName.trim()) ||
-                (importMode === 'update' && !selectedGroupId)
-              "
-              :loading="isProcessing"
-            >
-              {{ importMode === 'new' ? '导入到新分组' : '更新分组' }}
-            </a-button>
-          </div>
-
-          <!-- 实时导入预览 -->
-          <div
-            v-if="showImportPreview && importingEmojis.length > 0"
-            class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-medium text-blue-900 dark:text-blue-100">
-                正在导入的表情 ({{ importingEmojis.length }})
-              </h4>
-              <a-button v-if="!isProcessing" size="small" @click="showImportPreview = false">
-                关闭预览
-              </a-button>
-            </div>
-            <div
-              class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-[400px] overflow-y-auto"
-            >
-              <div
-                v-for="emoji in importingEmojis"
-                :key="emoji.id"
-                class="flex flex-col items-center p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all"
-              >
-                <div
-                  class="w-16 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded"
+          <div class="space-y-5">
+            <!-- 贴纸包输入 -->
+            <div>
+              <h4 class="font-medium text-gray-900 dark:text-white mb-3">贴纸包链接或名称</h4>
+              <div class="flex flex-wrap gap-2">
+                <a-input
+                  v-model:value="telegramInput"
+                  placeholder="例如：https://t.me/addstickers/xxx 或 xxx"
+                  @pressEnter="previewStickerSet"
+                />
+                <a-button
+                  type="primary"
+                  @click="previewStickerSet"
+                  :disabled="!telegramInput || isProcessing || isQueueRunning"
+                  :loading="isProcessing"
                 >
-                  <CachedImage
-                    :src="emoji.url"
-                    :alt="emoji.name"
-                    class="max-w-full max-h-full object-contain"
-                    loading="lazy"
-                  />
+                  预览
+                </a-button>
+              </div>
+            </div>
+
+            <!-- 队列导入 -->
+            <div
+              class="p-4 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-md"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h4 class="font-medium text-gray-900 dark:text-white">批量队列导入</h4>
+                <div class="flex flex-wrap gap-2">
+                  <a-button
+                    size="small"
+                    @click="enqueueInputs"
+                    :disabled="isProcessing || isQueueRunning"
+                  >
+                    加入队列
+                  </a-button>
+                  <a-button
+                    size="small"
+                    type="primary"
+                    @click="startQueueImport"
+                    :disabled="isProcessing || isQueueRunning"
+                    :loading="isQueueRunning"
+                  >
+                    开始队列导入
+                  </a-button>
+                  <a-button size="small" danger @click="clearQueue" :disabled="isQueueRunning">
+                    清空队列
+                  </a-button>
                 </div>
-                <span
-                  class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center truncate w-full"
+              </div>
+              <a-textarea
+                v-model:value="queueInput"
+                :rows="3"
+                placeholder="多行输入，每行一个贴纸包链接或名称，例如：https://t.me/addstickers/xxx"
+              />
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                队列会按顺序依次导入；同名分组会自动切换到更新模式
+              </p>
+
+              <div v-if="importQueue.length > 0" class="mt-3 space-y-2">
+                <div
+                  v-for="item in importQueue"
+                  :key="item.id"
+                  class="flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded"
                 >
-                  {{ emoji.name }}
+                  <div class="flex-1 truncate text-sm text-gray-800 dark:text-gray-200">
+                    {{ item.input }}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">{{ item.message }}</div>
+                  <a-tag
+                    :color="
+                      item.status === 'done'
+                        ? 'green'
+                        : item.status === 'running'
+                          ? 'blue'
+                          : item.status === 'error'
+                            ? 'red'
+                            : item.status === 'cancelled'
+                              ? 'orange'
+                              : 'default'
+                    "
+                  >
+                    {{
+                      item.status === 'done'
+                        ? '完成'
+                        : item.status === 'running'
+                          ? '进行中'
+                          : item.status === 'error'
+                            ? '失败'
+                            : item.status === 'cancelled'
+                              ? '已取消'
+                              : '待处理'
+                    }}
+                  </a-tag>
+                </div>
+              </div>
+            </div>
+
+            <!-- 进度显示 -->
+            <div
+              v-if="isProcessing && progress.message"
+              class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-sm text-gray-700 dark:text-gray-300">{{ progress.message }}</p>
+                <a-button size="small" danger @click="cancelImport" :disabled="isCancelling">
+                  {{ isCancelling ? '取消中...' : '取消导入' }}
+                </a-button>
+              </div>
+              <p
+                v-if="progress.message.includes('本地编码动画 AVIF')"
+                class="text-xs text-gray-500 dark:text-gray-400 mb-2"
+              >
+                当前主要在本地 CPU 上做编码，网络面板暂时不变化是正常现象；若超过 45 秒会自动降级。
+              </p>
+              <div v-if="progress.total > 0" class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    class="bg-blue-600 h-2 rounded-full transition-all"
+                    :style="{ width: `${(progress.processed / progress.total) * 100}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-600 dark:text-gray-400">
+                  {{ progress.processed }}/{{ progress.total }}
                 </span>
               </div>
             </div>
+
+            <!-- 429 等待进度条 -->
+            <div
+              v-if="isWaitingFor429"
+              class="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md"
+            >
+              <div class="flex items-center gap-2 mb-3">
+                <svg
+                  class="animate-spin h-5 w-5 text-orange-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <p class="text-sm font-medium text-orange-900 dark:text-orange-100">
+                  请求过于频繁，等待中...
+                </p>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs text-orange-700 dark:text-orange-300">
+                  <span>剩余时间：{{ retryCountdown }} 秒</span>
+                  <span>总计：{{ retryAfterSeconds }} 秒</span>
+                </div>
+                <a-progress
+                  :percent="((retryAfterSeconds - retryCountdown) / retryAfterSeconds) * 100"
+                  :show-info="false"
+                  status="active"
+                  stroke-color="#f97316"
+                />
+              </div>
+            </div>
+
+            <!-- 贴纸包预览 -->
+            <div v-if="stickerSetInfo" class="space-y-4">
+              <div
+                class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md"
+              >
+                <h4 class="font-medium text-green-900 dark:text-green-100 mb-2">
+                  {{ stickerSetInfo.title }}
+                </h4>
+                <p class="text-sm text-green-800 dark:text-green-200">
+                  {{ stickerSetInfo.stickers.length }} 个贴纸
+                  <span v-if="stickerSetInfo.is_animated">(包含动画贴纸/TGS)</span>
+                  <span v-if="stickerSetInfo.is_video">(包含视频贴纸/WebM)</span>
+                </p>
+              </div>
+
+              <!-- 导入选项 -->
+              <div>
+                <h4 class="font-medium text-gray-900 dark:text-white mb-3">4️⃣ 导入模式</h4>
+                <a-radio-group v-model:value="importMode" class="mb-4">
+                  <a-radio value="new">新建分组</a-radio>
+                  <a-radio value="update">更新已有分组</a-radio>
+                </a-radio-group>
+
+                <!-- 新建分组选项 -->
+                <div v-if="importMode === 'new'" class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
+                      分组名称
+                    </label>
+                    <a-input v-model:value="newGroupName" placeholder="输入分组名称" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
+                      分组图标
+                    </label>
+                    <a-input
+                      v-model:value="newGroupIcon"
+                      placeholder="留空则使用第一张贴纸作为图标"
+                    />
+                  </div>
+                </div>
+
+                <!-- 更新分组选项 -->
+                <div v-if="importMode === 'update'" class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-white mb-1">
+                    选择要更新的分组
+                  </label>
+                  <GroupSelector
+                    v-model="selectedGroupId"
+                    :groups="availableGroups"
+                    placeholder="请选择分组"
+                  />
+                  <!-- 显示将要新增的表情数量 -->
+                  <div
+                    v-if="selectedGroupId && willAddCount > 0"
+                    class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-800 dark:text-blue-200"
+                  >
+                    <span class="font-medium">即将新增 {{ willAddCount }} 个表情</span>
+                    <span class="text-xs ml-1">(已自动过滤重复)</span>
+                  </div>
+                  <div
+                    v-else-if="selectedGroupId && willAddCount === 0"
+                    class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-200"
+                  >
+                    <span>该分组已包含所有贴纸，无需重复导入</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 导入按钮 -->
+              <div class="flex justify-end">
+                <a-button
+                  type="primary"
+                  size="large"
+                  @click="doImport"
+                  :disabled="
+                    !stickerSetInfo ||
+                    isProcessing ||
+                    isQueueRunning ||
+                    (importMode === 'new' && !newGroupName.trim()) ||
+                    (importMode === 'update' && !selectedGroupId)
+                  "
+                  :loading="isProcessing"
+                >
+                  {{ importMode === 'new' ? '导入到新分组' : '更新分组' }}
+                </a-button>
+              </div>
+
+              <!-- 实时导入预览 -->
+              <div
+                v-if="showImportPreview && importingEmojis.length > 0"
+                class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <h4 class="font-medium text-blue-900 dark:text-blue-100">
+                    正在导入的表情 ({{ importingEmojis.length }})
+                  </h4>
+                  <a-button v-if="!isProcessing" size="small" @click="showImportPreview = false">
+                    关闭预览
+                  </a-button>
+                </div>
+                <div
+                  class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-[400px] overflow-y-auto"
+                >
+                  <div
+                    v-for="emoji in importingEmojis"
+                    :key="emoji.id"
+                    class="flex flex-col items-center p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all"
+                  >
+                    <div
+                      class="w-16 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded"
+                    >
+                      <CachedImage
+                        :src="emoji.url"
+                        :alt="emoji.name"
+                        class="max-w-full max-h-full object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                    <span
+                      class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center truncate w-full"
+                    >
+                      {{ emoji.name }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </a-tab-pane>
+        <a-tab-pane key="update" tab="更新">
+          <div class="space-y-4 p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              选择已保存 Telegram 贴纸包来源的分组，自动补充尚未导入的贴纸。
+            </p>
+            <div
+              v-if="telegramGroupsForUpdate.length"
+              class="divide-y divide-gray-200 rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700"
+            >
+              <div
+                v-for="entry in telegramGroupsForUpdate"
+                :key="entry.group.id"
+                class="flex flex-wrap items-center justify-between gap-3 p-4"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="truncate font-medium text-gray-900 dark:text-gray-100">
+                    {{ entry.group.name }}
+                  </div>
+                  <div class="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {{ entry.source }}
+                  </div>
+                  <div class="mt-1 text-xs text-gray-400">
+                    {{ entry.group.emojis.length }} 个表情
+                  </div>
+                </div>
+                <a-button
+                  type="primary"
+                  @click="updateExistingTelegramGroup(entry.group, entry.source)"
+                >
+                  更新此分组
+                </a-button>
+              </div>
+            </div>
+            <a-empty v-else description="还没有保存 Telegram 来源的分组；导入后会显示在这里" />
+          </div>
+        </a-tab-pane>
+        <a-tab-pane key="config" tab="Telegram 配置">
+          <div class="space-y-4">
+            <!-- Bot Token 设置 -->
+            <div
+              class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+            >
+              <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">Bot Token</h4>
+              <div class="flex flex-wrap gap-2">
+                <a-input-password
+                  v-model:value="telegramBotToken"
+                  placeholder="输入 Telegram Bot Token"
+                  class="flex-1"
+                />
+                <a-button type="primary" @click="saveBotToken" :disabled="!telegramBotToken">
+                  保存
+                </a-button>
+              </div>
+              <p class="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                在 Telegram 中搜索 @BotFather，发送 /newbot 创建机器人获取 Token
+              </p>
+            </div>
+
+            <!-- 上传服务选择 -->
+            <div
+              class="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md"
+            >
+              <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">上传服务</h4>
+              <a-radio-group
+                v-model:value="uploadService"
+                class="telegram-upload-radio flex flex-wrap"
+              >
+                <a-radio-button value="linux.do">linux.do</a-radio-button>
+                <a-radio-button value="idcflare.com">idcflare.com</a-radio-button>
+                <a-radio-button value="imgbed">imgbed</a-radio-button>
+                <a-radio-button value="customDiscourse">
+                  {{ customUploadOriginSaved || '自定义 Discourse' }}
+                </a-radio-button>
+              </a-radio-group>
+              <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <a-input
+                  v-model:value="customUploadOrigin"
+                  placeholder="https://forum.example.com"
+                  aria-label="自定义 Discourse 实例域名"
+                />
+                <a-button @click="applyCustomUploadOrigin">添加并使用此实例</a-button>
+              </div>
+              <p
+                v-if="customUploadOriginSaved"
+                class="mt-2 text-xs text-green-700 dark:text-green-300"
+              >
+                当前自定义实例：{{ customUploadOriginSaved }}
+              </p>
+              <p v-if="customUploadError" class="mt-2 text-xs text-red-600 dark:text-red-300">
+                {{ customUploadError }}
+              </p>
+              <p class="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                贴纸将自动上传到所选服务并保存托管链接
+              </p>
+            </div>
+
+            <!-- WebM / TGS 转 AVIF -->
+            <div
+              class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
+            >
+              <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-3">浏览器内转换</h4>
+              <div class="space-y-3">
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="text-sm">WebM 浏览器转换</span>
+                  <a-select v-model:value="nativeWebmFormat" class="w-full sm:w-72">
+                    <a-select-option value="webp">原生动画 WebP（推荐，无 FFmpeg）</a-select-option>
+                    <a-select-option value="animated-avif">
+                      浏览器内动画 AVIF（WASM，无需安装）
+                    </a-select-option>
+                    <a-select-option value="avif">
+                      AVIF 静态首帧（不支持原生时用 WASM）
+                    </a-select-option>
+                    <a-select-option value="disabled">旧版转换设置（可选后端）</a-select-option>
+                  </a-select>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <a-switch v-model:checked="localAvifEnabled" />
+                  <span class="text-sm text-amber-900 dark:text-amber-100">
+                    TGS / 旧版浏览器内 AVIF（WASM，实验性）
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <a-switch v-model:checked="webmToAvifEnabled" />
+                  <a-input
+                    v-model:value="webmToAvifBackend"
+                    placeholder="可选旧版转换后端（浏览器模式不使用）"
+                    class="flex-1"
+                    :disabled="!webmToAvifEnabled || nativeWebmFormat !== 'disabled'"
+                  />
+                </div>
+              </div>
+              <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">
+                WebM 默认由浏览器解码并编码为动画 WebP（20fps，最长 10 秒、最大
+                512px），无需转换服务器。 AVIF 首帧为静态图片；原生编码不可用时使用本地 WASM。TGS
+                仍需启用离线动画 AVIF。 上述浏览器模式不调用转换服务器，动画 AVIF
+                失败不会降级为静态。
+              </p>
+            </div>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
     </div>
   </div>
 </template>

@@ -1,48 +1,97 @@
-import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate'
+import { inflateSync, strFromU8, strToU8 } from 'fflate'
+import type { BrotliWasmType } from 'brotli-wasm'
 
-const PREFIX = 'eg1:'
+const COMPACT_KEYS = new Set([
+  'appSettings',
+  'favorites',
+  'archivedGroupIds',
+  'discourseDomains',
+  'emojiGroupIndex',
+  'telegramBotToken'
+])
 export const isEmojiGroupStorageKey = (key: string) => key.startsWith('emojiGroup_')
+export const isCompactStorageKey = (key: string) =>
+  isEmojiGroupStorageKey(key) || COMPACT_KEYS.has(key)
 
-const toBase64 = (bytes: Uint8Array) => {
-  const parts: string[] = []
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    parts.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000)))
+let brotli: BrotliWasmType | undefined
+let ready: Promise<void> | undefined
+export function initializeStorageCodec(): Promise<void> {
+  if (!ready) {
+    ready = import('brotli-wasm')
+      .then(async module => {
+        brotli = await module.default
+      })
+      .catch(error => {
+        ready = undefined
+        throw error
+      })
   }
-  return btoa(parts.join(''))
+  return ready
 }
 
-// Read legacy {data,timestamp}, plain groups and versioned compressed groups.
+function getBrotli() {
+  if (!brotli) throw new Error('Storage codec must be initialized before use')
+  return brotli
+}
+
+// Chrome storage is JSON-only. Persist compressed bytes directly as unsigned integer words,
+// not Base64 (or another textual binary encoding). Tiny values remain plain JSON.
 export function decodeStorageValue(key: string, value: unknown): any {
-  const unpacked =
+  let unpacked =
     value && typeof value === 'object' && 'data' in value
       ? (value as { data: unknown }).data
       : value
-  if (isEmojiGroupStorageKey(key) && typeof unpacked === 'string') {
-    if (unpacked.startsWith(PREFIX)) {
-      const bytes = Uint8Array.from(atob(unpacked.slice(PREFIX.length)), char => char.charCodeAt(0))
-      const group = JSON.parse(strFromU8(inflateSync(bytes)))
-      if (!group || typeof group !== 'object' || !Array.isArray(group.emojis))
-        throw new Error('Invalid compressed emoji group')
-      return group
+  if (isCompactStorageKey(key) && Array.isArray(unpacked) && unpacked[0] === 'br2') {
+    const [, byteLength, words] = unpacked
+    if (
+      unpacked.length !== 3 ||
+      !Number.isInteger(byteLength) ||
+      byteLength < 0 ||
+      !Array.isArray(words) ||
+      words.length !== Math.ceil(byteLength / 4) ||
+      !words.every(
+        (word: unknown) => Number.isInteger(word) && Number(word) >= 0 && Number(word) <= 0xffffffff
+      )
+    ) {
+      throw new Error('Invalid compressed storage words')
     }
-    if (/^eg\d+:/.test(unpacked)) throw new Error('Unsupported emoji group storage version')
+    const bytes = new Uint8Array(words.length * 4)
+    const view = new DataView(bytes.buffer)
+    words.forEach((word: number, i: number) => view.setUint32(i * 4, word, true))
+    unpacked = JSON.parse(strFromU8(getBrotli().decompress(bytes.subarray(0, byteLength))))
+  } else if (isEmojiGroupStorageKey(key) && typeof unpacked === 'string') {
+    // Decode-only compatibility for the old Base64 + DEFLATE format.
+    if (unpacked.startsWith('eg1:')) {
+      const bytes = Uint8Array.from(atob(unpacked.slice(4)), char => char.charCodeAt(0))
+      unpacked = JSON.parse(strFromU8(inflateSync(bytes)))
+    } else if (/^eg\d+:/.test(unpacked)) throw new Error('Unsupported emoji group storage version')
   }
   return unpacked ?? null
 }
 
-// Tiny groups stay as plain objects, with no data/timestamp envelope. Compress only
-// when the actual persisted JSON is smaller (Base64's overhead is included).
 export function encodeEmojiGroupValue(value: unknown): unknown {
-  if (!value || typeof value !== 'object' || !Array.isArray((value as { emojis?: unknown }).emojis))
-    return value
+  return encodeCompactValue(value)
+}
+
+function encodeCompactValue(value: unknown): unknown {
+  if (value == null) return value
   const json = JSON.stringify(value)
+  if (json === undefined) return null
   const bytes = strToU8(json)
-  if (bytes.length < 1024) return value
-  const compressed = PREFIX + toBase64(deflateSync(bytes, { level: 9 }))
+  if (bytes.length < 256) return value
+  const binary = getBrotli().compress(bytes, { quality: 9 })
+  // JSON cannot store ArrayBuffer. Four bytes per unsigned integer avoids both
+  // textual encodings and the overhead of serializing every byte separately.
+  const padded = new Uint8Array(Math.ceil(binary.length / 4) * 4)
+  padded.set(binary)
+  const view = new DataView(padded.buffer)
+  const words = Array.from({ length: padded.length / 4 }, (_, i) => view.getUint32(i * 4, true))
+  const compressed = ['br2', binary.length, words]
+  // Account for ALL JSON overhead, not just compressed payload bytes.
   return strToU8(JSON.stringify(compressed)).length < bytes.length ? compressed : value
 }
 
 export function encodeStorageValue(key: string, value: unknown, timestamp = Date.now()): unknown {
-  if (isEmojiGroupStorageKey(key)) return encodeEmojiGroupValue(decodeStorageValue(key, value))
+  if (isCompactStorageKey(key)) return encodeCompactValue(decodeStorageValue(key, value))
   return { data: value, timestamp }
 }

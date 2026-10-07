@@ -1,6 +1,7 @@
 import { getChromeAPI } from '../utils/main.ts'
 import { getDiscourseTabUrlPatterns, getXTabUrlPatterns } from '../utils/domainTabMessenger'
 
+import { setSettings } from '@/utils/simpleStorage'
 import type { AppSettings } from '@/types/type'
 
 const CONTENT_TAB_URL_PATTERNS = ['http://*/*', 'https://*/*']
@@ -83,14 +84,7 @@ export const handleSyncSettings = async (
   }
 
   try {
-    // 保存为新的存储格式：{ data: {...}, timestamp: ... }
-    const timestamp = Date.now()
-    const appSettingsData = {
-      data: { ...settings, lastModified: timestamp },
-      timestamp: timestamp
-    }
-
-    await chromeAPI.storage.local.set({ appSettings: appSettingsData })
+    await setSettings({ ...settings, lastModified: Date.now() })
 
     // 仅当与 content script 相关的配置变更时才广播，且按域名范围过滤目标 tab
     const targetPatterns = await resolveBroadcastPatterns(updates)

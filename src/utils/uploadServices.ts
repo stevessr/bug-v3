@@ -1,3 +1,4 @@
+import { normalizeDiscourseUploadOrigin } from '@/utils/discourseInstance'
 import {
   DEFAULT_UPLOAD_RETRY_MS,
   getUploadRetryDelay,
@@ -324,12 +325,25 @@ export function uploadViaDiscourseAppEvents(
   })
 }
 
-class DiscourseUploadService implements UploadService {
+export class DiscourseUploadService implements UploadService {
   private domain: string
-  private clientId: string
+  private clientId?: string
+  private origin: string
 
-  constructor(domain: string, clientId: string) {
-    this.domain = domain
+  constructor(domain: string, clientId?: string) {
+    const parsed = new URL(domain.includes('://') ? domain : `https://${domain}`)
+    if (
+      !['http:', 'https:'].includes(parsed.protocol) ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== '/' ||
+      parsed.search ||
+      parsed.hash
+    ) {
+      throw new Error('Invalid Discourse instance URL')
+    }
+    this.origin = parsed.origin
+    this.domain = parsed.host
     this.clientId = clientId
   }
 
@@ -340,7 +354,11 @@ class DiscourseUploadService implements UploadService {
   /** Check whether we are running in a Discourse page with Ember initialized */
   private isDiscoursePageContext(): boolean {
     try {
-      return !!(globalThis as any).Discourse?.__container__
+      return (
+        (globalThis as any).location?.hostname?.toLowerCase() ===
+          new URL(this.origin).hostname.toLowerCase() &&
+        !!(globalThis as any).Discourse?.__container__
+      )
     } catch {
       return false
     }
@@ -371,13 +389,13 @@ class DiscourseUploadService implements UploadService {
     onProgress?: (percent: number) => void,
     onRateLimitWait?: (waitTime: number) => Promise<void>
   ): Promise<UploadServiceResult> {
-    const maxRetries = 3
     const maxChallengeRecoveries = 2
     let attempt = 0
     let challengeRecoveries = 0
-    let delay = 1000 // 1 second
 
-    while (attempt < maxRetries) {
+    // A rate limit is a cooldown, not a terminal upload failure. Keep the same
+    // file until the server accepts it or the consumer cancels its wait.
+    while (true) {
       try {
         return await this.attemptUploadDetailed(file, onProgress)
       } catch (error: any) {
@@ -401,8 +419,8 @@ class DiscourseUploadService implements UploadService {
         }
 
         // If the error indicates a 429 status, wait and retry
-        if (error.isRateLimitError && attempt < maxRetries - 1) {
-          const waitTime = error.waitTime || delay
+        if (error.isRateLimitError) {
+          const waitTime = Math.max(1000, error.waitTime || DEFAULT_UPLOAD_RETRY_MS)
           const waitStarted = Date.now()
           if (onRateLimitWait) {
             await onRateLimitWait(waitTime)
@@ -411,20 +429,17 @@ class DiscourseUploadService implements UploadService {
           // Some consumers show a countdown by awaiting the callback; do not wait twice.
           const remaining = Math.max(0, waitTime - (Date.now() - waitStarted))
           if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining))
-          delay *= 2 // Exponential backoff for subsequent fallbacks
           attempt++
         } else {
-          if (error.isRateLimitError || error.isLinuxDoChallengeError) {
+          if (error.isLinuxDoChallengeError) {
             error.shouldTerminateUploadFlow = true
           }
-          // For other errors or if max retries reached, rethrow
+          // Do not endlessly retry authentication, network or verification failures.
           console.error(`${this.domain} upload failed after ${attempt + 1} attempts:`, error)
           throw error
         }
       }
     }
-    // This part should not be reachable if maxRetries > 0, but is here for type safety
-    throw new Error('Upload failed after multiple retries.')
   }
 
   private async attemptUploadDetailed(
@@ -441,7 +456,7 @@ class DiscourseUploadService implements UploadService {
         return await this.uploadViaLinuxDoProxyDetailed(file, onProgress)
       }
 
-      // Get cookies and CSRF token
+      // Get cookies and CSRF token from an open tab on this exact Discourse instance.
       const { cookies, csrfToken } = await this.getAuth()
 
       // Build form data
@@ -460,17 +475,18 @@ class DiscourseUploadService implements UploadService {
       if (csrfToken) headers['X-Csrf-Token'] = csrfToken
       if (cookies) headers['Cookie'] = cookies
 
-      const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
+      const uploadUrl = `${this.origin}/uploads.json${this.clientId ? `?client_id=${encodeURIComponent(this.clientId)}` : ''}`
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
         headers,
-        body: form
+        body: form,
+        credentials: 'include'
       })
 
       if (response.ok) {
         const data = await response.json()
-        const result = normalizeUploadResult(`https://${this.domain}`, data)
+        const result = normalizeUploadResult(this.origin, data)
         if (onProgress) onProgress(100)
         return result
       } else {
@@ -507,13 +523,13 @@ class DiscourseUploadService implements UploadService {
     try {
       // Get cookies from chrome API if available
       if (typeof chrome !== 'undefined' && chrome.cookies) {
-        const cookieList = await chrome.cookies.getAll({ domain: this.domain })
+        const cookieList = await chrome.cookies.getAll({ domain: new URL(this.origin).hostname })
         cookies = cookieList.map(c => `${c.name}=${c.value}`).join('; ')
       }
 
       // Get CSRF token from tabs
       if (typeof chrome !== 'undefined' && chrome.tabs) {
-        const tabs = await chrome.tabs.query({ url: `https://${this.domain}/*` })
+        const tabs = await chrome.tabs.query({ url: `${this.origin}/*` })
         for (const tab of tabs) {
           if (tab.id) {
             try {
@@ -558,7 +574,7 @@ class DiscourseUploadService implements UploadService {
 
     onProgress?.(20)
 
-    const uploadUrl = `https://${this.domain}/uploads.json?client_id=${this.clientId}`
+    const uploadUrl = `${this.origin}/uploads.json${this.clientId ? `?client_id=${encodeURIComponent(this.clientId)}` : ''}`
     const response = await new Promise<any>((resolve, reject) => {
       chromeAPI.runtime.sendMessage(
         {
@@ -586,7 +602,7 @@ class DiscourseUploadService implements UploadService {
     const proxyStatus = (response as any)?.data?.status ?? (response as any)?.status
 
     if (proxyOk) {
-      const result = normalizeUploadResult(`https://${this.domain}`, proxyPayload)
+      const result = normalizeUploadResult(this.origin, proxyPayload)
       onProgress?.(100)
       return result
     }
@@ -662,6 +678,13 @@ export const uploadServices: Record<string, UploadService> = {
 }
 for (const [key, config] of Object.entries(DISCOURSE_UPLOAD_CONFIGS)) {
   uploadServices[key] = new DiscourseUploadService(config.domain, config.clientId)
+}
+
+export function createDiscourseUploadService(instanceUrl: string): UploadService {
+  const origin = normalizeDiscourseUploadOrigin(instanceUrl)
+  const parsed = new URL(origin)
+  const builtIn = DISCOURSE_UPLOAD_CONFIGS[parsed.host]
+  return new DiscourseUploadService(origin, builtIn?.clientId)
 }
 
 // Universal upload function that can be used for any group

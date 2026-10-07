@@ -1,9 +1,10 @@
-import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
+import { decodeStorageValue, initializeStorageCodec } from '@/utils/storage/emojiGroupCodec'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
 export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
   async get(key: string): Promise<any> {
+    await initializeStorageCodec()
     // Try extension storage first (main source for content scripts)
     if (chrome?.storage?.local) {
       try {

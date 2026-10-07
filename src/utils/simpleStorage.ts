@@ -12,7 +12,9 @@
 import {
   decodeStorageValue,
   encodeStorageValue,
-  isEmojiGroupStorageKey
+  isEmojiGroupStorageKey,
+  isCompactStorageKey,
+  initializeStorageCodec
 } from './storage/emojiGroupCodec'
 import { sanitizeEmojiGroup, isSettings } from './typeGuards'
 
@@ -59,7 +61,7 @@ const localStorageGet = <T = unknown>(key: string): T | null => {
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
     const value = decodeStorageValue(key, parsed)
-    if (isEmojiGroupStorageKey(key)) {
+    if (isCompactStorageKey(key)) {
       const upgraded = JSON.stringify(encodeStorageValue(key, value))
       if (upgraded !== raw) {
         try {
@@ -72,7 +74,7 @@ const localStorageGet = <T = unknown>(key: string): T | null => {
     return value as T | null
   } catch (error) {
     log.error('localStorage get failed:', key, error)
-    if (isEmojiGroupStorageKey(key)) throw error
+    if (isCompactStorageKey(key)) throw error
     return null
   }
 }
@@ -93,10 +95,12 @@ const localStorageRemove = (key: string) => {
 
 let writeQueue: Promise<unknown> = Promise.resolve()
 const serializeStorageWrite = <T>(task: () => Promise<T>): Promise<T> => {
-  const run = async (): Promise<T> =>
-    typeof navigator !== 'undefined' && navigator.locks
+  const run = async (): Promise<T> => {
+    await initializeStorageCodec()
+    return typeof navigator !== 'undefined' && navigator.locks
       ? navigator.locks.request('emoji-extension-storage-write', task)
       : task()
+  }
   const pending = writeQueue.then(run, run)
   writeQueue = pending.catch(() => {})
   return pending
@@ -147,7 +151,7 @@ const upgradeGroupSnapshots = async (
 ) => {
   const candidates: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(snapshots)) {
-    if (!isEmojiGroupStorageKey(key) || value == null) continue
+    if (!isCompactStorageKey(key) || value == null) continue
     const upgraded = encodeStorageValue(key, value)
     if (JSON.stringify(upgraded) !== JSON.stringify(value)) candidates[key] = upgraded
   }
@@ -175,7 +179,8 @@ const upgradeGroupSnapshots = async (
 /**
  * 从 chrome.storage.local 读取数据
  */
-export async function storageGet<T = unknown>(key: string): Promise<T | null> {
+export async function storageGet<T = unknown>(key: string, upgrade = true): Promise<T | null> {
+  await initializeStorageCodec()
   const api = getChromeAPI()
   if (!api?.storage?.local) {
     warnNoChromeStorage()
@@ -190,7 +195,7 @@ export async function storageGet<T = unknown>(key: string): Promise<T | null> {
     })
   })
   const value = decodeStorageValue(key, result[key]) as T | null
-  if (isEmojiGroupStorageKey(key)) await upgradeGroupSnapshots(api, result)
+  if (upgrade && isCompactStorageKey(key)) await upgradeGroupSnapshots(api, result)
   return value
 }
 
@@ -267,6 +272,7 @@ export async function storageBatchRemove(keys: string[]): Promise<void> {
  * @returns 包含所有数据的对象
  */
 export async function storageBatchGet(keys: string[]): Promise<Record<string, any>> {
+  await initializeStorageCodec()
   const api = getChromeAPI()
   if (!api?.storage?.local) {
     warnNoChromeStorage()
@@ -680,6 +686,7 @@ export async function saveAllData(data: {
  * 优化：使用批量读取，将 N+1 次查询优化为 2 次
  */
 export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
+  await initializeStorageCodec()
   if (typeof indexedDB !== 'undefined') {
     await cleanupArchivedGroupStorage()
   }
@@ -696,7 +703,7 @@ export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
     await upgradeGroupSnapshots(api, snapshots)
   } else if (isLocalStorageAvailable()) {
     const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
-    for (const key of keys) if (key && isEmojiGroupStorageKey(key)) localStorageGet(key)
+    for (const key of keys) if (key && isCompactStorageKey(key)) localStorageGet(key)
   }
   const index = await getEmojiGroupIndex()
   if (index.length === 0) {
@@ -775,9 +782,10 @@ async function cleanupArchivedGroupStorageUnlocked(): Promise<void> {
   if (isLocalStorageAvailable()) {
     for (const id of ids) localStorageRemove(STORAGE_KEYS.GROUP_PREFIX + id)
   }
-  const index = await getEmojiGroupIndex()
+  const index =
+    (await storageGet<Array<{ id: string; order: number }>>(STORAGE_KEYS.GROUP_INDEX, false)) ?? []
   const active = index.filter(item => !ids.has(item.id))
-  const previousIds = await getArchivedGroupIds()
+  const previousIds = (await storageGet<string[]>(STORAGE_KEYS.ARCHIVED_GROUPS, false)) ?? []
   const items: Record<string, unknown> = {}
   if (active.length !== index.length) items[STORAGE_KEYS.GROUP_INDEX] = active
   if (JSON.stringify(previousIds) !== JSON.stringify([...ids]))
@@ -799,9 +807,13 @@ export async function unarchiveGroup(groupId: string): Promise<EmojiGroup | null
   return serializeStorageWrite(async () => {
     const group = await getArchivedGroup(groupId)
     if (!group) return null
-    const index = await getEmojiGroupIndex()
+    const index =
+      (await storageGet<Array<{ id: string; order: number }>>(STORAGE_KEYS.GROUP_INDEX, false)) ??
+      []
     if (!index.some(item => item.id === groupId)) index.push({ id: groupId, order: index.length })
-    const archivedIds = (await getArchivedGroupIds()).filter(id => id !== groupId)
+    const archivedIds = (
+      (await storageGet<string[]>(STORAGE_KEYS.ARCHIVED_GROUPS, false)) ?? []
+    ).filter(id => id !== groupId)
     await writeStorageItems(
       {
         [STORAGE_KEYS.GROUP_PREFIX + groupId]: group,
@@ -878,7 +890,9 @@ export async function deleteArchivedGroup(groupId: string): Promise<void> {
       store.delete(groupId)
     })
     await writeStorageItems({
-      [STORAGE_KEYS.ARCHIVED_GROUPS]: (await getArchivedGroupIds()).filter(id => id !== groupId)
+      [STORAGE_KEYS.ARCHIVED_GROUPS]: (
+        (await storageGet<string[]>(STORAGE_KEYS.ARCHIVED_GROUPS, false)) ?? []
+      ).filter(id => id !== groupId)
     })
   })
 }
@@ -1033,18 +1047,22 @@ export function onStorageChanged(callback: StorageChangeListener): () => void {
   const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
     if (areaName !== 'local') return
 
-    for (const [key, change] of Object.entries(changes)) {
-      const oldVal = change.oldValue as { data?: unknown } | unknown
-      const newVal = change.newValue as { data?: unknown } | unknown
-
-      callback({
-        key,
-        oldValue:
-          (oldVal && typeof oldVal === 'object' && 'data' in oldVal ? oldVal.data : oldVal) ?? null,
-        newValue:
-          (newVal && typeof newVal === 'object' && 'data' in newVal ? newVal.data : newVal) ?? null
+    void initializeStorageCodec()
+      .then(() => {
+        for (const [key, change] of Object.entries(changes)) {
+          try {
+            callback({
+              key,
+              oldValue: decodeStorageValue(key, change.oldValue) ?? null,
+              newValue: decodeStorageValue(key, change.newValue) ?? null
+            })
+          } catch (error) {
+            // Never leak the physical br2 representation to storage subscribers.
+            log.error('Storage change decode failed:', key, error)
+          }
+        }
       })
-    }
+      .catch(error => log.error('Storage change codec initialization failed:', error))
   }
 
   api.storage.onChanged.addListener(listener)

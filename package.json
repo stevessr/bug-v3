@@ -60,6 +60,7 @@
     "@jsquash/avif": "^2.1.1",
     "@opentelemetry/api": "^1.9.1",
     "ant-design-vue": "^4.2.6",
+    "brotli-wasm": "^3.0.1",
     "dayjs": "^1.11.21",
     "dexie": "^4.4.4",
     "dompurify": "^3.4.13",

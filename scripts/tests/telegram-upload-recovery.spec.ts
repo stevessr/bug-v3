@@ -144,17 +144,37 @@ test('429 verification HTML opens the normal challenge page before retry, not a 
   )
 })
 
-test('persistent 429 has bounded retries and pauses the remaining import', async () => {
+test('persistent 429 continues beyond three attempts and eventually saves the same file', async () => {
+  const limited = { status: 429, ok: false, data: {}, headers: { 'retry-after': '4' } }
+  await proxyFixture([...Array(6).fill(limited), success], async (service, context) => {
+    const result = await service.uploadFileDetailed(
+      fixtureFile(),
+      undefined,
+      async (ms: number) => {
+        context.waits.push(ms)
+        context.advance(ms)
+      }
+    )
+    expect(result.short_url).toBe('upload://fixture.webp')
+    expect(context.messages).toHaveLength(7)
+    expect(context.waits).toEqual(Array(6).fill(4000))
+    expect(context.messages.every(item => item.type === 'LINUX_DO_UPLOAD')).toBe(true)
+    expect(new Set(context.messages.map(item => JSON.stringify(item.options))).size).toBe(1)
+  })
+})
+
+test('persistent 429 stops only when the user cancels a later countdown', async () => {
   const limited = { status: 429, ok: false, data: {} }
-  await proxyFixture([limited, limited, limited], async (service, context) => {
+  await proxyFixture(Array(10).fill(limited), async (service, context) => {
     await expect(
       service.uploadFileDetailed(fixtureFile(), undefined, async (ms: number) => {
         context.waits.push(ms)
+        if (context.waits.length === 5) throw new DOMException('Cancelled', 'AbortError')
         context.advance(ms)
       })
-    ).rejects.toMatchObject({ status: 429, shouldTerminateUploadFlow: true })
-    expect(context.messages).toHaveLength(3)
-    expect(context.waits).toHaveLength(2)
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(context.messages).toHaveLength(5)
+    expect(context.waits).toHaveLength(5)
   })
 })
 
@@ -182,7 +202,7 @@ test('verification timeout stops the import instead of opening tabs for each rem
   )
 })
 
-async function startWaitingImport(page: import('@playwright/test').Page) {
+async function startWaitingImport(page: import('@playwright/test').Page, rateLimitCount = 0) {
   await page.addInitScript(() => {
     localStorage.setItem('telegramBotToken', JSON.stringify('fixture-token'))
     localStorage.setItem('emojiGroupIndex', JSON.stringify([{ id: 'telegram_wait', order: 0 }]))
@@ -242,12 +262,30 @@ async function startWaitingImport(page: import('@playwright/test').Page) {
   await page.goto(
     'http://localhost:4189/?mode=options#/import?source=telegram&tgGroupId=telegram_wait&tgInput=WaitFixture&tgAuto=1'
   )
-  await page.evaluate(async () => {
+  await page.evaluate(async rateLimitCount => {
     const moduleUrl = '/js/uploadServices.js'
     const module = await import(moduleUrl)
     const services = Object.values(module).find(
       (value: any) => value?.['linux.do']?.uploadFileDetailed
     ) as any
+    if (rateLimitCount) {
+      const w = window as any
+      w.uploadAttempts = 0
+      w.uploadedNames = []
+      services['linux.do'].attemptUploadDetailed = async (file: File) => {
+        w.uploadAttempts++
+        w.uploadedNames.push(file.name)
+        if (w.uploadAttempts <= rateLimitCount) {
+          throw Object.assign(new Error('上传请求过于频繁，等待后重试'), {
+            status: 429,
+            isRateLimitError: true,
+            waitTime: 1000
+          })
+        }
+        return { url: 'https://linux.do/uploads/fixture.png', short_url: 'upload://fixture.png' }
+      }
+      return
+    }
     services['linux.do'].uploadFileDetailed = async (
       _file: File,
       _progress: unknown,
@@ -256,7 +294,7 @@ async function startWaitingImport(page: import('@playwright/test').Page) {
       await onWait(2000)
       return { url: 'https://linux.do/uploads/fixture.png', short_url: 'upload://fixture.png' }
     }
-  })
+  }, rateLimitCount)
   release()
 }
 
@@ -272,6 +310,26 @@ test('TG options shows the upload countdown and then returns after saving the sa
   })
   expect(group.emojis).toHaveLength(1)
   expect(group.emojis[0].short_url).toBe('upload://fixture.png')
+})
+
+test('TG UI survives four consecutive upload 429 responses and returns only after success', async ({
+  page
+}) => {
+  await startWaitingImport(page, 4)
+  await expect(page.getByText('上传限流，等待 1 秒后重试当前贴纸...')).toBeVisible()
+  await expect(page).toHaveURL(/#\/groups$/, { timeout: 15000 })
+  const result = await page.evaluate(() => {
+    const w = window as any
+    return {
+      attempts: w.uploadAttempts,
+      names: w.uploadedNames,
+      saved: JSON.parse(localStorage.getItem('emojiGroup_telegram_wait')!)
+    }
+  })
+  expect(result.attempts).toBe(5)
+  expect(new Set(result.names).size).toBe(1)
+  expect((result.saved.data || result.saved).emojis).toHaveLength(1)
+  await expect(page.getByText(/上传已暂停/)).toHaveCount(0)
 })
 
 test('cancelling the TG upload countdown resolves the pending wait without success navigation', async ({
@@ -364,6 +422,7 @@ test('same import component responds to a later automatic-update route request',
 }) => {
   const requests = await seedAutoUpdate(page)
   await page.goto('http://localhost:4189/?mode=options#/import?source=telegram')
+  await page.getByRole('tab', { name: 'Telegram 配置', exact: true }).click()
   await expect(page.getByPlaceholder('输入 Telegram Bot Token')).toHaveValue('fixture-token')
   await page.evaluate(() => {
     location.hash =
@@ -454,4 +513,188 @@ test('legacy group without source can supply it once and immediately finish the 
   await page.getByRole('button', { name: /预\s*览/ }).click()
   await verifyCorrectTarget(page)
   expect(requests()).toBe(1)
+})
+
+test('buffer modal can cancel a rate-limit countdown and saves completed stickers', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('telegramBotToken', JSON.stringify('fixture-token'))
+    localStorage.setItem('emojiGroupIndex', JSON.stringify([]))
+  })
+  await page.route('https://s.pwsh.us.kg/**', route => route.fulfill({ status: 404 }))
+  await page.route('https://api.telegram.org/**', route => {
+    const url = route.request().url()
+    if (url.includes('getStickerSet'))
+      return route.fulfill({
+        json: {
+          ok: true,
+          result: {
+            name: 'CancelPack',
+            title: 'Cancelled buffer fixture',
+            stickers: [1, 2].map(i => ({
+              file_id: `fixture${i}`,
+              file_unique_id: `fixture${i}`,
+              emoji: '😀',
+              width: 1,
+              height: 1,
+              is_animated: false,
+              is_video: false,
+              type: 'regular'
+            }))
+          }
+        }
+      })
+    if (url.includes('getFile'))
+      return route.fulfill({ json: { ok: true, result: { file_path: 'fixture.png' } } })
+    return route.fulfill({
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==',
+        'base64'
+      ),
+      contentType: 'image/png'
+    })
+  })
+  await page.goto('http://localhost:4189/?mode=options#/buffer')
+  await page.evaluate(async () => {
+    const module = await import('/js/uploadServices.js')
+    const services = Object.values(module).find(
+      (value: any) => value?.['linux.do']?.uploadFileDetailed
+    ) as any
+    const w = window as any
+    w.uploadAttempts = 0
+    services['linux.do'].attemptUploadDetailed = async () => {
+      if (++w.uploadAttempts === 1)
+        return { url: 'https://linux.do/uploads/fixture.png', short_url: 'upload://fixture.png' }
+      throw Object.assign(new Error('Too many requests'), {
+        status: 429,
+        isRateLimitError: true,
+        waitTime: 60000
+      })
+    }
+  })
+  await page.getByRole('button', { name: 'Telegram 贴纸导入' }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByPlaceholder('例如：https://t.me/addstickers/xxx 或 xxx').fill('CancelPack')
+  await modal.getByRole('button', { name: /预\s*览/ }).click()
+  await modal.getByRole('button', { name: '开始导入' }).click()
+  await expect(modal.getByText(/上传限流，等待/)).toBeVisible()
+  await modal.getByRole('button', { name: '取消导入', exact: true }).click()
+  await expect(modal.getByRole('button', { name: /^取\s*消$/ })).toBeEnabled()
+  expect(await page.evaluate(() => (window as any).uploadAttempts)).toBe(2)
+  const saved = await page.evaluate(() =>
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('emojiGroup_'))
+      .map(key => {
+        const raw = JSON.parse(localStorage.getItem(key)!)
+        return raw.data || raw
+      })
+      .find(group => group.name === 'Cancelled buffer fixture')
+  )
+  expect(saved.emojis).toHaveLength(1)
+  expect(saved.emojis[0].short_url).toBe('upload://fixture.png')
+  await expect(modal).toBeVisible()
+})
+
+test('Telegram config is in a separate subtab; import state survives switching tabs', async ({
+  page
+}) => {
+  await seedAutoUpdate(page)
+  await page.goto('http://localhost:4189/?mode=options#/import?source=telegram')
+  const input = page.getByPlaceholder('例如：https://t.me/addstickers/xxx 或 xxx', { exact: true })
+  await input.fill('DraftPack')
+  await expect(page.getByPlaceholder('输入 Telegram Bot Token')).not.toBeVisible()
+  await page.getByRole('tab', { name: 'Telegram 配置', exact: true }).click()
+  await expect(page.getByPlaceholder('输入 Telegram Bot Token')).toHaveValue('fixture-token')
+  await expect(page.getByText('上传服务', { exact: true })).toBeVisible()
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  const idleRadio = page.locator('.telegram-upload-radio .ant-radio-button-wrapper').nth(1)
+  await expect
+    .poll(() => idleRadio.evaluate(element => getComputedStyle(element).backgroundColor))
+    .toBe('rgb(24, 24, 27)')
+  await expect(input).not.toBeVisible()
+  await page.getByRole('tab', { name: '贴纸导入', exact: true }).click()
+  await expect(input).toHaveValue('DraftPack')
+})
+
+test('custom Discourse upload domains are normalized, authenticated and can upload', async () => {
+  const scope = globalThis as any
+  const previous = {
+    fetch: scope.fetch,
+    location: scope.location,
+    chrome: scope.chrome,
+    logger: scope.createLogger
+  }
+  const calls: any[] = []
+  scope.createLogger = () => ({ debug() {}, info() {}, warn() {}, error() {} })
+  scope.location = { protocol: 'https:' }
+  scope.chrome = undefined
+  scope.fetch = async (url: string, options: any) => {
+    calls.push({ url, credentials: options.credentials, headers: options.headers })
+    return new Response(
+      JSON.stringify({ url: '/uploads/fixture.png', short_url: 'upload://fixture.png' }),
+      {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      }
+    )
+  }
+  try {
+    const { createDiscourseUploadService: create } = await import('../../src/utils/uploadServices')
+    const service = create('https://forum.example.com/')
+    const upload = await service.uploadFileDetailed(
+      new File(['fixture'], 'fixture.png', { type: 'image/png' })
+    )
+    expect(upload.url).toBe('https://forum.example.com/uploads/fixture.png')
+    expect(upload.short_url).toBe('upload://fixture.png')
+    expect(calls[0].url).toBe('https://forum.example.com/uploads.json')
+    expect(calls[0].credentials).toBe('include')
+    expect(calls[0].url).not.toContain('client_id=')
+    expect(() => create('http://forum.example.com')).toThrow()
+    expect(() => create('https://forum.example.com/category')).toThrow()
+  } finally {
+    scope.fetch = previous.fetch
+    scope.location = previous.location
+    scope.chrome = previous.chrome
+    scope.createLogger = previous.logger
+  }
+})
+
+test('Telegram update subtab lists saved pack sources and launches the selected update', async ({
+  page
+}) => {
+  const requests = await seedAutoUpdate(page)
+  await page.goto('http://localhost:4189/?mode=options#/import?source=telegram')
+  await page.getByRole('tab', { name: '更新', exact: true }).click()
+  const entry = page.getByText('Renamed fixture', { exact: true })
+  await expect(entry).toBeVisible()
+  await expect(page.getByText('CanonicalPack', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '更新此分组' }).click()
+  await expect(page).toHaveURL(/#\/groups$/, { timeout: 10000 })
+  expect(requests()).toBe(1)
+})
+
+test('upload service radio buttons follow dark mode and custom domain persists', async ({
+  page
+}) => {
+  await seedAutoUpdate(page)
+  await page.goto('http://localhost:4189/?mode=options#/import?source=telegram')
+  await page.getByRole('tab', { name: 'Telegram 配置', exact: true }).click()
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  const idleRadio = page.locator('.telegram-upload-radio .ant-radio-button-wrapper').nth(1)
+  await expect
+    .poll(() =>
+      idleRadio.evaluate(element => {
+        const style = getComputedStyle(element)
+        return { background: style.backgroundColor, color: style.color }
+      })
+    )
+    .toEqual({ background: 'rgb(24, 24, 27)', color: 'rgb(229, 231, 235)' })
+  await page
+    .getByRole('textbox', { name: '自定义 Discourse 实例域名' })
+    .fill('https://forum.example.com/')
+  await page.getByRole('button', { name: '添加并使用此实例' }).click()
+  await expect(page.getByRole('radio', { name: /forum\.example\.com/ })).toBeChecked()
+  await expect(page.getByText('当前自定义实例：https://forum.example.com')).toBeVisible()
 })

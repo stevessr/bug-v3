@@ -43,22 +43,25 @@ const activeSource = computed<ImportSource>({
 
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
-    <div class="px-6 pt-5">
+    <div class="px-4 pt-5 sm:px-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t('import') }}</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">选择来源，导入或更新你的表情分组</p>
     </div>
 
-    <a-tabs v-model:activeKey="activeSource" class="px-4">
-      <a-tab-pane key="bilibili" :tab="t('bilibiliImport')">
-        <div class="pb-4">
-          <BilibiliImportPage embedded />
-        </div>
-      </a-tab-pane>
+    <div class="px-4 sm:px-6">
+      <a-tabs v-model:activeKey="activeSource">
+        <a-tab-pane key="bilibili" :tab="t('bilibiliImport')">
+          <div class="pb-4">
+            <BilibiliImportPage embedded />
+          </div>
+        </a-tab-pane>
 
-      <a-tab-pane key="telegram" :tab="t('telegramImport')">
-        <div class="pb-4">
-          <TelegramImportPage embedded />
-        </div>
-      </a-tab-pane>
-    </a-tabs>
+        <a-tab-pane key="telegram" :tab="t('telegramImport')">
+          <div class="pb-4">
+            <TelegramImportPage embedded />
+          </div>
+        </a-tab-pane>
+      </a-tabs>
+    </div>
   </div>
 </template>

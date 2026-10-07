@@ -1,6 +1,10 @@
 import { type ShallowRef, type Ref } from 'vue'
 
-import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
+import {
+  decodeStorageValue,
+  initializeStorageCodec,
+  isCompactStorageKey
+} from '@/utils/storage/emojiGroupCodec'
 import { STORAGE_KEYS } from '@/utils/simpleStorage'
 import * as storage from '@/utils/simpleStorage'
 import type { EmojiGroup, AppSettings, Emoji } from '@/types/type'
@@ -56,6 +60,7 @@ export function useStorageSync({
     groupId: string,
     change: chrome.storage.StorageChange
   ): Promise<EmojiGroup | null> => {
+    await initializeStorageCodec()
     // 尝试从 change payload 获取新数据
     let newGroup: EmojiGroup | null = null
     if (change?.newValue !== undefined) {
@@ -116,8 +121,9 @@ export function useStorageSync({
   /**
    * 处理设置变更
    */
-  const handleSettingsChange = (change: chrome.storage.StorageChange) => {
-    const data = change?.newValue ? (change.newValue as { data?: AppSettings }).data : null
+  const handleSettingsChange = async (change: chrome.storage.StorageChange) => {
+    await initializeStorageCodec()
+    const data = decodeStorageValue(STORAGE_KEYS.SETTINGS, change?.newValue)
     if (data && typeof data === 'object') {
       settings.value = { ...defaultSettings, ...data }
       log.info('Updated settings from external storage')
@@ -127,8 +133,9 @@ export function useStorageSync({
   /**
    * 处理收藏夹变更
    */
-  const handleFavoritesChange = (change: chrome.storage.StorageChange) => {
-    const data = change?.newValue ? (change.newValue as { data?: string[] }).data : null
+  const handleFavoritesChange = async (change: chrome.storage.StorageChange) => {
+    await initializeStorageCodec()
+    const data = decodeStorageValue(STORAGE_KEYS.FAVORITES, change?.newValue)
     if (Array.isArray(data)) {
       favorites.value = new Set(data)
       log.info('Updated favorites from external storage')
@@ -271,9 +278,9 @@ export function useStorageSync({
           const previousGroup = previousGroups.get(groupId) || null
           applyGroupDiff(previousGroup, updatedGroup)
         } else if (key === STORAGE_KEYS.SETTINGS) {
-          handleSettingsChange(changes[key])
+          await handleSettingsChange(changes[key])
         } else if (key === STORAGE_KEYS.FAVORITES) {
-          handleFavoritesChange(changes[key])
+          await handleFavoritesChange(changes[key])
         } else if (key === STORAGE_KEYS.GROUP_INDEX) {
           await handleGroupIndexChange()
         }
@@ -356,7 +363,7 @@ export function useStorageSync({
 
           // If incoming changes are older or equal to the last processed one, skip
           if (
-            !changedKeys.some(key => key.startsWith(STORAGE_KEYS.GROUP_PREFIX)) &&
+            !changedKeys.some(isCompactStorageKey) &&
             maxIncomingTs &&
             maxIncomingTs <= lastExternalChangeTs
           ) {

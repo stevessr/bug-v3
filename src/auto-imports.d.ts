@@ -17,6 +17,7 @@ declare global {
   const DEFAULT_RECONNECT_DELAY_MS: typeof import('./utils/collab/constants').DEFAULT_RECONNECT_DELAY_MS
   const DEFAULT_TASK_TIMEOUT_MS: typeof import('./utils/collab/constants').DEFAULT_TASK_TIMEOUT_MS
   const DEFAULT_UPLOAD_RETRY_MS: typeof import('./utils/uploadRetry').DEFAULT_UPLOAD_RETRY_MS
+  const DiscourseUploadService: typeof import('./utils/uploadServices').DiscourseUploadService
   const EMOJI: typeof import('./utils/constants').EMOJI
   const EffectScope: typeof import('vue').EffectScope
   const ImageCache: typeof import('./utils/imageCache').ImageCache
@@ -55,6 +56,7 @@ declare global {
   const convertWebmToAvifViaBackend: typeof import('./utils/webmToAvifBackend').convertWebmToAvifViaBackend
   const createApp: typeof import('vue').createApp
   const createDatabaseFile: typeof import('./utils/cacheExportHelpers').createDatabaseFile
+  const createDiscourseUploadService: typeof import('./utils/uploadServices').createDiscourseUploadService
   const createFileUrl: typeof import('./utils/telegramResolver').createFileUrl
   const createLogger: typeof import('./utils/logger').createLogger
   const createPinia: typeof import('pinia').createPinia
@@ -151,6 +153,7 @@ declare global {
   const markRaw: typeof import('vue').markRaw
   const message: typeof import('ant-design-vue').message
   const nextTick: typeof import('vue').nextTick
+  const normalizeDiscourseUploadOrigin: typeof import('./utils/discourseInstance').normalizeDiscourseUploadOrigin
   const normalizeDiscourseUploadUrl: typeof import('./utils/discourseUpload').normalizeDiscourseUploadUrl
   const normalizeImageUrl: typeof import('./utils/isImageUrl').normalizeImageUrl
   const onActivated: typeof import('vue').onActivated
@@ -330,7 +333,7 @@ declare global {
   export type { TenorMediaFormat, TenorResult, TenorSearchResponse, TenorSearchOptions, TenorFeaturedOptions } from './utils/tenor'
   import('./utils/tenor')
   // @ts-ignore
-  export type { UploadService, UploadServiceResult, UploadOptions } from './utils/uploadServices'
+  export type { DiscourseUploadService, UploadService, UploadServiceResult, UploadOptions } from './utils/uploadServices'
   import('./utils/uploadServices')
   // @ts-ignore
   export type { WebmToAvifBackendOptions } from './utils/webmToAvifBackend'
@@ -351,6 +354,7 @@ declare module 'vue' {
     readonly DEFAULT_RECONNECT_DELAY_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_RECONNECT_DELAY_MS']>
     readonly DEFAULT_TASK_TIMEOUT_MS: UnwrapRef<typeof import('./utils/collab/constants')['DEFAULT_TASK_TIMEOUT_MS']>
     readonly DEFAULT_UPLOAD_RETRY_MS: UnwrapRef<typeof import('./utils/uploadRetry')['DEFAULT_UPLOAD_RETRY_MS']>
+    readonly DiscourseUploadService: UnwrapRef<typeof import('./utils/uploadServices')['DiscourseUploadService']>
     readonly EMOJI: UnwrapRef<typeof import('./utils/constants')['EMOJI']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly ImageCache: UnwrapRef<typeof import('./utils/imageCache')['ImageCache']>
@@ -389,6 +393,7 @@ declare module 'vue' {
     readonly convertWebmToAvifViaBackend: UnwrapRef<typeof import('./utils/webmToAvifBackend')['convertWebmToAvifViaBackend']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['createDatabaseFile']>
+    readonly createDiscourseUploadService: UnwrapRef<typeof import('./utils/uploadServices')['createDiscourseUploadService']>
     readonly createFileUrl: UnwrapRef<typeof import('./utils/telegramResolver')['createFileUrl']>
     readonly createLogger: UnwrapRef<typeof import('./utils/logger')['createLogger']>
     readonly createPinia: UnwrapRef<typeof import('pinia')['createPinia']>
@@ -485,6 +490,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly message: UnwrapRef<typeof import('ant-design-vue')['message']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeDiscourseUploadOrigin: UnwrapRef<typeof import('./utils/discourseInstance')['normalizeDiscourseUploadOrigin']>
     readonly normalizeDiscourseUploadUrl: UnwrapRef<typeof import('./utils/discourseUpload')['normalizeDiscourseUploadUrl']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>

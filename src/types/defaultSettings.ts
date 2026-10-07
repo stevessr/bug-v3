@@ -50,6 +50,8 @@ export const defaultSettings: AppSettings = {
   linuxDoSeekingRefreshIntervalMs: 60000, // 默认 60 秒轮询
   linuxDoSeekingPosition: 'left', // 默认左侧吸附
   linuxDoSeekingActionFilter: '1,5', // 默认互动 + 回复
+  telegramUploadService: 'linux.do',
+  telegramCustomDiscourseOrigin: '',
   telegramWebmToAvifEnabled: false,
   telegramWebmToAvifBackend: '',
   telegramNativeWebmFormat: 'webp',

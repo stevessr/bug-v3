@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import {
   QuestionCircleOutlined,
   CloudUploadOutlined,
@@ -31,16 +31,47 @@ import { uploadServices } from '@/utils/uploadServices'
 import type { EmojiGroup } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 
+let importAbortController: AbortController | null = null
+const isImporting = ref(false)
+const isCancelling = ref(false)
+const cancelImport = () => {
+  isCancelling.value = true
+  importAbortController?.abort()
+}
+onUnmounted(() => importAbortController?.abort())
+
 const waitForUploadRateLimit = async (waitTime: number) => {
   const deadline = Date.now() + waitTime
   while (Date.now() < deadline) {
+    importAbortController?.signal.throwIfAborted()
     progress.value.message = `上传限流，等待 ${Math.ceil((deadline - Date.now()) / 1000)} 秒后重试当前贴纸...`
-    await new Promise(resolve => setTimeout(resolve, Math.min(1000, deadline - Date.now())))
+    const signal = importAbortController?.signal
+    await new Promise<void>((resolve, reject) => {
+      const abort = () => {
+        clearTimeout(timer)
+        reject(new DOMException('Upload cancelled', 'AbortError'))
+      }
+      const timer = setTimeout(
+        () => {
+          signal?.removeEventListener('abort', abort)
+          resolve()
+        },
+        Math.min(1000, deadline - Date.now())
+      )
+      signal?.addEventListener('abort', abort, { once: true })
+    })
   }
+  importAbortController?.signal.throwIfAborted()
 }
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits(['update:modelValue', 'imported'])
+watch(
+  () => props.modelValue,
+  open => {
+    if (!open) importAbortController?.abort()
+  }
+)
 
 const store = useEmojiStore()
 const safeSettings = computed(() => store.settings || defaultSettings)
@@ -202,6 +233,9 @@ const doImport = async () => {
     return
   }
 
+  importAbortController = new AbortController()
+  isImporting.value = true
+  isCancelling.value = false
   isProcessing.value = true
   errorMessage.value = ''
 
@@ -245,6 +279,10 @@ const doImport = async () => {
 
     // 处理每个贴纸
     for (let i = 0; i < validStickers.length; i++) {
+      if (importAbortController.signal.aborted) {
+        uploadStopped = true
+        break
+      }
       const sticker = validStickers[i]
       progress.value = {
         processed: i,
@@ -311,6 +349,7 @@ const doImport = async () => {
         // 创建 File 对象
         const filename = `${sticker.emoji || 'sticker'}_${i + 1}.${extension}`
         const file = new File([blob], filename, { type: mimeType })
+        importAbortController.signal.throwIfAborted()
 
         // 上传到托管服务
         progress.value.message = `上传贴纸 ${i + 1}/${total} 到 ${uploadService.value}...`
@@ -346,6 +385,11 @@ const doImport = async () => {
 
         progress.value.processed = i + 1
       } catch (err) {
+        if (importAbortController.signal.aborted || (err as Error)?.name === 'AbortError') {
+          uploadStopped = true
+          progress.value.message = '导入已取消，正在保存已完成的贴纸...'
+          break
+        }
         console.error(`处理贴纸失败：`, err)
         if ((err as any)?.shouldTerminateUploadFlow === true) {
           uploadStopped = true
@@ -356,6 +400,8 @@ const doImport = async () => {
         // message.warning(`贴纸 ${i + 1} 上传失败，已跳过`)
       }
     }
+
+    uploadStopped = uploadStopped || importAbortController.signal.aborted
 
     // 更新分组中的 emojis
     if (importMode.value === 'new') {
@@ -402,6 +448,9 @@ const doImport = async () => {
     store.endBatch()
   } finally {
     isProcessing.value = false
+    isImporting.value = false
+    isCancelling.value = false
+    importAbortController = null
   }
 }
 </script>
@@ -608,7 +657,12 @@ const doImport = async () => {
 
         <!-- 底部按钮 -->
         <div class="flex justify-end gap-3 mt-6">
-          <a-button @click="close" :disabled="isProcessing">取消</a-button>
+          <a-button
+            @click="isImporting ? cancelImport() : close()"
+            :disabled="(isProcessing && !isImporting) || isCancelling"
+          >
+            {{ isImporting ? (isCancelling ? '取消中...' : '取消导入') : '取消' }}
+          </a-button>
           <a-button
             type="primary"
             @click="doImport"

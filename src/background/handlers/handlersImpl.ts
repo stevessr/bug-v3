@@ -1,7 +1,7 @@
 import { getChromeAPI } from '../utils/main.ts'
 
 import * as storage from '@/utils/simpleStorage'
-import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
+import { decodeStorageValue, initializeStorageCodec } from '@/utils/storage/emojiGroupCodec'
 import type { EmojiGroup, AppSettings } from '@/types/type'
 import { defaultSettings } from '@/types/defaultSettings'
 
@@ -195,6 +195,7 @@ export async function handleSaveEmojiData(
   }
 
   try {
+    await initializeStorageCodec()
     if (Array.isArray(data.groups) || data.settings || data.favorites) {
       await storage.saveAllData({
         groups: data.groups as EmojiGroup[] | undefined,

@@ -67,6 +67,8 @@ export interface AppSettings {
   useDiscourseNativeUpload?: boolean // 帖子上传是否使用 Discourse 原生上传器；false 时走扩展内建 API
   forumUploadConcurrency?: number // 论坛上传并发数（1-20，默认 3）
   // Telegram sticker local/backend AVIF conversion
+  telegramUploadService?: 'linux.do' | 'idcflare.com' | 'imgbed' | 'customDiscourse'
+  telegramCustomDiscourseOrigin?: string
   telegramWebmToAvifEnabled?: boolean
   telegramWebmToAvifBackend?: string
   telegramNativeWebmFormat?: 'webp' | 'avif' | 'animated-avif' | 'disabled'

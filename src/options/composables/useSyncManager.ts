@@ -1,4 +1,4 @@
-import { decodeStorageValue } from '@/utils/storage/emojiGroupCodec'
+import { decodeStorageValue, initializeStorageCodec } from '@/utils/storage/emojiGroupCodec'
 import { STORAGE_KEYS, storageBatchSet } from '@/utils/simpleStorage'
 
 /**
@@ -34,6 +34,7 @@ export function useSyncManager(options: {
    */
   const forceLocalToExtension = async () => {
     try {
+      await initializeStorageCodec()
       if (typeof localStorage === 'undefined') {
         showError('本地存储不可用')
         return

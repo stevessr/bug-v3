@@ -1,9 +1,9 @@
-import { expect, test, type Page } from '@playwright/test'
+import { chromium, expect, test, type Page } from '@playwright/test'
 import { build } from 'vite'
+import { deflateSync, strToU8 } from 'fflate'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { decodeStorageValue, encodeStorageValue } from '../../src/utils/storage/emojiGroupCodec'
 
 let output: string
 const group = (id = 'fixture', count = 500) => ({
@@ -65,6 +65,7 @@ async function fixture(page: Page) {
     w.writes = 0
     w.failWrite = false
     w.failRemove = false
+    const storageListeners = new Set<(...args: any[]) => void>()
     const runtime: any = {}
     const get = (keys: any, callback?: any) => {
       const result =
@@ -85,6 +86,14 @@ async function fixture(page: Page) {
     w.chrome = {
       runtime,
       storage: {
+        onChanged: {
+          addListener(listener: (...args: any[]) => void) {
+            storageListeners.add(listener)
+          },
+          removeListener(listener: (...args: any[]) => void) {
+            storageListeners.delete(listener)
+          }
+        },
         local: {
           get,
           set(items: any, callback: any) {
@@ -106,24 +115,67 @@ async function fixture(page: Page) {
             delete runtime.lastError
           }
         }
-      }
+      },
+      storageListeners
     }
     w.storage = await import('/storage-fixture/entry.js')
+    await w.storage.initializeStorageCodec()
   })
 }
 
-test('lossless versioned compression removes envelopes and reduces realistic group size', () => {
+test('Brotli stores bytes without Base64 and reduces realistic group size losslessly', async ({
+  page
+}) => {
+  await fixture(page)
   const original = group()
-  const encoded = encodeStorageValue('emojiGroup_fixture', { data: original, timestamp: 1 })
-  expect(typeof encoded).toBe('string')
-  expect(String(encoded).startsWith('eg1:')).toBe(true)
-  expect(decodeStorageValue('emojiGroup_fixture', encoded)).toEqual(original)
-  expect(JSON.stringify(encoded).length).toBeLessThan(JSON.stringify(original).length * 0.2)
-  expect(encodeStorageValue('emojiGroup_small', group('small', 0))).toEqual(group('small', 0))
-  expect(decodeStorageValue('appSettings', { data: { theme: 'dark' }, timestamp: 1 })).toEqual({
-    theme: 'dark'
-  })
-  expect(() => decodeStorageValue('emojiGroup_bad', 'eg2:bad')).toThrow()
+  const result = await page.evaluate(original => {
+    const s = (window as any).storage
+    const encoded = s.encodeStorageValue('emojiGroup_fixture', { data: original, timestamp: 1 })
+    return {
+      encoded,
+      decoded: s.decodeStorageValue('emojiGroup_fixture', encoded),
+      small: s.encodeStorageValue('telegramBotToken', 'fixture-token'),
+      settings: s.decodeStorageValue('appSettings', { data: { theme: 'dark' }, timestamp: 1 })
+    }
+  }, original)
+  expect(result.encoded[0]).toBe('br2')
+  expect(Array.isArray(result.encoded[2])).toBe(true)
+  expect(result.decoded).toEqual(original)
+  expect(JSON.stringify(result.encoded).length).toBeLessThan(JSON.stringify(original).length * 0.2)
+  const old =
+    'eg1:' +
+    Buffer.from(deflateSync(strToU8(JSON.stringify(original)), { level: 9 })).toString('base64')
+  expect(JSON.stringify(result.encoded).length).toBeLessThan(JSON.stringify(old).length)
+  const decodedLegacy = await page.evaluate(async old => {
+    const w = window as any
+    w.raw.emojiGroup_fixture = old
+    const decoded = await w.storage.storageGet('emojiGroup_fixture')
+    return { decoded, migrated: w.raw.emojiGroup_fixture }
+  }, old)
+  expect(decodedLegacy.decoded).toEqual(original)
+  expect(decodedLegacy.migrated[0]).toBe('br2')
+  expect(result.small).toBe('fixture-token')
+  expect(result.settings).toEqual({ theme: 'dark' })
+})
+
+test('storage change subscribers receive decoded JSON values, never br2 envelopes', async ({
+  page
+}) => {
+  await fixture(page)
+  const original = group('event', 10)
+  const result = await page.evaluate(async original => {
+    const w = window as any
+    const encoded = w.storage.encodeStorageValue('emojiGroup_event', original)
+    let received: any
+    const unsubscribe = w.storage.onStorageChanged((change: any) => (received = change))
+    for (const listener of w.chrome.storageListeners) {
+      listener({ emojiGroup_event: { oldValue: null, newValue: encoded } }, 'local')
+    }
+    await new Promise(resolve => setTimeout(resolve, 0))
+    unsubscribe()
+    return received
+  }, original)
+  expect(result).toEqual({ key: 'emojiGroup_event', oldValue: null, newValue: original })
 })
 
 test('single/batch reads auto-upgrade once; content adapter decodes compressed groups', async ({
@@ -152,7 +204,7 @@ test('single/batch reads auto-upgrade once; content adapter decodes compressed g
   expect(result.first).toEqual(original)
   expect(result.second).toEqual(original)
   expect(result.content).toEqual(original)
-  expect(result.encoded).toMatch(/^eg1:/)
+  expect(result.encoded[0]).toBe('br2')
   expect(result.finalWrites).toBe(result.writes)
 })
 
@@ -268,7 +320,7 @@ test('storage deletion errors propagate; unindexed legacy groups auto-upgrade on
     }
     return { encoded, error, preserved: !!w.raw.emojiGroup_orphan }
   }, group('orphan'))
-  expect(result.encoded).toMatch(/^eg1:/)
+  expect(result.encoded[0]).toBe('br2')
   expect(result.error).toContain('Removal failed')
   expect(result.preserved).toBe(true)
 })
@@ -359,4 +411,85 @@ test('localStorage quota errors propagate and partial unarchive is rolled back',
   expect(result.error).toContain('Quota')
   expect(result.active).toBeNull()
   expect(result.archive).toEqual(original)
+})
+
+test('all managed config keys upgrade losslessly, without data/timestamp envelopes', async ({
+  page
+}) => {
+  await fixture(page)
+  const result = await page.evaluate(async () => {
+    const w = window as any,
+      s = w.storage
+    const configs = {
+      appSettings: {
+        imageScale: 32,
+        enableHoverPreview: false,
+        customCssBlocks: Array(100).fill({ css: '.emoji { color: red; }', enabled: true })
+      },
+      archivedGroupIds: Array.from({ length: 500 }, (_, i) => `telegram_archived_${i}`),
+      discourseDomains: Array.from({ length: 100 }, (_, i) => ({
+        domain: `forum${i}.example.org`,
+        enabledGroups: ['😀', 'fixture']
+      })),
+      emojiGroupIndex: Array.from({ length: 500 }, (_, i) => ({
+        id: `telegram_group_${i}`,
+        order: i
+      })),
+      favorites: ['😀', 'a', 'b'],
+      telegramBotToken: 'fixture-token'
+    }
+    for (const [key, data] of Object.entries(configs)) w.raw[key] = { data, timestamp: 1 }
+    const read = await s.storageBatchGet(Object.keys(configs))
+    const encoded = { ...w.raw }
+    await s.storageBatchSet(read)
+    return { configs, read, encoded, reread: await s.storageBatchGet(Object.keys(configs)) }
+  })
+  expect(result.read).toEqual(result.configs)
+  expect(result.reread).toEqual(result.configs)
+  expect(result.encoded.telegramBotToken).toBe('fixture-token')
+  expect(result.encoded.favorites).toEqual(['😀', 'a', 'b'])
+  for (const key of ['appSettings', 'archivedGroupIds', 'discourseDomains', 'emojiGroupIndex']) {
+    expect(result.encoded[key][0]).toBe('br2')
+    expect(JSON.stringify(result.encoded[key]).length).toBeLessThan(
+      JSON.stringify(result.configs[key]).length
+    )
+  }
+})
+
+test('packaged extension initializes Brotli under MV3 CSP and migrates real chrome storage', async () => {
+  const profile = await mkdtemp(path.join(tmpdir(), 'emoji-extension-storage-'))
+  const extension = path.resolve('dist')
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: 'chromium',
+    headless: true,
+    args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`]
+  })
+  try {
+    const worker = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker'))
+    const id = worker.url().split('/')[2]
+    await worker.evaluate(async original => {
+      await chrome.storage.local.set({
+        emojiGroup_fixture: { data: original, timestamp: 1 },
+        emojiGroupIndex: { data: [{ id: original.id, order: 0 }], timestamp: 1 },
+        telegramBotToken: { data: 'fixture-token', timestamp: 1 }
+      })
+    }, group())
+    const page = await context.newPage()
+    await page.goto(`chrome-extension://${id}/index.html?mode=options#/import?source=telegram`)
+    await page.getByRole('tab', { name: 'Telegram 配置', exact: true }).click()
+    await expect(page.getByPlaceholder('输入 Telegram Bot Token')).toHaveValue('fixture-token')
+    await page.getByPlaceholder('输入 Telegram Bot Token').fill('new-fixture-token')
+    await page.getByRole('button', { name: /^保\s*存$/ }).click()
+    await expect
+      .poll(async () =>
+        worker.evaluate(async () => {
+          const raw = await chrome.storage.local.get(['emojiGroup_fixture', 'telegramBotToken'])
+          return { groupVersion: raw.emojiGroup_fixture?.[0], token: raw.telegramBotToken }
+        })
+      )
+      .toEqual({ groupVersion: 'br2', token: 'new-fixture-token' })
+  } finally {
+    await context.close()
+    await rm(profile, { recursive: true, force: true })
+  }
 })
