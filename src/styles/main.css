@@ -533,3 +533,135 @@ html.dark .telegram-upload-radio .ant-radio-button-wrapper:not(:first-child)::be
   height: 100%;
   object-fit: contain !important;
 }
+
+/* ============ Options surfaces: Material Design 3 + generous page gutters ============ */
+body.options-mode {
+  background: var(--theme-background, var(--md3-background));
+}
+
+.options-root {
+  color: var(--theme-on-background, var(--md3-on-background));
+  background: var(--theme-background, var(--md3-background));
+}
+
+.options-root > header,
+.options-root > nav {
+  background: var(--theme-surface, var(--md3-surface));
+  color: var(--theme-on-surface, var(--md3-on-surface));
+}
+
+.options-root > header > div,
+.options-root > nav > div {
+  max-width: 1440px;
+}
+
+.options-root > main {
+  width: min(100%, 1440px);
+  padding: clamp(24px, 3vw, 40px) clamp(20px, 3.2vw, 48px) 56px;
+}
+
+/* Bridge remaining legacy utility classes to the active MD3 color scheme. */
+.options-root .bg-white {
+  background-color: var(--theme-surface, var(--md3-surface)) !important;
+}
+.options-root .bg-gray-50 {
+  background-color: var(--theme-surface-container-low, var(--md3-surface-container-low)) !important;
+}
+.options-root .bg-gray-100 {
+  background-color: var(--theme-surface-container, var(--md3-surface-container)) !important;
+}
+.options-root .bg-gray-200 {
+  background-color: var(
+    --theme-surface-container-high,
+    var(--md3-surface-container-high)
+  ) !important;
+}
+.options-root .text-gray-900,
+.options-root .text-gray-800,
+.options-root .text-gray-700 {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+}
+.options-root .text-gray-600,
+.options-root .text-gray-500 {
+  color: var(--theme-on-surface-variant, var(--md3-on-surface-variant)) !important;
+}
+.options-root .border-gray-100,
+.options-root .border-gray-200,
+.options-root .border-gray-300 {
+  border-color: var(--theme-outline-variant, var(--md3-outline-variant)) !important;
+}
+
+/* MD3 cards use tonal surfaces, softer outlines and a consistent 16px shape. */
+.options-root .bg-white.rounded-lg,
+.options-root .bg-gray-50.rounded-lg,
+.options-root .bg-gray-100.rounded-lg,
+.options-root .bg-gray-800.rounded-lg {
+  border-radius: 16px;
+  border-color: var(--theme-outline-variant, var(--md3-outline-variant));
+  box-shadow:
+    0 1px 2px rgb(20 24 28 / 8%),
+    0 2px 8px rgb(20 24 28 / 4%);
+}
+
+[data-theme='dark'] .options-root [class~='dark:bg-gray-800'],
+[data-theme='dark'] .options-root [class~='dark:bg-gray-900'] {
+  background-color: var(--theme-surface-container-low, var(--md3-surface-container-low)) !important;
+}
+[data-theme='dark'] .options-root [class~='dark:bg-gray-700'],
+[data-theme='dark'] .options-root [class~='dark:bg-gray-700/50'] {
+  background-color: var(--theme-surface-container, var(--md3-surface-container)) !important;
+}
+[data-theme='dark'] .options-root [class~='dark:bg-gray-600'] {
+  background-color: var(
+    --theme-surface-container-high,
+    var(--md3-surface-container-high)
+  ) !important;
+}
+[data-theme='dark'] .options-root [class~='dark:text-white'],
+[data-theme='dark'] .options-root [class~='dark:text-gray-100'],
+[data-theme='dark'] .options-root [class~='dark:text-gray-200'] {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+}
+[data-theme='dark'] .options-root [class~='dark:text-gray-300'],
+[data-theme='dark'] .options-root [class~='dark:text-gray-400'] {
+  color: var(--theme-on-surface-variant, var(--md3-on-surface-variant)) !important;
+}
+[data-theme='dark'] .options-root [class~='dark:border-gray-600'],
+[data-theme='dark'] .options-root [class~='dark:border-gray-700'] {
+  border-color: var(--theme-outline-variant, var(--md3-outline-variant)) !important;
+}
+
+/* Material tab navigation has an unobtrusive indicator rather than filled pills. */
+.options-root .ant-menu-horizontal {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.options-root .ant-menu-horizontal::-webkit-scrollbar {
+  display: none;
+}
+.options-root .ant-menu-horizontal > .ant-menu-item,
+.options-root .ant-menu-horizontal > .ant-menu-submenu {
+  flex: 0 0 auto;
+  height: 52px;
+  line-height: 52px;
+  margin: 0 4px !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+.options-root .ant-menu-horizontal > .ant-menu-item-selected {
+  color: var(--theme-primary, var(--md3-primary)) !important;
+  background: transparent !important;
+  border-bottom: 3px solid var(--theme-primary, var(--md3-primary)) !important;
+}
+.options-root .ant-menu-horizontal > .ant-menu-item-selected::after {
+  display: none !important;
+}
+.options-root .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+.options-root .ant-btn {
+  min-height: 36px;
+  border-radius: 12px;
+}
