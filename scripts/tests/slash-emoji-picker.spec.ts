@@ -281,6 +281,56 @@ test('group image icons render as bounded images with a fallback on failure', as
   await expect(page.locator(picker).getByRole('option', { name: '狗狗' })).toHaveText('📁狗狗')
   const overflow = await page
     .locator(picker + ' .slash-items')
+    .first()
     .evaluate(list => list.scrollWidth > list.clientWidth)
   expect(overflow).toBe(false)
+})
+
+test('groups and corresponding emojis stay visible together, with search and quick navigation', async ({
+  page
+}) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    ;(window as any).slash.cachedState.emojiGroups[1].emojis[0].tags = ['小狗']
+  })
+  const editor = page.locator('textarea.d-editor-input')
+  await editor.pressSequentially('/')
+  await expect(page.locator(picker).getByRole('option', { name: '猫猫' })).toBeVisible()
+  await expect(
+    page.locator('.slash-group-preview').getByRole('button', { name: '开心' })
+  ).toBeVisible()
+  await editor.press('ArrowDown')
+  await expect(
+    page.locator('.slash-group-preview').getByRole('button', { name: '旺旺' })
+  ).toBeVisible()
+  await editor.press('ArrowRight')
+  await expect(page.locator('.slash-group-nav').getByRole('button', { name: '猫猫' })).toBeVisible()
+  await expect(page.locator(picker).getByRole('option', { name: '旺旺' })).toBeVisible()
+  await page.locator(picker).getByRole('button', { name: '‹ 返回分组' }).click()
+  await editor.pressSequentially('小狗')
+  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
+  await expect(page.locator(picker).getByRole('option')).toHaveText('📁狗狗')
+  await editor.press('ArrowRight')
+  await editor.press('Enter')
+  await expect(editor).toHaveValue(/!\[旺旺/)
+  await expect(page.locator(picker)).toHaveCount(0)
+})
+
+test('root emoji search preview can insert a result directly', async ({ page }) => {
+  await fixture(page)
+  await page.locator('textarea.d-editor-input').pressSequentially('/害羞')
+  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
+  await page.locator('.slash-group-preview').getByRole('button', { name: '害羞' }).click()
+  await expect(page.locator('textarea.d-editor-input')).toHaveValue(':shy:')
+})
+
+test('typing group name and a space jumps straight to emoji search', async ({ page }) => {
+  await fixture(page)
+  const editor = page.locator('textarea.d-editor-input')
+  await editor.pressSequentially('/猫猫 害羞')
+  await expect(page.locator(picker).getByRole('option')).toHaveCount(1)
+  await expect(page.locator(picker).getByRole('option')).toHaveAttribute('aria-label', '害羞')
+  await expect(page.locator('.slash-group-nav')).toBeVisible()
+  await editor.press('Enter')
+  await expect(editor).toHaveValue(':shy:')
 })
