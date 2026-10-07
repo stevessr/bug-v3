@@ -1324,6 +1324,13 @@
   color: var(--md3-primary) !important;
 }
 
+/* Popconfirm/Popover message text has its own color rule in Ant Design Vue,
+   so the inherited .ant-popover-inner-content color is not sufficient. */
+.ant-popover-message,
+.ant-popover-message-title {
+  color: var(--md3-on-surface) !important;
+}
+
 /* Popover 按钮 hover */
 .ant-popover-buttons .ant-btn:hover {
   border-color: var(--md3-primary) !important;
