@@ -140,7 +140,7 @@ const focusLastEmoji = () => {
     <div v-else-if="emojis.length > 0" class="emoji-grid-container" role="grid">
       <div
         class="emoji-grid"
-        :style="`display: grid; grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); gap: 12px; min-height: 300px;`"
+        :style="`display: grid; grid-template-columns: repeat(${gridColumns}, minmax(0, 1fr)); gap: 12px;`"
         role="row"
       >
         <a-button
@@ -158,7 +158,7 @@ const focusLastEmoji = () => {
             <CachedImage
               :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
               :alt="emoji.name"
-              class="w-full h-full object-contain"
+              class="emoji-image"
               loading="lazy"
             />
           </div>
@@ -244,6 +244,9 @@ const focusLastEmoji = () => {
 }
 
 .emoji-grid {
+  min-height: 0;
+  align-content: start;
+  align-items: start;
   overflow-y: auto;
 }
 
@@ -272,9 +275,21 @@ const focusLastEmoji = () => {
 
 .emoji-item-image {
   width: 100%;
-  aspect-ratio: 1;
   overflow: hidden;
   border-radius: 0.25rem;
+}
+
+/* CachedImage has a wrapper: override its inner image too, not just the wrapper. */
+.emoji-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.emoji-image :deep(.cached-image-img) {
+  width: 100%;
+  height: auto;
 }
 
 /* Badge for usage count */

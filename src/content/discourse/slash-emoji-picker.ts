@@ -8,6 +8,7 @@ import {
   createPickerImageObserver
 } from './utils/pickerPerformance'
 
+import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import type { Emoji, EmojiGroup } from '@/types/type'
 import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
 
@@ -25,6 +26,9 @@ export function initSlashEmojiPicker(): () => void {
   styles.textContent = `
 #${ID}{position:fixed;z-index:2147483646;width:min(360px,calc(100vw - 16px));background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 30px #0004;padding:8px;font:14px/1.5 system-ui;box-sizing:border-box}
 #${ID} .slash-items{max-height:220px;overflow:auto;display:grid;gap:4px}
+#${ID} .slash-group{display:flex;align-items:center;gap:8px;overflow:hidden}
+#${ID} .slash-group-icon{width:28px;height:28px;flex:0 0 28px}
+#${ID} .slash-group-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #${ID} .slash-grid{grid-template-columns:repeat(${COLUMNS},minmax(0,1fr))}
 #${ID} button{font:inherit;color:inherit;border:0;background:transparent;border-radius:6px;padding:8px;text-align:left;cursor:pointer;min-width:0}
 #${ID} button[aria-selected=true]{background:var(--tertiary-low,#dbeafe);outline:2px solid var(--tertiary,#2563eb);outline-offset:-2px}
@@ -263,7 +267,33 @@ export function initSlashEmojiPicker(): () => void {
         })
         button.append(image)
         observer?.observe(image)
-      } else button.textContent = `${(item as EmojiGroup).icon || '📁'} ${item.name}`
+      } else {
+        button.className = 'slash-group'
+        const icon = (item as EmojiGroup).icon || '📁'
+        if (isImageUrl(icon)) {
+          const image = document.createElement('img')
+          image.className = 'slash-group-icon'
+          image.alt = ''
+          image.loading = 'lazy'
+          image.src = normalizeImageUrl(icon)
+          image.onerror = () => {
+            const fallback = document.createElement('span')
+            fallback.className = 'slash-group-icon'
+            fallback.textContent = '📁'
+            image.replaceWith(fallback)
+          }
+          button.append(image)
+        } else {
+          const symbol = document.createElement('span')
+          symbol.className = 'slash-group-icon'
+          symbol.textContent = icon
+          button.append(symbol)
+        }
+        const label = document.createElement('span')
+        label.className = 'slash-group-name'
+        label.textContent = item.name
+        button.append(label)
+      }
       button.onmouseenter = () => {
         index = i
         highlight()

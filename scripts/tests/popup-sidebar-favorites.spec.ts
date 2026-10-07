@@ -97,3 +97,42 @@ test('dark settings labels remain visible and have contrasting theme colors', as
   expect(colors.text).not.toBe(colors.background)
   expect(colors.text).not.toBe('rgba(0, 0, 0, 0)')
 })
+
+test('popup tiles follow natural image heights instead of stretching into strips', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 400, height: 600 })
+  await seed(page, 'owner')
+  await page.route('https://example.com/**', route => {
+    const height = route.request().url().includes('one') ? 40 : 160
+    return route.fulfill({
+      contentType: 'image/svg+xml',
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="${height}"><rect width="80" height="${height}" fill="orange"/></svg>`
+    })
+  })
+  await page.goto('/?mode=popup')
+  await expect(page.locator('.emoji-item')).toHaveCount(2)
+  const images = page.locator('.emoji-item img')
+  await expect
+    .poll(() =>
+      images.evaluateAll(elements =>
+        elements.every(element => (element as HTMLImageElement).naturalWidth === 80)
+      )
+    )
+    .toBe(true)
+  for (let index = 0; index < 2; index++) {
+    const size = await images.nth(index).evaluate(element => {
+      const image = element as HTMLImageElement
+      const tile = image.closest('.emoji-item')!
+      const imageRect = image.getBoundingClientRect()
+      return {
+        ratio: imageRect.height / imageRect.width,
+        naturalRatio: image.naturalHeight / image.naturalWidth,
+        tileHeight: tile.getBoundingClientRect().height,
+        imageHeight: imageRect.height
+      }
+    })
+    expect(size.ratio).toBeCloseTo(size.naturalRatio, 2)
+    expect(size.tileHeight - size.imageHeight).toBeLessThan(5)
+  }
+})

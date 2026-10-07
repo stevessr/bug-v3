@@ -251,3 +251,36 @@ test('options switch persists independently and can be turned off', async ({ pag
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
 })
+
+test('group image icons render as bounded images with a fallback on failure', async ({ page }) => {
+  await fixture(page)
+  await page.route('https://icons.example/**', route =>
+    route.request().url().endsWith('broken.webp')
+      ? route.fulfill({ status: 404 })
+      : route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"/>'
+        })
+  )
+  await page.evaluate(() => {
+    const groups = (window as any).slash.cachedState.emojiGroups
+    groups[0].icon = 'https://icons.example/group.webp'
+    groups[1].icon = 'https://icons.example/broken.webp'
+  })
+  await page.locator('textarea.d-editor-input').pressSequentially('/')
+  const group = page.locator(picker).getByRole('option', { name: '猫猫' })
+  const icon = group.locator('img')
+  await expect(icon).toBeVisible()
+  await expect
+    .poll(() => icon.evaluate(image => (image as HTMLImageElement).naturalWidth))
+    .toBe(200)
+  await expect(group).toHaveText('猫猫')
+  const size = await icon.boundingBox()
+  expect(size!.width).toBe(28)
+  expect(size!.height).toBe(28)
+  await expect(page.locator(picker).getByRole('option', { name: '狗狗' })).toHaveText('📁狗狗')
+  const overflow = await page
+    .locator(picker + ' .slash-items')
+    .evaluate(list => list.scrollWidth > list.clientWidth)
+  expect(overflow).toBe(false)
+})
