@@ -41,13 +41,31 @@ function readExistingIndex(): BilibiliEmotePackageLite[] {
 
 function parseIdOption(name: string): number | undefined {
   const prefix = `--${name}=`
-  const argument = process.argv.slice(2).find(value => value.startsWith(prefix))
+  const args = process.argv.slice(2)
+  const inlineArgument = args.find(value => value.startsWith(prefix))
+  const index = args.indexOf(`--${name}`)
+  const argument = inlineArgument ?? (index >= 0 ? args[index + 1] : undefined)
   if (!argument) return undefined
-  const value = Number(argument.slice(prefix.length))
+  const rawValue = inlineArgument ? argument.slice(prefix.length) : argument
+  const value = Number(rawValue)
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`Invalid --${name} value: ${argument.slice(prefix.length)}`)
+    throw new Error(`Invalid --${name} value: ${rawValue}`)
   }
   return value
+}
+
+function showHelp() {
+  console.log(`Usage: node scripts/fetch_bilibili_index.ts [options]
+
+Continue scanning after the largest ID in the existing index, append new packages
+to scripts/cfworker/public/assets/bilibili/index.json, and deduplicate by ID.
+
+Options:
+  --from ID   Start scanning at ID (default: existing maximum ID + 1)
+  --to ID     Stop at ID (default: start ID + 9999 or 10289, whichever is greater)
+  --help      Show this help
+
+The scan stops after 100 consecutive IDs return no package.`)
 }
 
 async function fetchPackageLite(id: number): Promise<BilibiliEmotePackageLite | null> {
@@ -87,6 +105,10 @@ async function fetchPackageLite(id: number): Promise<BilibiliEmotePackageLite | 
 }
 
 async function main() {
+  if (process.argv.slice(2).includes('--help') || process.argv.slice(2).includes('-h')) {
+    showHelp()
+    return
+  }
   const existing = readExistingIndex()
   const existingMaxId = existing.reduce((max, item) => Math.max(max, item.id), -1)
   const startId = parseIdOption('from') ?? existingMaxId + 1
@@ -103,7 +125,8 @@ async function main() {
   let consecutiveMisses = 0
   let stoppedAt: number | undefined
 
-  // Fetch in ordered batches so parallel requests cannot break the consecutive-miss check.
+  // Fetch concurrently in small ordered batches. Results are printed and counted by ID order,
+  // so the 100-consecutive-miss cutoff remains exact without spawning worker processes.
   for (let batchStart = startId; batchStart <= endId; batchStart += CONCURRENCY) {
     const ids = Array.from(
       { length: Math.min(CONCURRENCY, endId - batchStart + 1) },
@@ -115,6 +138,7 @@ async function main() {
       const id = ids[index]
       const pkg = packages[index]
       if (pkg) {
+        if (consecutiveMisses > 0) process.stdout.write('\n')
         merged.set(pkg.id, pkg)
         foundCount++
         consecutiveMisses = 0
@@ -137,11 +161,14 @@ async function main() {
 
   fs.writeFileSync(INDEX_FILE, JSON.stringify(sorted, null, 2))
 
+  process.stdout.write('\n')
   console.log(
     `\nScan complete. Found ${foundCount} new packages; index now contains ${sorted.length} packages.`
   )
   if (stoppedAt !== undefined) {
-    console.log(`Stopped at ID ${stoppedAt} after ${MAX_CONSECUTIVE_MISSES} consecutive missing packages.`)
+    console.log(
+      `Stopped at ID ${stoppedAt} after ${MAX_CONSECUTIVE_MISSES} consecutive missing packages.`
+    )
   }
   console.log(`Index saved to ${INDEX_FILE}`)
 }
