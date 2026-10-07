@@ -76,12 +76,12 @@ export default defineComponent({
                           loading="lazy"
                         />
                         {usageCount > 0 ? (
-                          <span class="absolute -top-1.5 -left-1.5 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                          <span class="absolute top-2 left-2 z-10 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
                             {usageCount > 99 ? '99+' : usageCount}
                           </span>
                         ) : (
                           <span
-                            class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                            class="absolute top-2 left-2 z-10 w-5 h-5 rounded-full flex items-center justify-center text-xs shadow-sm"
                             style={{
                               background: 'linear-gradient(135deg, #ffd700 0%, #ffa500 100%)',
                               boxShadow: '0 2px 4px rgba(255, 215, 0, 0.4)'
