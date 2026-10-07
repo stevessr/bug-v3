@@ -1,5 +1,8 @@
 import { inflateSync, strFromU8, strToU8 } from 'fflate'
 import type { BrotliWasmType } from 'brotli-wasm'
+// Use the non-eager WASM entry: the package root initializes WASM on import.
+// A relative package path also bypasses its exports map, which hides this entry.
+import initBrotli, * as brotliModule from '../../../node_modules/brotli-wasm/pkg.web/brotli_wasm.js'
 
 const COMPACT_KEYS = new Set([
   'appSettings',
@@ -17,9 +20,11 @@ let brotli: BrotliWasmType | undefined
 let ready: Promise<void> | undefined
 export function initializeStorageCodec(): Promise<void> {
   if (!ready) {
-    ready = import('brotli-wasm')
-      .then(async module => {
-        brotli = await module.default
+    // MV3 service workers prohibit dynamic import(), and Vite's import-preload
+    // helper additionally requires document. Keep the WASM module import static.
+    ready = initBrotli()
+      .then(() => {
+        brotli = brotliModule
       })
       .catch(error => {
         ready = undefined

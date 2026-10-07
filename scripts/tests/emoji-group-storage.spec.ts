@@ -471,6 +471,20 @@ test('packaged extension initializes Brotli under MV3 CSP and migrates real chro
       await chrome.storage.local.set({
         emojiGroup_fixture: { data: original, timestamp: 1 },
         emojiGroupIndex: { data: [{ id: original.id, order: 0 }], timestamp: 1 },
+        discourseDomains: {
+          data: [{ domain: 'linux.do', enabledGroups: [original.id] }],
+          timestamp: 1
+        },
+        appSettings: {
+          data: {
+            enableSubmenuInjector: true,
+            imageScale: 32,
+            defaultGroup: 'fixture',
+            showSearchBar: true,
+            gridColumns: 6
+          },
+          timestamp: 1
+        },
         telegramBotToken: { data: 'fixture-token', timestamp: 1 }
       })
     }, group())
@@ -488,6 +502,29 @@ test('packaged extension initializes Brotli under MV3 CSP and migrates real chro
         })
       )
       .toEqual({ groupVersion: 'br2', token: 'new-fixture-token' })
+    // Read through the actual background message handlers, not the options-page
+    // codec. A service worker has no document, even when a page has initialized WASM.
+    const response = await page.evaluate(async () => {
+      const groups = await chrome.runtime.sendMessage({
+        type: 'GET_EMOJI_DATA',
+        sourceDomain: 'linux.do'
+      })
+      const setting = await chrome.runtime.sendMessage({
+        type: 'GET_EMOJI_SETTING',
+        key: 'enableSubmenuInjector'
+      })
+      const batch = await chrome.runtime.sendMessage({
+        type: 'GET_EMOJI_SETTINGS_BATCH',
+        keys: ['enableSubmenuInjector']
+      })
+      return { groups, setting, batch }
+    })
+    expect(response.groups, JSON.stringify(response)).toMatchObject({ success: true })
+    expect(response.groups.data.groups.find((value: any) => value.id === 'fixture')).toEqual(
+      group()
+    )
+    expect(response.setting).toEqual({ success: true, data: { value: true } })
+    expect(response.batch).toEqual({ success: true, data: { enableSubmenuInjector: true } })
   } finally {
     await context.close()
     await rm(profile, { recursive: true, force: true })
