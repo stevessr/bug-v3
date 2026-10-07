@@ -193,3 +193,36 @@ test('PI debug actions route the selected tab through the background service', a
     }
   ])
 })
+
+test('debugger permission check awaits Chrome contains and never requests an invalid optional permission', async () => {
+  const chromeMock = {
+    debugger: {},
+    permissions: {
+      async contains(query) {
+        assert.deepEqual(query, { permissions: ['debugger'] })
+        return true
+      },
+      request() {
+        assert.fail('debugger is not an optional permission')
+      }
+    }
+  }
+  const module = loadTypeScriptModule('src/background/handlers/agentDebugger.ts', {
+    '../utils/main': { getChromeAPI: () => chromeMock }
+  })
+  assert.equal(await module.hasDebuggerPermission(), true)
+  assert.equal(await module.ensureDebuggerPermission(), true)
+  let response
+  await module.handleAgentDebugRequest({ type: 'AGENT_DEBUG_HAS_PERMISSION' }, value => {
+    response = value
+  })
+  assert.deepEqual(response, { success: true, data: { granted: true } })
+  assert.equal(await module.hasDebuggerPermission({ permissions: chromeMock.permissions }), false)
+  assert.equal(
+    await module.hasDebuggerPermission({
+      debugger: {},
+      permissions: { contains: async () => false }
+    }),
+    false
+  )
+})

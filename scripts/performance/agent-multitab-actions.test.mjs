@@ -367,7 +367,8 @@ test('browser action schema and manifest expose the multi-tab contract', () => {
   }
   assert.ok(manifest.permissions.includes('tabs'))
   assert.ok(manifest.permissions.includes('tabGroups'))
-  assert.ok(manifest.optional_permissions.includes('debugger'))
+  assert.ok(manifest.permissions.includes('debugger'))
+  assert.ok(!manifest.optional_permissions.includes('debugger'))
   assert.ok(manifest.permissions.includes('alarms'))
 })
 
@@ -386,6 +387,6 @@ test('firefox manifest variant strips chromium-only permissions at packaging tim
   assert.ok(!('side_panel' in firefox))
   assert.ok(firefox.sidebar_action)
   assert.ok(firefox.sidebar_action.default_panel)
-  // Firefox 支持的可选权限保留：cookies / debugger 按需申请
+  // Firefox 支持的可选 cookies 权限保留，debugger 被过滤
   assert.deepEqual(firefox.optional_permissions, manifest.optional_permissions)
 })

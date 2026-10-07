@@ -28,6 +28,7 @@ export async function loadDataFromStorage(updates?: any): Promise<void> {
       if (typeof updates === 'object') {
         cachedState.settings = { ...cachedState.settings, ...updates }
       }
+      window.dispatchEvent(new Event('emoji-extension-settings-changed'))
       return
     }
 
@@ -85,6 +86,7 @@ export async function loadDataFromStorage(updates?: any): Promise<void> {
       cachedState.settings = {} as any
     }
 
+    window.dispatchEvent(new Event('emoji-extension-settings-changed'))
     let finalEmojisCount = 0
     cachedState.emojiGroups.forEach((g: any) => {
       if (g?.emojis?.length) finalEmojisCount += g.emojis.length

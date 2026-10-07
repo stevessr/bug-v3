@@ -257,40 +257,22 @@ const ensureDebuggerListeners = (chromeAPI: typeof chrome) => {
 const requireDebugger = (chromeAPI: typeof chrome | undefined): typeof chrome => {
   if (!chromeAPI?.debugger) {
     throw new Error(
-      'chrome.debugger 不可用。请在 Agent 设置中开启"开发者观测"并授予调试权限（optional permission）。'
+      'chrome.debugger 不可用。请在 Agent 设置中开启"开发者观测"；请确认 Chromium 清单包含必需的 debugger 权限（Firefox 不支持此 API）。'
     )
   }
   return chromeAPI
 }
 
-/**
- * 请求可选的 debugger 权限。在用户于 Agent 设置中开启"开发者观测"时调用。
- * 首次请求会弹窗；已授权则直接 resolve(true)。
- */
-export async function ensureDebuggerPermission(
-  chromeOverride?: typeof chrome
-): Promise<boolean> {
-  const chromeAPI = chromeOverride || getChromeAPI()
-  const permissions = chromeAPI?.permissions
-  if (!permissions?.request) return false
-
-  try {
-    const granted = await permissions.request({ permissions: ['debugger'] })
-    return granted === true
-  } catch {
-    return false
-  }
+/** Debugger is a required Chromium manifest permission, not an optional permission. */
+export async function ensureDebuggerPermission(chromeOverride?: typeof chrome): Promise<boolean> {
+  return hasDebuggerPermission(chromeOverride)
 }
 
-/**
- * 查询 debugger 权限是否已授予。
- */
-export function hasDebuggerPermission(chromeOverride?: typeof chrome): boolean {
+export async function hasDebuggerPermission(chromeOverride?: typeof chrome): Promise<boolean> {
   const chromeAPI = chromeOverride || getChromeAPI()
-  const permissions = chromeAPI?.permissions
-  if (!permissions?.contains) return false
+  if (!chromeAPI?.debugger || !chromeAPI.permissions?.contains) return false
   try {
-    return permissions.contains({ permissions: ['debugger'] }) === true
+    return (await chromeAPI.permissions.contains({ permissions: ['debugger'] })) === true
   } catch {
     return false
   }
@@ -412,8 +394,8 @@ export async function handleAgentDebugRequest(
     let data: unknown
     switch (message.type) {
       case 'AGENT_DEBUG_START':
-        // debugger 是可选权限；首次启动调试会话前确保已授予。
-        if (!hasDebuggerPermission()) {
+        // Chromium 安装时授予 debugger；功能仍需用户显式启用。
+        if (!(await hasDebuggerPermission())) {
           const granted = await ensureDebuggerPermission()
           if (!granted) {
             throw new Error('开发者观测需要调试权限，用户未授予')
@@ -434,7 +416,7 @@ export async function handleAgentDebugRequest(
         data = { granted: await ensureDebuggerPermission() }
         break
       case 'AGENT_DEBUG_HAS_PERMISSION':
-        data = { granted: hasDebuggerPermission() }
+        data = { granted: await hasDebuggerPermission() }
         break
     }
     sendResponse({ success: true, data })

@@ -28,8 +28,7 @@ const sendRuntimeMessage = (chromeAPI: typeof chrome, message: unknown): Promise
 }
 
 /**
- * debugger 是可选权限。在执行任何 debug 动作前，先确保权限已授予；
- * 未授予时通过 runtime message 触发后台 permissions.request 弹窗。
+ * debugger 是 Chromium 必需清单权限；在启动 debug 动作前检查 API 和安装授权。
  */
 async function ensureDebuggerPermissionGranted(chromeAPI: typeof chrome): Promise<void> {
   const has = await sendRuntimeMessage(chromeAPI, { type: 'AGENT_DEBUG_HAS_PERMISSION' })
@@ -37,7 +36,7 @@ async function ensureDebuggerPermissionGranted(chromeAPI: typeof chrome): Promis
 
   const granted = await sendRuntimeMessage(chromeAPI, { type: 'AGENT_DEBUG_ENSURE_PERMISSION' })
   if (!granted?.granted) {
-    throw new Error('开发者观测需要调试权限，用户未授予')
+    throw new Error('开发者观测需要 Chromium 的 debugger 安装权限；请重新加载扩展并确认授权')
   }
 }
 
@@ -49,7 +48,7 @@ export async function executeDebugAction(
   const tabId = resolveActionTabId(action, fallbackTabId)
   if (tabId === null) throw new Error('未找到目标标签页')
 
-  // debugger 为可选权限；执行首个调试动作前确保已授予。
+  // 安装授权与 Agent 功能开关分离，启动前检查权限。
   if (action.type === 'debug-start') {
     await ensureDebuggerPermissionGranted(chromeAPI)
   }

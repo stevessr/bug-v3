@@ -1,6 +1,6 @@
-// 导入各个功能模块
 import { requestSettingsBatch } from '../utils/core/requestSetting'
 
+import { initSlashEmojiPicker } from './slash-emoji-picker'
 import { scanForMagnificPopup, observeMagnificPopup } from './utils/magnific-popup'
 import { scanForCookedContent, observeCookedContent } from './utils/cooked-content'
 import { isDiscoursePage } from './utils/page-detection'
@@ -25,6 +25,7 @@ export async function initDiscourse() {
     scanForMagnificPopup()
     observeMagnificPopup()
     setupDiscourseUploadHandler()
+    initSlashEmojiPicker()
 
     // 批量获取所有需要的设置（单次消息往返，替代 8+ 次顺序请求）
     const settings = await requestSettingsBatch([

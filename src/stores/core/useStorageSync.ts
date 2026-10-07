@@ -63,7 +63,9 @@ export function useStorageSync({
     await initializeStorageCodec()
     // 尝试从 change payload 获取新数据
     let newGroup: EmojiGroup | null = null
-    if (change?.newValue !== undefined) {
+    if (groupId === 'favorites' && change?.newValue !== undefined) {
+      newGroup = await storage.getEmojiGroup(groupId)
+    } else if (change?.newValue !== undefined) {
       newGroup = decodeStorageValue(
         STORAGE_KEYS.GROUP_PREFIX + groupId,
         change.newValue

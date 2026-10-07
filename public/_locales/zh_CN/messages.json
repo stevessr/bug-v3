@@ -3050,5 +3050,17 @@
   "zoomTitle": {
     "message": "缩放",
     "description": "缩放标题"
+  },
+  "sidebarEmojisTitle": {
+    "message": "表情选择器"
+  },
+  "sidebarEmojisDescription": {
+    "message": "选择分组、搜索并复制表情"
+  },
+  "sidebarAssistantTitle": {
+    "message": "浏览器助手"
+  },
+  "sidebarAssistantDescription": {
+    "message": "自动化任务与网页操作"
   }
 }

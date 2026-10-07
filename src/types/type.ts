@@ -49,6 +49,7 @@ export interface AppSettings {
   useIndexedDBForImages?: boolean // 允许使用 IndexedDB 缓存图片显示（旧版开关，已被缓存策略替代）
   imageCacheStrategy?: 'auto' | 'force-indexeddb' | 'force-source' | 'adaptive' // 图片缓存策略
   imageCacheMigratedAt?: number // 图片缓存策略迁移时间戳
+  enableSlashEmojiPicker?: boolean // Discourse slash-triggered experimental emoji picker
   enableSubmenuInjector?: boolean // 将功能按钮注入到 Discourse 下拉菜单中（试验性功能）
   cloudMarketDomain?: string // 云端市场域名配置（默认 s.pwsh.us.kg）
   enableLinuxDoSeeking?: boolean // 启用 LinuxDo 追觅功能（监控 linux.do 用户活动，显示侧边栏）
@@ -112,6 +113,8 @@ export interface Emoji {
   height?: number
   groupId: string
   // Favorites usage tracking fields
+  sourceGroupId?: string // 常用表情所属的源分组
+  sourceEmojiId?: string // 常用表情引用的源表情
   usageCount?: number
   lastUsed?: number // timestamp
   addedAt?: number // timestamp when first added to favorites

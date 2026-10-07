@@ -3,7 +3,7 @@
   "default_locale": "zh_CN",
   "name": "__MSG_extensionName__",
   "short_name": "__MSG_extensionShortName__",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "__MSG_extensionDescription__",
   "author": "stevessr",
   "homepage_url": "https://github.com/stevessr/bug-v3",
@@ -19,21 +19,13 @@
     "downloads.shelf",
     "downloads.ui",
     "notifications",
-    "identity"
+    "identity",
+    "debugger"
   ],
-  "optional_permissions": ["cookies", "debugger"],
+  "optional_permissions": ["cookies"],
   "host_permissions": ["<all_urls>", "file:///*"],
   "side_panel": {
     "default_path": "index.html?mode=sidebar"
-  },
-  "sidebar_action": {
-    "default_panel": "index.html?type=sidebar",
-    "default_title": "__MSG_extensionName__",
-    "default_icon": {
-      "48": "img/48.png",
-      "64": "img/64.png",
-      "128": "img/128.png"
-    }
   },
   "action": {
     "default_popup": "index.html?mode=popup",
@@ -50,7 +42,6 @@
     "open_in_tab": true
   },
   "background": {
-    "scripts": ["js/background.js"],
     "service_worker": "js/background.js",
     "type": "module"
   },
@@ -75,15 +66,6 @@
       "matches": ["<all_urls>"]
     }
   ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "emoji-extension@pwsh.us.kg",
-      "update_url": "https://s.pwsh.us.kg/updates.json",
-      "data_collection_permissions": {
-        "required": ["websiteActivity", "websiteContent"]
-      }
-    }
-  },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }

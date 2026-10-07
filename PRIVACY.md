@@ -44,7 +44,7 @@
 - `downloads`：导入、导出和下载用户选择的文件；
 - `sidePanel`、`tabs` 和 `notifications`：提供侧边栏、跨标签页功能和状态提示；
 - `cookies`（可选）：仅当用户主动使用需要登录的站点功能（linux.do 论坛、Discourse 工具、代理带 Cookie 请求）时，才会通过浏览器的权限弹窗申请；首次使用会弹窗，之后同一来源免重复确认；
-- `debugger`（可选）：仅当用户在 Agent 设置中主动开启"开发者观测"并执行调试动作时授予，用于读取当前标签页的控制台日志和网络请求以辅助诊断；
+- `debugger`（Chromium 必需安装权限，不支持可选声明）：安装或更新时由浏览器请求授权；仅当用户在 Agent 设置中主动开启"开发者观测"并执行调试动作时使用，用于读取目标标签页的控制台日志和网络请求以辅助诊断。授权不会自动开启调试功能，Firefox 构建不请求此权限；
 - `alarms`：用于定时执行用户配置的周期性任务（缓存清理、定时浏览、定时点赞、Agent 工作流调度），service worker 休眠后需此 API 唤醒；
 - `identity` 和其他辅助权限：仅用于用户主动启用的 Agent、MCP 或本地连接功能。
 
@@ -100,7 +100,7 @@ The requested permissions support emoji management and user-initiated helper fea
 - `downloads`: import, export, and download files selected by the user;
 - `sidePanel`, `tabs`, and `notifications`: provide the sidebar, cross-tab features, and status messages;
 - optional `cookies`: requested through the browser permission prompt only when the user invokes a logged-in site feature (linux.do forum, Discourse tools, cookie-bearing proxy requests); the prompt appears on first use and later same-origin uses are confirmed without prompting;
-- optional `debugger`: granted only when the user enables "developer observation" in Agent settings and runs a debug action; used to read the active tab's console logs and network requests for diagnostics;
+- `debugger` (required Chromium installation permission; optional declaration is unsupported): granted through the browser at installation/update, but used only when the user enables "developer observation" in Agent settings and runs a debug action to read the target tab's console logs and network requests for diagnostics. Granting the permission does not automatically enable debugging; Firefox builds do not request it;
 - `alarms`: used to run user-configured periodic tasks (cache cleanup, scheduled browse, scheduled likes, Agent workflow scheduling); the service worker needs this API to wake after sleeping;
 - `identity` and other helper permissions: user-enabled Agent, MCP, or local-connection features only.
 

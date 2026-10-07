@@ -2,69 +2,22 @@ import { getChromeAPI } from '../utils/main.ts'
 
 import * as storage from '@/utils/simpleStorage'
 import type { Emoji, EmojiGroup } from '@/types/type'
-import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+import { recordFavoriteUse } from '@/utils/favoriteReferences'
 
-export async function handleAddToFavorites(
+async function addToFavorites(
   emoji: Partial<Emoji>,
   sendResponse: (response: { success: boolean; message?: string; error?: string }) => void
 ) {
   // mark callback as referenced to avoid unused-var lint
   void sendResponse
   try {
-    const uploadMetadata = extractDiscourseUploadMetadata(
-      emoji.short_url,
-      emoji.short_path,
-      emoji.url
+    const groups = await storage.getAllEmojiGroups()
+    const favoritesGroup = recordFavoriteUse(
+      groups.find(group => group.id === 'favorites') ||
+        ({ id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] } as EmojiGroup),
+      emoji as Emoji,
+      groups
     )
-    const favoritesGroup =
-      (await storage.getEmojiGroup('favorites')) ||
-      ({ id: 'favorites', name: '常用表情', icon: '⭐', order: 0, emojis: [] } as EmojiGroup)
-
-    // Ensure emojis array exists
-    if (!Array.isArray(favoritesGroup.emojis)) {
-      favoritesGroup.emojis = []
-    }
-
-    const now = Date.now()
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex((e: Emoji) => e.url === emoji.url)
-
-    if (existingEmojiIndex !== -1) {
-      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
-      // A favorite may have been created before the upload response exposed
-      // Discourse's short fields. Merge them on duplicate-by-URL additions.
-      if (uploadMetadata.short_url) existingEmoji.short_url = uploadMetadata.short_url
-      if (uploadMetadata.short_path) existingEmoji.short_path = uploadMetadata.short_path
-      const lastUsed = existingEmoji.lastUsed || 0
-      const timeDiff = now - lastUsed
-      const twelveHours = 12 * 60 * 60 * 1000
-
-      if (timeDiff < twelveHours) {
-        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1
-      } else {
-        const currentCount = existingEmoji.usageCount || 1
-        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1
-        existingEmoji.lastUsed = now
-      }
-    } else {
-      const favoriteEmoji: Emoji = {
-        ...emoji,
-        ...uploadMetadata,
-        short_url: uploadMetadata.short_url,
-        short_path: uploadMetadata.short_path,
-        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        packet: emoji.packet ?? 0,
-        name: emoji.name ?? '',
-        url: emoji.url ?? '',
-        groupId: 'favorites',
-        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {}),
-        usageCount: 1,
-        lastUsed: now,
-        addedAt: now
-      }
-      favoritesGroup.emojis.push(favoriteEmoji)
-    }
-
-    favoritesGroup.emojis.sort((a: Emoji, b: Emoji) => (b.lastUsed || 0) - (a.lastUsed || 0))
 
     const currentIndex = await storage.getEmojiGroupIndex()
     const favoritesIndex = currentIndex.findIndex(entry => entry.id === 'favorites')
@@ -128,4 +81,14 @@ export async function handleAddToFavorites(
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
+}
+
+let favoriteQueue: Promise<void> = Promise.resolve()
+export function handleAddToFavorites(
+  emoji: Partial<Emoji>,
+  sendResponse: (response: { success: boolean; message?: string; error?: string }) => void
+): Promise<void> {
+  const pending = favoriteQueue.then(() => addToFavorites(emoji, sendResponse))
+  favoriteQueue = pending.catch(() => {})
+  return pending
 }

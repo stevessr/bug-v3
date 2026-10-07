@@ -31,7 +31,7 @@ watch(localValue, newValue => {
 </script>
 
 <template>
-  <div v-if="visible" class="flex items-center justify-between">
+  <div v-if="visible" class="setting-switch flex items-center justify-between">
     <div>
       <label class="text-sm font-medium text-gray-900 dark:text-white">{{ label }}</label>
       <p class="text-sm text-gray-500 dark:text-white">{{ description }}</p>
@@ -39,3 +39,25 @@ watch(localValue, newValue => {
     <a-switch v-model:checked="localValue" />
   </div>
 </template>
+
+<style scoped>
+.setting-switch {
+  gap: 16px;
+  color: var(--md3-on-surface, #202124);
+}
+.setting-switch > div {
+  min-width: 0;
+  flex: 1;
+}
+.setting-switch label {
+  display: block;
+  color: var(--md3-on-surface, #202124);
+  overflow-wrap: anywhere;
+}
+.setting-switch p {
+  color: var(--md3-on-surface-variant, #5f6368);
+}
+.setting-switch :deep(.ant-switch) {
+  flex-shrink: 0;
+}
+</style>

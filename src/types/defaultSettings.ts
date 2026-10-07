@@ -27,6 +27,7 @@ export const defaultSettings: AppSettings = {
   enableCalloutSuggestions: true, // 默认启用 callout suggestions
   enableColorSuggestions: true, // 默认启用 [co 颜色自动补全
   enableBatchParseImages: false, // 默认启用一键解析图片按钮
+  enableSlashEmojiPicker: false, // 默认关闭 / 快捷表情选择
   enableExperimentalFeatures: false, // 默认关闭试验性特性
   enableChatMultiReactor: false, // 默认禁用聊天多表情反应功能
   chatMultiReactorEmojis: [], // 默认空数组，使用模块内置的默认表情列表

@@ -174,6 +174,7 @@ declare global {
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const optimizedHashService: typeof import('./utils/optimizedHashService').optimizedHashService
+  const packFavoriteGroup: typeof import('./utils/favoriteReferences').packFavoriteGroup
   const parseDatabaseFile: typeof import('./utils/cacheExportHelpers').parseDatabaseFile
   const pickTenorPreview: typeof import('./utils/tenor').pickTenorPreview
   const preloadImages: typeof import('./utils/imageUrlHelper').preloadImages
@@ -182,6 +183,7 @@ declare global {
   const provide: typeof import('vue').provide
   const reactive: typeof import('vue').reactive
   const readonly: typeof import('vue').readonly
+  const recordFavoriteUse: typeof import('./utils/favoriteReferences').recordFavoriteUse
   const ref: typeof import('vue').ref
   const removeCacheEntries: typeof import('./utils/imageCache').removeCacheEntries
   const removeDiscourseDomain: typeof import('./utils/simpleStorage').removeDiscourseDomain
@@ -190,6 +192,7 @@ declare global {
   const resetToDefaults: typeof import('./utils/simpleStorage').resetToDefaults
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveExtensionSurface: typeof import('./utils/appMode').resolveExtensionSurface
+  const resolveFavoriteGroup: typeof import('./utils/favoriteReferences').resolveFavoriteGroup
   const resolveImageCacheStrategy: typeof import('./utils/imageCachePolicy').resolveImageCacheStrategy
   const rewriteEmojiUrlFields: typeof import('./utils/emojiUrlRewrite').rewriteEmojiUrlFields
   const rewriteEmojiUrlValue: typeof import('./utils/emojiUrlRewrite').rewriteEmojiUrlValue
@@ -511,6 +514,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly optimizedHashService: UnwrapRef<typeof import('./utils/optimizedHashService')['optimizedHashService']>
+    readonly packFavoriteGroup: UnwrapRef<typeof import('./utils/favoriteReferences')['packFavoriteGroup']>
     readonly parseDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']>
     readonly pickTenorPreview: UnwrapRef<typeof import('./utils/tenor')['pickTenorPreview']>
     readonly preloadImages: UnwrapRef<typeof import('./utils/imageUrlHelper')['preloadImages']>
@@ -519,6 +523,7 @@ declare module 'vue' {
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
+    readonly recordFavoriteUse: UnwrapRef<typeof import('./utils/favoriteReferences')['recordFavoriteUse']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly removeCacheEntries: UnwrapRef<typeof import('./utils/imageCache')['removeCacheEntries']>
     readonly removeDiscourseDomain: UnwrapRef<typeof import('./utils/simpleStorage')['removeDiscourseDomain']>
@@ -527,6 +532,7 @@ declare module 'vue' {
     readonly resetToDefaults: UnwrapRef<typeof import('./utils/simpleStorage')['resetToDefaults']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveExtensionSurface: UnwrapRef<typeof import('./utils/appMode')['resolveExtensionSurface']>
+    readonly resolveFavoriteGroup: UnwrapRef<typeof import('./utils/favoriteReferences')['resolveFavoriteGroup']>
     readonly resolveImageCacheStrategy: UnwrapRef<typeof import('./utils/imageCachePolicy')['resolveImageCacheStrategy']>
     readonly rewriteEmojiUrlFields: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlFields']>
     readonly rewriteEmojiUrlValue: UnwrapRef<typeof import('./utils/emojiUrlRewrite')['rewriteEmojiUrlValue']>

@@ -2,6 +2,7 @@
 import { toRefs, watch } from 'vue'
 
 import { useEmojiImages } from '@/composables/useEmojiImages'
+import { useEmojiStore } from '@/stores/emojiStore'
 import type { Emoji } from '@/types/type'
 import CachedImage from '@/components/CachedImage.vue'
 
@@ -19,6 +20,29 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['select', 'openOptions'])
+
+const usageStore = useEmojiStore()
+const usageCounts = computed(
+  () =>
+    new Map(
+      (usageStore.getFavoriteEmojis() || []).map(emoji => [
+        `${emoji.sourceGroupId || emoji.groupId}:${emoji.sourceEmojiId || emoji.id}`,
+        emoji.usageCount || 0
+      ])
+    )
+)
+const usageCount = (emoji: Emoji) =>
+  usageCounts.value.get(
+    `${emoji.sourceGroupId || emoji.groupId}:${emoji.sourceEmojiId || emoji.id}`
+  ) ||
+  emoji.usageCount ||
+  0
+
+const emojiTitle = (emoji: Emoji) => {
+  const source =
+    emoji.sourceGroupId && usageStore.groups.find(group => group.id === emoji.sourceGroupId)
+  return source ? `${emoji.name} · ${source.name} · ${usageCount(emoji)}` : emoji.name
+}
 
 const { emojis, isLoading, favorites, gridColumns, emptyMessage, showAddButton, isActive } =
   toRefs(props)
@@ -121,12 +145,12 @@ const focusLastEmoji = () => {
       >
         <a-button
           v-for="(emoji, index) in emojis"
-          :key="emoji.id"
+          :key="`${emoji.groupId}:${emoji.id}`"
           @click="$emit('select', emoji)"
           @keydown="handleKeyNavigation($event, index)"
           :data-emoji-index="index"
           class="emoji-item"
-          :title="emoji.name"
+          :title="emojiTitle(emoji)"
           role="gridcell"
           tabindex="0"
         >
@@ -134,17 +158,17 @@ const focusLastEmoji = () => {
             <CachedImage
               :src="imageSources.get(emoji.id) || getImageSrcSync(emoji)"
               :alt="emoji.name"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-contain"
               loading="lazy"
             />
           </div>
           <!-- Activity indicator for favorites -->
           <div
-            v-if="favorites.has(emoji.id) && emoji.usageCount"
+            v-if="usageCount(emoji) > 0"
             class="emoji-item-badge"
-            :title="t('usageCountTimes', [emoji.usageCount])"
+            :title="t('usageCountTimes', [String(usageCount(emoji))])"
           >
-            {{ emoji.usageCount > 99 ? '99+' : emoji.usageCount }}
+            {{ usageCount(emoji) > 99 ? '99+' : usageCount(emoji) }}
           </div>
           <!-- Star icon for favorites without usage count -->
           <div v-else-if="favorites.has(emoji.id)" class="emoji-item-star">

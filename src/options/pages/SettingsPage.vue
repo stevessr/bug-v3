@@ -63,6 +63,7 @@ const {
   updateEnableHoverPreview,
   updateSyncVariantToDisplayUrl,
   updateImageCacheStrategy,
+  updateEnableSlashEmojiPicker,
   updateEnableSubmenuInjector,
   updateUseDiscourseNativeUpload,
   updateEnableDiscourseRouterRefresh,
@@ -174,6 +175,7 @@ onMounted(async () => {
               @update:enableBatchParseImages="updateEnableBatchParseImages"
               @update:enableExperimentalFeatures="updateEnableExperimentalFeatures"
               @update:imageCacheStrategy="updateImageCacheStrategy"
+              @update:enableSlashEmojiPicker="updateEnableSlashEmojiPicker"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:useDiscourseNativeUpload="updateUseDiscourseNativeUpload"
               @update:forumUploadConcurrency="updateForumUploadConcurrency"

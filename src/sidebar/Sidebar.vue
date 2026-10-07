@@ -12,7 +12,8 @@ const Agent = defineAsyncComponent(() => import('./Agent.vue'))
 import CachedImage from '@/components/CachedImage.vue'
 import { shouldUseImageCache } from '@/utils/imageCachePolicy'
 
-const { t } = useI18n()
+const { t, initI18n } = useI18n()
+void initI18n()
 
 const { emojiStore, showCopyToast, selectEmoji, openOptions } = usePopup({ manageUrl: false })
 
@@ -98,7 +99,7 @@ const filterOption = (input: string, option: any) => {
 const virtualGroups = computed(() => [
   {
     id: 'all-emojis',
-    name: '所有表情',
+    name: t('allEmojis'),
     icon: '🔍',
     isVirtual: true
   }
@@ -126,21 +127,23 @@ const filteredEmojis = computed(() => {
   const allEmojis: Array<any> = []
 
   // 收集所有表情
-  emojiStore.sortedGroups.forEach(group => {
-    group.emojis?.forEach(emoji => {
-      // 按名稱搜索
-      const nameMatch = emoji.name.toLowerCase().includes(query)
-      // 按標籤搜索
-      const tagMatch = emoji.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+  emojiStore.sortedGroups
+    .filter(group => group.id !== 'favorites')
+    .forEach(group => {
+      group.emojis?.forEach(emoji => {
+        // 按名稱搜索
+        const nameMatch = emoji.name.toLowerCase().includes(query)
+        // 按標籤搜索
+        const tagMatch = emoji.tags?.some((tag: string) => tag.toLowerCase().includes(query))
 
-      if (nameMatch || tagMatch) {
-        allEmojis.push({
-          ...emoji,
-          groupName: group.name
-        })
-      }
+        if (nameMatch || tagMatch) {
+          allEmojis.push({
+            ...emoji,
+            groupName: group.name
+          })
+        }
+      })
     })
-  })
 
   return allEmojis
 })
@@ -162,7 +165,7 @@ const getCurrentGroupEmojis = (groupId: string) => {
   if (groupId === 'all-emojis') {
     // 返回所有表情
     const allEmojis = []
-    for (const group of emojiStore.sortedGroups) {
+    for (const group of emojiStore.sortedGroups.filter(group => group.id !== 'favorites')) {
       if (group.emojis) {
         allEmojis.push(...group.emojis)
       }
@@ -199,8 +202,16 @@ const handleSearch = () => {
       <div class="sidebar-header">
         <div class="flex items-center justify-between px-3 py-2">
           <div class="flex flex-col">
-            <span class="sidebar-title">浏览器助手</span>
-            <span class="sidebar-subtitle">自动化任务与网页操作</span>
+            <span class="sidebar-title">
+              {{ activeView === 'emoji' ? t('sidebarEmojisTitle') : t('sidebarAssistantTitle') }}
+            </span>
+            <span class="sidebar-subtitle">
+              {{
+                activeView === 'emoji'
+                  ? t('sidebarEmojisDescription')
+                  : t('sidebarAssistantDescription')
+              }}
+            </span>
           </div>
           <div class="sidebar-toggle">
             <button
@@ -240,7 +251,7 @@ const handleSearch = () => {
               @input="handleSearch"
             />
             <button
-              v-if="searchQuery"
+              v-if="searchQuery.trim()"
               @click="clearSearch"
               class="sidebar-clear-btn"
               :title="t('clearSearch')"
@@ -299,7 +310,7 @@ const handleSearch = () => {
         <!-- 表情网格 -->
         <div class="sidebar-body">
           <!-- 搜索模式 - 顯示搜索結果 -->
-          <template v-if="searchQuery">
+          <template v-if="searchQuery.trim()">
             <div class="p-3">
               <div class="sidebar-search-result-info">
                 {{ t('searchResultsFound', { query: searchQuery, count: filteredEmojis.length }) }}
@@ -354,7 +365,7 @@ ${t('tagsLabel', [emoji.tags?.join(', ') || t('noTags')])}`"
           <template v-else-if="emojiStore.activeGroupId === 'all-emojis'">
             <div class="p-3">
               <div class="sidebar-search-result-info">
-                {{ t('showAllEmojis', [getCurrentGroupEmojis('all-emojis').length]) }}
+                {{ t('showAllEmojis', { count: getCurrentGroupEmojis('all-emojis').length }) }}
               </div>
               <LazyEmojiGrid
                 :emojis="getCurrentGroupEmojis('all-emojis')"

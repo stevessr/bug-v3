@@ -1,3 +1,4 @@
+import { getEmojiGroup } from '@/utils/simpleStorage'
 import { decodeStorageValue, initializeStorageCodec } from '@/utils/storage/emojiGroupCodec'
 import { loadPackagedDefaults } from '@/types/defaultEmojiGroups.loader'
 
@@ -5,6 +6,7 @@ export class ContentStorageAdapter {
   // Read from extension storage with fallback to local/session storage
   async get(key: string): Promise<any> {
     await initializeStorageCodec()
+    if (key === 'emojiGroup_favorites') return getEmojiGroup('favorites')
     // Try extension storage first (main source for content scripts)
     if (chrome?.storage?.local) {
       try {

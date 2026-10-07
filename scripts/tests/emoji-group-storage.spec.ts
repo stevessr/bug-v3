@@ -530,3 +530,98 @@ test('packaged extension initializes Brotli under MV3 CSP and migrates real chro
     await rm(profile, { recursive: true, force: true })
   }
 })
+
+test('favorites migrate to counters and owner references; reads resolve current source metadata', async ({
+  page
+}) => {
+  await fixture(page)
+  const original = group('owner', 2)
+  const result = await page.evaluate(async original => {
+    const w = window as any
+    w.raw.emojiGroupIndex = [
+      { id: 'favorites', order: 0 },
+      { id: 'owner', order: 1 }
+    ]
+    w.raw.emojiGroup_owner = original
+    w.raw.emojiGroup_favorites = {
+      id: 'favorites',
+      name: '常用表情',
+      icon: '⭐',
+      order: 0,
+      emojis: [
+        { ...original.emojis[0], id: 'fav-old', groupId: 'favorites', usageCount: 2 },
+        { ...original.emojis[0], id: 'fav-duplicate', groupId: 'favorites', usageCount: 3 }
+      ]
+    }
+    const first = await w.storage.getAllEmojiGroups()
+    const physical = w.storage.decodeStorageValue(
+      'emojiGroup_favorites',
+      w.raw.emojiGroup_favorites
+    )
+    const updated = {
+      ...original,
+      emojis: original.emojis.map((emoji, i) =>
+        i
+          ? emoji
+          : {
+              ...emoji,
+              name: '新名称',
+              url: 'https://linux.do/new.webp',
+              customOutput: 'new-output'
+            }
+      )
+    }
+    await w.storage.setEmojiGroup('owner', updated)
+    const hydrated = await w.storage.getEmojiGroup('favorites')
+    const used = w.storage.recordFavoriteUse(hydrated, hydrated.emojis[0], [updated], 123)
+    return {
+      first: first.find(group => group.id === 'favorites'),
+      physical,
+      hydrated,
+      used,
+      ids: await w.storage.getFavorites()
+    }
+  }, original)
+  expect(result.first.emojis).toHaveLength(1)
+  expect(result.first.emojis[0].usageCount).toBe(5)
+  expect(result.physical.emojis).toEqual([
+    { id: 'owner_0', sourceGroupId: 'owner', sourceEmojiId: 'owner_0', usageCount: 5, lastUsed: 0 }
+  ])
+  expect(result.hydrated.emojis[0]).toMatchObject({
+    name: '新名称',
+    url: 'https://linux.do/new.webp',
+    customOutput: 'new-output',
+    usageCount: 5
+  })
+  expect(result.used.emojis).toHaveLength(1)
+  expect(result.used.emojis[0]).toMatchObject({ usageCount: 6, lastUsed: 123 })
+  expect(result.ids).toEqual(['owner_0'])
+})
+
+test('deleted owner references disappear; unmatched legacy favorites are preserved', async ({
+  page
+}) => {
+  await fixture(page)
+  const result = await page.evaluate(() => {
+    const w = window as any
+    return w.storage.resolveFavoriteGroup(
+      {
+        id: 'favorites',
+        name: '常用表情',
+        emojis: [
+          { id: 'missing', sourceGroupId: 'deleted', sourceEmojiId: 'gone', usageCount: 2 },
+          {
+            id: 'legacy',
+            groupId: 'favorites',
+            name: '历史图片',
+            url: 'https://example.com/legacy.webp',
+            usageCount: 7
+          }
+        ]
+      },
+      []
+    )
+  })
+  expect(result.emojis).toHaveLength(1)
+  expect(result.emojis[0]).toMatchObject({ id: 'legacy', usageCount: 7 })
+})

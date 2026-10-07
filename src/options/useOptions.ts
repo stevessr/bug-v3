@@ -272,6 +272,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ imageCacheStrategy: strategy })
   }
 
+  const updateEnableSlashEmojiPicker = (value: boolean) => {
+    emojiStore.updateSettings({ enableSlashEmojiPicker: value })
+  }
+
   const updateEnableSubmenuInjector = (value: boolean) => {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
@@ -437,6 +441,15 @@ export default function useOptions() {
   }
 
   const openEditEmoji = (emoji: Emoji, groupId: string, index: number) => {
+    if (groupId === 'favorites' && emoji.sourceGroupId && emoji.sourceEmojiId) {
+      const source = emojiStore.groups.find(group => group.id === emoji.sourceGroupId)
+      const sourceIndex = source?.emojis.findIndex(item => item.id === emoji.sourceEmojiId) ?? -1
+      if (source && sourceIndex >= 0) {
+        emoji = source.emojis[sourceIndex]
+        groupId = source.id
+        index = sourceIndex
+      }
+    }
     editingEmoji.value = emoji
     editingEmojiGroupId.value = groupId
     editingEmojiIndex.value = index
@@ -855,6 +868,7 @@ export default function useOptions() {
     updateCustomCssBlocks,
     updateSyncVariantToDisplayUrl,
     updateImageCacheStrategy,
+    updateEnableSlashEmojiPicker,
     updateEnableSubmenuInjector,
     updateUseDiscourseNativeUpload,
     updateEnableDiscourseRouterRefresh,

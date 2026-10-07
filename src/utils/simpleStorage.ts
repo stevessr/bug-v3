@@ -17,6 +17,7 @@ import {
   initializeStorageCodec
 } from './storage/emojiGroupCodec'
 import { sanitizeEmojiGroup, isSettings } from './typeGuards'
+import { resolveFavoriteGroup, packFavoriteGroup } from './favoriteReferences'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
@@ -176,6 +177,21 @@ const upgradeGroupSnapshots = async (
   }
 }
 
+async function hydrateFavorites(key: string, value: any): Promise<any> {
+  if (key !== 'emojiGroup_favorites' || !Array.isArray(value?.emojis)) return value
+  const ids = [
+    ...new Set(value.emojis.map((emoji: any) => emoji.sourceGroupId).filter(Boolean))
+  ] as string[]
+  if (!ids.length) return value
+  const sources = await Promise.all(
+    ids.map(id => storageGet<EmojiGroup>(`emojiGroup_${id}`, false))
+  )
+  return resolveFavoriteGroup(
+    value,
+    sources.filter((group): group is EmojiGroup => !!group)
+  )
+}
+
 /**
  * 从 chrome.storage.local 读取数据
  */
@@ -184,7 +200,7 @@ export async function storageGet<T = unknown>(key: string, upgrade = true): Prom
   const api = getChromeAPI()
   if (!api?.storage?.local) {
     warnNoChromeStorage()
-    return localStorageGet<T>(key)
+    return hydrateFavorites(key, localStorageGet<T>(key))
   }
 
   const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
@@ -196,7 +212,7 @@ export async function storageGet<T = unknown>(key: string, upgrade = true): Prom
   })
   const value = decodeStorageValue(key, result[key]) as T | null
   if (upgrade && isCompactStorageKey(key)) await upgradeGroupSnapshots(api, result)
-  return value
+  return hydrateFavorites(key, value)
 }
 
 /**
@@ -276,7 +292,11 @@ export async function storageBatchGet(keys: string[]): Promise<Record<string, an
   const api = getChromeAPI()
   if (!api?.storage?.local) {
     warnNoChromeStorage()
-    return Object.fromEntries(keys.map(key => [key, localStorageGet(key)]))
+    return Object.fromEntries(
+      await Promise.all(
+        keys.map(async key => [key, await hydrateFavorites(key, localStorageGet(key))])
+      )
+    )
   }
   const values = await new Promise<Record<string, unknown>>((resolve, reject) => {
     api.storage.local.get(keys, result => {
@@ -289,6 +309,11 @@ export async function storageBatchGet(keys: string[]): Promise<Record<string, an
     Object.entries(values).map(([key, value]) => [key, decodeStorageValue(key, value)])
   )
   await upgradeGroupSnapshots(api, values)
+  if (unpacked.emojiGroup_favorites)
+    unpacked.emojiGroup_favorites = await hydrateFavorites(
+      'emojiGroup_favorites',
+      unpacked.emojiGroup_favorites
+    )
   return unpacked
 }
 
@@ -723,6 +748,34 @@ export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
     }
   }
 
+  const favoriteIndex = groups.findIndex(group => group.id === 'favorites')
+  if (favoriteIndex !== -1) {
+    const original = groups[favoriteIndex]
+    const resolved = resolveFavoriteGroup(original, groups)
+    groups[favoriteIndex] = resolved
+    // Lossless migration of copied favorites to owner references; don't re-save
+    // already packed references simply because reads hydrated their metadata.
+    if (
+      JSON.stringify(packFavoriteGroup(original)) !== JSON.stringify(packFavoriteGroup(resolved))
+    ) {
+      try {
+        await serializeStorageWrite(async () => {
+          const current = await storageGet<EmojiGroup>('emojiGroup_favorites', false)
+          if (
+            JSON.stringify(packFavoriteGroup(current)) !==
+            JSON.stringify(packFavoriteGroup(original))
+          )
+            return
+          await writeStorageItems({
+            emojiGroup_favorites: resolved,
+            favorites: resolved.emojis.map(emoji => emoji.id)
+          })
+        })
+      } catch (error) {
+        log.warn('Favorite reference migration failed; preserving existing data', error)
+      }
+    }
+  }
   return groups
 }
 
@@ -1048,13 +1101,15 @@ export function onStorageChanged(callback: StorageChangeListener): () => void {
     if (areaName !== 'local') return
 
     void initializeStorageCodec()
-      .then(() => {
+      .then(async () => {
         for (const [key, change] of Object.entries(changes)) {
           try {
             callback({
               key,
-              oldValue: decodeStorageValue(key, change.oldValue) ?? null,
-              newValue: decodeStorageValue(key, change.newValue) ?? null
+              oldValue:
+                (await hydrateFavorites(key, decodeStorageValue(key, change.oldValue))) ?? null,
+              newValue:
+                (await hydrateFavorites(key, decodeStorageValue(key, change.newValue))) ?? null
             })
           } catch (error) {
             // Never leak the physical br2 representation to storage subscribers.

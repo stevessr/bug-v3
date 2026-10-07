@@ -10,7 +10,7 @@ import type { SaveControl } from './core/types'
 import type { Emoji, EmojiGroup } from '@/types/type'
 import * as storage from '@/utils/simpleStorage'
 import { createLogger } from '@/utils/logger'
-import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
+import { recordFavoriteUse, resolveFavoriteGroup } from '@/utils/favoriteReferences'
 
 export interface FavoritesStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -105,52 +105,9 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
       return
     }
 
-    const favoritesGroup = ensureFavoritesGroup(groups)
-    const now = Date.now()
-    const uploadMetadata = extractDiscourseUploadMetadata(
-      emoji.short_url,
-      emoji.short_path,
-      emoji.url
-    )
-    const existingEmojiIndex = favoritesGroup.emojis.findIndex(e => e && e.url === emoji.url)
-
-    if (existingEmojiIndex !== -1) {
-      // Update usage tracking for existing emoji
-      const existingEmoji = favoritesGroup.emojis[existingEmojiIndex]
-      // Preserve short upload metadata when an older favorite is added again.
-      if (uploadMetadata.short_url) existingEmoji.short_url = uploadMetadata.short_url
-      if (uploadMetadata.short_path) existingEmoji.short_path = uploadMetadata.short_path
-      const lastUsed = existingEmoji.lastUsed || 0
-      const timeDiff = now - lastUsed
-      const twelveHours = 12 * 60 * 60 * 1000
-
-      if (timeDiff < twelveHours) {
-        existingEmoji.usageCount = (existingEmoji.usageCount || 0) + 1
-      } else {
-        // Apply decay for old usage
-        const currentCount = existingEmoji.usageCount || 1
-        existingEmoji.usageCount = Math.floor(currentCount * 0.8) + 1
-        existingEmoji.lastUsed = now
-      }
-    } else {
-      // Add new emoji to favorites
-      const favoriteEmoji: Emoji = {
-        ...emoji,
-        ...uploadMetadata,
-        short_url: uploadMetadata.short_url,
-        short_path: uploadMetadata.short_path,
-        id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        groupId: 'favorites',
-        usageCount: 1,
-        lastUsed: now,
-        addedAt: now,
-        ...(emoji.tags && emoji.tags.length > 0 ? { tags: emoji.tags } : {})
-      }
-      favoritesGroup.emojis.push(favoriteEmoji)
-    }
-
-    // Sort by lastUsed (most recent first)
-    favoritesGroup.emojis.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
+    const favoritesGroup = recordFavoriteUse(ensureFavoritesGroup(groups), emoji, groups.value)
+    groups.value = groups.value.map(group => (group.id === 'favorites' ? favoritesGroup : group))
+    favorites.value = new Set(favoritesGroup.emojis.map(item => item.id))
 
     // Mark favorites as dirty for incremental save
     saveControl.markFavoritesDirty?.()
@@ -241,7 +198,7 @@ export function useFavoritesStore(options: FavoritesStoreOptions) {
   const getFavoriteEmojis = (): Emoji[] => {
     const favoritesGroup = groups.value.find(g => g.id === 'favorites')
     if (!favoritesGroup?.emojis) return []
-    return [...favoritesGroup.emojis].sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+    return resolveFavoriteGroup(favoritesGroup, groups.value).emojis
   }
 
   /**

@@ -1,5 +1,7 @@
 import { inflateSync, strFromU8, strToU8 } from 'fflate'
 import type { BrotliWasmType } from 'brotli-wasm'
+
+import { packFavoriteGroup } from '../favoriteReferences'
 // Use the non-eager WASM entry: the package root initializes WASM on import.
 // A relative package path also bypasses its exports map, which hides this entry.
 import initBrotli, * as brotliModule from '../../../node_modules/brotli-wasm/pkg.web/brotli_wasm.js'
@@ -97,6 +99,9 @@ function encodeCompactValue(value: unknown): unknown {
 }
 
 export function encodeStorageValue(key: string, value: unknown, timestamp = Date.now()): unknown {
-  if (isCompactStorageKey(key)) return encodeCompactValue(decodeStorageValue(key, value))
+  if (isCompactStorageKey(key)) {
+    const decoded = decodeStorageValue(key, value)
+    return encodeCompactValue(key === 'emojiGroup_favorites' ? packFavoriteGroup(decoded) : decoded)
+  }
   return { data: value, timestamp }
 }

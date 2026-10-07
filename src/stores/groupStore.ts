@@ -10,6 +10,7 @@ import type { SaveControl } from './core/types'
 
 import type { EmojiGroup } from '@/types/type'
 import { createLogger } from '@/utils/logger'
+import { resolveFavoriteGroup } from '@/utils/favoriteReferences'
 
 export interface GroupStoreOptions {
   groups: Ref<EmojiGroup[]>
@@ -22,12 +23,15 @@ export function useGroupStore(options: GroupStoreOptions) {
   const log = createLogger('GroupStore')
 
   // --- Computed ---
-  const activeGroup = computed(
-    () => groups.value.find(g => g.id === activeGroupId.value) || groups.value[0]
-  )
+  const activeGroup = computed(() => {
+    const group = groups.value.find(g => g.id === activeGroupId.value) || groups.value[0]
+    return group?.id === 'favorites' ? resolveFavoriteGroup(group, groups.value) : group
+  })
 
   const sortedGroups = computed(() => {
-    return [...groups.value].sort((a, b) => a.order - b.order)
+    return groups.value
+      .map(group => (group.id === 'favorites' ? resolveFavoriteGroup(group, groups.value) : group))
+      .sort((a, b) => a.order - b.order)
   })
 
   // --- Actions ---

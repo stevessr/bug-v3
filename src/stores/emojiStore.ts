@@ -17,6 +17,7 @@ import {
   useCssStore
 } from './index'
 
+import { resolveFavoriteGroup } from '@/utils/favoriteReferences'
 import { normalizeImageUrl } from '@/utils/isImageUrl'
 import * as storage from '@/utils/simpleStorage'
 import { STORAGE_KEYS } from '@/utils/simpleStorage'
@@ -44,7 +45,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
   const settings = shallowRef<AppSettings>(defaultSettings)
   const favorites = ref<Set<string>>(new Set())
   const activeGroupId = ref<string>('nachoneko')
-  const searchQuery = ref<string>(' ')
+  const searchQuery = ref<string>('')
   // 优化：使用 shallowRef 减少数组的深层响应式开销
   const selectedTags = shallowRef<string[]>([]) // 当前选中的标签
   const isLoading = ref(true)
@@ -465,7 +466,12 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
         }
       }
 
-      favorites.value = new Set(favoritesData || [])
+      favorites.value = new Set([
+        ...(favoritesData || []),
+        ...(groups.value.find(group => group.id === 'favorites')?.emojis || []).map(
+          emoji => emoji.id
+        )
+      ])
 
       log.info('Final groups after assignment:', {
         count: groups.value?.length || 0,
@@ -645,7 +651,9 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const groupIndex = groups.value.findIndex(g => g.id === groupId)
     if (groupIndex === -1) return
 
-    const group = groups.value[groupIndex]
+    const storedGroup = groups.value[groupIndex]
+    const group =
+      groupId === 'favorites' ? resolveFavoriteGroup(storedGroup, groups.value) : storedGroup
     const emojis = group?.emojis || []
     if (index >= 0 && index < emojis.length) {
       const emoji = emojis[index]
@@ -1224,6 +1232,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     updateEmojiInGroup,
     // Favorites (delegated to favoritesStore)
     addToFavorites: favoritesStore.addToFavorites,
+    getFavoriteEmojis: favoritesStore.getFavoriteEmojis,
     toggleFavorite: favoritesStore.toggleFavorite,
     clearAllFavorites: favoritesStore.clearAllFavorites,
     findEmojiById: emojiCrudStore.findEmoji,

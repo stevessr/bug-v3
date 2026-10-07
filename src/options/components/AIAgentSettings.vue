@@ -490,8 +490,7 @@ const updatePermission = (agent: SubAgentConfig, key: keyof AgentPermissions, va
   agent.permissions[key] = value
 }
 
-// debugger 是 Chrome optional_permission：开启“开发者观测”开关时申请；
-// 撤销需用户到扩展详情页移除权限，此处只负责授予。
+// debugger 是 Chromium 必需清单权限；此开关仅启用功能，不申请可选权限。
 const onDebuggerPermissionChange = async (agent: SubAgentConfig, value: boolean): Promise<void> => {
   if (!value) {
     updatePermission(agent, 'debugger', false)
@@ -514,7 +513,7 @@ const onDebuggerPermissionChange = async (agent: SubAgentConfig, value: boolean)
   if (granted) {
     updatePermission(agent, 'debugger', true)
   } else {
-    message.warning('未授予调试权限（Chrome optional permission），开发者观测保持关闭')
+    message.warning('当前浏览器不支持调试 API 或未授予 debugger 安装权限，开发者观测保持关闭')
     updatePermission(agent, 'debugger', false)
   }
 }

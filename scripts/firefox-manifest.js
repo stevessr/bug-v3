@@ -31,6 +31,11 @@ export function createFirefoxManifest(sourceManifest) {
       permission => !FIREFOX_UNSUPPORTED_PERMISSIONS.has(permission)
     )
   }
+  if (Array.isArray(manifest.optional_permissions)) {
+    manifest.optional_permissions = manifest.optional_permissions.filter(
+      permission => !FIREFOX_UNSUPPORTED_PERMISSIONS.has(permission)
+    )
+  }
 
   // Firefox exposes a sidebarAction UI instead of Chrome's sidePanel UI.
   delete manifest.side_panel
@@ -41,15 +46,12 @@ export function createFirefoxManifest(sourceManifest) {
     ...(manifest.sidebar_action || {})
   }
 
-  // Firefox MV3 uses an event page (`scripts`) and ignores the service worker
-  // entry. Keep both keys so the same artifact remains valid for browsers that
-  // implement MV3 with service workers as well.
+  // Firefox MV3 uses an event page; Chromium receives the unmodified source manifest.
   const background = manifest.background || {}
   const backgroundScript = background.service_worker || background.scripts?.[0]
   if (backgroundScript) {
     manifest.background = {
       scripts: [backgroundScript],
-      ...(background.service_worker ? { service_worker: background.service_worker } : {}),
       ...(background.type ? { type: background.type } : {})
     }
   }
@@ -57,16 +59,15 @@ export function createFirefoxManifest(sourceManifest) {
   manifest.browser_specific_settings = {
     ...(manifest.browser_specific_settings || {}),
     gecko: {
+      id: 'emoji-extension@pwsh.us.kg',
       ...(manifest.browser_specific_settings?.gecko || {}),
-      update_url:
-        manifest.browser_specific_settings?.gecko?.update_url || FIREFOX_UPDATE_URL,
-      data_collection_permissions:
-        manifest.browser_specific_settings?.gecko?.data_collection_permissions || {
-          required: ['websiteActivity', 'websiteContent']
-        }
+      update_url: manifest.browser_specific_settings?.gecko?.update_url || FIREFOX_UPDATE_URL,
+      data_collection_permissions: manifest.browser_specific_settings?.gecko
+        ?.data_collection_permissions || {
+        required: ['websiteActivity', 'websiteContent']
+      }
     }
   }
 
   return manifest
 }
-

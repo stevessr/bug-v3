@@ -3046,5 +3046,17 @@
   "zoomTitle": {
     "message": "Zoom",
     "description": "Zoom title"
+  },
+  "sidebarEmojisTitle": {
+    "message": "Emoji picker"
+  },
+  "sidebarEmojisDescription": {
+    "message": "Select a group, search and copy emojis"
+  },
+  "sidebarAssistantTitle": {
+    "message": "Browser assistant"
+  },
+  "sidebarAssistantDescription": {
+    "message": "Automation and browser actions"
   }
 }

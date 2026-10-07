@@ -36,8 +36,10 @@ export function useI18n() {
   const language = ref(getCurrentLanguage())
 
   const updateLanguage = (event: CustomEvent<string>) => {
-    void setLanguage(event.detail)
-    language.value = event.detail
+    void setLanguage(event.detail).then(() => {
+      language.value = event.detail
+      isReady.value = true
+    })
   }
 
   onMounted(() => {
@@ -49,7 +51,11 @@ export function useI18n() {
   })
 
   return {
-    t: getMessage,
+    t: (...args: Parameters<typeof getMessage>) => {
+      void isReady.value
+      void language.value
+      return getMessage(...args)
+    },
     locale: () => language.value,
     isChinese: () => language.value.startsWith('zh'),
     format: formatMessage,

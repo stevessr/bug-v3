@@ -16,6 +16,7 @@ const emit = defineEmits([
   'update:enableExperimentalFeatures',
   'update:imageCacheStrategy',
   'update:enableSubmenuInjector',
+  'update:enableSlashEmojiPicker',
   'update:cloudMarketDomain',
   'update:useDiscourseNativeUpload',
   'update:enableDiscourseRouterRefresh',
@@ -327,6 +328,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
           </a-button>
         </a-dropdown>
       </div>
+
+      <SettingSwitch
+        :model-value="getSetting('enableSlashEmojiPicker', false)"
+        @update:model-value="handleSettingUpdate('enableSlashEmojiPicker', $event)"
+        label="启用 / 快捷表情选取 (试验性功能)"
+        description="默认关闭。在论坛编辑器输入独立的 /，先选分组，再用方向键选择表情、回车插入；输入名称筛选，Esc 取消，退格返回分组。"
+      />
 
       <SettingSwitch
         :model-value="getSetting('enableSubmenuInjector', false)"

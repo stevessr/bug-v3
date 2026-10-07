@@ -59,11 +59,11 @@ export function getMessage(
     let message = localTranslations[currentLanguage][messageName].message
     if (substitutions) {
       if (typeof substitutions === 'string') {
-        substitutions = [substitutions]
+        message = message.split('$1').join(substitutions)
       } else if (Array.isArray(substitutions)) {
         // 处理数组格式 (Chrome i18n 格式)
         substitutions.forEach((substitution, index) => {
-          message = message.replace(`$${index + 1}`, substitution)
+          message = message.split(`$${index + 1}`).join(String(substitution))
         })
       } else {
         // 处理对象格式 ({key: value})
@@ -75,13 +75,18 @@ export function getMessage(
     return message
   }
 
-  // 回退到 Chrome i18n API
+  // Chrome's API also accepts calls without substitutions. Named placeholders
+  // remain in several local messages, so format those after retrieving the text.
   const chromeI18n = getChromeI18n()
-  if (chromeI18n && (Array.isArray(substitutions) || typeof substitutions === 'string')) {
-    return chromeI18n.getMessage(messageName, substitutions) || messageName
-  }
-  // Chrome i18n API 不支持对象格式，直接返回消息名
-  return messageName
+  const args = Array.isArray(substitutions)
+    ? substitutions.map(String)
+    : typeof substitutions === 'string'
+      ? substitutions
+      : undefined
+  const message = chromeI18n?.getMessage(messageName, args) || messageName
+  return substitutions && !Array.isArray(substitutions) && typeof substitutions === 'object'
+    ? formatMessage(message, substitutions)
+    : message
 }
 
 /**
@@ -111,7 +116,7 @@ export function isChineseLocale(): boolean {
  */
 export function formatMessage(template: string, params: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key) => {
-    return params[key]?.toString() || match
+    return params[key] == null ? match : String(params[key])
   })
 }
 
