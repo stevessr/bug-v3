@@ -18,6 +18,7 @@ function isMessageBusPath(pathname: string): boolean {
 
 const PRELOADED_JSON_ROUTE_KEYS: Record<string, string[]> = {
   '/site.json': ['site'],
+  '/categories.json': ['categories', 'category_list', 'categoryList'],
   '/site/settings.json': ['siteSettings', 'site_settings'],
   '/site/emoji.json': ['customEmoji', 'custom_emoji'],
   '/site/custom_html.json': ['customHTML', 'custom_html'],
@@ -47,7 +48,29 @@ function getPreloadedJsonRouteData(
     if (!keys) return { found: false }
 
     const data = getDiscoursePreloadedValue(...keys)
-    return data === undefined ? { found: false } : { found: true, data }
+    if (data !== undefined) return { found: true, data }
+
+    // Some recent Discourse builds expose the bootstrap JSON from
+    // discourse-assets-json rather than `#data-preloaded`; it may already be
+    // the complete categories response rather than a keyed site payload.
+    const preloaded = getDiscoursePreloadedData()
+    if (preloaded) {
+      const site = preloaded.site
+      const hasCategories =
+        Array.isArray(preloaded.categories) ||
+        Boolean(
+          preloaded.category_list &&
+          typeof preloaded.category_list === 'object' &&
+          Array.isArray((preloaded.category_list as Record<string, unknown>).categories)
+        )
+      if (target.pathname === '/site.json' && site !== undefined) {
+        return { found: true, data: site }
+      }
+      if (target.pathname === '/categories.json' && hasCategories) {
+        return { found: true, data: preloaded }
+      }
+    }
+    return { found: false }
   } catch {
     return { found: false }
   }

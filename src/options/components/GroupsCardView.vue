@@ -314,7 +314,7 @@ const onTouchCancel = () => {
               <div v-else class="text-2xl">{{ group.icon }}</div>
             </div>
           </div>
-          <a-card-meta :title="group.name">
+          <a-card-meta class="group-card-meta" :title="group.name">
             <div class="text-sm text-gray-500 dark:text-white">
               {{ group.emojis?.length || 0 }} 个表情
             </div>
@@ -368,5 +368,20 @@ const onTouchCancel = () => {
   object-fit: contain;
   display: block;
   margin: 0 auto;
+}
+
+.group-card :deep(.ant-card-meta),
+.group-card :deep(.ant-card-meta-detail) {
+  text-align: center;
+}
+
+.group-card :deep(.ant-card-meta-title) {
+  color: var(--theme-on-surface, var(--md3-on-surface, #f5f5f5));
+  text-align: center;
+}
+
+.group-card :deep(.ant-card-meta-description) {
+  color: var(--theme-on-surface-variant, var(--md3-on-surface-variant, #a1a1aa));
+  text-align: center;
 }
 </style>

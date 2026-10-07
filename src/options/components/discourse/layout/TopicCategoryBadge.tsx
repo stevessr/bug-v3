@@ -69,7 +69,6 @@ export default defineComponent({
         onClick={handleClick}
         onKeydown={handleKeydown}
       >
-        <span class="topic-category-badge__bar" aria-hidden="true" />
         <span class="topic-category-badge__icon" aria-hidden="true">
           {logoUrl.value ? (
             <img src={logoUrl.value} alt="" loading="lazy" />

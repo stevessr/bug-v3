@@ -30,14 +30,6 @@
   transform: translateY(-1px);
 }
 
-.topic-category-badge__bar {
-  width: 3px;
-  height: 16px;
-  flex: 0 0 auto;
-  border-radius: var(--d-shape-full, 999px);
-  background: color-mix(in srgb, var(--topic-category-text-color) 72%, transparent);
-}
-
 .topic-category-badge__icon {
   display: inline-grid;
   width: 17px;

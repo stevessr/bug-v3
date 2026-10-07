@@ -1,6 +1,8 @@
 // Sync target interface and implementations for WebDAV and S3
 // This module provides the plugin infrastructure for syncing emoji data
 
+import type { SyncProgress, SyncProgressCallback } from '@/types/sync'
+
 export interface SyncConfig {
   type: 'webdav' | 's3' | 'cloudflare'
   enabled: boolean
@@ -63,14 +65,8 @@ interface SettingsLike {
   [key: string]: unknown
 }
 
-export interface Progress {
-  current: number
-  total: number
-  action: 'push' | 'pull' | 'test'
-  message?: string // 可选的详细消息
-}
-
-export type ProgressCallback = (progress: Progress) => void
+export type Progress = SyncProgress
+export type ProgressCallback = SyncProgressCallback
 
 // Base sync target interface
 export interface ISyncTarget {

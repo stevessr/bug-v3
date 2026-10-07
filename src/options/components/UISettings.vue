@@ -54,7 +54,7 @@ const handleImageScaleChange = () => {
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-lg font-semibold dark:text-white">界面设置</h2>
     </div>
-    <div class="p-6 space-y-6">
+    <div class="p-6 space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <label class="text-sm font-medium dark:text-white">默认图片缩放</label>

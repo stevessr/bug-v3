@@ -357,3 +357,14 @@ onMounted(async () => {
     <CloudDataPreview ref="cloudDataPreviewRef" :options="options" :isConfigured="isConfigured" />
   </div>
 </template>
+
+<style scoped>
+.settings-tabs :deep(.ant-tabs-nav) {
+  margin: 0 0 16px;
+  padding-inline: 8px;
+}
+
+.settings-tabs :deep(.ant-tabs-content-holder) {
+  padding: 0 12px 12px;
+}
+</style>

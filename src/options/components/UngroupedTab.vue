@@ -447,12 +447,12 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
               <span class="text-sm text-gray-600 dark:text-white">
                 已选择 {{ selectedEmojis.size }} 个
               </span>
-              <div class="flex items-center gap-2">
+              <div class="flex min-w-0 flex-1 items-center gap-2">
                 <GroupSelector
                   v-model="targetGroupId"
                   :groups="availableGroups"
                   placeholder="选择目标分组"
-                  class="flex-1"
+                  class="min-w-[200px] flex-1"
                 />
                 <a-button @click="showCreateGroupDialog = true" size="small" title="创建新分组">
                   + 新建

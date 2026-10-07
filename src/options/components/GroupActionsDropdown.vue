@@ -52,16 +52,24 @@ const isTelegramGroup = computed(() => {
         更多操作
       </a-button>
       <template #overlay>
-        <a-menu>
-          <a-menu-item @click.prevent="onEdit">编辑</a-menu-item>
-          <a-menu-item v-if="isTelegramGroup" @click.prevent="onTelegramUpdate">
+        <a-menu class="group-actions-menu" :selectable="false">
+          <a-menu-item key="edit" @click.prevent="onEdit">编辑</a-menu-item>
+          <a-menu-item
+            v-if="isTelegramGroup"
+            key="telegram-update"
+            @click.prevent="onTelegramUpdate"
+          >
             更新（Telegram）
           </a-menu-item>
-          <a-menu-item @click.prevent="onViewDetail">查看详细信息</a-menu-item>
-          <a-menu-item @click.prevent="onExport">导出</a-menu-item>
-          <a-menu-item @click.prevent="onCopyAsMarkdown">复制为 Markdown</a-menu-item>
-          <a-menu-item @click.prevent="onAIRename">AI 批量重命名</a-menu-item>
-          <a-menu-item @click.prevent="onBatchUpdateSize">批量更新尺寸</a-menu-item>
+          <a-menu-item key="details" @click.prevent="onViewDetail">查看详细信息</a-menu-item>
+          <a-menu-item key="export" @click.prevent="onExport">导出</a-menu-item>
+          <a-menu-item key="markdown" @click.prevent="onCopyAsMarkdown">
+            复制为 Markdown
+          </a-menu-item>
+          <a-menu-item key="ai-rename" @click.prevent="onAIRename">AI 批量重命名</a-menu-item>
+          <a-menu-item key="batch-size" @click.prevent="onBatchUpdateSize">
+            批量更新尺寸
+          </a-menu-item>
           <a-popconfirm
             placement="top"
             title="确认要打包下载此分组吗？"
@@ -69,9 +77,9 @@ const isTelegramGroup = computed(() => {
             cancel-text="取消"
             @confirm="onExportZip"
           >
-            <a-menu-item>打包下载</a-menu-item>
+            <a-menu-item key="export-zip">打包下载</a-menu-item>
           </a-popconfirm>
-          <a-menu-item @click.prevent="onDedupe">去重</a-menu-item>
+          <a-menu-item key="dedupe" @click.prevent="onDedupe">去重</a-menu-item>
           <a-popconfirm
             placement="top"
             title="确认清空此分组的图片缓存吗？"
@@ -79,7 +87,7 @@ const isTelegramGroup = computed(() => {
             cancel-text="取消"
             @confirm="onClearCache"
           >
-            <a-menu-item>清空缓存</a-menu-item>
+            <a-menu-item key="clear-cache">清空缓存</a-menu-item>
           </a-popconfirm>
           <a-popconfirm
             placement="top"
@@ -88,9 +96,9 @@ const isTelegramGroup = computed(() => {
             cancel-text="取消"
             @confirm="onArchive"
           >
-            <a-menu-item>归档</a-menu-item>
+            <a-menu-item key="archive">归档</a-menu-item>
           </a-popconfirm>
-          <a-menu-item @click.prevent="onConfirmDelete">
+          <a-menu-item key="delete" @click.prevent="onConfirmDelete">
             <span style="color: #e11d48">删除</span>
           </a-menu-item>
         </a-menu>

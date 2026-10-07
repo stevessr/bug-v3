@@ -35,7 +35,6 @@ export default defineComponent({
         ]}
         onClick={handleToggle}
       >
-        <div class="h-1 w-full rounded-t-2xl bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-300" />
         <div class="flex h-full flex-col items-center justify-between p-3">
           <div class="ai-rename-card-image h-24 w-full flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 dark:bg-gray-800">
             <CachedImage

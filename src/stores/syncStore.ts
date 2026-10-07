@@ -5,8 +5,7 @@
 
 import type { Ref } from 'vue'
 
-import type { ProgressCallback } from './core/types'
-
+import type { SyncProgressCallback } from '@/types/sync'
 import type { EmojiGroup, AppSettings } from '@/types/type'
 import { cloudflareSyncService } from '@/utils/cloudflareSync'
 import {
@@ -98,7 +97,7 @@ export function useSyncStore(_options: SyncStoreOptions) {
    */
   const syncToCloudflare = async (
     direction: 'push' | 'pull' | 'both' = 'both',
-    onProgress?: ProgressCallback
+    onProgress?: SyncProgressCallback
   ): Promise<SyncResult> => {
     return await cloudflareSyncService.sync(direction, onProgress)
   }
@@ -106,21 +105,21 @@ export function useSyncStore(_options: SyncStoreOptions) {
   /**
    * Preview cloud data without applying changes
    */
-  const previewCloudData = async (onProgress?: ProgressCallback) => {
+  const previewCloudData = async (onProgress?: SyncProgressCallback) => {
     return await cloudflareSyncService.previewCloudData(onProgress)
   }
 
   /**
    * Preview cloud config
    */
-  const previewCloudConfig = async (onProgress?: ProgressCallback) => {
+  const previewCloudConfig = async (onProgress?: SyncProgressCallback) => {
     return await cloudflareSyncService.previewCloudConfig(onProgress)
   }
 
   /**
    * Load group details from cloud
    */
-  const loadGroupDetails = async (groupName: string, onProgress?: ProgressCallback) => {
+  const loadGroupDetails = async (groupName: string, onProgress?: SyncProgressCallback) => {
     return await cloudflareSyncService.loadGroupDetails(groupName, onProgress)
   }
 

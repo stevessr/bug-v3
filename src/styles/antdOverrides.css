@@ -353,12 +353,13 @@
 
 .ant-menu-horizontal > .ant-menu-item:hover,
 .ant-menu-horizontal > .ant-menu-submenu:hover {
-  background: var(--md3-surface-container-high) !important;
+  background: var(--theme-surface-container-high, var(--md3-surface-container-high)) !important;
+  color: var(--theme-primary, var(--md3-primary)) !important;
 }
 
 .ant-menu-horizontal > .ant-menu-item-selected {
-  background: var(--md3-primary-container) !important;
-  color: var(--md3-on-primary-container) !important;
+  background: var(--theme-primary-container, var(--md3-primary-container)) !important;
+  color: var(--theme-on-primary-container, var(--md3-on-primary-container)) !important;
 }
 
 .ant-menu-horizontal > .ant-menu-item-selected::after {
@@ -368,8 +369,8 @@
 /* Menu item active 状态 */
 .ant-menu-item-active,
 .ant-menu-submenu-active {
-  background: var(--md3-surface-container-high) !important;
-  color: var(--md3-primary) !important;
+  background: var(--theme-surface-container-high, var(--md3-surface-container-high)) !important;
+  color: var(--theme-primary, var(--md3-primary)) !important;
 }
 
 /* Dropdown menu item active 状态 */
@@ -565,8 +566,36 @@
 }
 
 .ant-tabs-tab.ant-tabs-tab-active {
-  background: var(--md3-surface-container-low) !important;
-  border-radius: 999px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.input-mode-tabs .ant-tabs-tab,
+.buffer-page-tabs .ant-tabs-tab {
+  margin-inline-end: 16px !important;
+  padding: 8px 6px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  transition: color 160ms ease !important;
+}
+
+.input-mode-tabs .ant-tabs-tab:hover:not(.ant-tabs-tab-active),
+.buffer-page-tabs .ant-tabs-tab:hover:not(.ant-tabs-tab-active) {
+  color: var(--theme-primary, var(--md3-primary)) !important;
+  background: transparent !important;
+}
+
+.input-mode-tabs .ant-tabs-ink-bar,
+.buffer-page-tabs .ant-tabs-ink-bar {
+  height: 2px !important;
+  border-radius: 999px;
+}
+
+.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active,
+.ant-tabs-card > div > .ant-tabs-nav .ant-tabs-tab-active {
+  color: var(--theme-on-primary-container, var(--md3-on-primary-container)) !important;
+  background: var(--theme-primary-container, var(--md3-primary-container)) !important;
+  border-color: var(--theme-outline-variant, var(--md3-outline-variant)) !important;
 }
 
 .ant-tabs-nav::before {
@@ -1374,6 +1403,31 @@
 .ant-segmented-thumb {
   background: var(--md3-primary-container) !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Keep the thumb's previous-to-current position animation, with a calmer MD3 easing. */
+.ant-segmented .ant-segmented-thumb-motion-appear-active {
+  transition:
+    transform 240ms cubic-bezier(0.2, 0, 0, 1),
+    width 200ms cubic-bezier(0.2, 0, 0, 1) !important;
+  will-change: transform, width;
+}
+
+.ant-segmented-item {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.buffer-page .ant-input-number {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+  background: var(--theme-surface-container-low, var(--md3-surface-container-low)) !important;
+  border-color: var(--theme-outline, var(--md3-outline)) !important;
+}
+
+.buffer-page .ant-input-number-input {
+  color: var(--theme-on-surface, var(--md3-on-surface)) !important;
+  background: transparent !important;
 }
 
 .ant-slider-rail {

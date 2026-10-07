@@ -165,3 +165,13 @@ export interface MergeResult<T = unknown> {
   autoResolved: boolean
   strategy: string
 }
+
+/** Shared progress contract for sync providers and store/UI consumers. */
+export interface SyncProgress {
+  current: number
+  total: number
+  action: 'push' | 'pull' | 'test'
+  message?: string
+}
+
+export type SyncProgressCallback = (progress: SyncProgress) => void

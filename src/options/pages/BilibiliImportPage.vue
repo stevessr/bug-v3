@@ -30,6 +30,7 @@ const idImportLoading = ref(false)
 const searchLoading = ref(false)
 const previewModalVisible = ref(false)
 const previewingPackage = ref<BilibiliEmotePackage | null>(null)
+const activeImportMethod = ref<'search' | 'id'>('search')
 
 const isLoading = computed(() => idImportLoading.value || searchLoading.value)
 
@@ -272,93 +273,99 @@ const selectSearchResult = async (result: BilibiliEmoteIndexItem) => {
       <!-- 主要内容区域 -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
         <!-- 搜索与 ID 导入区域 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- 搜索区域 -->
-          <div
-            class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
-          >
-            <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">
-              {{ t('searchEmotePackages') }}
-            </h4>
-            <div class="flex gap-2 mb-3">
-              <a-input
-                v-model:value="searchInput"
-                :placeholder="t('searchEmotePackagesPlaceholder')"
-                @pressEnter="handleSearch"
-              />
-              <a-button
-                type="primary"
-                @click="handleSearch"
-                :disabled="!searchInput || !searchInput.trim()"
-                :loading="searchLoading"
-              >
-                {{ searchLoading ? t('searching') : t('search') }}
-              </a-button>
-            </div>
-
-            <!-- 搜索结果列表 -->
+        <a-tabs v-model:activeKey="activeImportMethod" class="bilibili-method-tabs">
+          <a-tab-pane key="search" tab="搜索表情包">
+            <!-- 搜索区域 -->
             <div
-              v-if="searchResults.length > 0"
-              class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
+              class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md p-4"
             >
+              <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-3">
+                {{ t('searchEmotePackages') }}
+              </h4>
+              <div class="flex gap-2 mb-3">
+                <a-input
+                  v-model:value="searchInput"
+                  :placeholder="t('searchEmotePackagesPlaceholder')"
+                  @pressEnter="handleSearch"
+                />
+                <a-button
+                  type="primary"
+                  @click="handleSearch"
+                  :disabled="!searchInput || !searchInput.trim()"
+                  :loading="searchLoading"
+                >
+                  {{ searchLoading ? t('searching') : t('search') }}
+                </a-button>
+              </div>
+
+              <!-- 搜索结果列表 -->
               <div
-                v-for="result in searchResults"
-                :key="result.id"
-                class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
-                @click="selectSearchResult(result)"
+                v-if="searchResults.length > 0"
+                class="max-h-40 overflow-y-auto border border-purple-200 dark:border-purple-700 rounded bg-white dark:bg-black/20"
               >
-                <CachedImage :src="result.url" class="w-8 h-8 rounded object-cover" />
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm truncate dark:text-gray-200">
-                    {{ result.text }}
+                <div
+                  v-for="result in searchResults"
+                  :key="result.id"
+                  class="flex items-center gap-3 p-2 hover:bg-purple-100 dark:hover:bg-purple-900/40 cursor-pointer border-b last:border-b-0 border-purple-100 dark:border-purple-800"
+                  @click="selectSearchResult(result)"
+                >
+                  <CachedImage :src="result.url" class="w-8 h-8 rounded object-cover" />
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm truncate dark:text-gray-200">
+                      {{ result.text }}
+                    </div>
+                    <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
                   </div>
-                  <div class="text-xs text-gray-500">ID: {{ result.id }}</div>
+                  <a-button size="small" type="text">{{ t('select') }}</a-button>
                 </div>
-                <a-button size="small" type="text">{{ t('select') }}</a-button>
+              </div>
+              <div
+                v-else-if="
+                  searchInput &&
+                  !searchLoading &&
+                  searchResults.length === 0 &&
+                  errorMessage === '未找到匹配的表情包'
+                "
+                class="text-center py-4 text-sm text-gray-500"
+              >
+                {{ t('noRelatedPackagesFound') }}
               </div>
             </div>
+          </a-tab-pane>
+
+          <a-tab-pane key="id" tab="通过 ID 导入">
+            <!-- ID 导入区域 -->
             <div
-              v-else-if="
-                searchInput &&
-                !searchLoading &&
-                searchResults.length === 0 &&
-                errorMessage === '未找到匹配的表情包'
-              "
-              class="text-center py-4 text-sm text-gray-500"
+              class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
             >
-              {{ t('noRelatedPackagesFound') }}
+              <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">
+                {{ t('importById') }}
+              </h4>
+
+              <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                {{ t('importByIdDescription') }}
+              </p>
+
+              <div class="flex gap-2">
+                <a-input-number
+                  v-model:value="packageIdInput"
+                  :placeholder="t('packageIdPlaceholder')"
+                  class="flex-1"
+                  :controls="false"
+                  @pressEnter="importPackageById"
+                />
+                <a-button
+                  type="primary"
+                  @click="importPackageById"
+                  :disabled="!packageIdInput || !String(packageIdInput).trim()"
+                  :loading="idImportLoading"
+                >
+                  {{ idImportLoading ? t('importing') : t('import') }}
+                </a-button>
+              </div>
             </div>
-          </div>
-
-          <!-- ID 导入区域 -->
-          <div
-            class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
-          >
-            <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-3">{{ t('importById') }}</h4>
-
-            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
-              {{ t('importByIdDescription') }}
-            </p>
-
-            <div class="flex gap-2">
-              <a-input-number
-                v-model:value="packageIdInput"
-                :placeholder="t('packageIdPlaceholder')"
-                class="flex-1"
-                :controls="false"
-                @pressEnter="importPackageById"
-              />
-              <a-button
-                type="primary"
-                @click="importPackageById"
-                :disabled="!packageIdInput || !String(packageIdInput).trim()"
-                :loading="idImportLoading"
-              >
-                {{ idImportLoading ? t('importing') : t('import') }}
-              </a-button>
-            </div>
-          </div>
-        </div>
+          </a-tab-pane>
+        </a-tabs>
 
         <!-- 已导入的表情包列表 -->
         <div v-if="packages.length > 0" class="space-y-4">

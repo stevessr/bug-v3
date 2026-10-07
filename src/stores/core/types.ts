@@ -44,13 +44,6 @@ export interface SaveControl {
 }
 
 /**
- * Progress callback for long-running operations
- */
-export interface ProgressCallback {
-  (progress: { current: number; total: number; action: string; message?: string }): void
-}
-
-/**
  * Duplicate detection result
  */
 export interface DuplicateGroup {

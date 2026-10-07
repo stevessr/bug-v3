@@ -62,11 +62,21 @@ function normalizeCategory(value: unknown): PreloadedCategory | null {
 
 function extractCategories(data: unknown): PreloadedCategory[] {
   const root = isRecord(data) ? data : null
-  const rawCategories = Array.isArray(root?.categories)
-    ? root.categories
-    : isRecord(root?.category_list) && Array.isArray(root.category_list.categories)
-      ? root.category_list.categories
-      : []
+  const site = isRecord(root?.site) ? root.site : null
+  const preload = isRecord(root?._preload) ? root._preload : null
+  const categoryList = isRecord(root?.category_list)
+    ? root.category_list
+    : isRecord(site?.category_list)
+      ? site.category_list
+      : null
+  const rawCategories = [
+    root?.categories,
+    root?.categoryList,
+    root?.category_definitions,
+    categoryList?.categories,
+    site?.categories,
+    isRecord(preload?.category_list) ? preload.category_list.categories : preload?.categories
+  ].find(Array.isArray) as unknown[] | undefined
   const byId = new Map<number, PreloadedCategory>()
 
   const visit = (raw: unknown) => {
@@ -83,7 +93,7 @@ function extractCategories(data: unknown): PreloadedCategory[] {
     nested.forEach(visit)
   }
 
-  rawCategories.forEach(visit)
+  rawCategories?.forEach(visit)
   return Array.from(byId.values())
 }
 

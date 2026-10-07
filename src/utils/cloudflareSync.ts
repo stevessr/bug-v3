@@ -1,10 +1,11 @@
 import { type AppSettings, type EmojiGroup } from '@/types/type'
+import type { SyncProgressCallback } from '@/types/sync'
+export type { SyncProgress } from '@/types/sync'
 import {
   createSyncTarget,
   type CloudflareConfig,
   type SyncData,
   type SyncResult,
-  type ProgressCallback as SyncProgressCallback,
   type Progress,
   type GroupLike
 } from '@/utils/syncTargets'
@@ -41,14 +42,7 @@ export interface ExtendedSyncData extends Omit<SyncData, 'settings' | 'emojiGrou
   }
 }
 
-export interface SyncProgress {
-  current: number
-  total: number
-  action: 'push' | 'pull' | 'test'
-  message: string
-}
-
-export type ProgressCallback = (progress: SyncProgress) => void
+type CloudflareProgressCallback = SyncProgressCallback
 
 export class CloudflareSyncService {
   private config: ExtendedCloudflareConfig | null = null
@@ -236,7 +230,7 @@ export class CloudflareSyncService {
     }
   }
 
-  public async pushData(onProgress?: ProgressCallback): Promise<SyncResult> {
+  public async pushData(onProgress?: CloudflareProgressCallback): Promise<SyncResult> {
     if (!this.config) {
       return {
         success: false,
@@ -311,7 +305,7 @@ export class CloudflareSyncService {
   }
 
   public async pullData(
-    onProgress?: ProgressCallback
+    onProgress?: CloudflareProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
@@ -417,7 +411,7 @@ export class CloudflareSyncService {
 
   public async sync(
     direction: 'push' | 'pull' | 'both',
-    onProgress?: ProgressCallback
+    onProgress?: CloudflareProgressCallback
   ): Promise<{ success: boolean; message: string }> {
     if (!this.config) {
       return { success: false, message: 'No Cloudflare configuration available' }
@@ -466,7 +460,7 @@ export class CloudflareSyncService {
 
   // Preview cloud data without merging
   public async previewCloudData(
-    onProgress?: ProgressCallback
+    onProgress?: CloudflareProgressCallback
   ): Promise<{ success: boolean; data?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
@@ -512,7 +506,7 @@ export class CloudflareSyncService {
 
   // Preview cloud config only (get group list without detailed emoji data)
   public async previewCloudConfig(
-    onProgress?: ProgressCallback
+    onProgress?: CloudflareProgressCallback
   ): Promise<{ success: boolean; config?: SyncData; error?: unknown; message: string }> {
     if (!this.config) {
       return {
@@ -677,7 +671,7 @@ export class CloudflareSyncService {
   // Load specific group details (lazy loading)
   public async loadGroupDetails(
     groupName: string,
-    onProgress?: ProgressCallback
+    onProgress?: CloudflareProgressCallback
   ): Promise<{ success: boolean; group?: GroupLike; error?: unknown; message: string }> {
     if (!this.config) {
       return {

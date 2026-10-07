@@ -186,12 +186,12 @@ const displayTones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
 
       <div class="flex flex-col space-y-4">
         <!-- 主题色系选择器 -->
-        <div class="flex items-start justify-between">
+        <div class="theme-scheme-field">
           <div>
             <label class="text-sm font-medium dark:text-white">主题色系</label>
             <p class="text-sm text-gray-500 dark:text-gray-400">选择 MD3 预设色系</p>
           </div>
-          <div class="w-full">
+          <div class="theme-scheme-picker">
             <ThemeColorPicker
               :md3ColorScheme="localMd3ColorScheme"
               :md3SeedColor="localMd3SeedColor"
@@ -461,3 +461,24 @@ const displayTones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
     </div>
   </div>
 </template>
+
+<style scoped>
+.theme-scheme-field {
+  display: grid;
+  grid-template-columns: minmax(145px, 190px) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.theme-scheme-picker {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .theme-scheme-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+</style>

@@ -29,9 +29,6 @@ export function initSlashEmojiPicker(): () => void {
 #${ID} .slash-group{display:flex;align-items:center;gap:8px;overflow:hidden}
 #${ID} .slash-group-icon{width:28px;height:28px;flex:0 0 28px}
 #${ID} .slash-group-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#${ID} .slash-browser{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:8px}
-#${ID} .slash-group-preview{min-width:0}
-#${ID} .slash-group-preview .slash-grid{max-height:220px;grid-template-columns:repeat(3,minmax(0,1fr))}
 #${ID} .slash-grid{grid-template-columns:repeat(${COLUMNS},minmax(0,1fr))}
 #${ID} button{font:inherit;color:inherit;border:0;background:transparent;border-radius:6px;padding:8px;text-align:left;cursor:pointer;min-width:0}
 #${ID} button[aria-selected=true],#${ID} button[aria-current=true]{background:var(--tertiary-low,#dbeafe);outline:2px solid var(--tertiary,#2563eb);outline-offset:-2px}
@@ -113,7 +110,6 @@ export function initSlashEmojiPicker(): () => void {
       editor.setAttribute('aria-activedescendant', active.id)
       active.scrollIntoView({ block: 'nearest' })
     } else editor.removeAttribute('aria-activedescendant')
-    showGroupPreview()
     const preview = box.querySelector('.slash-preview')
     if (!preview) return
     preview.replaceChildren()
@@ -239,38 +235,6 @@ export function initSlashEmojiPicker(): () => void {
     observer?.observe(image)
     return image
   }
-  const showGroupPreview = () => {
-    const panel = box?.querySelector('.slash-group-preview')
-    if (!panel || selectedGroup) return
-    observer?.disconnect()
-    panel.replaceChildren()
-    const group = items[index] as EmojiGroup | undefined
-    if (!group) return
-    const title = document.createElement('strong')
-    title.textContent = group.name
-    const grid = document.createElement('div')
-    grid.className = 'slash-items slash-grid'
-    grid.setAttribute('aria-label', group.name + ' 表情预览')
-    const matching = group.emojis.filter(emoji => matchesEmoji(emoji, searchQuery))
-    const emojis = matching.length ? matching : group.emojis
-    emojis.forEach((emoji, i) => {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.tabIndex = -1
-      button.title = emoji.name
-      button.setAttribute('aria-label', emoji.name)
-      button.append(createEmojiImage(emoji, i < 18))
-      button.onclick = () => {
-        selectedGroup = group
-        groupEnd = end
-        render('')
-        index = items.findIndex(item => item.id === emoji.id)
-        choose()
-      }
-      grid.append(button)
-    })
-    panel.append(title, grid)
-  }
   const render = (query: string) => {
     if (!box || !editor) return
     observer?.disconnect()
@@ -363,47 +327,7 @@ export function initSlashEmojiPicker(): () => void {
     hint.className = 'slash-hint'
     hint.textContent =
       '输入分组/表情名或标签搜索 · → 进入分组 · Backspace 返回 · Enter 确认 · Esc 取消'
-    const browser = document.createElement('div')
-    browser.className = 'slash-browser'
-    if (selectedGroup) {
-      const groups = document.createElement('div')
-      groups.className = 'slash-items slash-group-nav'
-      groups.setAttribute('aria-label', '切换表情分组')
-      cachedState.emojiGroups
-        .filter((group: EmojiGroup) => group.emojis?.length)
-        .forEach((group: EmojiGroup) => {
-          const button = document.createElement('button')
-          button.type = 'button'
-          button.tabIndex = -1
-          button.className = 'slash-group'
-          button.setAttribute('aria-current', String(group.id === selectedGroup?.id))
-          const icon = document.createElement(isImageUrl(group.icon) ? 'img' : 'span')
-          icon.className = 'slash-group-icon'
-          if (icon instanceof HTMLImageElement) {
-            icon.src = normalizeImageUrl(group.icon)
-            icon.alt = ''
-          } else icon.textContent = group.icon || '📁'
-          const label = document.createElement('span')
-          label.className = 'slash-group-name'
-          label.textContent = group.name
-          button.append(icon, label)
-          button.onclick = () => {
-            selectedGroup = group
-            groupEnd = end
-            index = 0
-            render('')
-          }
-          groups.append(button)
-        })
-      browser.append(groups)
-    }
-    browser.append(list)
-    if (!selectedGroup) {
-      const groupPreview = document.createElement('div')
-      groupPreview.className = 'slash-group-preview'
-      browser.append(groupPreview)
-    }
-    box.append(header, browser, preview, hint)
+    box.append(header, list, preview, hint)
     highlight()
     position()
   }

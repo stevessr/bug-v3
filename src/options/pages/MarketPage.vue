@@ -532,10 +532,11 @@ onMounted(() => {
     </div>
 
     <!-- 搜索栏 -->
-    <div class="mb-4 space-y-3">
+    <div class="market-search-controls mb-4">
       <a-select
         v-model:value="selectedTopic"
-        class="market-topic-select w-full max-w-md"
+        class="market-topic-select w-full"
+        size="large"
         show-search
         option-filter-prop="label"
         aria-label="选择表情包分类"
@@ -551,7 +552,7 @@ onMounted(() => {
         :placeholder="t('searchPackagesPlaceholder')"
         allow-clear
         size="large"
-        class="max-w-md"
+        class="w-full"
       />
     </div>
 
@@ -735,6 +736,28 @@ onMounted(() => {
 <style scoped>
 .market-page {
   min-height: 600px;
+}
+
+.market-search-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+}
+
+.market-search-controls :deep(.ant-select),
+.market-search-controls :deep(.ant-select-selector),
+.market-search-controls :deep(.ant-input-search),
+.market-search-controls :deep(.ant-input-group),
+.market-search-controls :deep(.ant-input-affix-wrapper),
+.market-search-controls :deep(.ant-input-search-button) {
+  height: 48px;
+}
+
+@media (max-width: 720px) {
+  .market-search-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .line-clamp-2 {

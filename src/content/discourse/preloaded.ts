@@ -35,7 +35,11 @@ function observePreloadedElement(element: HTMLElement | null) {
  * JSON script body (`<script id="data-preloaded" type="application/json">`).
  */
 export function getDiscoursePreloadedData(): DiscoursePreloadedData | null {
-  const preloaded = document.getElementById('data-preloaded') as HTMLElement | null
+  const preloaded =
+    (document.getElementById('data-preloaded') as HTMLElement | null) ||
+    (document.querySelector(
+      'body > discourse-assets > discourse-assets-json > script, discourse-assets-json script'
+    ) as HTMLElement | null)
   observePreloadedElement(preloaded)
   if (cacheInitialized) return cachedData
 

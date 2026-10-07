@@ -14,7 +14,6 @@ const props = defineProps<{ settings: AppSettings | Ref<AppSettings> }>()
 const emit = defineEmits(['update:customCssBlocks'])
 
 // State
-const showBlockModal = ref(false)
 const showBlockEditor = ref(false)
 const editingBlock = ref<CustomCssBlock | null>(null)
 const localBlockName = ref('')
@@ -31,14 +30,6 @@ const currentSettings = computed(() =>
 const cssBlocks = computed(() => currentSettings.value.customCssBlocks || [])
 
 // Methods
-const openBlockManager = () => {
-  showBlockModal.value = true
-}
-
-const closeBlockManager = () => {
-  showBlockModal.value = false
-}
-
 const createNewBlock = () => {
   modalMode.value = 'create'
   editingBlock.value = null
@@ -123,11 +114,9 @@ const formatDate = (timestamp: number) => {
             创建和管理多个 CSS 块，支持独立开关控制（仅在支持的平台注入）
           </p>
         </div>
-        <div>
-          <a-button class="css-manager-button" @click="openBlockManager" title="打开 CSS 块管理器">
-            管理 CSS 块 ({{ cssBlocks.length }})
-          </a-button>
-        </div>
+        <a-button type="primary" @click="createNewBlock" :icon="h(PlusOutlined)">
+          新建 CSS 块
+        </a-button>
       </div>
 
       <!-- Combined CSS Preview -->
@@ -142,92 +131,53 @@ const formatDate = (timestamp: number) => {
         </div>
       </div>
 
-      <!-- Block Manager Modal -->
-      <div v-if="showBlockModal" class="fixed inset-0 flex items-center justify-center z-50">
-        <div
-          class="fixed inset-0 bg-black bg-opacity-50"
-          @click="closeBlockManager"
-          title="点击关闭"
-        ></div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] flex flex-col relative z-10"
+      <div
+        v-if="cssBlocks.length === 0"
+        class="rounded-xl border border-dashed p-8 text-center text-gray-500 dark:text-gray-400"
+      >
+        暂无 CSS 块，点击“新建 CSS 块”开始管理
+      </div>
+
+      <div v-else class="space-y-3">
+        <article
+          v-for="block in cssBlocks"
+          :key="block.id"
+          class="rounded-xl border p-4"
+          :class="block.enabled ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'"
         >
-          <div
-            class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
-          >
-            <h3 class="text-lg font-semibold dark:text-white">CSS 块管理</h3>
-            <a-button @click="closeBlockManager" size="small">关闭</a-button>
-          </div>
-
-          <div class="flex-1 overflow-hidden p-6">
-            <div class="h-full overflow-y-auto">
-              <div class="mb-4">
-                <a-button type="primary" @click="createNewBlock" :icon="h(PlusOutlined)">
-                  新建 CSS 块
-                </a-button>
-              </div>
-
-              <div
-                v-if="cssBlocks.length === 0"
-                class="text-center py-8 text-gray-500 dark:text-gray-400"
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <a-button
+                :type="block.enabled ? 'primary' : 'default'"
+                size="small"
+                @click="toggleBlock(block)"
+                :icon="block.enabled ? h(EyeOutlined) : h(EyeInvisibleOutlined)"
               >
-                暂无 CSS 块，点击上方按钮创建
-              </div>
-
-              <div v-else class="space-y-3">
-                <div
-                  v-for="block in cssBlocks"
-                  :key="block.id"
-                  class="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-                  :class="{
-                    'bg-gray-50 dark:bg-gray-900': !block.enabled,
-                    'bg-white dark:bg-gray-800': block.enabled
-                  }"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center space-x-3">
-                      <a-button
-                        :type="block.enabled ? 'primary' : 'default'"
-                        size="small"
-                        @click="toggleBlock(block)"
-                        :icon="block.enabled ? h(EyeOutlined) : h(EyeInvisibleOutlined)"
-                      >
-                        {{ block.enabled ? '已启用' : '已禁用' }}
-                      </a-button>
-                      <h4 class="font-medium dark:text-white">{{ block.name }}</h4>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                      <a-button size="small" @click="editBlock(block)" :icon="h(EditOutlined)">
-                        编辑
-                      </a-button>
-                      <a-button
-                        size="small"
-                        danger
-                        @click="deleteBlock(block)"
-                        :icon="h(DeleteOutlined)"
-                      >
-                        删除
-                      </a-button>
-                    </div>
-                  </div>
-
-                  <div v-if="block.content" class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    <div class="bg-gray-100 dark:bg-gray-900 rounded p-2 max-h-32 overflow-y-auto">
-                      <pre class="text-xs font-mono whitespace-pre-wrap">{{ block.content }}</pre>
-                    </div>
-                  </div>
-
-                  <div class="text-xs text-gray-500 dark:text-gray-500">
-                    创建时间：{{ formatDate(block.createdAt) }}
-                    <span v-if="block.updatedAt !== block.createdAt" class="ml-3">
-                      更新时间：{{ formatDate(block.updatedAt) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                {{ block.enabled ? '已启用' : '已禁用' }}
+              </a-button>
+              <h4 class="truncate font-medium dark:text-white">{{ block.name }}</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <a-button size="small" @click="editBlock(block)" :icon="h(EditOutlined)">
+                编辑
+              </a-button>
+              <a-button size="small" danger @click="deleteBlock(block)" :icon="h(DeleteOutlined)">
+                删除
+              </a-button>
             </div>
           </div>
-        </div>
+          <div v-if="block.content" class="mb-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
+            <pre
+              class="max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-mono text-xs text-gray-700 dark:text-gray-300"
+              >{{ block.content }}</pre>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            创建时间：{{ formatDate(block.createdAt) }}
+            <span v-if="block.updatedAt !== block.createdAt" class="ml-3">
+              更新时间：{{ formatDate(block.updatedAt) }}
+            </span>
+          </div>
+        </article>
       </div>
 
       <!-- Block Editor Modal -->
@@ -295,16 +245,3 @@ const formatDate = (timestamp: number) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.css-manager-button {
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease;
-}
-.css-manager-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
-}
-</style>

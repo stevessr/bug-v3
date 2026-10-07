@@ -19,9 +19,20 @@ function normalizeIdList(value: unknown): number[] | null {
 }
 
 function getChildren(category: RawCategory): RawCategory[] {
-  if (Array.isArray(category.subcategory_list)) return category.subcategory_list
-  if (Array.isArray(category.subcategories)) return category.subcategories
+  const candidates = [category.subcategory_list, category.subcategories, category.child_categories]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate
+    if (candidate && typeof candidate === 'object' && Array.isArray(candidate.categories)) {
+      return candidate.categories
+    }
+  }
   return []
+}
+
+function normalizeHexColor(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback
+  const normalized = value.trim().replace(/^#/, '')
+  return /^[\da-f]{3}(?:[\da-f]{3})?(?:[\da-f]{2})?$/i.test(normalized) ? normalized : fallback
 }
 
 function normalizeDescription(value: unknown): string | undefined {
@@ -94,8 +105,8 @@ function upsertCategory(
         : typeof preloaded?.slug === 'string'
           ? preloaded.slug
           : String(id),
-    color: typeof colorRaw === 'string' ? colorRaw : '0088CC',
-    text_color: typeof textColorRaw === 'string' ? textColorRaw : 'FFFFFF',
+    color: normalizeHexColor(colorRaw, '0088CC'),
+    text_color: normalizeHexColor(textColorRaw, 'FFFFFF'),
     topic_count: topicCount,
     parent_category_id: parentId,
     subcategory_ids: subcategoryIds,

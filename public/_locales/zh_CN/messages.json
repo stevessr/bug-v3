@@ -140,7 +140,7 @@
     "description": "应用选中的重命名"
   },
   "archived": {
-    "message": "(已归档)",
+    "message": "归档",
     "description": "已归档"
   },
   "archivedPackage": {

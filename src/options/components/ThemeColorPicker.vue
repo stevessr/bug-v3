@@ -527,6 +527,24 @@ const handlePaste = async (event: ClipboardEvent) => {
   margin-bottom: 12px;
 }
 
+.theme-color-picker :deep(.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab),
+.theme-color-picker :deep(.ant-tabs-card > div > .ant-tabs-nav .ant-tabs-tab) {
+  margin-inline-end: 6px;
+  padding: 6px 12px;
+  border-radius: 12px 12px 0 0;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.theme-color-picker :deep(.ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active),
+.theme-color-picker :deep(.ant-tabs-card > div > .ant-tabs-nav .ant-tabs-tab-active) {
+  color: var(--theme-on-primary-container, var(--md3-on-primary-container)) !important;
+  background: var(--theme-primary-container, var(--md3-primary-container)) !important;
+  border-color: var(--theme-outline-variant, var(--md3-outline-variant)) !important;
+}
+
 /* 隐藏 Tab 内容的默认 padding */
 .theme-color-picker :deep(.ant-tabs-content) {
   min-height: 200px;
