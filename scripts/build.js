@@ -113,7 +113,7 @@ try {
       fs.mkdirSync(wasmPublicDest, { recursive: true })
     }
 
-    const files = ['perceptual_hash.js', 'perceptual_hash.wasm']
+    const files = ['perceptual_hash.js', 'perceptual_hash.wasm', 'color_quantization.wasm']
     let copiedCount = 0
 
     files.forEach(file => {

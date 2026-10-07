@@ -1,7 +1,7 @@
 /**
  * WASM Color Quantization Service
- * Provides K-Means and Median Cut color quantization via the same Rust WASM module
- * used for perceptual hashing. Falls back to JS implementations when WASM is unavailable.
+ * Provides K-Means and Median Cut color quantization via a dedicated Rust WASM module.
+ * Falls back to JS implementations when WASM is unavailable.
  */
 
 interface ColorWasmExports {
@@ -71,7 +71,7 @@ class WASMColorService {
     if (!this.wasmAvailable) return
 
     try {
-      const wasmUrl = this.getWasmPath('perceptual_hash.wasm')
+      const wasmUrl = this.getWasmPath('color_quantization.wasm')
       const response = await fetch(wasmUrl)
       if (!response.ok) {
         throw new Error(`Failed to fetch WASM (${response.status})`)

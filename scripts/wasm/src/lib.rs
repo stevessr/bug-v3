@@ -1,9 +1,11 @@
 use core::mem::size_of;
 use core::ptr::{self, null_mut};
 use std::alloc::{alloc, dealloc, Layout};
+#[cfg(feature = "hash")]
 use std::ffi::{c_char, CStr};
 
 #[repr(C)]
+#[cfg(feature = "hash")]
 pub struct HashResult {
     pub hash: *mut u8,
     pub error: i32,
@@ -80,6 +82,7 @@ pub extern "C" fn free(ptr: *mut u8) {
 }
 
 #[inline]
+#[cfg(feature = "hash")]
 fn hex_to_val(c: u8) -> u8 {
     match c {
         b'0'..=b'9' => c - b'0',
@@ -106,6 +109,7 @@ fn alloc_c_string(text: &str) -> *mut u8 {
     ptr
 }
 
+#[cfg(feature = "hash")]
 fn create_hash_result(hash: *mut u8, error: i32, error_message: *mut u8) -> *mut HashResult {
     let ptr = alloc_bytes(size_of::<HashResult>()) as *mut HashResult;
     if ptr.is_null() {
@@ -130,11 +134,13 @@ fn create_hash_result(hash: *mut u8, error: i32, error_message: *mut u8) -> *mut
     ptr
 }
 
+#[cfg(feature = "hash")]
 fn create_error_result(message: &str) -> *mut HashResult {
     let error_message = alloc_c_string(message);
     create_hash_result(null_mut(), 1, error_message)
 }
 
+#[cfg(feature = "hash")]
 fn calculate_hash_for_rgba(
     image_data: &[u8],
     width: usize,
@@ -199,6 +205,7 @@ fn calculate_hash_for_rgba(
     Ok(unsafe { String::from_utf8_unchecked(hex) })
 }
 
+#[cfg(feature = "hash")]
 fn parse_c_hex(ptr: *const u8) -> Option<Vec<u8>> {
     if ptr.is_null() {
         return None;
@@ -209,12 +216,14 @@ fn parse_c_hex(ptr: *const u8) -> Option<Vec<u8>> {
     Some(bytes.to_vec())
 }
 
+#[cfg(feature = "hash")]
 struct PackedHash {
     blocks: Vec<u64>,
     nibbles: usize,
     valid: bool,
 }
 
+#[cfg(feature = "hash")]
 fn pack_hex_to_u64_blocks(bytes: &[u8]) -> PackedHash {
     if bytes.is_empty() {
         return PackedHash {
@@ -251,6 +260,7 @@ fn pack_hex_to_u64_blocks(bytes: &[u8]) -> PackedHash {
     }
 }
 
+#[cfg(feature = "hash")]
 fn parse_packed_hash(ptr: *const u8) -> PackedHash {
     match parse_c_hex(ptr) {
         Some(bytes) => pack_hex_to_u64_blocks(&bytes),
@@ -262,6 +272,7 @@ fn parse_packed_hash(ptr: *const u8) -> PackedHash {
     }
 }
 
+#[cfg(feature = "hash")]
 fn hamming_distance_packed(hash1: &PackedHash, hash2: &PackedHash, early_stop: i32) -> i32 {
     if !hash1.valid || !hash2.valid || hash1.nibbles != hash2.nibbles {
         return -1;
@@ -296,6 +307,7 @@ fn hamming_distance_packed(hash1: &PackedHash, hash2: &PackedHash, early_stop: i
     distance
 }
 
+#[cfg(feature = "hash")]
 fn alloc_i32_array(values: &[i32]) -> *mut i32 {
     if values.is_empty() {
         return null_mut();
@@ -319,6 +331,7 @@ fn alloc_i32_array(values: &[i32]) -> *mut i32 {
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn calculate_perceptual_hash(
     image_data: *const u8,
     width: i32,
@@ -355,6 +368,7 @@ pub extern "C" fn calculate_perceptual_hash(
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn calculate_batch_hashes(
     images_data: *const u8,
     dimensions: *const i32,
@@ -452,6 +466,7 @@ pub extern "C" fn calculate_batch_hashes(
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn calculate_hamming_distance(hash1: *const u8, hash2: *const u8) -> i32 {
     let packed1 = parse_packed_hash(hash1);
     let packed2 = parse_packed_hash(hash2);
@@ -459,6 +474,7 @@ pub extern "C" fn calculate_hamming_distance(hash1: *const u8, hash2: *const u8)
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn find_similar_pairs(
     hashes: *const *const u8,
     num_hashes: i32,
@@ -514,6 +530,7 @@ pub extern "C" fn find_similar_pairs(
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn find_similar_pairs_bucketed(
     hashes: *const *const u8,
     num_hashes: i32,
@@ -640,6 +657,7 @@ pub extern "C" fn find_similar_pairs_bucketed(
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn free_hash_result(result: *mut HashResult) {
     if result.is_null() {
         return;
@@ -660,6 +678,7 @@ pub extern "C" fn free_hash_result(result: *mut HashResult) {
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn free_batch_results(results: *mut HashResult, num_results: i32) {
     if results.is_null() || num_results <= 0 {
         return;
@@ -682,11 +701,13 @@ pub extern "C" fn free_batch_results(results: *mut HashResult, num_results: i32)
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn free_pairs(pairs: *mut i32) {
     dealloc_bytes(pairs as *mut u8);
 }
 
 #[no_mangle]
+#[cfg(feature = "hash")]
 pub extern "C" fn has_simd_support() -> i32 {
     if cfg!(target_feature = "simd128") {
         1
@@ -700,6 +721,7 @@ pub extern "C" fn has_simd_support() -> i32 {
 /// Result struct for color quantization operations.
 /// `colors_ptr` points to a flat array of `[r, g, b, population]` u32 tuples.
 #[repr(C)]
+#[cfg(feature = "color")]
 pub struct ColorResult {
     pub colors_ptr: *mut u32,
     pub num_colors: i32,
@@ -707,6 +729,7 @@ pub struct ColorResult {
     pub error_message: *mut u8,
 }
 
+#[cfg(feature = "color")]
 fn create_color_result(
     colors_ptr: *mut u32,
     num_colors: i32,
@@ -736,12 +759,14 @@ fn create_color_result(
     ptr
 }
 
+#[cfg(feature = "color")]
 fn create_color_error(message: &str) -> *mut ColorResult {
     let error_message = alloc_c_string(message);
     create_color_result(null_mut(), 0, 1, error_message)
 }
 
 /// Allocate and populate a flat u32 array with [r, g, b, population] tuples.
+#[cfg(feature = "color")]
 fn alloc_color_array(colors: &[(u32, u32, u32, u32)]) -> *mut u32 {
     if colors.is_empty() {
         return null_mut();
@@ -770,6 +795,7 @@ fn alloc_color_array(colors: &[(u32, u32, u32, u32)]) -> *mut u32 {
 }
 
 #[inline]
+#[cfg(feature = "color")]
 fn color_distance_sq(r1: u32, g1: u32, b1: u32, r2: u32, g2: u32, b2: u32) -> u32 {
     let dr = r1.wrapping_sub(r2);
     let dg = g1.wrapping_sub(g2);
@@ -782,6 +808,7 @@ fn color_distance_sq(r1: u32, g1: u32, b1: u32, r2: u32, g2: u32, b2: u32) -> u3
 }
 
 /// Extract RGB pixels from RGBA data, skipping transparent pixels.
+#[cfg(feature = "color")]
 fn extract_rgb_pixels(pixel_data: &[u8], skip_alpha: u8) -> Vec<(u32, u32, u32)> {
     let num_pixels = pixel_data.len() / 4;
     let mut pixels = Vec::with_capacity(num_pixels);
@@ -802,6 +829,7 @@ fn extract_rgb_pixels(pixel_data: &[u8], skip_alpha: u8) -> Vec<(u32, u32, u32)>
 
 /// K-Means clustering on RGBA pixel data.
 #[no_mangle]
+#[cfg(feature = "color")]
 pub extern "C" fn kmeans_quantize(
     pixel_data: *const u8,
     width: i32,
@@ -921,6 +949,7 @@ pub extern "C" fn kmeans_quantize(
 
 /// Median Cut algorithm on RGBA pixel data.
 #[no_mangle]
+#[cfg(feature = "color")]
 pub extern "C" fn median_cut_quantize(
     pixel_data: *const u8,
     width: i32,
@@ -968,6 +997,7 @@ pub extern "C" fn median_cut_quantize(
     create_color_result(ptr, colors.len() as i32, 0, null_mut())
 }
 
+#[cfg(feature = "color")]
 fn median_cut_impl(
     mut pixels: Vec<(u32, u32, u32)>,
     depth: usize,
@@ -1020,6 +1050,7 @@ fn median_cut_impl(
 }
 
 #[no_mangle]
+#[cfg(feature = "color")]
 pub extern "C" fn free_color_result(result: *mut ColorResult) {
     if result.is_null() {
         return;

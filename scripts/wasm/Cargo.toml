@@ -5,6 +5,11 @@ edition = "2021"
 description = "Rust WebAssembly perceptual hash module for emoji duplicate detection"
 license = "MIT"
 
+[features]
+default = ["hash", "color"]
+hash = []
+color = []
+
 [lib]
 crate-type = ["cdylib"]
 
