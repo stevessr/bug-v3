@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'url'
+import { execFileSync } from 'node:child_process'
 
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -170,6 +171,25 @@ function createPruneKatexFallbackFontsPlugin(): Plugin {
   }
 }
 
+function readRecentGitHistory() {
+  try {
+    const cwd = fileURLToPath(new URL('.', import.meta.url))
+    return execFileSync(
+      'git',
+      ['log', '-n', '12', '--date=short', '--pretty=format:%h%x1f%cs%x1f%s'],
+      { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    )
+      .split('\n')
+      .map(line => {
+        const [hash, date, subject] = line.split('\u001f')
+        return hash && date && subject ? { hash, date, subject } : null
+      })
+      .filter((entry): entry is { hash: string; date: string; subject: string } => entry !== null)
+  } catch {
+    return []
+  }
+}
+
 // 拦截 @jsquash/avif 的多线程编码器入口（avif_enc_mt.js 及其 worker），
 // 替换为一个最小 stub 模块。原始文件包含 `new Worker(new URL('./avif_enc_mt.worker.mjs', import.meta.url))`
 // 与 `new URL('avif_enc_mt.wasm', import.meta.url)`，Vite 一旦扫描这两条
@@ -303,7 +323,8 @@ export default defineConfig(({ mode }) => {
       // 编译期标志定义
       __ENABLE_LOGGING__: enableLogging,
       __ENABLE_FORUM_BROWSER__: enableForumBrowser,
-      __ENABLE_LOCAL_MCP_BRIDGE__: enableLocalMcpBridge
+      __ENABLE_LOCAL_MCP_BRIDGE__: enableLocalMcpBridge,
+      __APP_GIT_HISTORY__: JSON.stringify(readRecentGitHistory())
     },
     plugins: [
       createAntDesignVueOnDemandPlugin(),

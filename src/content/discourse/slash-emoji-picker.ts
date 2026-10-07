@@ -36,10 +36,12 @@ export function initSlashEmojiPicker(): () => void {
 #${ID} img,#${ID} canvas{object-fit:contain;max-width:100%;max-height:56px}
 #${ID} .slash-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 #${ID} .slash-hint{font-size:11px;opacity:.7;margin-top:6px}
-#${ID} .slash-preview{display:flex;align-items:center;gap:8px;height:64px;margin-top:6px;overflow:hidden}
-#${ID} .slash-preview img{width:64px;height:64px}
+#${ID}-hover-preview{position:fixed;z-index:2147483647;width:200px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-sizing:border-box;background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 24px #0005;pointer-events:none;font:13px/1.4 system-ui;text-align:center}
+#${ID}-hover-preview[hidden]{display:none}
+#${ID}-hover-preview img,#${ID}-hover-preview canvas{display:block;width:176px;height:176px;max-width:100%;object-fit:contain;border-radius:6px}
+#${ID}-hover-preview span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:520px){#${ID} .slash-content{grid-template-columns:minmax(110px,.6fr) minmax(0,1.4fr);gap:6px}#${ID} .slash-group{gap:4px;padding:6px}}
-@media(prefers-color-scheme:dark){#${ID}{background:var(--secondary,#202124);color:var(--primary,#eee);border-color:var(--primary-low,#555)}}`
+@media(prefers-color-scheme:dark){#${ID},#${ID}-hover-preview{background:var(--secondary,#202124);color:var(--primary,#eee);border-color:var(--primary-low,#555)}}`
   document.head.append(styles)
   let editor: Editor | null = null
   let start = 0
@@ -53,6 +55,7 @@ export function initSlashEmojiPicker(): () => void {
   let emojiItems: Emoji[] = []
   let activePane: 'groups' | 'emojis' = 'groups'
   let box: HTMLDivElement | null = null
+  let hoverPreview: HTMLDivElement | null = null
   let observer: ReturnType<typeof createPickerImageObserver> | null = null
   let composing = false
   let inputAtOpen = ''
@@ -65,6 +68,8 @@ export function initSlashEmojiPicker(): () => void {
     observer = null
     box?.remove()
     box = null
+    hoverPreview?.remove()
+    hoverPreview = null
     if (editor) {
       if (previousControls === null) editor.removeAttribute('aria-controls')
       else editor.setAttribute('aria-controls', previousControls)
@@ -99,13 +104,92 @@ export function initSlashEmojiPicker(): () => void {
       node: range.startContainer as Text
     }
   }
+  const caretRect = (target: Editor): DOMRect | null => {
+    if (!(target instanceof HTMLTextAreaElement)) {
+      const selection = window.getSelection()
+      if (!selection?.isCollapsed || !selection.rangeCount) return null
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      return rect.width || rect.height ? rect : null
+    }
+
+    const selectionStart = target.selectionStart
+    const targetRect = target.getBoundingClientRect()
+    const computed = getComputedStyle(target)
+    const mirror = document.createElement('div')
+    const copiedStyles = [
+      'boxSizing',
+      'fontFamily',
+      'fontSize',
+      'fontWeight',
+      'fontStyle',
+      'fontVariant',
+      'letterSpacing',
+      'lineHeight',
+      'textAlign',
+      'textIndent',
+      'textTransform',
+      'wordSpacing',
+      'paddingTop',
+      'paddingRight',
+      'paddingBottom',
+      'paddingLeft',
+      'borderTopWidth',
+      'borderRightWidth',
+      'borderBottomWidth',
+      'borderLeftWidth'
+    ] as const
+    for (const property of copiedStyles) mirror.style[property] = computed[property]
+    Object.assign(mirror.style, {
+      position: 'fixed',
+      visibility: 'hidden',
+      pointerEvents: 'none',
+      left: `${targetRect.left}px`,
+      top: `${targetRect.top}px`,
+      width: `${targetRect.width}px`,
+      height: 'auto',
+      minHeight: `${targetRect.height}px`,
+      overflow: 'hidden',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word'
+    })
+    mirror.scrollTop = target.scrollTop
+    mirror.scrollLeft = target.scrollLeft
+    mirror.append(document.createTextNode(target.value.slice(0, selectionStart)))
+    const marker = document.createElement('span')
+    marker.textContent = '\u200b'
+    mirror.append(marker)
+    document.body.append(mirror)
+    const rect = marker.getBoundingClientRect()
+    mirror.remove()
+    return new DOMRect(rect.left, rect.top, 1, rect.height || parseFloat(computed.lineHeight) || 16)
+  }
   const position = () => {
     if (!box || !editor) return
-    const rect = editor.getBoundingClientRect()
+    const anchor = caretRect(editor) || editor.getBoundingClientRect()
     const width = box.getBoundingClientRect().width
     const height = box.getBoundingClientRect().height
-    box.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`
-    box.style.top = `${Math.max(8, rect.top >= height + 8 ? rect.top - height - 6 : Math.min(rect.bottom + 6, window.innerHeight - height - 8))}px`
+    const left = anchor.left + width <= window.innerWidth - 8 ? anchor.left : anchor.right - width
+    const below = anchor.bottom + height + 6 <= window.innerHeight - 8
+    box.style.left = `${Math.max(8, Math.min(left, window.innerWidth - width - 8))}px`
+    box.style.top = `${Math.max(8, below ? anchor.bottom + 6 : anchor.top - height - 6)}px`
+    positionHoverPreview()
+  }
+  const positionHoverPreview = () => {
+    if (!hoverPreview || hoverPreview.hidden || !box) return
+    const active = box.querySelector<HTMLButtonElement>(
+      `[data-pane="emojis"] [role="option"][aria-selected="true"]`
+    )
+    if (!active) return
+    const activeRect = active.getBoundingClientRect()
+    const previewRect = hoverPreview.getBoundingClientRect()
+    const gap = 8
+    let left = activeRect.right + gap
+    if (left + previewRect.width > window.innerWidth - 8)
+      left = activeRect.left - previewRect.width - gap
+    const top = Math.max(8, Math.min(activeRect.top, window.innerHeight - previewRect.height - 8))
+    hoverPreview.style.left = `${Math.max(8, left)}px`
+    hoverPreview.style.top = `${top}px`
   }
   const highlight = () => {
     if (!box || !editor) return
@@ -120,17 +204,23 @@ export function initSlashEmojiPicker(): () => void {
       editor.setAttribute('aria-activedescendant', active.id)
       active.scrollIntoView({ block: 'nearest' })
     } else editor.removeAttribute('aria-activedescendant')
-    const preview = box.querySelector('.slash-preview')
-    if (!preview) return
-    preview.replaceChildren()
-    if (activePane === 'emojis' && selectedGroup && emojiItems[index]) {
-      const emoji = emojiItems[index]
+    if (!hoverPreview) {
+      hoverPreview = document.createElement('div')
+      hoverPreview.id = `${ID}-hover-preview`
+      hoverPreview.setAttribute('aria-hidden', 'true')
+      document.body.append(hoverPreview)
+    }
+    const emoji = activePane === 'emojis' ? emojiItems[index] : null
+    hoverPreview.hidden = !emoji
+    hoverPreview.replaceChildren()
+    if (emoji) {
       const image = document.createElement('img')
       image.src = getEmojiPickerPreviewUrl(emoji)
-      image.alt = emoji.name
+      image.alt = ''
       const label = document.createElement('span')
       label.textContent = emoji.name
-      preview.append(image, label)
+      hoverPreview.append(image, label)
+      positionHoverPreview()
     }
   }
   const choose = () => {
@@ -382,13 +472,10 @@ export function initSlashEmojiPicker(): () => void {
       emojisList.textContent = selectedGroup ? '分组内没有匹配表情' : '选择一个分组'
     content.append(groupsList, emojisList)
     box.setAttribute('aria-controls', `${ID}-groups ${ID}-emojis`)
-    const preview = document.createElement('div')
-    preview.className = 'slash-preview'
-    preview.hidden = activePane !== 'emojis'
     const hint = document.createElement('div')
     hint.className = 'slash-hint'
     hint.textContent = '悬停/选择分组查看子菜单 · ↑↓ 切换 · → 展开 · ← 返回 · Enter 插入 · Esc 取消'
-    box.append(header, content, preview, hint)
+    box.append(header, content, hint)
     highlight()
     position()
   }

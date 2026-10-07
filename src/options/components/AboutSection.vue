@@ -4,81 +4,21 @@ import TypeIt from 'typeit'
 
 // 从 package.json 读取版本信息（相对路径从当前文件到项目根）
 import pkg from '../../../package.json'
-const changelogMarkdown = `
-## [1.2.9-patch-4] - 2026-10-07
-### 更新
-- 新增可搜索的分组快捷表情选择与常用表情引用统计
-- 增加后台 Discourse 原生上传器选项与 429 自动等待重试
-- 优化分组、Telegram 导入和浏览器侧栏的显示与主题适配
-`
-
-const version = pkg?.version || 'dev'
+const version = computed(() => {
+  try {
+    return chrome.runtime.getManifest().version || pkg?.version || 'dev'
+  } catch {
+    return pkg?.version || 'dev'
+  }
+})
 const extensionName = pkg?.name || 'Emoji Extension'
 
-type ChangelogEntry = {
-  version: string
+type CommitEntry = {
+  hash: string
   date: string
-  notes: string[]
+  subject: string
 }
-
-const CHANGELOG_HEADING_RE = /^##\s+\[?([^\]\s]+)\]?\s*-\s*(.+)$/
-const CHANGELOG_SECTION_RE = /^###\s+(.+)$/
-const CHANGELOG_NOTE_RE = /^[-*]\s+(.+)$/
-
-function parseChangelog(markdown: string, maxEntries = 8): ChangelogEntry[] {
-  const entries: ChangelogEntry[] = []
-  let current: ChangelogEntry | null = null
-  let currentSection = ''
-
-  const flushCurrent = () => {
-    if (current && current.notes.length > 0) {
-      entries.push(current)
-    }
-  }
-
-  for (const rawLine of markdown.split(/\r?\n/)) {
-    const line = rawLine.trim()
-    if (!line) {
-      continue
-    }
-
-    const headingMatch = line.match(CHANGELOG_HEADING_RE)
-    if (headingMatch) {
-      flushCurrent()
-      const [, entryVersion, entryDate] = headingMatch
-      current = {
-        version: entryVersion.trim(),
-        date: entryDate.trim(),
-        notes: []
-      }
-      currentSection = ''
-      continue
-    }
-
-    if (!current) {
-      continue
-    }
-
-    const sectionMatch = line.match(CHANGELOG_SECTION_RE)
-    if (sectionMatch) {
-      currentSection = sectionMatch[1].trim()
-      continue
-    }
-
-    const noteMatch = line.match(CHANGELOG_NOTE_RE)
-    if (noteMatch) {
-      const noteText = noteMatch[1].trim()
-      if (!noteText) {
-        continue
-      }
-      current.notes.push(currentSection ? `${currentSection}: ${noteText}` : noteText)
-    }
-  }
-
-  flushCurrent()
-
-  return entries.slice(0, maxEntries)
-}
+const recentCommits: CommitEntry[] = __APP_GIT_HISTORY__
 
 // 功能统计
 const stats = ref([
@@ -115,20 +55,6 @@ const features = ref([
   }
 ])
 
-// 更新日志（从仓库 CHANGELOG.md 自动解析）
-const parsedChangelog = parseChangelog(changelogMarkdown)
-const changelog = ref<ChangelogEntry[]>(
-  parsedChangelog.length > 0
-    ? parsedChangelog
-    : [
-        {
-          version,
-          date: new Date().toISOString().slice(0, 10),
-          notes: ['暂无可解析的更新日志，请查看仓库根目录 CHANGELOG.md。']
-        }
-      ]
-)
-
 const supportedSites = ref([
   'Discord',
   'Reddit',
@@ -164,65 +90,6 @@ onBeforeUnmount(() => {
     typeItInstance.destroy()
     typeItInstance = null
   }
-  // 清理 changelog 的 TypeIt 实例
-  changelogTypeIts.value.forEach(inst => {
-    if (inst && typeof inst.destroy === 'function') {
-      inst.destroy()
-    }
-  })
-  changelogTypeIts.value = []
-  // 清理排队的定时器
-  if (changelogTimers && changelogTimers.length) {
-    changelogTimers.forEach(t => clearTimeout(t))
-    changelogTimers = []
-  }
-})
-
-// changelog entries typing
-const changelogEls = ref<Array<HTMLElement | null>>([])
-
-function setChangelogEl(el: any, idx: number) {
-  // 模板 ref 回调可能传入 Element 或组件实例，使用 any 并断言为 HTMLElement 或 null
-  changelogEls.value[idx] = (el as HTMLElement) || null
-}
-
-const changelogTypeIts = ref<Array<any>>([])
-let changelogTimers: Array<ReturnType<typeof setTimeout>> = []
-
-// 从旧到新排序的日志，用于渲染和顺序打字
-const sortedChangelog = computed(() => {
-  return [...changelog.value].slice().reverse()
-})
-
-onMounted(() => {
-  // 顺序初始化每条 changelog 的 TypeIt（串行启动，基于字符数计算延迟）
-  const baseDelay = 600 // 等待主描述先开始
-  const charSpeed = 20 // ms per char (和 TypeIt 配置保持一致)
-  let acc = baseDelay
-
-  sortedChangelog.value.forEach((entry, i) => {
-    const notesText = entry.notes.join('\n  •  ')
-    const estDuration = Math.max(200, notesText.length * charSpeed)
-
-    const t = setTimeout(() => {
-      const targetEl = changelogEls.value[i]
-      if (targetEl) {
-        const inst = new TypeIt(targetEl, {
-          lifeLike: true,
-          speed: charSpeed,
-          cursor: true,
-          waitUntilVisible: true,
-          breakLines: false
-        })
-          .type(notesText)
-          .go()
-        changelogTypeIts.value[i] = inst
-      }
-    }, acc)
-
-    changelogTimers.push(t)
-    acc += estDuration + 200 // 每条之间加点间隔
-  })
 })
 </script>
 
@@ -327,33 +194,35 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 更新日志 -->
+    <!-- 动态 Git 提交历史 -->
     <div class="bg-white rounded-lg shadow-sm border dark:border-gray-700 dark:bg-gray-800">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📝 更新日志</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📝 最近更新</h3>
       </div>
-      <div class="p-6 space-y-4">
+      <div v-if="recentCommits.length" class="divide-y divide-gray-200 dark:divide-gray-700">
         <div
-          v-for="(entry, idx) in sortedChangelog"
-          :key="entry.version"
-          class="border-l-4 border-blue-500 pl-4"
+          v-for="entry in recentCommits"
+          :key="entry.hash"
+          class="flex items-start gap-3 px-6 py-3"
         >
-          <div class="flex items-center gap-2 mb-1">
-            <span class="font-medium text-gray-900 dark:text-white">v{{ entry.version }}</span>
-            <span class="text-xs text-gray-500 dark:text-gray-400">{{ entry.date }}</span>
-            <span
-              v-if="entry.version === version"
-              class="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded"
-            >
-              当前版本
-            </span>
-          </div>
-          <div class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-            <!-- TypeIt will render the notes text into this span -->
-            <span class="block" :ref="el => setChangelogEl(el, idx)"></span>
+          <a
+            class="shrink-0 rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            :href="`https://github.com/stevessr/bug-v3/commit/${entry.hash}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            :aria-label="`查看提交 ${entry.hash}`"
+          >
+            {{ entry.hash }}
+          </a>
+          <div class="min-w-0 flex-1">
+            <div class="text-sm text-gray-900 dark:text-white">{{ entry.subject }}</div>
+            <time class="text-xs text-gray-500 dark:text-gray-400" :datetime="entry.date">
+              {{ entry.date }}
+            </time>
           </div>
         </div>
       </div>
+      <p v-else class="p-6 text-sm text-gray-500 dark:text-gray-400">暂无 Git 提交历史</p>
     </div>
   </div>
 </template>

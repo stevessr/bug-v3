@@ -116,6 +116,19 @@ test('keyboard chooses group then emoji and inserts only in the active forum edi
   await expect(page.locator(`${picker} .slash-groups [role=option]`)).toHaveCount(2)
   await expect(page.locator(`${picker} .slash-emojis [role=option]`)).toHaveCount(2)
   await expect(page.locator(picker)).toHaveCSS('width', '820px')
+  const anchorLayout = await page.evaluate(() => {
+    const editor = document.querySelector('.chat-composer__input')!.getBoundingClientRect()
+    const menu = document.querySelector('#emoji-extension-slash-picker')!.getBoundingClientRect()
+    return {
+      editorLeft: editor.left,
+      editorBottom: editor.bottom,
+      menuLeft: menu.left,
+      menuTop: menu.top
+    }
+  })
+  expect(anchorLayout.menuLeft).toBeGreaterThan(anchorLayout.editorLeft)
+  expect(anchorLayout.menuLeft).toBeLessThan(anchorLayout.editorLeft + 120)
+  expect(anchorLayout.menuTop).toBeLessThan(anchorLayout.editorBottom + 20)
   await editor.press('ArrowDown')
   await editor.press('Enter')
   await expect(page.locator(`${picker} .slash-emojis`)).toHaveAttribute('aria-label', '狗狗 表情')
@@ -123,6 +136,8 @@ test('keyboard chooses group then emoji and inserts only in the active forum edi
     'aria-label',
     '旺旺'
   )
+  await expect(page.locator(`${picker} #emoji-extension-slash-picker-hover-preview`)).toHaveCount(0)
+  await expect(page.locator('#emoji-extension-slash-picker-hover-preview')).toBeVisible()
   await editor.press('Enter')
   await expect(editor).toHaveValue('hello ![旺旺|500x500,50%](upload://dog.webp) ')
   await expect(page.locator('textarea.d-editor-input')).toHaveValue('')
