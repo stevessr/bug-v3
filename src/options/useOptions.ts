@@ -280,6 +280,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableSubmenuInjector: value })
   }
 
+  const updateUseBackgroundNativeUpload = (value: boolean) => {
+    emojiStore.updateSettings({ useBackgroundNativeUpload: value })
+  }
+
   const updateUseDiscourseNativeUpload = (value: boolean) => {
     emojiStore.updateSettings({ useDiscourseNativeUpload: value })
   }
@@ -871,6 +875,7 @@ export default function useOptions() {
     updateEnableSlashEmojiPicker,
     updateEnableSubmenuInjector,
     updateUseDiscourseNativeUpload,
+    updateUseBackgroundNativeUpload,
     updateEnableDiscourseRouterRefresh,
     updateDiscourseRouterRefreshInterval,
     updateForumUploadConcurrency,

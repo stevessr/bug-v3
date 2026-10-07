@@ -66,6 +66,7 @@ const {
   updateEnableSlashEmojiPicker,
   updateEnableSubmenuInjector,
   updateUseDiscourseNativeUpload,
+  updateUseBackgroundNativeUpload,
   updateEnableDiscourseRouterRefresh,
   updateDiscourseRouterRefreshInterval,
   updateForumUploadConcurrency,
@@ -178,6 +179,7 @@ onMounted(async () => {
               @update:enableSlashEmojiPicker="updateEnableSlashEmojiPicker"
               @update:enableSubmenuInjector="updateEnableSubmenuInjector"
               @update:useDiscourseNativeUpload="updateUseDiscourseNativeUpload"
+              @update:useBackgroundNativeUpload="updateUseBackgroundNativeUpload"
               @update:forumUploadConcurrency="updateForumUploadConcurrency"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"

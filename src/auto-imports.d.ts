@@ -241,6 +241,7 @@ declare global {
   const unref: typeof import('vue').unref
   const uploadAndAddEmoji: typeof import('./utils/uploadServices').uploadAndAddEmoji
   const uploadLinuxDoMultipart: typeof import('./utils/discourseUpload').uploadLinuxDoMultipart
+  const uploadNativeViaTab: typeof import('./utils/nativeBackgroundUpload').uploadNativeViaTab
   const uploadServices: typeof import('./utils/uploadServices').uploadServices
   const uploadViaDiscourseAppEvents: typeof import('./utils/uploadServices').uploadViaDiscourseAppEvents
   const useAbortController: typeof import('./composables/useEventListener').useAbortController
@@ -581,6 +582,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly uploadAndAddEmoji: UnwrapRef<typeof import('./utils/uploadServices')['uploadAndAddEmoji']>
     readonly uploadLinuxDoMultipart: UnwrapRef<typeof import('./utils/discourseUpload')['uploadLinuxDoMultipart']>
+    readonly uploadNativeViaTab: UnwrapRef<typeof import('./utils/nativeBackgroundUpload')['uploadNativeViaTab']>
     readonly uploadServices: UnwrapRef<typeof import('./utils/uploadServices')['uploadServices']>
     readonly uploadViaDiscourseAppEvents: UnwrapRef<typeof import('./utils/uploadServices')['uploadViaDiscourseAppEvents']>
     readonly useAbortController: UnwrapRef<typeof import('./composables/useEventListener')['useAbortController']>

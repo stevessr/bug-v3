@@ -19,6 +19,7 @@ const emit = defineEmits([
   'update:enableSlashEmojiPicker',
   'update:cloudMarketDomain',
   'update:useDiscourseNativeUpload',
+  'update:useBackgroundNativeUpload',
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
   'update:forumUploadConcurrency',
@@ -348,6 +349,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
         @update:model-value="handleSettingUpdate('useDiscourseNativeUpload', $event)"
         label="使用 Discourse 原生上传器"
         description="用于注入的帖子批量上传。关闭后跳过 Discourse 原生上传函数，直接使用扩展内建 API；聊天附件仍保留原生流程"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('useBackgroundNativeUpload', false)"
+        @update:model-value="handleSettingUpdate('useBackgroundNativeUpload', $event)"
+        label="后台使用原生上传器"
+        description="默认关闭。开启后，Telegram 导入、缓冲区等后台 Discourse 上传交给目标论坛页面的原生上传器；需打开并登录该论坛，保持帖子编辑器开启。不可用时提示错误，不自动回退内建 API；不影响 imgbed。"
       />
 
       <!-- 论坛上传并发数配置 -->

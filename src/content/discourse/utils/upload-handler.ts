@@ -1,5 +1,7 @@
+import { pageUploadHandler } from '../../messageHandlers/pageUploadHandler'
 import { DQS } from '../../utils/dom/createEl'
 
+import { getSettings } from '@/utils/simpleStorage'
 import { isLinuxDoDiscourseBase, uploadLinuxDoMultipart } from '@/utils/discourseUpload'
 
 let discourseUploadHandlerInitialized = false
@@ -44,6 +46,34 @@ export function setupDiscourseUploadHandler() {
         const file = new File([blob], filename, { type: mimeType })
 
         const base = message.discourseBase || window.location.origin
+
+        if ((await getSettings())?.useBackgroundNativeUpload === true) {
+          pageUploadHandler(
+            {
+              type: 'PAGE_UPLOAD',
+              options: {
+                url: base,
+                nativeUpload: true,
+                fileData: Array.from(new Uint8Array(arrayBuffer)),
+                fileName: filename,
+                mimeType
+              }
+            },
+            _sender,
+            response => {
+              const payload = response.data as any
+              sendUploadResult({
+                type: 'UPLOAD_RESULT',
+                success: response.success && payload?.ok === true,
+                requestId,
+                data: payload?.data,
+                details: payload?.data,
+                error: response.error || (payload?.ok ? undefined : payload?.data?.message)
+              })
+            }
+          )
+          return
+        }
 
         // CSRF token
         const meta = DQS('meta[name="csrf-token"]') as HTMLMetaElement | null

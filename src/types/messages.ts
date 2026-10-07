@@ -122,6 +122,7 @@ export interface LinuxDoPageFetchMessage extends BaseMessage {
 export interface LinuxDoUploadMessage extends BaseMessage {
   type: 'LINUX_DO_UPLOAD'
   options: {
+    nativeUpload?: boolean
     url: string
     fileData: number[]
     fileName: string

@@ -1,3 +1,5 @@
+import { getSettings } from '@/utils/simpleStorage'
+import { DiscourseUploadService } from '@/utils/uploadServices'
 import {
   isLinuxDoDiscourseBase,
   normalizeDiscourseUploadUrl,
@@ -34,6 +36,12 @@ export async function downloadAndUploadDirect(
   if (!resp.ok) throw new Error(`failed to download image: ${resp.status}`)
   const arrayBuffer = await resp.arrayBuffer()
   const blob = new Blob([new Uint8Array(arrayBuffer)], { type: mimeType || 'image/png' })
+
+  if ((await getSettings())?.useBackgroundNativeUpload === true) {
+    return new DiscourseUploadService(discourseBase).uploadFileDetailed(
+      new File([blob], filename, { type: blob.type })
+    )
+  }
 
   if (isLinuxDoDiscourseBase(discourseBase)) {
     return await uploadLinuxDoMultipart({

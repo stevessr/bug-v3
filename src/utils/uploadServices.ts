@@ -1,3 +1,4 @@
+import { uploadNativeViaTab } from '@/utils/nativeBackgroundUpload'
 import { normalizeDiscourseUploadOrigin } from '@/utils/discourseInstance'
 import {
   DEFAULT_UPLOAD_RETRY_MS,
@@ -452,6 +453,12 @@ export class DiscourseUploadService implements UploadService {
         return await uploadViaDiscourseAppEvents(file, onProgress)
       }
 
+      const hasSettingsStorage =
+        typeof localStorage !== 'undefined' || !!globalThis.chrome?.storage?.local
+      if (hasSettingsStorage && (await getSettings())?.useBackgroundNativeUpload === true) {
+        return await this.uploadViaLinuxDoProxyDetailed(file, onProgress, true)
+      }
+
       if (this.shouldUseLinuxDoPageProxy()) {
         return await this.uploadViaLinuxDoProxyDetailed(file, onProgress)
       }
@@ -562,10 +569,11 @@ export class DiscourseUploadService implements UploadService {
 
   private async uploadViaLinuxDoProxyDetailed(
     file: File,
-    onProgress?: (percent: number) => void
+    onProgress?: (percent: number) => void,
+    nativeUpload = false
   ): Promise<UploadServiceResult> {
     const chromeAPI = (globalThis as any).chrome
-    if (!chromeAPI?.runtime?.sendMessage) {
+    if (!nativeUpload && !chromeAPI?.runtime?.sendMessage) {
       throw new Error('Page proxy unavailable: chrome.runtime is not accessible')
     }
 
@@ -575,27 +583,34 @@ export class DiscourseUploadService implements UploadService {
     onProgress?.(20)
 
     const uploadUrl = `${this.origin}/uploads.json${this.clientId ? `?client_id=${encodeURIComponent(this.clientId)}` : ''}`
-    const response = await new Promise<any>((resolve, reject) => {
-      chromeAPI.runtime.sendMessage(
-        {
-          type: 'LINUX_DO_UPLOAD',
-          options: {
-            url: uploadUrl,
-            fileData: Array.from(new Uint8Array(arrayBuffer)),
-            fileName: file.name,
-            mimeType: file.type,
-            sha1
-          }
-        },
-        (resp: any) => {
-          if (resp?.success) {
-            resolve(resp)
-            return
-          }
-          reject(new Error(resp?.error || 'Page upload failed'))
-        }
-      )
-    })
+    const response = nativeUpload
+      ? await uploadNativeViaTab(this.origin, {
+          url: uploadUrl,
+          fileData: Array.from(new Uint8Array(arrayBuffer)),
+          fileName: file.name,
+          mimeType: file.type
+        })
+      : await new Promise<any>((resolve, reject) => {
+          chromeAPI.runtime.sendMessage(
+            {
+              type: 'LINUX_DO_UPLOAD',
+              options: {
+                url: uploadUrl,
+                fileData: Array.from(new Uint8Array(arrayBuffer)),
+                fileName: file.name,
+                mimeType: file.type,
+                sha1
+              }
+            },
+            (resp: any) => {
+              if (resp?.success) {
+                resolve(resp)
+                return
+              }
+              reject(new Error(resp?.error || 'Page upload failed'))
+            }
+          )
+        })
 
     const proxyPayload = (response as any)?.data?.data ?? (response as any)?.data
     const proxyOk = (response as any)?.data?.ok ?? (response as any)?.ok
@@ -609,7 +624,10 @@ export class DiscourseUploadService implements UploadService {
 
     const errorData = proxyPayload
     const proxyHeaders = (response as any)?.data?.headers ?? (response as any)?.headers ?? {}
-    if (isUploadChallenge(proxyStatus, errorData, proxyHeaders['cf-mitigated'])) {
+    if (
+      this.domain === 'linux.do' &&
+      isUploadChallenge(proxyStatus, errorData, proxyHeaders['cf-mitigated'])
+    ) {
       throw createLinuxDoChallengeError(errorData, proxyStatus)
     }
     if (proxyStatus === 429) {

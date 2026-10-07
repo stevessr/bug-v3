@@ -34,6 +34,7 @@ const DISCOURSE_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
   'enableDiscourseRouterRefresh',
   'discourseRouterRefreshInterval',
   'useDiscourseNativeUpload',
+  'useBackgroundNativeUpload',
   'forumUploadConcurrency',
   'enableLinuxDoCredit',
   'enableLinuxDoLikeCounter',

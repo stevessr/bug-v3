@@ -60,6 +60,7 @@ export const defaultSettings: AppSettings = {
   // Discourse 路由刷新功能
   enableDiscourseRouterRefresh: false, // 默认禁用周期性路由刷新
   discourseRouterRefreshInterval: 30000, // 默认 30 秒刷新一次
+  useBackgroundNativeUpload: false,
   useDiscourseNativeUpload: true, // 默认保持 Discourse 原生上传路由，可关闭后改走内建 API
   forumUploadConcurrency: 3, // 默认论坛上传并发数（1-20）
   // LinuxDo Credit 积分显示
