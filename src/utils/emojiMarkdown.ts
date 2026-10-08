@@ -1,8 +1,10 @@
 import { getForumFromUrl } from './cdnMapping'
+import { extractDiscourseUploadMetadata } from './discourseUpload'
 
 export interface EmojiMarkdownSource {
   url?: string | null
   short_url?: string | null
+  short_path?: string | null
 }
 
 /**
@@ -20,27 +22,27 @@ export function getPreferredEmojiMarkdownUrl(
   return url
 }
 
+export function getEmojiShortUrl(source: EmojiMarkdownSource | null | undefined): string | null {
+  const explicit = typeof source?.short_url === 'string' ? source.short_url.trim() : ''
+  return explicit || extractDiscourseUploadMetadata(source?.short_path).short_url || null
+}
+
 /**
  * Determine whether short_url is safe to use given the current page hostname.
  *
- * If the emoji's CDN domain maps to a known forum, short_url only resolves on
- * that forum. Cross-forum insertion (e.g. pasting a Linux.do emoji on another
- * Discourse instance) must use the direct URL instead — otherwise the target
- * forum's /uploads/lookup-urls endpoint will return [] and the image won't show.
+ * `short_url` is local to its source forum. Only insert it when the source and
+ * current page resolve to the same forum host; another forum must use the
+ * direct URL or its /uploads/lookup-urls endpoint cannot resolve the upload.
  */
 export function shouldUseShortUrl(emoji: EmojiMarkdownSource, currentHostname: string): boolean {
-  if (!emoji.short_url) return false
+  const shortUrl = emoji.short_url || extractDiscourseUploadMetadata(emoji.short_path).short_url
+  if (!shortUrl) return false
   const url = emoji.url
   if (!url) return false
 
   const sourceForum = getForumFromUrl(url)
-  if (!sourceForum) {
-    // CDN domain not in our map — can't judge, allow short_url (preserves existing behavior)
-    return true
-  }
-
   const currentForum = getForumFromUrl(`https://${currentHostname}`)
-  return currentForum === sourceForum
+  return Boolean(sourceForum && currentForum && currentForum === sourceForum)
 }
 
 export function buildMarkdownImage(

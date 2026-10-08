@@ -5,17 +5,21 @@ import { DQS } from '../../utils/dom/createEl'
 
 import { uploadThroughDiscourseRoute } from './nativeUpload'
 
-import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
+import { buildMarkdownImage, getEmojiShortUrl, shouldUseShortUrl } from '@/utils/emojiMarkdown'
 import type { Emoji } from '@/types/type'
 import { fetchTenorMediaAsBlob } from '@/utils/tenor'
 
 export type PickerContext = 'chat' | 'composer'
 
-function getSafeEmojiSource(emoji: { url?: string; short_url?: string | null }) {
+function getSafeEmojiSource(emoji: {
+  url?: string
+  short_url?: string | null
+  short_path?: string | null
+}) {
   const hostname = window.location.hostname
   return {
     url: emoji.url,
-    short_url: shouldUseShortUrl(emoji, hostname) ? emoji.short_url : null
+    short_url: shouldUseShortUrl(emoji, hostname) ? getEmojiShortUrl(emoji) : null
   }
 }
 

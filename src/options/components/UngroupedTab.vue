@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import {
+  QuestionCircleOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  UploadOutlined
+} from '@ant-design/icons-vue'
 
 import type { EmojiGroup, Emoji } from '../../types/type'
 import { useEmojiStore } from '../../stores/emojiStore'
@@ -501,7 +507,8 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
             class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
             title="添加表情到未分组"
           >
-            ➕ 添加表情
+            <PlusOutlined />
+            <span>添加表情</span>
           </a-button>
         </div>
 
@@ -514,7 +521,8 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
             class="text-sm px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
             title="上传所有未分组表情到 linux.do"
           >
-            📤 上传全部
+            <UploadOutlined />
+            <span>上传全部</span>
           </a-button>
 
           <!-- Upload selected button when in multi-select mode -->
@@ -524,7 +532,8 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
             class="text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
             title="上传选中的表情到 linux.do"
           >
-            📤 上传选中 ({{ selectedEmojis.size }})
+            <UploadOutlined />
+            <span>上传选中 ({{ selectedEmojis.size }})</span>
           </a-button>
         </div>
       </div>
@@ -574,23 +583,23 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
             </div>
 
             <!-- 非多选模式下的编辑/删除按钮 -->
-            <div v-if="!isMultiSelectMode" class="flex justify-center gap-2 mt-1.5">
+            <div v-if="!isMultiSelectMode" class="emoji-actions">
               <a-button
+                size="small"
                 @click="$emit('edit', emoji, ungroup.id, idx)"
                 title="编辑"
-                class="text-xs px-1.5 py-0.5 bg-white bg-opacity-80 dark:bg-black dark:text-white rounded"
+                class="emoji-action-button"
               >
-                编辑
+                <EditOutlined />
+                <span>编辑</span>
               </a-button>
               <a-popconfirm title="确认移除此表情？" @confirm="$emit('remove', ungroup.id, idx)">
                 <template #icon>
                   <QuestionCircleOutlined style="color: red" />
                 </template>
-                <a-button
-                  title="移除"
-                  class="text-xs px-1.5 py-0.5 bg-white bg-opacity-80 rounded hover:bg-opacity-100 dark:bg-black dark:text-white"
-                >
-                  移除
+                <a-button size="small" title="移除" danger class="emoji-action-button">
+                  <DeleteOutlined />
+                  <span>移除</span>
                 </a-button>
               </a-popconfirm>
             </div>
@@ -611,6 +620,22 @@ const handleCreateGroup = async (data: { name: string; icon: string; detail: str
 
 <style scoped>
 .emoji-item {
-  width: 80px;
+  min-width: 0;
+}
+
+.emoji-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.emoji-action-button {
+  width: 100%;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 </style>

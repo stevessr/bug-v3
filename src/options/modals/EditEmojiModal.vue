@@ -14,6 +14,7 @@ import { emojiPreviewUploader } from '../utils/emojiPreviewUploader'
 import { getEmojiImageUrlSync } from '../../utils/imageUrlHelper'
 import CachedImage from '../../components/CachedImage.vue'
 import { isLinuxDoUrl } from '../../utils/cdnMapping'
+import { extractDiscourseUploadMetadata } from '../../utils/discourseUpload'
 
 import GeminiNamingModal from './GeminiNamingModal.vue'
 
@@ -32,7 +33,6 @@ const localEmoji = ref<Partial<Emoji>>({
   name: '',
   url: '',
   short_url: '',
-  short_path: '',
   displayUrl: '',
   customOutput: '',
   tags: []
@@ -139,14 +139,12 @@ const uploadSingleEmoji = async (emoji: Partial<Emoji>) => {
         emojiStore.updateEmoji(emoji.id, {
           url: resp.url,
           displayUrl: resp.url,
-          short_url: resp.short_url || undefined,
-          short_path: resp.short_path || undefined
+          short_url: resp.short_url || undefined
         })
         // 同步更新 UI 显示的 URL
         localEmoji.value.url = resp.url
         localEmoji.value.displayUrl = resp.url
         localEmoji.value.short_url = resp.short_url || undefined
-        localEmoji.value.short_path = resp.short_path || undefined
       }
     } finally {
       // Show upload progress dialog regardless
@@ -227,7 +225,10 @@ watch(
   () => props.emoji,
   newEmoji => {
     if (newEmoji) {
-      localEmoji.value = { ...newEmoji }
+      localEmoji.value = {
+        ...newEmoji,
+        ...extractDiscourseUploadMetadata(newEmoji.short_url, newEmoji.short_path, newEmoji.url)
+      }
       selectedGroupId.value = newEmoji.groupId || props.groupId || ''
       imageLoadError.value = false // 重置图片错误状态
       isLoadingViaProxy.value = false
@@ -281,7 +282,6 @@ const handleSubmit = () => {
       name: localEmoji.value.name,
       url: localEmoji.value.url,
       short_url: localEmoji.value.short_url || undefined,
-      short_path: localEmoji.value.short_path || undefined,
       displayUrl: localEmoji.value.displayUrl || undefined,
       customOutput: localEmoji.value.customOutput || undefined,
       groupId: selectedGroupId.value,
@@ -383,6 +383,28 @@ const handleSubmit = () => {
                     title="表情输出链接"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-white">插入到编辑器时使用的链接</p>
+                </div>
+
+                <div>
+                  <label
+                    for="emoji-short-url"
+                    class="block text-sm font-medium text-gray-700 dark:text-white"
+                  >
+                    Discourse 上传短链接 (可选)
+                  </label>
+                  <input
+                    id="emoji-short-url"
+                    v-model="localEmoji.short_url"
+                    type="text"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-black dark:text-white dark:border-gray-600"
+                    placeholder="upload://image.png"
+                    autocomplete="off"
+                    @keydown.enter.prevent="handleSubmit"
+                    title="同一论坛中优先使用此原生短链接"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-white">
+                    仅在同一论坛插入时优先使用；跨论坛会回退到输出链接
+                  </p>
                 </div>
 
                 <!-- Display URL field -->

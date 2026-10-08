@@ -14,7 +14,7 @@ export const CDN_DOMAIN_MAP: Record<string, string> = {
  * or undefined if not recognized.
  */
 export function getForumForCdnDomain(domain: string): string | undefined {
-  return CDN_DOMAIN_MAP[domain]
+  return CDN_DOMAIN_MAP[domain.toLowerCase()]
 }
 
 /**
@@ -22,8 +22,16 @@ export function getForumForCdnDomain(domain: string): string | undefined {
  */
 export function getForumFromUrl(url: string): string | undefined {
   try {
-    const hostname = new URL(url).hostname
-    return getForumForCdnDomain(hostname)
+    const hostname = new URL(url).hostname.toLowerCase()
+    const cdnForum = getForumForCdnDomain(hostname)
+    if (cdnForum) return cdnForum
+
+    // A forum's own host and its CDN aliases must resolve to the same identity.
+    if (hostname === 'linux.do' || hostname.endsWith('.linux.do')) return 'linux.do'
+
+    // For other Discourse instances, only use upload:// URLs when both the
+    // source and current page use the exact same host.
+    return hostname
   } catch {
     return undefined
   }

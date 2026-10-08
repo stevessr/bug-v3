@@ -141,7 +141,7 @@ watch(
         <CachedImage
           :src="imageUrl"
           alt="Preview"
-          class="max-w-full max-h-48 rounded border border-gray-200"
+          class="gemini-image-preview rounded border border-gray-200"
         />
       </div>
 
@@ -240,3 +240,18 @@ watch(
     </div>
   </a-modal>
 </template>
+
+<style scoped>
+.gemini-image-preview {
+  max-width: 100%;
+  max-height: 12rem;
+}
+
+.gemini-image-preview :deep(.cached-image-img) {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 12rem;
+  object-fit: contain;
+}
+</style>

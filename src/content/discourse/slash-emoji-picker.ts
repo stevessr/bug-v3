@@ -10,7 +10,7 @@ import {
 
 import { isImageUrl, normalizeImageUrl } from '@/utils/isImageUrl'
 import type { Emoji, EmojiGroup } from '@/types/type'
-import { buildMarkdownImage, shouldUseShortUrl } from '@/utils/emojiMarkdown'
+import { buildMarkdownImage, getEmojiShortUrl, shouldUseShortUrl } from '@/utils/emojiMarkdown'
 
 type Editor = HTMLTextAreaElement | HTMLElement
 const SELECTOR =
@@ -256,7 +256,9 @@ export function initSlashEmojiPicker(): () => void {
       ? emoji.customOutput
       : buildMarkdownImage(`${emoji.name}|${emoji.width || 500}x${emoji.height || 500},${scale}%`, {
           url: emoji.url,
-          short_url: shouldUseShortUrl(emoji, window.location.hostname) ? emoji.short_url : null
+          short_url: shouldUseShortUrl(emoji, window.location.hostname)
+            ? getEmojiShortUrl(emoji)
+            : null
         }) + ' '
     const target = editor
     const savedStart = start

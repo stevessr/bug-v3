@@ -1011,8 +1011,7 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
     const emojiWithUploadMetadata: Emoji = {
       ...payload.emoji,
       ...uploadMetadata,
-      short_url: uploadMetadata.short_url,
-      short_path: uploadMetadata.short_path
+      short_url: uploadMetadata.short_url
     }
 
     // Deduplication check: Skip if we recently processed this emoji
@@ -1073,13 +1072,6 @@ export const useEmojiStore = defineStore('emojiExtension', () => {
       ) {
         metadataUpdates.short_url = emojiWithUploadMetadata.short_url
       }
-      if (
-        emojiWithUploadMetadata.short_path &&
-        emojiWithUploadMetadata.short_path !== existingEmoji.short_path
-      ) {
-        metadataUpdates.short_path = emojiWithUploadMetadata.short_path
-      }
-
       if (Object.keys(metadataUpdates).length > 0) {
         const updatedGroup: EmojiGroup = {
           ...targetGroup,

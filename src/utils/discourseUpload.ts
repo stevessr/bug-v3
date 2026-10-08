@@ -257,7 +257,6 @@ export function isLinuxDoDiscourseBase(baseUrl: string): boolean {
 
 export interface DiscourseUploadMetadata {
   short_url?: string
-  short_path?: string
 }
 
 /**
@@ -276,6 +275,19 @@ export function isDiscourseShortPath(value: unknown): value is string {
     return new URL(raw, getUrlBase()).pathname.startsWith('/uploads/short-url/')
   } catch {
     return false
+  }
+}
+
+function shortUrlFromPath(shortPath: string): string | undefined {
+  try {
+    const pathname = new URL(shortPath, getUrlBase()).pathname
+    const prefix = '/uploads/short-url/'
+    if (!pathname.startsWith(prefix)) return undefined
+    const key = decodeURIComponent(pathname.slice(prefix.length))
+    if (!key || key.includes('/') || key.includes('\\')) return undefined
+    return `upload://${key}`
+  } catch {
+    return undefined
   }
 }
 
@@ -300,9 +312,12 @@ export function extractDiscourseUploadMetadata(...values: unknown[]): DiscourseU
     }
   }
 
+  // Discourse's native short path and upload:// URL share the same upload key.
+  // Recover the canonical form when page markup exposes only the short path.
+  if (!short_url && short_path) short_url = shortUrlFromPath(short_path)
+
   return {
-    ...(short_url ? { short_url } : {}),
-    ...(short_path ? { short_path } : {})
+    ...(short_url ? { short_url } : {})
   }
 }
 

@@ -59,13 +59,13 @@ async function fixture(page: Page, enabled = true) {
           {
             id: 'one',
             name: '开心',
-            url: 'https://forum.example.com/a.webp',
+            url: 'http://localhost:4189/a.webp',
             short_url: 'upload://happy.webp'
           },
           {
             id: 'two',
             name: '害羞',
-            url: 'https://forum.example.com/b.webp',
+            url: 'http://localhost:4189/b.webp',
             customOutput: ':shy:'
           }
         ]
@@ -77,7 +77,7 @@ async function fixture(page: Page, enabled = true) {
           {
             id: 'three',
             name: '旺旺',
-            url: 'https://forum.example.com/c.webp',
+            url: 'http://localhost:4189/c.webp',
             short_url: 'upload://dog.webp'
           }
         ]

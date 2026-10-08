@@ -103,6 +103,7 @@ declare global {
   const getEmojiImageUrlSync: typeof import('./utils/imageUrlHelper').getEmojiImageUrlSync
   const getEmojiImageUrlWithLoading: typeof import('./utils/imageUrlHelper').getEmojiImageUrlWithLoading
   const getEmojiImageUrls: typeof import('./utils/imageUrlHelper').getEmojiImageUrls
+  const getEmojiShortUrl: typeof import('./utils/emojiMarkdown').getEmojiShortUrl
   const getFavorites: typeof import('./utils/simpleStorage').getFavorites
   const getFile: typeof import('./utils/telegramResolver').getFile
   const getForumForCdnDomain: typeof import('./utils/cdnMapping').getForumForCdnDomain
@@ -444,6 +445,7 @@ declare module 'vue' {
     readonly getEmojiImageUrlSync: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrlSync']>
     readonly getEmojiImageUrlWithLoading: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrlWithLoading']>
     readonly getEmojiImageUrls: UnwrapRef<typeof import('./utils/imageUrlHelper')['getEmojiImageUrls']>
+    readonly getEmojiShortUrl: UnwrapRef<typeof import('./utils/emojiMarkdown')['getEmojiShortUrl']>
     readonly getFavorites: UnwrapRef<typeof import('./utils/simpleStorage')['getFavorites']>
     readonly getFile: UnwrapRef<typeof import('./utils/telegramResolver')['getFile']>
     readonly getForumForCdnDomain: UnwrapRef<typeof import('./utils/cdnMapping')['getForumForCdnDomain']>

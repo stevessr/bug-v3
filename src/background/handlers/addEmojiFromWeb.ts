@@ -84,9 +84,6 @@ export async function handleAddEmojiFromWeb(emojiData: any, sendResponse: any) {
       if (inputUploadMetadata.short_url && !existingEmoji.short_url) {
         metadataUpdates.short_url = inputUploadMetadata.short_url
       }
-      if (inputUploadMetadata.short_path && !existingEmoji.short_path) {
-        metadataUpdates.short_path = inputUploadMetadata.short_path
-      }
       if (Object.keys(metadataUpdates).length > 0) {
         Object.assign(existingEmoji, metadataUpdates)
         await storage.setAllEmojiGroups(groups)
