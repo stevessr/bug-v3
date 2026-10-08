@@ -11,6 +11,33 @@ import { DOA, DQSA, createE } from '../../utils/dom/createEl'
 
 const carouselOverlayMap = new WeakMap<Element, { btn: HTMLElement; raf?: number }>()
 const processedElements = new WeakSet<Element>()
+let carouselHoverStylesInjected = false
+
+function injectCarouselHoverStyles() {
+  if (carouselHoverStylesInjected || document.getElementById('x-emoji-carousel-hover-styles'))
+    return
+  const style = createE('style', {
+    id: 'x-emoji-carousel-hover-styles',
+    text: `
+      .x-emoji-overlay-wrapper {
+        opacity: 0; visibility: hidden; transform: translateY(-3px);
+        transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
+      }
+      .x-emoji-overlay-wrapper.is-visible,
+      .x-emoji-overlay-wrapper:focus-within {
+        opacity: 1; visibility: visible; transform: translateY(0);
+      }
+      @media (hover: none) {
+        .x-emoji-overlay-wrapper { opacity: 1; visibility: visible; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .x-emoji-overlay-wrapper { transition: none; }
+      }
+    `
+  })
+  DOA(style)
+  carouselHoverStylesInjected = true
+}
 
 function markInjected(...elements: (Element | null | undefined)[]) {
   for (const el of elements) {
@@ -279,6 +306,7 @@ function createMenuBarBtn(data: AddEmojiButtonData, menuBar: Element) {
 function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   const existing = carouselOverlayMap.get(target)
   if (existing) return existing.btn
+  injectCarouselHoverStyles()
   // wrapper to hold both buttons — create with DOM API and set proper CSS so it can be positioned
   const wrapper = createE('div', {
     class: 'x-emoji-overlay-wrapper',
@@ -292,6 +320,20 @@ function createCarouselOverlayBtn(data: AddEmojiButtonData, target: Element) {
   addBtn.style.position = 'static'
   wrapper.appendChild(downloadBtn)
   wrapper.appendChild(addBtn)
+
+  let hideTimer: ReturnType<typeof setTimeout> | undefined
+  const show = () => {
+    if (hideTimer) clearTimeout(hideTimer)
+    wrapper.classList.add('is-visible')
+  }
+  const hide = () => {
+    if (hideTimer) clearTimeout(hideTimer)
+    hideTimer = setTimeout(() => wrapper.classList.remove('is-visible'), 140)
+  }
+  target.addEventListener('mouseenter', show)
+  target.addEventListener('mouseleave', hide)
+  wrapper.addEventListener('mouseenter', show)
+  wrapper.addEventListener('mouseleave', hide)
 
   DOA(wrapper)
   markInjected(target)

@@ -1,5 +1,90 @@
 import { DOA, DQSA, createE } from '../../utils/dom/createEl'
 
+const COPY_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>'
+const DOWNLOAD_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM11 2v10.17L7.41 8.59 6 10l6 6 6-6-1.41-1.41L13 12.17V2h-2z"/></svg>'
+const CHECK_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 16.17-3.88-3.88-1.41 1.42L9 19 21 7l-1.41-1.41z"/></svg>'
+const ERROR_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
+
+let videoActionStylesInjected = false
+
+function injectVideoActionStyles() {
+  if (videoActionStylesInjected || document.getElementById('x-video-action-styles')) return
+  const style = createE('style', {
+    id: 'x-video-action-styles',
+    text: `
+      .x-video-action-host { position: relative !important; }
+      .x-video-action-toolbar {
+        position: absolute; top: 8px; right: 8px; z-index: 99999;
+        display: flex; gap: 6px; opacity: 0; visibility: hidden;
+        transform: translateY(-4px); transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
+        pointer-events: none;
+      }
+      .x-video-action-host:hover > .x-video-action-toolbar,
+      .x-video-action-host:focus-within > .x-video-action-toolbar {
+        opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+      }
+      .x-video-action-button {
+        display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
+        border: 0; border-radius: 999px; color: #fff; background: rgba(15, 20, 25, .82);
+        box-shadow: 0 1px 4px rgba(0,0,0,.28); cursor: pointer; opacity: .86;
+        transition: opacity 120ms ease, background-color 120ms ease, transform 120ms ease;
+      }
+      .x-video-action-button:hover, .x-video-action-button:focus-visible {
+        opacity: 1; background: rgba(15, 20, 25, .96); transform: scale(1.06);
+      }
+      .x-video-action-button:focus-visible, .x-video-inline-action:focus-visible {
+        outline: 2px solid #1d9bf0; outline-offset: 2px;
+      }
+      .x-video-action-button svg { width: 18px; height: 18px; fill: currentColor; }
+      .x-video-action-button[data-state="success"] { color: #00ba7c; }
+      .x-video-action-button[data-state="error"] { color: #f4212e; }
+      .x-video-inline-action {
+        display: inline-grid; place-items: center; vertical-align: middle; width: 30px; height: 30px;
+        margin-left: 6px; padding: 0; border: 0; border-radius: 999px; color: #fff;
+        background: rgba(15, 20, 25, .78); cursor: pointer; opacity: 0; visibility: hidden;
+        transition: opacity 140ms ease, visibility 140ms;
+      }
+      .x-video-inline-action-host:hover > .x-video-inline-action,
+      .x-video-inline-action-host:focus-within > .x-video-inline-action { opacity: 1; visibility: visible; }
+      .x-video-inline-action svg { width: 16px; height: 16px; fill: currentColor; }
+      @media (hover: none) {
+        .x-video-action-toolbar { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+        .x-video-inline-action { opacity: 1; visibility: visible; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .x-video-action-toolbar, .x-video-action-button, .x-video-inline-action { transition: none; }
+      }
+    `
+  })
+  DOA(style)
+  videoActionStylesInjected = true
+}
+
+function setButtonState(btn: HTMLElement, state: 'success' | 'error' | '') {
+  btn.dataset.state = state
+  if (state === 'success') {
+    btn.innerHTML = CHECK_ICON
+    btn.title = '操作成功'
+    btn.setAttribute('aria-label', '操作成功')
+  } else if (state === 'error') {
+    btn.innerHTML = ERROR_ICON
+    btn.title = '操作失败'
+    btn.setAttribute('aria-label', '操作失败')
+  }
+}
+
+function resetButtonState(btn: HTMLElement, icon: string, label: string) {
+  btn.innerHTML = icon
+  btn.title = label
+  btn.setAttribute('aria-label', label)
+  delete btn.dataset.state
+  btn.removeAttribute('disabled')
+}
+
 function isXPage(): boolean {
   try {
     const host = window.location.hostname.toLowerCase()
@@ -112,37 +197,25 @@ function setupCopyClick(btn: HTMLElement, url: string) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const orig = btn.textContent || '📋'
-    const origStyle = btn.style.background
+    const icon = url.startsWith('blob:') ? DOWNLOAD_ICON : COPY_ICON
+    const label = url.startsWith('blob:') ? '下载视频' : '复制视频地址'
+    if (btn.hasAttribute('disabled')) return
+    btn.setAttribute('disabled', 'true')
     try {
       if (url.startsWith('blob:')) {
-        btn.textContent = '下载中...'
-        btn.style.background = 'linear-gradient(135deg,#3b82f6,#1d4ed8)'
+        btn.title = '下载中…'
+        btn.setAttribute('aria-label', '下载中')
         await downloadBlob(url)
-        btn.textContent = '已下载'
-        btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-        setTimeout(() => {
-          btn.textContent = orig
-          btn.style.background = origStyle
-        }, 1400)
+        setButtonState(btn, 'success')
       } else {
         await navigator.clipboard.writeText(url)
-        btn.textContent = '已复制'
-        btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-        setTimeout(() => {
-          btn.textContent = orig
-          btn.style.background = origStyle
-        }, 1400)
+        setButtonState(btn, 'success')
       }
     } catch (err) {
       console.error('[XVideoCopy] 操作失败', err)
-      btn.textContent = '失败'
-      btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      setTimeout(() => {
-        btn.textContent = orig
-        btn.style.background = origStyle
-      }, 1400)
+      setButtonState(btn, 'error')
     }
+    setTimeout(() => resetButtonState(btn, icon, label), 1400)
   })
 }
 
@@ -150,66 +223,57 @@ function setupDownloadClick(btn: HTMLElement, url: string) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
-    const orig = btn.textContent || '⬇️'
-    const origStyle = btn.style.background
+    const icon = DOWNLOAD_ICON
+    const label = '下载视频'
+    if (btn.hasAttribute('disabled')) return
+    btn.setAttribute('disabled', 'true')
     try {
-      btn.textContent = '下载中...'
-      btn.style.background = 'linear-gradient(135deg,#3b82f6,#1d4ed8)'
+      btn.title = '下载中…'
+      btn.setAttribute('aria-label', '下载中')
       await downloadBlob(url)
-      btn.textContent = '已下载'
-      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)'
-      setTimeout(() => {
-        btn.textContent = orig
-        btn.style.background = origStyle
-      }, 1400)
+      setButtonState(btn, 'success')
     } catch (err) {
       console.error('[XVideoCopy] 下载失败', err)
-      btn.textContent = '失败'
-      btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'
-      setTimeout(() => {
-        btn.textContent = orig
-        btn.style.background = origStyle
-      }, 1400)
+      setButtonState(btn, 'error')
     }
+    setTimeout(() => resetButtonState(btn, icon, label), 1400)
   })
 }
 
 function createCopyBtn(url: string) {
+  const icon = url.startsWith('blob:') ? DOWNLOAD_ICON : COPY_ICON
   const btn = createE('button', {
-    class: 'x-video-copy-btn',
+    class: 'x-video-copy-btn x-video-action-button',
     type: 'button',
     ti: '复制视频地址',
-    text: '📋',
-    style:
-      'position:absolute;right:6px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
+    attrs: { 'aria-label': '复制视频地址' },
+    in: icon
   })
   setupCopyClick(btn, url)
   return btn
 }
 
-function createDownloadBtn(url: string) {
-  if (url.startsWith('blob:')) return undefined as unknown as HTMLElement // don't show download button for blob URLs since downloading doesn't make sense
+function createDownloadBtn(url: string): HTMLElement | null {
+  if (url.startsWith('blob:')) return null // blob URLs are already available locally
   const btn = createE('button', {
-    class: 'x-video-download-btn',
+    class: 'x-video-download-btn x-video-action-button',
     type: 'button',
     ti: '下载视频',
-    text: '⬇️',
-    style:
-      'position:absolute;right:40px;top:6px;z-index:99999;cursor:pointer;border-radius:6px;padding:6px 8px;background:rgba(0,0,0,0.6);color:#fff;border:none;font-weight:700;'
+    attrs: { 'aria-label': '下载视频' },
+    in: DOWNLOAD_ICON
   })
   setupDownloadClick(btn, url)
   return btn
 }
 
-function createInlineBtn(url: string) {
-  if (url.startsWith('blob:')) return undefined as unknown as HTMLElement // don't show inline button for blob URLs since copying doesn't make sense
+function createInlineBtn(url: string): HTMLElement | null {
+  if (url.startsWith('blob:')) return null // blob URLs are already available locally
   const btn = createE('button', {
-    class: 'x-video-copy-inline-btn',
+    class: 'x-video-copy-inline-btn x-video-inline-action',
     type: 'button',
     ti: url.startsWith('blob:') ? '下载视频' : '复制视频地址',
-    text: '📋',
-    style:
-      'display:inline-block;vertical-align:middle;margin-left:8px;cursor:pointer;border-radius:6px;padding:2px 6px;background:rgba(0,0,0,0.06);color:var(--text-color,#0f1419);border:1px solid rgba(0,0,0,0.08);font-weight:600;'
+    attrs: { 'aria-label': url.startsWith('blob:') ? '下载视频' : '复制视频地址' },
+    in: COPY_ICON
   })
   setupCopyClick(btn, url)
   return btn
@@ -217,53 +281,32 @@ function createInlineBtn(url: string) {
 
 function addButtonToVideo(video: HTMLVideoElement) {
   try {
-    // If we've already attached buttons for this video, try to ensure both buttons exist.
-    try {
-      const el = video as HTMLElement & { dataset: DOMStringMap }
-      if (el.dataset && el.dataset.xVideoCopyAttached === '1') {
-        const parent = video.parentElement || video
-        try {
-          // if download button missing, add it
-          if (!(parent as Element).querySelector('.x-video-download-btn')) {
-            const url = getVideoUrl(video)
-            if (url) {
-              const container = parent as HTMLElement
-              const dbtn = createDownloadBtn(url)
-              container.appendChild(dbtn)
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-        return
-      }
-    } catch {
-      /* ignore dataset read errors */
-    }
     const parent = video.parentElement || video
-    // if parent already has copy button, assume already handled
-    if ((parent as Element).querySelector('.x-video-copy-btn')) return
     const url = getVideoUrl(video)
     if (!url) return
     const container = parent as HTMLElement
+    injectVideoActionStyles()
     const computed = window.getComputedStyle(container)
     if (computed.position === 'static' || !computed.position) container.style.position = 'relative'
-    const btn = createCopyBtn(url)
-    container.appendChild(btn)
-    // also add a download button next to the copy button
-    try {
-      const dbtn = createDownloadBtn(url)
-      container.appendChild(dbtn)
-    } catch {
-      /* ignore */
+
+    container.classList.add('x-video-action-host')
+    let toolbar = Array.from(container.children).find(child =>
+      child.classList.contains('x-video-action-toolbar')
+    ) as HTMLElement | undefined
+    if (!toolbar) {
+      toolbar = createE('div', {
+        class: 'x-video-action-toolbar',
+        attrs: { role: 'group', 'aria-label': '视频操作' }
+      })
+      container.appendChild(toolbar)
     }
-    // mark the video so subsequent scans won't add duplicate buttons
-    try {
-      const el = video as HTMLElement & { dataset: DOMStringMap }
-      if (el.dataset) el.dataset.xVideoCopyAttached = '1'
-    } catch {
-      /* ignore */
+
+    if (!toolbar.querySelector('.x-video-copy-btn')) toolbar.appendChild(createCopyBtn(url))
+    if (!toolbar.querySelector('.x-video-download-btn')) {
+      const downloadButton = createDownloadBtn(url)
+      if (downloadButton) toolbar.appendChild(downloadButton)
     }
+
     try {
       addInlineButtonsToAncestors(video, url)
     } catch {
@@ -286,12 +329,16 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
       const tweetText = node.querySelector('[data-testid="tweetText"]') as HTMLElement | null
       if (tweetText) {
         if (!tweetText.querySelector('.x-video-copy-inline-btn')) {
+          injectVideoActionStyles()
+          tweetText.parentElement?.classList.add('x-video-inline-action-host')
           const inline = createInlineBtn(url)
-          try {
-            tweetText.insertAdjacentElement('afterend', inline)
-          } catch {
-            const parent = tweetText.parentElement
-            if (parent) parent.appendChild(inline)
+          if (inline) {
+            try {
+              tweetText.insertAdjacentElement('afterend', inline)
+            } catch {
+              const parent = tweetText.parentElement
+              if (parent) parent.appendChild(inline)
+            }
           }
         }
         return
@@ -321,7 +368,10 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
         return false
       })
       if (hasTextChild) {
+        injectVideoActionStyles()
+        node.classList.add('x-video-inline-action-host')
         const inline = createInlineBtn(url)
+        if (!inline) return
         const children = Array.from(node.children)
         let inserted = false
         for (let j = 0; j < children.length; j++) {

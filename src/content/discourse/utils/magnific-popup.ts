@@ -7,11 +7,11 @@ import { extractNameFromUrl } from './picture'
 import { extractDiscourseUploadMetadata } from '@/utils/discourseUpload'
 
 function createMfpEmojiButton(data: AddEmojiButtonData): HTMLElement {
-  const button = createE('a', {
-    class: 'emoji-add-link',
-    style: `color:var(--tertiary,#2563eb);background:var(--secondary,#fff);border:1px solid var(--primary-low,#ddd);border-radius:50%;width:32px;height:32px;padding:0;margin:0 2px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1;`,
+  const button = createE('button', {
+    class: 'pswp__button emoji-add-link',
+    type: 'button',
     ti: '添加到未分组表情',
-    in: '＋'
+    in: `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 32 32" width="32" height="32"><use class="pswp__icn-shadow" href="#pswp__icn-emoji-add"></use><path id="pswp__icn-emoji-add" d="M15 6h2v9h9v2h-9v9h-2v-9H6v-2h9z"></path></svg>`
   })
   button.setAttribute('aria-label', '添加表情')
   setupButtonClickHandler(button, data)
