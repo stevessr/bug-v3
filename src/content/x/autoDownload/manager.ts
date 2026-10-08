@@ -126,15 +126,15 @@ function getToastContainer() {
     toastContainer = createE('div', {
       style: `
       position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(20px, env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column-reverse;
-      align-items: center;
+      align-items: flex-end;
       gap: 10px;
       z-index: 10000;
       pointer-events: none;
+      max-width: calc(100vw - 32px);
     `
     })
     DOA(toastContainer)
@@ -161,7 +161,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
     transform: translateY(20px);
     transition: all 0.3s ease;
     white-space: nowrap;
-    max-width: 80vw;
+    max-width: min(80vw, 360px);
     overflow: hidden;
     text-overflow: ellipsis;
   `
