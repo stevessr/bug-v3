@@ -127,7 +127,10 @@ export async function handleXVideoMedia(
     if (message.action !== 'copy' && message.action !== 'download') {
       throw new Error('不支持的视频操作')
     }
-    const index = Number.isInteger(message.index) && message.index >= 0 ? message.index : 0
+    const index =
+      typeof message.index === 'number' && Number.isInteger(message.index) && message.index >= 0
+        ? message.index
+        : 0
     if (index > 20) throw new Error('视频序号超出范围')
 
     let videos: string[] = []
