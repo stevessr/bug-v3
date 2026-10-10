@@ -169,6 +169,17 @@ export interface ProxyImageMessage extends BaseMessage {
 }
 
 /**
+ * On-demand X/Twitter video resolution and download (public tweets).
+ */
+export interface XVideoMediaMessage extends BaseMessage {
+  type: 'X_VIDEO_MEDIA'
+  tweetId: string
+  action: 'copy' | 'download'
+  index?: number
+  fallbackUrl?: string
+}
+
+/**
  * DOWNLOAD_IMAGE 消息
  */
 export interface DownloadImageMessage extends BaseMessage {
@@ -449,6 +460,7 @@ export type TypedMessage =
   | ProxyFetchMessage
   | ProxyImageMessage
   | DownloadImageMessage
+  | XVideoMediaMessage
   | CaptureScreenshotMessage
   | AgentDebugStartMessage
   | AgentDebugReadConsoleMessage

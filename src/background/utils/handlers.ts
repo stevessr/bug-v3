@@ -26,6 +26,7 @@ import {
   handleProxyFetchRequest,
   handleProxyImageRequest
 } from '../handlers/main.ts'
+import { handleXVideoMedia } from '../handlers/handleXVideoMedia.ts'
 import * as mcpBridgeModule from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
@@ -171,6 +172,10 @@ export function setupMessageListener() {
 
           case 'LINUX_DO_RECOVER_CHALLENGE':
             handleLinuxDoChallengeRequest((typedMsg as any).options, sendResponse as any)
+            return true
+
+          case 'X_VIDEO_MEDIA':
+            void handleXVideoMedia(typedMsg, sender, sendResponse)
             return true
 
           case 'downloadImage':
