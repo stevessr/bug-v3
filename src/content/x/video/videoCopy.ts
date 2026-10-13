@@ -1,5 +1,7 @@
 import { DOA, DQSA, createE } from '../../utils/dom/createEl'
 
+import { getXVideoContext } from './videoMetadata'
+
 const COPY_ICON =
   '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>'
 const DOWNLOAD_ICON =
@@ -102,73 +104,23 @@ function isXPage(): boolean {
   }
 }
 
-function getVideoUrl(video: HTMLVideoElement): string | null {
-  try {
-    const source = video.querySelector('source') as HTMLSourceElement | null
-    if (source && source.src) return source.src
-    if (video.currentSrc) return video.currentSrc
-    if ((video as HTMLVideoElement).src) return (video as HTMLVideoElement).src
-  } catch {
-    /* ignore */
-  }
-  return null
-}
-
-async function downloadBlob(url: string): Promise<void> {
-  try {
-    const response = await fetch(url)
-    if (!response.ok) throw new Error(`网络请求失败：${response.status} ${response.statusText}`)
-    const blob = await response.blob()
-    const downloadUrl = URL.createObjectURL(blob)
-    const link = createE('a')
-    link.href = downloadUrl
-    // try to derive a sensible filename from the URL when possible
-    try {
-      let filename = `video_${Date.now()}.mp4`
-      if (url && !url.startsWith('blob:')) {
-        try {
-          const u = new URL(url)
-          const parts = u.pathname.split('/').filter(Boolean)
-          const last = parts.length ? parts[parts.length - 1] : ''
-          if (last) filename = decodeURIComponent(last)
-          else if (u.search) {
-            // attempt to find a filename-like query param
-            const nameParam = u.searchParams.get('filename') || u.searchParams.get('name')
-            if (nameParam) filename = nameParam
-          }
-        } catch {
-          /* ignore URL parse errors and keep fallback */
-        }
-      }
-      link.download = filename
-    } catch {
-      link.download = `video_${Date.now()}.mp4`
-    }
-    DOA(link)
-    link.click()
-    // remove by DOM method to be safe
-    try {
-      if (link.parentElement) link.parentElement.removeChild(link)
-    } catch {
-      /* ignore */
-    }
-    URL.revokeObjectURL(downloadUrl)
-  } catch (error) {
-    try {
-      console.error('[XVideoCopy] 下载失败', error)
-    } catch {
-      /* ignore */
-    }
-    try {
-      safeAlert(
-        '下载失败：' +
-          (error && (error as Error).message ? (error as Error).message : String(error))
-      )
-    } catch {
-      /* ignore */
-    }
-    throw error
-  }
+async function requestVideo(btn: HTMLElement, download = false): Promise<string> {
+  // Resolve at click time: X recycles players and changes src after injection.
+  const container = btn.closest('.x-video-action-host, .x-video-inline-action-host')
+  const video = container?.querySelector<HTMLVideoElement | HTMLImageElement>(
+    'video, img[src*="/tweet_video_thumb/"]'
+  )
+  if (!video) throw new Error('视频播放器已移除，请刷新后重试')
+  const marker = video.getAttribute('data-x-video-resolver') || crypto.randomUUID()
+  video.setAttribute('data-x-video-resolver', marker)
+  const result = await chrome.runtime.sendMessage({
+    type: 'X_VIDEO_RESOLVE',
+    marker,
+    download,
+    ...getXVideoContext(video)
+  })
+  if (!result?.success || !result.url) throw new Error(result?.error || '无法解析 MP4 地址')
+  return result.url
 }
 
 function safeAlert(message: string) {
@@ -193,7 +145,7 @@ function safeAlert(message: string) {
   }
 }
 
-function setupCopyClick(btn: HTMLElement, url: string) {
+function setupCopyClick(btn: HTMLElement) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
@@ -202,17 +154,19 @@ function setupCopyClick(btn: HTMLElement, url: string) {
     if (btn.hasAttribute('disabled')) return
     btn.setAttribute('disabled', 'true')
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(await requestVideo(btn))
       setButtonState(btn, 'success')
     } catch (err) {
       console.error('[XVideoCopy] 操作失败', err)
       setButtonState(btn, 'error')
+      btn.title = err instanceof Error ? err.message : '操作失败'
+      safeAlert(btn.title)
     }
     setTimeout(() => resetButtonState(btn, icon, label), 1400)
   })
 }
 
-function setupDownloadClick(btn: HTMLElement, url: string) {
+function setupDownloadClick(btn: HTMLElement) {
   btn.addEventListener('click', async e => {
     e.preventDefault()
     e.stopPropagation()
@@ -223,17 +177,19 @@ function setupDownloadClick(btn: HTMLElement, url: string) {
     try {
       btn.title = '下载中…'
       btn.setAttribute('aria-label', '下载中')
-      await downloadBlob(url)
+      await requestVideo(btn, true)
       setButtonState(btn, 'success')
     } catch (err) {
       console.error('[XVideoCopy] 下载失败', err)
       setButtonState(btn, 'error')
+      btn.title = err instanceof Error ? err.message : '操作失败'
+      safeAlert(btn.title)
     }
     setTimeout(() => resetButtonState(btn, icon, label), 1400)
   })
 }
 
-function createCopyBtn(url: string) {
+function createCopyBtn() {
   const btn = createE('button', {
     class: 'x-video-copy-btn x-video-action-button',
     type: 'button',
@@ -241,11 +197,11 @@ function createCopyBtn(url: string) {
     attrs: { 'aria-label': '复制视频地址' },
     in: COPY_ICON
   })
-  setupCopyClick(btn, url)
+  setupCopyClick(btn)
   return btn
 }
 
-function createDownloadBtn(url: string): HTMLElement {
+function createDownloadBtn(): HTMLElement {
   const btn = createE('button', {
     class: 'x-video-download-btn x-video-action-button',
     type: 'button',
@@ -253,11 +209,11 @@ function createDownloadBtn(url: string): HTMLElement {
     attrs: { 'aria-label': '下载视频' },
     in: DOWNLOAD_ICON
   })
-  setupDownloadClick(btn, url)
+  setupDownloadClick(btn)
   return btn
 }
 
-function createInlineBtn(url: string): HTMLElement {
+function createInlineBtn(): HTMLElement {
   const btn = createE('button', {
     class: 'x-video-copy-inline-btn x-video-inline-action',
     type: 'button',
@@ -265,24 +221,23 @@ function createInlineBtn(url: string): HTMLElement {
     attrs: { 'aria-label': '复制视频地址' },
     in: COPY_ICON
   })
-  setupCopyClick(btn, url)
+  setupCopyClick(btn)
   return btn
 }
 
-function addButtonToVideo(video: HTMLVideoElement) {
+function addButtonToVideo(video: HTMLVideoElement | HTMLImageElement) {
   try {
     const parent =
       (video.closest('[data-testid="videoPlayer"]') as HTMLElement | null) ||
       video.parentElement ||
       video
-    const url = getVideoUrl(video)
-    if (!url) return
     const container = parent as HTMLElement
     injectVideoActionStyles()
     const computed = window.getComputedStyle(container)
     if (computed.position === 'static' || !computed.position) container.style.position = 'relative'
 
-    container.classList.add('x-video-action-host')
+    if (!container.classList.contains('x-video-action-host'))
+      container.classList.add('x-video-action-host')
     let toolbar = Array.from(container.children).find(child =>
       child.classList.contains('x-video-action-toolbar')
     ) as HTMLElement | undefined
@@ -294,13 +249,13 @@ function addButtonToVideo(video: HTMLVideoElement) {
       container.appendChild(toolbar)
     }
 
-    if (!toolbar.querySelector('.x-video-copy-btn')) toolbar.appendChild(createCopyBtn(url))
+    if (!toolbar.querySelector('.x-video-copy-btn')) toolbar.appendChild(createCopyBtn())
     if (!toolbar.querySelector('.x-video-download-btn')) {
-      toolbar.appendChild(createDownloadBtn(url))
+      toolbar.appendChild(createDownloadBtn())
     }
 
     try {
-      addInlineButtonsToAncestors(video, url)
+      addInlineButtonsToAncestors(video)
     } catch {
       /* ignore */
     }
@@ -309,7 +264,7 @@ function addButtonToVideo(video: HTMLVideoElement) {
   }
 }
 
-function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
+function addInlineButtonsToAncestors(video: HTMLVideoElement | HTMLImageElement) {
   let node: HTMLElement | null = video.parentElement
   const maxLevels = 4
   for (let i = 0; i < maxLevels && node; i++) {
@@ -323,7 +278,7 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
         if (!tweetText.querySelector('.x-video-copy-inline-btn')) {
           injectVideoActionStyles()
           tweetText.parentElement?.classList.add('x-video-inline-action-host')
-          const inline = createInlineBtn(url)
+          const inline = createInlineBtn()
           try {
             tweetText.insertAdjacentElement('afterend', inline)
           } catch {
@@ -360,7 +315,7 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
       if (hasTextChild) {
         injectVideoActionStyles()
         node.classList.add('x-video-inline-action-host')
-        const inline = createInlineBtn(url)
+        const inline = createInlineBtn()
         const children = Array.from(node.children)
         let inserted = false
         for (let j = 0; j < children.length; j++) {
@@ -384,7 +339,9 @@ function addInlineButtonsToAncestors(video: HTMLVideoElement, url: string) {
 }
 
 function scanAndInjectVideo() {
-  const videos = Array.from(DQSA('video')) as HTMLVideoElement[]
+  const videos = Array.from(DQSA('video, img[src*="/tweet_video_thumb/"]')) as (
+    HTMLVideoElement | HTMLImageElement
+  )[]
   videos.forEach(v => {
     try {
       const rect = v.getBoundingClientRect()

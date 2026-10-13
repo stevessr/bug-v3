@@ -431,7 +431,18 @@ export interface FavoritesUpdatedMessage extends BaseMessage {
 /**
  * 所有基于 type 的消息联合类型
  */
+export interface XVideoResolveMessage extends BaseMessage {
+  type: 'X_VIDEO_RESOLVE'
+  marker: string
+  download?: boolean
+  poster?: string
+  tweetId?: string
+  mediaIndex?: number
+  mediaCount?: number
+}
+
 export type TypedMessage =
+  | XVideoResolveMessage
   | GetEmojiDataMessage
   | GetEmojiSettingMessage
   | GetEmojiSettingsBatchMessage

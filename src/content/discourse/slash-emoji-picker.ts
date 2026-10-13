@@ -23,9 +23,10 @@ export function initSlashEmojiPicker(): () => void {
   const styles = document.createElement('style')
   styles.id = `${ID}-styles`
   styles.textContent = `
-#${ID}{position:fixed;z-index:2147483646;width:min(820px,calc(100vw - 16px));background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 30px #0004;padding:10px;font:14px/1.5 system-ui;box-sizing:border-box}
-#${ID} .slash-content{display:grid;grid-template-columns:minmax(150px,.62fr) minmax(0,1.38fr);gap:10px;min-width:0}
-#${ID} .slash-items{max-height:280px;overflow:auto;display:grid;align-content:start;gap:4px;min-width:0}
+#${ID}{position:fixed;z-index:2147483646;width:min(820px,calc(100vw - 16px));display:grid;grid-template-columns:minmax(150px,.62fr) minmax(0,1.38fr);grid-template-rows:auto minmax(0,1fr) auto;gap:8px;background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 30px #0004;padding:10px;font:14px/1.5 system-ui;box-sizing:border-box}
+#${ID} .slash-items{max-height:280px;overflow:auto;display:grid;align-content:start;gap:4px;min-width:0;padding:6px;background:color-mix(in srgb,var(--primary-very-low,#f8f8f8) 55%,transparent);border:1px solid var(--primary-low,#ddd);border-radius:8px}
+#${ID} .slash-groups{grid-column:1;grid-row:2}
+#${ID} .slash-emojis{grid-column:2;grid-row:2}
 #${ID} .slash-grid{grid-template-columns:repeat(var(--slash-columns,4),minmax(0,1fr));gap:6px}
 #${ID} .slash-group{display:flex;align-items:center;gap:8px;overflow:hidden}
 #${ID} .slash-group-icon{width:28px;height:28px;flex:0 0 28px}
@@ -34,13 +35,13 @@ export function initSlashEmojiPicker(): () => void {
 #${ID} button[aria-selected=true],#${ID} button[aria-current=true]{background:var(--tertiary-low,#dbeafe);outline:2px solid var(--tertiary,#2563eb);outline-offset:-2px}
 #${ID} .slash-grid button{display:flex;align-items:center;justify-content:center;min-height:68px;padding:5px}
 #${ID} img,#${ID} canvas{object-fit:contain;max-width:100%;max-height:56px}
-#${ID} .slash-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-#${ID} .slash-hint{font-size:11px;opacity:.7;margin-top:6px}
+#${ID} .slash-header{grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:6px}
+#${ID} .slash-hint{grid-column:1/-1;grid-row:3;font-size:11px;opacity:.7}
 #${ID}-hover-preview{position:fixed;z-index:2147483647;width:200px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-sizing:border-box;background:var(--secondary,#fff);color:var(--primary,#222);border:1px solid var(--primary-low,#ddd);border-radius:10px;box-shadow:0 8px 24px #0005;pointer-events:none;font:13px/1.4 system-ui;text-align:center}
 #${ID}-hover-preview[hidden]{display:none}
 #${ID}-hover-preview img,#${ID}-hover-preview canvas{display:block;width:176px;height:176px;max-width:100%;object-fit:contain;border-radius:6px}
 #${ID}-hover-preview span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:520px){#${ID} .slash-content{grid-template-columns:minmax(110px,.6fr) minmax(0,1.4fr);gap:6px}#${ID} .slash-group{gap:4px;padding:6px}}
+@media(max-width:520px){#${ID}{grid-template-columns:minmax(110px,.6fr) minmax(0,1.4fr);gap:6px}#${ID} .slash-items{padding:4px}#${ID} .slash-group{gap:4px;padding:6px}}
 @media(prefers-color-scheme:dark){#${ID},#${ID}-hover-preview{background:var(--secondary,#202124);color:var(--primary,#eee);border-color:var(--primary-low,#555)}}`
   document.head.append(styles)
   let editor: Editor | null = null
@@ -351,8 +352,6 @@ export function initSlashEmojiPicker(): () => void {
     const title = document.createElement('strong')
     title.textContent = '选择表情'
     header.append(title)
-    const content = document.createElement('div')
-    content.className = 'slash-content'
     const groupsList = document.createElement('div')
     groupsList.className = 'slash-items slash-groups'
     groupsList.dataset.pane = 'groups'
@@ -472,12 +471,12 @@ export function initSlashEmojiPicker(): () => void {
     if (!groupItems.length) groupsList.textContent = '没有匹配分组'
     if (!emojiItems.length)
       emojisList.textContent = selectedGroup ? '分组内没有匹配表情' : '选择一个分组'
-    content.append(groupsList, emojisList)
     box.setAttribute('aria-controls', `${ID}-groups ${ID}-emojis`)
     const hint = document.createElement('div')
     hint.className = 'slash-hint'
     hint.textContent = '悬停/选择分组查看子菜单 · ↑↓ 切换 · → 展开 · ← 返回 · Enter 插入 · Esc 取消'
-    box.append(header, content, hint)
+    // Keep the group menu and its emoji submenu as distinct sibling panels.
+    box.append(header, groupsList, emojisList, hint)
     highlight()
     position()
   }

@@ -1,3 +1,4 @@
+import { handleXVideoRequest } from '../handlers/handleXVideoRequest'
 import { handleAddEmojiFromWeb } from '../handlers/addEmojiFromWeb.ts'
 import { handleUploadAndAddEmoji } from '../handlers/uploadAndAddEmoji.ts'
 import {
@@ -171,6 +172,10 @@ export function setupMessageListener() {
 
           case 'LINUX_DO_RECOVER_CHALLENGE':
             handleLinuxDoChallengeRequest((typedMsg as any).options, sendResponse as any)
+            return true
+
+          case 'X_VIDEO_RESOLVE':
+            void handleXVideoRequest(typedMsg as any, sender, sendResponse)
             return true
 
           case 'downloadImage':
