@@ -1,5 +1,7 @@
-import { selectXVideoVariant, type XVideoContext } from '../../content/x/video/videoMetadata'
 import { resolveXVideoUrl } from '../../content/x/video/resolveVideo'
+import type { XVideoContext } from '../../content/x/video/videoMetadata'
+
+import { fetchXVideoTweetResult, selectXVideoTweetVariant } from './xVideoMetadata'
 
 export async function handleXVideoRequest(
   message: { marker: string; download?: boolean } & Partial<XVideoContext>,
@@ -26,19 +28,8 @@ export async function handleXVideoRequest(
     if (!url && message.tweetId && /^\d{1,40}$/.test(message.tweetId)) {
       // Public tweet metadata contains MP4 variants even before playback. Fetch
       // in the extension background to avoid the page's CORS/CSP restrictions.
-      const endpoint = new URL('https://cdn.syndication.twimg.com/tweet-result')
-      endpoint.searchParams.set('id', message.tweetId)
-      endpoint.searchParams.set('lang', 'en')
-      endpoint.searchParams.set(
-        'token',
-        ((Number(message.tweetId) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, '')
-      )
-      const response = await fetch(endpoint, {
-        signal: AbortSignal.timeout(12000),
-        credentials: 'omit'
-      })
-      if (!response.ok) throw new Error(`视频元数据请求失败（${response.status}）`)
-      url = selectXVideoVariant(await response.json(), {
+      const tweet = await fetchXVideoTweetResult(message.tweetId)
+      url = selectXVideoTweetVariant(tweet, {
         poster: typeof message.poster === 'string' ? message.poster : '',
         mediaIndex: Number.isInteger(message.mediaIndex) ? (message.mediaIndex as number) : 0,
         mediaCount: Number.isInteger(message.mediaCount) ? (message.mediaCount as number) : 1

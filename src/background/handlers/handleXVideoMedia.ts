@@ -3,7 +3,12 @@
  * or a silent HLS track. Uses the public syndication endpoint (public tweets
  * only); no private GraphQL keys, user cookies or third-party proxy.
  */
+import { fetchXVideoTweetResult, selectXVideoTweetVariant } from './xVideoMetadata.ts'
+import type { XVideoTweetResult } from './xVideoMetadata.ts'
+
 import type { MessageResponse, XVideoMediaMessage } from '@/types/messages'
+
+export { syndicationToken } from './xVideoMetadata.ts'
 
 interface Variant {
   url?: unknown
@@ -12,6 +17,8 @@ interface Variant {
 }
 interface Media {
   type?: unknown
+  media_url_https?: string
+  media_url?: string
   video_info?: { variants?: Variant[] }
   variants?: Variant[]
 }
@@ -22,10 +29,6 @@ interface TweetResult {
 }
 
 const TWEET_ID = /^\d{15,22}$/
-
-export function syndicationToken(tweetId: string): string {
-  return ((Number(tweetId) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, '')
-}
 
 export function isTwimgMp4(raw: string): boolean {
   try {
@@ -42,27 +45,22 @@ export function isTwimgMp4(raw: string): boolean {
 
 /** Highest bitrate progressive MP4 for each video/GIF, in tweet media order. */
 export function extractMp4Videos(data: TweetResult): string[] {
-  const result: string[] = []
-  const mediaList = Array.isArray(data.mediaDetails) ? data.mediaDetails : []
-
-  const addMedia = (media: Media | undefined) => {
-    if (!media) return
-    const variants = media.video_info?.variants || media.variants || []
-    const mp4s = variants
-      .filter(
-        (variant): variant is Variant & { url: string } =>
-          typeof variant.url === 'string' &&
-          variant.content_type === 'video/mp4' &&
-          isTwimgMp4(variant.url)
-      )
-      .sort((a, b) => Number(b.bitrate || 0) - Number(a.bitrate || 0))
-    if (mp4s.length) result.push(mp4s[0].url)
-  }
-
-  for (const media of mediaList) addMedia(media)
+  const mediaList = (Array.isArray(data.mediaDetails) ? data.mediaDetails : []).filter(
+    media => media.video_info?.variants || media.variants
+  )
   // Some syndication responses expose only data.video instead of mediaDetails.
-  if (!result.length) addMedia(data.video)
-  return result
+  if (!mediaList.length && data.video) mediaList.push(data.video)
+  const tweet = { ...data, mediaDetails: mediaList } as XVideoTweetResult
+
+  return mediaList.flatMap((media, mediaIndex) => {
+    const poster = media.media_url_https || media.media_url || ''
+    const url = selectXVideoTweetVariant(tweet, {
+      poster,
+      mediaIndex,
+      mediaCount: mediaList.length
+    })
+    return url ? [url] : []
+  })
 }
 
 function senderIsX(sender: chrome.runtime.MessageSender): boolean {
@@ -81,21 +79,8 @@ function senderIsX(sender: chrome.runtime.MessageSender): boolean {
 }
 
 async function lookupTweet(tweetId: string): Promise<{ videos: string[]; author: string }> {
-  const url = new URL('https://cdn.syndication.twimg.com/tweet-result')
-  url.searchParams.set('id', tweetId)
-  url.searchParams.set('token', syndicationToken(tweetId))
-  url.searchParams.set('lang', 'en')
-
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 12000)
-  try {
-    const response = await fetch(url, { credentials: 'omit', signal: controller.signal })
-    if (!response.ok) throw new Error('X 视频信息请求失败 (HTTP ' + response.status + ')')
-    const data = (await response.json()) as TweetResult
-    return { videos: extractMp4Videos(data), author: data.user?.screen_name || 'x' }
-  } finally {
-    clearTimeout(timer)
-  }
+  const data = (await fetchXVideoTweetResult(tweetId)) as TweetResult
+  return { videos: extractMp4Videos(data), author: data.user?.screen_name || 'x' }
 }
 
 function filenameFor(tweetId: string, author: string, index: number, count: number): string {
