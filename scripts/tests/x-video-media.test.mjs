@@ -41,7 +41,8 @@ test('reject HLS, blob, non-HTTPS and lookalike CDN domains', () => {
     base + 'master.m3u8',
     'blob:https://x.com/any',
     'http://video.twimg.com/a.mp4',
-    'https://video.twimg.com.attacker.test/a.mp4'
+    'https://video.twimg.com.attacker.test/a.mp4',
+    'https://attacker.twimg.com/a.mp4'
   ]) assert.equal(isTwimgMp4(url), false)
   assert.deepEqual(
     extractMp4Videos({
@@ -132,4 +133,32 @@ test('can fall back to direct trusted MP4 if syndication is unavailable', async 
   )
   assert.equal(response?.success, true)
   assert.equal(response?.data?.url, base + 'fallback.mp4')
+})
+
+test('does not download a fallback MP4 from a non-canonical twimg subdomain', async t => {
+  const previousFetch = globalThis.fetch
+  const previousChrome = globalThis.chrome
+  t.after(() => {
+    globalThis.fetch = previousFetch
+    globalThis.chrome = previousChrome
+  })
+  globalThis.fetch = async () => { throw new Error('offline') }
+  let downloadStarted = false
+  globalThis.chrome = {
+    runtime: { lastError: null },
+    downloads: { download() { downloadStarted = true } }
+  }
+  let response = null
+  await handleXVideoMedia(
+    {
+      type: 'X_VIDEO_MEDIA',
+      tweetId: '1890123456789012345',
+      action: 'download',
+      fallbackUrl: 'https://attacker.twimg.com/fallback.mp4'
+    },
+    source,
+    result => { response = result }
+  )
+  assert.equal(response?.success, false)
+  assert.equal(downloadStarted, false)
 })

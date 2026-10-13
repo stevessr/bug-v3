@@ -35,7 +35,7 @@ export function isTwimgMp4(raw: string): boolean {
     const url = new URL(raw)
     return (
       url.protocol === 'https:' &&
-      (url.hostname === 'video.twimg.com' || url.hostname.endsWith('.twimg.com')) &&
+      url.hostname === 'video.twimg.com' &&
       /\.mp4$/i.test(url.pathname)
     )
   } catch {

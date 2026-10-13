@@ -51,6 +51,7 @@ test('syndication video fallback works without mediaDetails', () => {
 test('reject unsafe/streaming video URLs and avoid downloading a raw HLS track', () => {
   expect(isTwimgMp4(base + '1280x720/clip.mp4?tag=12')).toBe(true)
   expect(isTwimgMp4('https://video.twimg.com.attacker.test/clip.mp4')).toBe(false)
+  expect(isTwimgMp4('https://attacker.twimg.com/clip.mp4')).toBe(false)
   expect(isTwimgMp4('http://video.twimg.com/clip.mp4')).toBe(false)
   expect(isTwimgMp4('blob:https://x.com/abc')).toBe(false)
   expect(isTwimgMp4(base + 'playlist.m3u8')).toBe(false)
