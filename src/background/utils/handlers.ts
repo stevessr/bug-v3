@@ -28,7 +28,6 @@ import {
   handleProxyImageRequest
 } from '../handlers/main.ts'
 import { handleXVideoMedia } from '../handlers/handleXVideoMedia.ts'
-import * as mcpBridgeModule from '../handlers/mcpBridge.ts'
 
 import { getChromeAPI } from './main.ts'
 
@@ -38,11 +37,11 @@ import type { BackgroundMessage, TypedMessage, MessageResponse } from '@/types/m
 export { setupStorageChangeListener, setupContextMenu, setupPeriodicCleanup, setupAgentWorkflows }
 
 function loadMcpBridge() {
-  return Promise.resolve(mcpBridgeModule)
+  return import('../handlers/mcpBridge.ts')
 }
 
 function respondWithMcpBridge<T>(
-  operation: (bridge: typeof mcpBridgeModule) => Promise<T> | T,
+  operation: (bridge: Awaited<ReturnType<typeof loadMcpBridge>>) => Promise<T> | T,
   sendResponse: (resp: MessageResponse) => void,
   fallbackError: string
 ) {
