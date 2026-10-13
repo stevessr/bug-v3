@@ -24,13 +24,18 @@ test('select the highest bitrate MP4 in media order, including GIF videos', () =
             ]
           }
         },
-        { type: 'animated_gif', video_info: { variants: [{ content_type: 'video/mp4', url: base + 'gif.mp4' }] } }
+        {
+          type: 'animated_gif',
+          video_info: { variants: [{ content_type: 'video/mp4', url: base + 'gif.mp4' }] }
+        }
       ]
     }),
     [base + '720p.mp4', base + 'gif.mp4']
   )
   assert.deepEqual(
-    extractMp4Videos({ video: { variants: [{ content_type: 'video/mp4', url: base + 'solo.mp4' }] } }),
+    extractMp4Videos({
+      video: { variants: [{ content_type: 'video/mp4', url: base + 'solo.mp4' }] }
+    }),
     [base + 'solo.mp4']
   )
 })
@@ -43,13 +48,16 @@ test('reject HLS, blob, non-HTTPS and lookalike CDN domains', () => {
     'http://video.twimg.com/a.mp4',
     'https://video.twimg.com.attacker.test/a.mp4',
     'https://attacker.twimg.com/a.mp4'
-  ]) assert.equal(isTwimgMp4(url), false)
+  ])
+    assert.equal(isTwimgMp4(url), false)
   assert.deepEqual(
     extractMp4Videos({
-      video: { variants: [
-        { content_type: 'video/mp4', url: 'https://unsafe.test/a.mp4' },
-        { content_type: 'application/x-mpegURL', url: base + 'master.m3u8' }
-      ] }
+      video: {
+        variants: [
+          { content_type: 'video/mp4', url: 'https://unsafe.test/a.mp4' },
+          { content_type: 'application/x-mpegURL', url: base + 'master.m3u8' }
+        ]
+      }
     }),
     []
   )
@@ -71,15 +79,24 @@ test('background downloads second video and uses selected MP4', async t => {
   let saved = null
   globalThis.chrome = {
     runtime: { lastError: null },
-    downloads: { download(options, callback) { saved = options; callback(123) } }
+    downloads: {
+      download(options, callback) {
+        saved = options
+        callback(123)
+      }
+    }
   }
   globalThis.fetch = async () => ({
     ok: true,
     json: async () => ({
       user: { screen_name: 'sample_user' },
       mediaDetails: [
-        { video_info: { variants: [{ content_type: 'video/mp4', url: base + 'a.mp4', bitrate: 1 }] } },
-        { video_info: { variants: [{ content_type: 'video/mp4', url: base + 'b.mp4', bitrate: 2 }] } }
+        {
+          video_info: { variants: [{ content_type: 'video/mp4', url: base + 'a.mp4', bitrate: 1 }] }
+        },
+        {
+          video_info: { variants: [{ content_type: 'video/mp4', url: base + 'b.mp4', bitrate: 2 }] }
+        }
       ]
     })
   })
@@ -87,7 +104,9 @@ test('background downloads second video and uses selected MP4', async t => {
   await handleXVideoMedia(
     { type: 'X_VIDEO_MEDIA', tweetId: '1890123456789012345', index: 1, action: 'download' },
     source,
-    result => { response = result }
+    result => {
+      response = result
+    }
   )
   assert.equal(response?.success, true)
   assert.equal(response?.data?.downloadId, 123)
@@ -101,13 +120,19 @@ test('background downloads second video and uses selected MP4', async t => {
 
 test('background rejects requests from unrelated sites', async t => {
   const previousFetch = globalThis.fetch
-  t.after(() => { globalThis.fetch = previousFetch })
-  globalThis.fetch = async () => { throw Error('fetch must not run') }
+  t.after(() => {
+    globalThis.fetch = previousFetch
+  })
+  globalThis.fetch = async () => {
+    throw Error('fetch must not run')
+  }
   let response = null
   await handleXVideoMedia(
     { type: 'X_VIDEO_MEDIA', tweetId: '1890123456789012345', action: 'download' },
     { url: 'https://attacker.test/' },
-    result => { response = result }
+    result => {
+      response = result
+    }
   )
   assert.equal(response?.success, false)
   assert.match(response?.error || '', /仅允许/)
@@ -120,16 +145,29 @@ test('can fall back to direct trusted MP4 if syndication is unavailable', async 
     globalThis.fetch = previousFetch
     globalThis.chrome = previousChrome
   })
-  globalThis.fetch = async () => { throw new Error('offline') }
-  globalThis.chrome = { runtime: { lastError: null }, downloads: { download() { throw Error('should not download') } } }
+  globalThis.fetch = async () => {
+    throw new Error('offline')
+  }
+  globalThis.chrome = {
+    runtime: { lastError: null },
+    downloads: {
+      download() {
+        throw Error('should not download')
+      }
+    }
+  }
   let response = null
   await handleXVideoMedia(
     {
-      type: 'X_VIDEO_MEDIA', tweetId: '1890123456789012345', action: 'copy',
+      type: 'X_VIDEO_MEDIA',
+      tweetId: '1890123456789012345',
+      action: 'copy',
       fallbackUrl: base + 'fallback.mp4'
     },
     source,
-    result => { response = result }
+    result => {
+      response = result
+    }
   )
   assert.equal(response?.success, true)
   assert.equal(response?.data?.url, base + 'fallback.mp4')
@@ -142,11 +180,17 @@ test('does not download a fallback MP4 from a non-canonical twimg subdomain', as
     globalThis.fetch = previousFetch
     globalThis.chrome = previousChrome
   })
-  globalThis.fetch = async () => { throw new Error('offline') }
+  globalThis.fetch = async () => {
+    throw new Error('offline')
+  }
   let downloadStarted = false
   globalThis.chrome = {
     runtime: { lastError: null },
-    downloads: { download() { downloadStarted = true } }
+    downloads: {
+      download() {
+        downloadStarted = true
+      }
+    }
   }
   let response = null
   await handleXVideoMedia(
@@ -157,7 +201,9 @@ test('does not download a fallback MP4 from a non-canonical twimg subdomain', as
       fallbackUrl: 'https://attacker.twimg.com/fallback.mp4'
     },
     source,
-    result => { response = result }
+    result => {
+      response = result
+    }
   )
   assert.equal(response?.success, false)
   assert.equal(downloadStarted, false)

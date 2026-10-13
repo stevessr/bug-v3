@@ -32,10 +32,7 @@ test('only progressive MP4 variants are selected, ordered by bitrate', () => {
     ]
   }
 
-  expect(extractMp4Videos(data)).toEqual([
-    base + '1280x720/high.mp4',
-    base + '640x360/gif.mp4'
-  ])
+  expect(extractMp4Videos(data)).toEqual([base + '1280x720/high.mp4', base + '640x360/gif.mp4'])
 })
 
 test('syndication video fallback works without mediaDetails', () => {
