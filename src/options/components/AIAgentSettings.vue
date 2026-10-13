@@ -1242,7 +1242,10 @@ watch(
               <a-button size="small" danger @click="removeMcpServer(server.id)">删除</a-button>
             </div>
           </div>
-          <a-input v-model:value="server.url" placeholder="https://mcp.example.com/stream" />
+          <a-input
+            v-model:value="server.url"
+            placeholder="https:&#47;&#47;mcp.example.com/stream"
+          />
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
             <a-select v-model:value="server.transport">
               <a-select-option value="sse">SSE</a-select-option>
