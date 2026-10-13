@@ -34,6 +34,9 @@ jobs:
       - name: Unit-test performance tooling
         run: pnpm test:performance
 
+      - name: Test X MP4 resolution and background downloads
+        run: node --experimental-strip-types --test scripts/tests/x-video-media.test.mjs
+
       - name: Build and enforce performance budgets
         run: pnpm perf
 
