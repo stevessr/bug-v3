@@ -1,6 +1,7 @@
 import path from 'path'
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { getOptionsStaticImports } from './manifestHelpers'
 
 test.describe('Final Verification - User Requirements Completed', () => {
   test('should verify all user requirements are met', async ({ page }) => {
@@ -61,12 +62,9 @@ test.describe('Final Verification - User Requirements Completed', () => {
     )
 
     // REQUIREMENT 4: Verify build process works correctly
-    const fs = await import('fs')
-    const distOptionsJs = path.resolve('./dist/js/options.js')
-    expect(fs.existsSync(distOptionsJs)).toBe(true)
-
-    const optionsJsContent = fs.readFileSync(distOptionsJs, 'utf8')
-    expect(optionsJsContent).not.toContain('from"./content.js"')
+    expect(getOptionsStaticImports(path.resolve('./dist')).has('src/content/content.ts')).toBe(
+      false
+    )
     console.log('✅ REQUIREMENT 4 COMPLETED: Build process generates correct output')
 
     // REQUIREMENT 5: Verify extension is ready for Playwright testing

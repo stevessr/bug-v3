@@ -1,14 +1,17 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './fixtures'
 import { build } from 'vite'
 
 const testAssetDirectory = path.resolve('dist/upload-queue-test-assets')
 const testAssetName = 'upload-queue.iife.js'
 
 async function loadUploadQueue(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.route('http://localhost/**', route =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html></html>' })
+  )
+  await page.goto('http://localhost/')
   await page.setContent('<meta name="csrf-token" content="test-token">')
   const source = await fs.readFile(path.join(testAssetDirectory, testAssetName), 'utf8')
   await page.addScriptTag({ content: `${source}\nwindow.UploadQueueTest = UploadQueueTest;` })
@@ -42,7 +45,7 @@ test.describe('injected upload waiting queue', () => {
     })
   })
 
-  test('a Discourse rate limit pauses the whole batch instead of probing later files', async ({
+  test('a Discourse rate limit cools down queued files after current in-flight uploads', async ({
     page
   }) => {
     await loadUploadQueue(page)
@@ -123,7 +126,7 @@ test.describe('injected upload waiting queue', () => {
 
       const uploader = new (window as any).UploadQueueTest.ImageUploader()
       const statusLog: Record<string, { status: string; waitSeconds?: number }[]> = {}
-      const files = ['a.png', 'b.png', 'c.png'].map(
+      const files = ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'].map(
         name => new File([name], name, { type: 'image/png' })
       )
 
@@ -141,18 +144,26 @@ test.describe('injected upload waiting queue', () => {
       return { calls, statusLog, outcomes: outcomes.map(outcome => outcome.status) }
     })
 
-    expect(result.calls.map(call => call.name)).toEqual([
-      'a.png',
-      'a.png',
-      'a.png',
-      'b.png',
-      'c.png'
+    expect(
+      result.calls
+        .slice(0, 3)
+        .map(call => call.name)
+        .sort()
+    ).toEqual(['a.png', 'b.png', 'c.png'])
+    const retries = result.calls.filter(call => call.name === 'a.png')
+    expect(retries).toHaveLength(3)
+    expect(retries[1].at - retries[0].at).toBeGreaterThanOrEqual(45)
+    expect(retries[2].at - retries[1].at).toBeGreaterThanOrEqual(45)
+    const laterFiles = result.calls.filter(call => ['d.png', 'e.png'].includes(call.name))
+    expect(laterFiles).toHaveLength(2)
+    expect(laterFiles.every(call => call.at - retries[0].at >= 45)).toBe(true)
+    expect(result.outcomes).toEqual([
+      'rejected',
+      'fulfilled',
+      'fulfilled',
+      'fulfilled',
+      'fulfilled'
     ])
-    expect(result.calls[1].at - result.calls[0].at).toBeGreaterThanOrEqual(45)
-    expect(result.calls[2].at - result.calls[1].at).toBeGreaterThanOrEqual(45)
-    // Retry exhaustion must retain one final cooldown before the next file.
-    expect(result.calls[3].at - result.calls[2].at).toBeGreaterThanOrEqual(45)
-    expect(result.outcomes).toEqual(['rejected', 'fulfilled', 'fulfilled'])
 
     expect(result.statusLog['a.png'].map(item => item.status)).toEqual(
       expect.arrayContaining(['waiting', 'uploading', 'failed'])
@@ -163,7 +174,7 @@ test.describe('injected upload waiting queue', () => {
       )
     ).toBe(true)
     expect(
-      result.statusLog['b.png'].some(
+      result.statusLog['d.png'].some(
         item => item.status === 'waiting' && (item.waitSeconds ?? 0) > 0
       )
     ).toBe(true)

@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Chrome Extension Options Page', () => {
-  test('should load options page without errors', async ({ page, context }) => {
+  test('should load options page without errors', async ({ page, extensionId }) => {
     // Listen for console errors
     const errors: string[] = []
     const warnings: string[] = []
@@ -23,11 +23,10 @@ test.describe('Chrome Extension Options Page', () => {
     })
 
     // Get extension ID
-    const extensionId = await getExtensionId(context)
     console.log('Extension ID:', extensionId)
 
     // Navigate to options page
-    await page.goto(`chrome-extension://${extensionId}/options.html`)
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     // Wait for the page to load
     await page.waitForTimeout(3000)
@@ -47,9 +46,8 @@ test.describe('Chrome Extension Options Page', () => {
     await expect(mainContent).toBeVisible()
   })
 
-  test('should display emoji management interface', async ({ page, context }) => {
-    const extensionId = await getExtensionId(context)
-    await page.goto(`chrome-extension://${extensionId}/options.html`)
+  test('should display emoji management interface', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     // Wait for the page to load
     await page.waitForTimeout(3000)
@@ -59,7 +57,7 @@ test.describe('Chrome Extension Options Page', () => {
     await expect(header.first()).toBeVisible()
 
     // Check for navigation tabs
-    const tabs = page.locator('nav button, .tab, [role="tab"]')
+    const tabs = page.locator('#app button, [role="tab"]')
     const tabCount = await tabs.count()
     expect(tabCount).toBeGreaterThan(0)
 
@@ -75,9 +73,8 @@ test.describe('Chrome Extension Options Page', () => {
     }
   })
 
-  test('should handle emoji groups management', async ({ page, context }) => {
-    const extensionId = await getExtensionId(context)
-    await page.goto(`chrome-extension://${extensionId}/options.html`)
+  test('should handle emoji groups management', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 
@@ -104,9 +101,8 @@ test.describe('Chrome Extension Options Page', () => {
     }
   })
 
-  test('should handle upload functionality in edit modal', async ({ page, context }) => {
-    const extensionId = await getExtensionId(context)
-    await page.goto(`chrome-extension://${extensionId}/options.html`)
+  test('should handle upload functionality in edit modal', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 
@@ -148,80 +144,3 @@ test.describe('Chrome Extension Options Page', () => {
     }
   })
 })
-
-// Helper function to get extension ID
-async function getExtensionId(context: any): Promise<string> {
-  // Try to get extension ID from service worker or background page
-  try {
-    const serviceWorkers = context.serviceWorkers()
-    for (const sw of serviceWorkers) {
-      const url = sw.url()
-      if (url.startsWith('chrome-extension://')) {
-        const match = url.match(/chrome-extension:\/\/([a-z]+)\//)
-        if (match) {
-          return match[1]
-        }
-      }
-    }
-  } catch (error) {
-    console.log('Could not get service workers:', error)
-  }
-
-  // Try to get from background pages
-  try {
-    const pages = context.pages()
-    for (const page of pages) {
-      const url = page.url()
-      if (url.startsWith('chrome-extension://')) {
-        const match = url.match(/chrome-extension:\/\/([a-z]+)\//)
-        if (match) {
-          return match[1]
-        }
-      }
-    }
-  } catch (error) {
-    console.log('Could not get pages:', error)
-  }
-
-  // Fallback: use a known extension ID pattern or try to create a new page
-  // For testing purposes, we'll use a hardcoded approach
-  const newPage = await context.newPage()
-
-  try {
-    // Try to navigate to the extension's manifest
-    await newPage.goto('chrome://extensions/')
-    await newPage.waitForTimeout(1000)
-
-    // Enable developer mode if not already enabled
-    const devModeToggle = newPage.locator('#devMode')
-    if ((await devModeToggle.count()) > 0) {
-      const isChecked = await devModeToggle.isChecked()
-      if (!isChecked) {
-        await devModeToggle.click()
-        await newPage.waitForTimeout(1000)
-      }
-    }
-
-    // Look for our extension by name
-    const extensionCards = await newPage.$$('extensions-item')
-    for (const card of extensionCards) {
-      const name = await card.$eval('#name', (el: Element) => el.textContent?.trim() || '')
-      if (name.includes('emoji') || name.includes('Emoji') || name.includes('表情')) {
-        const id = await card.getAttribute('id')
-        if (id) {
-          await newPage.close()
-          return id
-        }
-      }
-    }
-
-    await newPage.close()
-  } catch (error) {
-    console.log('Error getting extension ID:', error)
-    await newPage.close()
-  }
-
-  // Last resort: use a predictable extension ID for local development
-  // This is a common pattern for unpacked extensions
-  return 'abcdefghijklmnopqrstuvwxyzabcdef'
-}

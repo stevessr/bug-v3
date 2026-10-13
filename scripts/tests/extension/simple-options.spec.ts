@@ -1,9 +1,7 @@
-import path from 'path'
-
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Chrome Extension Options Page - Simple Test', () => {
-  test('should load options page from file system', async ({ page }) => {
+  test('should load the extension options page', async ({ page, extensionId }) => {
     // Listen for console errors
     const errors: string[] = []
     const warnings: string[] = []
@@ -26,9 +24,8 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
       }
     })
 
-    // Navigate to options page from file system
-    const optionsPath = path.resolve('./dist/index.html')
-    await page.goto(`file://${optionsPath}`)
+    // Navigate to the manifest-declared options page
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     // Wait for the page to load
     await page.waitForTimeout(3000)
@@ -64,12 +61,11 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
       expect(headerText).toBeTruthy()
     }
 
-    console.log('✅ Options page loaded successfully from file system')
+    console.log('✅ Options page loaded successfully from the extension')
   })
 
-  test('should display navigation tabs', async ({ page }) => {
-    const optionsPath = path.resolve('./dist/index.html')
-    await page.goto(`file://${optionsPath}`)
+  test('should display navigation tabs', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 
@@ -94,9 +90,8 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
     }
   })
 
-  test('should handle emoji management interface', async ({ page }) => {
-    const optionsPath = path.resolve('./dist/index.html')
-    await page.goto(`file://${optionsPath}`)
+  test('should handle emoji management interface', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 
@@ -122,9 +117,8 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
     console.log('✅ Emoji management interface elements found')
   })
 
-  test('should verify upload button functionality is removed', async ({ page }) => {
-    const optionsPath = path.resolve('./dist/index.html')
-    await page.goto(`file://${optionsPath}`)
+  test('should verify upload button functionality is removed', async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 
@@ -144,7 +138,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
     console.log('✅ Upload functionality properly removed from main interface')
   })
 
-  test('should not have content.js import errors', async ({ page }) => {
+  test('should not have content.js import errors', async ({ page, extensionId }) => {
     const errors: string[] = []
 
     page.on('console', msg => {
@@ -154,8 +148,7 @@ test.describe('Chrome Extension Options Page - Simple Test', () => {
       }
     })
 
-    const optionsPath = path.resolve('./dist/index.html')
-    await page.goto(`file://${optionsPath}`)
+    await page.goto(`chrome-extension://${extensionId}/index.html?mode=options`)
 
     await page.waitForTimeout(3000)
 

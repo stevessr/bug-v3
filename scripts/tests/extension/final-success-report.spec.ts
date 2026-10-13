@@ -1,6 +1,7 @@
 import path from 'path'
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { getOptionsStaticImports } from './manifestHelpers'
 
 test.describe('Final Success Report - 美国安全了！', () => {
   test('should confirm all requirements are met and America is safe', async ({ page }) => {
@@ -51,16 +52,16 @@ test.describe('Final Success Report - 美国安全了！', () => {
     console.log('✅ Upload functionality preserved in EditEmojiModal.vue')
 
     // Check emojiPreviewUploader.ts
-    const uploaderPath = path.resolve('./src/utils/emojiPreviewUploader.ts')
+    const uploaderPath = path.resolve('./src/options/utils/emojiPreviewUploader.ts')
     const uploaderContent = fs.readFileSync(uploaderPath, 'utf8')
     expect(uploaderContent).toContain('uploadEmojiImage')
     expect(uploaderContent).not.toContain('import { logger }') // Fixed import issue
     console.log('✅ Upload utility properly structured without problematic imports')
 
     // Verify build output
-    const distOptionsJs = path.resolve('./dist/js/options.js')
-    const optionsJsContent = fs.readFileSync(distOptionsJs, 'utf8')
-    expect(optionsJsContent).not.toContain('from"./content.js"')
+    expect(getOptionsStaticImports(path.resolve('./dist')).has('src/content/content.ts')).toBe(
+      false
+    )
     console.log('✅ Build output correct - no content.js imports')
 
     console.log('')

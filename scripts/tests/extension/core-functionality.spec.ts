@@ -1,6 +1,7 @@
 import path from 'path'
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { getOptionsStaticImports } from './manifestHelpers'
 
 test.describe('Chrome Extension Core Functionality', () => {
   test('should successfully build and load without critical errors', async ({ page }) => {
@@ -55,24 +56,7 @@ test.describe('Chrome Extension Core Functionality', () => {
 
     // The UI and content script are separate manifest entrypoints; inspect the
     // static import graph instead of relying on bundle filenames/minifier output.
-    const manifestPath = path.join(distPath, '.vite', 'manifest.json')
-    expect(fs.existsSync(manifestPath)).toBe(true)
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<
-      string,
-      { imports?: string[] }
-    >
-    const optionsKey = 'src/options/main.ts'
-    expect(manifest[optionsKey]).toBeDefined()
-
-    const pending = [optionsKey]
-    const visited = new Set<string>()
-    while (pending.length > 0) {
-      const key = pending.pop()!
-      if (visited.has(key)) continue
-      visited.add(key)
-      pending.push(...(manifest[key]?.imports || []))
-    }
-    expect(visited).not.toContain('src/content/content.ts')
+    expect(getOptionsStaticImports(distPath).has('src/content/content.ts')).toBe(false)
 
     console.log('✅ File structure test passed - correct build output')
   })

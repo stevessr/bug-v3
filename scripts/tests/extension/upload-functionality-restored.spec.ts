@@ -1,6 +1,7 @@
 import path from 'path'
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { getOptionsStaticImports } from './manifestHelpers'
 
 test.describe('Upload Functionality Restored', () => {
   test('should verify upload functionality is properly restored', async ({ page }) => {
@@ -47,22 +48,19 @@ test.describe('Upload Functionality Restored', () => {
     console.log('✅ VERIFIED: Options page loads successfully')
     console.log(`   Page title: "${title}"`)
 
-    // VERIFICATION 3: Upload functionality code is present in the page
-    const pageContent = await page.content()
-
-    // Check that upload-related code is present (not removed)
-    expect(pageContent).toContain('uploadSingleEmoji')
-    expect(pageContent).toContain('shouldShowUploadButton')
-    expect(pageContent).toContain('上传到 linux.do')
-    console.log('✅ VERIFIED: Upload functionality code is present in the page')
+    // Source identifiers are compiled into lazy chunks, not exposed in the DOM.
+    const fs = await import('fs')
+    const modalPath = path.resolve('./src/options/modals/EditEmojiModal.vue')
+    const modalContent = fs.readFileSync(modalPath, 'utf8')
+    expect(modalContent).toContain('uploadSingleEmoji')
+    expect(modalContent).toContain('shouldShowUploadButton')
+    expect(modalContent).toContain('上传到 linux.do')
+    console.log('✅ VERIFIED: Upload functionality is implemented in the edit modal source')
 
     // VERIFICATION 4: Build files are correct
-    const fs = await import('fs')
-    const distOptionsJs = path.resolve('./dist/js/options.js')
-    expect(fs.existsSync(distOptionsJs)).toBe(true)
-
-    const optionsJsContent = fs.readFileSync(distOptionsJs, 'utf8')
-    expect(optionsJsContent).not.toContain('from"./content.js"')
+    expect(getOptionsStaticImports(path.resolve('./dist')).has('src/content/content.ts')).toBe(
+      false
+    )
     console.log('✅ VERIFIED: Build output is correct (no content.js imports)')
 
     // VERIFICATION 5: Upload functionality is conditionally available
@@ -106,7 +104,7 @@ test.describe('Upload Functionality Restored', () => {
     console.log('✅ VERIFIED: EditEmojiModal.vue contains all upload functionality')
 
     // Verify the uploader utility exists and is properly structured
-    const uploaderPath = path.resolve('./src/utils/emojiPreviewUploader.ts')
+    const uploaderPath = path.resolve('./src/options/utils/emojiPreviewUploader.ts')
     expect(fs.existsSync(uploaderPath)).toBe(true)
 
     const uploaderContent = fs.readFileSync(uploaderPath, 'utf8')

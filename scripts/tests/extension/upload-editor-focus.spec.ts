@@ -1,16 +1,16 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './fixtures'
 import { build } from 'vite'
 
 const testAssetDirectory = path.resolve('dist/test-assets')
 const testAssetName = 'upload-editor-focus.iife.js'
 
 async function loadEditorHelpers(page: Page, html: string): Promise<void> {
-  await page.goto('/')
+  await page.goto('about:blank')
   await page.setContent(html)
-  await page.addScriptTag({ url: `/test-assets/${testAssetName}` })
+  await page.addScriptTag({ path: path.join(testAssetDirectory, testAssetName) })
   await page.evaluate(() => {
     ;(window as any).UploadEditorFocusTest.startEditorFocusTracking()
   })
