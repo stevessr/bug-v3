@@ -53,10 +53,26 @@ test.describe('Chrome Extension Core Functionality', () => {
     expect(fs.existsSync(path.join(distPath, 'js', 'content.js'))).toBe(true)
     expect(fs.existsSync(path.join(distPath, 'manifest.json'))).toBe(true)
 
-    // Check that options.js doesn't import content.js
-    const optionsJs = fs.readFileSync(path.join(distPath, 'js', 'options.js'), 'utf8')
-    expect(optionsJs).not.toContain('import{l as H}from"./content.js"')
-    expect(optionsJs).not.toContain('from"./content.js"')
+    // The UI and content script are separate manifest entrypoints; inspect the
+    // static import graph instead of relying on bundle filenames/minifier output.
+    const manifestPath = path.join(distPath, '.vite', 'manifest.json')
+    expect(fs.existsSync(manifestPath)).toBe(true)
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<
+      string,
+      { imports?: string[] }
+    >
+    const optionsKey = 'src/options/main.ts'
+    expect(manifest[optionsKey]).toBeDefined()
+
+    const pending = [optionsKey]
+    const visited = new Set<string>()
+    while (pending.length > 0) {
+      const key = pending.pop()!
+      if (visited.has(key)) continue
+      visited.add(key)
+      pending.push(...(manifest[key]?.imports || []))
+    }
+    expect(visited).not.toContain('src/content/content.ts')
 
     console.log('✅ File structure test passed - correct build output')
   })
