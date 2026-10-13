@@ -143,8 +143,10 @@ export async function handleXVideoMedia(
       console.warn('[XVideo] Syndication lookup failed, checking direct MP4 fallback:', error)
     }
 
-    const fallback = typeof message.fallbackUrl === 'string' &&
-      isTwimgMp4(message.fallbackUrl) ? message.fallbackUrl : null
+    const fallback =
+      typeof message.fallbackUrl === 'string' && isTwimgMp4(message.fallbackUrl)
+        ? message.fallbackUrl
+        : null
     const url = videos.length ? videos[Math.min(index, videos.length - 1)] : fallback
     if (!url) throw new Error('无法获取完整 MP4（私密推文或 X 接口不可用）')
     const filename = filenameFor(message.tweetId, author, index, videos.length)
