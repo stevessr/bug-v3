@@ -1020,7 +1020,7 @@ watch(
         />
 
         <a-input
-          :value="activeProviderProfile.baseUrl || ''"
+          :value="activeProviderProfile?.baseUrl || ''"
           placeholder="可选：覆盖默认 endpoint，例如 https://openrouter.ai/api/v1"
           @update:value="(v: string) => updateActiveProfile('baseUrl', v)"
         />
