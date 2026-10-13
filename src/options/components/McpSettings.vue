@@ -439,7 +439,8 @@ onUnmounted(() => {
         <ol class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
           <li>
             <template v-if="bridgeSettings.transport === 'native'">
-              需先在 manifest 中补回 nativeMessaging 权限，并按文档安装 Native host；扩展连接时会自动启动服务器
+              需先在 manifest 中补回 nativeMessaging 权限，并按文档安装 Native
+              host；扩展连接时会自动启动服务器
             </template>
             <template v-else>
               运行
