@@ -176,6 +176,7 @@ declare global {
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const optimizedHashService: typeof import('./utils/optimizedHashService').optimizedHashService
   const packFavoriteGroup: typeof import('./utils/favoriteReferences').packFavoriteGroup
+  const packedFavoritesEqual: typeof import('./utils/favoriteReferences').packedFavoritesEqual
   const parseDatabaseFile: typeof import('./utils/cacheExportHelpers').parseDatabaseFile
   const pickTenorPreview: typeof import('./utils/tenor').pickTenorPreview
   const preloadImages: typeof import('./utils/imageUrlHelper').preloadImages
@@ -518,6 +519,7 @@ declare module 'vue' {
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly optimizedHashService: UnwrapRef<typeof import('./utils/optimizedHashService')['optimizedHashService']>
     readonly packFavoriteGroup: UnwrapRef<typeof import('./utils/favoriteReferences')['packFavoriteGroup']>
+    readonly packedFavoritesEqual: UnwrapRef<typeof import('./utils/favoriteReferences')['packedFavoritesEqual']>
     readonly parseDatabaseFile: UnwrapRef<typeof import('./utils/cacheExportHelpers')['parseDatabaseFile']>
     readonly pickTenorPreview: UnwrapRef<typeof import('./utils/tenor')['pickTenorPreview']>
     readonly preloadImages: UnwrapRef<typeof import('./utils/imageUrlHelper')['preloadImages']>

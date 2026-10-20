@@ -12,9 +12,13 @@ import type {
   MessageHandler
 } from './types'
 
+import { createLogger } from '@/utils/logger'
+
 /**
  * 联动上传客户端类
  */
+const log = createLogger('CollaborativeUpload')
+
 export class CollaborativeUploadClient {
   private ws: WebSocket | null = null
   private config: CollaborativeUploadConfig
@@ -108,7 +112,7 @@ export class CollaborativeUploadClient {
         this.connectReject = reject
 
         this.ws.onopen = () => {
-          console.log('[CollaborativeUpload] Connected to server, UUID:', this.uuid)
+          log.info('Connected to server, UUID:', this.uuid)
           this._status.connected = true
 
           // 根据角色注册
@@ -128,7 +132,7 @@ export class CollaborativeUploadClient {
         }
 
         this.ws.onclose = () => {
-          console.log('[CollaborativeUpload] Disconnected from server')
+          log.info('Disconnected from server')
           this._status.connected = false
           this.stopHeartbeat()
           this.config.onStatusChange?.(this._status)
@@ -155,7 +159,7 @@ export class CollaborativeUploadClient {
         }
 
         this.ws.onerror = error => {
-          console.error('[CollaborativeUpload] WebSocket error:', error)
+          log.error('WebSocket error:', error)
           if (this.connectReject) {
             this.connectReject(error instanceof Error ? error : new Error('WebSocket error'))
             this.connectResolve = null
@@ -188,10 +192,28 @@ export class CollaborativeUploadClient {
   }
 
   /**
+   * 将指定未完成的远程任务标记为失败（跳过已有结果的文件）
+   * 使用 Set 避免对每个文件做 O(n) 的 some() 查找
+   */
+  private failPendingRemoteFiles(error: string): void {
+    const done = new Set(this.sessionResults.map(r => r.filename))
+    for (const filename of this.pendingRemoteFiles) {
+      if (!done.has(filename)) {
+        this.sessionResults.push({
+          filename,
+          success: false,
+          error
+        })
+      }
+    }
+    this.pendingRemoteFiles = []
+  }
+
+  /**
    * 取消上传任务
    */
   cancelUpload(): void {
-    console.log('[CollaborativeUpload] Cancelling upload...')
+    log.info('Cancelling upload...')
 
     // 清除超时定时器
     if (this.taskTimeoutTimer) {
@@ -201,17 +223,7 @@ export class CollaborativeUploadClient {
 
     // 取消所有待处理的远程任务
     if (this.pendingRemoteFiles.length > 0) {
-      for (const filename of this.pendingRemoteFiles) {
-        const hasResult = this.sessionResults.some(r => r.filename === filename)
-        if (!hasResult) {
-          this.sessionResults.push({
-            filename,
-            success: false,
-            error: '用户取消上传'
-          })
-        }
-      }
-      this.pendingRemoteFiles = []
+      this.failPendingRemoteFiles('用户取消上传')
     }
 
     // 重置上传状态
@@ -240,7 +252,7 @@ export class CollaborativeUploadClient {
     if (fileSet) {
       fileSet.add(filename)
     }
-    console.log(`[CollaborativeUpload] Assigned ${filename} to ${workerId}`)
+    log.info(`Assigned ${filename} to ${workerId}`)
   }
 
   /**
@@ -315,10 +327,7 @@ export class CollaborativeUploadClient {
   private handleDisconnectDuringUpload(): void {
     if (!this.isUploading) return
 
-    console.log(
-      '[CollaborativeUpload] Disconnected during upload, pending remote files:',
-      this.pendingRemoteFiles
-    )
+    log.info('Disconnected during upload, pending remote files:', this.pendingRemoteFiles)
 
     // 清除超时定时器
     if (this.taskTimeoutTimer) {
@@ -331,18 +340,7 @@ export class CollaborativeUploadClient {
       this.config.onDisconnect?.(this.pendingRemoteFiles)
 
       // 将未完成的远程任务标记为失败
-      for (const filename of this.pendingRemoteFiles) {
-        // 检查是否已经有这个文件的结果
-        const hasResult = this.sessionResults.some(r => r.filename === filename)
-        if (!hasResult) {
-          this.sessionResults.push({
-            filename,
-            success: false,
-            error: '服务器连接断开'
-          })
-        }
-      }
-      this.pendingRemoteFiles = []
+      this.failPendingRemoteFiles('服务器连接断开')
     }
 
     // 更新进度显示
@@ -377,20 +375,10 @@ export class CollaborativeUploadClient {
     const timeout = this.config.taskTimeout || DEFAULT_TASK_TIMEOUT_MS // 默认 60 秒
 
     this.taskTimeoutTimer = setTimeout(() => {
-      console.log('[CollaborativeUpload] Task timeout reached')
+      log.info('Task timeout reached')
 
       // 将未完成的远程任务标记为超时
-      for (const filename of this.pendingRemoteFiles) {
-        const hasResult = this.sessionResults.some(r => r.filename === filename)
-        if (!hasResult) {
-          this.sessionResults.push({
-            filename,
-            success: false,
-            error: '上传超时'
-          })
-        }
-      }
-      this.pendingRemoteFiles = []
+      this.failPendingRemoteFiles('上传超时')
 
       // 触发完成检查
       this.checkAllComplete()
@@ -424,7 +412,7 @@ export class CollaborativeUploadClient {
           this._workerId = data.workerId
           this._status.workerId = data.workerId
           this._serverStats = data.serverStats
-          console.log('[CollaborativeUpload] Registered as worker:', data.workerId)
+          log.info('Registered as worker:', data.workerId)
           this.config.onStatusChange?.(this._status)
           // Resolve connection promise - worker is now fully registered
           if (this.connectResolve) {
@@ -438,7 +426,7 @@ export class CollaborativeUploadClient {
           this._sessionId = data.sessionId
           this._status.sessionId = data.sessionId
           this._serverStats = data.serverStats
-          console.log('[CollaborativeUpload] Session created:', data.sessionId)
+          log.info('Session created:', data.sessionId)
           this.config.onStatusChange?.(this._status)
           // Resolve connection promise - master session is now ready
           if (this.connectResolve) {
@@ -449,11 +437,11 @@ export class CollaborativeUploadClient {
           break
 
         case 'TASKS_SUBMITTED':
-          console.log('[CollaborativeUpload] Tasks submitted:', data.taskCount)
+          log.info('Tasks submitted:', data.taskCount)
           // 保存 master UUID（worker 端）
           if (data.masterUuid) {
             this.masterUuid = data.masterUuid
-            console.log('[CollaborativeUpload] Master UUID:', this.masterUuid)
+            log.info('Master UUID:', this.masterUuid)
           }
           break
 
@@ -467,8 +455,8 @@ export class CollaborativeUploadClient {
               mimeType: data.task.mimeType,
               size: data.task.size
             })
-            console.log(
-              `[CollaborativeUpload] Task metadata stored for binary: ${data.task.taskId}, Master UUID: ${this.masterUuid || 'unknown'}`
+            log.info(
+              `Task metadata stored for binary: ${data.task.taskId}, Master UUID: ${this.masterUuid || 'unknown'}`
             )
           } else {
             // 兼容旧的 Base64 模式
@@ -478,9 +466,7 @@ export class CollaborativeUploadClient {
 
         case 'TASK_WAITING':
           // 主控端收到工作者等待通知（429 rate limit）
-          console.log(
-            `[CollaborativeUpload] Worker ${data.workerId} waiting on ${data.filename}: ${data.waitTime}s`
-          )
+          log.info(`Worker ${data.workerId} waiting on ${data.filename}: ${data.waitTime}s`)
           // 记录文件分配给节点
           this.assignFileToNode(data.workerId, data.filename)
           this.config.onProgress?.({
@@ -506,9 +492,7 @@ export class CollaborativeUploadClient {
             r => r.filename === data.filename
           )
           if (existingCompletedResult) {
-            console.warn(
-              `[CollaborativeUpload] Duplicate TASK_COMPLETED for ${data.filename}, ignoring`
-            )
+            log.warn(`Duplicate TASK_COMPLETED for ${data.filename}, ignoring`)
             break
           }
           this.sessionResults.push({
@@ -553,9 +537,7 @@ export class CollaborativeUploadClient {
           // 检查是否已经有这个文件的结果，避免重复
           const existingFailedResult = this.sessionResults.find(r => r.filename === data.filename)
           if (existingFailedResult) {
-            console.warn(
-              `[CollaborativeUpload] Duplicate TASK_FAILED for ${data.filename}, ignoring`
-            )
+            log.warn(`Duplicate TASK_FAILED for ${data.filename}, ignoring`)
             break
           }
           this.sessionResults.push({
@@ -588,7 +570,7 @@ export class CollaborativeUploadClient {
 
         case 'SESSION_COMPLETED':
           // 服务器通知会话完成（仅远程任务）
-          console.log('[CollaborativeUpload] Remote session completed:', data.stats)
+          log.info('Remote session completed:', data.stats)
           // 不在这里 resolve，由 checkAllComplete 统一处理
           this.checkAllComplete()
           break
@@ -598,18 +580,18 @@ export class CollaborativeUploadClient {
           break
 
         case 'ERROR':
-          console.error('[CollaborativeUpload] Server error:', data.message)
+          log.error('Server error:', data.message)
           break
 
         default:
-          console.log('[CollaborativeUpload] Unknown message:', data.type)
+          log.info('Unknown message:', data.type)
       }
 
       // 调用注册的处理器
       const handlers = this.messageHandlers.get(data.type) || []
       handlers.forEach(handler => handler(data))
     } catch (error) {
-      console.error('[CollaborativeUpload] Error parsing message:', error)
+      log.error('Error parsing message:', error)
     }
   }
 
@@ -628,14 +610,12 @@ export class CollaborativeUploadClient {
 
       const fileData = data.slice(4 + taskIdLength)
 
-      console.log(
-        `[CollaborativeUpload] Received binary frame: taskId=${taskId}, size=${fileData.byteLength}`
-      )
+      log.info(`Received binary frame: taskId=${taskId}, size=${fileData.byteLength}`)
 
       // 查找对应的任务元数据
       const taskMeta = this.pendingTaskMeta.get(taskId)
       if (!taskMeta) {
-        console.error(`[CollaborativeUpload] No metadata found for task: ${taskId}`)
+        log.error(`No metadata found for task: ${taskId}`)
         return
       }
 
@@ -645,7 +625,7 @@ export class CollaborativeUploadClient {
       // 处理任务
       this.handleTaskWithBinaryData(taskId, taskMeta, fileData)
     } catch (error) {
-      console.error('[CollaborativeUpload] Error parsing binary frame:', error)
+      log.error('Error parsing binary frame:', error)
     }
   }
 
@@ -657,13 +637,7 @@ export class CollaborativeUploadClient {
     meta: UploadTask,
     data: ArrayBuffer
   ): Promise<void> {
-    console.log(
-      '[CollaborativeUpload] Processing binary task:',
-      taskId,
-      meta.filename,
-      'Worker UUID:',
-      this.uuid
-    )
+    log.info('Processing binary task:', taskId, meta.filename, 'Worker UUID:', this.uuid)
 
     // 通知开始处理任务
     this.config.onCurrentTask?.({ filename: meta.filename, status: 'processing' })
@@ -675,7 +649,7 @@ export class CollaborativeUploadClient {
 
       // Rate limit wait callback - notify master when waiting
       const onRateLimitWait = async (waitTime: number): Promise<void> => {
-        console.log(`[CollaborativeUpload] Worker rate limited, waiting ${waitTime / 1000}s...`)
+        log.info(`Worker rate limited, waiting ${waitTime / 1000}s...`)
         // 通知正在等待
         this.config.onCurrentTask?.({ filename: meta.filename, status: 'waiting' })
         this.send({
@@ -718,7 +692,7 @@ export class CollaborativeUploadClient {
       // 通知任务完成
       this.config.onCurrentTask?.({ filename: meta.filename, status: 'completed' })
     } catch (error) {
-      console.error('[CollaborativeUpload] Binary task failed:', error)
+      log.error('Binary task failed:', error)
 
       // 报告失败（包含 worker 信息）
       this.send({
@@ -749,7 +723,7 @@ export class CollaborativeUploadClient {
     dataBase64: string
     size: number
   }): Promise<void> {
-    console.log('[CollaborativeUpload] Task assigned:', task.id, task.filename)
+    log.info('Task assigned:', task.id, task.filename)
 
     try {
       // 将 Base64 转换为 File
@@ -763,7 +737,7 @@ export class CollaborativeUploadClient {
 
       // Rate limit wait callback - notify master when waiting
       const onRateLimitWait = async (waitTime: number): Promise<void> => {
-        console.log(`[CollaborativeUpload] Worker rate limited, waiting ${waitTime / 1000}s...`)
+        log.info(`Worker rate limited, waiting ${waitTime / 1000}s...`)
         this.send({
           type: 'TASK_WAITING',
           taskId: task.id,
@@ -797,7 +771,7 @@ export class CollaborativeUploadClient {
       this.workerStats.totalBytes += task.size
       this.config.onWorkerStats?.(this.workerStats)
     } catch (error) {
-      console.error('[CollaborativeUpload] Task failed:', error)
+      log.error('Task failed:', error)
 
       // 报告失败
       this.send({
@@ -868,7 +842,7 @@ export class CollaborativeUploadClient {
    */
   private sendBinaryFrame(taskId: string, data: ArrayBuffer): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error('[CollaborativeUpload] Cannot send binary: WebSocket not open')
+      log.error('Cannot send binary: WebSocket not open')
       return
     }
 

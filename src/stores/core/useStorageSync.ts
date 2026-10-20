@@ -63,17 +63,23 @@ export function useStorageSync({
     await initializeStorageCodec()
     // 尝试从 change payload 获取新数据
     let newGroup: EmojiGroup | null = null
+    let decodeFailed = false
     if (groupId === 'favorites' && change?.newValue !== undefined) {
       newGroup = await storage.getEmojiGroup(groupId)
     } else if (change?.newValue !== undefined) {
-      newGroup = decodeStorageValue(
-        STORAGE_KEYS.GROUP_PREFIX + groupId,
-        change.newValue
-      ) as EmojiGroup | null
+      try {
+        newGroup = decodeStorageValue(
+          STORAGE_KEYS.GROUP_PREFIX + groupId,
+          change.newValue
+        ) as EmojiGroup | null
+      } catch {
+        decodeFailed = true
+      }
     }
 
-    // 如果 payload 中没有，回退到存储读取
-    if (!newGroup) {
+    // 仅在 payload 缺失（真正删除）或解码失败时回退到存储读取，
+    // 避免合法的空分组数据触发冗余的 storage.get 调用
+    if (!newGroup && (change?.newValue === undefined || decodeFailed)) {
       try {
         newGroup = await storage.getEmojiGroup(groupId)
       } catch {

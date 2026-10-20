@@ -17,7 +17,7 @@ import {
   initializeStorageCodec
 } from './storage/emojiGroupCodec'
 import { sanitizeEmojiGroup, isSettings } from './typeGuards'
-import { resolveFavoriteGroup, packFavoriteGroup } from './favoriteReferences'
+import { resolveFavoriteGroup, packFavoriteGroup, packedFavoritesEqual } from './favoriteReferences'
 
 import type { EmojiGroup, AppSettings } from '@/types/type'
 
@@ -755,17 +755,11 @@ export async function getAllEmojiGroups(): Promise<EmojiGroup[]> {
     groups[favoriteIndex] = resolved
     // Lossless migration of copied favorites to owner references; don't re-save
     // already packed references simply because reads hydrated their metadata.
-    if (
-      JSON.stringify(packFavoriteGroup(original)) !== JSON.stringify(packFavoriteGroup(resolved))
-    ) {
+    if (!packedFavoritesEqual(packFavoriteGroup(original), packFavoriteGroup(resolved))) {
       try {
         await serializeStorageWrite(async () => {
           const current = await storageGet<EmojiGroup>('emojiGroup_favorites', false)
-          if (
-            JSON.stringify(packFavoriteGroup(current)) !==
-            JSON.stringify(packFavoriteGroup(original))
-          )
-            return
+          if (!packedFavoritesEqual(packFavoriteGroup(current), packFavoriteGroup(original))) return
           await writeStorageItems({
             emojiGroup_favorites: resolved,
             favorites: resolved.emojis.map(emoji => emoji.id)

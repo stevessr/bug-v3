@@ -72,6 +72,38 @@ export function packFavoriteGroup(value: unknown): unknown {
   }
 }
 
+/**
+ * 判断两个打包后的收藏夹数据是否等价（用于迁移检测）。
+ * 引用型条目只比较影响持久化结果的字段，避免启动路径上的两次完整 JSON 序列化。
+ */
+export function packedFavoritesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  const ga = a as EmojiGroup | null
+  const gb = b as EmojiGroup | null
+  if (!ga || !gb || !Array.isArray(ga.emojis) || !Array.isArray(gb.emojis)) return false
+  if (ga.emojis.length !== gb.emojis.length) return false
+  for (let i = 0; i < ga.emojis.length; i++) {
+    const ea = ga.emojis[i]
+    const eb = gb.emojis[i]
+    if (!ea || !eb) return ea === eb
+    if (ea.sourceGroupId && ea.sourceEmojiId) {
+      // 引用型条目：打包后仅保留以下字段
+      if (
+        ea.id !== eb.id ||
+        ea.sourceGroupId !== eb.sourceGroupId ||
+        ea.sourceEmojiId !== eb.sourceEmojiId ||
+        (ea.usageCount || 0) !== (eb.usageCount || 0) ||
+        (ea.lastUsed || 0) !== (eb.lastUsed || 0)
+      )
+        return false
+    } else if (ea !== eb) {
+      // 完整条目：保持引用级比较（resolveFavoriteGroup 产出的对象在迁移检测中源头一致）
+      return false
+    }
+  }
+  return true
+}
+
 export function recordFavoriteUse(
   group: EmojiGroup,
   emoji: Emoji,

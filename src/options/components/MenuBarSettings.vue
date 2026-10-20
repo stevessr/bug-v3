@@ -23,31 +23,22 @@ const _initialUploadMenuItems = getUploadMenuItems() || {
   sides: []
 }
 
+/** 深拷贝菜单项数组（保证与源数据引用隔离，避免直接改动 settings） */
+const cloneMenuItems = (val: unknown) => (Array.isArray(val) ? structuredClone(val) : [])
+
 const localUploadMenuItems = reactive<any>({
-  autoItems: Array.isArray(_initialUploadMenuItems.autoItems)
-    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.autoItems))
-    : [],
-  iframes: Array.isArray(_initialUploadMenuItems.iframes)
-    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.iframes))
-    : [],
-  sides: Array.isArray(_initialUploadMenuItems.sides)
-    ? JSON.parse(JSON.stringify(_initialUploadMenuItems.sides))
-    : []
+  autoItems: cloneMenuItems(_initialUploadMenuItems.autoItems),
+  iframes: cloneMenuItems(_initialUploadMenuItems.iframes),
+  sides: cloneMenuItems(_initialUploadMenuItems.sides)
 })
 
 watch(
   () => getUploadMenuItems(),
   v => {
     const val = v || { autoItems: [], iframes: [], sides: [] }
-    localUploadMenuItems.autoItems = Array.isArray(val.autoItems)
-      ? JSON.parse(JSON.stringify(val.autoItems))
-      : []
-    localUploadMenuItems.iframes = Array.isArray(val.iframes)
-      ? JSON.parse(JSON.stringify(val.iframes))
-      : []
-    localUploadMenuItems.sides = Array.isArray(val.sides)
-      ? JSON.parse(JSON.stringify(val.sides))
-      : []
+    localUploadMenuItems.autoItems = cloneMenuItems(val.autoItems)
+    localUploadMenuItems.iframes = cloneMenuItems(val.iframes)
+    localUploadMenuItems.sides = cloneMenuItems(val.sides)
   }
 )
 
@@ -72,13 +63,9 @@ const saveUploadMenuItems = () => {
 
 const cancelUploadMenuItems = () => {
   const val = getUploadMenuItems() || { autoItems: [], iframes: [], sides: [] }
-  localUploadMenuItems.autoItems = Array.isArray(val.autoItems)
-    ? JSON.parse(JSON.stringify(val.autoItems))
-    : []
-  localUploadMenuItems.iframes = Array.isArray(val.iframes)
-    ? JSON.parse(JSON.stringify(val.iframes))
-    : []
-  localUploadMenuItems.sides = Array.isArray(val.sides) ? JSON.parse(JSON.stringify(val.sides)) : []
+  localUploadMenuItems.autoItems = cloneMenuItems(val.autoItems)
+  localUploadMenuItems.iframes = cloneMenuItems(val.iframes)
+  localUploadMenuItems.sides = cloneMenuItems(val.sides)
   dirty.value = false
 }
 
