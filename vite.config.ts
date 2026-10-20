@@ -254,7 +254,12 @@ export default defineConfig(({ mode }) => {
   const buildInputs: Record<string, string> = {
     index: fileURLToPath(new URL('index.html', import.meta.url)),
     content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
-    background: fileURLToPath(new URL('src/background/background.ts', import.meta.url))
+    background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
+    // linux.do 主世界过盾脚本：必须以经典脚本注入页面主世界（world: 'MAIN'），
+    // 只有主世界能拦截页面自身的 fetch/XHR 读取 cf-mitigated 响应头
+    'cloudflare-wall-main': fileURLToPath(
+      new URL('src/content/cloudflare-wall-main.ts', import.meta.url)
+    )
   }
   const resolveAliases: Array<{ find: string | RegExp; replacement: string }> = [
     {

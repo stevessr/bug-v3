@@ -128,6 +128,7 @@ void import('./agent/workflowRecorder')
   .then(({ resumeWorkflowRecorderIfNeeded }) => resumeWorkflowRecorderIfNeeded())
   .catch(error => logError('Failed to initialize workflow recorder:', error))
 
-// Initialize 429 error interceptor for linux.do
-// This will automatically trigger Cloudflare challenge when rate limit is hit
-// antiRateLimit functionality removed; no network interception handling in content scripts
+// Cloudflare 盾自动过盾由独立的主世界内容脚本处理（js/cloudflare-wall-main.js，
+// 源码 src/content/cloudflare-wall-main.ts，world: 'MAIN'）。它在页面主世界拦截
+// fetch/XHR 读取 cf-mitigated: challenge 响应头并自动弹出/收起过盾小窗；
+// 隔离世界内容脚本不做网络拦截（拦不到页面自身的请求）。

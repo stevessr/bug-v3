@@ -50,6 +50,12 @@
       "matches": ["<all_urls>"],
       "js": ["content-loader.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://linux.do/*"],
+      "js": ["js/cloudflare-wall-main.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "icons": {
