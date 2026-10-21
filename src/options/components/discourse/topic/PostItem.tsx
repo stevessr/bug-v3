@@ -3,6 +3,7 @@ import { Dropdown, Menu, MenuItem, message } from 'ant-design-vue'
 
 import type { DiscoursePost, ParsedContent, DiscourseUserProfile } from '../types'
 import { formatTime, getAvatarUrl } from '../utils'
+import FaIcon from '../layout/FaIcon'
 import DiscourseEmojiPicker from '../emoji/DiscourseEmojiPicker'
 
 import PostContent from './PostContent'
@@ -418,16 +419,7 @@ export default defineComponent({
                       title="添加 Boost"
                       onClick={handleToggleBoostComposer}
                     >
-                      <svg
-                        class="fa d-icon d-icon-rocket svg-icon"
-                        width="1em"
-                        height="1em"
-                        aria-hidden="true"
-                        focusable="false"
-                        viewBox="0 0 24 24"
-                      >
-                        <use href="#rocket" />
-                      </svg>
+                      <FaIcon name="rocket" className="d-icon" />
                     </button>
                   )}
                 </div>
@@ -442,15 +434,7 @@ export default defineComponent({
                   type="button"
                   onClick={handleCopyLink}
                 >
-                  <svg
-                    class="fa d-icon d-icon-d-post-share svg-icon fa-width-auto svg-string"
-                    width="1em"
-                    height="1em"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <use href="#link"></use>
-                  </svg>
+                  <FaIcon name="link" className="d-icon" />
                 </button>
                 <button
                   class="btn no-text btn-icon post-action-menu__archive btn-flat"
@@ -459,15 +443,7 @@ export default defineComponent({
                   disabled={props.isArchiving}
                   onClick={handleArchiveTopic}
                 >
-                  <svg
-                    class="fa d-icon d-icon-box-archive svg-icon fa-width-auto svg-string"
-                    width="1em"
-                    height="1em"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <use href="#box-archive"></use>
-                  </svg>
+                  <FaIcon name="box-archive" className="d-icon" />
                 </button>
                 <div class="double-button">
                   <button
@@ -476,15 +452,7 @@ export default defineComponent({
                     type="button"
                     onClick={handleFlag}
                   >
-                    <svg
-                      class="fa d-icon d-icon-flag svg-icon fa-width-auto svg-string"
-                      width="1em"
-                      height="1em"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <use href="#flag"></use>
-                    </svg>
+                    <FaIcon name="flag" className="d-icon" />
                   </button>
                 </div>
                 {isOwnPost.value && props.post.can_edit && (
@@ -494,15 +462,7 @@ export default defineComponent({
                     type="button"
                     onClick={handleEdit}
                   >
-                    <svg
-                      class="fa d-icon d-icon-pencil svg-icon fa-width-auto svg-string"
-                      width="1em"
-                      height="1em"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <use href="#pencil"></use>
-                    </svg>
+                    <FaIcon name="pencil" className="d-icon" />
                   </button>
                 )}
                 <Dropdown
@@ -534,15 +494,7 @@ export default defineComponent({
                     title="帖子管理员操作"
                     type="button"
                   >
-                    <svg
-                      class="fa d-icon d-icon-wrench svg-icon fa-width-auto svg-string"
-                      width="1em"
-                      height="1em"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <use href="#wrench"></use>
-                    </svg>
+                    <FaIcon name="wrench" className="d-icon" />
                   </button>
                 </Dropdown>
                 <button
@@ -552,15 +504,7 @@ export default defineComponent({
                   type="button"
                   onClick={handleReplyClick}
                 >
-                  <svg
-                    class="fa d-icon d-icon-reply svg-icon fa-width-auto svg-string"
-                    width="1em"
-                    height="1em"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <use href="#reply"></use>
-                  </svg>
+                  <FaIcon name="reply" className="d-icon" />
                   <span class="d-button-label">回复</span>
                 </button>
               </div>

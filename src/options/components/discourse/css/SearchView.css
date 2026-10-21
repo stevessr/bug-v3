@@ -111,9 +111,10 @@
   padding: 0;
 }
 
-.search-query__button svg {
+.search-query__button .fa-solid {
   width: 18px;
   height: 18px;
+  font-size: 18px;
   margin-right: 0;
   fill: currentColor;
   vertical-align: -4px;
@@ -301,6 +302,7 @@
 .search-advanced-toggle__icon {
   width: 14px;
   height: 14px;
+  font-size: 14px;
   transition: transform var(--d-motion-medium, 220ms) var(--d-motion-standard, ease);
 }
 
@@ -350,9 +352,10 @@
   line-height: 1.5;
 }
 
-.search-syntax-hint svg {
+.search-syntax-hint .fa-solid {
   width: 17px;
   height: 17px;
+  font-size: 17px;
   flex: 0 0 auto;
   fill: currentColor;
 }
@@ -471,9 +474,10 @@
   text-align: center;
 }
 
-.search-results__empty svg {
+.search-results__empty .fa-solid {
   width: 34px;
   height: 34px;
+  font-size: 34px;
   margin-bottom: 4px;
   fill: currentColor;
 }

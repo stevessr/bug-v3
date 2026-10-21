@@ -1,7 +1,7 @@
 import { defineComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ReloadOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
-import { getDiscourseIconHref } from './iconSprite'
+import FaIcon from './FaIcon'
 import '../css/QuickSidebarPanel.css'
 
 export type QuickSidebarItem = {
@@ -156,14 +156,7 @@ export default defineComponent({
                       >
                         {item.icon ? (
                           <span class="quick-sidebar-icon">
-                            <svg
-                              class="fa d-icon svg-icon"
-                              width="1em"
-                              height="1em"
-                              aria-hidden="true"
-                            >
-                              <use href={getDiscourseIconHref(item.icon)} />
-                            </svg>
+                            <FaIcon name={item.icon} />
                           </span>
                         ) : item.color ? (
                           <span

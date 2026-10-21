@@ -2,6 +2,7 @@ import { defineComponent, computed, ref, watch, onUnmounted } from 'vue'
 
 import type { DiscoursePost } from '../types'
 import { formatTime } from '../utils'
+import FaIcon from '../layout/FaIcon'
 
 export default defineComponent({
   name: 'TopicTimeline',
@@ -156,9 +157,7 @@ export default defineComponent({
     return () => (
       <section class="topic-timeline" aria-label="话题时间线">
         <div class="topic-timeline__icon">
-          <svg class="topic-timeline__icon-svg" viewBox="0 0 24 24" fill="currentColor">
-            <use href="#bookmark" />
-          </svg>
+          <FaIcon name="bookmark" className="topic-timeline__icon-svg" />
         </div>
         <div class="topic-timeline__label topic-timeline__label--top">{minLabel.value}</div>
         <div
