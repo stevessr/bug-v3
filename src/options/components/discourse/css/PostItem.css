@@ -257,7 +257,7 @@
 .reactions-list .reaction-item--boost .d-icon {
   width: 1em;
   height: 1em;
-  fill: currentColor;
+  line-height: 1;
 }
 
 .reactions-list .reaction-item--boost:hover {
@@ -349,7 +349,7 @@
   font-weight: 650;
 }
 
-.btn-icon-text svg {
+.btn-icon-text .fa-solid {
   flex: 0 0 auto;
 }
 

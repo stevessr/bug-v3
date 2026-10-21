@@ -11,6 +11,7 @@ test('built-in Discourse icons are backed by Font Awesome Free', () => {
   const search = read('src/options/components/discourse/search/SearchView.tsx')
   const timeline = read('src/options/components/discourse/topic/TopicTimeline.tsx')
   const links = read('src/options/components/discourse/layout/SidebarQuickLinks.tsx')
+  const panel = read('src/options/components/discourse/layout/QuickSidebarPanel.tsx')
 
   assert.match(component, /@fortawesome\/fontawesome-free\/css\/solid\.min\.css/)
   assert.doesNotMatch(notifications, /<path\s+d=/)
@@ -18,6 +19,8 @@ test('built-in Discourse icons are backed by Font Awesome Free', () => {
   assert.doesNotMatch(search, /<path\s+d=/)
   assert.doesNotMatch(timeline, /<use href="#bookmark"/)
   assert.match(links, /<FaIcon name=\{link\.icon\}/)
+  assert.match(panel, /<FaIcon name=\{item\.icon\}/)
+  assert.doesNotMatch(panel, /getDiscourseIconHref|<use href=/)
 })
 
 test('site-provided Discourse symbols remain supported', () => {
@@ -25,4 +28,32 @@ test('site-provided Discourse symbols remain supported', () => {
   assert.match(sprite, /GET_DISCOURSE_ICON_SPRITE/)
   assert.match(sprite, /cloneSafeElement/)
   assert.doesNotMatch(sprite, /innerHTML\s*=/)
+})
+
+test('Font Awesome Free provides glyphs for the built-in Discourse icon names', () => {
+  const css = readFileSync(
+    new URL('../../node_modules/@fortawesome/fontawesome-free/css/solid.min.css', import.meta.url),
+    'utf8'
+  )
+  const iconSources = [
+    read('src/options/components/discourse/notifications/NotificationsView.tsx'),
+    read('src/options/components/discourse/topic/PostItem.tsx'),
+    read('src/options/components/discourse/topic/TopicTimeline.tsx'),
+    read('src/options/components/discourse/search/SearchView.tsx'),
+    read('src/options/components/discourse/layout/Sidebar.tsx'),
+    read('src/options/components/DiscourseBrowser.vue')
+  ]
+  const names = new Set()
+  for (const source of iconSources) {
+    for (const match of source.matchAll(/<FaIcon\s+name="([a-z-]+)"/g)) names.add(match[1])
+    for (const match of source.matchAll(/\bicon:\s*'([a-z-]+)'/g)) names.add(match[1])
+  }
+  assert.ok(names.size > 15, 'expected to check fixed icons across multiple views')
+  for (const name of names) {
+    assert.match(
+      css,
+      new RegExp(`\\.fa-${name}::?before\\b`),
+      `Missing Font Awesome Solid glyph for ${name}`
+    )
+  }
 })

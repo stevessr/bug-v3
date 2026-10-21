@@ -576,7 +576,11 @@ export default defineComponent({
               <span>{showAdvanced.value ? '收起' : '展开'}高级筛选</span>
               <FaIcon
                 name="chevron-down"
-                className={showAdvanced.value ? 'search-advanced-toggle__icon expanded' : 'search-advanced-toggle__icon'}
+                className={
+                  showAdvanced.value
+                    ? 'search-advanced-toggle__icon expanded'
+                    : 'search-advanced-toggle__icon'
+                }
               />
             </button>
           </div>
