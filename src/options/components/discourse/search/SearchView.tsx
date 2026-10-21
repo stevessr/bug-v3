@@ -14,6 +14,7 @@ import { sanitizeDiscourseHtml } from '../sanitizeHtml'
 import { formatTime } from '../utils'
 import TagPill from '../layout/TagPill'
 import TopicCategoryBadge from '../layout/TopicCategoryBadge'
+import FaIcon from '../layout/FaIcon'
 import {
   ensurePreloadedCategoriesLoaded,
   getAllPreloadedCategories
@@ -359,9 +360,7 @@ export default defineComponent({
               aria-label="搜索"
               title="搜索"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />
-              </svg>
+              <FaIcon name="magnifying-glass" />
               <span class="search-query__button-tooltip" aria-hidden="true">
                 搜索
               </span>
@@ -575,18 +574,10 @@ export default defineComponent({
               }}
             >
               <span>{showAdvanced.value ? '收起' : '展开'}高级筛选</span>
-              <svg
-                class={['search-advanced-toggle__icon', { expanded: showAdvanced.value }]}
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <FaIcon
+                name="chevron-down"
+                className={showAdvanced.value ? 'search-advanced-toggle__icon expanded' : 'search-advanced-toggle__icon'}
+              />
             </button>
           </div>
 
@@ -831,9 +822,7 @@ export default defineComponent({
           )}
 
           <aside class="search-syntax-hint">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M11 17h2v-6h-2v6Zm1-15a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18.2A8.2 8.2 0 1 1 12 3.8a8.2 8.2 0 0 1 0 16.4ZM11 9h2V7h-2v2Z" />
-            </svg>
+            <FaIcon name="circle-info" />
             <span>
               支持 Discourse 高级语法（如
               in:title、order:latest、tags:tag、@username、assigned:user）。以上筛选会自动追加到查询。
@@ -894,9 +883,7 @@ export default defineComponent({
           })}
           {!props.state.loading && visiblePosts.value.length === 0 && (
             <div class="search-results__empty" role="status">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9.5 3a6.5 6.5 0 1 0 3.99 11.63L19.86 21 21 19.86l-6.37-6.37A6.5 6.5 0 0 0 9.5 3Zm0 1.8a4.7 4.7 0 1 1 0 9.4 4.7 4.7 0 0 1 0-9.4Z" />
-              </svg>
+              <FaIcon name="magnifying-glass" />
               <strong>暂无搜索结果</strong>
               <span>尝试减少筛选条件或使用更宽泛的关键词。</span>
             </div>

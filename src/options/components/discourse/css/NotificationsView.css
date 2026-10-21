@@ -111,6 +111,9 @@
   box-sizing: border-box;
 }
 
+.ntf-type-icon { font-size: 12px; }
+.ntf-filter-icon { font-size: 20px; }
+
 .ntf-content {
   display: flex;
   min-width: 0;
