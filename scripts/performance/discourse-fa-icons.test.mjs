@@ -31,10 +31,16 @@ test('site-provided Discourse symbols remain supported', () => {
 })
 
 test('Font Awesome Free provides glyphs for the built-in Discourse icon names', () => {
-  const css = readFileSync(
-    new URL('../../node_modules/@fortawesome/fontawesome-free/css/solid.min.css', import.meta.url),
-    'utf8'
-  )
+  // Font Awesome 7 keeps glyph class rules in fontawesome.min.css and the
+  // solid font-face declaration in solid.min.css.
+  const css = ['fontawesome.min.css', 'solid.min.css']
+    .map(file =>
+      readFileSync(
+        new URL(`../../node_modules/@fortawesome/fontawesome-free/css/${file}`, import.meta.url),
+        'utf8'
+      )
+    )
+    .join('\\n')
   const iconSources = [
     read('src/options/components/discourse/notifications/NotificationsView.tsx'),
     read('src/options/components/discourse/topic/PostItem.tsx'),
