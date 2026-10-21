@@ -13,10 +13,7 @@ export default defineComponent({
   },
   setup(props) {
     return () => (
-      <i
-        class={['fa-solid', `fa-${props.name}`, props.className]}
-        aria-hidden="true"
-      />
+      <i class={['fa-solid', `fa-${props.name}`, props.className]} aria-hidden="true" />
     )
   }
 })
