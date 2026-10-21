@@ -1,4 +1,4 @@
-import { defineComponentimport { defineComponent, computed, ref, watch, onUnmounted } from 'vue'
+import { defineComponent, computed, ref, watch, onUnmounted } from 'vue'
 
 import type { DiscoursePost } from '../types'
 import { formatTime } from '../utils'
