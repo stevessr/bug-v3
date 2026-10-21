@@ -10,7 +10,11 @@
  * 行为与 scripts/userjs/cloudflare-wall.user.js 保持一致：
  * - 触发盾时右下角默认只显示收起的小窗，iframe 在后台隐藏加载自动过盾
  * - 点击小窗才展开完整 challenge 窗口（再次点击可收起）
- * - 检测到过盾完成（iframe 离开 /challenge）自动关闭并刷新页面
+ * - 检测到过盾完成（iframe 离开 /challenge，或渲染出 /challenge 路由的
+ *   Discourse 404 页——该路由本身不是真实页面）自动关闭并刷新页面
+ * - 样式使用 Discourse 站点提供的主题变量（--primary/--secondary 等），自动适配深浅色
+ * - 防嵌套触发：嵌套窗口（iframe 内实例）与 /challenge 页面不运行任何逻辑；
+ *   用户脚本版弹窗已存在时不重复弹
  * - DOM id 带 emoji-ext 前缀，避免与同名用户脚本同时安装时冲突
  */
 
@@ -18,24 +22,29 @@ interface WallConfig {
   challengePath: string
   iframeId: string
   toastId: string
+  // 其他实现（用户脚本版）的弹窗 ID：已存在时不重复弹，避免双重/嵌套触发
+  coexistingWallIds: string[]
   mitigatedHeader: string
   mitigatedChallengeValue: string
   challengeStatusCodes: number[]
   cfServerKeyword: string
   docChallengeSelector: string
   docChallengeTitles: string[]
+  // /challenge 路由本身不是真实页面：过盾完成（或本就无需验证）后 CF 放行，
+  // 渲染出 Discourse 的 404 页。出现该文案即视为验证已通过
+  challengeDoneTexts: string[]
   autoTriggerIntervalMs: number
   solvePollIntervalMs: number
   solvePollMaxMs: number
   autoReloadOnSolve: boolean
-  pillSize: { width: string; height: string }
-  panelSize: { width: string; height: string }
 }
 
 const CONFIG: WallConfig = {
   challengePath: '/challenge',
   iframeId: 'emoji-ext-cf-challenge-iframe',
   toastId: 'emoji-ext-cf-challenge-toast',
+  // 用户脚本版（scripts/userjs/cloudflare-wall.user.js）的弹窗 ID
+  coexistingWallIds: ['linuxdo-cf-challenge-iframe'],
   // Cloudflare 触发盾时的特殊响应头（'challenge' 是唯一取值）
   mitigatedHeader: 'cf-mitigated',
   mitigatedChallengeValue: 'challenge',
@@ -55,16 +64,100 @@ const CONFIG: WallConfig = {
   ].join(', '),
   // 全页 challenge 的标题特征（Managed/JS Challenge 均为 "Just a moment..."）
   docChallengeTitles: ['just a moment'],
+  // /challenge 路由本身不是真实页面：过盾完成（或本就无需验证）后 CF 放行，
+  // 渲染出 Discourse 的 404 页。出现该文案即视为验证已通过
+  // （与背景层 handleLinuxDoChallengeRequest 的判定一致）
+  challengeDoneTexts: ['该页面不存在或者是一个不公开页面'],
   // 自动弹窗节流间隔：大量请求同时失败时避免反复弹窗打扰
   autoTriggerIntervalMs: 30 * 1000,
   // 轮询 iframe 内验证是否已通过的间隔与超时
   solvePollIntervalMs: 1000,
   solvePollMaxMs: 5 * 60 * 1000,
   // 验证通过后自动刷新页面，让之前被盾拦掉的请求重新走一遍
-  autoReloadOnSolve: true,
-  pillSize: { width: '170px', height: '38px' },
-  panelSize: { width: '400px', height: '500px' }
+  autoReloadOnSolve: true
+  // 弹窗尺寸（收起 170x38 / 展开 400x500）在 WALL_CSS 中定义
 }
+
+/**
+ * 弹窗样式：颜色、圆角、阴影全部取自 Discourse 站点提供的 CSS 主题变量
+ * （--primary/--secondary/--danger 等），自动跟随站点深浅色主题；
+ * var() 的第二参数为降级默认值，站点变量缺失时仍可正常显示
+ */
+const WALL_CSS = `
+#${CONFIG.iframeId} {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  width: 170px;
+  height: 38px;
+  background-color: var(--secondary, #fff);
+  color: var(--primary, #222);
+  border: 1px solid var(--primary-low, #ccc);
+  border-radius: var(--d-border-radius, 8px);
+  box-shadow: var(--shadow-modal, 0 8px 60px rgba(0, 0, 0, 0.35));
+  overflow: hidden;
+  cursor: pointer;
+  transition: width 0.2s, height 0.2s;
+}
+#${CONFIG.iframeId}.expanded {
+  width: 400px;
+  height: 500px;
+  cursor: default;
+}
+#${CONFIG.iframeId} .cf-wall-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--primary-very-low, #f8f9fa);
+  border-bottom: 1px solid var(--primary-low, #eee);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--primary, #333);
+  white-space: nowrap;
+}
+#${CONFIG.iframeId} .cf-wall-close {
+  border: none;
+  background-color: var(--danger, #ff4d4f);
+  color: var(--secondary, #fff);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+#${CONFIG.iframeId} .cf-wall-panel-body {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--secondary, #fff);
+}
+#${CONFIG.iframeId}.expanded .cf-wall-panel-body {
+  display: flex;
+}
+#${CONFIG.iframeId} .cf-wall-panel-body iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background-color: var(--secondary, #fff);
+}
+#${CONFIG.toastId} {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 2147483647;
+  max-width: 70vw;
+  background-color: var(--primary, #222);
+  color: var(--secondary, #fff);
+  padding: 10px 16px;
+  border-radius: var(--d-border-radius, 6px);
+  font-size: 14px;
+}
+`
 
 const log = (...args: unknown[]) => {
   if (__ENABLE_LOGGING__) {
@@ -75,11 +168,14 @@ const log = (...args: unknown[]) => {
 interface WallState {
   lastAutoTriggerAt: number
   solveTimer: number | null
+  // 站点主题样式是否已注入
+  styleInjected: boolean
 }
 
 const state: WallState = {
   lastAutoTriggerAt: 0,
-  solveTimer: null
+  solveTimer: null,
+  styleInjected: false
 }
 
 type HeaderGetter = (name: string) => string | null
@@ -92,6 +188,22 @@ interface Window {
 interface XMLHttpRequest {
   __emojiExtCfXhrHooked?: boolean
   __emojiExtRequestUrl?: string
+}
+
+/**
+ * 注入弹窗样式（幂等）。颜色全部使用 Discourse 站点提供的主题变量
+ */
+function ensureStyles(): void {
+  if (state.styleInjected) return
+  try {
+    const style = document.createElement('style')
+    style.textContent = WALL_CSS
+    ;(document.head || document.documentElement).appendChild(style)
+    state.styleInjected = true
+    log('已注入过盾弹窗样式')
+  } catch (error) {
+    log('注入样式失败：', error)
+  }
 }
 
 /**
@@ -304,43 +416,26 @@ function showChallengePanel(): void {
     return
   }
 
+  // 用户脚本版过盾弹窗已存在时不重复弹（防双重/嵌套触发）
+  const coexistingId = CONFIG.coexistingWallIds.find(id => document.getElementById(id))
+  if (coexistingId) {
+    log('检测到用户脚本版过盾弹窗，跳过重复创建：', coexistingId)
+    return
+  }
+
+  ensureStyles()
   log('正在创建 Challenge 弹窗...')
 
   const redirectUrl = `${CONFIG.challengePath}?redirect=${encodeURIComponent(window.location.href)}`
 
-  // 创建容器
+  // 创建容器（尺寸与配色见 WALL_CSS，使用 Discourse 站点主题变量）
   const container = document.createElement('div')
   container.id = CONFIG.iframeId
   container.title = '点击展开/收起安全验证窗口'
-  Object.assign(container.style, {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    zIndex: '2147483647', // Max Z-Index
-    backgroundColor: '#fff',
-    boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid #ccc',
-    transition: 'width 0.2s, height 0.2s'
-  })
 
   // 创建标题栏
   const header = document.createElement('div')
-  Object.assign(header.style, {
-    padding: '8px 10px',
-    backgroundColor: '#f8f9fa',
-    borderBottom: '1px solid #eee',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#333',
-    whiteSpace: 'nowrap'
-  })
+  header.className = 'cf-wall-header'
 
   // 标题文本（收起时用短文案）
   const title = document.createElement('span')
@@ -348,17 +443,9 @@ function showChallengePanel(): void {
 
   // 关闭按钮
   const closeBtn = document.createElement('button')
+  closeBtn.className = 'cf-wall-close'
   closeBtn.innerText = '✕'
   closeBtn.title = '关闭'
-  Object.assign(closeBtn.style, {
-    border: 'none',
-    background: '#ff4d4f',
-    color: 'white',
-    borderRadius: '4px',
-    padding: '2px 8px',
-    cursor: 'pointer',
-    fontSize: '12px'
-  })
   closeBtn.onclick = event => {
     event.stopPropagation()
     container.remove()
@@ -368,24 +455,13 @@ function showChallengePanel(): void {
   header.appendChild(title)
   header.appendChild(closeBtn)
 
-  // iframe 外层容器：收起时 display:none，iframe 仍在后台加载以自动过盾
+  // iframe 外层容器：收起时隐藏，iframe 仍在后台加载以自动过盾
   const panelBody = document.createElement('div')
-  Object.assign(panelBody.style, {
-    display: 'none',
-    flex: '1',
-    flexDirection: 'column',
-    overflow: 'hidden'
-  })
+  panelBody.className = 'cf-wall-panel-body'
 
   // 创建 Iframe
   const iframe = document.createElement('iframe')
   iframe.src = redirectUrl
-  Object.assign(iframe.style, {
-    flex: '1',
-    width: '100%',
-    border: 'none',
-    backgroundColor: '#fff'
-  })
   panelBody.appendChild(iframe)
 
   // 组装
@@ -393,17 +469,11 @@ function showChallengePanel(): void {
   container.appendChild(panelBody)
   document.body.appendChild(container)
 
-  // 展开/收起状态
+  // 展开/收起状态（尺寸与显隐由 .expanded 类控制）
   let expanded = false
   const applyExpanded = () => {
-    const size = expanded ? CONFIG.panelSize : CONFIG.pillSize
-    Object.assign(container.style, {
-      width: size.width,
-      height: size.height,
-      cursor: expanded ? 'default' : 'pointer'
-    })
+    container.classList.toggle('expanded', expanded)
     title.innerText = expanded ? '🛡️ LINUX.DO 安全验证' : '🛡️ 安全验证'
-    panelBody.style.display = expanded ? 'flex' : 'none'
   }
 
   // 点击标题条切换展开/收起（✕ 关闭除外）
@@ -427,8 +497,24 @@ function showChallengePanel(): void {
 }
 
 /**
- * 轮询 iframe 地址：仍在 /challenge 说明验证未完成；
- * 离开 /challenge（跳回 redirect 目标）说明已通过，收掉弹窗并提示刷新
+ * 检查 iframe 内的 /challenge 页是否已经渲染出 Discourse 404 页：
+ * /challenge 路由本身不是真实页面，过盾完成（或本就无需验证）后 CF 放行，
+ * 页面出现「该页面不存在或者是一个不公开页面」即代表验证已通过
+ */
+function isChallengeDoneInIframe(iframe: HTMLIFrameElement): boolean {
+  try {
+    const doc = iframe.contentDocument
+    const text = (doc && doc.body && doc.body.innerText) || ''
+    return CONFIG.challengeDoneTexts.some(doneText => text.includes(doneText))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 轮询 iframe：仍在 /challenge 且未出现 404 文案说明验证未完成；
+ * URL 离开 /challenge（redirect 生效时）或渲染出 404 页（常见情形）
+ * 说明已通过，收掉弹窗并提示刷新
  */
 function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement): void {
   if (state.solveTimer) {
@@ -445,11 +531,18 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
     try {
       if (iframe.isConnected && container.isConnected) {
         alive = true
-        const path = iframe.contentWindow?.location.pathname || ''
-        solved = Boolean(path) && !path.startsWith(CONFIG.challengePath)
+        let path = ''
+        try {
+          path = iframe.contentWindow?.location.pathname || ''
+        } catch {
+          // 读取 iframe 地址失败（尚未导航完成等），交给内容判定兜底
+        }
+        solved =
+          (Boolean(path) && !path.startsWith(CONFIG.challengePath)) ||
+          isChallengeDoneInIframe(iframe)
       }
     } catch {
-      // 读取 iframe 状态失败（尚未导航完成等），继续等待下次轮询
+      // 读取 iframe 状态失败，继续等待下次轮询
     }
 
     if (solved) {
@@ -481,6 +574,8 @@ function showToast(message: string): void {
   try {
     if (!document.body) return
 
+    ensureStyles()
+
     const existing = document.getElementById(CONFIG.toastId)
     if (existing) {
       existing.remove()
@@ -489,17 +584,6 @@ function showToast(message: string): void {
     const toast = document.createElement('div')
     toast.id = CONFIG.toastId
     toast.innerText = message
-    Object.assign(toast.style, {
-      position: 'fixed',
-      bottom: '30px',
-      right: '30px',
-      zIndex: '2147483647',
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      color: '#fff',
-      padding: '10px 16px',
-      borderRadius: '6px',
-      fontSize: '14px'
-    })
     document.body.appendChild(toast)
 
     setTimeout(() => {
@@ -540,6 +624,18 @@ function initWall(): void {
  * 启动：document_start 下尽早挂载网络钩子（赶在应用发起请求前读取特殊表头）
  */
 function bootWall(): void {
+  // 防嵌套触发：本脚本 @match linux.do/*，过盾弹窗的 iframe 里会再跑一个实例。
+  // 嵌套窗口（window.top !== window）与 /challenge 页面（含过盾完成后渲染的 404 页）
+  // 一律不运行任何逻辑——不装钩子、不初始化，杜绝「iframe 里再装钩子 / 再弹一层窗」
+  if (window.top !== window) {
+    log('嵌套窗口（iframe）内不运行')
+    return
+  }
+  if (window.location.pathname.startsWith(CONFIG.challengePath)) {
+    log('challenge 页面内不运行')
+    return
+  }
+
   const globalWindow = window as unknown as { __emojiExtCfWallInstalled?: boolean }
   if (globalWindow.__emojiExtCfWallInstalled) {
     return

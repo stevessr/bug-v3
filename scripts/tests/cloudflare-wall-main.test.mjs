@@ -1,6 +1,7 @@
 // cloudflare-wall-main 的主世界过盾逻辑冒烟测试：
 // 按 Cloudflare 真实行为（cf-mitigated 表头、疑似盾响应、全页盾识别）验证
-// 网络钩子识别、默认收起小窗、点击展开、过盾后自动关闭与刷新。
+// 网络钩子识别、默认收起小窗、点击展开、过盾后自动关闭与刷新、
+// Discourse 主题变量样式注入、防嵌套触发。
 // 直接读取 TS 源码并剥离类型后在模拟 DOM 沙箱中运行。
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
@@ -10,14 +11,34 @@ import { test } from 'node:test'
 
 const SRC = new URL('../../src/content/cloudflare-wall-main.ts', import.meta.url)
 const IFRAME_ID = 'emoji-ext-cf-challenge-iframe'
+const USERJS_IFRAME_ID = 'linuxdo-cf-challenge-iframe'
 const TOAST_ID = 'emoji-ext-cf-challenge-toast'
 
 let nowMs = 1_700_000_000_000
 
 function makeElement(tag) {
+  const classes = new Set()
   const el = {
     tagName: tag,
     style: {},
+    classList: {
+      toggle(cls, force) {
+        if (force === undefined) {
+          if (classes.has(cls)) {
+            classes.delete(cls)
+            return false
+          }
+          classes.add(cls)
+          return true
+        }
+        if (force) classes.add(cls)
+        else classes.delete(cls)
+        return Boolean(force)
+      },
+      contains(cls) {
+        return classes.has(cls)
+      }
+    },
     children: [],
     parent: null,
     listeners: {},
@@ -27,6 +48,7 @@ function makeElement(tag) {
     isConnected: true,
     src: '',
     contentWindow: undefined,
+    contentDocument: undefined,
     appendChild(child) {
       child.parent = el
       el.children.push(child)
@@ -72,17 +94,15 @@ function findByTag(root, tag) {
   return null
 }
 
-function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
+function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nested = false } = {}) {
   const fetchCalls = []
   const reloads = []
+  let observedCount = 0
   let nextResponse = null
 
   const body = makeElement('body')
-  const location = {
-    pathname: '/t/topic/123',
-    href: 'https://linux.do/t/topic/123',
-    reload: () => reloads.push(1)
-  }
+  const head = makeElement('head')
+  const location = { pathname, href: `https://linux.do${pathname}`, reload: () => reloads.push(1) }
   const fetchImpl = input => {
     fetchCalls.push(typeof input === 'string' ? input : input && input.url)
     if (!nextResponse) throw new Error('no scripted response')
@@ -92,6 +112,7 @@ function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
     fetch: fetchImpl,
     location,
     _cf_chl_opt: chlOpt,
+    // 脚本使用 window.setInterval/clearInterval（DOM 类型返回 number）
     setInterval: fn => {
       let ticks = 0
       const id = setInterval(() => {
@@ -106,10 +127,13 @@ function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
     },
     clearInterval
   }
+  windowStub.top = nested ? { fakeTop: true } : windowStub
   const documentStub = {
     readyState: 'complete',
     title,
     body,
+    head,
+    documentElement: makeElement('html'),
     addEventListener() {},
     getElementById(id) {
       return findById(body, id)
@@ -149,8 +173,13 @@ function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
 
   return {
     windowStub,
+    head,
+    body,
     fetchCalls,
     reloads,
+    get observedCount() {
+      return observedCount
+    },
     popup() {
       return findById(body, IFRAME_ID)
     },
@@ -159,6 +188,9 @@ function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
     },
     panelBodyOf(popupEl) {
       return popupEl.children.find(c => findByTag(c, 'iframe'))
+    },
+    injectedStyles() {
+      return head.children.filter(c => c.tagName === 'style').map(c => c.textContent)
     },
     respond(status, headers) {
       nextResponse = {
@@ -177,7 +209,7 @@ function createEnv({ title = 'LINUX DO', chlOpt } = {}) {
 const flush = () => new Promise(r => setTimeout(r, 15))
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-test('疑似盾响应（403 + cloudflare + text/html，无特殊表头）触发默认收起的小窗', async () => {
+test('疑似盾响应（403 + cloudflare + text/html）触发默认收起小窗并注入 Discourse 主题变量样式', async () => {
   const env = createEnv()
   env.respond(403, { server: 'cloudflare', 'content-type': 'text/html; charset=utf-8' })
   const resp = await env.windowStub.fetch('/session/current.json')
@@ -185,8 +217,17 @@ test('疑似盾响应（403 + cloudflare + text/html，无特殊表头）触发�
   const popup = env.popup()
   assert.ok(resp, 'fetch 应原样返回响应（不破坏页面）')
   assert.ok(popup, '疑似盾响应应触发小窗')
-  assert.strictEqual(env.panelBodyOf(popup).style.display, 'none', '默认应收起（iframe 隐藏）')
-  assert.strictEqual(popup.style.width, '170px', '收起态应为小窗尺寸')
+  assert.ok(!popup.classList.contains('expanded'), '默认应收起')
+  assert.ok(env.panelBodyOf(popup), '弹窗内应有 iframe 容器')
+  const styles = env.injectedStyles()
+  assert.ok(
+    styles.some(css => css.includes('var(--secondary')),
+    '应注入 Discourse 主题变量样式'
+  )
+  assert.ok(
+    styles.every(css => !css.includes('#ff4d4f') || css.includes('var(--danger')),
+    '不应依赖硬编码配色'
+  )
 })
 
 test('cf-mitigated: challenge 特殊表头触发小窗，且自动触发有 30s 节流', async () => {
@@ -239,14 +280,13 @@ test('点击小窗展开/收起；展开态过盾成功后自动关闭 + toast +
   await flush()
   const popup = env.popup()
   assert.ok(popup, '小窗应存在')
-  assert.strictEqual(env.panelBodyOf(popup).style.display, 'none', '默认收起')
+  assert.ok(!popup.classList.contains('expanded'), '默认收起')
 
   popup.fire('click', { target: {} })
-  assert.strictEqual(env.panelBodyOf(popup).style.display, 'flex', '点击后应展开 iframe')
-  assert.strictEqual(popup.style.width, '400px', '展开态应为面板尺寸')
+  assert.ok(popup.classList.contains('expanded'), '点击后应展开')
 
   popup.fire('click', { target: {} })
-  assert.strictEqual(env.panelBodyOf(popup).style.display, 'none', '再次点击应收起')
+  assert.ok(!popup.classList.contains('expanded'), '再次点击应收起')
 
   popup.fire('click', { target: {} }) // 保持展开做验证流程
   const iframe = findByTag(popup, 'iframe')
@@ -270,7 +310,7 @@ test('收起态（用户从未点击）后台过盾成功也自动关闭并刷�
   await flush()
   const popup = env.popup()
   assert.ok(popup, '小窗应存在')
-  assert.strictEqual(env.panelBodyOf(popup).style.display, 'none', '保持收起')
+  assert.ok(!popup.classList.contains('expanded'), '保持收起')
 
   const iframe = findByTag(popup, 'iframe')
   iframe.contentWindow = { location: { pathname: '/t/topic/123' } } // 后台自动过盾成功
@@ -278,6 +318,35 @@ test('收起态（用户从未点击）后台过盾成功也自动关闭并刷�
   assert.ok(!env.popup(), '收起态过盾完成也应自动关闭')
   await sleep(1000)
   assert.strictEqual(env.reloads.length, 1, '应自动刷新页面')
+})
+
+test('/challenge 渲染出 Discourse 404 页即视为过盾完成，自动关闭并刷新', async () => {
+  const env = createEnv()
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  const popup = env.popup()
+  const iframe = findByTag(popup, 'iframe')
+  iframe.contentWindow = { location: { pathname: '/challenge' } }
+  iframe.contentDocument = { body: { innerText: '糟糕！该页面不存在或者是一个不公开页面。' } }
+  await sleep(80)
+  assert.ok(!env.popup(), '出现 404 页（过盾完成）应自动关闭')
+  assert.ok(env.toast(), '应显示验证通过提示')
+  await sleep(1000)
+  assert.strictEqual(env.reloads.length, 1, '应自动刷新页面')
+})
+
+test('验证未完成（仍在 /challenge 且无 404 文案）弹窗保留', async () => {
+  const env = createEnv()
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  const popup = env.popup()
+  const iframe = findByTag(popup, 'iframe')
+  iframe.contentWindow = { location: { pathname: '/challenge' } }
+  iframe.contentDocument = { body: { innerText: 'Checking your browser…' } }
+  await sleep(80)
+  assert.ok(env.popup(), '验证未完成弹窗应保留')
 })
 
 test('全页 challenge（Just a moment... 标题）不弹窗', async () => {
@@ -302,4 +371,42 @@ test('_cf_chl_opt.cType=managed（全页盾）时不弹窗', async () => {
   await env.windowStub.fetch('/posts.json')
   await flush()
   assert.ok(!env.popup(), 'managed 全页盾不应弹窗')
+})
+
+test('防嵌套：嵌套窗口（iframe 内实例）不装钩子、不弹窗', async () => {
+  const env = createEnv({ nested: true })
+  const originalFetch = env.windowStub.fetch
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  assert.ok(!env.popup(), '嵌套窗口不应弹窗')
+  assert.strictEqual(env.windowStub.fetch, originalFetch, '嵌套窗口不应挂载 fetch 钩子')
+})
+
+test('防嵌套：/challenge 页面（含过盾后的 404 页）不运行', async () => {
+  const env = createEnv({ pathname: '/challenge' })
+  const originalFetch = env.windowStub.fetch
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/challenge?redirect=x')
+  await flush()
+  assert.ok(!env.popup(), '/challenge 页面内不应弹窗')
+  assert.strictEqual(env.windowStub.fetch, originalFetch, '/challenge 页面内不应挂载钩子')
+})
+
+test('防嵌套：用户脚本版弹窗已存在时不重复弹', async () => {
+  const env = createEnv()
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  assert.ok(env.popup(), '基准：插件版弹窗应存在')
+  env.popup().remove()
+  nowMs += 31_000
+
+  const userjsPopup = makeElement('div')
+  userjsPopup.id = USERJS_IFRAME_ID
+  env.body.appendChild(userjsPopup)
+
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  assert.ok(!env.popup(), '用户脚本版弹窗已存在时插件版不应再弹')
 })

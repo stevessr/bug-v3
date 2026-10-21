@@ -4,16 +4,19 @@
 // @namespace            https://github.com/utags
 // @homepageURL          https://github.com/utags/userscripts#readme
 // @supportURL           https://github.com/utags/userscripts/issues
-// @version              0.4.1
-// @description          Detect Cloudflare challenges the way Cloudflare actually issues them: every challenge response carries the special cf-mitigated: challenge header (content-type is always text/html). Fetch/XHR hooks surface it instantly, a collapsed mini-bar appears (the challenge iframe loads hidden in the background), clicking the bar reveals the challenge window, and everything auto-closes once the check is passed
-// @description:zh-CN    按 Cloudflare 真实行为识别 5 秒盾：触发盾的响应必带特殊表头 cf-mitigated: challenge（content-type 恒为 text/html）。通过 fetch/XHR 钩子实时识别后，右下角默认只显示收起的小窗（iframe 在后台隐藏加载自动过盾），点击小窗才展开 challenge 窗口，检测到过盾完成后自动关闭并刷新页面
+// @version              0.5.0
+// @description          Opt-in (disabled by default) Cloudflare challenge helper for linux.do: detects challenges via the cf-mitigated: challenge header, shows a collapsed mini-bar that expands on click, styles itself with the site's Discourse theme variables, and auto-closes and reloads once the challenge is passed
+// @description:zh-CN    手动开启、默认关闭的 linux.do 过盾辅助：按 Cloudflare 真实行为（cf-mitigated: challenge 特殊表头）识别盾，右下角默认只显示收起小窗（iframe 后台隐藏加载），点击展开；样式使用 Discourse 站点提供的主题变量自动适配深浅色；检测到过盾完成后自动关闭并刷新页面
 // @author               Pipecraft (Modified by User)
 // @license              MIT
 // @match                https://linux.do/*
 // @run-at               document-start
 // @icon                 https://wsrv.nl/?w=64&h=64&url=https%3A%2F%2Ft3.gstatic.com%2FfaviconV2%3Fclient%3DSOCIAL%26type%3DFAVICON%26fallback_opts%3DTYPE%2CSIZE%2CURL%26url%3Dhttps%3A%2F%2Flinux.do%26size%3D64
 // @grant                GM_registerMenuCommand
+// @grant                GM_unregisterMenuCommand
 // @grant                GM_addStyle
+// @grant                GM_getValue
+// @grant                GM_setValue
 // ==/UserScript==
 
 ;(function () {
@@ -35,9 +38,13 @@
     // 调试模式
     DEBUG: false,
     // 菜单文本
-    MENU_TEXT: '手动触发 Challenge 弹窗',
+    MANUAL_MENU_TEXT: '手动触发 Challenge 窗口',
+    // 自动开关的存储键（GM 存储，localStorage 兜底）
+    STORAGE_KEY: 'linuxdoCfWallAutoEnabled',
     // iframe 容器 ID
     IFRAME_ID: 'linuxdo-cf-challenge-iframe',
+    // 其他实现（插件版）的弹窗 ID：已存在时不重复弹，避免双重触发
+    COEXISTING_WALL_IDS: ['emoji-ext-cf-challenge-iframe'],
     // 提示条 ID
     TOAST_ID: 'linuxdo-cf-challenge-toast',
     // Cloudflare 触发盾时的特殊响应头（官方文档：所有 challenge 类型都会带该头，
@@ -61,17 +68,100 @@
     ].join(', '),
     // 全页 challenge 的标题特征（Managed/JS Challenge 均为 "Just a moment..."）
     DOC_CHALLENGE_TITLES: ['just a moment'],
+    // /challenge 路由本身不是真实页面：过盾完成（或本就无需验证）后 CF 会放行，
+    // 渲染出 Discourse 的 404 页。出现该文案即视为验证已通过
+    // （与插件背景层 handleLinuxDoChallengeRequest 的判定一致）
+    CHALLENGE_DONE_TEXTS: ['该页面不存在或者是一个不公开页面'],
     // 自动弹窗节流间隔：大量请求同时失败时避免反复弹窗打扰
     AUTO_TRIGGER_INTERVAL_MS: 30 * 1000,
     // 轮询 iframe 内验证是否已通过的间隔与超时
     SOLVE_POLL_INTERVAL_MS: 1000,
     SOLVE_POLL_MAX_MS: 5 * 60 * 1000,
     // 验证通过后自动刷新页面，让之前被盾拦掉的请求重新走一遍
-    AUTO_RELOAD_ON_SOLVE: true,
-    // 弹窗尺寸：默认收起为小窗（仅标题条，iframe 隐藏加载），点击小窗展开
-    PILL_SIZE: { width: '170px', height: '38px' },
-    PANEL_SIZE: { width: '400px', height: '500px' }
+    AUTO_RELOAD_ON_SOLVE: true
+    // 弹窗尺寸（收起 170x38 / 展开 400x500）在下方 WALL_CSS 中定义
   }
+
+  /**
+   * 弹窗样式：颜色、圆角、阴影全部取自 Discourse 站点提供的 CSS 主题变量
+   * （--primary/--secondary/--danger 等），自动跟随站点深浅色主题；
+   * var() 的第二参数为降级默认值，站点变量缺失时仍可正常显示
+   */
+  const WALL_CSS = `
+#${CONFIG.IFRAME_ID} {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  width: 170px;
+  height: 38px;
+  background-color: var(--secondary, #fff);
+  color: var(--primary, #222);
+  border: 1px solid var(--primary-low, #ccc);
+  border-radius: var(--d-border-radius, 8px);
+  box-shadow: var(--shadow-modal, 0 8px 60px rgba(0, 0, 0, 0.35));
+  overflow: hidden;
+  cursor: pointer;
+  transition: width 0.2s, height 0.2s;
+}
+#${CONFIG.IFRAME_ID}.expanded {
+  width: 400px;
+  height: 500px;
+  cursor: default;
+}
+#${CONFIG.IFRAME_ID} .cf-wall-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--primary-very-low, #f8f9fa);
+  border-bottom: 1px solid var(--primary-low, #eee);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--primary, #333);
+  white-space: nowrap;
+}
+#${CONFIG.IFRAME_ID} .cf-wall-close {
+  border: none;
+  background-color: var(--danger, #ff4d4f);
+  color: var(--secondary, #fff);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+#${CONFIG.IFRAME_ID} .cf-wall-panel-body {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--secondary, #fff);
+}
+#${CONFIG.IFRAME_ID}.expanded .cf-wall-panel-body {
+  display: flex;
+}
+#${CONFIG.IFRAME_ID} .cf-wall-panel-body iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background-color: var(--secondary, #fff);
+}
+#${CONFIG.TOAST_ID} {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 2147483647;
+  max-width: 70vw;
+  background-color: var(--primary, #222);
+  color: var(--secondary, #fff);
+  padding: 10px 16px;
+  border-radius: var(--d-border-radius, 6px);
+  font-size: 14px;
+}
+`
 
   /**
    * 日志函数，仅在调试模式下输出
@@ -87,10 +177,61 @@
    * 脚本内部状态
    */
   const state = {
+    // 自动过盾开关（手动开启，默认关闭，持久化存储）
+    autoEnabled: false,
     // 上次自动触发弹窗的时间戳
     lastAutoTriggerAt: 0,
     // iframe 通过验证的轮询定时器
-    solveTimer: null
+    solveTimer: null,
+    // 站点主题样式是否已注入
+    styleInjected: false,
+    // DOM 就绪检查是否已排程
+    domChecksScheduled: false,
+    // DOM 变化观察器（dialog 报错兜底）
+    observer: null,
+    // 自动开关菜单命令 ID
+    autoCommandId: null,
+    // 已挂载的网络钩子（用于关闭开关时还原）
+    hooks: null
+  }
+
+  /**
+   * 读取自动过盾开关（GM 存储优先，localStorage 兜底），默认关闭
+   * @returns {boolean}
+   */
+  function readAutoEnabled() {
+    try {
+      if (typeof GM_getValue === 'function') {
+        return GM_getValue(CONFIG.STORAGE_KEY, false) === true
+      }
+    } catch (error) {
+      log('读取自动过盾开关失败：', error)
+    }
+    try {
+      return localStorage.getItem(CONFIG.STORAGE_KEY) === '1'
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * 写入自动过盾开关
+   * @param {boolean} value
+   */
+  function writeAutoEnabled(value) {
+    try {
+      if (typeof GM_setValue === 'function') {
+        GM_setValue(CONFIG.STORAGE_KEY, value)
+        return
+      }
+    } catch (error) {
+      log('写入自动过盾开关失败：', error)
+    }
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEY, value ? '1' : '0')
+    } catch (error) {
+      log('写入自动过盾开关（localStorage）失败：', error)
+    }
   }
 
   /**
@@ -110,6 +251,19 @@
       return window[name]
     } catch (error) {
       return undefined
+    }
+  }
+
+  /**
+   * 注入弹窗样式（幂等）。颜色全部使用 Discourse 站点提供的主题变量
+   */
+  function ensureStyles() {
+    if (state.styleInjected) return
+    try {
+      GM_addStyle(WALL_CSS)
+      state.styleInjected = true
+    } catch (error) {
+      log('注入样式失败：', error)
     }
   }
 
@@ -248,11 +402,14 @@
   }
 
   /**
-   * 挂载 fetch / XHR 钩子以读取响应头。
+   * 挂载 fetch / XHR 钩子以读取响应头，并记录原始引用便于还原。
    * Discourse 的请求都发生在页面主世界，沙箱环境优先挂到 unsafeWindow；
    * 全部包在 try/catch 中，任何失败都不影响页面原有逻辑
    */
   function installNetworkHooks() {
+    if (state.hooks) return
+
+    const hooks = { fetch: [], xhr: [] }
     const targets = []
     if (typeof unsafeWindow !== 'undefined' && unsafeWindow) {
       targets.push(unsafeWindow)
@@ -262,102 +419,130 @@
     }
 
     for (const target of targets) {
-      hookFetch(target)
-      hookXHR(target)
-    }
-  }
+      try {
+        if (target && typeof target.fetch === 'function' && !target.__linuxdoCfFetchHooked) {
+          const originalFetch = target.fetch
+          const patchedFetch = function (input) {
+            const promise = originalFetch.apply(this, arguments)
+            try {
+              promise
+                .then(response => {
+                  const url = typeof input === 'string' ? input : (input && input.url) || ''
+                  inspectResponse('fetch', url, response ? response.status : 0, name => {
+                    try {
+                      return response && response.headers ? response.headers.get(name) : null
+                    } catch (error) {
+                      return null
+                    }
+                  })
+                })
+                .catch(() => {})
+            } catch (error) {
+              log('监听 fetch 响应失败：', error)
+            }
+            return promise
+          }
 
-  /**
-   * 包装 window.fetch，在响应返回后检查特殊表头
-   * @param {Window} target - 目标 window
-   */
-  function hookFetch(target) {
-    try {
-      if (!target || typeof target.fetch !== 'function' || target.__linuxdoCfFetchHooked) {
-        return
-      }
-
-      const originalFetch = target.fetch
-      const patchedFetch = function (input) {
-        const promise = originalFetch.apply(this, arguments)
-        try {
-          promise
-            .then(response => {
-              const url = (input && input.url) || (typeof input === 'string' ? input : '')
-              inspectResponse('fetch', url, response ? response.status : 0, name => {
-                try {
-                  return response && response.headers ? response.headers.get(name) : null
-                } catch (error) {
-                  return null
-                }
-              })
-            })
-            .catch(() => {})
-        } catch (error) {
-          log('监听 fetch 响应失败：', error)
+          target.fetch = patchedFetch
+          if (target.fetch === patchedFetch) {
+            target.__linuxdoCfFetchHooked = true
+            hooks.fetch.push({ target, original: originalFetch, patched: patchedFetch })
+            log('已挂载 fetch 钩子')
+          }
         }
-        return promise
+      } catch (error) {
+        log('挂载 fetch 钩子失败：', error)
       }
 
-      target.fetch = patchedFetch
-      if (target.fetch === patchedFetch) {
-        target.__linuxdoCfFetchHooked = true
-        log('已挂载 fetch 钩子')
-      }
-    } catch (error) {
-      log('挂载 fetch 钩子失败：', error)
-    }
-  }
+      try {
+        if (target && typeof target.XMLHttpRequest === 'function') {
+          const proto = target.XMLHttpRequest.prototype
+          if (!proto.__linuxdoCfXhrHooked) {
+            const originalOpen = proto.open
+            const originalSend = proto.send
 
-  /**
-   * 包装 XMLHttpRequest，在 loadend 后检查特殊表头
-   * @param {Window} target - 目标 window
-   */
-  function hookXHR(target) {
-    try {
-      if (!target || typeof target.XMLHttpRequest !== 'function') {
-        return
-      }
-
-      const proto = target.XMLHttpRequest.prototype
-      if (proto.__linuxdoCfXhrHooked) {
-        return
-      }
-
-      const originalOpen = proto.open
-      const originalSend = proto.send
-
-      proto.open = function (method, url) {
-        try {
-          this.__linuxdoRequestUrl = typeof url === 'string' ? url : String(url || '')
-        } catch (error) {
-          // 记录 URL 失败不影响请求本身
-        }
-        return originalOpen.apply(this, arguments)
-      }
-
-      proto.send = function () {
-        try {
-          const xhr = this
-          xhr.addEventListener('loadend', () => {
-            inspectResponse('xhr', xhr.__linuxdoRequestUrl || '', xhr.status, name => {
+            proto.open = function (method, url) {
               try {
-                return xhr.getResponseHeader(name)
+                this.__linuxdoRequestUrl = typeof url === 'string' ? url : String(url || '')
               } catch (error) {
-                return null
+                // 记录 URL 失败不影响请求本身
               }
-            })
-          })
-        } catch (error) {
-          log('监听 XHR 响应失败：', error)
-        }
-        return originalSend.apply(this, arguments)
-      }
+              return originalOpen.apply(this, arguments)
+            }
 
-      proto.__linuxdoCfXhrHooked = true
-      log('已挂载 XHR 钩子')
-    } catch (error) {
-      log('挂载 XHR 钩子失败：', error)
+            proto.send = function () {
+              try {
+                const xhr = this
+                xhr.addEventListener('loadend', () => {
+                  inspectResponse('xhr', xhr.__linuxdoRequestUrl || '', xhr.status, name => {
+                    try {
+                      return xhr.getResponseHeader(name)
+                    } catch (error) {
+                      return null
+                    }
+                  })
+                })
+              } catch (error) {
+                log('监听 XHR 响应失败：', error)
+              }
+              return originalSend.apply(this, arguments)
+            }
+
+            proto.__linuxdoCfXhrHooked = true
+            hooks.xhr.push({ proto, open: originalOpen, send: originalSend })
+            log('已挂载 XHR 钩子')
+          }
+        }
+      } catch (error) {
+        log('挂载 XHR 钩子失败：', error)
+      }
+    }
+
+    state.hooks = hooks
+  }
+
+  /**
+   * 还原网络钩子（关闭自动过盾开关时调用）
+   */
+  function uninstallNetworkHooks() {
+    const hooks = state.hooks
+    if (!hooks) return
+
+    for (const item of hooks.fetch) {
+      try {
+        if (item.target.fetch === item.patched) {
+          item.target.fetch = item.original
+          item.target.__linuxdoCfFetchHooked = false
+          log('已卸载 fetch 钩子')
+        }
+      } catch (error) {
+        log('卸载 fetch 钩子失败：', error)
+      }
+    }
+
+    for (const item of hooks.xhr) {
+      try {
+        item.proto.open = item.open
+        item.proto.send = item.send
+        item.proto.__linuxdoCfXhrHooked = false
+        log('已卸载 XHR 钩子')
+      } catch (error) {
+        log('卸载 XHR 钩子失败：', error)
+      }
+    }
+
+    state.hooks = null
+  }
+
+  /**
+   * 应用自动过盾开关：开启时挂载钩子并排程 DOM 检查，关闭时还原钩子
+   */
+  function applyAutoEnabled() {
+    if (state.autoEnabled) {
+      installNetworkHooks()
+      scheduleDomChecks()
+    } else {
+      uninstallNetworkHooks()
     }
   }
 
@@ -379,43 +564,26 @@
       return
     }
 
+    // 插件版过盾弹窗已存在时不重复弹（防双重/嵌套触发）
+    const coexistingId = CONFIG.COEXISTING_WALL_IDS.find(id => document.getElementById(id))
+    if (coexistingId) {
+      log('检测到插件版过盾弹窗，跳过重复创建：', coexistingId)
+      return
+    }
+
+    ensureStyles()
     log('正在创建 Challenge 弹窗...')
 
     const redirectUrl = `${CONFIG.CHALLENGE_PATH}?redirect=${encodeURIComponent(window.location.href)}`
 
-    // 创建容器
+    // 创建容器（尺寸与配色见 WALL_CSS，使用 Discourse 站点主题变量）
     const container = document.createElement('div')
     container.id = CONFIG.IFRAME_ID
     container.title = '点击展开/收起安全验证窗口'
-    Object.assign(container.style, {
-      position: 'fixed',
-      bottom: '20px',
-      right: '20px',
-      zIndex: '2147483647', // Max Z-Index
-      backgroundColor: '#fff',
-      boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      border: '1px solid #ccc',
-      transition: 'width 0.2s, height 0.2s'
-    })
 
     // 创建标题栏
     const header = document.createElement('div')
-    Object.assign(header.style, {
-      padding: '8px 10px',
-      backgroundColor: '#f8f9fa',
-      borderBottom: '1px solid #eee',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      color: '#333',
-      whiteSpace: 'nowrap'
-    })
+    header.className = 'cf-wall-header'
 
     // 标题文本（收起时用短文案）
     const title = document.createElement('span')
@@ -423,17 +591,9 @@
 
     // 关闭按钮
     const closeBtn = document.createElement('button')
+    closeBtn.className = 'cf-wall-close'
     closeBtn.innerText = '✕'
     closeBtn.title = '关闭'
-    Object.assign(closeBtn.style, {
-      border: 'none',
-      background: '#ff4d4f',
-      color: 'white',
-      borderRadius: '4px',
-      padding: '2px 8px',
-      cursor: 'pointer',
-      fontSize: '12px'
-    })
     closeBtn.onclick = event => {
       event.stopPropagation()
       container.remove()
@@ -443,24 +603,13 @@
     header.appendChild(title)
     header.appendChild(closeBtn)
 
-    // iframe 外层容器：收起时 display:none，iframe 仍在后台加载以自动过盾
+    // iframe 外层容器：收起时隐藏，iframe 仍在后台加载以自动过盾
     const panelBody = document.createElement('div')
-    Object.assign(panelBody.style, {
-      display: 'none',
-      flex: '1',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    })
+    panelBody.className = 'cf-wall-panel-body'
 
     // 创建 Iframe
     const iframe = document.createElement('iframe')
     iframe.src = redirectUrl
-    Object.assign(iframe.style, {
-      flex: '1',
-      width: '100%',
-      border: 'none',
-      backgroundColor: '#fff'
-    })
     panelBody.appendChild(iframe)
 
     // 组装
@@ -468,17 +617,11 @@
     container.appendChild(panelBody)
     document.body.appendChild(container)
 
-    // 展开/收起状态
+    // 展开/收起状态（尺寸与显隐由 .expanded 类控制）
     let expanded = Boolean(options.autoExpand)
     const applyExpanded = () => {
-      const size = expanded ? CONFIG.PANEL_SIZE : CONFIG.PILL_SIZE
-      Object.assign(container.style, {
-        width: size.width,
-        height: size.height,
-        cursor: expanded ? 'default' : 'pointer'
-      })
+      container.classList.toggle('expanded', expanded)
       title.innerText = expanded ? '🛡️ LINUX.DO 安全验证' : '🛡️ 安全验证'
-      panelBody.style.display = expanded ? 'flex' : 'none'
     }
 
     // 点击标题条切换展开/收起（✕ 关闭除外）
@@ -491,7 +634,7 @@
 
     applyExpanded()
 
-    // 过盾完成后自动关闭：创建即开始监视 iframe 地址（不依赖 load 事件），
+    // 过盾完成后自动关闭：创建即开始监视 iframe（不依赖 load 事件），
     // 收起状态下也能检测到通过；iframe 每次加载完成再确认一次
     watchChallengeSolved(container, iframe)
     iframe.addEventListener('load', () => {
@@ -502,8 +645,26 @@
   }
 
   /**
-   * 轮询 iframe 地址：仍在 /challenge 说明验证未完成；
-   * 离开 /challenge（跳回 redirect 目标）说明已通过，收掉弹窗并提示刷新
+   * 检查 iframe 内的 /challenge 页是否已经渲染出 Discourse 404 页：
+   * /challenge 路由本身不是真实页面，过盾完成（或本就无需验证）后 CF 放行，
+   * 页面出现「该页面不存在或者是一个不公开页面」即代表验证已通过
+   * @param {HTMLIFrameElement} iframe - challenge iframe
+   * @returns {boolean}
+   */
+  function isChallengeDoneInIframe(iframe) {
+    try {
+      const doc = iframe.contentDocument
+      const text = (doc && doc.body && doc.body.innerText) || ''
+      return CONFIG.CHALLENGE_DONE_TEXTS.some(doneText => text.includes(doneText))
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * 轮询 iframe：仍在 /challenge 且未出现 404 文案说明验证未完成；
+   * URL 离开 /challenge（redirect 生效时）或渲染出 404 页（常见情形）
+   * 说明已通过，收掉弹窗并提示刷新
    * @param {HTMLElement} container - 弹窗容器
    * @param {HTMLIFrameElement} iframe - challenge iframe
    */
@@ -521,11 +682,18 @@
       try {
         if (iframe.isConnected && container.isConnected) {
           alive = true
-          const path = iframe.contentWindow.location.pathname
-          solved = Boolean(path) && !path.startsWith(CONFIG.CHALLENGE_PATH)
+          let path = ''
+          try {
+            path = iframe.contentWindow.location.pathname
+          } catch (error) {
+            // 读取 iframe 地址失败（尚未导航完成等），交给内容判定兜底
+          }
+          solved =
+            (Boolean(path) && !path.startsWith(CONFIG.CHALLENGE_PATH)) ||
+            isChallengeDoneInIframe(iframe)
         }
       } catch (error) {
-        // 读取 iframe 状态失败（尚未导航完成等），继续等待下次轮询
+        // 读取 iframe 状态失败，继续等待下次轮询
       }
 
       if (solved) {
@@ -551,12 +719,14 @@
   }
 
   /**
-   * 显示短暂提示条
+   * 显示短暂提示条（样式见 WALL_CSS，使用 Discourse 主题变量）
    * @param {string} message - 提示文本
    */
   function showToast(message) {
     try {
       if (!document.body) return
+
+      ensureStyles()
 
       const existing = document.getElementById(CONFIG.TOAST_ID)
       if (existing) {
@@ -566,17 +736,6 @@
       const toast = document.createElement('div')
       toast.id = CONFIG.TOAST_ID
       toast.innerText = message
-      Object.assign(toast.style, {
-        position: 'fixed',
-        bottom: '30px',
-        right: '30px',
-        zIndex: '2147483647',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        color: '#fff',
-        padding: '10px 16px',
-        borderRadius: '6px',
-        fontSize: '14px'
-      })
       document.body.appendChild(toast)
 
       setTimeout(() => {
@@ -592,10 +751,11 @@
   }
 
   /**
-   * 检查并处理 CloudFlare 失败
+   * 检查并处理 CloudFlare 失败（仅在自动过盾开启时生效）
    * @param {MutationObserver} [observer] - 可选的观察者实例
    */
   function checkAndRedirect(observer) {
+    if (!state.autoEnabled) return false
     if (isChallengeFailure()) {
       // 注意：这里我们不断开 observer，因为用户可能关闭弹窗后再次触发错误
       // 如果需要防止频繁触发，可以在 showChallengeIframe 里做状态管理
@@ -606,7 +766,7 @@
   }
 
   /**
-   * 手动触发
+   * 手动触发（不受自动开关影响）
    */
   function manualTrigger() {
     log('手动触发 Challenge 弹窗')
@@ -619,12 +779,63 @@
   }
 
   /**
-   * 初始化脚本（DOM 就绪后执行；网络钩子在 boot 中更早安装）
+   * 注册/刷新自动过盾开关菜单项（标签随状态变化）
    */
-  function initScript() {
+  function refreshAutoMenuCommand() {
+    const label = state.autoEnabled ? '🛡️ 自动过盾：开（点击关闭）' : '🛡️ 自动过盾：关（点击开启）'
+    try {
+      if (state.autoCommandId != null && typeof GM_unregisterMenuCommand === 'function') {
+        GM_unregisterMenuCommand(state.autoCommandId)
+      }
+    } catch (error) {
+      log('注销菜单命令失败：', error)
+    }
+    try {
+      state.autoCommandId = GM_registerMenuCommand(label, toggleAutoEnabled)
+    } catch (error) {
+      log('注册菜单命令失败：', error)
+    }
+  }
+
+  /**
+   * 切换自动过盾开关（持久化，立即生效）
+   */
+  function toggleAutoEnabled() {
+    state.autoEnabled = !state.autoEnabled
+    writeAutoEnabled(state.autoEnabled)
+    applyAutoEnabled()
+    refreshAutoMenuCommand()
+    showToast(state.autoEnabled ? '✅ 自动过盾已开启' : '⛔ 自动过盾已关闭')
+    log('自动过盾开关已切换为：', state.autoEnabled)
+  }
+
+  /**
+   * 注册油猴菜单：自动过盾开关 + 手动触发
+   */
+  function registerMenus() {
+    try {
+      refreshAutoMenuCommand()
+    } catch (error) {
+      log('注册自动过盾开关菜单失败：', error)
+    }
+    try {
+      GM_registerMenuCommand(CONFIG.MANUAL_MENU_TEXT, manualTrigger)
+    } catch (error) {
+      log('注册菜单命令时出错：', error)
+    }
+  }
+
+  /**
+   * DOM 就绪后的检查（仅在自动过盾开启时执行）：
+   * 初始 dialog 兜底检查 + 挂 MutationObserver 观察后续报错
+   */
+  function runDomChecks() {
+    if (!state.autoEnabled) return
+
     log('初始化脚本')
 
-    if (isChallengePage()) {
+    // challenge 页面（linux.do 自己的 /challenge 路径）自身无需再弹窗
+    if (window.location.pathname.startsWith(CONFIG.CHALLENGE_PATH)) {
       return
     }
 
@@ -641,13 +852,14 @@
     // 初始检查
     checkAndRedirect()
 
-    // 观察 DOM 变化
+    // 观察 DOM 变化（幂等，开关反复切换不会重复挂载）
+    if (state.observer) return
     try {
-      const observer = new MutationObserver((mutations, obs) => {
+      state.observer = new MutationObserver((mutations, obs) => {
         checkAndRedirect(obs)
       })
 
-      observer.observe(document.body, {
+      state.observer.observe(document.body, {
         childList: true,
         subtree: true,
         characterData: true
@@ -657,26 +869,52 @@
     } catch (error) {
       log('启动 DOM 观察器时出错：', error)
     }
+  }
 
-    // 注册菜单命令
-    try {
-      GM_registerMenuCommand(CONFIG.MENU_TEXT, manualTrigger)
-    } catch (error) {
-      log('注册菜单命令时出错：', error)
+  /**
+   * 排程 DOM 就绪检查（幂等）
+   */
+  function scheduleDomChecks() {
+    if (state.domChecksScheduled) return
+    state.domChecksScheduled = true
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runDomChecks)
+    } else {
+      runDomChecks()
     }
   }
 
   /**
-   * 启动：@run-at document-start 下尽早挂载网络钩子（赶在应用发起请求前读取特殊表头），
-   * DOM 相关检查等 DOMContentLoaded
+   * 启动：读取开关（默认关闭）→ 注入菜单 → 仅在开启时挂载网络钩子与 DOM 检查
    */
   function boot() {
-    installNetworkHooks()
+    // 防嵌套触发：本脚本 @match linux.do/*，过盾弹窗的 iframe 里会再跑一个实例。
+    // 嵌套窗口（window.top !== window）与 /challenge 页面（含过盾完成后渲染的 404 页）
+    // 一律不运行任何逻辑——不装钩子、不挂观察器、不注册菜单，
+    // 从根上杜绝「iframe 里再装钩子 / iframe 里再弹一层窗」的嵌套触发
+    try {
+      if (window.top !== window) {
+        log('嵌套窗口（iframe）内不运行')
+        return
+      }
+    } catch (error) {
+      // top 不可访问时按嵌套窗口处理
+      log('top 不可访问，按嵌套窗口处理：', error)
+      return
+    }
+    if (isChallengePage()) {
+      log('challenge 页面内不运行')
+      return
+    }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initScript)
-    } else {
-      initScript()
+    state.autoEnabled = readAutoEnabled()
+    log('自动过盾开关：', state.autoEnabled ? '开' : '关（可在油猴菜单开启）')
+
+    registerMenus()
+
+    if (state.autoEnabled) {
+      applyAutoEnabled()
     }
   }
 
