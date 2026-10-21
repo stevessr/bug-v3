@@ -57,7 +57,10 @@ test('Font Awesome Free provides glyphs for the built-in Discourse icon names', 
   assert.ok(names.size > 15, 'expected to check fixed icons across multiple views')
   for (const name of names) {
     // FA7 icon selectors assign --fa; :before is shared by all icons.
-    const selector = new RegExp(`\\.fa-${name}(?=[,{])`)
-    assert.ok(selector.test(css), `Missing Font Awesome Solid glyph for ${name}`)
+    const glyph = `.fa-${name}`
+    assert.ok(
+      css.includes(`${glyph}{`) || css.includes(`${glyph},`),
+      `Missing Font Awesome Solid glyph for ${name}`
+    )
   }
 })
