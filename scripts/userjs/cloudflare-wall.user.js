@@ -76,7 +76,7 @@
     AUTO_TRIGGER_INTERVAL_MS: 30 * 1000,
     // 轮询 iframe 内验证是否已通过的间隔与超时
     SOLVE_POLL_INTERVAL_MS: 1000,
-    SOLVE_POLL_MAX_MS: 5 * 60 * 1000,
+    SOLVE_POLL_MAX_MS: 5 * 60 * 1000
     // 过盾成功只关闭弹窗，不刷新页面；站点会在当前会话中直接恢复可用
     // 弹窗尺寸（收起 170x38 / 展开 400x500）在下方 WALL_CSS 中定义
   }
