@@ -3,6 +3,7 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import zlib from 'zlib'
 
 // 定义环境变量配置
 const configs = {
@@ -145,6 +146,30 @@ function resolveViteCli() {
   return viteCli
 }
 
+// 构建后把 dist/assets/ffmpeg-core.wasm（~31MB）压成 ffmpeg-core.wasm.gz（gzip -9 约 10MB）。
+// 运行时（src/utils/avif/localAvifService.ts）用 DecompressionStream 解压成 Blob URL 再交给
+// ffmpeg——全本地解压、离线可用，仅为了把扩展包体积从 ~42MB 降到 ~21MB。
+// dev 构建不产出 dist；--watch 进程不退出（gzip 永不执行），运行时检测不到 gz 会
+// 自动回退到未压缩 wasm，行为一致。
+async function compressFfmpegWasm() {
+  const wasmPath = path.resolve(process.cwd(), 'dist', 'assets', 'ffmpeg-core.wasm')
+  if (!fs.existsSync(wasmPath)) {
+    console.log('ℹ️ dist/assets/ffmpeg-core.wasm 不存在，跳过 wasm 压缩')
+    return
+  }
+  const startedAt = Date.now()
+  const raw = fs.readFileSync(wasmPath)
+  const gzipped = zlib.gzipSync(raw, { level: 9 })
+  fs.writeFileSync(`${wasmPath}.gz`, gzipped)
+  fs.rmSync(wasmPath)
+  const toMb = bytes => `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  console.log(
+    `🗜️ ffmpeg-core.wasm → ffmpeg-core.wasm.gz: ${toMb(raw.length)} → ${toMb(
+      gzipped.length
+    )} (${Date.now() - startedAt}ms)`
+  )
+}
+
 const viteArgs = buildType === 'dev' ? [] : ['build', ...(watchBuild ? ['--watch'] : [])]
 const viteCli = resolveViteCli()
 console.log(`⚡ Vite CLI: ${viteCli}`)
@@ -160,8 +185,14 @@ child.on('error', error => {
   process.exit(1)
 })
 
-child.on('exit', code => {
+child.on('exit', async code => {
   if (code === 0 && buildType !== 'dev') {
+    try {
+      await compressFfmpegWasm()
+    } catch (error) {
+      console.error('❌ Failed to compress ffmpeg-core.wasm:', error)
+      process.exit(1)
+    }
     console.log('✅ Build completed!')
   }
   process.exit(code)

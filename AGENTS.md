@@ -208,7 +208,7 @@ Features:
 ### Advanced Features
 
 - **AI Integration:** Google Gemini API for emoji naming and batch operations
-- **WASM Support:** Perceptual hashing, AVIF conversion
+- **WASM Support:** Perceptual hashing, AVIF conversion (ffmpeg-core.wasm is packaged gzip-compressed by `scripts/build.js` and decompressed at runtime — package ~21MB instead of ~42MB)
 - **Rich Text:** ProseMirror editor integration
 - **Cloudflare Workers:** Data deployment and CDN
 - **MCP Bridge:** Model Context Protocol integration

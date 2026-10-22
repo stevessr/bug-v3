@@ -4,11 +4,33 @@ import { encode as encodeAvif } from '@jsquash/avif'
 import classWorkerURL from '@ffmpeg/ffmpeg/worker?worker&url'
 import coreURL from '@ffmpeg/core?url'
 import wasmURL from '@ffmpeg/core/wasm?url'
-// 多线程 FFmpeg 核心需要 cross-origin isolation（manifest 未启用
-// cross_origin_embedder_policy），扩展上下文中永远不会满足。静态引用
-// @ffmpeg/core-mt 会把 32MB 多线程 WASM 强制拷贝进 dist，因此移除对应
-// import。如果未来 manifest 开启 COI，可恢复 coreMtURL/wasmMtURL/workerMtURL
-// 并启用 canUseMultiThreadCore 分支。
+// 包体积优化：构建脚本（scripts/build.js）把 ~31MB 的 ffmpeg-core.wasm 预压缩为
+// ffmpeg-core.wasm.gz（gzip -9 后约 10MB）。运行时用 DecompressionStream 解压成
+// Blob URL 再交给 ffmpeg——全本地解压、离线可用，行为不变。
+// dev server / watch 构建下 gz 不存在，回退到 ?url 直出的未压缩 wasm。
+const FFMPEG_WASM_GZ_PATH = 'assets/ffmpeg-core.wasm.gz'
+
+const resolveWasmUrl = async (): Promise<string> => {
+  try {
+    // 扩展上下文（options 页）提供 chrome.runtime.getURL；
+    // 非扩展环境（dev server 直开 / 单测）回退 ?url 直出的未压缩 wasm
+    const getURL = typeof chrome !== 'undefined' ? chrome.runtime?.getURL : undefined
+    if (typeof getURL !== 'function') {
+      return wasmURL
+    }
+    const response = await fetch(getURL(FFMPEG_WASM_GZ_PATH))
+    if (!response.ok || !response.body) {
+      return wasmURL
+    }
+    const buffer = await new Response(
+      response.body.pipeThrough(new DecompressionStream('gzip'))
+    ).arrayBuffer()
+    return URL.createObjectURL(new Blob([buffer], { type: 'application/wasm' }))
+  } catch {
+    // gz 缺失或解压 API 不可用：回退到未压缩 wasm URL
+    return wasmURL
+  }
+}
 
 export interface LocalAvifProgress {
   message: string
@@ -215,7 +237,15 @@ class LocalAvifService {
     const ffmpeg = this.getFfmpeg()
     this.ffmpegLoadPromise = (async () => {
       if (ffmpeg.loaded) return
-      await ffmpeg.load({ classWorkerURL, coreURL, wasmURL })
+      const wasmObjectUrl = await resolveWasmUrl()
+      try {
+        await ffmpeg.load({ classWorkerURL, coreURL, wasmURL: wasmObjectUrl })
+      } finally {
+        // 解压产生的 Blob URL 用完即回收；静态 ?url 资源路径不回收
+        if (wasmObjectUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(wasmObjectUrl)
+        }
+      }
     })().catch(error => {
       this.ffmpegLoadPromise = null
       throw error

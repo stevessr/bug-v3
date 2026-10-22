@@ -209,6 +209,22 @@ function scanSourceInvariants(rootDir) {
         : 'Discourse site icons must use the site bridge without assigning untrusted innerHTML.'
   })
 
+  const localAvifService = fs.readFileSync(
+    path.join(rootDir, 'src/utils/avif/localAvifService.ts'),
+    'utf8'
+  )
+  const usesGzipDistribution = localAvifService.includes('ffmpeg-core.wasm.gz')
+  const decompressesAtRuntime = localAvifService.includes('DecompressionStream')
+  checks.push({
+    id: 'source.ffmpeg-wasm-runtime-decompression',
+    passed: usesGzipDistribution && decompressesAtRuntime,
+    actual: { usesGzipDistribution, decompressesAtRuntime },
+    message:
+      usesGzipDistribution && decompressesAtRuntime
+        ? 'ffmpeg core wasm is decompressed at runtime from the gzip artifact.'
+        : 'ffmpeg core wasm must be resolved from the gzip artifact via DecompressionStream at runtime.'
+  })
+
   return checks
 }
 
@@ -299,6 +315,22 @@ export function auditExtension({
       duplicateAssets.length === 0
         ? 'No byte-identical large assets were emitted more than once.'
         : `${duplicateAssets.length} duplicated large asset group(s) found.`
+  })
+
+  // ffmpeg core wasm 必须以 gzip 分发（构建脚本压缩，运行时解压）；
+  // 未压缩的 ~31MB wasm 回到包里会直接吃掉一半包体积预算
+  const ffmpegWasmPath = path.join(distDir, 'assets', 'ffmpeg-core.wasm')
+  const rawWasmShipped = fs.existsSync(ffmpegWasmPath)
+  const gzWasmShipped = fs.existsSync(`${ffmpegWasmPath}.gz`)
+  checks.push({
+    id: 'dist.ffmpeg-wasm-compressed',
+    passed: !rawWasmShipped,
+    actual: { rawWasmShipped, gzWasmShipped },
+    message: rawWasmShipped
+      ? 'ffmpeg-core.wasm is shipped uncompressed (~31MB); the build must emit only the gzip artifact.'
+      : gzWasmShipped
+        ? 'ffmpeg core wasm is distributed gzip-compressed and decompressed at runtime.'
+        : 'ffmpeg core wasm is not bundled.'
   })
 
   if (scanSource) checks.push(...scanSourceInvariants(rootDir))
