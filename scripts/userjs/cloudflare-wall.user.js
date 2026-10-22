@@ -4,9 +4,9 @@
 // @namespace            https://github.com/utags
 // @homepageURL          https://github.com/utags/userscripts#readme
 // @supportURL           https://github.com/utags/userscripts/issues
-// @version              0.5.0
-// @description          Opt-in (disabled by default) Cloudflare challenge helper for linux.do: detects challenges via the cf-mitigated: challenge header, shows a collapsed mini-bar that expands on click, styles itself with the site's Discourse theme variables, and auto-closes and reloads once the challenge is passed
-// @description:zh-CN    手动开启、默认关闭的 linux.do 过盾辅助：按 Cloudflare 真实行为（cf-mitigated: challenge 特殊表头）识别盾，右下角默认只显示收起小窗（iframe 后台隐藏加载），点击展开；样式使用 Discourse 站点提供的主题变量自动适配深浅色；检测到过盾完成后自动关闭并刷新页面
+// @version              0.5.1
+// @description          Opt-in (disabled by default) Cloudflare challenge helper for linux.do: detects challenges via the cf-mitigated: challenge header, shows a collapsed mini-bar that expands on click, styles itself with the site's Discourse theme variables, and auto-closes when the challenge is passed without reloading the page
+// @description:zh-CN    手动开启、默认关闭的 linux.do 过盾辅助：按 Cloudflare 真实行为（cf-mitigated: challenge 特殊表头）识别盾，右下角默认只显示收起小窗（iframe 后台隐藏加载），点击展开；样式使用 Discourse 站点提供的主题变量自动适配深浅色；过盾完成后仅关闭弹窗、不刷新页面，可就地继续使用
 // @author               Pipecraft (Modified by User)
 // @license              MIT
 // @match                https://linux.do/*
@@ -77,8 +77,7 @@
     // 轮询 iframe 内验证是否已通过的间隔与超时
     SOLVE_POLL_INTERVAL_MS: 1000,
     SOLVE_POLL_MAX_MS: 5 * 60 * 1000,
-    // 验证通过后自动刷新页面，让之前被盾拦掉的请求重新走一遍
-    AUTO_RELOAD_ON_SOLVE: true
+    // 过盾成功只关闭弹窗，不刷新页面；站点会在当前会话中直接恢复可用
     // 弹窗尺寸（收起 170x38 / 展开 400x500）在下方 WALL_CSS 中定义
   }
 
@@ -700,12 +699,7 @@
         clearInterval(timer)
         state.solveTimer = null
         container.remove()
-        showToast(CONFIG.AUTO_RELOAD_ON_SOLVE ? '✅ 验证已通过，正在刷新页面…' : '✅ 验证已通过')
-        if (CONFIG.AUTO_RELOAD_ON_SOLVE) {
-          setTimeout(() => {
-            window.location.reload()
-          }, 800)
-        }
+        showToast('✅ 验证已通过')
         return
       }
 

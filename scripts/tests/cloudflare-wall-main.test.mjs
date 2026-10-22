@@ -97,12 +97,18 @@ function findByTag(root, tag) {
 function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nested = false } = {}) {
   const fetchCalls = []
   const reloads = []
+  const noticeMessages = []
   let observedCount = 0
   let nextResponse = null
 
   const body = makeElement('body')
   const head = makeElement('head')
-  const location = { pathname, href: `https://linux.do${pathname}`, reload: () => reloads.push(1) }
+  const location = {
+    pathname,
+    href: `https://linux.do${pathname}`,
+    origin: 'https://linux.do',
+    reload: () => reloads.push(1)
+  }
   const fetchImpl = input => {
     fetchCalls.push(typeof input === 'string' ? input : input && input.url)
     if (!nextResponse) throw new Error('no scripted response')
@@ -112,6 +118,7 @@ function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nest
     fetch: fetchImpl,
     location,
     _cf_chl_opt: chlOpt,
+    postMessage: (message, targetOrigin) => noticeMessages.push({ message, targetOrigin }),
     // 脚本使用 window.setInterval/clearInterval（DOM 类型返回 number）
     setInterval: fn => {
       let ticks = 0
@@ -175,8 +182,10 @@ function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nest
     windowStub,
     head,
     body,
+    location,
     fetchCalls,
     reloads,
+    noticeMessages,
     get observedCount() {
       return observedCount
     },
@@ -204,6 +213,17 @@ function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nest
       }
     }
   }
+}
+
+function assertExtensionSuccessNotice(env) {
+  assert.strictEqual(env.noticeMessages.length, 1, '应发送一次扩展 notice 事件')
+  assert.strictEqual(
+    env.noticeMessages[0].message.source,
+    'emoji-extension-cloudflare-wall-main',
+    'notice 应来自主世界过盾脚本'
+  )
+  assert.strictEqual(env.noticeMessages[0].message.type, 'challenge-solved')
+  assert.strictEqual(env.noticeMessages[0].targetOrigin, env.location.origin)
 }
 
 const flush = () => new Promise(r => setTimeout(r, 15))
@@ -273,7 +293,7 @@ test('200 正常响应不弹窗', async () => {
   assert.ok(!env.popup(), '正常响应不应触发弹窗')
 })
 
-test('点击小窗展开/收起；展开态过盾成功后自动关闭 + toast + 刷新', async () => {
+test('点击小窗展开/收起；过盾后关闭并调用扩展 notice，不刷新页面', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -298,12 +318,15 @@ test('点击小窗展开/收起；展开态过盾成功后自动关闭 + toast +
   iframe.contentWindow.location.pathname = '/t/topic/123' // 验证通过，跳回原页面
   await sleep(80)
   assert.ok(!env.popup(), '检测到过盾完成后应自动关闭')
-  assert.ok(env.toast(), '应显示验证通过提示')
-  await sleep(1000)
-  assert.strictEqual(env.reloads.length, 1, '验证通过后应自动刷新页面')
+  assertExtensionSuccessNotice(env)
+  env.respond(200, { 'content-type': 'application/json' })
+  const nextResponse = await env.windowStub.fetch('/session/current.json')
+  assert.strictEqual(nextResponse.status, 200, '过盾后页面仍可继续发请求')
+  assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '不应导航离开当前页面')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
 })
 
-test('收起态（用户从未点击）后台过盾成功也自动关闭并刷新', async () => {
+test('收起态后台过盾成功也自动关闭并通知，不刷新页面', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -316,11 +339,12 @@ test('收起态（用户从未点击）后台过盾成功也自动关闭并刷�
   iframe.contentWindow = { location: { pathname: '/t/topic/123' } } // 后台自动过盾成功
   await sleep(80)
   assert.ok(!env.popup(), '收起态过盾完成也应自动关闭')
-  await sleep(1000)
-  assert.strictEqual(env.reloads.length, 1, '应自动刷新页面')
+  assertExtensionSuccessNotice(env)
+  assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '当前页面地址应保持不变')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
 })
 
-test('/challenge 渲染出 Discourse 404 页即视为过盾完成，自动关闭并刷新', async () => {
+test('/challenge 渲染出 Discourse 404 页即视为过盾完成，只关闭并通知，不刷新', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -331,9 +355,9 @@ test('/challenge 渲染出 Discourse 404 页即视为过盾完成，自动关闭
   iframe.contentDocument = { body: { innerText: '糟糕！该页面不存在或者是一个不公开页面。' } }
   await sleep(80)
   assert.ok(!env.popup(), '出现 404 页（过盾完成）应自动关闭')
-  assert.ok(env.toast(), '应显示验证通过提示')
-  await sleep(1000)
-  assert.strictEqual(env.reloads.length, 1, '应自动刷新页面')
+  assertExtensionSuccessNotice(env)
+  assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '当前页面地址应保持不变')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
 })
 
 test('验证未完成（仍在 /challenge 且无 404 文案）弹窗保留', async () => {

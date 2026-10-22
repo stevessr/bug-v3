@@ -11,7 +11,7 @@
  * - 触发盾时右下角默认只显示收起的小窗，iframe 在后台隐藏加载自动过盾
  * - 点击小窗才展开完整 challenge 窗口（再次点击可收起）
  * - 检测到过盾完成（iframe 离开 /challenge，或渲染出 /challenge 路由的
- *   Discourse 404 页——该路由本身不是真实页面）自动关闭并刷新页面
+ *   Discourse 404 页——该路由本身不是真实页面）自动关闭弹窗并提示；不刷新当前页面
  * - 样式使用 Discourse 站点提供的主题变量（--primary/--secondary 等），自动适配深浅色
  * - 防嵌套触发：嵌套窗口（iframe 内实例）与 /challenge 页面不运行任何逻辑；
  *   用户脚本版弹窗已存在时不重复弹
@@ -21,7 +21,6 @@
 interface WallConfig {
   challengePath: string
   iframeId: string
-  toastId: string
   // 其他实现（用户脚本版）的弹窗 ID：已存在时不重复弹，避免双重/嵌套触发
   coexistingWallIds: string[]
   mitigatedHeader: string
@@ -36,13 +35,11 @@ interface WallConfig {
   autoTriggerIntervalMs: number
   solvePollIntervalMs: number
   solvePollMaxMs: number
-  autoReloadOnSolve: boolean
 }
 
 const CONFIG: WallConfig = {
   challengePath: '/challenge',
   iframeId: 'emoji-ext-cf-challenge-iframe',
-  toastId: 'emoji-ext-cf-challenge-toast',
   // 用户脚本版（scripts/userjs/cloudflare-wall.user.js）的弹窗 ID
   coexistingWallIds: ['linuxdo-cf-challenge-iframe'],
   // Cloudflare 触发盾时的特殊响应头（'challenge' 是唯一取值）
@@ -72,9 +69,8 @@ const CONFIG: WallConfig = {
   autoTriggerIntervalMs: 30 * 1000,
   // 轮询 iframe 内验证是否已通过的间隔与超时
   solvePollIntervalMs: 1000,
-  solvePollMaxMs: 5 * 60 * 1000,
-  // 验证通过后自动刷新页面，让之前被盾拦掉的请求重新走一遍
-  autoReloadOnSolve: true
+  solvePollMaxMs: 5 * 60 * 1000
+  // 过盾成功只关闭弹窗，不刷新页面；站点会在当前会话中直接恢复可用
   // 弹窗尺寸（收起 170x38 / 展开 400x500）在 WALL_CSS 中定义
 }
 
@@ -144,18 +140,6 @@ const WALL_CSS = `
   width: 100%;
   border: none;
   background-color: var(--secondary, #fff);
-}
-#${CONFIG.toastId} {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  z-index: 2147483647;
-  max-width: 70vw;
-  background-color: var(--primary, #222);
-  color: var(--secondary, #fff);
-  padding: 10px 16px;
-  border-radius: var(--d-border-radius, 6px);
-  font-size: 14px;
 }
 `
 
@@ -549,13 +533,10 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
       window.clearInterval(timer)
       state.solveTimer = null
       container.remove()
-      showToast(CONFIG.autoReloadOnSolve ? '✅ 验证已通过，正在刷新页面…' : '✅ 验证已通过')
-      if (CONFIG.autoReloadOnSolve) {
-        setTimeout(() => {
-          window.location.reload()
-        }, 800)
-      }
-      return
+      window.postMessage(
+        { source: 'emoji-extension-cloudflare-wall-main', type: 'challenge-solved' },
+        window.location.origin
+      )
     }
 
     if (!alive || Date.now() - startedAt > CONFIG.solvePollMaxMs) {
@@ -565,37 +546,6 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
   }, CONFIG.solvePollIntervalMs)
 
   state.solveTimer = timer
-}
-
-/**
- * 显示短暂提示条
- */
-function showToast(message: string): void {
-  try {
-    if (!document.body) return
-
-    ensureStyles()
-
-    const existing = document.getElementById(CONFIG.toastId)
-    if (existing) {
-      existing.remove()
-    }
-
-    const toast = document.createElement('div')
-    toast.id = CONFIG.toastId
-    toast.innerText = message
-    document.body.appendChild(toast)
-
-    setTimeout(() => {
-      try {
-        toast.remove()
-      } catch {
-        // 元素已不存在，忽略
-      }
-    }, 4000)
-  } catch (error) {
-    log('显示提示失败：', error)
-  }
 }
 
 /**

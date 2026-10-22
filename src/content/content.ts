@@ -11,6 +11,21 @@ const logInfo = (...args: unknown[]) => {
 }
 const logError = (...args: unknown[]) => console.error('[Emoji Extension]', ...args)
 
+// MAIN-world 过盾脚本无法调用扩展模块；通过同源 window message 将成功提示交给
+// 隔离世界，再复用扩展已有的 notify success notice。
+const CLOUDFLARE_WALL_NOTICE_SOURCE = 'emoji-extension-cloudflare-wall-main'
+window.addEventListener('message', event => {
+  if (event.source !== window || event.origin !== window.location.origin) return
+  const data = event.data as { source?: unknown; type?: unknown }
+  if (data?.source !== CLOUDFLARE_WALL_NOTICE_SOURCE || data.type !== 'challenge-solved') {
+    return
+  }
+
+  void import('./utils/ui/notify')
+    .then(({ notify }) => notify('✅ 验证已通过', 'success'))
+    .catch(error => logError('Failed to show challenge success notice:', error))
+})
+
 logInfo('Content script bootstrap loaded')
 
 const CONTENT_MESSAGE_TYPES = new Set<ContentMessage['type']>([
