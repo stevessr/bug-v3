@@ -11,7 +11,8 @@
  * - 触发盾时右下角默认只显示收起的小窗，iframe 在后台隐藏加载自动过盾
  * - 点击小窗才展开完整 challenge 窗口（再次点击可收起）
  * - 检测到过盾完成（iframe 离开 /challenge，或渲染出 /challenge 路由的
- *   Discourse 404 页——该路由本身不是真实页面）自动关闭弹窗并提示；不刷新当前页面
+ *   Discourse 404 页——该路由本身不是真实页面）自动关闭弹窗并提示，再通过
+ *   Discourse 路由函数（同「周期刷新」功能）软刷新当前路由，不做整页 reload
  * - 样式使用 Discourse 站点提供的主题变量（--primary/--secondary 等），自动适配深浅色
  * - 防嵌套触发：嵌套窗口（iframe 内实例）与 /challenge 页面不运行任何逻辑；
  *   用户脚本版弹窗已存在时不重复弹
@@ -70,7 +71,8 @@ const CONFIG: WallConfig = {
   // 轮询 iframe 内验证是否已通过的间隔与超时
   solvePollIntervalMs: 1000,
   solvePollMaxMs: 5 * 60 * 1000
-  // 过盾成功只关闭弹窗，不刷新页面；站点会在当前会话中直接恢复可用
+  // 过盾成功只关闭弹窗，不做整页 reload；改用 Discourse 路由函数软刷新当前路由，
+  // 让被盾拦掉的请求重新走一遍（与「周期刷新」功能的 Discourse 调用一致）
   // 弹窗尺寸（收起 170x38 / 展开 400x500）在 WALL_CSS 中定义
 }
 
@@ -167,6 +169,12 @@ type HeaderGetter = (name: string) => string | null
 interface Window {
   __emojiExtCfWallInstalled?: boolean
   __emojiExtCfFetchHooked?: boolean
+  /** Discourse 页面应用暴露的全局对象（用于路由级软刷新） */
+  Discourse?: {
+    router?: {
+      transitionTo?: (path: string) => unknown
+    }
+  }
 }
 
 interface XMLHttpRequest {
@@ -498,7 +506,7 @@ function isChallengeDoneInIframe(iframe: HTMLIFrameElement): boolean {
 /**
  * 轮询 iframe：仍在 /challenge 且未出现 404 文案说明验证未完成；
  * URL 离开 /challenge（redirect 生效时）或渲染出 404 页（常见情形）
- * 说明已通过，收掉弹窗并提示刷新
+ * 说明已通过，收掉弹窗、经 Discourse 路由函数软刷新当前页面并提示
  */
 function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement): void {
   if (state.solveTimer) {
@@ -537,6 +545,9 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
         { source: 'emoji-extension-cloudflare-wall-main', type: 'challenge-solved' },
         window.location.origin
       )
+      // 不做整页 reload：改用 Discourse 路由函数（与「周期刷新」功能一致）
+      // 软刷新当前路由，让之前被盾拦掉的请求重新走一遍
+      refreshRouteViaDiscourse()
     }
 
     if (!alive || Date.now() - startedAt > CONFIG.solvePollMaxMs) {
@@ -546,6 +557,27 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
   }, CONFIG.solvePollIntervalMs)
 
   state.solveTimer = timer
+}
+
+/**
+ * 通过 Discourse 路由函数软刷新当前路由（与「周期刷新」功能的调用一致：
+ * window.Discourse.router.transitionTo(当前路径)）。由 Ember 重新进入当前路由，
+ * 被盾拦掉的数据请求会重新走一遍；不做整页 reload。
+ * 路由器不可用（应用未挂载 / 非 Discourse 环境）时静默跳过
+ */
+function refreshRouteViaDiscourse(): void {
+  try {
+    const router = window.Discourse?.router
+    if (!router || typeof router.transitionTo !== 'function') {
+      log('Discourse 路由器不可用，跳过路由刷新')
+      return
+    }
+    const currentPath = window.location.pathname
+    router.transitionTo(currentPath)
+    log('已通过 Discourse 路由刷新当前页面：', currentPath)
+  } catch (error) {
+    log('Discourse 路由刷新失败：', error)
+  }
 }
 
 /**

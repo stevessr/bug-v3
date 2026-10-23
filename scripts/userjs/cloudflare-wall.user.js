@@ -4,9 +4,9 @@
 // @namespace            https://github.com/utags
 // @homepageURL          https://github.com/utags/userscripts#readme
 // @supportURL           https://github.com/utags/userscripts/issues
-// @version              0.5.1
-// @description          Opt-in (disabled by default) Cloudflare challenge helper for linux.do: detects challenges via the cf-mitigated: challenge header, shows a collapsed mini-bar that expands on click, styles itself with the site's Discourse theme variables, and auto-closes when the challenge is passed without reloading the page
-// @description:zh-CN    手动开启、默认关闭的 linux.do 过盾辅助：按 Cloudflare 真实行为（cf-mitigated: challenge 特殊表头）识别盾，右下角默认只显示收起小窗（iframe 后台隐藏加载），点击展开；样式使用 Discourse 站点提供的主题变量自动适配深浅色；过盾完成后仅关闭弹窗、不刷新页面，可就地继续使用
+// @version              0.5.2
+// @description          Opt-in (disabled by default) Cloudflare challenge helper for linux.do: detects challenges via the cf-mitigated: challenge header, shows a collapsed mini-bar that expands on click, styles itself with the site's Discourse theme variables, and auto-closes when the challenge is passed, then soft-refreshes the current route via Discourse's router function (no full page reload)
+// @description:zh-CN    手动开启、默认关闭的 linux.do 过盾辅助：按 Cloudflare 真实行为（cf-mitigated: challenge 特殊表头）识别盾，右下角默认只显示收起小窗（iframe 后台隐藏加载），点击展开；样式使用 Discourse 站点提供的主题变量自动适配深浅色；过盾完成后仅关闭弹窗、经 Discourse 路由函数软刷新当前路由（不做整页 reload），可就地继续使用
 // @author               Pipecraft (Modified by User)
 // @license              MIT
 // @match                https://linux.do/*
@@ -77,7 +77,8 @@
     // 轮询 iframe 内验证是否已通过的间隔与超时
     SOLVE_POLL_INTERVAL_MS: 1000,
     SOLVE_POLL_MAX_MS: 5 * 60 * 1000
-    // 过盾成功只关闭弹窗，不刷新页面；站点会在当前会话中直接恢复可用
+    // 过盾成功只关闭弹窗，不做整页 reload；改用 Discourse 路由函数软刷新当前路由，
+    // 让被盾拦掉的请求重新走一遍（与插件版及「周期刷新」功能的 Discourse 调用一致）
     // 弹窗尺寸（收起 170x38 / 展开 400x500）在下方 WALL_CSS 中定义
   }
 
@@ -663,7 +664,7 @@
   /**
    * 轮询 iframe：仍在 /challenge 且未出现 404 文案说明验证未完成；
    * URL 离开 /challenge（redirect 生效时）或渲染出 404 页（常见情形）
-   * 说明已通过，收掉弹窗并提示刷新
+   * 说明已通过，收掉弹窗、经 Discourse 路由函数软刷新当前页面并提示
    * @param {HTMLElement} container - 弹窗容器
    * @param {HTMLIFrameElement} iframe - challenge iframe
    */
@@ -700,6 +701,9 @@
         state.solveTimer = null
         container.remove()
         showToast('✅ 验证已通过')
+        // 不做整页 reload：改用 Discourse 路由函数（与插件版/「周期刷新」一致）
+        // 软刷新当前路由，让之前被盾拦掉的请求重新走一遍
+        refreshRouteViaDiscourse()
         return
       }
 
@@ -710,6 +714,28 @@
     }, CONFIG.SOLVE_POLL_INTERVAL_MS)
 
     state.solveTimer = timer
+  }
+
+  /**
+   * 通过 Discourse 路由函数软刷新当前路由（与插件版/「周期刷新」功能的调用一致：
+   * Discourse.router.transitionTo(当前路径)）。由 Ember 重新进入当前路由，
+   * 被盾拦掉的数据请求会重新走一遍；不做整页 reload。
+   * 路由器不可用（应用未挂载 / 非 Discourse 环境）时静默跳过
+   */
+  function refreshRouteViaDiscourse() {
+    try {
+      const discourse = getGlobal('Discourse')
+      const router = discourse && discourse.router
+      if (!router || typeof router.transitionTo !== 'function') {
+        log('Discourse 路由器不可用，跳过路由刷新')
+        return
+      }
+      const currentPath = window.location.pathname
+      router.transitionTo(currentPath)
+      log('已通过 Discourse 路由刷新当前页面：', currentPath)
+    } catch (error) {
+      log('Discourse 路由刷新失败：', error)
+    }
   }
 
   /**

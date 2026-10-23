@@ -1,7 +1,7 @@
 // cloudflare-wall-main 的主世界过盾逻辑冒烟测试：
 // 按 Cloudflare 真实行为（cf-mitigated 表头、疑似盾响应、全页盾识别）验证
-// 网络钩子识别、默认收起小窗、点击展开、过盾后自动关闭与刷新、
-// Discourse 主题变量样式注入、防嵌套触发。
+// 网络钩子识别、默认收起小窗、点击展开、过盾后自动关闭并经 Discourse 路由
+// 函数软刷新（不整页 reload）、Discourse 主题变量样式注入、防嵌套触发。
 // 直接读取 TS 源码并剥离类型后在模拟 DOM 沙箱中运行。
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
@@ -94,10 +94,17 @@ function findByTag(root, tag) {
   return null
 }
 
-function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nested = false } = {}) {
+function createEnv({
+  title = 'LINUX DO',
+  chlOpt,
+  pathname = '/t/topic/123',
+  nested = false,
+  discourseTransitionTo = null
+} = {}) {
   const fetchCalls = []
   const reloads = []
   const noticeMessages = []
+  const transitionCalls = []
   let observedCount = 0
   let nextResponse = null
 
@@ -135,6 +142,17 @@ function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nest
     clearInterval
   }
   windowStub.top = nested ? { fakeTop: true } : windowStub
+  if (discourseTransitionTo) {
+    // 模拟 Discourse 页面应用暴露的路由器（与「周期刷新」功能调用的函数一致）
+    windowStub.Discourse = {
+      router: {
+        transitionTo: path => {
+          transitionCalls.push(path)
+          return discourseTransitionTo(path)
+        }
+      }
+    }
+  }
   const documentStub = {
     readyState: 'complete',
     title,
@@ -186,6 +204,7 @@ function createEnv({ title = 'LINUX DO', chlOpt, pathname = '/t/topic/123', nest
     fetchCalls,
     reloads,
     noticeMessages,
+    transitionCalls,
     get observedCount() {
       return observedCount
     },
@@ -293,7 +312,7 @@ test('200 正常响应不弹窗', async () => {
   assert.ok(!env.popup(), '正常响应不应触发弹窗')
 })
 
-test('点击小窗展开/收起；过盾后关闭并调用扩展 notice，不刷新页面', async () => {
+test('点击小窗展开/收起；过盾后关闭并调用扩展 notice，不整页 reload', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -323,10 +342,37 @@ test('点击小窗展开/收起；过盾后关闭并调用扩展 notice，不刷
   const nextResponse = await env.windowStub.fetch('/session/current.json')
   assert.strictEqual(nextResponse.status, 200, '过盾后页面仍可继续发请求')
   assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '不应导航离开当前页面')
-  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应整页 reload')
+  assert.deepStrictEqual(
+    env.transitionCalls,
+    [],
+    '无 Discourse 路由器（应用未挂载）时应静默跳过路由刷新'
+  )
 })
 
-test('收起态后台过盾成功也自动关闭并通知，不刷新页面', async () => {
+test('过盾成功后调用 Discourse 路由函数软刷新当前路由（同「周期刷新」），不整页 reload', async () => {
+  const env = createEnv({ discourseTransitionTo: () => {} })
+  env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  const popup = env.popup()
+  assert.ok(popup, '小窗应存在')
+
+  const iframe = findByTag(popup, 'iframe')
+  iframe.contentWindow = { location: { pathname: '/t/topic/123' } } // 后台自动过盾成功
+  await sleep(80)
+  assert.ok(!env.popup(), '过盾完成后弹窗应自动关闭')
+  assertExtensionSuccessNotice(env)
+  assert.deepStrictEqual(
+    env.transitionCalls,
+    ['/t/topic/123'],
+    '应调用 Discourse.router.transitionTo(当前路径) 软刷新当前路由'
+  )
+  assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '当前页面地址应保持不变')
+  assert.strictEqual(env.reloads.length, 0, '不应做整页 reload')
+})
+
+test('收起态后台过盾成功也自动关闭并通知，不整页 reload', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -341,10 +387,10 @@ test('收起态后台过盾成功也自动关闭并通知，不刷新页面', as
   assert.ok(!env.popup(), '收起态过盾完成也应自动关闭')
   assertExtensionSuccessNotice(env)
   assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '当前页面地址应保持不变')
-  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应整页 reload')
 })
 
-test('/challenge 渲染出 Discourse 404 页即视为过盾完成，只关闭并通知，不刷新', async () => {
+test('/challenge 渲染出 Discourse 404 页即视为过盾完成，只关闭并通知，不整页 reload', async () => {
   const env = createEnv()
   env.respond(403, { 'cf-mitigated': 'challenge', 'content-type': 'text/html' })
   await env.windowStub.fetch('/posts.json')
@@ -357,7 +403,7 @@ test('/challenge 渲染出 Discourse 404 页即视为过盾完成，只关闭并
   assert.ok(!env.popup(), '出现 404 页（过盾完成）应自动关闭')
   assertExtensionSuccessNotice(env)
   assert.strictEqual(env.location.href, 'https://linux.do/t/topic/123', '当前页面地址应保持不变')
-  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应刷新页面')
+  assert.strictEqual(env.reloads.length, 0, '过盾成功后不应整页 reload')
 })
 
 test('验证未完成（仍在 /challenge 且无 404 文案）弹窗保留', async () => {
