@@ -79,6 +79,7 @@ export interface AppSettings {
   enableLinuxDoCredit?: boolean // 启用 LinuxDo Credit 积分浮窗
   // LinuxDo 点赞计数器（试验性功能）
   enableLinuxDoLikeCounter?: boolean // 启用 LinuxDo 点赞计数器（显示当日剩余点赞次数）
+  enableLinuxDoAutoChallenge?: boolean // 启用 Linux.do Cloudflare 自动过盾
   // 计划任务：定时点赞功能（试验性功能）
   enableScheduledLikes?: boolean // 启用计划任务点赞功能
   scheduledLikeTasks?: ScheduledLikeTask[] // 计划任务列表

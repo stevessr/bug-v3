@@ -70,6 +70,11 @@ test.describe('Chrome Extension Options Page', () => {
       // Should show settings content
       const settingsContent = page.locator('.space-y-6, .settings-content')
       await expect(settingsContent.first()).toBeVisible()
+      const switchesTab = page.getByRole('tab', { name: '开关' })
+      await switchesTab.click()
+      await expect(
+        page.getByText('启用 Linux.do Cloudflare 自动过盾', { exact: true })
+      ).toBeVisible()
     }
   })
 

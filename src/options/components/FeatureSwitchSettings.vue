@@ -24,6 +24,7 @@ const emit = defineEmits([
   'update:discourseRouterRefreshInterval',
   'update:forumUploadConcurrency',
   'update:enableLinuxDoLikeCounter',
+  'update:enableLinuxDoAutoChallenge',
   'update:enableTenorSearch',
   'update:tenorApiKey',
   'update:tenorLocale',
@@ -395,6 +396,13 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
         @update:model-value="handleSettingUpdate('enableLinuxDoLikeCounter', $event)"
         label="启用 LinuxDo 点赞计数器 (试验性功能)"
         description="在 LinuxDo 点赞选择器上显示当日剩余点赞次数和冷却时间"
+      />
+
+      <SettingSwitch
+        :model-value="getSetting('enableLinuxDoAutoChallenge', true)"
+        @update:model-value="handleSettingUpdate('enableLinuxDoAutoChallenge', $event)"
+        label="启用 Linux.do Cloudflare 自动过盾"
+        description="检测到 Cloudflare Challenge 时自动弹出安全验证小窗；关闭后不再检测或弹出。"
       />
 
       <SettingSwitch

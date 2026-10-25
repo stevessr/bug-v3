@@ -107,6 +107,7 @@ function createEnv({
   const transitionCalls = []
   let observedCount = 0
   let nextResponse = null
+  const windowMessageListeners = []
 
   const body = makeElement('body')
   const head = makeElement('head')
@@ -125,6 +126,9 @@ function createEnv({
     fetch: fetchImpl,
     location,
     _cf_chl_opt: chlOpt,
+    addEventListener(type, listener) {
+      if (type === 'message') windowMessageListeners.push(listener)
+    },
     postMessage: (message, targetOrigin) => noticeMessages.push({ message, targetOrigin }),
     // 脚本使用 window.setInterval/clearInterval（DOM 类型返回 number）
     setInterval: fn => {
@@ -205,6 +209,18 @@ function createEnv({
     reloads,
     noticeMessages,
     transitionCalls,
+    updateWallSetting(enabled) {
+      const event = {
+        source: windowStub,
+        origin: location.origin,
+        data: {
+          source: 'emoji-extension-cloudflare-wall-main',
+          type: 'settings-updated',
+          enabled
+        }
+      }
+      for (const listener of windowMessageListeners) listener(event)
+    },
     get observedCount() {
       return observedCount
     },
@@ -267,6 +283,23 @@ test('疑似盾响应（403 + cloudflare + text/html）触发默认收起小窗�
     styles.every(css => !css.includes('#ff4d4f') || css.includes('var(--danger')),
     '不应依赖硬编码配色'
   )
+})
+
+test('过盾开关关闭时不弹窗，重新开启时立即生效', async () => {
+  const env = createEnv()
+  env.updateWallSetting(false)
+  env.respond(403, { 'cf-mitigated': 'challenge' })
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  assert.equal(env.popup(), null, '关闭开关后不应弹出过盾窗口')
+
+  env.updateWallSetting(true)
+  await env.windowStub.fetch('/posts.json')
+  await flush()
+  assert.ok(env.popup(), '重新开启后应立即检测并弹出过盾窗口')
+
+  env.updateWallSetting(false)
+  assert.equal(env.popup(), null, '关闭开关也应关闭已经打开的过盾窗口')
 })
 
 test('cf-mitigated: challenge 特殊表头触发小窗，且自动触发有 30s 节流', async () => {

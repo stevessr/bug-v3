@@ -81,6 +81,7 @@ const {
   updateLinuxDoSeekingPosition,
   updateLinuxDoSeekingActionFilter,
   updateEnableLinuxDoCredit,
+  updateEnableLinuxDoAutoChallenge,
   updateTheme,
   updateMd3ColorScheme,
   updateMd3SeedColor,
@@ -183,6 +184,7 @@ onMounted(async () => {
               @update:forumUploadConcurrency="updateForumUploadConcurrency"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
+              @update:enableLinuxDoAutoChallenge="updateEnableLinuxDoAutoChallenge"
               @update:discourseRouterRefreshInterval="updateDiscourseRouterRefreshInterval"
               @update:enableTenorSearch="updateEnableTenorSearch"
               @update:tenorApiKey="updateTenorApiKey"

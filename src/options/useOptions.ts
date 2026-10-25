@@ -292,6 +292,10 @@ export default function useOptions() {
     emojiStore.updateSettings({ enableDiscourseRouterRefresh: value })
   }
 
+  const updateEnableLinuxDoAutoChallenge = (value: boolean) => {
+    emojiStore.updateSettings({ enableLinuxDoAutoChallenge: value })
+  }
+
   const updateDiscourseRouterRefreshInterval = (interval: number) => {
     emojiStore.updateSettings({ discourseRouterRefreshInterval: interval })
   }
@@ -877,6 +881,7 @@ export default function useOptions() {
     updateUseDiscourseNativeUpload,
     updateUseBackgroundNativeUpload,
     updateEnableDiscourseRouterRefresh,
+    updateEnableLinuxDoAutoChallenge,
     updateDiscourseRouterRefreshInterval,
     updateForumUploadConcurrency,
     updateEnableHoverPreview,

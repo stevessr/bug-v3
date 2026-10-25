@@ -5,6 +5,11 @@
 
 import { detectPlatform, getDiscourseDomains } from './utils/core/platformDetector'
 import type { ContentMessage } from './messageHandlers/types'
+import { requestSettingFromBackground } from './utils/core/requestSetting'
+import {
+  CLOUDFLARE_WALL_BRIDGE_SOURCE,
+  publishCloudflareWallEnabled
+} from './utils/cloudflareWallSettingsBridge'
 
 const logInfo = (...args: unknown[]) => {
   if (__ENABLE_LOGGING__) console.info('[Emoji Extension]', ...args)
@@ -13,7 +18,7 @@ const logError = (...args: unknown[]) => console.error('[Emoji Extension]', ...a
 
 // MAIN-world 过盾脚本无法调用扩展模块；通过同源 window message 将成功提示交给
 // 隔离世界，再复用扩展已有的 notify success notice。
-const CLOUDFLARE_WALL_NOTICE_SOURCE = 'emoji-extension-cloudflare-wall-main'
+const CLOUDFLARE_WALL_NOTICE_SOURCE = CLOUDFLARE_WALL_BRIDGE_SOURCE
 window.addEventListener('message', event => {
   if (event.source !== window || event.origin !== window.location.origin) return
   const data = event.data as { source?: unknown; type?: unknown }
@@ -56,6 +61,11 @@ async function initialize(): Promise<void> {
   // 1. 检测平台
   const platformInfo = detectPlatform()
   logInfo(`Platform detected: ${platformInfo.platform} (${platformInfo.hostname})`)
+
+  if (window.location.hostname === 'linux.do') {
+    const enabled = await requestSettingFromBackground('enableLinuxDoAutoChallenge')
+    publishCloudflareWallEnabled(enabled !== false)
+  }
 
   // 2. Discourse is feature-rich, so none of its picker/storage code is
   // parsed on unrelated pages even though the manifest matches <all_urls>.

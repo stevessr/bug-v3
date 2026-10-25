@@ -152,16 +152,44 @@ const log = (...args: unknown[]) => {
 }
 
 interface WallState {
+  enabled: boolean
   lastAutoTriggerAt: number
   solveTimer: number | null
   // 站点主题样式是否已注入
   styleInjected: boolean
 }
 
+const WALL_BRIDGE_SOURCE = 'emoji-extension-cloudflare-wall-main'
+
 const state: WallState = {
+  // Preserve the existing behavior until the isolated content script reports the saved setting.
+  enabled: true,
   lastAutoTriggerAt: 0,
   solveTimer: null,
   styleInjected: false
+}
+
+function handleWallSettingsMessage(event: MessageEvent): void {
+  if (event.source !== window || event.origin !== window.location.origin) return
+
+  const data = event.data as { source?: unknown; type?: unknown; enabled?: unknown }
+  if (
+    data?.source !== WALL_BRIDGE_SOURCE ||
+    data.type !== 'settings-updated' ||
+    typeof data.enabled !== 'boolean'
+  ) {
+    return
+  }
+
+  state.enabled = data.enabled
+  if (data.enabled) return
+
+  state.lastAutoTriggerAt = 0
+  if (state.solveTimer !== null) {
+    window.clearInterval(state.solveTimer)
+    state.solveTimer = null
+  }
+  document.getElementById(CONFIG.iframeId)?.remove()
 }
 
 type HeaderGetter = (name: string) => string | null
@@ -251,6 +279,8 @@ function inspectResponse(
   getHeader: HeaderGetter
 ): void {
   try {
+    if (!state.enabled) return
+
     const mitigated = String(getHeader(CONFIG.mitigatedHeader) || '').toLowerCase()
 
     if (mitigated === CONFIG.mitigatedChallengeValue) {
@@ -285,6 +315,8 @@ function inspectResponse(
  * 自动触发小窗（带节流与全页 challenge 保护）
  */
 function triggerChallengePopup(reason: string): void {
+  if (!state.enabled) return
+
   // 顶层文档本身就是全页盾时会自行完成验证并刷新，不能再叠一层弹窗
   if (looksLikeFullPageChallenge()) {
     log('当前是 Cloudflare 全页 challenge，跳过弹窗：', reason)
@@ -542,7 +574,7 @@ function watchChallengeSolved(container: HTMLElement, iframe: HTMLIFrameElement)
       state.solveTimer = null
       container.remove()
       window.postMessage(
-        { source: 'emoji-extension-cloudflare-wall-main', type: 'challenge-solved' },
+        { source: WALL_BRIDGE_SOURCE, type: 'challenge-solved' },
         window.location.origin
       )
       // 不做整页 reload：改用 Discourse 路由函数（与「周期刷新」功能一致）
@@ -624,6 +656,7 @@ function bootWall(): void {
   }
   globalWindow.__emojiExtCfWallInstalled = true
 
+  window.addEventListener('message', handleWallSettingsMessage)
   hookFetch()
   hookXHR()
 

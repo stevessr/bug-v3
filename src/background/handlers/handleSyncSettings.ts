@@ -38,6 +38,7 @@ const DISCOURSE_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
   'forumUploadConcurrency',
   'enableLinuxDoCredit',
   'enableLinuxDoLikeCounter',
+  'enableLinuxDoAutoChallenge',
   'enableExperimentalFeatures'
 ]
 
