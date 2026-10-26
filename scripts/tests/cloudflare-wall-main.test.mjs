@@ -107,6 +107,7 @@ function createEnv({
   const transitionCalls = []
   let observedCount = 0
   let nextResponse = null
+  let responseHeaderReadCount = 0
   const windowMessageListeners = []
 
   const body = makeElement('body')
@@ -209,6 +210,9 @@ function createEnv({
     reloads,
     noticeMessages,
     transitionCalls,
+    get responseHeaderReadCount() {
+      return responseHeaderReadCount
+    },
     updateWallSetting(enabled) {
       const event = {
         source: windowStub,
@@ -241,6 +245,7 @@ function createEnv({
         status,
         headers: {
           get: name => {
+            responseHeaderReadCount += 1
             const v = headers[String(name).toLowerCase()]
             return v === undefined ? null : v
           }
@@ -292,11 +297,13 @@ test('过盾开关关闭时不弹窗，重新开启时立即生效', async () =>
   await env.windowStub.fetch('/posts.json')
   await flush()
   assert.equal(env.popup(), null, '关闭开关后不应弹出过盾窗口')
+  assert.equal(env.responseHeaderReadCount, 0, '关闭时应跳过响应头读取')
 
   env.updateWallSetting(true)
   await env.windowStub.fetch('/posts.json')
   await flush()
   assert.ok(env.popup(), '重新开启后应立即检测并弹出过盾窗口')
+  assert.ok(env.responseHeaderReadCount > 0, '开启后应继续检查响应头')
 
   env.updateWallSetting(false)
   assert.equal(env.popup(), null, '关闭开关也应关闭已经打开的过盾窗口')

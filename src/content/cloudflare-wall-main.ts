@@ -349,6 +349,8 @@ function hookFetch(): void {
       try {
         promise
           .then(response => {
+            if (!state.enabled) return
+
             const url =
               typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
             inspectResponse('fetch', url, response ? response.status : 0, name => {
@@ -402,6 +404,8 @@ function hookXHR(): void {
       try {
         const xhr = this
         xhr.addEventListener('loadend', () => {
+          if (!state.enabled) return
+
           inspectResponse('xhr', xhr.__emojiExtRequestUrl || '', xhr.status, name => {
             try {
               return xhr.getResponseHeader(name)

@@ -63,8 +63,9 @@ async function initialize(): Promise<void> {
   logInfo(`Platform detected: ${platformInfo.platform} (${platformInfo.hostname})`)
 
   if (window.location.hostname === 'linux.do') {
-    const enabled = await requestSettingFromBackground('enableLinuxDoAutoChallenge')
-    publishCloudflareWallEnabled(enabled !== false)
+    void requestSettingFromBackground('enableLinuxDoAutoChallenge').then(enabled => {
+      publishCloudflareWallEnabled(enabled !== false)
+    })
   }
 
   // 2. Discourse is feature-rich, so none of its picker/storage code is
