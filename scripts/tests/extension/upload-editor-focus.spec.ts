@@ -10,6 +10,7 @@ const testAssetName = 'upload-editor-focus.iife.js'
 
 type UploadEditorHelpers = {
   captureEditorInsertionTarget: () => EditorInsertionTarget | null
+  finalizeEditorInsertionCaret: (target: EditorInsertionTarget | null | undefined) => void
   insertIntoEditor: (text: string, target?: EditorInsertionTarget | null) => boolean
   resolveEditorInsertionTarget: (
     target: EditorInsertionTarget | null | undefined
@@ -359,7 +360,49 @@ test.describe('uploaded image editor targeting', () => {
     expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)'.length)
   })
 
-  test('restores the fixed textarea index after asynchronous Discourse focus updates', async ({
+  test('moves the caret forward only after the batch while keeping panel focus', async ({
+    page
+  }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <textarea id="editor" class="d-editor-input">start</textarea>
+        <button id="panel-btn" type="button">上传中</button>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLTextAreaElement>('#editor')!
+      const panelButton = document.querySelector<HTMLButtonElement>('#panel-btn')!
+      editor.focus()
+      editor.setSelectionRange(0, 0)
+      editor.dispatchEvent(new Event('select', { bubbles: true }))
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+
+      panelButton.focus()
+      helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+      const caretDuringBatch = editor.selectionStart
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
+
+      return {
+        activeId: document.activeElement?.id ?? null,
+        value: editor.value,
+        caretDuringBatch,
+        visibleCaret: editor.selectionStart,
+        insertionTail: frozenTarget.nextInsertionStart
+      }
+    })
+
+    expect(result.activeId).toBe('panel-btn')
+    expect(result.value).toBe('![a](upload://a)![b](upload://b)start')
+    expect(result.caretDuringBatch).toBe(0)
+    expect(result.visibleCaret).toBe('![a](upload://a)![b](upload://b)'.length)
+    expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)'.length)
+  })
+
+  test('restores the panel focus and forward caret after async textarea updates', async ({
     page
   }) => {
     await loadEditorHelpers(
@@ -394,6 +437,7 @@ test.describe('uploaded image editor targeting', () => {
       panelButton.focus()
 
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
       await new Promise<void>(resolve => {
         requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0)))
       })
@@ -410,7 +454,7 @@ test.describe('uploaded image editor targeting', () => {
     expect(result).toEqual({
       activeId: 'panel-btn',
       value: '![a](upload://a)start',
-      visibleCaret: 0,
+      visibleCaret: '![a](upload://a)'.length,
       fixedIndex: 0,
       insertionTail: '![a](upload://a)'.length
     })
@@ -449,6 +493,7 @@ test.describe('uploaded image editor targeting', () => {
       })
 
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
       await new Promise<void>(resolve => setTimeout(resolve, 80))
       return {
         activeTag: document.activeElement?.tagName ?? null,
@@ -460,7 +505,7 @@ test.describe('uploaded image editor targeting', () => {
     expect(result).toEqual({
       activeTag: 'BODY',
       value: '![a](upload://a)start',
-      visibleCaret: 0
+      visibleCaret: '![a](upload://a)'.length
     })
   })
 
@@ -479,6 +524,7 @@ test.describe('uploaded image editor targeting', () => {
       const frozenTarget = helpers.captureEditorInsertionTarget()
       document.querySelector<HTMLButtonElement>('#panel-btn')!.focus()
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
     })
 
     // Playwright's pointer event is trusted, so the delayed stabilization must
@@ -551,6 +597,7 @@ test.describe('uploaded image editor targeting', () => {
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
       helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
       helpers.insertIntoEditor('![c](upload://c)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
       const currentSelection = window.getSelection()!
       const caretRange = currentSelection.getRangeAt(0)
       const beforeCaret = document.createRange()
@@ -570,7 +617,9 @@ test.describe('uploaded image editor targeting', () => {
     expect(result.html).toContain('![a](upload://a)![b](upload://b)![c](upload://c)start')
     expect(result.activeId).toBe('panel-btn')
     expect(result.fixedIndex).toBe(0)
-    expect(result.visibleCaretOffset).toBe(0)
+    expect(result.visibleCaretOffset).toBe(
+      '![a](upload://a)![b](upload://b)![c](upload://c)'.length
+    )
     expect(result.insertionTail).toBe('![a](upload://a)![b](upload://b)![c](upload://c)'.length)
   })
 
@@ -641,6 +690,7 @@ test.describe('uploaded image editor targeting', () => {
       panelButton.focus()
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
       helpers.insertIntoEditor('![b](upload://b)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
 
       const caretRange = window.getSelection()!.getRangeAt(0)
       const atoms = Array.from(editor.querySelectorAll('.composer-image-node'))
@@ -656,17 +706,16 @@ test.describe('uploaded image editor targeting', () => {
       }
     })
 
-    // The two original images (A, B) still precede the caret: it stayed put in
-    // the trailing paragraph instead of flying to the front. The two uploads
-    // append in order after it, and focus never left the panel.
-    expect(result.atomsBeforeCaret).toBe(2)
+    // Finalization advances the caret after both new atoms while preserving
+    // the original two-atom anchor and focus outside the editor.
+    expect(result.atomsBeforeCaret).toBe(4)
     expect(result.anchorOffset).toBe(2)
     expect(result.insertionTail).toBe(4)
     expect(result.order).toEqual(['![a](upload://a)', '![b](upload://b)'])
     expect(result.activeId).toBe('panel-btn')
   })
 
-  test('ProseMirror: restores panel focus and fixed index after an asynchronous paste update', async ({
+  test('ProseMirror: restores panel focus and the forward caret after async paste updates', async ({
     page
   }) => {
     await loadEditorHelpers(
@@ -725,6 +774,7 @@ test.describe('uploaded image editor targeting', () => {
       panelButton.focus()
 
       helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
       await new Promise<void>(resolve => {
         requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0)))
       })
@@ -745,8 +795,71 @@ test.describe('uploaded image editor targeting', () => {
     expect(result).toEqual({
       activeId: 'panel-btn',
       text: '![a](upload://a)start',
-      visibleCaretOffset: 0,
+      visibleCaretOffset: '![a](upload://a)'.length,
       fixedIndex: 0,
+      insertionTail: '![a](upload://a)'.length
+    })
+  })
+
+  test('ProseMirror fallback restores panel focus and advances the caret after the batch', async ({
+    page
+  }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <div class="ProseMirror-container">
+          <div id="editor" contenteditable="true" translate="no" class="ProseMirror d-editor-input"><p>start</p></div>
+        </div>
+        <button id="panel-btn" type="button">上传中</button>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as any).UploadEditorFocusTest
+      const editor = document.querySelector<HTMLElement>('#editor')!
+      const panelButton = document.querySelector<HTMLButtonElement>('#panel-btn')!
+      editor.addEventListener('paste', event => event.preventDefault())
+
+      editor.focus()
+      const range = document.createRange()
+      range.selectNodeContents(editor.querySelector('p')!)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+      document.dispatchEvent(new Event('selectionchange'))
+      const frozenTarget = helpers.captureEditorInsertionTarget()
+
+      panelButton.focus()
+      const inserted = helpers.insertIntoEditor('![a](upload://a)', frozenTarget)
+      const measureCaretOffset = () => {
+        const caretRange = selection.getRangeAt(0)
+        const beforeCaret = document.createRange()
+        beforeCaret.selectNodeContents(editor)
+        beforeCaret.setEnd(caretRange.startContainer, caretRange.startOffset)
+        return beforeCaret.toString().length
+      }
+      const activeIdDuringBatch = document.activeElement?.id ?? null
+      const caretDuringBatch = measureCaretOffset()
+      helpers.finalizeEditorInsertionCaret(frozenTarget)
+      return {
+        inserted,
+        activeIdDuringBatch,
+        caretDuringBatch,
+        activeId: document.activeElement?.id ?? null,
+        text: editor.textContent,
+        visibleCaretOffset: measureCaretOffset(),
+        insertionTail: frozenTarget.nextInsertionTextOffset
+      }
+    })
+
+    expect(result).toEqual({
+      inserted: true,
+      activeIdDuringBatch: 'panel-btn',
+      caretDuringBatch: 0,
+      activeId: 'panel-btn',
+      text: '![a](upload://a)start',
+      visibleCaretOffset: '![a](upload://a)'.length,
       insertionTail: '![a](upload://a)'.length
     })
   })

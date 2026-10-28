@@ -162,15 +162,13 @@ function focusWithoutScroll(element: HTMLElement): void {
 }
 
 /**
- * Discourse updates both textarea and ProseMirror state asynchronously. Its
- * input/paste handlers can therefore move focus and the live caret again after
- * our synchronous restore. Keep the frozen session anchor stable through the
- * current microtask, timer queue and two render frames, but stop immediately if
- * the user performs a real pointer/keyboard action.
+ * Discourse input/paste handlers may move focus and the live caret after the
+ * synchronous insert. Reapply the requested session caret across asynchronous
+ * commits while preserving focus outside the editor and yielding to real input.
  */
-function stabilizeEditorAnchor(
+function stabilizeEditorCaret(
   editor: DiscourseEditorElement,
-  restoreAnchor: () => void,
+  restoreCaret: () => void,
   previouslyFocused: HTMLElement | null,
   interactionVersion: number
 ): void {
@@ -205,7 +203,7 @@ function stabilizeEditorAnchor(
       return
     }
 
-    restoreAnchor()
+    restoreCaret()
 
     // Restore panel focus only when Discourse moved it into this editor. Never
     // override focus that has moved to some other control in the meantime.
@@ -406,7 +404,7 @@ function insertIntoTextarea(
   // the upload panel.
   placeCaretInTextarea(editor, anchorPosition, 'none')
   lastFocusedEditor = cloneEditorTarget(target)
-  stabilizeEditorAnchor(
+  stabilizeEditorCaret(
     editor,
     () => {
       placeCaretInTextarea(editor, anchorPosition, 'none')
@@ -459,6 +457,53 @@ function restoreProseMirrorAnchor(
   const selection = editor.ownerDocument.defaultView?.getSelection()
   selection?.removeAllRanges()
   selection?.addRange(range)
+}
+
+function restoreProseMirrorInsertionCaret(
+  target: Extract<EditorInsertionTarget, { kind: 'prosemirror' }>
+): void {
+  const editor = target.element
+  const caretOffset = target.nextInsertionTextOffset ?? target.anchorTextOffset
+  const range =
+    caretOffset !== null
+      ? createRangeAtEditorContentOffset(editor, caretOffset)
+      : isRangeInsideEditor(editor, target.range)
+        ? target.range.cloneRange()
+        : createRangeAtEditorEnd(editor)
+
+  range.collapse(true)
+  target.range = range.cloneRange()
+
+  const selection = editor.ownerDocument.defaultView?.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+}
+
+/**
+ * Once the upload batch has finished, move the visible caret to the private
+ * forward insertion tail exactly once. Do not retarget or override a newer
+ * trusted user interaction.
+ */
+export function finalizeEditorInsertionCaret(
+  target: EditorInsertionTarget | null | undefined
+): void {
+  if (!target || !target.hasInserted || !isEditorUsable(target.element)) return
+
+  const editor = target.element
+  const state = editorRestorationStates.get(editor)
+  if (!state || state.interactionVersion !== trustedInteractionVersion) return
+
+  const restoreCaret = () => {
+    if (target.kind === 'textarea') {
+      const position = Math.max(0, Math.min(target.nextInsertionStart, target.element.value.length))
+      placeCaretInTextarea(target.element, position, 'none')
+    } else {
+      restoreProseMirrorInsertionCaret(target)
+    }
+    lastFocusedEditor = cloneEditorTarget(target)
+  }
+
+  stabilizeEditorCaret(editor, restoreCaret, state.previouslyFocused, state.interactionVersion)
 }
 
 // The rich composer renders uploads and other embeds as atomic nodes that hold
@@ -687,7 +732,7 @@ function insertIntoProseMirror(
     advanceProseMirrorTarget(target, tail)
     restoreProseMirrorAnchor(target)
     lastFocusedEditor = cloneEditorTarget(target)
-    stabilizeEditorAnchor(
+    stabilizeEditorCaret(
       editor,
       () => {
         restoreProseMirrorAnchor(target)

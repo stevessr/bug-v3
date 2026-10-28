@@ -2,6 +2,7 @@ import { createE, DAEL, DOA } from '../../dom/createEl'
 import { uploader, type UploadResponse, type UploadStatusUpdate } from '../core'
 import {
   captureEditorInsertionTarget,
+  finalizeEditorInsertionCaret,
   insertIntoEditor,
   resolveEditorInsertionTarget,
   type EditorInsertionTarget
@@ -263,6 +264,10 @@ export async function uploadAndInsert(
 
   await Promise.all(uploadTasks)
   flushReadyInsertions()
+
+  // Keep the insertion point fixed while asynchronous results arrive. Once the
+  // batch is complete, advance the visible caret to the final inserted tail.
+  finalizeEditorInsertionCaret(frozenEditorTarget)
 
   // Close progress panel after 1.5s, but keep reference for retry handling
   const closePanel = () => {
