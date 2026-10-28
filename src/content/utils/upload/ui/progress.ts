@@ -3,6 +3,7 @@ import { uploader, type UploadResponse, type UploadStatusUpdate } from '../core'
 import {
   captureEditorInsertionTarget,
   insertIntoEditor,
+  resolveEditorInsertionTarget,
   type EditorInsertionTarget
 } from '../helpers'
 import { notify } from '../../ui/notify'
@@ -20,7 +21,7 @@ export async function uploadAndInsert(
   if (!files || files.length === 0) return
 
   const filesArray = Array.from(files)
-  const frozenEditorTarget =
+  let frozenEditorTarget =
     editorTarget === undefined ? captureEditorInsertionTarget() : editorTarget
 
   // Composer uploads promise automatic insertion. Without a frozen strict
@@ -204,13 +205,16 @@ export async function uploadAndInsert(
           outcome.result.width && outcome.result.height
             ? `${file.name}|${outcome.result.width}x${outcome.result.height}`
             : file.name
-        if (!insertIntoEditor(buildMarkdownImage(alt, outcome.result), frozenEditorTarget)) {
+        const markdown = buildMarkdownImage(alt, outcome.result)
+        const insertionTarget = resolveEditorInsertionTarget(frozenEditorTarget)
+        if (insertionTarget) frozenEditorTarget = insertionTarget
+        if (!insertIntoEditor(markdown, insertionTarget)) {
           insertionFailureCount++
           updateProgress(
             nextInsertionIndex,
             file,
             'success',
-            '上传成功，但原编辑器已失效，未自动填入'
+            '上传成功，但未找到可用编辑器焦点，未自动填入'
           )
         }
       }

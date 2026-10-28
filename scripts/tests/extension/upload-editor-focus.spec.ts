@@ -3,9 +3,18 @@ import path from 'node:path'
 
 import { expect, test, type Page } from './fixtures'
 import { build } from 'vite'
+import type { EditorInsertionTarget } from '../../../src/content/utils/upload/helpers'
 
 const testAssetDirectory = path.resolve('dist/test-assets')
 const testAssetName = 'upload-editor-focus.iife.js'
+
+type UploadEditorHelpers = {
+  captureEditorInsertionTarget: () => EditorInsertionTarget | null
+  insertIntoEditor: (text: string, target?: EditorInsertionTarget | null) => boolean
+  resolveEditorInsertionTarget: (
+    target: EditorInsertionTarget | null | undefined
+  ) => EditorInsertionTarget | null
+}
 
 async function loadEditorHelpers(page: Page, html: string): Promise<void> {
   await page.goto('about:blank')
@@ -742,7 +751,9 @@ test.describe('uploaded image editor targeting', () => {
     })
   })
 
-  test('does not retarget when the captured editor is removed', async ({ page }) => {
+  test('reacquires the focused strict editor when the captured editor is removed', async ({
+    page
+  }) => {
     await loadEditorHelpers(
       page,
       `
@@ -752,7 +763,8 @@ test.describe('uploaded image editor targeting', () => {
     )
 
     const result = await page.evaluate(() => {
-      const helpers = (window as any).UploadEditorFocusTest
+      const helpers = (window as Window & { UploadEditorFocusTest: UploadEditorHelpers })
+        .UploadEditorFocusTest
       const editorA = document.querySelector<HTMLTextAreaElement>('#editor-a')!
       const editorB = document.querySelector<HTMLTextAreaElement>('#editor-b')!
 
@@ -765,10 +777,133 @@ test.describe('uploaded image editor targeting', () => {
       editorB.focus()
       editorB.setSelectionRange(1, 1)
       editorB.dispatchEvent(new Event('select', { bubbles: true }))
-      const inserted = helpers.insertIntoEditor('DO-NOT-INSERT', frozenTarget)
+      const inserted = helpers.insertIntoEditor('INSERTED', frozenTarget)
       return { inserted, editorB: editorB.value }
     })
 
-    expect(result).toEqual({ inserted: false, editorB: 'xyz' })
+    expect(result).toEqual({ inserted: true, editorB: 'xINSERTEDyz' })
+  })
+
+  test('pins the replacement editor for the rest of the upload session', async ({ page }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <textarea id="editor-a" class="d-editor-input">abc</textarea>
+        <textarea id="editor-b" class="d-editor-input">xyz</textarea>
+        <textarea id="editor-c" class="d-editor-input">123</textarea>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as Window & { UploadEditorFocusTest: UploadEditorHelpers })
+        .UploadEditorFocusTest
+      const editorA = document.querySelector<HTMLTextAreaElement>('#editor-a')!
+      const editorB = document.querySelector<HTMLTextAreaElement>('#editor-b')!
+      const editorC = document.querySelector<HTMLTextAreaElement>('#editor-c')!
+
+      editorA.focus()
+      editorA.setSelectionRange(1, 1)
+      editorA.dispatchEvent(new Event('select', { bubbles: true }))
+      const staleTarget = helpers.captureEditorInsertionTarget()
+      editorA.remove()
+
+      editorB.focus()
+      editorB.setSelectionRange(1, 1)
+      editorB.dispatchEvent(new Event('select', { bubbles: true }))
+      let uploadTarget = helpers.resolveEditorInsertionTarget(staleTarget)
+      const firstInserted = helpers.insertIntoEditor('X', uploadTarget)
+
+      editorC.focus()
+      editorC.setSelectionRange(1, 1)
+      editorC.dispatchEvent(new Event('select', { bubbles: true }))
+      uploadTarget = helpers.resolveEditorInsertionTarget(uploadTarget)
+      const secondInserted = helpers.insertIntoEditor('Y', uploadTarget)
+
+      return {
+        firstInserted,
+        secondInserted,
+        editorB: editorB.value,
+        editorC: editorC.value
+      }
+    })
+
+    expect(result).toEqual({
+      firstInserted: true,
+      secondInserted: true,
+      editorB: 'xXYyz',
+      editorC: '123'
+    })
+  })
+
+  test('reacquires a unique strict editor when none is focused', async ({ page }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <textarea id="editor-a" class="d-editor-input">abc</textarea>
+        <textarea id="editor-b" class="d-editor-input">xyz</textarea>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as Window & { UploadEditorFocusTest: UploadEditorHelpers })
+        .UploadEditorFocusTest
+      const editorA = document.querySelector<HTMLTextAreaElement>('#editor-a')!
+      const editorB = document.querySelector<HTMLTextAreaElement>('#editor-b')!
+
+      editorA.focus()
+      editorA.setSelectionRange(1, 1)
+      editorA.dispatchEvent(new Event('select', { bubbles: true }))
+      const staleTarget = helpers.captureEditorInsertionTarget()
+      editorB.setSelectionRange(editorB.value.length, editorB.value.length)
+      editorA.remove()
+
+      const inserted = helpers.insertIntoEditor('MARKDOWN', staleTarget)
+      return { inserted, editorB: editorB.value }
+    })
+
+    expect(result).toEqual({ inserted: true, editorB: 'xyzMARKDOWN' })
+  })
+
+  test('does not guess when several strict editors remain unfocused', async ({ page }) => {
+    await loadEditorHelpers(
+      page,
+      `
+        <textarea id="editor-a" class="d-editor-input">abc</textarea>
+        <textarea id="editor-b" class="d-editor-input">xyz</textarea>
+        <textarea id="editor-c" class="d-editor-input">123</textarea>
+        <textarea id="other-control">panel</textarea>
+      `
+    )
+
+    const result = await page.evaluate(() => {
+      const helpers = (window as Window & { UploadEditorFocusTest: UploadEditorHelpers })
+        .UploadEditorFocusTest
+      const editorA = document.querySelector<HTMLTextAreaElement>('#editor-a')!
+      const editorB = document.querySelector<HTMLTextAreaElement>('#editor-b')!
+      const editorC = document.querySelector<HTMLTextAreaElement>('#editor-c')!
+      const otherControl = document.querySelector<HTMLTextAreaElement>('#other-control')!
+
+      editorA.focus()
+      editorA.setSelectionRange(1, 1)
+      editorA.dispatchEvent(new Event('select', { bubbles: true }))
+      const staleTarget = helpers.captureEditorInsertionTarget()
+      editorA.remove()
+      otherControl.focus()
+
+      const inserted = helpers.insertIntoEditor('DO-NOT-GUESS', staleTarget)
+      return {
+        inserted,
+        editorB: editorB.value,
+        editorC: editorC.value,
+        otherControl: otherControl.value
+      }
+    })
+
+    expect(result).toEqual({
+      inserted: false,
+      editorB: 'xyz',
+      editorC: '123',
+      otherControl: 'panel'
+    })
   })
 })

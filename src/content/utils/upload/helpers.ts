@@ -329,6 +329,18 @@ export function captureEditorInsertionTarget(): EditorInsertionTarget | null {
   return lastFocusedEditor ? cloneEditorTarget(lastFocusedEditor) : null
 }
 
+/**
+ * Keep a usable upload target pinned. If async work detached it, reacquire a
+ * current strict Discourse editor; an explicit null still means no target.
+ */
+export function resolveEditorInsertionTarget(
+  target: EditorInsertionTarget | null | undefined
+): EditorInsertionTarget | null {
+  if (target === null) return null
+  if (target && isEditorUsable(target.element)) return target
+  return captureEditorInsertionTarget()
+}
+
 function createInputEvent(text: string): Event {
   try {
     return new InputEvent('input', {
@@ -736,9 +748,9 @@ export function parseImageFilenamesFromMarkdown(markdownText: string): string[] 
 }
 
 /**
- * Insert only into the remembered Discourse composer root. Supplying a target
- * pins the whole async upload session to that editor and caret; it will never
- * fall through to document.activeElement, a generic textarea, or an arbitrary
+ * Insert into the remembered Discourse composer root. A supplied target stays
+ * pinned while usable; if it becomes stale during upload, only a fresh strict
+ * Discourse editor may replace it. Never use a generic textarea or arbitrary
  * contenteditable element.
  */
 export function insertIntoEditor(
@@ -747,9 +759,9 @@ export function insertIntoEditor(
 ): boolean {
   if (!text) return false
 
-  const target = insertionTarget === undefined ? captureEditorInsertionTarget() : insertionTarget
+  const target = resolveEditorInsertionTarget(insertionTarget)
   if (!target || !isEditorUsable(target.element)) {
-    console.warn('[Image Uploader] Remembered Discourse editor is unavailable; insertion skipped')
+    console.warn('[Image Uploader] No usable Discourse editor found; insertion skipped')
     return false
   }
 
