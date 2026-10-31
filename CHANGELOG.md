@@ -5,6 +5,16 @@ All notable changes to the Emoji Extension project will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Add a lazy-loaded custom WebM/MP4 player for Linux.do attachments. It reads the `.zip`-served bytes through a narrowly allowlisted userscript request and keeps a download link as fallback.
+
+### Changed
+
+- Rewrite the Linux.do voice userscript from the bundled Svelte runtime into readable, self-contained JavaScript while preserving recording, upload, playback and transcription behavior.
+
 ## [1.2.6] - 2024-11-14
 
 ### Added
