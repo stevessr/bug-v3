@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         linux-do-voice-msg
 // @namespace    https://github.com/chenyu5/linux-do-voice-msg
-// @version      1.1.0
+// @version      1.1.1
 // @author       helloai
 // @description  为 linux.do 编辑器提供语音录制、播放及支持 WebM/MP4 视频附件的自定义播放器。
 // @license      MIT
@@ -2640,6 +2640,58 @@
     }
   }
 
+  function getVideoUploadShortUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return ''
+    if (/^upload:\/\/[a-z0-9]+(?:\.[a-z0-9._-]+)*$/i.test(value)) return value
+    try {
+      const url = new URL(value, window.location.href)
+      if (url.origin !== window.location.origin) return ''
+      const match = url.pathname.match(/^\/uploads\/short-url\/([a-z0-9]+(?:\.[a-z0-9._-]+)*)$/i)
+      return match ? `upload://${match[1]}` : ''
+    } catch {
+      return ''
+    }
+  }
+
+  async function lookupVideoUploadUrls(shortUrls) {
+    const uniqueShortUrls = Array.from(new Set(shortUrls.filter(Boolean)))
+    if (!uniqueShortUrls.length || typeof pageWindow.fetch !== 'function') return new Map()
+
+    const headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    }
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken
+
+    try {
+      const response = await pageWindow.fetch(`${window.location.origin}/uploads/lookup-urls`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers,
+        body: JSON.stringify({ short_urls: uniqueShortUrls })
+      })
+      if (!response.ok) return new Map()
+      const uploads = await response.json()
+      if (!Array.isArray(uploads)) return new Map()
+      return new Map(
+        uploads
+          .map(upload => [
+            upload.short_url,
+            {
+              url: getAllowedVideoUrl(upload.url),
+              shortPath: getAllowedVideoUrl(upload.short_path)
+            }
+          ])
+          .filter(
+            ([shortUrl, urls]) => typeof shortUrl === 'string' && (urls.url || urls.shortPath)
+          )
+      )
+    } catch {
+      return new Map()
+    }
+  }
+
   class VideoAttachmentPlayer {
     constructor(host, mediaUrl, mimeType, fileName) {
       this.host = host
@@ -2894,7 +2946,7 @@
   function findVideoAttachments() {
     const matches = []
     for (const container of document.querySelectorAll('.cooked .video-container')) {
-      if (container.getAttribute(VIDEO_PROCESSED_ATTRIBUTE) === 'true') continue
+      if (container.hasAttribute(VIDEO_PROCESSED_ATTRIBUTE)) continue
       const video = container.querySelector('video')
       const source = video?.querySelector('source')
       const fallbackLink = container.querySelector('a[href]')
@@ -2904,7 +2956,14 @@
         fallbackLink?.getAttribute('href') ||
         ''
       const fileName = fallbackLink?.textContent?.trim() || rawUrl
-      const mimeType = getVideoMimeType(source?.getAttribute('type') || '', fileName, rawUrl)
+      const shortUrl = [
+        source?.getAttribute('data-orig-src'),
+        video?.getAttribute('data-orig-src'),
+        fallbackLink?.getAttribute('data-orig-href'),
+        fallbackLink?.getAttribute('data-orig-src')
+      ]
+        .map(getVideoUploadShortUrl)
+        .find(Boolean)
       const mediaUrl = [
         source?.getAttribute('src'),
         video?.getAttribute('src'),
@@ -2913,38 +2972,87 @@
       ]
         .map(getAllowedVideoUrl)
         .find(Boolean)
-      if (!mediaUrl || !mimeType) continue
-      matches.push({ container, attachmentLink: null, fallbackLink, mediaUrl, mimeType, fileName })
-      if (fallbackLink) fallbackLink.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'true')
+      const mimeType = getVideoMimeType(
+        source?.getAttribute('type') || '',
+        fileName,
+        `${rawUrl} ${shortUrl || ''}`
+      )
+      if ((!mediaUrl && !shortUrl) || !mimeType) continue
+      matches.push({
+        container,
+        attachmentLink: null,
+        fallbackLink,
+        mediaUrl,
+        mimeType,
+        fileName,
+        shortUrl
+      })
     }
 
     for (const attachmentLink of document.querySelectorAll('.cooked a.attachment')) {
-      if (attachmentLink.getAttribute(VIDEO_PROCESSED_ATTRIBUTE) === 'true') continue
+      if (attachmentLink.hasAttribute(VIDEO_PROCESSED_ATTRIBUTE)) continue
       if (attachmentLink.closest('.video-container')) continue
       const rawUrl = attachmentLink.getAttribute('href') || attachmentLink.href || ''
       const candidates = [
-        rawUrl,
         attachmentLink.getAttribute('data-orig-href'),
-        attachmentLink.getAttribute('data-orig-src')
+        attachmentLink.getAttribute('data-orig-src'),
+        rawUrl,
+        attachmentLink.href
       ]
+      const shortUrl = candidates.map(getVideoUploadShortUrl).find(Boolean)
       const mediaUrl = candidates.map(getAllowedVideoUrl).find(Boolean)
       const fileName = attachmentLink.textContent?.trim() || attachmentLink.title || rawUrl
       const mimeType = getVideoMimeType(
         '',
-        `${fileName} ${attachmentLink.title || ''}`,
+        `${fileName} ${attachmentLink.title || ''} ${shortUrl || ''}`,
         mediaUrl || rawUrl
       )
-      if (!mediaUrl || !mimeType) continue
+      if ((!mediaUrl && !shortUrl) || !mimeType) continue
       matches.push({
         container: null,
         attachmentLink,
         fallbackLink: attachmentLink,
         mediaUrl,
         mimeType,
-        fileName
+        fileName,
+        shortUrl
       })
     }
     return matches
+  }
+
+  function scanVideoPlayers() {
+    const attachments = findVideoAttachments()
+    if (!attachments.length) return
+    const shortUrls = attachments.map(attachment => attachment.shortUrl).filter(Boolean)
+    if (!shortUrls.length) {
+      attachments.forEach(mountVideoPlayer)
+      return
+    }
+
+    for (const attachment of attachments) {
+      const sourceNode = attachment.container || attachment.attachmentLink
+      sourceNode.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'resolving')
+    }
+    void lookupVideoUploadUrls(shortUrls).then(uploadUrls => {
+      for (const attachment of attachments) {
+        const sourceNode = attachment.container || attachment.attachmentLink
+        if (
+          !sourceNode.isConnected ||
+          sourceNode.getAttribute(VIDEO_PROCESSED_ATTRIBUTE) !== 'resolving'
+        ) {
+          continue
+        }
+        const resolvedUpload = attachment.shortUrl ? uploadUrls.get(attachment.shortUrl) : null
+        attachment.mediaUrl = resolvedUpload?.url || attachment.mediaUrl
+        attachment.fallbackUrl = resolvedUpload?.shortPath || attachment.mediaUrl
+        if (!attachment.mediaUrl) {
+          sourceNode.removeAttribute(VIDEO_PROCESSED_ATTRIBUTE)
+          continue
+        }
+        mountVideoPlayer(attachment)
+      }
+    })
   }
 
   function createVideoFallbackLink(url, fileName) {
@@ -2956,11 +3064,11 @@
   }
 
   function mountVideoPlayer(attachment) {
-    const host = document.createElement('span')
+    const host = document.createElement('div')
     host.className = 'ldv-video-player-host'
+    host.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'true')
     if (attachment.container) {
-      attachment.container.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'true')
-      attachment.container.replaceChildren(host)
+      attachment.container.replaceWith(host)
     } else {
       attachment.attachmentLink.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'true')
       attachment.attachmentLink.replaceWith(host)
@@ -2973,7 +3081,8 @@
     )
     const fallbackLink =
       attachment.fallbackLink || createVideoFallbackLink(attachment.mediaUrl, attachment.fileName)
-    fallbackLink.href = attachment.mediaUrl
+    fallbackLink.setAttribute(VIDEO_PROCESSED_ATTRIBUTE, 'true')
+    fallbackLink.href = attachment.fallbackUrl || attachment.mediaUrl
     fallbackLink.rel = 'noopener nofollow ugc'
     const fallbackHost = document.createElement('div')
     fallbackHost.className = 'ldv-video-player-fallback'
@@ -3040,7 +3149,7 @@
       player.destroy()
       videoPlayerInstances.delete(host)
     }
-    for (const attachment of findVideoAttachments()) mountVideoPlayer(attachment)
+    scanVideoPlayers()
     for (const attachment of findVoiceAttachments()) mountVoicePlayer(attachment)
   }
 

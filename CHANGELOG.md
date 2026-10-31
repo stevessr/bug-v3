@@ -1,7 +1,6 @@
 # Changelog
 
 All notable changes to the Emoji Extension project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -14,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Rewrite the Linux.do voice userscript from the bundled Svelte runtime into readable, self-contained JavaScript while preserving recording, upload, playback and transcription behavior.
+
+### Fixed
+
+- Resolve Discourse video short URLs before loading media and remove the original 16:9 wrapper to prevent excess black space.
 
 ## [1.2.6] - 2024-11-14
 

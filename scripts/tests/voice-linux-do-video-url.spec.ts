@@ -96,9 +96,10 @@ test('zip-workaround video uploads insert a downloadable attachment instead of a
   expect(pageErrors).toEqual([])
 })
 
-test('custom players load MP4 and WebM as typed blobs and reject untrusted media hosts', async ({
+test('custom players resolve Discourse short URLs, replace the video wrapper, and reject untrusted hosts', async ({
   page
 }) => {
+  const lookupRequests: Array<{ shortUrls: string[]; csrfToken: string | undefined }> = []
   await page.addInitScript(() => {
     const testWindow = window as Window & {
       __gmRequests: Array<{ url: string; responseType: string }>
@@ -114,7 +115,7 @@ test('custom players load MP4 and WebM as typed blobs and reject untrusted media
       testWindow.__gmRequests.push({ url: details.url, responseType: details.responseType })
       window.setTimeout(() => {
         if (details.url.includes('clip-fail')) {
-          details.onerror()
+          details.onload({ status: 403, response: new Blob(['forbidden']) })
           return
         }
         details.onload({ status: 206, response: new Blob(['mock media bytes']) })
@@ -132,6 +133,31 @@ test('custom players load MP4 and WebM as typed blobs and reject untrusted media
       })
       return
     }
+    if (pathname === '/uploads/lookup-urls') {
+      const requestBody = route.request().postDataJSON() as { short_urls: string[] }
+      lookupRequests.push({
+        shortUrls: requestBody.short_urls,
+        csrfToken: route.request().headers()['x-csrf-token']
+      })
+      const mappedUploads = [
+        {
+          short_url: 'upload://clipid.mp4.zip',
+          url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/resolved-clip.mp4.zip',
+          short_path: '/uploads/short-url/clipid.mp4.zip'
+        },
+        {
+          short_url: 'upload://clip.webm.zip',
+          url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/resolved-clip.webm.zip',
+          short_path: '/uploads/short-url/clip.webm.zip'
+        }
+      ].filter(upload => requestBody.short_urls.includes(upload.short_url))
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mappedUploads)
+      })
+      return
+    }
     await route.abort()
   })
   await page.goto('https://linux.do/t/topic/123')
@@ -139,23 +165,39 @@ test('custom players load MP4 and WebM as typed blobs and reject untrusted media
   await page.evaluate(() => {
     document.body.insertAdjacentHTML(
       'beforeend',
-      '<div class="cooked"><div class="video-container"><video><source src="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip.mp4.zip" type="video/mp4"><a href="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip.mp4.zip">clip.mp4.zip</a></video></div><p><a class="attachment" href="/uploads/short-url/clip.webm.zip">clip.webm.zip（原始 WebM，下载后移除 .zip 后缀）</a></p><p><a class="attachment" href="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip-fail.mp4.zip">clip-fail.mp4.zip</a></p><p><a class="attachment" href="https://evil.example/clip.mp4.zip">clip.mp4.zip</a></p><p><a class="attachment" href="/t/topic/clip.mp4.zip">clip.mp4.zip</a></p></div>'
+      '<div class="cooked"><div class="video-container"><video><source src="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/stale-clip.mp4.zip" data-orig-src="upload://clipid.mp4.zip" type="video/mp4"><a href="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/stale-clip.mp4.zip">clip.mp4.zip</a></video></div><p><a class="attachment" href="/uploads/short-url/clip.webm.zip">clip.webm.zip（原始 WebM，下载后移除 .zip 后缀）</a></p><p><a class="attachment" href="https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip-fail.mp4.zip">clip-fail.mp4.zip</a></p><p><a class="attachment" href="https://evil.example/clip.mp4.zip">clip.mp4.zip</a></p><p><a class="attachment" href="/t/topic/clip.mp4.zip">clip.mp4.zip</a></p></div>'
     )
   })
 
   const players = page.locator('.ldv-video-player-host')
   await expect(players).toHaveCount(3)
+  await expect(page.locator('.cooked .video-container')).toHaveCount(0)
   await expect(page.locator('.cooked a.attachment')).toHaveCount(4)
+  const firstPlayerBox = await players.first().boundingBox()
+  expect(firstPlayerBox?.height).toBeLessThan(600)
+  expect(
+    await players
+      .first()
+      .evaluate(element => element.parentElement?.classList.contains('video-container'))
+  ).toBe(false)
+
   const cases = [
     {
       index: 0,
-      url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip.mp4.zip',
+      url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/resolved-clip.mp4.zip',
+      fallbackUrl: 'https://linux.do/uploads/short-url/clipid.mp4.zip',
       mimeType: 'video/mp4'
     },
-    { index: 1, url: 'https://linux.do/uploads/short-url/clip.webm.zip', mimeType: 'video/webm' },
+    {
+      index: 1,
+      url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/resolved-clip.webm.zip',
+      fallbackUrl: 'https://linux.do/uploads/short-url/clip.webm.zip',
+      mimeType: 'video/webm'
+    },
     {
       index: 2,
       url: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip-fail.mp4.zip',
+      fallbackUrl: 'https://linuxdo-uploads.s3.ldstatic.com/original/4X/a1/b2/c/clip-fail.mp4.zip',
       mimeType: 'video/mp4'
     }
   ]
@@ -163,9 +205,12 @@ test('custom players load MP4 and WebM as typed blobs and reject untrusted media
     const player = players.nth(media.index)
     await player.getByRole('button', { name: '加载视频' }).click()
     const video = player.locator('video')
-    await expect(player.locator('.ldv-video-player-fallback a')).toHaveAttribute('href', media.url)
+    await expect(player.locator('.ldv-video-player-fallback a')).toHaveAttribute(
+      'href',
+      media.fallbackUrl
+    )
     if (media.index === 2) {
-      await expect(player.locator('.ldv-video-player-error')).toContainText('加载失败')
+      await expect(player.locator('.ldv-video-player-error')).toContainText('HTTP 403')
       continue
     }
     await expect(video).toHaveAttribute('src', /^blob:/)
@@ -214,6 +259,12 @@ test('custom players load MP4 and WebM as typed blobs and reject untrusted media
   }
   await expect(page.locator('.cooked a[href="https://evil.example/clip.mp4.zip"]')).toHaveCount(1)
   await expect(page.locator('.cooked a[href="/t/topic/clip.mp4.zip"]')).toHaveCount(1)
+  expect(lookupRequests).toEqual([
+    {
+      shortUrls: ['upload://clipid.mp4.zip', 'upload://clip.webm.zip'],
+      csrfToken: 'csrf-test'
+    }
+  ])
   const requests = await page.evaluate(() => {
     return (window as Window & { __gmRequests: Array<{ url: string; responseType: string }> })
       .__gmRequests
