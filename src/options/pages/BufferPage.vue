@@ -384,6 +384,32 @@ const { uploadFiles } = useUpload({
 const showImageCropper = ref(false)
 const cropImageFile = ref<File | null>(null)
 
+// 上传视频入口：把视频文件交给「视频转动图」转换器处理
+const videoConverterRef = ref<InstanceType<typeof VideoToAnimationConverter> | null>(null)
+const pendingVideoFiles = ref<File[] | null>(null)
+
+const handleVideoFilesSelected = async (files: File[]) => {
+  if (!files.length) return
+  activeBufferTab.value = 'video'
+  videoConverterLoaded.value = true
+  await nextTick()
+  const converter = videoConverterRef.value
+  if (converter) {
+    pendingVideoFiles.value = null
+    await converter.addSourceFiles(files)
+  } else {
+    // 转换器仍在异步加载，挂载后由 watcher 补投递
+    pendingVideoFiles.value = files
+  }
+}
+
+watch(videoConverterRef, async converter => {
+  if (!converter || !pendingVideoFiles.value) return
+  const files = pendingVideoFiles.value
+  pendingVideoFiles.value = null
+  await converter.addSourceFiles(files)
+})
+
 const handleConvertedVideosToUpload = async (files: File[]) => {
   if (!files.length) return
   const { added, skipped, failed } = await addFiles(files)
@@ -962,7 +988,7 @@ onBeforeUnmount(() => {
       <a-tab-pane key="upload" tab="普通上传">
         <!-- File Upload Area -->
         <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <h3 class="text-lg font-semibold dark:text-white mb-4">上传图片</h3>
+          <h3 class="text-lg font-semibold dark:text-white mb-4">选择上传文件</h3>
 
           <!-- 重复过滤器设置 -->
           <div
@@ -1072,8 +1098,20 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- 自定义文件上传区域 -->
-          <FileUploader @filesSelected="addFiles" />
+          <!-- 自定义文件上传区域：图片与视频分开入口，共用 FileUploader 组件 -->
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">上传图片</h4>
+              <FileUploader accept="image/*" @filesSelected="addFiles" />
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">上传视频</h4>
+              <FileUploader
+                accept="video/*,.mp4,.webm,.mov,.mkv,.m4v,.ogv,.gif"
+                @filesSelected="handleVideoFilesSelected"
+              />
+            </div>
+          </div>
 
           <!-- File List -->
           <a-collapse v-if="selectedFiles.length > 0" class="mt-4" :default-active-key="['files']">
@@ -1333,6 +1371,7 @@ onBeforeUnmount(() => {
       <a-tab-pane key="video" tab="视频转动图">
         <VideoToAnimationConverter
           v-if="videoConverterLoaded"
+          ref="videoConverterRef"
           @addToUpload="handleConvertedVideosToUpload"
         />
       </a-tab-pane>

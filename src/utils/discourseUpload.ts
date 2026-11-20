@@ -155,7 +155,7 @@ function createUploadError(
   const error = new Error(message) as DiscourseUploadFailure
   error.status = status
   error.retryHeaders = Object.fromEntries(
-    ['retry-after', 'cf-mitigated'].flatMap(name => {
+    ['retry-after'].flatMap(name => {
       const value = headers?.get(name)
       return value ? [[name, value]] : []
     })

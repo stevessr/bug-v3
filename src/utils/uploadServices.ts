@@ -498,14 +498,7 @@ export class DiscourseUploadService implements UploadService {
         return result
       } else {
         const errorData = await readResponseErrorPayload(response)
-        if (
-          this.domain === 'linux.do' &&
-          isUploadChallenge(
-            response.status,
-            errorData,
-            response.headers.get('cf-mitigated') || undefined
-          )
-        ) {
+        if (this.domain === 'linux.do' && isUploadChallenge(response.status, errorData)) {
           throw createLinuxDoChallengeError(errorData, response.status)
         }
         if (response.status === 429) {
@@ -624,10 +617,7 @@ export class DiscourseUploadService implements UploadService {
 
     const errorData = proxyPayload
     const proxyHeaders = (response as any)?.data?.headers ?? (response as any)?.headers ?? {}
-    if (
-      this.domain === 'linux.do' &&
-      isUploadChallenge(proxyStatus, errorData, proxyHeaders['cf-mitigated'])
-    ) {
+    if (this.domain === 'linux.do' && isUploadChallenge(proxyStatus, errorData)) {
       throw createLinuxDoChallengeError(errorData, proxyStatus)
     }
     if (proxyStatus === 429) {

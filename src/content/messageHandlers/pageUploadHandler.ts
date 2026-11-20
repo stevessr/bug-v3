@@ -134,8 +134,7 @@ export const pageUploadHandler: MessageHandler = (message, _sender, sendResponse
             ok: res.ok,
             data,
             headers: {
-              'retry-after': res.headers.get('retry-after'),
-              'cf-mitigated': res.headers.get('cf-mitigated')
+              'retry-after': res.headers.get('retry-after')
             }
           }
         }

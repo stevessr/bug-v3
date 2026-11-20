@@ -2,10 +2,11 @@
  * linux.do Cloudflare 盾自动过盾（页面主世界版本）
  *
  * 为什么必须在 MAIN world：Discourse 应用自身的 fetch/XHR 发生在页面主世界，
- * 隔离世界（默认 content script）的 window.fetch 补丁拦不到这些请求，也就读不到
- * Cloudflare 触发盾时的特殊响应头 `cf-mitigated: challenge`（官方文档：所有
- * challenge 类型必带该头，content-type 恒为 text/html）。旧的 antiRateLimit
+ * 隔离世界（默认内容脚本）的 window.fetch 补丁拦不到这些请求。旧的 antiRateLimit
  * 内容脚本拦截方案因此被移除，本文件以 `world: "MAIN"` 内容脚本身份运行。
+ * 注意：不读取 cf-mitigated 等非 CORS 暴露响应头（跨域读取会触发
+ * 「Refused to get unsafe header」告警且恒为 null），仅凭状态码 + content-type
+ * 兜底判定 challenge。
  *
  * 行为与 scripts/userjs/cloudflare-wall.user.js 保持一致：
  * - 触发盾时右下角默认只显示收起的小窗，iframe 在后台隐藏加载自动过盾
@@ -24,10 +25,7 @@ interface WallConfig {
   iframeId: string
   // 其他实现（用户脚本版）的弹窗 ID：已存在时不重复弹，避免双重/嵌套触发
   coexistingWallIds: string[]
-  mitigatedHeader: string
-  mitigatedChallengeValue: string
   challengeStatusCodes: number[]
-  cfServerKeyword: string
   docChallengeSelector: string
   docChallengeTitles: string[]
   // /challenge 路由本身不是真实页面：过盾完成（或本就无需验证）后 CF 放行，
@@ -43,14 +41,10 @@ const CONFIG: WallConfig = {
   iframeId: 'emoji-ext-cf-challenge-iframe',
   // 用户脚本版（scripts/userjs/cloudflare-wall.user.js）的弹窗 ID
   coexistingWallIds: ['linuxdo-cf-challenge-iframe'],
-  // Cloudflare 触发盾时的特殊响应头（'challenge' 是唯一取值）
-  mitigatedHeader: 'cf-mitigated',
-  mitigatedChallengeValue: 'challenge',
-  // 与盾伴生的 HTTP 状态码（Managed/JS Challenge 常见 403/503，限流为 429），
-  // 仅用于特殊表头被中间层剥掉时的兜底判定
+  // 与盾伴生的 HTTP 状态码（Managed/JS Challenge 常见 403/503，限流为 429）
+  // 注意：不再读取 cf-mitigated / server 等非 CORS 暴露响应头——跨域响应下
+  // 读取会触发「Refused to get unsafe header」告警且恒为 null，毫无收益
   challengeStatusCodes: [403, 503, 429],
-  // 兜底判定还需同时满足：Cloudflare 代理响应 + HTML 内容
-  cfServerKeyword: 'cloudflare',
   // 全页 challenge 的 DOM 特征；不能宽松匹配整个 challenge-platform 路径，
   // 因为 CF 对正常页面也会注入 jsd 探测脚本
   docChallengeSelector: [
@@ -269,8 +263,9 @@ function looksLikeCloudflareBlockPage(): boolean {
 
 /**
  * 按 Cloudflare 真实行为检查单个响应：
- * 1. 官方特征：响应头 cf-mitigated: challenge（所有 challenge 类型必带，content-type 恒为 text/html）
- * 2. 兜底特征：403/503/429 + server: cloudflare + text/html（特殊表头被剥掉时）
+ * 兜底特征：403/503/429 + text/html。不读取 cf-mitigated / server 等非 CORS
+ * 暴露响应头（跨域响应下读取会触发「Refused to get unsafe header」告警且恒为
+ * null）；content-type 属于 CORS 安全列表，可安全读取。
  */
 function inspectResponse(
   source: string,
@@ -281,28 +276,9 @@ function inspectResponse(
   try {
     if (!state.enabled) return
 
-    const mitigated = String(getHeader(CONFIG.mitigatedHeader) || '').toLowerCase()
-
-    if (mitigated === CONFIG.mitigatedChallengeValue) {
-      log(`[${source}] 命中特殊表头 cf-mitigated: challenge`, status, url)
-      triggerChallengePopup('cf-mitigated-header')
-      return
-    }
-
-    if (mitigated) {
-      // 其他取值（如 WAF 拦截页）无法通过过盾解决，只记录不弹窗
-      log(`[${source}] cf-mitigated=${mitigated}，非 challenge，跳过`, status, url)
-      return
-    }
-
     const contentType = String(getHeader('content-type') || '').toLowerCase()
-    const server = String(getHeader('server') || '').toLowerCase()
 
-    if (
-      CONFIG.challengeStatusCodes.includes(status) &&
-      server.includes(CONFIG.cfServerKeyword) &&
-      contentType.includes('text/html')
-    ) {
+    if (CONFIG.challengeStatusCodes.includes(status) && contentType.includes('text/html')) {
       log(`[${source}] 疑似 challenge 响应（${status} + ${contentType}）`, url)
       triggerChallengePopup('suspected-html-response')
     }

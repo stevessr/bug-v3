@@ -181,5 +181,6 @@ if (
 
 // Cloudflare 盾自动过盾由独立的主世界内容脚本处理（js/cloudflare-wall-main.js，
 // 源码 src/content/cloudflare-wall-main.ts，world: 'MAIN'）。它在页面主世界拦截
-// fetch/XHR 读取 cf-mitigated: challenge 响应头并自动弹出/收起过盾小窗；
+// fetch/XHR 响应（仅凭状态码 + content-type 兜底判定，不读取非 CORS 暴露
+// 响应头）并自动弹出/收起过盾小窗；
 // 隔离世界内容脚本不做网络拦截（拦不到页面自身的请求）。

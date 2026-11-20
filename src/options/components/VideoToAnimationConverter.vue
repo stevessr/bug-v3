@@ -552,6 +552,8 @@ const queueAllToUpload = () => {
   )
 }
 
+defineExpose({ addSourceFiles })
+
 onBeforeUnmount(() => {
   isUnmounted = true
   if (saveTimer) {
