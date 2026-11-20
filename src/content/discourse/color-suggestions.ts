@@ -192,22 +192,45 @@ function recordRecent(hex: string) {
 // ------------------------- 触发检测 -------------------------
 
 // 光标前的文本匹配 `[coxxx`（仅字母，且必须以 co 开头）时触发。
-// 返回 start = '[' 在文本中的下标，keyword = 前缀 co 之后的过滤关键字。
+// 返回 start = 左括号在文本中的下标，keyword = 前缀 co 之后的过滤关键字。
+// 半角/全角左括号都支持，方便中文输入法下直接使用。
 function matchColorTrigger(before: string, pos: number): { start: number; keyword: string } | null {
-  const m = before.match(/\[([a-zA-Z]{1,10})$/)
+  const m = before.match(/[［【[]([a-zA-Z]{1,10})$/)
   if (!m) return null
   const token = m[1].toLowerCase()
   if (!token.startsWith(COLOR_TRIGGER_PREFIX)) return null
   return { start: pos - m[0].length, keyword: token.slice(COLOR_TRIGGER_PREFIX.length) }
 }
 
-function getColorTriggerFromProseMirror(): { start: number; keyword: string } | null {
+// 找到光标所在的 `[color=...]` 起始标签（要求标签之后、光标之前存在对应的 `[/color]`）。
+// 返回标签在文本中的区间，用于把"再插入一层颜色"改成"修改当前颜色"。
+function findEnclosingColorTag(text: string, pos: number): { start: number; end: number } | null {
+  const tagPattern = /\[color=[^\]]*\]/gi
+  let match: RegExpExecArray | null
+  let found: { start: number; end: number } | null = null
+  while ((match = tagPattern.exec(text))) {
+    const start = match.index
+    const end = start + match[0].length
+    if (end > pos) break
+    if (text.indexOf('[/color]', Math.max(end, pos)) === -1) continue
+    found = { start, end }
+  }
+  return found
+}
+
+function getColorTriggerFromProseMirror(
+  editor: HTMLElement
+): { start: number; keyword: string } | null {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0) return null
   const range = selection.getRangeAt(0)
-  if (!range.collapsed) return null
-  const before = (range.startContainer.textContent || '').slice(0, range.startOffset)
-  return matchColorTrigger(before, range.startOffset)
+  if (!range.collapsed || !editor.contains(range.commonAncestorContainer)) return null
+  const block = proseBlockFor(range, editor)
+  // 代码块里的 [co 只是普通文本，不弹补全
+  if (block.closest('pre') || block.closest('code')) return null
+  const prefix = blockPrefix(block, range)
+  if (prefix === null) return null
+  return matchColorTrigger(prefix, prefix.length)
 }
 
 // ------------------------- 颜色过滤 -------------------------
@@ -224,58 +247,176 @@ function filterClassicColors(keyword: string): ClassicColor[] {
 
 // ------------------------- 插入 -------------------------
 
-function applyToTextarea(el: HTMLTextAreaElement, value: string) {
+interface ColorEdit {
+  start: number
+  end: number
+  text: string
+  caret: number
+}
+
+// 计算一次颜色插入：
+//  - 光标位于已有 [color=...] 标签内：只替换起始标签，避免嵌套出新的颜色
+//  - 存在选区：用颜色标签包裹选区
+//  - 其余情况：插入一对空标签，光标落在两个标签之间
+function buildColorEdit(
+  fullText: string,
+  selectionText: string,
+  caretOffset: number,
+  value: string
+): ColorEdit {
   const open = `[color=${value}]`
   const close = '[/color]'
-  const pos = el.selectionStart ?? el.value.length
-  const trig = matchColorTrigger(el.value.slice(0, pos), pos)
-  // 有触发符则替换 `[cxxx`，否则在光标处直接插入
-  const start = trig ? trig.start : pos
-  el.value = el.value.slice(0, start) + open + close + el.value.slice(pos)
-  // 光标放在两组标签之间
-  const caret = start + open.length
-  el.selectionStart = el.selectionEnd = caret
+  const prefix = fullText.slice(0, caretOffset)
+  const trigger = matchColorTrigger(prefix, caretOffset)
+  // 结束标签在光标之后，必须在完整文本里查找
+  const enclosing = findEnclosingColorTag(fullText, caretOffset)
+
+  if (enclosing) {
+    // 保留标签内已经输入的内容，只替换起始标签并清掉刚输入的触发词
+    const tailStart = trigger ? trigger.start : caretOffset
+    const preserved = prefix.slice(enclosing.end, tailStart)
+    const text = open + preserved
+    return {
+      start: enclosing.start,
+      end: caretOffset,
+      text,
+      caret: enclosing.start + text.length
+    }
+  }
+
+  const start = trigger ? trigger.start : caretOffset
+  if (selectionText) {
+    const text = open + selectionText + close
+    return { start, end: caretOffset + selectionText.length, text, caret: start + text.length }
+  }
+  const text = open + close
+  return { start, end: caretOffset, text, caret: start + open.length }
+}
+
+function replaceTextareaRange(
+  el: HTMLTextAreaElement,
+  start: number,
+  end: number,
+  text: string
+): boolean {
   el.focus()
-  el.dispatchEvent(new Event('input', { bubbles: true }))
+  el.setSelectionRange(start, end)
+  // execCommand 会写入浏览器原生撤销栈；不可用时退回 setRangeText。
+  const applied = document.execCommand(text ? 'insertText' : 'delete', false, text)
+  if (!applied) {
+    el.setRangeText(text, start, end, 'end')
+    el.dispatchEvent(
+      new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text })
+    )
+  }
+  return true
+}
+
+function applyToTextarea(el: HTMLTextAreaElement, value: string): boolean {
+  const pos = el.selectionStart ?? el.value.length
+  const selectionEnd = el.selectionEnd ?? pos
+  const selectionText = selectionEnd > pos ? el.value.slice(pos, selectionEnd) : ''
+  const edit = buildColorEdit(el.value, selectionText, pos, value)
+  replaceTextareaRange(el, edit.start, edit.end, edit.text)
+  el.focus()
+  el.setSelectionRange(edit.caret, edit.caret)
+  return true
+}
+
+const PROSE_BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, pre, blockquote, div'
+
+function proseBlockFor(range: Range, editor: HTMLElement): HTMLElement {
+  const container = range.startContainer
+  const element =
+    container.nodeType === Node.TEXT_NODE ? container.parentElement : (container as HTMLElement)
+  const block = element?.closest<HTMLElement>(PROSE_BLOCK_SELECTOR)
+  return block && editor.contains(block) ? block : editor
+}
+
+function blockPrefix(block: Element, range: Range): string | null {
+  const prefixRange = document.createRange()
+  prefixRange.selectNodeContents(block)
+  try {
+    prefixRange.setEnd(range.startContainer, range.startOffset)
+  } catch {
+    return null
+  }
+  return prefixRange.toString()
+}
+
+function offsetToPoint(root: Element, offset: number): { node: Node; offset: number } | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let remaining = offset
+  let node = walker.nextNode()
+  while (node) {
+    const length = node.textContent?.length || 0
+    if (remaining <= length) return { node, offset: remaining }
+    remaining -= length
+    node = walker.nextNode()
+  }
+  return null
+}
+
+function setProseSelection(range: Range, editor: HTMLElement) {
+  const selection = window.getSelection()
+  if (!selection) return
+  selection.removeAllRanges()
+  selection.addRange(range)
+  editor.focus({ preventScroll: true })
+  // ProseMirror 只通过 selectionchange 感知程序化选区变化
+  document.dispatchEvent(new Event('selectionchange'))
+}
+
+function insertProseText(editor: HTMLElement, text: string): boolean {
+  // 走 ProseMirror 自己的粘贴事务，保证撤销栈和编辑器状态一致
+  const data = new DataTransfer()
+  data.setData('text/plain', text)
+  const paste = new ClipboardEvent('paste', {
+    bubbles: true,
+    cancelable: true,
+    clipboardData: data
+  })
+  editor.dispatchEvent(paste)
+  if (paste.defaultPrevented) return true
+  return document.execCommand('insertText', false, text)
 }
 
 function applyToProseMirror(el: HTMLElement, value: string, savedRange?: Range): boolean {
   try {
     const selection = window.getSelection()
     if (!selection) return false
-    const range =
+    const initial =
       savedRange?.cloneRange() ??
       (selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null)
-    if (!range || !el.contains(range.commonAncestorContainer)) return false
+    if (!initial || !el.contains(initial.commonAncestorContainer)) return false
 
-    const node = range.startContainer
-    const offset = range.startOffset
-    const trig = matchColorTrigger((node.textContent || '').slice(0, offset), offset)
+    const block = proseBlockFor(initial, el)
+    const prefix = blockPrefix(block, initial)
+    if (prefix === null) return false
+    const blockRange = document.createRange()
+    blockRange.selectNodeContents(block)
+    const selectionText = initial.collapsed ? '' : initial.toString()
+    const edit = buildColorEdit(blockRange.toString(), selectionText, prefix.length, value)
 
-    const openNode = document.createTextNode(`[color=${value}]`)
-    const closeNode = document.createTextNode('[/color]')
+    const startPoint = offsetToPoint(block, edit.start)
+    const endPoint = offsetToPoint(block, edit.end)
+    if (!startPoint || !endPoint) return false
     const workRange = document.createRange()
-    if (trig) {
-      // 删除从 '[' 到光标的触发文本
-      workRange.setStart(node, trig.start)
-      workRange.setEnd(node, offset)
-    } else {
-      workRange.setStart(node, offset)
-      workRange.setEnd(node, offset)
-    }
-    workRange.deleteContents()
-    // 先插 close 再插 open，最终顺序为 open -> close
-    workRange.insertNode(closeNode)
-    workRange.insertNode(openNode)
+    workRange.setStart(startPoint.node, startPoint.offset)
+    workRange.setEnd(endPoint.node, endPoint.offset)
+    setProseSelection(workRange, el)
+    if (!insertProseText(el, edit.text)) return false
 
-    // 光标放在两组标签之间
-    const caret = document.createRange()
-    caret.setStartAfter(openNode)
-    caret.collapse(true)
-    selection.removeAllRanges()
-    selection.addRange(caret)
-
-    el.dispatchEvent(new Event('input', { bubbles: true }))
+    // 插入后 ProseMirror 可能重建文本节点，重新定位到标签中间
+    const after = window.getSelection()
+    if (!after || after.rangeCount === 0) return true
+    const caretBlock = proseBlockFor(after.getRangeAt(0), el)
+    const caretPoint = offsetToPoint(caretBlock, edit.caret)
+    if (!caretPoint) return true
+    const caretRange = document.createRange()
+    caretRange.setStart(caretPoint.node, caretPoint.offset)
+    caretRange.collapse(true)
+    setProseSelection(caretRange, el)
     return true
   } catch (e) {
     console.error('[DiscourseOneClick] color completion (ProseMirror) failed', e)
@@ -324,14 +465,16 @@ function insertColorFromHex(hex: string) {
   }
   restoreColorInsertionPoint(editor)
   const value = formatColor(norm, currentFormat)
+  // hideSuggestionBox 会清空保存的插入点，先取出 ProseMirror 选区
+  const savedRange = savedColorInsertion?.proseMirrorRange
+  hideSuggestionBox()
   const inserted =
     editor instanceof HTMLTextAreaElement
-      ? (applyToTextarea(editor, value), true)
-      : applyToProseMirror(editor, value, savedColorInsertion?.proseMirrorRange)
+      ? applyToTextarea(editor, value)
+      : applyToProseMirror(editor, value, savedRange)
   if (!inserted) return
-  savedColorInsertion = null
+  editor.focus({ preventScroll: true })
   recordRecent(norm)
-  hideSuggestionBox()
 }
 
 // ------------------------- 光标定位（镜像法） -------------------------
@@ -789,6 +932,7 @@ function openEyeDropper() {
 // ------------------------- 事件处理 -------------------------
 
 function handleInput(event: Event) {
+  if ((event as InputEvent).isComposing) return
   const target = event.target as Element | null
   if (!target) return
 
@@ -802,7 +946,7 @@ function handleInput(event: Event) {
     activeEditor = target
     showSuggestionBox(target, trig.keyword)
   } else if (target instanceof HTMLElement && target.classList.contains('ProseMirror')) {
-    const trig = getColorTriggerFromProseMirror()
+    const trig = getColorTriggerFromProseMirror(target)
     if (!trig) {
       hideSuggestionBox()
       return
