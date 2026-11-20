@@ -10,6 +10,25 @@ import { encodeAvif } from './avifEncoder'
 // Blob URL 再交给 ffmpeg——全本地解压、离线可用，行为不变。
 // dev server / watch 构建下 gz 不存在，回退到 ?url 直出的未压缩 wasm。
 const FFMPEG_WASM_GZ_PATH = 'assets/ffmpeg-core.wasm.gz'
+const FFMPEG_LOAD_TIMEOUT_MS = 60000
+
+const hasWasmMagic = (buffer: ArrayBuffer): boolean => {
+  if (buffer.byteLength < 8) return false
+  const bytes = new Uint8Array(buffer, 0, 4)
+  return bytes[0] === 0x00 && bytes[1] === 0x61 && bytes[2] === 0x73 && bytes[3] === 0x6d
+}
+
+const isWorkerCompromisedError = (error: unknown): boolean => {
+  if (error instanceof DOMException && error.name === 'AbortError') return true
+  const name =
+    error && typeof error === 'object' && 'name' in error ? String((error as any).name) : ''
+  if (name === 'AbortError' || name === 'TimeoutError') return true
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : String(error ?? '')
+  return /abort|timeout|超时|terminate|RuntimeError|out of memory|memory access out of bounds|unreachable|not loaded/i.test(
+    message
+  )
+}
 
 const resolveWasmUrl = async (): Promise<string> => {
   try {
@@ -27,6 +46,9 @@ const resolveWasmUrl = async (): Promise<string> => {
     const buffer = await new Response(
       response.body.pipeThrough(new DecompressionStream('gzip'))
     ).arrayBuffer()
+    if (!hasWasmMagic(buffer)) {
+      return wasmURL
+    }
     return URL.createObjectURL(new Blob([buffer], { type: 'application/wasm' }))
   } catch {
     // gz 缺失或解压 API 不可用：回退到未压缩 wasm URL
@@ -57,7 +79,8 @@ const normalizeAvifSequence = (input: Uint8Array): Uint8Array => {
   let removed = 0
   const top: { offset: number; size: number; type: string }[] = []
   for (let offset = 0; offset + 8 <= bytes.length;) {
-    const size = view.getUint32(offset)
+    const rawSize = view.getUint32(offset)
+    const size = rawSize === 0 ? bytes.length - offset : rawSize
     if (size < 8 || offset + size > bytes.length) throw new Error('Invalid AVIF sequence container')
     const type = tag(offset + 4)
     top.push({ offset, size, type })
@@ -66,7 +89,8 @@ const normalizeAvifSequence = (input: Uint8Array): Uint8Array => {
   }
   const fixOffsets = (start: number, end: number) => {
     for (let offset = start; offset + 8 <= end;) {
-      const size = view.getUint32(offset)
+      const rawSize = view.getUint32(offset)
+      const size = rawSize === 0 ? end - offset : rawSize
       if (size < 8 || offset + size > end) throw new Error('Invalid AVIF track box')
       const type = tag(offset + 4)
       if (type === 'stco') {
@@ -74,7 +98,9 @@ const normalizeAvifSequence = (input: Uint8Array): Uint8Array => {
         for (let i = 0; i < count; i++) {
           const position = offset + 16 + i * 4
           if (position + 4 > offset + size) throw new Error('Invalid AVIF chunk offsets')
-          view.setUint32(position, view.getUint32(position) - removed)
+          const oldOffset = view.getUint32(position)
+          if (oldOffset < removed) throw new Error('Invalid AVIF chunk offset underflow')
+          view.setUint32(position, oldOffset - removed)
         }
       } else if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
         fixOffsets(offset + 8, offset + size)
@@ -115,15 +141,19 @@ const toArrayBuffer = (value: ArrayBufferLike): ArrayBuffer => {
 }
 
 const objectUrlToImage = async (url: string, signal?: AbortSignal): Promise<HTMLImageElement> => {
+  if (signal?.aborted) {
+    throw new DOMException('Image loading aborted', 'AbortError')
+  }
   return await new Promise((resolve, reject) => {
     const image = new Image()
-    const cleanup = () => {
-      image.onload = null
-      image.onerror = null
-    }
     const onAbort = () => {
       cleanup()
       reject(new DOMException('Image loading aborted', 'AbortError'))
+    }
+    const cleanup = () => {
+      image.onload = null
+      image.onerror = null
+      signal?.removeEventListener('abort', onAbort)
     }
 
     image.onload = () => {
@@ -223,6 +253,7 @@ const createJobId = () => `tg_${Date.now()}_${Math.random().toString(36).slice(2
 class LocalAvifService {
   private ffmpeg: FFmpeg | null = null
   private ffmpegLoadPromise: Promise<void> | null = null
+  private ffmpegJobChain: Promise<void> = Promise.resolve()
 
   private getFfmpeg(): FFmpeg {
     if (!this.ffmpeg) {
@@ -231,29 +262,88 @@ class LocalAvifService {
     return this.ffmpeg
   }
 
-  async ensureFfmpegLoaded(): Promise<void> {
+  resetFfmpegWorker(): void {
+    try {
+      this.ffmpeg?.terminate()
+    } catch {
+      // ignore terminate errors
+    }
+    this.ffmpeg = null
+    this.ffmpegLoadPromise = null
+  }
+
+  async ensureFfmpegLoaded(signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted()
+    if (this.ffmpeg?.loaded) return
+
     if (this.ffmpegLoadPromise) {
-      return this.ffmpegLoadPromise
+      await this.ffmpegLoadPromise
+      if (this.ffmpeg?.loaded) return
+      this.ffmpegLoadPromise = null
     }
 
     const ffmpeg = this.getFfmpeg()
+    const loadController = new AbortController()
+    const onAbort = () => loadController.abort(signal?.reason)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    const timer = setTimeout(
+      () => loadController.abort(new Error('FFmpeg WASM 加载超时，请重试')),
+      FFMPEG_LOAD_TIMEOUT_MS
+    )
+
     this.ffmpegLoadPromise = (async () => {
       if (ffmpeg.loaded) return
       const wasmObjectUrl = await resolveWasmUrl()
       try {
-        await ffmpeg.load({ classWorkerURL, coreURL, wasmURL: wasmObjectUrl })
+        loadController.signal.throwIfAborted()
+        await ffmpeg.load(
+          { classWorkerURL, coreURL, wasmURL: wasmObjectUrl },
+          { signal: loadController.signal }
+        )
       } finally {
         // 解压产生的 Blob URL 用完即回收；静态 ?url 资源路径不回收
         if (wasmObjectUrl.startsWith('blob:')) {
           URL.revokeObjectURL(wasmObjectUrl)
         }
       }
-    })().catch(error => {
-      this.ffmpegLoadPromise = null
-      throw error
-    })
+    })()
+      .catch(error => {
+        this.resetFfmpegWorker()
+        throw error
+      })
+      .finally(() => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+      })
 
     return this.ffmpegLoadPromise
+  }
+
+  /** Serialize FFmpeg jobs so concurrent callers never collide in the single worker MEMFS. */
+  async runExclusiveFfmpegJob<T>(
+    task: (ffmpeg: FFmpeg) => Promise<T>,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<T> {
+    options.signal?.throwIfAborted()
+    const run = async (): Promise<T> => {
+      options.signal?.throwIfAborted()
+      await this.ensureFfmpegLoaded(options.signal)
+      options.signal?.throwIfAborted()
+      try {
+        return await task(this.getFfmpeg())
+      } catch (error) {
+        if (options.signal?.aborted || isWorkerCompromisedError(error)) {
+          this.resetFfmpegWorker()
+        }
+        throw error
+      }
+    }
+    const resultPromise = this.ffmpegJobChain.then(run, run)
+    this.ffmpegJobChain = resultPromise.then(
+      () => undefined,
+      () => undefined
+    )
+    return resultPromise
   }
 
   async convertWebmToAnimatedAvif(
@@ -276,39 +366,46 @@ class LocalAvifService {
       onProgress?: (event: LocalAvifProgress) => void
     } = {}
   ): Promise<Blob> {
-    await this.ensureFfmpegLoaded()
+    return await this.runExclusiveFfmpegJob(
+      async ffmpeg => {
+        const jobId = createJobId()
+        const inputPath = `${jobId}-input.ivf`
+        const outputPath = `${jobId}-output.avif`
 
-    const ffmpeg = this.getFfmpeg()
-    const jobId = createJobId()
-    const inputPath = `${jobId}-input.ivf`
-    const outputPath = `${jobId}-output.avif`
+        options.onProgress?.({ message: '正在初始化浏览器内 AVIF 封装器...' })
+        options.signal?.throwIfAborted()
+        await ffmpeg.writeFile(inputPath, await fetchFile(blob), { signal: options.signal })
 
-    options.onProgress?.({ message: '正在初始化浏览器内 AVIF 封装器...' })
-    await ffmpeg.writeFile(inputPath, await fetchFile(blob), { signal: options.signal })
+        try {
+          options.onProgress?.({ message: '正在浏览器内封装动画 AVIF...' })
+          options.signal?.throwIfAborted()
+          const exitCode = await ffmpeg.exec(
+            ['-i', inputPath, '-c:v', 'copy', '-f', 'avif', outputPath],
+            options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+            { signal: options.signal }
+          )
 
-    try {
-      options.onProgress?.({ message: '正在浏览器内封装动画 AVIF...' })
-      const exitCode = await ffmpeg.exec(
-        ['-i', inputPath, '-c:v', 'copy', '-f', 'avif', outputPath],
-        options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-        { signal: options.signal }
-      )
+          if (exitCode !== 0) {
+            throw new Error(`ffmpeg exited with code ${exitCode}`)
+          }
 
-      if (exitCode !== 0) {
-        throw new Error(`ffmpeg exited with code ${exitCode}`)
-      }
+          options.signal?.throwIfAborted()
+          const data = await ffmpeg.readFile(outputPath, undefined, { signal: options.signal })
+          const bytes = data instanceof Uint8Array ? data : new Uint8Array()
+          if (bytes.byteLength === 0) {
+            throw new Error('Local animated AVIF output is empty')
+          }
 
-      const data = await ffmpeg.readFile(outputPath, undefined, { signal: options.signal })
-      const bytes = data instanceof Uint8Array ? data : new Uint8Array()
-      if (bytes.byteLength === 0) {
-        throw new Error('Local animated AVIF output is empty')
-      }
-
-      return uint8ArrayToBlob(normalizeAvifSequence(bytes), 'image/avif')
-    } finally {
-      await this.safeDeleteFile(inputPath, options.signal)
-      await this.safeDeleteFile(outputPath, options.signal)
-    }
+          return uint8ArrayToBlob(normalizeAvifSequence(bytes), 'image/avif')
+        } finally {
+          if (!options.signal?.aborted) {
+            await this.safeDeleteFile(inputPath)
+            await this.safeDeleteFile(outputPath)
+          }
+        }
+      },
+      { signal: options.signal }
+    )
   }
 
   async convertPngFramesToAnimatedAvif(
@@ -324,58 +421,68 @@ class LocalAvifService {
       throw new Error('No TGS frames available for AVIF conversion')
     }
 
-    await this.ensureFfmpegLoaded()
-    const ffmpeg = this.getFfmpeg()
-    const jobId = createJobId()
-    const outputPath = `${jobId}-tgs.avif`
-    const inputNames: string[] = []
+    return await this.runExclusiveFfmpegJob(
+      async ffmpeg => {
+        const jobId = createJobId()
+        const outputPath = `${jobId}-tgs.avif`
+        const inputNames: string[] = []
 
-    try {
-      options.onProgress?.({ message: '正在写入 TGS 帧到浏览器内 WASM 编码器...' })
-      for (let i = 0; i < frames.length; i++) {
-        const frameName = `${jobId}-frame_${String(i).padStart(4, '0')}.png`
-        inputNames.push(frameName)
-        await ffmpeg.writeFile(frameName, await fetchFile(frames[i]), { signal: options.signal })
-      }
+        try {
+          options.onProgress?.({ message: '正在写入 TGS 帧到浏览器内 WASM 编码器...' })
+          for (let i = 0; i < frames.length; i++) {
+            options.signal?.throwIfAborted()
+            const frameName = `${jobId}-frame_${String(i).padStart(4, '0')}.png`
+            inputNames.push(frameName)
+            await ffmpeg.writeFile(frameName, await fetchFile(frames[i]), {
+              signal: options.signal
+            })
+          }
 
-      options.onProgress?.({ message: '正在浏览器内转换 TGS 为动画 AVIF...' })
-      const exitCode = await ffmpeg.exec(
-        [
-          '-framerate',
-          String(Math.max(1, fps)),
-          '-i',
-          `${jobId}-frame_%04d.png`,
-          '-c:v',
-          'libaom-av1',
-          '-pix_fmt',
-          'yuv420p',
-          '-crf',
-          '32',
-          '-b:v',
-          '0',
-          '-f',
-          'avif',
-          outputPath
-        ],
-        options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-        { signal: options.signal }
-      )
+          options.onProgress?.({ message: '正在浏览器内转换 TGS 为动画 AVIF...' })
+          options.signal?.throwIfAborted()
+          const exitCode = await ffmpeg.exec(
+            [
+              '-framerate',
+              String(Math.max(1, fps)),
+              '-i',
+              `${jobId}-frame_%04d.png`,
+              '-c:v',
+              'libaom-av1',
+              '-pix_fmt',
+              'yuv420p',
+              '-crf',
+              '32',
+              '-b:v',
+              '0',
+              '-f',
+              'avif',
+              outputPath
+            ],
+            options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+            { signal: options.signal }
+          )
 
-      if (exitCode !== 0) {
-        throw new Error(`ffmpeg exited with code ${exitCode}`)
-      }
+          if (exitCode !== 0) {
+            throw new Error(`ffmpeg exited with code ${exitCode}`)
+          }
 
-      const data = await ffmpeg.readFile(outputPath, undefined, { signal: options.signal })
-      const bytes = data instanceof Uint8Array ? data : new Uint8Array()
-      if (bytes.byteLength === 0) {
-        throw new Error('Local animated AVIF output is empty')
-      }
+          options.signal?.throwIfAborted()
+          const data = await ffmpeg.readFile(outputPath, undefined, { signal: options.signal })
+          const bytes = data instanceof Uint8Array ? data : new Uint8Array()
+          if (bytes.byteLength === 0) {
+            throw new Error('Local animated AVIF output is empty')
+          }
 
-      return uint8ArrayToBlob(bytes, 'image/avif')
-    } finally {
-      await Promise.all(inputNames.map(name => this.safeDeleteFile(name, options.signal)))
-      await this.safeDeleteFile(outputPath, options.signal)
-    }
+          return uint8ArrayToBlob(bytes, 'image/avif')
+        } finally {
+          if (!options.signal?.aborted) {
+            await Promise.all(inputNames.map(name => this.safeDeleteFile(name)))
+            await this.safeDeleteFile(outputPath)
+          }
+        }
+      },
+      { signal: options.signal }
+    )
   }
 
   async encodeStaticAvifFromBlob(
@@ -485,9 +592,10 @@ class LocalAvifService {
     return context.getImageData(0, 0, canvas.width, canvas.height)
   }
 
-  private async safeDeleteFile(path: string, signal?: AbortSignal): Promise<void> {
+  private async safeDeleteFile(path: string): Promise<void> {
+    if (!this.ffmpeg?.loaded) return
     try {
-      await this.getFfmpeg().deleteFile(path, { signal })
+      await this.ffmpeg.deleteFile(path)
     } catch {
       // ignore cleanup errors
     }

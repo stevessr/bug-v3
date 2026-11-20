@@ -15,6 +15,12 @@ const resolveAvifWasmGzUrl = (): string => {
   return new URL(AVIF_WASM_GZ_PATH, new URL(/* @vite-ignore */ '../', import.meta.url)).href
 }
 
+const hasWasmMagic = (buffer: ArrayBuffer): boolean => {
+  if (buffer.byteLength < 8) return false
+  const bytes = new Uint8Array(buffer, 0, 4)
+  return bytes[0] === 0x00 && bytes[1] === 0x61 && bytes[2] === 0x73 && bytes[3] === 0x6d
+}
+
 let initPromise: Promise<void> | null = null
 
 export function ensureAvifEncoderReady(): Promise<void> {
@@ -29,6 +35,7 @@ export function ensureAvifEncoderReady(): Promise<void> {
         const buffer = await new Response(
           response.body.pipeThrough(new DecompressionStream('gzip'))
         ).arrayBuffer()
+        if (!hasWasmMagic(buffer)) return
         wasmBinary = new Uint8Array(buffer)
       } catch {
         // Fall back to default uncompressed avif_enc.wasm in dev/watch builds.

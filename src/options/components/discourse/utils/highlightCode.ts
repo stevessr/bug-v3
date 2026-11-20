@@ -17,15 +17,19 @@ const EXTRA_LANGUAGES: ReadonlyArray<readonly [string, () => Promise<{ default: 
 function getHighlighter(): Promise<HLJSApi> {
   if (!hljsPromise) {
     hljsPromise = (async () => {
-      const [{ default: hljs }, ...loaded] = await Promise.all([
+      const [{ default: hljs }, loadedResults] = await Promise.all([
         import('highlight.js/lib/common'),
-        ...EXTRA_LANGUAGES.map(async ([name, loader]) => {
-          const mod = await loader()
-          return [name, mod.default] as const
-        })
+        Promise.allSettled(
+          EXTRA_LANGUAGES.map(async ([name, loader]) => {
+            const mod = await loader()
+            return [name, mod.default] as const
+          })
+        )
       ])
 
-      for (const [name, language] of loaded) {
+      for (const result of loadedResults) {
+        if (result.status !== 'fulfilled') continue
+        const [name, language] = result.value
         if (!hljs.getLanguage(name)) {
           hljs.registerLanguage(name, language)
         }
@@ -50,18 +54,22 @@ export async function highlightCodeBlocks(container: HTMLElement | null): Promis
   const hljs = await getHighlighter()
 
   for (const el of blocks) {
-    if (el.dataset.highlighted) continue
-    const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
-    if (langMatch) {
-      const lang = langMatch.slice('lang-'.length)
-      if (hljs.getLanguage(lang)) {
-        el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
-        el.classList.add('hljs')
-        el.dataset.highlighted = 'true'
-        continue
+    if (!el.isConnected || el.dataset.highlighted) continue
+    try {
+      const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
+      if (langMatch) {
+        const lang = langMatch.slice('lang-'.length)
+        if (hljs.getLanguage(lang)) {
+          el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
+          el.classList.add('hljs')
+          el.dataset.highlighted = 'true'
+          continue
+        }
       }
+      hljs.highlightElement(el)
+      el.dataset.highlighted = 'true'
+    } catch {
+      // ignore per-block highlight failures
     }
-    hljs.highlightElement(el)
-    el.dataset.highlighted = 'true'
   }
 }

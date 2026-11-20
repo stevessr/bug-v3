@@ -5,15 +5,25 @@
  * 当启用 IndexedDB 缓存时，强制使用缓存，失败则显示 404 占位图
  * 加载过程中显示转圈动画
  */
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
 import { useEmojiStore } from '@/stores/emojiStore'
-import { getCachedImage, cacheImage } from '@/utils/imageCache'
 import {
   resolveImageCacheStrategy,
   isImageDomainBlocked,
   shouldUseImageCache
 } from '@/utils/imageCachePolicy'
+
+let imageCacheModulePromise: Promise<typeof import('@/utils/imageCache')> | null = null
+const loadImageCache = () => {
+  if (!imageCacheModulePromise) {
+    imageCacheModulePromise = import('@/utils/imageCache').catch(error => {
+      imageCacheModulePromise = null
+      throw error
+    })
+  }
+  return imageCacheModulePromise
+}
 
 const props = defineProps<{
   src: string
@@ -28,6 +38,10 @@ const displaySrc = ref(props.src)
 const isCached = ref(false)
 const isError = ref(false)
 const isLoading = ref(false)
+
+let requestVersion = 0
+let isUnmounted = false
+let hasRetriedCache = false
 
 // 404 占位图 - 使用 data URI 避免额外请求
 const ERROR_PLACEHOLDER =
@@ -60,6 +74,9 @@ const loadCachedImage = async (
   url: string,
   options: { forceCache?: boolean; fallbackToSource?: boolean } = {}
 ) => {
+  const version = ++requestVersion
+  const isStale = () => isUnmounted || version !== requestVersion || url !== props.src
+
   if (!url) {
     displaySrc.value = url
     return
@@ -83,8 +100,12 @@ const loadCachedImage = async (
   isError.value = false
 
   try {
+    const { getCachedImage, cacheImage } = await loadImageCache()
+    if (isStale()) return
+
     // 先尝试从缓存获取
     const cachedUrl = await getCachedImage(url)
+    if (isStale()) return
     if (cachedUrl) {
       displaySrc.value = cachedUrl
       isCached.value = true
@@ -95,6 +116,7 @@ const loadCachedImage = async (
 
     // 缓存未命中，尝试缓存图片
     const blobUrl = await cacheImage(url)
+    if (isStale()) return
     if (blobUrl) {
       displaySrc.value = blobUrl
       isCached.value = true
@@ -123,6 +145,7 @@ const loadCachedImage = async (
       isCached.value = false
     }
   } catch {
+    if (isStale()) return
     isLoading.value = false
     const forceCache = options.forceCache ?? false
     const fallbackToSource = options.fallbackToSource ?? !forceCache
@@ -145,21 +168,37 @@ const loadCachedImage = async (
 }
 
 const handleImageError = async () => {
-  // 如果已经是错误状态或占位图，不再处理
-  if (isError.value || displaySrc.value === ERROR_PLACEHOLDER) {
+  // 如果已卸载、已经是错误状态或占位图，不再处理
+  if (isUnmounted || isError.value || displaySrc.value === ERROR_PLACEHOLDER) {
     return
   }
 
+  if (hasRetriedCache) {
+    displaySrc.value = ERROR_PLACEHOLDER
+    isError.value = true
+    isCached.value = false
+    isLoading.value = false
+    return
+  }
+
+  hasRetriedCache = true
+  const version = requestVersion
+  const currentSrc = props.src
+
   // 如果是 blob URL 失败，可能是缓存已过期，尝试重新缓存
-  if (displaySrc.value.startsWith('blob:') && props.src) {
+  if (displaySrc.value.startsWith('blob:') && currentSrc) {
     try {
-      const blobUrl = await cacheImage(props.src)
+      const { cacheImage } = await loadImageCache()
+      if (isUnmounted || version !== requestVersion || currentSrc !== props.src) return
+      const blobUrl = await cacheImage(currentSrc)
+      if (isUnmounted || version !== requestVersion || currentSrc !== props.src) return
       if (blobUrl) {
         displaySrc.value = blobUrl
         isCached.value = true
         return
       }
     } catch {
+      if (isUnmounted || version !== requestVersion || currentSrc !== props.src) return
       // 重新缓存失败
     }
   }
@@ -168,8 +207,8 @@ const handleImageError = async () => {
 
   // Force-source 模式：在扩展页仍允许回退到缓存，否则容易被 CORP 阻断
   if (strategy === 'force-source') {
-    if (props.src && isExtensionPage()) {
-      await loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+    if (currentSrc && isExtensionPage()) {
+      await loadCachedImage(currentSrc, { forceCache: true, fallbackToSource: false })
       return
     }
     displaySrc.value = ERROR_PLACEHOLDER
@@ -178,8 +217,8 @@ const handleImageError = async () => {
   }
 
   // 失败后尝试缓存加载（auto/adaptive/force-indexeddb）
-  if (props.src) {
-    await loadCachedImage(props.src, { forceCache: true, fallbackToSource: false })
+  if (currentSrc) {
+    await loadCachedImage(currentSrc, { forceCache: true, fallbackToSource: false })
     return
   }
 
@@ -191,20 +230,26 @@ const handleImageError = async () => {
 watch(
   () => props.src,
   newSrc => {
-    if (newSrc) {
-      isCached.value = false
-      isError.value = false
-      isLoading.value = false
-      const forceCache = shouldForceCache(newSrc)
-      const preferCache = shouldUseCache(newSrc) && (forceCache || isExtensionPage())
-      if (preferCache) {
-        loadCachedImage(newSrc, {
-          forceCache,
-          fallbackToSource: !forceCache
-        })
-      } else {
-        displaySrc.value = newSrc
-      }
+    requestVersion++
+    hasRetriedCache = false
+    isCached.value = false
+    isError.value = false
+    isLoading.value = false
+
+    if (!newSrc) {
+      displaySrc.value = ''
+      return
+    }
+
+    const forceCache = shouldForceCache(newSrc)
+    const preferCache = shouldUseCache(newSrc) && (forceCache || isExtensionPage())
+    if (preferCache) {
+      loadCachedImage(newSrc, {
+        forceCache,
+        fallbackToSource: !forceCache
+      })
+    } else {
+      displaySrc.value = newSrc
     }
   },
   { immediate: false }
@@ -221,6 +266,11 @@ onMounted(() => {
       displaySrc.value = props.src
     }
   }
+})
+
+onBeforeUnmount(() => {
+  isUnmounted = true
+  requestVersion++
 })
 </script>
 

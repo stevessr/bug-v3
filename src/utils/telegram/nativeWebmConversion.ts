@@ -98,13 +98,21 @@ const encodeCanvas = (canvas: HTMLCanvasElement, type: string): Promise<Blob> =>
 export async function convertWebmInBrowser(
   blob: Blob,
   format: 'webp' | 'avif' | 'animated-avif',
-  options: { signal?: AbortSignal; onProgress?: (event: { message: string }) => void } = {}
+  options: {
+    fps?: number
+    maxWidth?: number
+    startTime?: number
+    duration?: number
+    quality?: number
+    signal?: AbortSignal
+    onProgress?: (event: { message: string }) => void
+  } = {}
 ): Promise<{ blob: Blob; warning?: string }> {
   const controller = new AbortController()
   const onAbort = () => controller.abort(options.signal?.reason)
   options.signal?.addEventListener('abort', onAbort, { once: true })
   if (options.signal?.aborted) onAbort()
-  const timer = setTimeout(() => controller.abort(new Error('浏览器转换超时')), 45000)
+  const timer = setTimeout(() => controller.abort(new Error('浏览器转换超时')), 90000)
   const signal = controller.signal
   const check = () => signal.throwIfAborted()
   const video = document.createElement('video')
@@ -112,9 +120,11 @@ export async function convertWebmInBrowser(
   video.playsInline = true
   video.preload = 'auto'
   const url = URL.createObjectURL(blob)
-  const waitFor = (event: string, action: () => void) =>
+  const waitFor = (event: string, action: () => void, timeoutMs?: number) =>
     new Promise<void>((resolve, reject) => {
+      let eventTimer: ReturnType<typeof setTimeout> | null = null
       const cleanup = () => {
+        if (eventTimer) clearTimeout(eventTimer)
         video.removeEventListener(event, done)
         video.removeEventListener('error', failed)
         signal.removeEventListener('abort', aborted)
@@ -125,7 +135,7 @@ export async function convertWebmInBrowser(
       }
       const failed = () => {
         cleanup()
-        reject(new Error('浏览器无法解码此 WebM'))
+        reject(new Error('浏览器无法解码此视频'))
       }
       const aborted = () => {
         cleanup()
@@ -134,6 +144,12 @@ export async function convertWebmInBrowser(
       if (signal.aborted) {
         reject(signal.reason)
         return
+      }
+      if (timeoutMs) {
+        eventTimer = setTimeout(() => {
+          cleanup()
+          reject(new Error('视频定位帧超时'))
+        }, timeoutMs)
       }
       video.addEventListener(event, done, { once: true })
       video.addEventListener('error', failed, { once: true })
@@ -145,22 +161,69 @@ export async function convertWebmInBrowser(
     await waitFor('loadeddata', () => {
       video.src = url
     })
-    const duration = video.duration
-    // TG video stickers are at most 3s; bound memory/runtime for malformed input.
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 10) {
-      throw new Error('WebM 时长无效或超过 10 秒限制')
+    if (!video.videoWidth || !video.videoHeight) {
+      throw new Error('此文件不包含有效视频画面')
     }
+    const videoDuration = video.duration
+    // Allow up to 60s source when trimmed; cap extracted animation segment at 15s to bound memory.
+    if (!Number.isFinite(videoDuration) || videoDuration <= 0 || videoDuration > 60) {
+      throw new Error('视频时长无效或超过 60 秒限制')
+    }
+    const seekVideo = async (targetTime: number) => {
+      const clamped = Math.min(Math.max(0, targetTime), Math.max(0, videoDuration - 0.001))
+      if (Math.abs(video.currentTime - clamped) <= 1e-4 && !video.seeking) {
+        return
+      }
+      await waitFor(
+        'seeked',
+        () => {
+          video.currentTime = clamped
+        },
+        15000
+      )
+    }
+    const clipStart =
+      typeof options.startTime === 'number' &&
+      Number.isFinite(options.startTime) &&
+      options.startTime > 0
+        ? Math.min(options.startTime, Math.max(0, videoDuration - 0.05))
+        : 0
+    const requestedDuration =
+      typeof options.duration === 'number' &&
+      Number.isFinite(options.duration) &&
+      options.duration > 0
+        ? options.duration
+        : videoDuration - clipStart
+    const clipDuration = Math.min(requestedDuration, videoDuration - clipStart)
+    if (!Number.isFinite(clipDuration) || clipDuration <= 0 || clipDuration > 15) {
+      throw new Error('动画片段时长无效或超过 15 秒限制，请设置裁剪时长（≤15秒）')
+    }
+
     const canvas = document.createElement('canvas')
-    const scale = Math.min(1, 512 / Math.max(video.videoWidth, video.videoHeight))
+    const scale =
+      options.maxWidth === 0
+        ? 1
+        : typeof options.maxWidth === 'number' &&
+            Number.isFinite(options.maxWidth) &&
+            options.maxWidth > 0
+          ? Math.min(1, options.maxWidth / Math.max(1, video.videoWidth))
+          : Math.min(1, 512 / Math.max(video.videoWidth, video.videoHeight))
     canvas.width = Math.max(1, Math.round(video.videoWidth * scale))
     canvas.height = Math.max(1, Math.round(video.videoHeight * scale))
-    const context = canvas.getContext('2d', { alpha: true })
+    const context = canvas.getContext('2d', { alpha: true, willReadFrequently: true })
     if (!context) throw new Error('浏览器不支持 Canvas 2D')
     const draw = () => {
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
     }
+    const encodeQuality =
+      typeof options.quality === 'number' && Number.isFinite(options.quality)
+        ? Math.min(100, Math.max(1, Math.round(options.quality)))
+        : 62
     if (format === 'avif') {
+      if (clipStart > 0) {
+        await seekVideo(clipStart)
+      }
       draw()
       options.onProgress?.({ message: '正在本地编码 AVIF 静态首帧...' })
       const native = await encodeCanvas(canvas, 'image/avif')
@@ -170,7 +233,7 @@ export async function convertWebmInBrowser(
       // Canvas silently returns PNG when AVIF encoding isn't implemented.
       const { encodeAvif: encode } = await import('@/utils/avif/avifEncoder')
       const bytes = await encode(context.getImageData(0, 0, canvas.width, canvas.height), {
-        quality: 62
+        quality: encodeQuality
       })
       check()
       return {
@@ -178,19 +241,24 @@ export async function convertWebmInBrowser(
         warning: '浏览器不支持原生 AVIF 编码，已用本地 WASM 编码静态首帧（无动画）'
       }
     }
-    const fps = 20
-    const count = Math.ceil(duration * fps)
+    const fps =
+      typeof options.fps === 'number' && Number.isFinite(options.fps)
+        ? Math.min(30, Math.max(1, Math.round(options.fps)))
+        : 20
+    const count = Math.max(1, Math.ceil(clipDuration * fps))
+    const MAX_ANIMATED_AVIF_FRAMES = 300
+    if (format === 'animated-avif' && count > MAX_ANIMATED_AVIF_FRAMES) {
+      throw new Error('动画 AVIF 单次最多支持 300 帧，请降低帧率或缩短裁剪时长')
+    }
     const frames: { bytes: Uint8Array; durationMs: number }[] = []
     let hasTransparency = false
     const avifEncoder =
       format === 'animated-avif' ? (await import('@/utils/avif/avifEncoder')).encodeAvif : null
     for (let i = 0; i < count; i++) {
       check()
-      const time = i / fps
-      if (i > 0)
-        await waitFor('seeked', () => {
-          video.currentTime = time
-        })
+      const elapsed = i / fps
+      const time = clipStart + elapsed
+      if (i > 0 || clipStart > 0) await seekVideo(time)
       draw()
       if (avifEncoder) {
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
@@ -199,10 +267,12 @@ export async function convertWebmInBrowser(
           if (pixels.data[pixel] !== 255) hasTransparency = true
           pixels.data[pixel] = 255
         }
-        const encoded = new Uint8Array(await avifEncoder(pixels, { quality: 62, speed: 8 }))
+        const encoded = new Uint8Array(
+          await avifEncoder(pixels, { quality: encodeQuality, speed: 8 })
+        )
         frames.push({
           bytes: extractAvifSample(encoded),
-          durationMs: Math.min(1 / fps, duration - time) * 1000
+          durationMs: Math.min(1 / fps, clipDuration - elapsed) * 1000
         })
         check()
         options.onProgress?.({ message: `浏览器内动画 AVIF 编码 ${i + 1}/${count}...` })
@@ -213,7 +283,7 @@ export async function convertWebmInBrowser(
       if (frame.type !== 'image/webp') throw new Error('此浏览器不支持原生 WebP 编码')
       frames.push({
         bytes: new Uint8Array(await frame.arrayBuffer()),
-        durationMs: Math.min(1 / fps, duration - time) * 1000
+        durationMs: Math.min(1 / fps, clipDuration - elapsed) * 1000
       })
       options.onProgress?.({ message: `浏览器原生动画 WebP 编码 ${i + 1}/${count}...` })
     }
@@ -243,18 +313,19 @@ export async function convertWebmInBrowser(
 }
 
 // jsquash produces a single opaque AV1 image; extract its compressed sample without decoding.
-const extractAvifSample = (bytes: Uint8Array): Uint8Array => {
+export const extractAvifSample = (bytes: Uint8Array): Uint8Array => {
   for (let offset = 0; offset + 8 <= bytes.length;) {
-    const size = new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0)
-    if (size < 8 || offset + size > bytes.length) throw new Error('AVIF 帧容器无效')
+    const rawSize = new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0)
+    const boxSize = rawSize === 0 ? bytes.length - offset : rawSize
+    if (boxSize < 8 || offset + boxSize > bytes.length) throw new Error('AVIF 帧容器无效')
     const name = new TextDecoder().decode(bytes.subarray(offset + 4, offset + 8))
-    if (name === 'mdat') return bytes.slice(offset + 8, offset + size)
-    offset += size
+    if (name === 'mdat') return bytes.slice(offset + 8, offset + boxSize)
+    offset += boxSize
   }
   throw new Error('AVIF 帧没有 AV1 数据')
 }
 
-const createAv1Ivf = (
+export const createAv1Ivf = (
   frames: { bytes: Uint8Array; durationMs: number }[],
   width: number,
   height: number
@@ -271,11 +342,12 @@ const createAv1Ivf = (
   view.setUint32(24, frames.length, true)
   let timestamp = 0
   const samples = frames.map(frame => {
+    const stepMs = Math.max(1, Math.round(frame.durationMs))
     const prefix = new Uint8Array(12)
     const data = new DataView(prefix.buffer)
     data.setUint32(0, frame.bytes.length, true)
-    data.setBigUint64(4, BigInt(Math.round(timestamp)), true)
-    timestamp += frame.durationMs
+    data.setBigUint64(4, BigInt(timestamp), true)
+    timestamp += stepMs
     return join([prefix, frame.bytes])
   })
   return new Blob([join([header, ...samples])], { type: 'video/x-ivf' })

@@ -50,7 +50,12 @@ const CONTENT_MESSAGE_TYPES = new Set<ContentMessage['type']>([
 let messageDispatcherPromise: Promise<typeof import('./messageHandlers')> | null = null
 
 const loadMessageDispatcher = () => {
-  messageDispatcherPromise ??= import('./messageHandlers')
+  if (!messageDispatcherPromise) {
+    messageDispatcherPromise = import('./messageHandlers').catch(error => {
+      messageDispatcherPromise = null
+      throw error
+    })
+  }
   return messageDispatcherPromise
 }
 
@@ -151,7 +156,11 @@ if (chrome?.runtime?.onMessage) {
 // A recording session lives in background storage so it survives navigations.
 // Ask the service worker whether this newly loaded document should resume capture,
 // and only load workflowRecorder when a recording session is actually active.
-if (typeof chrome !== 'undefined' && typeof chrome.runtime?.sendMessage === 'function') {
+if (
+  typeof chrome !== 'undefined' &&
+  chrome.runtime?.id &&
+  typeof chrome.runtime?.sendMessage === 'function'
+) {
   void (async () => {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'AGENT_RECORDING_CONTENT_READY' })
@@ -160,7 +169,12 @@ if (typeof chrome !== 'undefined' && typeof chrome.runtime?.sendMessage === 'fun
         setWorkflowRecordingEnabled(true)
       }
     } catch (error) {
-      logError('Failed to check workflow recording state:', error)
+      const msg = error instanceof Error ? error.message : String(error)
+      if (/Extension context invalidated|Receiving end does not exist/i.test(msg)) {
+        logInfo('Recording state check skipped:', msg)
+      } else {
+        logError('Failed to check workflow recording state:', error)
+      }
     }
   })()
 }
