@@ -105,6 +105,22 @@ export function initSlashEmojiPicker(): () => void {
       node: range.startContainer as Text
     }
   }
+  /**
+   * ProseMirror re-creates text nodes while typing, so the pinned token has to
+   * be validated by its text, not by node identity. Re-pins the text node when
+   * the same token is found in a fresh node.
+   */
+  const tokenIntact = (
+    target: Editor,
+    current: { before: string; pos: number; node: Text | null }
+  ): boolean => {
+    if (current.pos !== end) return false
+    if (current.before.slice(start, end) !== inputAtOpen) return false
+    if (target instanceof HTMLTextAreaElement) return true
+    if (!current.node?.isConnected) return false
+    textNode = current.node
+    return true
+  }
   const caretRect = (target: Editor): DOMRect | null => {
     if (!(target instanceof HTMLTextAreaElement)) {
       const selection = window.getSelection()
@@ -243,14 +259,10 @@ export function initSlashEmojiPicker(): () => void {
       return close()
     if (!selectedGroup) return close()
     // Revalidate the pinned caret/token: never insert in another editor or stale range.
+    // ProseMirror re-creates text nodes while typing, so compare the token text
+    // instead of node identity and re-pin to the fresh node.
     const current = caret(editor)
-    if (
-      !current ||
-      current.pos !== end ||
-      current.node !== textNode ||
-      current.before.slice(start, end) !== inputAtOpen
-    )
-      return close()
+    if (!current || !tokenIntact(editor, current)) return close()
     const emoji = emojiItems[index]
     const scale = cachedState.settings.imageScale || 100
     const output = emoji.customOutput?.trim()
@@ -264,7 +276,7 @@ export function initSlashEmojiPicker(): () => void {
     const target = editor
     const savedStart = start
     const savedEnd = end
-    const node = textNode
+    const node = current.node
     close()
     target.focus({ preventScroll: true })
     if (target instanceof HTMLTextAreaElement) {
@@ -284,7 +296,12 @@ export function initSlashEmojiPicker(): () => void {
       if (!selection) return
       selection.removeAllRanges()
       selection.addRange(range)
-      // Let ProseMirror handle paste through its own transaction/undo machinery.
+      // ProseMirror tracks its own selection state and only learns about a
+      // programmatic DOM selection through "selectionchange". Without this the
+      // paste below lands at the old caret and leaves the "/query" token in the
+      // editor. Let ProseMirror handle paste through its own transaction/undo
+      // machinery.
+      document.dispatchEvent(new Event('selectionchange'))
       const data = new DataTransfer()
       data.setData('text/plain', output)
       const paste = new ClipboardEvent('paste', {
@@ -379,6 +396,7 @@ export function initSlashEmojiPicker(): () => void {
       activePane = 'groups'
     }
     if (!selectedGroup && groupItems.length) selectedGroup = groupItems[0]
+    if (groupEnd < start + 1) groupEnd = start + 1
     const normalizedGroupName = selectedGroup?.name.toLocaleLowerCase() || ''
     const emojiQuery =
       selectedGroup && normalizedQuery.startsWith(`${normalizedGroupName} `)
@@ -430,7 +448,12 @@ export function initSlashEmojiPicker(): () => void {
       label.className = 'slash-group-name'
       label.textContent = item.name
       button.append(label)
-      button.onmouseenter = () => {
+      // mousemove (not mouseenter): re-rendering the list recreates buttons
+      // under a stationary pointer, and the synthetic mouseenter used to pull
+      // the active pane back to "groups" so Enter opened a group instead of
+      // inserting the emoji the user was looking at.
+      button.onmousemove = () => {
+        if (activePane === 'groups' && index === i && selectedGroup?.id === item.id) return
         activePane = 'groups'
         index = i
         if (selectedGroup?.id !== item.id) {
@@ -501,6 +524,11 @@ export function initSlashEmojiPicker(): () => void {
         return
       editor = target
       start = current.pos - 1
+      // The query after the slash is not a group name yet; keep the emoji
+      // filter anchored right after "/" so typing filters emojis instead of
+      // producing a query that still contains the trigger (which matched
+      // nothing and left the raw "/query" text behind).
+      groupEnd = start + 1
       textNode = current.node
       previousControls = target.getAttribute('aria-controls')
       previousActive = target.getAttribute('aria-activedescendant')
@@ -512,13 +540,15 @@ export function initSlashEmojiPicker(): () => void {
       selectedGroup = null
       index = 0
     }
-    if (
-      editor !== target ||
-      current.node !== textNode ||
-      current.pos <= start ||
-      current.before[start] !== '/'
-    )
-      return close()
+    if (editor !== target || current.pos <= start || current.before[start] !== '/') return close()
+    if (current.node !== textNode) {
+      // ProseMirror replaces the text node on some edits; re-pin when the
+      // already-typed token still matches, otherwise the picker would close
+      // after the first character and leave the raw "/query" in the editor.
+      if (target instanceof HTMLTextAreaElement) return close()
+      if (!current.node || current.before.slice(start, end) !== inputAtOpen) return close()
+      textNode = current.node
+    }
     end = current.pos
     inputAtOpen = current.before.slice(start, end)
     if (inputAtOpen.includes('\n') || inputAtOpen.slice(1).includes('/')) return close()
@@ -555,7 +585,7 @@ export function initSlashEmojiPicker(): () => void {
     if (composing || event.isComposing || event.keyCode === 229) return
     if (event.ctrlKey || event.metaKey || event.altKey) return close()
     const current = caret(editor)
-    if (!current || current.pos !== end || current.node !== textNode) return close()
+    if (!current || !tokenIntact(editor, current)) return close()
     let handled = true
     if (event.key === 'Escape') close()
     else if (event.key === 'Enter') choose()

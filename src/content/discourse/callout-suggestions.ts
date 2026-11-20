@@ -14,6 +14,53 @@ const DEFAULT_ICON = {
 let suggestionBox: HTMLDivElement | null = null
 let activeSuggestionIndex = 0
 
+// Callouts only exist inside blockquotes, so the trigger must be a blockquote
+// line whose content starts with the bracket: "> [!note]". Plain "[!note]"
+// typed in normal text must not open the suggestions.
+const TEXTAREA_TRIGGER = /^[ \t]*>[ \t]*[［【[](?:!|！)?([a-z]*)$/i
+const PROSE_MIRROR_TRIGGER = /^[［【[](?:!|！)?([a-z]*)$/i
+const PROSE_BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, pre, blockquote'
+
+/** Position of the trigger bracket inside a line prefix, or -1. */
+function getBracketIndex(linePrefix: string): number {
+  return linePrefix.search(/[［【[]/)
+}
+
+/**
+ * ProseMirror renders the blockquote as a real element, so "> " is not part of
+ * the text. Accept the trigger when the caret sits inside a blockquote and the
+ * bracket starts the current block's line.
+ */
+function getProseLinePrefix(range: Range): string | null {
+  const startNode = range.startContainer
+  const startElement =
+    startNode.nodeType === Node.TEXT_NODE ? startNode.parentElement : (startNode as Element)
+  if (!startElement?.closest('blockquote')) return null
+  const block = startElement.closest(PROSE_BLOCK_SELECTOR) ?? startElement
+  const prefixRange = document.createRange()
+  prefixRange.selectNodeContents(block)
+  try {
+    prefixRange.setEnd(range.startContainer, range.startOffset)
+  } catch {
+    return null
+  }
+  return prefixRange.toString()
+}
+
+/** Convert a character offset inside an element's text into a DOM point. */
+function offsetToPoint(root: Element, offset: number): { node: Node; offset: number } | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let remaining = offset
+  let node = walker.nextNode()
+  while (node) {
+    const length = node.textContent?.length || 0
+    if (remaining <= length) return { node, offset: remaining }
+    remaining -= length
+    node = walker.nextNode()
+  }
+  return null
+}
+
 function createSuggestionBox() {
   if (suggestionBox) return
   suggestionBox = createE('div', {
@@ -81,15 +128,11 @@ function applyCompletion(element: HTMLTextAreaElement | HTMLElement, selectedKey
     const selectionStart = element.selectionStart || 0
     const textBeforeCursor = text.substring(0, selectionStart)
 
-    // 压缩搜索：查找最近的半角或全角左括号触发符
-    const triggerIndex = Math.max(
-      textBeforeCursor.lastIndexOf('['),
-      textBeforeCursor.lastIndexOf('［'),
-      textBeforeCursor.lastIndexOf('【')
-    )
-
-    // 如果没有找到任何触发符，则直接返回
-    if (triggerIndex === -1) return
+    // 触发符必须位于 "> " 引用行的开头
+    const lineStart = textBeforeCursor.lastIndexOf('\n') + 1
+    const bracketIndex = getBracketIndex(textBeforeCursor.slice(lineStart))
+    if (bracketIndex === -1) return
+    const triggerIndex = lineStart + bracketIndex
 
     const newText = `[!${selectedKeyword}]`
     const textAfter = text.substring(selectionStart)
@@ -108,21 +151,26 @@ function applyCompletion(element: HTMLTextAreaElement | HTMLElement, selectedKey
       if (!selection || selection.rangeCount === 0) return
 
       const range = selection.getRangeAt(0)
-      const textBeforeCursor =
-        range.startContainer.textContent?.substring(0, range.startOffset) || ''
-
-      // 压缩搜索：查找最近的半角或全角左括号触发符
-      const triggerIndex = Math.max(
-        textBeforeCursor.lastIndexOf('['),
-        textBeforeCursor.lastIndexOf('［'),
-        textBeforeCursor.lastIndexOf('【')
-      )
-
-      if (triggerIndex === -1) return
+      const startNode = range.startContainer
+      const startElement =
+        startNode.nodeType === Node.TEXT_NODE ? startNode.parentElement : (startNode as Element)
+      if (!startElement?.closest('blockquote')) return
+      const block = startElement.closest(PROSE_BLOCK_SELECTOR) ?? startElement
+      const prefixRange = document.createRange()
+      prefixRange.selectNodeContents(block)
+      try {
+        prefixRange.setEnd(range.startContainer, range.startOffset)
+      } catch {
+        return
+      }
+      const bracketIndex = getBracketIndex(prefixRange.toString())
+      if (bracketIndex === -1) return
+      const startPoint = offsetToPoint(block, bracketIndex)
+      if (!startPoint) return
 
       // Delete from trigger to cursor
       const deleteRange = document.createRange()
-      deleteRange.setStart(range.startContainer, triggerIndex)
+      deleteRange.setStart(startPoint.node, startPoint.offset)
       deleteRange.setEnd(range.startContainer, range.startOffset)
       deleteRange.deleteContents()
 
@@ -307,8 +355,9 @@ function handleInput(event: Event) {
     const text = textarea.value
     const selectionStart = textarea.selectionStart || 0
     const textBeforeCursor = text.substring(0, selectionStart)
-    // 支持半角/全角触发符：当输入左括号（半角 '['、全角 '［' 或 '【'）即可触发，'!' 可选
-    const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
+    // 仅当当前行以 "> "（引用）开头时才触发，支持半角/全角左括号，'!' 可选
+    const linePrefix = textBeforeCursor.slice(textBeforeCursor.lastIndexOf('\n') + 1)
+    const match = linePrefix.match(TEXTAREA_TRIGGER)
     if (match) {
       const keyword = match[1].toLowerCase()
       const filtered = calloutKeywords.filter(k => k.startsWith(keyword))
@@ -326,8 +375,13 @@ function handleInput(event: Event) {
     }
 
     const range = selection.getRangeAt(0)
-    const textBeforeCursor = range.startContainer.textContent?.substring(0, range.startOffset) || ''
-    const match = textBeforeCursor.match(/(?:\[|［|【])(?:!|！)?([a-z]*)$/i)
+    // 所见即所得编辑器里引用是 <blockquote> 元素，"[!" 必须位于引用块的行首
+    const linePrefix = getProseLinePrefix(range)
+    if (linePrefix === null) {
+      hideSuggestionBox()
+      return
+    }
+    const match = linePrefix.match(PROSE_MIRROR_TRIGGER)
     if (match) {
       const keyword = match[1].toLowerCase()
       const filtered = calloutKeywords.filter(k => k.startsWith(keyword))

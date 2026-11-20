@@ -350,6 +350,21 @@ test('root emoji search preview can insert a result directly', async ({ page }) 
   await expect(page.locator('textarea.d-editor-input')).toHaveValue(':shy:')
 })
 
+test('hovering an emoji tile keeps the token anchored and replaces it', async ({ page }) => {
+  await fixture(page)
+  const editor = page.locator('textarea.d-editor-input')
+  await editor.pressSequentially('/')
+  await expect(page.locator(picker)).toBeVisible()
+  // Hovering the emoji grid used to switch the pane before the token offset was
+  // anchored, so typing filtered with a query that still contained "/".
+  await page.locator(picker).locator('.slash-emojis [role=option]').first().hover()
+  await editor.pressSequentially('害羞')
+  await expect(page.locator(picker).locator('.slash-emojis [role=option]')).toHaveCount(1)
+  await editor.press('Enter')
+  await expect(editor).toHaveValue(':shy:')
+  await expect(page.locator(picker)).toHaveCount(0)
+})
+
 test('typing group name and a space jumps straight to emoji search', async ({ page }) => {
   await fixture(page)
   const editor = page.locator('textarea.d-editor-input')
