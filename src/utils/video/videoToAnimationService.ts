@@ -427,7 +427,9 @@ async function encodeAnimatedAvifViaFfmpeg(
   inExt: string,
   jobSignal: AbortSignal
 ): Promise<{ blob: Blob; warning?: string }> {
-  const fps = clampFps(options.fps)
+  // fps === 0 → detect the source frame rate via FFmpeg and keep it (capped at 30).
+  let fps = options.fps === 0 ? 30 : clampFps(options.fps)
+  const keepSourceFps = options.fps === 0
   const timeoutMs = options.timeoutMs ?? DEFAULT_FFMPEG_TIMEOUT_MS
   const boundedDuration = Math.min(options.duration ?? 15, 15)
   const jobId = createJobId()
@@ -463,6 +465,17 @@ async function encodeAnimatedAvifViaFfmpeg(
       try {
         jobSignal.throwIfAborted()
         await ffmpeg.writeFile(inputPath, await fetchFile(input), { signal: jobSignal })
+        if (keepSourceFps) {
+          // `ffmpeg -i file` exits non-zero but logs the stream info including "NN fps".
+          lastLogs.length = 0
+          await ffmpeg.exec(['-hide_banner', '-i', inputPath], 15000, { signal: jobSignal })
+          const match = lastLogs.join('\n').match(/,\s*(\d+(?:\.\d+)?)\s*fps/)
+          const detected = match ? Number(match[1]) : NaN
+          if (Number.isFinite(detected) && detected > 0) {
+            fps = clampFps(Math.min(30, detected))
+          }
+          lastLogs.length = 0
+        }
         const trimArgs = buildTrimInputArgs(inputPath, options.startTime, boundedDuration)
         const vf = buildVideoFilter({
           fps,
@@ -654,7 +667,7 @@ export async function convertVideoToAnimation(
     )
     try {
       let converted: { blob: Blob; warning?: string }
-      if (isGifInput(inputName, input.type)) {
+      if (isGifInput(inputName, input.type) || options.fps === 0) {
         converted = await encodeAnimatedAvifViaFfmpeg(input, options, inExt, avifDeadline.signal)
       } else {
         try {

@@ -52,6 +52,22 @@ test('builds lanczos scale filters and clamps dimensions between 2 and 4096', ()
   )
 })
 
+test('fps 0 keeps the source frame rate by omitting the fps filter', () => {
+  assert.equal(buildVideoFilter({ fps: 0 }), 'null')
+  assert.equal(buildVideoFilter({ fps: 0, maxWidth: 0 }), 'null')
+  assert.equal(buildVideoFilter({ fps: 0, maxWidth: 320 }), "scale='min(320,iw)':-2:flags=lanczos")
+  assert.ok(!buildVideoFilter({ fps: 0, maxWidth: 320 }).includes('fps='))
+  const gif = buildGifTwoPassArgs('in.mp4', 'pal.png', 'out.gif', { fps: 0 })
+  assert.match(gif.pass1[gif.pass1.indexOf('-vf') + 1], /^null,palettegen/)
+  assert.match(gif.pass2[gif.pass2.indexOf('-filter_complex') + 1], /^\[0:v\]null\[x\]/)
+  assert.deepEqual(buildApngArgs('in.mp4', 'o.png', { fps: 0 }).slice(0, 4), [
+    '-i',
+    'in.mp4',
+    '-vf',
+    'null'
+  ])
+})
+
 test('builds trim input args before -i and sanitizes non-finite/tiny/excess durations', () => {
   assert.equal(formatTrimSeconds(undefined), null)
   assert.equal(formatTrimSeconds(-1), null)
@@ -172,4 +188,42 @@ test('sanitizes output filenames, resolves MIME metadata and input extensions, a
   assert.equal(validateAnimationOutputMagic(Buffer.from('RIFF1234PNG '), 'webp'), false)
   assert.equal(validateAnimationOutputMagic(Buffer.from('\x00\x00\x00\x1cftypavis'), 'avif'), true)
   assert.equal(validateAnimationOutputMagic(Buffer.from('\x00\x00\x00\x1cmoovavis'), 'avif'), false)
+})
+
+test('video convert settings normalize stale/untrusted data and keep defaults', async () => {
+  const { DEFAULT_VIDEO_CONVERT_SETTINGS, normalizeVideoConvertSettings } =
+    await import('../../src/utils/video/videoConvertSettings.ts')
+  assert.deepEqual(normalizeVideoConvertSettings(null), DEFAULT_VIDEO_CONVERT_SETTINGS)
+  assert.deepEqual(normalizeVideoConvertSettings('garbage'), DEFAULT_VIDEO_CONVERT_SETTINGS)
+
+  const normalized = normalizeVideoConvertSettings({
+    format: 'webp',
+    preset: 'original',
+    fps: 0,
+    maxWidth: 0,
+    quality: 500,
+    gifProfile: 'nope',
+    webpLossless: 'yes',
+    autoConvertOnUpload: false
+  })
+  assert.equal(normalized.format, 'webp')
+  assert.equal(normalized.preset, 'original')
+  assert.equal(normalized.fps, 0)
+  assert.equal(normalized.maxWidth, 0)
+  assert.equal(normalized.quality, 100)
+  assert.equal(normalized.gifProfile, 'high')
+  assert.equal(normalized.webpLossless, false)
+  assert.equal(normalized.autoConvertOnUpload, false)
+
+  assert.equal(normalizeVideoConvertSettings({ format: 'bmp' }).format, 'gif')
+  assert.equal(normalizeVideoConvertSettings({ fps: 999 }).fps, 30)
+})
+
+test('isVideoFileLike detects videos but not images or GIFs', async () => {
+  const { isVideoFileLike } = await import('../../src/utils/video/videoAnimationArgs.ts')
+  assert.equal(isVideoFileLike({ name: 'a.mp4', type: 'video/mp4' }), true)
+  assert.equal(isVideoFileLike({ name: 'a.MOV', type: '' }), true)
+  assert.equal(isVideoFileLike({ name: 'a.gif', type: 'image/gif' }), false)
+  assert.equal(isVideoFileLike({ name: 'a.mp4', type: 'image/png' }), false)
+  assert.equal(isVideoFileLike({ name: 'a.png', type: '' }), false)
 })

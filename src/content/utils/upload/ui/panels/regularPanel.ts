@@ -1,6 +1,8 @@
 import { createE } from '../../../dom/createEl'
 import { notify } from '../../../ui/notify'
 
+import { isVideoFileLike } from '@/utils/video/videoAnimationArgs'
+
 export interface RegularPanelAPI {
   panel: HTMLElement
   dropZone: HTMLElement
@@ -39,10 +41,10 @@ export function createRegularPanel(): RegularPanelAPI {
   const dropText = createE('div', {
     in: `
       <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
-        拖拽图片到此处，或点击选择文件
+        拖拽图片/视频到此处，或点击选择文件
       </div>
       <div style="font-size: 14px; color: #6b7280;">
-        支持 JPG、PNG、GIF 等格式，最大 10MB
+        支持 JPG、PNG、GIF 等格式，最大 10MB<br/>也支持 MP4 等视频，将按选项页「视频转动图」的设置自动转换
       </div>
     `
   })
@@ -52,7 +54,7 @@ export function createRegularPanel(): RegularPanelAPI {
 
   const fileInput = createE('input', {
     type: 'file',
-    accept: 'image/*',
+    accept: 'image/*,video/*,.mp4,.webm,.mov,.mkv,.m4v,.ogv',
     multiple: true,
     style: 'display: none;'
   })
@@ -154,11 +156,22 @@ export function createRegularPanel(): RegularPanelAPI {
         cursor: default;
       `
     })
-    const img = createE('img', {
+    const isVideo = isVideoFileLike(file)
+    const media = createE(isVideo ? 'video' : 'img', {
       style: 'width: 100%; height: 100%; object-fit: cover; display: block;'
-    }) as HTMLImageElement
-    img.src = URL.createObjectURL(file)
-    img.onload = () => URL.revokeObjectURL(img.src)
+    }) as HTMLImageElement | HTMLVideoElement
+    const mediaUrl = URL.createObjectURL(file)
+    media.src = mediaUrl
+    if (media instanceof HTMLVideoElement) {
+      // Videos are converted on upload; the first frame is only a preview.
+      media.muted = true
+      media.preload = 'metadata'
+      media.title = `${file.name}（上传时自动转换）`
+      media.onloadeddata = () => URL.revokeObjectURL(mediaUrl)
+      media.onerror = () => URL.revokeObjectURL(mediaUrl)
+    } else {
+      media.onload = () => URL.revokeObjectURL(mediaUrl)
+    }
 
     const removeBtn = createE('button', {
       text: '✕',
@@ -190,7 +203,7 @@ export function createRegularPanel(): RegularPanelAPI {
       refreshPreviewState()
     })
 
-    item.appendChild(img)
+    item.appendChild(media)
     item.appendChild(removeBtn)
     fileItemMap.set(file, item)
     return item
@@ -262,14 +275,14 @@ export function createRegularPanel(): RegularPanelAPI {
   })
 
   const addFilesToPreview = (files: File[]) => {
-    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    const imageFiles = files.filter(f => f.type.startsWith('image/') || isVideoFileLike(f))
     if (imageFiles.length === 0) return
     for (const file of imageFiles) {
       pendingFiles.push(file)
       previewGridInner.appendChild(createPreviewItem(file))
     }
     refreshPreviewState()
-    notify(`已添加 ${imageFiles.length} 个图片到预览列表`, 'info')
+    notify(`已添加 ${imageFiles.length} 个文件到预览列表`, 'info')
   }
 
   panel.appendChild(dropZone)

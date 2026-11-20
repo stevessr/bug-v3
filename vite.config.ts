@@ -255,6 +255,8 @@ export default defineConfig(({ mode }) => {
 
   const buildInputs: Record<string, string> = {
     index: fileURLToPath(new URL('index.html', import.meta.url)),
+    // Hidden iframe page used by the injected uploader to convert videos (FFmpeg WASM)
+    'video-convert': fileURLToPath(new URL('video-convert.html', import.meta.url)),
     content: fileURLToPath(new URL('src/content/content.ts', import.meta.url)),
     background: fileURLToPath(new URL('src/background/background.ts', import.meta.url)),
     // linux.do 主世界过盾脚本：必须以经典脚本注入页面主世界（world: 'MAIN'），

@@ -38,7 +38,8 @@ export const VIDEO_ANIMATION_PRESETS: Record<
   balanced: { label: '均衡', fps: 10, maxWidth: 360, quality: 75 },
   hd: { label: '高清动图', fps: 15, maxWidth: 480, quality: 85 },
   compact: { label: '极简小体积', fps: 8, maxWidth: 240, quality: 65 },
-  original: { label: '原尺寸', fps: 15, maxWidth: 0, quality: 80 }
+  // fps 0 = 保持源视频帧率
+  original: { label: '原尺寸', fps: 0, maxWidth: 0, quality: 80 }
 }
 
 const SUPPORTED_INPUT_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv', 'm4v', 'ogv', 'gif'])
@@ -96,7 +97,8 @@ export const buildVideoFilter = (options: {
   maxWidth?: number
   maxHeight?: number
 }): string => {
-  const filters = [`fps=${clampFps(options.fps)}`]
+  // fps === 0 means "keep source frame rate": no fps filter, FFmpeg keeps source timestamps.
+  const filters = options.fps === 0 ? [] : [`fps=${clampFps(options.fps)}`]
   const width = clampDimension(options.maxWidth)
   const height = clampDimension(options.maxHeight)
 
@@ -110,7 +112,7 @@ export const buildVideoFilter = (options: {
     filters.push(`scale=-2:'min(${height},ih)':flags=lanczos`)
   }
 
-  return filters.join(',')
+  return filters.length > 0 ? filters.join(',') : 'null'
 }
 
 export const buildTrimInputArgs = (
@@ -281,6 +283,17 @@ export const isGifInput = (fileName?: string, mimeType?: string): boolean => {
   if (cleanMime === 'image/gif') return true
   const ext = fileName?.trim().split('.').pop()?.toLowerCase()
   return ext === 'gif'
+}
+
+const VIDEO_UPLOAD_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv', 'm4v', 'ogv'])
+
+/** True for video files (not GIF, which is already an image) that the converter accepts. */
+export const isVideoFileLike = (file: { name?: string; type?: string }): boolean => {
+  const mime = file.type?.split(';')[0]?.trim().toLowerCase() || ''
+  if (mime.startsWith('video/')) return true
+  if (mime.startsWith('image/')) return false
+  const ext = file.name?.trim().split('.').pop()?.toLowerCase()
+  return !!ext && VIDEO_UPLOAD_EXTENSIONS.has(ext)
 }
 
 export const validateAnimationOutputMagic = (

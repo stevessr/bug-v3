@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CloudUploadOutlined,
   DeleteOutlined,
@@ -22,6 +22,10 @@ import {
   type VideoAnimationPresetId,
   type VideoConvertProgress
 } from '@/utils/video/videoAnimationArgs'
+import {
+  loadVideoConvertSettings,
+  saveVideoConvertSettings
+} from '@/utils/video/videoConvertSettings'
 import type { VideoConvertResult, VideoMetadata } from '@/utils/video/videoToAnimationService'
 
 let videoServicePromise: Promise<typeof import('@/utils/video/videoToAnimationService')> | null =
@@ -76,6 +80,61 @@ const startTime = ref<number | undefined>(undefined)
 const clipDuration = ref<number | undefined>(undefined)
 const gifProfile = ref<GifPaletteProfile>('high')
 const webpLossless = ref(false)
+const autoConvertOnUpload = ref(true)
+
+// 参数记忆：转换参数持久化到扩展存储，选项页重开后恢复；前端注入上传器自动转换视频时
+// 也读取同一份设置（格式 / 尺寸 / 帧率 / 画质）。
+let settingsHydrated = false
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+const flushSettings = () =>
+  void saveVideoConvertSettings({
+    format: outputFormat.value,
+    preset: activePreset.value,
+    fps: typeof fps.value === 'number' ? fps.value : VIDEO_ANIMATION_PRESETS.emoji.fps,
+    maxWidth: typeof maxWidth.value === 'number' ? maxWidth.value : 0,
+    quality: typeof quality.value === 'number' ? quality.value : 75,
+    gifProfile: gifProfile.value,
+    webpLossless: webpLossless.value,
+    autoConvertOnUpload: autoConvertOnUpload.value
+  })
+
+const persistSettings = () => {
+  if (!settingsHydrated) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    flushSettings()
+  }, 250)
+}
+
+watch(
+  [
+    outputFormat,
+    activePreset,
+    fps,
+    maxWidth,
+    quality,
+    gifProfile,
+    webpLossless,
+    autoConvertOnUpload
+  ],
+  persistSettings
+)
+
+onMounted(async () => {
+  const saved = await loadVideoConvertSettings()
+  if (isUnmounted) return
+  outputFormat.value = saved.format
+  activePreset.value = saved.preset
+  fps.value = saved.fps
+  maxWidth.value = saved.maxWidth
+  quality.value = saved.quality
+  gifProfile.value = saved.gifProfile
+  webpLossless.value = saved.webpLossless
+  autoConvertOnUpload.value = saved.autoConvertOnUpload
+  settingsHydrated = true
+})
 
 const isConverting = ref(false)
 const convertProgress = ref<VideoConvertProgress>({
@@ -495,6 +554,12 @@ const queueAllToUpload = () => {
 
 onBeforeUnmount(() => {
   isUnmounted = true
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+    settingsHydrated = true
+    flushSettings()
+  }
   urlFetchAbortController?.abort(new DOMException('组件已卸载', 'AbortError'))
   urlFetchAbortController = null
   metadataAbortController?.abort(new DOMException('组件已卸载', 'AbortError'))
@@ -726,11 +791,11 @@ onBeforeUnmount(() => {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-            帧率 (FPS: 1–30)
+            帧率 (FPS: 1–30，0 = 保持源帧率)
           </label>
           <a-input-number
             v-model:value="fps"
-            :min="1"
+            :min="0"
             :max="30"
             :step="1"
             :disabled="isConverting"
@@ -836,6 +901,17 @@ onBeforeUnmount(() => {
             @change="markCustomPreset"
           />
         </div>
+      </div>
+
+      <!-- 前端注入上传器自动转换 -->
+      <div
+        class="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700"
+      >
+        <a-switch v-model:checked="autoConvertOnUpload" data-testid="auto-convert-switch" />
+        <span class="text-sm text-gray-700 dark:text-gray-300">论坛页面内的上传器自动转换视频</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          选择 MP4 等视频时，按上面保存的格式、尺寸、帧率与画质转换后再上传（参数会自动记忆）。
+        </span>
       </div>
 
       <!-- 错误提示 -->

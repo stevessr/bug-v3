@@ -1,6 +1,7 @@
 import { showCustomFolderPicker } from '../../picker'
 import { uploader } from '../core'
 
+import { isVideoFileLike } from '@/utils/video/videoAnimationArgs'
 import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
 
 export async function showFolderPickerWithUpload(
@@ -34,8 +35,8 @@ export async function collectFiles(entry: any, files: File[]): Promise<void> {
     const file = await new Promise<File>(resolve => {
       entry.file((f: File) => resolve(f))
     })
-    // Only collect image files
-    if (file.type.startsWith('image/')) {
+    // Collect images and videos (videos are converted before upload)
+    if (file.type.startsWith('image/') || isVideoFileLike(file)) {
       files.push(file)
     }
   } else if (entry.isDirectory) {

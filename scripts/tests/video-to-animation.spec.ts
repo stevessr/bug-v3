@@ -38,7 +38,7 @@ async function decodeAnimationInBrowser(
   serviceModuleUrl: string,
   mp4Bytes: number[],
   format: 'gif' | 'apng' | 'webp' | 'avif',
-  extraOptions: { startTime?: number; duration?: number } = {}
+  extraOptions: { startTime?: number; duration?: number; fps?: number } = {}
 ) {
   return await page.evaluate(
     async ({ moduleUrl, bytes, targetFormat, extra }) => {
@@ -211,6 +211,27 @@ test('built videoToAnimationService converts MP4 to GIF, APNG, WebP, and AVIF of
   expect(externalRequests).toEqual([])
 })
 
+test('fps 0 keeps the source frame rate for every output format', async ({ page }) => {
+  test.setTimeout(120000)
+  await serveBuild(page)
+  await page.route('http://localhost/video-test', route =>
+    route.fulfill({ body: '<html></html>', contentType: 'text/html' })
+  )
+  await page.goto('http://localhost/video-test')
+  const serviceModuleUrl = getVideoServiceUrl()
+  const bytes = [...mp4Fixture]
+
+  // sample-colors.mp4 is 6 frames at 20 fps; keeping the source rate must keep all 6 frames.
+  for (const format of ['gif', 'apng', 'webp', 'avif'] as const) {
+    const result = await decodeAnimationInBrowser(page, serviceModuleUrl, bytes, format, {
+      fps: 0
+    })
+    // libwebp_anim merges identical consecutive frames (3 red + 3 blue → 2 frames with
+    // longer durations), so the visible timing is still the source rate.
+    expect(result.frameCount, `${format} frame count`).toBe(format === 'webp' ? 2 : 6)
+  }
+})
+
 test('handles empty/corrupt inputs, mid-flight aborts with clean recovery, and URL validation', async ({
   page
 }) => {
@@ -371,4 +392,100 @@ test('BufferPage VideoToAnimation tab converts MP4 and queues result to upload w
   await expect(page.getByRole('heading', { name: '待上传文件 (1)' })).toBeVisible({
     timeout: 10000
   })
+})
+
+test('video-convert iframe page converts a File sent over a private MessageChannel', async ({
+  page
+}) => {
+  test.setTimeout(90000)
+  await serveBuild(page)
+  await page.route('http://localhost/host', route =>
+    route.fulfill({
+      body: '<html><body><iframe id="f" src="/video-convert.html"></iframe></body></html>',
+      contentType: 'text/html'
+    })
+  )
+  await page.goto('http://localhost/host')
+
+  const outcome = await page.evaluate(
+    async bytes => {
+      const iframe = document.getElementById('f') as HTMLIFrameElement
+      await new Promise<void>(resolve => {
+        if (iframe.contentDocument?.readyState === 'complete') resolve()
+        else iframe.addEventListener('load', () => resolve(), { once: true })
+      })
+      const channel = new MessageChannel()
+      const ready = new Promise<void>(resolve => {
+        channel.port1.onmessage = event => event.data?.type === 'ready' && resolve()
+      })
+      iframe.contentWindow!.postMessage(
+        { type: 'EMOJI_VIDEO_CONVERT_INIT' },
+        window.location.origin,
+        [channel.port2]
+      )
+      await ready
+
+      return await new Promise<{ type: string; name: string; size: number; error?: string }>(
+        resolve => {
+          channel.port1.onmessage = event => {
+            const data = event.data
+            if (data.type === 'result') {
+              resolve({ type: data.file.type, name: data.file.name, size: data.file.size })
+            } else if (data.type === 'error') {
+              resolve({ type: '', name: '', size: 0, error: data.message })
+            }
+          }
+          channel.port1.postMessage({
+            type: 'convert',
+            id: 'job-1',
+            file: new File([new Uint8Array(bytes)], 'sample-colors.mp4', { type: 'video/mp4' }),
+            options: {
+              format: 'webp',
+              fps: 0,
+              maxWidth: 0,
+              quality: 75,
+              gifProfile: 'high',
+              webpLossless: false
+            }
+          })
+        }
+      )
+    },
+    [...mp4Fixture]
+  )
+
+  expect(outcome.error).toBeUndefined()
+  expect(outcome.type).toBe('image/webp')
+  expect(outcome.name).toBe('sample-colors.webp')
+  expect(outcome.size).toBeGreaterThan(50)
+})
+
+test('BufferPage video converter remembers its parameters across reloads', async ({ page }) => {
+  test.setTimeout(90000)
+  await serveBuild(page)
+  await page.goto('http://localhost/?mode=options#/buffer')
+  await page.getByRole('tab', { name: '视频转动图' }).click()
+
+  const webpRadio = page.locator('.ant-radio-button-wrapper', { hasText: 'WebP 动图' })
+  await webpRadio.scrollIntoViewIfNeeded()
+  await webpRadio.click()
+  await page.getByRole('button', { name: '原尺寸' }).click()
+  await page.getByTestId('auto-convert-switch').click()
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => JSON.parse(localStorage.getItem('videoAnimationSettings') || 'null'))
+    )
+    .toMatchObject({
+      format: 'webp',
+      preset: 'original',
+      fps: 0,
+      maxWidth: 0,
+      autoConvertOnUpload: false
+    })
+
+  await page.reload()
+  await page.getByRole('tab', { name: '视频转动图' }).click()
+  await expect(webpRadio).toHaveClass(/ant-radio-button-wrapper-checked/)
+  await expect(page.getByTestId('auto-convert-switch')).not.toBeChecked()
 })

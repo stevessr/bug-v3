@@ -11,6 +11,7 @@ import {
   normalizeDiscourseUploadUrl,
   uploadLinuxDoMultipart
 } from '@/utils/discourseUpload'
+import { isVideoFileLike } from '@/utils/video/videoAnimationArgs'
 
 export interface UploadResponse {
   id: number
@@ -100,6 +101,13 @@ export class ImageUploader {
     routeContext: DiscourseUploadRouteContext = 'auto',
     onStatusChange?: UploadStatusListener
   ): Promise<UploadResponse> {
+    // Videos are converted with the animation settings saved in the options page
+    // (format / size / frame rate) before entering the upload queue.
+    if (isVideoFileLike(file)) {
+      const { convertVideoForUpload } = await import('./videoConvert')
+      file = await convertVideoForUpload(file)
+    }
+
     return new Promise((resolve, reject) => {
       const item: UploadQueueItem = {
         id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
