@@ -18,13 +18,42 @@ export const isEmojiGroupStorageKey = (key: string) => key.startsWith('emojiGrou
 export const isCompactStorageKey = (key: string) =>
   isEmojiGroupStorageKey(key) || COMPACT_KEYS.has(key)
 
+const BROTLI_WASM_GZ_PATH = 'assets/brotli_wasm_bg.wasm.gz'
+
+const hasWasmMagic = (buffer: ArrayBuffer): boolean => {
+  if (buffer.byteLength < 8) return false
+  const bytes = new Uint8Array(buffer, 0, 4)
+  return bytes[0] === 0x00 && bytes[1] === 0x61 && bytes[2] === 0x73 && bytes[3] === 0x6d
+}
+
+async function resolveBrotliWasmBinary(): Promise<ArrayBuffer | undefined> {
+  if (typeof DecompressionStream !== 'function') return undefined
+  try {
+    const getURL = typeof chrome !== 'undefined' ? chrome.runtime?.getURL : undefined
+    const gzUrl =
+      typeof getURL === 'function'
+        ? getURL(BROTLI_WASM_GZ_PATH)
+        : new URL(BROTLI_WASM_GZ_PATH, new URL(/* @vite-ignore */ '../', import.meta.url)).href
+    const response = await fetch(gzUrl)
+    if (!response.ok || !response.body) return undefined
+    const buffer = await new Response(
+      response.body.pipeThrough(new DecompressionStream('gzip'))
+    ).arrayBuffer()
+    return hasWasmMagic(buffer) ? buffer : undefined
+  } catch {
+    // Fall back to uncompressed brotli_wasm_bg.wasm in dev/watch/lib builds.
+    return undefined
+  }
+}
+
 let brotli: BrotliWasmType | undefined
 let ready: Promise<void> | undefined
 export function initializeStorageCodec(): Promise<void> {
   if (!ready) {
     // MV3 service workers prohibit dynamic import(), and Vite's import-preload
     // helper additionally requires document. Keep the WASM module import static.
-    ready = initBrotli()
+    ready = resolveBrotliWasmBinary()
+      .then(binary => initBrotli(binary))
       .then(() => {
         brotli = brotliModule
       })

@@ -459,8 +459,9 @@ test('all managed config keys upgrade losslessly, without data/timestamp envelop
 test('packaged extension initializes Brotli under MV3 CSP and migrates real chrome storage', async () => {
   const profile = await mkdtemp(path.join(tmpdir(), 'emoji-extension-storage-'))
   const extension = path.resolve('dist')
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
   const context = await chromium.launchPersistentContext(profile, {
-    channel: 'chromium',
+    ...(executablePath ? { executablePath } : { channel: 'chromium' }),
     headless: true,
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`]
   })

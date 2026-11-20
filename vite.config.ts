@@ -488,13 +488,23 @@ export default defineConfig(({ mode }) => {
                       priority: 30
                     },
                     {
+                      name: 'vendor-sanitize',
+                      test: /[\\/]node_modules[\\/]dompurify[\\/]/,
+                      priority: 20
+                    },
+                    {
+                      name: 'vendor-markdown',
+                      test: /[\\/]node_modules[\\/]marked[\\/]/,
+                      priority: 19
+                    },
+                    {
                       name: 'vendor-highlight',
                       test: /[\\/]node_modules[\\/]highlight\.js[\\/]/,
                       priority: 19
                     },
                     {
                       name: 'vendor-editor',
-                      test: /[\\/]node_modules[\\/](?:marked|rehype-parse|rehype-stringify|unified|dompurify)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:rehype-parse|rehype-stringify|unified|hast-[^\\/]+|unist-[^\\/]+|parse5|vfile|property-information)[\\/]/,
                       priority: 18,
                       maxSize: 850 * 1024
                     },
@@ -504,8 +514,23 @@ export default defineConfig(({ mode }) => {
                       priority: 15
                     },
                     {
+                      name: 'vendor-katex',
+                      test: /[\\/]node_modules[\\/]katex[\\/]/,
+                      priority: 12
+                    },
+                    {
+                      name: 'vendor-dexie',
+                      test: /[\\/]node_modules[\\/]dexie[\\/]/,
+                      priority: 12
+                    },
+                    {
+                      name: 'vendor-zod',
+                      test: /[\\/]node_modules[\\/]zod[\\/]/,
+                      priority: 12
+                    },
+                    {
                       name: 'vendor-utils',
-                      test: /[\\/]node_modules[\\/](?:katex|dayjs|lodash|dexie|zod|nanoid|typeit)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:dayjs|lodash|nanoid|typeit)[\\/]/,
                       priority: 10
                     }
                     // Modules not captured above are split by Rolldown's

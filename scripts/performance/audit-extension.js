@@ -358,6 +358,20 @@ export function auditExtension({
         : 'avif_enc.wasm is not bundled.'
   })
 
+  const brotliWasmPath = path.join(distDir, 'assets', 'brotli_wasm_bg.wasm')
+  const rawBrotliWasmShipped = fs.existsSync(brotliWasmPath)
+  const gzBrotliWasmShipped = fs.existsSync(`${brotliWasmPath}.gz`)
+  checks.push({
+    id: 'dist.brotli-wasm-compressed',
+    passed: !rawBrotliWasmShipped,
+    actual: { rawBrotliWasmShipped, gzBrotliWasmShipped },
+    message: rawBrotliWasmShipped
+      ? 'brotli_wasm_bg.wasm is shipped uncompressed; the build must emit only the gzip artifact.'
+      : gzBrotliWasmShipped
+        ? 'brotli_wasm_bg.wasm is distributed gzip-compressed and decompressed at runtime.'
+        : 'brotli_wasm_bg.wasm is not bundled.'
+  })
+
   if (scanSource) checks.push(...scanSourceInvariants(rootDir))
 
   return {

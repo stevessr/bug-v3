@@ -152,7 +152,7 @@ function resolveViteCli() {
 // 自动回退到未压缩 wasm，行为一致。
 async function compressWasmAssets() {
   const assetsDir = path.resolve(process.cwd(), 'dist', 'assets')
-  const targets = ['ffmpeg-core.wasm', 'avif_enc.wasm']
+  const targets = ['ffmpeg-core.wasm', 'avif_enc.wasm', 'brotli_wasm_bg.wasm']
   const toMb = bytes => `${(bytes / 1024 / 1024).toFixed(1)}MB`
 
   for (const fileName of targets) {
