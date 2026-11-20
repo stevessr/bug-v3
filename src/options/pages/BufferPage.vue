@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, inject, onBeforeUnmount, nextTick } from 'vue'
+import {
+  ref,
+  computed,
+  defineAsyncComponent,
+  onMounted,
+  watch,
+  inject,
+  onBeforeUnmount,
+  nextTick
+} from 'vue'
 import { QuestionCircleOutlined, SyncOutlined, CheckCircleOutlined } from '@ant-design/icons-vue'
 
 import type { OptionsInject } from '../types'
@@ -27,6 +36,12 @@ import { getEmojiImageUrlWithLoading } from '@/utils/imageUrlHelper'
 import { shouldPreferCache, shouldUseImageCache } from '@/utils/imageCachePolicy'
 import CachedImage from '@/components/CachedImage.vue'
 
+const VideoToAnimationConverter = defineAsyncComponent({
+  loader: () => import('../components/VideoToAnimationConverter.vue'),
+  delay: 100,
+  timeout: 30000
+})
+
 const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
 
@@ -40,6 +55,8 @@ const imageSources = ref<Map<string, string>>(new Map())
 const loadingStates = ref<Map<string, boolean>>(new Map())
 let imageSourcesInitId = 0 // 用于取消过时的初始化
 let isInitializingImageSources = false // 防止并发初始化
+let pendingImageSourcesReinit = false
+let isComponentUnmounted = false
 
 // Computed
 const bufferGroup = computed(() =>
@@ -119,13 +136,14 @@ const categorizedUploadItems = computed(() => {
 
 // 初始化图片缓存（带并发控制）
 const initializeImageSources = async () => {
-  if (!bufferEmojis.value.length) return
+  if (!bufferEmojis.value.length || isComponentUnmounted) return
 
   // 如果正在初始化，增加 ID 以取消当前初始化
   const currentInitId = ++imageSourcesInitId
 
-  // 如果已经在初始化中，直接返回
+  // 如果已经在初始化中，标记待重跑并在当前轮结束后继续
   if (isInitializingImageSources) {
+    pendingImageSourcesReinit = true
     console.log('[BufferPage] Image sources initialization already in progress, will restart')
     return
   }
@@ -143,7 +161,7 @@ const initializeImageSources = async () => {
     const results = await Promise.allSettled(
       bufferEmojis.value.map(async emoji => {
         // 检查是否已被取消
-        if (currentInitId !== imageSourcesInitId) {
+        if (currentInitId !== imageSourcesInitId || isComponentUnmounted) {
           return null
         }
 
@@ -167,7 +185,7 @@ const initializeImageSources = async () => {
     )
 
     // 最后一次检查是否被取消
-    if (currentInitId === imageSourcesInitId) {
+    if (currentInitId === imageSourcesInitId && !isComponentUnmounted) {
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value) {
           const { emojiId, url, isLoading } = result.value
@@ -182,6 +200,10 @@ const initializeImageSources = async () => {
     }
   } finally {
     isInitializingImageSources = false
+    if (pendingImageSourcesReinit && !isComponentUnmounted) {
+      pendingImageSourcesReinit = false
+      void initializeImageSources()
+    }
   }
 }
 
@@ -231,7 +253,15 @@ const loadUploadConcurrency = () => {
 }
 
 const uploadService = ref<'linux.do' | 'idcflare.com' | 'imgbed'>('linux.do')
-const activeBufferTab = ref<'upload' | 'folder'>('upload')
+const activeBufferTab = ref<'upload' | 'folder' | 'video'>('upload')
+const videoConverterLoaded = ref(false)
+watch(
+  activeBufferTab,
+  tab => {
+    if (tab === 'video') videoConverterLoaded.value = true
+  },
+  { immediate: true }
+)
 const uploadConcurrency = ref<number | undefined>(DEFAULT_UPLOAD_CONCURRENCY)
 const selectedFiles = ref<FileItem[]>([])
 const folderInputRef = ref<HTMLInputElement | null>(null)
@@ -354,6 +384,24 @@ const { uploadFiles } = useUpload({
 const showImageCropper = ref(false)
 const cropImageFile = ref<File | null>(null)
 
+const handleConvertedVideosToUpload = async (files: File[]) => {
+  if (!files.length) return
+  const { added, skipped, failed } = await addFiles(files)
+  if (added > 0) {
+    activeBufferTab.value = 'upload'
+    message.success(
+      skipped > 0
+        ? `已将 ${added} 个转换后的动图加入待上传队列（跳过 ${skipped} 个同名文件）`
+        : `已将 ${added} 个转换后的动图加入待上传队列`
+    )
+  } else if (skipped > 0) {
+    activeBufferTab.value = 'upload'
+    message.warning('同名文件已在待上传队列或缓冲区中，已跳过重复加入')
+  } else if (failed > 0) {
+    message.error('转换结果加入上传队列失败')
+  }
+}
+
 const clearSelectedFiles = async () => {
   if (isUploading.value) return
   if (!selectedFiles.value.length) return
@@ -427,7 +475,10 @@ const formatNodeId = (nodeId: string) => {
   return nodeId.length > 15 ? nodeId.slice(0, 12) + '...' : nodeId
 }
 
-const addFiles = async (files: File[], requestedTargetGroupId?: string) => {
+const addFiles = async (
+  files: File[],
+  requestedTargetGroupId?: string
+): Promise<{ added: number; skipped: number; failed: number }> => {
   const imageFiles = files.filter(isEmojiImageFile)
   const targetGroup =
     (requestedTargetGroupId &&
@@ -473,9 +524,11 @@ const addFiles = async (files: File[], requestedTargetGroupId?: string) => {
     return true
   })
 
+  const skipped = imageFiles.length - filteredFiles.length
+
   if (filteredFiles.length === 0) {
     console.log('[BufferPage] No new files to add after filtering')
-    return
+    return { added: 0, skipped, failed: 0 }
   }
 
   console.log(`[BufferPage] Processing ${filteredFiles.length} files in batches...`)
@@ -577,6 +630,8 @@ const addFiles = async (files: File[], requestedTargetGroupId?: string) => {
   if (errorCount > 0) {
     message.warning(`部分文件处理失败：${successCount} 成功，${errorCount} 失败`)
   }
+
+  return { added: successCount, skipped, failed: errorCount }
 }
 
 // 从文件夹上传：解析文件夹名 → name/detail，查找或创建目标分组，并读取其内全部图片。
@@ -832,6 +887,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  isComponentUnmounted = true
   selectedFiles.value.forEach(item => URL.revokeObjectURL(item.previewUrl))
   if (progressInterval) {
     clearInterval(progressInterval)
@@ -1273,6 +1329,12 @@ onBeforeUnmount(() => {
             />
           </div>
         </div>
+      </a-tab-pane>
+      <a-tab-pane key="video" tab="视频转动图">
+        <VideoToAnimationConverter
+          v-if="videoConverterLoaded"
+          @addToUpload="handleConvertedVideosToUpload"
+        />
       </a-tab-pane>
     </a-tabs>
 

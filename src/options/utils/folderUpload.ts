@@ -1,4 +1,5 @@
 const IMAGE_EXTENSIONS = new Set([
+  'apng',
   'avif',
   'bmp',
   'gif',
