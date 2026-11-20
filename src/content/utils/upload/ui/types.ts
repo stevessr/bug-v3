@@ -1,9 +1,14 @@
+import type { UploadMode } from './panels/regularPanel'
+
 export interface DragDropElements {
   panel: HTMLElement
   overlay: any
   dropZone: HTMLElement
   fileInput: HTMLInputElement
   closeButton: HTMLElement
+  modeToggle: HTMLElement
+  setUploadMode: (mode: UploadMode) => void
+  getUploadMode: () => UploadMode
   diffDropZone: HTMLElement
   diffFileInput: HTMLInputElement
   markdownTextarea: HTMLTextAreaElement

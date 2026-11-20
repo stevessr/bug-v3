@@ -40,7 +40,11 @@ function createMenuItem(
   isChat: boolean = false
 ): HTMLElement {
   const li = createE('li', {
-    class: isChat ? 'chat-composer-dropdown__item' : 'dropdown-menu__item'
+    class: isChat ? 'chat-composer-dropdown__item' : 'dropdown-menu__item',
+    // Discourse menu styles assume the native li/button structure; pin the
+    // layout so injected rows line up with the native ones instead of
+    // centering the label inside the menu.
+    style: 'display: block; width: 100%; margin: 0; padding: 0; list-style: none;'
   })
   li.setAttribute('data-emoji-extension', 'true')
 
@@ -49,17 +53,37 @@ function createMenuItem(
       ? 'btn btn-icon-text chat-composer-dropdown__action-btn btn-transparent'
       : 'btn btn-icon-text',
     type: 'button',
-    ti: text
+    ti: text,
+    style: `
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.65rem 1rem;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+    `
   }) as HTMLButtonElement
 
-  const emojiSpan = createE('span', { text: emoji })
-  emojiSpan.style.marginRight = '6px'
-
-  const labelSpan = createE('span', {
-    class: 'd-button-label',
-    text: text
+  const emojiSpan = createE('span', {
+    text: emoji,
+    style: 'flex: 0 0 auto; width: 1.25em; font-size: 1.05em; line-height: 1; text-align: center;'
   })
 
+  // Mirror the native markup (label wrapper + text span) so theme rules such
+  // as ".d-button-label { display:flex; flex:1; justify-content:space-between }"
+  // cannot push the text into the middle of the row.
+  const labelSpan = createE('span', {
+    class: 'd-button-label',
+    style:
+      'flex: 0 1 auto; display: block; text-align: left; justify-content: flex-start; min-width: 0; overflow: hidden; text-overflow: ellipsis;'
+  })
+  const labelText = createE('span', { class: 'd-button-label__text', text })
+
+  labelSpan.appendChild(labelText)
   btn.appendChild(emojiSpan)
   btn.appendChild(labelSpan)
   btn.addEventListener('click', onClick as any)

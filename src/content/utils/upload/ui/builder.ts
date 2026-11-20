@@ -13,8 +13,10 @@ export function createDragDropUploadPanel(): DragDropElements {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 500px;
-      max-width: 90vw;
+      width: 520px;
+      max-width: 92vw;
+      max-height: 90vh;
+      overflow-y: auto;
       background: var(--primary-very-low);
       border-radius: 12px;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -23,20 +25,40 @@ export function createDragDropUploadPanel(): DragDropElements {
     `
   })
 
+  // ---- Sub-panels (created before the header so the header can host the
+  //      image/video mode toggle that lives in the regular panel) ----
+  const regular = createRegularPanel()
+  const folder = createFolderPanel()
+  const diff = createDiffPanel()
+  const url = createUrlPanel()
+
   const header = createE('div', {
     style: `
-      padding: 20px 24px 0;
+      padding: 18px 24px 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       cursor: move;
       user-select: none; -webkit-user-select: none;
     `
   })
 
+  const titleGroup = createE('div', {
+    style: 'display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap;'
+  })
+
   const title = createE('h2', {
     text: '上传图片',
-    style: 'margin: 0; font-size: 18px; font-weight: 600; color: #111827;'
+    style: 'margin: 0; font-size: 18px; font-weight: 600; color: var(--primary);'
+  })
+
+  titleGroup.appendChild(title)
+  titleGroup.appendChild(regular.modeToggle)
+
+  // Keep the dialog title in sync with the selected upload mode.
+  regular.onModeChange(mode => {
+    title.textContent = mode === 'video' ? '上传视频' : '上传图片'
   })
 
   const closeButton = createE('button', {
@@ -45,44 +67,56 @@ export function createDragDropUploadPanel(): DragDropElements {
       background: none;
       border: none;
       font-size: 20px;
+      line-height: 1;
       cursor: pointer;
-      color: #6b7280;
-      padding: 4px;
+      color: var(--primary-medium);
+      padding: 4px 6px;
       border-radius: 4px;
       transition: background-color 0.2s;
     `
   })
   closeButton.addEventListener('mouseenter', () => {
-    closeButton.style.backgroundColor = '#f3f4f6'
+    closeButton.style.backgroundColor = 'var(--primary-low)'
   })
   closeButton.addEventListener('mouseleave', () => {
     closeButton.style.backgroundColor = 'transparent'
   })
 
-  header.appendChild(title)
+  header.appendChild(titleGroup)
   header.appendChild(closeButton)
 
   // ---- Tab bar ----
+  // Tabs share the row equally and never wrap: the injected panel is narrow and
+  // "文件夹上传" used to break onto a second line inside its tab.
   const tabContainer = createE('div', {
-    style: 'display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px;'
+    style:
+      'display: flex; border-bottom: 1px solid var(--primary-low); margin-bottom: 20px; gap: 2px;'
   })
 
   const tabStyle = (active: boolean) => `
-    flex: 1;
-    padding: 10px 20px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 6px;
     background: none;
     border: none;
-    border-bottom: 2px solid ${active ? '#3b82f6' : 'transparent'};
-    color: ${active ? '#3b82f6' : '#6b7280'};
+    border-bottom: 2px solid ${active ? 'var(--tertiary)' : 'transparent'};
+    color: ${active ? 'var(--tertiary)' : 'var(--primary-medium)'};
+    font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
+    text-align: center;
     cursor: pointer;
     transition: all 0.2s;
   `
 
-  const regularTab = createE('button', { text: '常规上传', style: tabStyle(true) })
-  const diffTab = createE('button', { text: '差分上传', style: tabStyle(false) })
-  const folderTab = createE('button', { text: '文件夹上传', style: tabStyle(false) })
-  const urlTab = createE('button', { text: 'URL 导入', style: tabStyle(false) })
+  const regularTab = createE('button', { type: 'button', text: '常规上传', style: tabStyle(true) })
+  const diffTab = createE('button', { type: 'button', text: '差分上传', style: tabStyle(false) })
+  const folderTab = createE('button', {
+    type: 'button',
+    text: '文件夹上传',
+    style: tabStyle(false)
+  })
+  const urlTab = createE('button', { type: 'button', text: 'URL 导入', style: tabStyle(false) })
 
   tabContainer.appendChild(regularTab)
   tabContainer.appendChild(diffTab)
@@ -115,12 +149,6 @@ export function createDragDropUploadPanel(): DragDropElements {
     header.style.cursor = 'move'
   })
 
-  // ---- Sub-panels ----
-  const regular = createRegularPanel()
-  const folder = createFolderPanel()
-  const diff = createDiffPanel()
-  const url = createUrlPanel()
-
   // ---- Status bar ----
   const statusBar = createE('div', {
     style: `
@@ -131,14 +159,14 @@ export function createDragDropUploadPanel(): DragDropElements {
       font-size: 13px;
       align-items: center;
       justify-content: space-between;
-      background: #fef2f2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
+      background: var(--danger-low);
+      color: var(--danger);
+      border: 1px solid var(--danger);
     `
   })
 
   // ---- Content assembly ----
-  const content = createE('div', { class: 'upload-panel-content', style: 'padding: 24px;' })
+  const content = createE('div', { class: 'upload-panel-content', style: 'padding: 0 24px 24px;' })
   content.appendChild(tabContainer)
   content.appendChild(regular.previewGrid)
   content.appendChild(regular.panel)
@@ -155,12 +183,14 @@ export function createDragDropUploadPanel(): DragDropElements {
   const allPanels = [regular.panel, diff.panel, folder.panel, url.panel] as HTMLElement[]
 
   const switchTab = (activeTab: HTMLElement, activePanel: HTMLElement) => {
+    // The image/video switch only applies to the regular upload tab.
+    regular.modeToggle.style.display = activePanel === regular.panel ? 'inline-flex' : 'none'
     allTabs.forEach(t => {
       t.style.borderBottomColor = 'transparent'
-      t.style.color = '#6b7280'
+      t.style.color = 'var(--primary-medium)'
     })
-    activeTab.style.borderBottomColor = '#3b82f6'
-    activeTab.style.color = '#3b82f6'
+    activeTab.style.borderBottomColor = 'var(--tertiary)'
+    activeTab.style.color = 'var(--tertiary)'
     allPanels.forEach(p => {
       p.style.display = 'none'
     })
@@ -178,6 +208,9 @@ export function createDragDropUploadPanel(): DragDropElements {
     dropZone: regular.dropZone,
     fileInput: regular.fileInput,
     closeButton,
+    modeToggle: regular.modeToggle,
+    setUploadMode: regular.setMode,
+    getUploadMode: regular.getMode,
     diffDropZone: diff.dropZone,
     diffFileInput: diff.fileInput,
     markdownTextarea: diff.textarea,

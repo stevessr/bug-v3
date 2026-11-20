@@ -3,15 +3,29 @@ import { notify } from '../../../ui/notify'
 
 import { isVideoFileLike } from '@/utils/video/videoAnimationArgs'
 
+export type UploadMode = 'image' | 'video'
+
+const IMAGE_ACCEPT = 'image/*,.avif,.webp,.gif,.png,.jpg,.jpeg'
+const VIDEO_ACCEPT = 'video/*,.mp4,.webm,.mov,.mkv,.m4v,.ogv'
+
+const IMAGE_NAME_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i
+
+const isImageFileLike = (file: Pick<File, 'name' | 'type'>): boolean =>
+  file.type.toLowerCase().startsWith('image/') || IMAGE_NAME_PATTERN.test(file.name)
+
 export interface RegularPanelAPI {
   panel: HTMLElement
   dropZone: HTMLElement
   fileInput: HTMLInputElement
   previewGrid: HTMLElement
+  modeToggle: HTMLElement
   clearPreview: () => void
   addFilesToPreview: (files: File[]) => void
   getPendingFiles: () => File[]
   setUploadHandler: (fn: (files: File[]) => Promise<void>) => void
+  setMode: (mode: UploadMode) => void
+  getMode: () => UploadMode
+  onModeChange: (fn: (mode: UploadMode) => void) => void
 }
 
 export function createRegularPanel(): RegularPanelAPI {
@@ -20,10 +34,68 @@ export function createRegularPanel(): RegularPanelAPI {
     style: 'display: block;'
   }) as HTMLElement
 
+  // ---- 图片 / 视频 模式切换 ----
+  let mode: UploadMode = 'image'
+  const modeChangeListeners: Array<(mode: UploadMode) => void> = []
+
+  const modeToggle = createE('div', {
+    class: 'upload-mode-toggle',
+    role: 'group',
+    attrs: { 'aria-label': '上传类型' },
+    style: `
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px;
+      border-radius: 6px;
+      background: var(--primary-low);
+    `
+  }) as HTMLElement
+
+  const modeButtons: Record<UploadMode, HTMLButtonElement> = {
+    image: createE('button', {
+      type: 'button',
+      text: '🖼️ 图片',
+      ti: '只选择图片文件',
+      style: `
+        padding: 4px 10px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--primary-high);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      `
+    }) as HTMLButtonElement,
+    video: createE('button', {
+      type: 'button',
+      text: '🎬 视频',
+      ti: '只选择视频文件（上传时自动转换为动图）',
+      style: `
+        padding: 4px 10px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--primary-high);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      `
+    }) as HTMLButtonElement
+  }
+
+  modeToggle.appendChild(modeButtons.image)
+  modeToggle.appendChild(modeButtons.video)
+
   const dropZone = createE('div', {
     class: 'drop-zone',
     style: `
-      border: 2px dashed #d1d5db;
+      border: 2px dashed var(--primary-low);
       border-radius: 8px;
       padding: 40px 20px;
       text-align: center;
@@ -39,22 +111,62 @@ export function createRegularPanel(): RegularPanelAPI {
   })
 
   const dropText = createE('div', {
-    in: `
-      <div style="font-size: 16px; font-weight: 500; color: #374151; margin-bottom: 8px;">
-        拖拽图片/视频到此处，或点击选择文件
+    in: ''
+  })
+
+  const renderDropText = () => {
+    const isVideoMode = mode === 'video'
+    dropText.innerHTML = `
+      <div style="font-size: 16px; font-weight: 500; color: var(--primary); margin-bottom: 8px;">
+        ${isVideoMode ? '拖拽视频到此处，或点击选择文件' : '拖拽图片到此处，或点击选择文件'}
       </div>
-      <div style="font-size: 14px; color: #6b7280;">
-        支持 JPG、PNG、GIF 等格式，最大 10MB<br/>也支持 MP4 等视频，将按选项页「视频转动图」的设置自动转换
+      <div style="font-size: 14px; color: var(--primary-medium); line-height: 1.5;">
+        ${
+          isVideoMode
+            ? '支持 MP4、WebM、MOV、MKV 等视频，最大 10MB<br/>上传时按选项页「视频转动图」的设置自动转换为动图'
+            : '支持 JPG、PNG、GIF、WebP、AVIF 等格式，最大 10MB<br/>需要上传视频？点击上方「视频」切换上传模式'
+        }
       </div>
     `
-  })
+  }
+
+  const applyModeStyles = () => {
+    for (const key of ['image', 'video'] as UploadMode[]) {
+      const button = modeButtons[key]
+      const active = key === mode
+      button.style.background = active ? 'var(--tertiary)' : 'transparent'
+      button.style.color = active ? 'var(--secondary)' : 'var(--primary-high)'
+    }
+  }
+
+  const applyMode = () => {
+    fileInput.accept = mode === 'video' ? VIDEO_ACCEPT : IMAGE_ACCEPT
+    renderDropText()
+    applyModeStyles()
+    for (const listener of modeChangeListeners) {
+      try {
+        listener(mode)
+      } catch {
+        // ignore listener errors
+      }
+    }
+  }
+
+  const setMode = (nextMode: UploadMode) => {
+    if (nextMode === mode) return
+    mode = nextMode
+    applyMode()
+  }
+
+  modeButtons.image.addEventListener('click', () => setMode('image'))
+  modeButtons.video.addEventListener('click', () => setMode('video'))
 
   dropZone.appendChild(dropIcon)
   dropZone.appendChild(dropText)
 
   const fileInput = createE('input', {
     type: 'file',
-    accept: 'image/*,video/*,.mp4,.webm,.mov,.mkv,.m4v,.ogv',
+    accept: IMAGE_ACCEPT,
     multiple: true,
     style: 'display: none;'
   })
@@ -82,7 +194,7 @@ export function createRegularPanel(): RegularPanelAPI {
 
   const previewCount = createE('span', {
     text: '已选择 0 个文件',
-    style: 'font-size: 13px; color: #6b7280; flex: 1;'
+    style: 'font-size: 13px; color: var(--primary-medium); flex: 1;'
   })
 
   const clearBtn = createE('button', {
@@ -90,8 +202,8 @@ export function createRegularPanel(): RegularPanelAPI {
     style: `
       padding: 6px 14px;
       background: transparent;
-      color: #6b7280;
-      border: 1px solid #d1d5db;
+      color: var(--primary-medium);
+      border: 1px solid var(--primary-low);
       border-radius: 6px;
       font-size: 13px;
       cursor: pointer;
@@ -99,7 +211,7 @@ export function createRegularPanel(): RegularPanelAPI {
     `
   }) as HTMLButtonElement
   clearBtn.addEventListener('mouseenter', () => {
-    clearBtn.style.background = '#f3f4f6'
+    clearBtn.style.background = 'var(--primary-low)'
   })
   clearBtn.addEventListener('mouseleave', () => {
     clearBtn.style.background = 'transparent'
@@ -151,8 +263,8 @@ export function createRegularPanel(): RegularPanelAPI {
         aspect-ratio: 1;
         border-radius: 6px;
         overflow: hidden;
-        border: 1px solid #e5e7eb;
-        background: #f9fafb;
+        border: 1px solid var(--primary-low);
+        background: var(--primary-very-low);
         cursor: default;
       `
     })
@@ -224,8 +336,8 @@ export function createRegularPanel(): RegularPanelAPI {
       clearCountdownInterval = null
     }
     clearBtn.textContent = '清空'
-    clearBtn.style.color = '#6b7280'
-    clearBtn.style.borderColor = '#d1d5db'
+    clearBtn.style.color = 'var(--primary-medium)'
+    clearBtn.style.borderColor = 'var(--primary-low)'
     clearBtn.style.background = 'transparent'
   }
 
@@ -275,15 +387,33 @@ export function createRegularPanel(): RegularPanelAPI {
   })
 
   const addFilesToPreview = (files: File[]) => {
-    const imageFiles = files.filter(f => f.type.startsWith('image/') || isVideoFileLike(f))
-    if (imageFiles.length === 0) return
-    for (const file of imageFiles) {
+    const accepted = files.filter(f => (mode === 'video' ? isVideoFileLike(f) : isImageFileLike(f)))
+    const skipped = files.length - accepted.length
+    if (accepted.length === 0) {
+      if (skipped > 0) {
+        notify(
+          mode === 'video'
+            ? '当前为视频上传模式，请选择视频文件或切换到图片模式'
+            : '当前为图片上传模式，请选择图片文件或切换到视频模式',
+          'info'
+        )
+      }
+      return
+    }
+    for (const file of accepted) {
       pendingFiles.push(file)
       previewGridInner.appendChild(createPreviewItem(file))
     }
     refreshPreviewState()
-    notify(`已添加 ${imageFiles.length} 个文件到预览列表`, 'info')
+    notify(
+      skipped > 0
+        ? `已添加 ${accepted.length} 个文件到预览列表（跳过 ${skipped} 个当前模式不支持的文件）`
+        : `已添加 ${accepted.length} 个文件到预览列表`,
+      'info'
+    )
   }
+
+  applyMode()
 
   panel.appendChild(dropZone)
   panel.appendChild(fileInput)
@@ -293,11 +423,17 @@ export function createRegularPanel(): RegularPanelAPI {
     dropZone,
     fileInput,
     previewGrid,
+    modeToggle,
     clearPreview,
     addFilesToPreview,
     getPendingFiles: () => [...pendingFiles],
     setUploadHandler: (fn: (files: File[]) => Promise<void>) => {
       onUpload = fn
+    },
+    setMode,
+    getMode: () => mode,
+    onModeChange: fn => {
+      modeChangeListeners.push(fn)
     }
   }
 }

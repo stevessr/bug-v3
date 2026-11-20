@@ -98,8 +98,8 @@ export async function showImageUploadDialog(
       e.preventDefault()
       if (!isDragOver) {
         isDragOver = true
-        dropZone.style.borderColor = '#3b82f6'
-        dropZone.style.backgroundColor = '#eff6ff'
+        dropZone.style.borderColor = 'var(--tertiary)'
+        dropZone.style.backgroundColor = 'var(--tertiary-low)'
       }
     })
 
@@ -107,16 +107,16 @@ export async function showImageUploadDialog(
       e.preventDefault()
       if (!dropZone.contains(e.relatedTarget as Node)) {
         isDragOver = false
-        dropZone.style.borderColor = '#d1d5db'
-        dropZone.style.backgroundColor = '#f9fafb'
+        dropZone.style.borderColor = 'var(--primary-low)'
+        dropZone.style.backgroundColor = 'var(--primary-low)'
       }
     })
 
     dropZone.addEventListener('drop', async (e: DragEvent) => {
       e.preventDefault()
       isDragOver = false
-      dropZone.style.borderColor = '#d1d5db'
-      dropZone.style.backgroundColor = '#f9fafb'
+      dropZone.style.borderColor = 'var(--primary-low)'
+      dropZone.style.backgroundColor = 'var(--primary-low)'
 
       const files = e.dataTransfer?.files
       if (files) {
