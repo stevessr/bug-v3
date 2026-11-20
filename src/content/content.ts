@@ -149,10 +149,21 @@ if (chrome?.runtime?.onMessage) {
 }
 
 // A recording session lives in background storage so it survives navigations.
-// Ask the service worker whether this newly loaded document should resume capture.
-void import('./agent/workflowRecorder')
-  .then(({ resumeWorkflowRecorderIfNeeded }) => resumeWorkflowRecorderIfNeeded())
-  .catch(error => logError('Failed to initialize workflow recorder:', error))
+// Ask the service worker whether this newly loaded document should resume capture,
+// and only load workflowRecorder when a recording session is actually active.
+if (typeof chrome !== 'undefined' && typeof chrome.runtime?.sendMessage === 'function') {
+  void (async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'AGENT_RECORDING_CONTENT_READY' })
+      if (response?.success === true && response?.data?.active === true) {
+        const { setWorkflowRecordingEnabled } = await import('./agent/workflowRecorder')
+        setWorkflowRecordingEnabled(true)
+      }
+    } catch (error) {
+      logError('Failed to check workflow recording state:', error)
+    }
+  })()
+}
 
 // Cloudflare 盾自动过盾由独立的主世界内容脚本处理（js/cloudflare-wall-main.js，
 // 源码 src/content/cloudflare-wall-main.ts，world: 'MAIN'）。它在页面主世界拦截

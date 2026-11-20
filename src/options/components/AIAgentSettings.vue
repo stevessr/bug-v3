@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowReactive, watch } from 'vue'
 import { nanoid } from 'nanoid'
 
 import SkillsSettings from './SkillsSettings.vue'
@@ -44,6 +44,7 @@ import {
   defaultEnabledPluginIds,
   isPluginEnabled,
   type AgentPlugin,
+  type PluginAvailabilityLevel,
   type PluginAvailabilityResult
 } from '@/agent/plugins'
 import type {
@@ -68,7 +69,7 @@ const {
   removeProviderProfile,
   updateActiveProfile
 } = useAgentSettings()
-const enableLocalMcpBridge = __ENABLE_LOCAL_MCP_BRIDGE__
+const enableLocalMcpBridge = ref(__ENABLE_LOCAL_MCP_BRIDGE__)
 const managedApprovalMode = ref<AgentApprovalMode>('auto')
 const managedSitePermissions = ref<AgentSitePermission[]>([])
 const managedPermissionHistory = ref<AgentPermissionHistoryEntry[]>([])
@@ -312,8 +313,20 @@ const disableAllPlugins = () => {
   settings.value = { ...settings.value, enabledPluginIds: [] }
 }
 
-const pluginAvailability = reactive<Record<string, PluginAvailabilityResult>>({})
-const pluginAvailabilityLoading = reactive<Record<string, boolean>>({})
+const pluginAvailability = shallowReactive<Record<string, PluginAvailabilityResult>>({})
+const pluginAvailabilityLoading = shallowReactive<Record<string, boolean>>({})
+
+// Template-safe accessors: `vue-tsc` cannot resolve `Record<string, T>[string]`
+// inside template closures, so narrow every lookup to a plain value here.
+const getPluginAvailability = (id: string): PluginAvailabilityResult | undefined =>
+  Object.prototype.hasOwnProperty.call(pluginAvailability, id) ? pluginAvailability[id] : undefined
+const isPluginAvailabilityLoading = (id: string): boolean => pluginAvailabilityLoading[id] === true
+const pluginLevelColor = (level: PluginAvailabilityLevel): string =>
+  PLUGIN_LEVEL_COLOR[level] ?? 'default'
+const pluginLevelLabel = (level: PluginAvailabilityLevel): string =>
+  PLUGIN_LEVEL_LABEL[level] ?? level
+const capabilityColor = (state: string): string => CAPABILITY_STATE_COLOR[state] ?? 'default'
+const capabilityLabel = (state: string): string => CAPABILITY_STATE_LABEL[state] ?? state
 
 const refreshPluginAvailability = async (plugin: AgentPlugin) => {
   if (!plugin.checkAvailability) return
@@ -340,14 +353,14 @@ const refreshAllPluginAvailability = async () => {
   )
 }
 
-const PLUGIN_LEVEL_COLOR: Record<PluginAvailabilityResult['level'], string> = {
+const PLUGIN_LEVEL_COLOR: Record<string, string> = {
   available: 'green',
   partial: 'orange',
   unavailable: 'red',
   unknown: 'default'
 }
 
-const PLUGIN_LEVEL_LABEL: Record<PluginAvailabilityResult['level'], string> = {
+const PLUGIN_LEVEL_LABEL: Record<string, string> = {
   available: '可用',
   partial: '部分可用',
   unavailable: '不可用',
@@ -370,17 +383,17 @@ const CAPABILITY_STATE_LABEL: Record<string, string> = {
   unknown: '未知'
 }
 
-const headerDrafts = reactive<Record<string, string>>({})
-const headerErrors = reactive<Record<string, string>>({})
+const headerDrafts = ref<Record<string, string>>({})
+const headerErrors = ref<Record<string, string>>({})
 const mcpBridgeEnabled = ref(true)
 const mcpTestStatus = ref('')
 const mcpTestLoading = ref(false)
-const mcpServerStatus = reactive<Record<string, string>>({})
-const mcpServerLoading = reactive<Record<string, boolean>>({})
-const folderRootStatus = reactive<Record<string, string>>({})
-const folderRootLoading = reactive<Record<string, boolean>>({})
+const mcpServerStatus = ref<Record<string, string>>({})
+const mcpServerLoading = ref<Record<string, boolean>>({})
+const folderRootStatus = ref<Record<string, string>>({})
+const folderRootLoading = ref<Record<string, boolean>>({})
 const MCP_BRIDGE_DISABLE_KEY = 'mcp-native-host-disabled'
-const folderAccessSupported = supportsAgentFolderAccess()
+const folderAccessSupported = ref(supportsAgentFolderAccess())
 
 // file:// 主机权限：Chrome 不允许运行时请求 file 地址的访问权，只能由用户在
 // chrome://extensions 的“允许访问文件网址”开关开启。此处检测开关状态并给出引导。
@@ -429,7 +442,7 @@ const addMcpServer = () => {
     enabled: true
   }
   settings.value = { ...settings.value, mcpServers: [...settings.value.mcpServers, server] }
-  headerDrafts[id] = '{}'
+  headerDrafts.value[id] = '{}'
 }
 
 const removeMcpServer = (id: string) => {
@@ -437,32 +450,32 @@ const removeMcpServer = (id: string) => {
     ...settings.value,
     mcpServers: settings.value.mcpServers.filter(server => server.id !== id)
   }
-  delete headerDrafts[id]
-  delete headerErrors[id]
+  delete headerDrafts.value[id]
+  delete headerErrors.value[id]
 }
 
 const syncHeaderDraft = (server: McpServerConfig) => {
   const json = JSON.stringify(server.headers || {}, null, 2)
-  headerDrafts[server.id] = json
+  headerDrafts.value[server.id] = json
 }
 
 const updateHeaders = (server: McpServerConfig) => {
-  const raw = headerDrafts[server.id] || ''
+  const raw = headerDrafts.value[server.id] || ''
   if (!raw.trim()) {
     server.headers = {}
-    headerErrors[server.id] = ''
+    headerErrors.value[server.id] = ''
     return
   }
   try {
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object') {
       server.headers = parsed as Record<string, string>
-      headerErrors[server.id] = ''
+      headerErrors.value[server.id] = ''
     } else {
-      headerErrors[server.id] = '必须是 JSON 对象'
+      headerErrors.value[server.id] = '必须是 JSON 对象'
     }
   } catch (error: any) {
-    headerErrors[server.id] = error?.message || 'JSON 解析失败'
+    headerErrors.value[server.id] = error?.message || 'JSON 解析失败'
   }
 }
 
@@ -567,13 +580,13 @@ const describePermissionState = (
 }
 
 const refreshFolderRootState = async (root: AgentFolderRoot) => {
-  folderRootLoading[root.id] = true
+  folderRootLoading.value[root.id] = true
   try {
     const state = await getAgentFolderRootState(root)
     if (state.handleName && root.handleName !== state.handleName) {
       root.handleName = state.handleName
     }
-    folderRootStatus[root.id] = state.error
+    folderRootStatus.value[root.id] = state.error
       ? state.error
       : describePermissionState(
           state.permission,
@@ -581,14 +594,14 @@ const refreshFolderRootState = async (root: AgentFolderRoot) => {
           state.handleName || root.handleName
         )
   } catch (error: any) {
-    folderRootStatus[root.id] = error?.message || '无法读取文件夹状态'
+    folderRootStatus.value[root.id] = error?.message || '无法读取文件夹状态'
   } finally {
-    folderRootLoading[root.id] = false
+    folderRootLoading.value[root.id] = false
   }
 }
 
 const refreshAllFolderRoots = async () => {
-  if (!folderAccessSupported) return
+  if (!folderAccessSupported.value) return
   await Promise.all(settings.value.folderRoots.map(root => refreshFolderRootState(root)))
 }
 
@@ -597,10 +610,10 @@ const ensureFolderAlias = (root: AgentFolderRoot) => {
 }
 
 const addFolderRoot = async () => {
-  if (!folderAccessSupported) return
+  if (!folderAccessSupported.value) return
   const id = nanoid()
   try {
-    folderRootLoading[id] = true
+    folderRootLoading.value[id] = true
     const selected = await pickAgentFolderRoot(id, 'read')
     const root: AgentFolderRoot = {
       id,
@@ -613,25 +626,29 @@ const addFolderRoot = async () => {
       ...settings.value,
       folderRoots: [...settings.value.folderRoots, root]
     }
-    folderRootStatus[id] = describePermissionState(selected.permission, true, selected.handleName)
+    folderRootStatus.value[id] = describePermissionState(
+      selected.permission,
+      true,
+      selected.handleName
+    )
     await refreshFolderRootState(root)
   } catch (error: any) {
     if (error?.name !== 'AbortError') {
-      folderRootStatus[id] = error?.message || '选择文件夹失败'
+      folderRootStatus.value[id] = error?.message || '选择文件夹失败'
     }
   } finally {
-    folderRootLoading[id] = false
+    folderRootLoading.value[id] = false
   }
 }
 
 const reselectFolderRoot = async (root: AgentFolderRoot) => {
-  if (!folderAccessSupported) return
-  folderRootLoading[root.id] = true
+  if (!folderAccessSupported.value) return
+  folderRootLoading.value[root.id] = true
   try {
     const selected = await pickAgentFolderRoot(root.id, root.readOnly ? 'read' : 'readwrite')
     root.handleName = selected.handleName
     ensureFolderAlias(root)
-    folderRootStatus[root.id] = describePermissionState(
+    folderRootStatus.value[root.id] = describePermissionState(
       selected.permission,
       root.readOnly,
       selected.handleName
@@ -639,30 +656,30 @@ const reselectFolderRoot = async (root: AgentFolderRoot) => {
     await refreshFolderRootState(root)
   } catch (error: any) {
     if (error?.name !== 'AbortError') {
-      folderRootStatus[root.id] = error?.message || '重新选择文件夹失败'
+      folderRootStatus.value[root.id] = error?.message || '重新选择文件夹失败'
     }
   } finally {
-    folderRootLoading[root.id] = false
+    folderRootLoading.value[root.id] = false
   }
 }
 
 const requestFolderRootPermission = async (root: AgentFolderRoot) => {
-  folderRootLoading[root.id] = true
+  folderRootLoading.value[root.id] = true
   try {
     const result = await requestAgentFolderPermission(root.id, root.readOnly ? 'read' : 'readwrite')
     if (result.handleName) {
       root.handleName = result.handleName
     }
-    folderRootStatus[root.id] = describePermissionState(
+    folderRootStatus.value[root.id] = describePermissionState(
       result.permission,
       root.readOnly,
       result.handleName || root.handleName
     )
     await refreshFolderRootState(root)
   } catch (error: any) {
-    folderRootStatus[root.id] = error?.message || '授权失败'
+    folderRootStatus.value[root.id] = error?.message || '授权失败'
   } finally {
-    folderRootLoading[root.id] = false
+    folderRootLoading.value[root.id] = false
   }
 }
 
@@ -673,11 +690,11 @@ const onFolderReadOnlyChange = async (root: AgentFolderRoot, value: boolean) => 
     return
   }
 
-  folderRootLoading[root.id] = true
+  folderRootLoading.value[root.id] = true
   try {
     const result = await requestAgentFolderPermission(root.id, 'readwrite')
     if (result.permission !== 'granted') {
-      folderRootStatus[root.id] = describePermissionState(
+      folderRootStatus.value[root.id] = describePermissionState(
         result.permission,
         true,
         result.handleName || root.handleName
@@ -690,7 +707,7 @@ const onFolderReadOnlyChange = async (root: AgentFolderRoot, value: boolean) => 
     if (result.handleName) {
       root.handleName = result.handleName
     }
-    folderRootStatus[root.id] = describePermissionState(
+    folderRootStatus.value[root.id] = describePermissionState(
       result.permission,
       false,
       result.handleName || root.handleName
@@ -698,9 +715,9 @@ const onFolderReadOnlyChange = async (root: AgentFolderRoot, value: boolean) => 
     await refreshFolderRootState(root)
   } catch (error: any) {
     root.readOnly = true
-    folderRootStatus[root.id] = error?.message || '申请写入权限失败'
+    folderRootStatus.value[root.id] = error?.message || '申请写入权限失败'
   } finally {
-    folderRootLoading[root.id] = false
+    folderRootLoading.value[root.id] = false
   }
 }
 
@@ -709,21 +726,21 @@ const removeFolderRoot = async (id: string) => {
     ...settings.value,
     folderRoots: settings.value.folderRoots.filter(root => root.id !== id)
   }
-  delete folderRootStatus[id]
-  delete folderRootLoading[id]
+  delete folderRootStatus.value[id]
+  delete folderRootLoading.value[id]
   await removeAgentFolderHandle(id)
 }
 
 const restoreAgentDefaults = async () => {
   const rootIds = settings.value.folderRoots.map(root => root.id)
   restoreDefaults()
-  Object.keys(folderRootStatus).forEach(key => delete folderRootStatus[key])
-  Object.keys(folderRootLoading).forEach(key => delete folderRootLoading[key])
+  Object.keys(folderRootStatus.value).forEach(key => delete folderRootStatus.value[key])
+  Object.keys(folderRootLoading.value).forEach(key => delete folderRootLoading.value[key])
   await Promise.all(rootIds.map(id => removeAgentFolderHandle(id)))
 }
 
 const loadMcpBridgeState = () => {
-  if (!enableLocalMcpBridge) return
+  if (!enableLocalMcpBridge.value) return
   if (typeof localStorage === 'undefined') return
   const raw = localStorage.getItem(MCP_BRIDGE_DISABLE_KEY)
   mcpBridgeEnabled.value = raw ? raw !== 'true' : true
@@ -736,7 +753,7 @@ const loadMcpBridgeState = () => {
 }
 
 const onMcpBridgeToggle = (value: boolean) => {
-  if (!enableLocalMcpBridge) return
+  if (!enableLocalMcpBridge.value) return
   mcpBridgeEnabled.value = value
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(MCP_BRIDGE_DISABLE_KEY, value ? 'false' : 'true')
@@ -747,7 +764,7 @@ const onMcpBridgeToggle = (value: boolean) => {
 }
 
 const testMcpBridgeConnection = async () => {
-  if (!enableLocalMcpBridge) {
+  if (!enableLocalMcpBridge.value) {
     mcpTestStatus.value = '当前构建已禁用本地 MCP 桥接'
     return
   }
@@ -773,11 +790,11 @@ const testMcpBridgeConnection = async () => {
 
 const testMcpServerConnection = async (server: McpServerConfig) => {
   if (!chrome?.runtime?.sendMessage) {
-    mcpServerStatus[server.id] = '无法调用扩展后台'
+    mcpServerStatus.value[server.id] = '无法调用扩展后台'
     return
   }
-  mcpServerLoading[server.id] = true
-  mcpServerStatus[server.id] = '测试中...'
+  mcpServerLoading.value[server.id] = true
+  mcpServerStatus.value[server.id] = '测试中...'
   try {
     const resp = await chrome.runtime.sendMessage({
       type: 'MCP_SERVER_TEST',
@@ -789,22 +806,22 @@ const testMcpServerConnection = async (server: McpServerConfig) => {
     })
     if (resp?.success && resp?.data?.ok) {
       const statusText = resp.data.status ? `HTTP ${resp.data.status}` : '连接成功'
-      mcpServerStatus[server.id] = `测试成功：${statusText}`
+      mcpServerStatus.value[server.id] = `测试成功：${statusText}`
     } else {
-      mcpServerStatus[server.id] = resp?.data?.error || resp?.error || '测试失败'
+      mcpServerStatus.value[server.id] = resp?.data?.error || resp?.error || '测试失败'
     }
   } catch (error: any) {
-    mcpServerStatus[server.id] = error?.message || '测试失败'
+    mcpServerStatus.value[server.id] = error?.message || '测试失败'
   } finally {
-    mcpServerLoading[server.id] = false
+    mcpServerLoading.value[server.id] = false
   }
 }
 
 // === MCP OAuth ===
 const oauthRedirectUri = computed(() => getOAuthRedirectUri())
-const oauthStatus = reactive<Record<string, string>>({})
-const oauthLoading = reactive<Record<string, boolean>>({})
-const oauthAdvancedOpen = reactive<Record<string, boolean>>({})
+const oauthStatus = ref<Record<string, string>>({})
+const oauthLoading = ref<Record<string, boolean>>({})
+const oauthAdvancedOpen = ref<Record<string, boolean>>({})
 
 /** 把当前 MCP server 写回 settings，触发 useAgentSettings 自动保存。 */
 const persistMcpServer = (server: McpServerConfig) => {
@@ -830,29 +847,29 @@ const updateOauthConfig = <K extends keyof McpOAuthConfig>(
 }
 
 const discoverServerOAuth = async (server: McpServerConfig) => {
-  oauthLoading[server.id] = true
-  oauthStatus[server.id] = '探测中…'
+  oauthLoading.value[server.id] = true
+  oauthStatus.value[server.id] = '探测中…'
   try {
     const discovered = await discoverMcpOAuth(server.url, server.oauth)
     server.oauth = discovered
     persistMcpServer(server)
     if (discovered.authorizationEndpoint && discovered.tokenEndpoint) {
-      oauthStatus[server.id] = '已完成 OAuth metadata 发现'
+      oauthStatus.value[server.id] = '已完成 OAuth metadata 发现'
     } else {
-      oauthStatus[server.id] = '探测完成，但端点不完整，请手动补全'
-      oauthAdvancedOpen[server.id] = true
+      oauthStatus.value[server.id] = '探测完成，但端点不完整，请手动补全'
+      oauthAdvancedOpen.value[server.id] = true
     }
   } catch (err: any) {
-    oauthStatus[server.id] = err?.message || '探测失败'
-    oauthAdvancedOpen[server.id] = true
+    oauthStatus.value[server.id] = err?.message || '探测失败'
+    oauthAdvancedOpen.value[server.id] = true
   } finally {
-    oauthLoading[server.id] = false
+    oauthLoading.value[server.id] = false
   }
 }
 
 const authorizeServer = async (server: McpServerConfig) => {
-  oauthLoading[server.id] = true
-  oauthStatus[server.id] = '准备授权…'
+  oauthLoading.value[server.id] = true
+  oauthStatus.value[server.id] = '准备授权…'
   try {
     let oauth = server.oauth || {}
     if (!oauth.authorizationEndpoint || !oauth.tokenEndpoint) {
@@ -864,7 +881,7 @@ const authorizeServer = async (server: McpServerConfig) => {
     }
     if (!oauth.clientId) {
       if (oauth.registrationEndpoint) {
-        oauthStatus[server.id] = '正在执行 DCR 客户端注册…'
+        oauthStatus.value[server.id] = '正在执行 DCR 客户端注册…'
         const reg = await dynamicallyRegisterClient(oauth, oauthRedirectUri.value)
         oauth.clientId = reg.clientId
         if (reg.clientSecret) oauth.clientSecret = reg.clientSecret
@@ -873,22 +890,22 @@ const authorizeServer = async (server: McpServerConfig) => {
         throw new Error('缺少 client_id，且 authorization server 未提供 registration_endpoint')
       }
     }
-    oauthStatus[server.id] = '打开授权窗口…'
+    oauthStatus.value[server.id] = '打开授权窗口…'
     const tokens = await runMcpOAuthFlow(oauth, { redirectUri: oauthRedirectUri.value })
     server.oauthTokens = tokens
     persistMcpServer(server)
-    oauthStatus[server.id] = '授权成功'
+    oauthStatus.value[server.id] = '授权成功'
   } catch (err: any) {
-    oauthStatus[server.id] = err?.message || '授权失败'
+    oauthStatus.value[server.id] = err?.message || '授权失败'
   } finally {
-    oauthLoading[server.id] = false
+    oauthLoading.value[server.id] = false
   }
 }
 
 const logoutServer = (server: McpServerConfig) => {
   server.oauthTokens = undefined
   persistMcpServer(server)
-  oauthStatus[server.id] = '已清除当前 OAuth tokens'
+  oauthStatus.value[server.id] = '已清除当前 OAuth tokens'
 }
 
 const oauthBadge = (server: McpServerConfig) => {
@@ -1417,36 +1434,40 @@ watch(
               <a-tag color="default" class="text-xs">{{ plugin.id }}</a-tag>
               <a-tag v-if="plugin.defaultEnabled" color="blue" class="text-xs">默认开启</a-tag>
               <template v-if="plugin.checkAvailability">
-                <a-popover v-if="pluginAvailability[plugin.id]" trigger="click" placement="bottom">
+                <a-popover
+                  v-if="getPluginAvailability(plugin.id)"
+                  trigger="click"
+                  placement="bottom"
+                >
                   <template #title>
                     <span class="text-xs">
                       能力状态 ·
-                      {{ PLUGIN_LEVEL_LABEL[pluginAvailability[plugin.id].level] }}
+                      {{ pluginLevelLabel(getPluginAvailability(plugin.id)!.level) }}
                     </span>
                   </template>
                   <template #content>
                     <div class="space-y-2 max-w-xs">
                       <div class="text-xs text-gray-600 dark:text-gray-300">
-                        {{ pluginAvailability[plugin.id].summary }}
+                        {{ getPluginAvailability(plugin.id)!.summary }}
                       </div>
-                      <div v-if="pluginAvailability[plugin.id].details?.length" class="space-y-1">
+                      <div
+                        v-if="getPluginAvailability(plugin.id)!.details?.length"
+                        class="space-y-1"
+                      >
                         <div
-                          v-for="detail in pluginAvailability[plugin.id].details"
+                          v-for="detail in getPluginAvailability(plugin.id)!.details"
                           :key="detail.label"
                           class="flex items-center justify-between gap-2 text-xs"
                         >
                           <span class="text-gray-700 dark:text-gray-200">
                             {{ detail.label }}
                           </span>
-                          <a-tag
-                            :color="CAPABILITY_STATE_COLOR[detail.state] || 'default'"
-                            class="m-0"
-                          >
-                            {{ CAPABILITY_STATE_LABEL[detail.state] || detail.state }}
+                          <a-tag :color="capabilityColor(detail.state)" class="m-0">
+                            {{ capabilityLabel(detail.state) }}
                           </a-tag>
                         </div>
                         <div
-                          v-for="detail in pluginAvailability[plugin.id].details?.filter(
+                          v-for="detail in getPluginAvailability(plugin.id)!.details?.filter(
                             d => d.hint
                           )"
                           :key="`hint-${detail.label}`"
@@ -1457,7 +1478,7 @@ watch(
                       </div>
                       <a-button
                         size="small"
-                        :loading="pluginAvailabilityLoading[plugin.id]"
+                        :loading="isPluginAvailabilityLoading(plugin.id)"
                         @click="refreshPluginAvailability(plugin)"
                       >
                         重新探测
@@ -1465,11 +1486,11 @@ watch(
                     </div>
                   </template>
                   <a-tag
-                    :color="PLUGIN_LEVEL_COLOR[pluginAvailability[plugin.id].level]"
+                    :color="pluginLevelColor(getPluginAvailability(plugin.id)!.level)"
                     class="cursor-pointer text-xs"
                   >
-                    {{ PLUGIN_LEVEL_LABEL[pluginAvailability[plugin.id].level] }} ·
-                    {{ pluginAvailability[plugin.id].summary }}
+                    {{ pluginLevelLabel(getPluginAvailability(plugin.id)!.level) }} ·
+                    {{ getPluginAvailability(plugin.id)!.summary }}
                   </a-tag>
                 </a-popover>
                 <a-tag
@@ -1478,7 +1499,7 @@ watch(
                   class="cursor-pointer text-xs"
                   @click="refreshPluginAvailability(plugin)"
                 >
-                  {{ pluginAvailabilityLoading[plugin.id] ? '探测中…' : '点击探测' }}
+                  {{ isPluginAvailabilityLoading(plugin.id) ? '探测中…' : '点击探测' }}
                 </a-tag>
               </template>
             </div>

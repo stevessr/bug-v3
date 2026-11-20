@@ -8,10 +8,10 @@ import { nanoid } from 'nanoid'
 
 import type { McpServerConfig } from './types'
 import { executeScript, type ScriptContext } from './scriptRunner'
-// eslint-disable-next-line import/order
+// eslint-disable-next-line import-x/order
 import { discoverMcpTools, callMcpTool, type McpTool } from './mcpClient'
 
-// eslint-disable-next-line import/order
+// eslint-disable-next-line import-x/order
 import type {
   Skill,
   SkillPreset,

@@ -17,10 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "jsx": "preserve",
     "types": ["chrome", "node"],
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

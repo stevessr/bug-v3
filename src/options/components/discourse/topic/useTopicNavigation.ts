@@ -1,9 +1,9 @@
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import hljs from 'highlight.js'
 import '../css/highlight.css'
 
 import type { parsePostContent } from '../parser/parsePostContent'
 import type { extractData, pageFetch } from '../utils'
+import { highlightCodeBlocks } from '../utils/highlightCode'
 
 type Notify = {
   warning: (message: string) => void
@@ -278,21 +278,7 @@ export function useTopicNavigation(options: {
       if (data?.cooked) {
         const parsed = options.parsePostContent(data.cooked, options.baseUrl)
         blockquote.innerHTML = parsed.html
-
-        const codeBlocks = blockquote.querySelectorAll('pre code')
-        codeBlocks.forEach(block => {
-          const el = block as HTMLElement
-          const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
-          if (langMatch) {
-            const lang = langMatch.replace('lang-', '')
-            if (hljs.getLanguage(lang)) {
-              el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
-              el.classList.add('hljs')
-              return
-            }
-          }
-          hljs.highlightElement(el)
-        })
+        await highlightCodeBlocks(blockquote)
       } else if (result.ok === false) {
         const statusText = result.status ? ` (${result.status})` : ''
         blockquote.innerHTML = `<div class="quote-error">引用内容加载失败${statusText}</div>`

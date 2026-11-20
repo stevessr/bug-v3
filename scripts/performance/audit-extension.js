@@ -333,6 +333,31 @@ export function auditExtension({
         : 'ffmpeg core wasm is not bundled.'
   })
 
+  const avifDecWasmPath = path.join(distDir, 'assets', 'avif_dec.wasm')
+  const avifDecShipped = fs.existsSync(avifDecWasmPath)
+  checks.push({
+    id: 'dist.no-avif-decoder-wasm',
+    passed: !avifDecShipped,
+    actual: avifDecShipped,
+    message: avifDecShipped
+      ? 'Unused avif_dec.wasm is bundled; import @jsquash/avif/encode instead of the package barrel.'
+      : 'Unused avif_dec.wasm is excluded from the extension package.'
+  })
+
+  const avifEncWasmPath = path.join(distDir, 'assets', 'avif_enc.wasm')
+  const rawAvifWasmShipped = fs.existsSync(avifEncWasmPath)
+  const gzAvifWasmShipped = fs.existsSync(`${avifEncWasmPath}.gz`)
+  checks.push({
+    id: 'dist.avif-wasm-compressed',
+    passed: !rawAvifWasmShipped,
+    actual: { rawAvifWasmShipped, gzAvifWasmShipped },
+    message: rawAvifWasmShipped
+      ? 'avif_enc.wasm is shipped uncompressed; the build must emit only the gzip artifact.'
+      : gzAvifWasmShipped
+        ? 'avif_enc.wasm is distributed gzip-compressed and decompressed at runtime.'
+        : 'avif_enc.wasm is not bundled.'
+  })
+
   if (scanSource) checks.push(...scanSourceInvariants(rootDir))
 
   return {

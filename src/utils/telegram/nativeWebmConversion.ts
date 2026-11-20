@@ -168,7 +168,7 @@ export async function convertWebmInBrowser(
       if (native.type === 'image/avif')
         return { blob: native, warning: 'AVIF 首帧模式为静态图片，不保留动画' }
       // Canvas silently returns PNG when AVIF encoding isn't implemented.
-      const { encode } = await import('@jsquash/avif')
+      const { encodeAvif: encode } = await import('@/utils/avif/avifEncoder')
       const bytes = await encode(context.getImageData(0, 0, canvas.width, canvas.height), {
         quality: 62
       })
@@ -182,7 +182,8 @@ export async function convertWebmInBrowser(
     const count = Math.ceil(duration * fps)
     const frames: { bytes: Uint8Array; durationMs: number }[] = []
     let hasTransparency = false
-    const avifEncoder = format === 'animated-avif' ? (await import('@jsquash/avif')).encode : null
+    const avifEncoder =
+      format === 'animated-avif' ? (await import('@/utils/avif/avifEncoder')).encodeAvif : null
     for (let i = 0; i < count; i++) {
       check()
       const time = i / fps

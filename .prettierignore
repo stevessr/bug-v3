@@ -12,6 +12,7 @@ scripts/cfworker/public/assets/
 scripts/cfworker/functions/api/market-random.ts
 
 # Local tool state and test reports
+.agents/
 .limcode/
 playwright-report/
 test-results/

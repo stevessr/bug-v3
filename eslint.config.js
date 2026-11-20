@@ -3,7 +3,7 @@ import typescript from '@typescript-eslint/eslint-plugin'
 import typescriptParser from '@typescript-eslint/parser'
 import vue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
-import importPlugin from 'eslint-plugin-import'
+import importPlugin from 'eslint-plugin-import-x'
 import promise from 'eslint-plugin-promise'
 import prettier from 'eslint-plugin-prettier'
 import prettierConfig from 'eslint-config-prettier'
@@ -14,6 +14,7 @@ export default [
   // 忽略的文件
   {
     ignores: [
+      '.agents/**',
       'dist/**',
       'node_modules/**',
       'src/auto-imports.d.ts',
@@ -71,7 +72,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      import: importPlugin,
+      'import-x': importPlugin,
       promise: promise,
       prettier: prettier
     },
@@ -85,14 +86,14 @@ export default [
       '@typescript-eslint/no-var-requires': 'error',
 
       // Import 规则
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
           'newlines-between': 'always'
         }
       ],
-      'import/no-duplicates': 'error',
+      'import-x/no-duplicates': 'error',
 
       // Promise 规则
       'promise/catch-or-return': 'error',
@@ -128,7 +129,7 @@ export default [
     plugins: {
       vue: vue,
       '@typescript-eslint': typescript,
-      import: importPlugin,
+      'import-x': importPlugin,
       promise: promise,
       prettier: prettier
     },
@@ -156,7 +157,7 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
 
       // Import 规则
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
@@ -196,20 +197,20 @@ export default [
       sourceType: 'module'
     },
     plugins: {
-      import: importPlugin,
+      'import-x': importPlugin,
       promise: promise,
       prettier: prettier
     },
     rules: {
       // Import 规则
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
           'newlines-between': 'always'
         }
       ],
-      'import/no-duplicates': 'error',
+      'import-x/no-duplicates': 'error',
 
       // Promise 规则
       'promise/catch-or-return': 'error',
@@ -275,5 +276,13 @@ export default [
   },
 
   // Prettier 配置（必须放在最后）
-  prettierConfig
+  prettierConfig,
+
+  {
+    rules: {
+      // ESLint 10 adds these stricter rules; retain this project's existing lint policy.
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off'
+    }
+  }
 ]

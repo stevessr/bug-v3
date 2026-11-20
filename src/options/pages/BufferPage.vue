@@ -30,6 +30,11 @@ import CachedImage from '@/components/CachedImage.vue'
 const options = inject<OptionsInject>('options')!
 const { emojiStore, openEditEmoji } = options
 
+// vue-tsc 3.3.14 会把模板闭包里注入的 Pinia store 当作 Ref 再断言一次，
+// 导致 `emojiStore.settings` 在该层无法解析。这里用 computed 固定其类型，
+// 模板中通过该 computed 读取，避免依赖注入对象在模板里的类型收窄行为。
+const settings = computed(() => emojiStore.settings)
+
 // 图片缓存状态管理
 const imageSources = ref<Map<string, string>>(new Map())
 const loadingStates = ref<Map<string, boolean>>(new Map())
@@ -1511,7 +1516,7 @@ onBeforeUnmount(() => {
         <div class="p-6">
           <BufferEmojiGrid
             :emojis="bufferGroup.emojis"
-            :grid-columns="emojiStore.settings.gridColumns"
+            :grid-columns="settings.gridColumns"
             :is-multi-select-mode="isMultiSelectMode"
             :selected-emojis="selectedEmojis"
             @edit="editEmoji"
@@ -1536,7 +1541,7 @@ onBeforeUnmount(() => {
     <ImageCropper
       v-if="showImageCropper && cropImageFile"
       :image-file="cropImageFile"
-      :ai-settings="emojiStore.settings"
+      :ai-settings="settings"
       @close="closeImageCropper"
       @upload="handleCroppedEmojis"
     />

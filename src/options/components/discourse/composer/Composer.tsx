@@ -2,7 +2,6 @@ import { computed, ref, watch, defineComponent, onBeforeUnmount, onMounted, next
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import katex from 'katex'
-import hljs from 'highlight.js'
 import { Input, Button, Select, TreeSelect } from 'ant-design-vue'
 
 import type { DiscourseCategory, DiscourseUser } from '../types'
@@ -19,6 +18,7 @@ import TagPill from '../layout/TagPill'
 import { getDiscourseIconHref } from '../layout/iconSprite'
 import ProseMirrorEditor from '../ProseMirrorEditor'
 import { extractData, getAvatarUrl, pageFetch } from '../utils'
+import { highlightCodeBlocks } from '../utils/highlightCode'
 
 import {
   clearDraft,
@@ -137,25 +137,7 @@ export default defineComponent({
     )
 
     const applyHighlighting = () => {
-      if (!previewContentRef.value) return
-      const codeBlocks = previewContentRef.value.querySelectorAll('pre code')
-      codeBlocks.forEach(block => {
-        const el = block as HTMLElement
-        if (el.dataset.highlighted) return
-
-        const langMatch = Array.from(el.classList).find(cls => cls.startsWith('lang-'))
-        if (langMatch) {
-          const lang = langMatch.replace('lang-', '')
-          if (hljs.getLanguage(lang)) {
-            el.innerHTML = hljs.highlight(el.textContent || '', { language: lang }).value
-            el.classList.add('hljs')
-            el.dataset.highlighted = 'true'
-            return
-          }
-        }
-        hljs.highlightElement(el)
-        el.dataset.highlighted = 'true'
-      })
+      void highlightCodeBlocks(previewContentRef.value)
     }
 
     onMounted(() => {

@@ -2,7 +2,6 @@ import { computed, defineComponent, onMounted, ref, watch, type PropType } from 
 import { Spin } from 'ant-design-vue'
 
 import FaIcon from '../layout/FaIcon'
-
 import type { DiscourseNotification, DiscourseNotificationFilter } from '../types'
 import { replaceEmojiShortcodesInHtml } from '../bbcode/emojiShortcode'
 import { ensureEmojiShortcodesLoaded } from '../linux.do/emojis'

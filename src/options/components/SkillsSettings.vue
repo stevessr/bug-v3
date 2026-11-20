@@ -56,7 +56,7 @@ const showCustomSkillModal = ref(false)
 const showImportSkillModal = ref(false)
 const importingSkill = ref(false)
 const skillsShInput = ref('')
-const newCustomSkill = reactive({
+const newCustomSkill = ref({
   name: '',
   description: '',
   category: 'other' as SkillCategory,
@@ -67,7 +67,7 @@ const newCustomSkill = reactive({
 // Skill Chains
 const skillChains = ref<SkillChain[]>([])
 const showChainModal = ref(false)
-const newChain = reactive({
+const newChain = ref({
   name: '',
   description: '',
   steps: [] as Array<{ skillId: string; staticArgs: string }>
@@ -82,7 +82,7 @@ const selectedSkillForStats = ref<Skill | null>(null)
 const showPresetsModal = ref(false)
 const selectedSkillForPresets = ref<Skill | null>(null)
 const skillPresets = ref<SkillPreset[]>([])
-const newPreset = reactive({
+const newPreset = ref({
   name: '',
   description: '',
   args: ''
@@ -213,27 +213,27 @@ const requiredApiKeys = computed(() => {
 
 // 创建自定义 Skill
 const createCustomSkill = () => {
-  if (!newCustomSkill.name.trim()) return
+  if (!newCustomSkill.value.name.trim()) return
 
   addCustomSkill({
-    name: newCustomSkill.name.trim(),
-    description: newCustomSkill.description.trim(),
-    category: newCustomSkill.category,
+    name: newCustomSkill.value.name.trim(),
+    description: newCustomSkill.value.description.trim(),
+    category: newCustomSkill.value.category,
     source: 'custom',
     enabled: true,
-    promptTemplate: newCustomSkill.promptTemplate.trim(),
-    tags: newCustomSkill.tags
+    promptTemplate: newCustomSkill.value.promptTemplate.trim(),
+    tags: newCustomSkill.value.tags
       .split(',')
       .map(t => t.trim())
       .filter(Boolean)
   })
 
   // 重置表单
-  newCustomSkill.name = ''
-  newCustomSkill.description = ''
-  newCustomSkill.category = 'other'
-  newCustomSkill.promptTemplate = ''
-  newCustomSkill.tags = ''
+  newCustomSkill.value.name = ''
+  newCustomSkill.value.description = ''
+  newCustomSkill.value.category = 'other'
+  newCustomSkill.value.promptTemplate = ''
+  newCustomSkill.value.tags = ''
 
   // 刷新列表
   customSkills.value = loadCustomSkills()
@@ -273,22 +273,22 @@ const deleteCustomSkill = (skillId: string) => {
 
 // 创建 Skill Chain
 const createSkillChain = () => {
-  if (!newChain.name.trim() || newChain.steps.length === 0) return
+  if (!newChain.value.name.trim() || newChain.value.steps.length === 0) return
 
   addSkillChain({
-    name: newChain.name.trim(),
-    description: newChain.description.trim(),
+    name: newChain.value.name.trim(),
+    description: newChain.value.description.trim(),
     enabled: true,
-    steps: newChain.steps.map(step => ({
+    steps: newChain.value.steps.map(step => ({
       skillId: step.skillId,
       staticArgs: step.staticArgs ? JSON.parse(step.staticArgs) : undefined
     }))
   })
 
   // 重置表单
-  newChain.name = ''
-  newChain.description = ''
-  newChain.steps = []
+  newChain.value.name = ''
+  newChain.value.description = ''
+  newChain.value.steps = []
 
   // 刷新列表
   skillChains.value = loadSkillChains()
@@ -297,12 +297,12 @@ const createSkillChain = () => {
 
 // 添加 Chain 步骤
 const addChainStep = () => {
-  newChain.steps.push({ skillId: '', staticArgs: '' })
+  newChain.value.steps.push({ skillId: '', staticArgs: '' })
 }
 
 // 删除 Chain 步骤
 const removeChainStep = (index: number) => {
-  newChain.steps.splice(index, 1)
+  newChain.value.steps.splice(index, 1)
 }
 
 // 删除 Skill Chain
@@ -337,13 +337,13 @@ const showSkillPresets = (skill: Skill) => {
 
 // 添加 Skill 预设
 const createSkillPreset = () => {
-  if (!selectedSkillForPresets.value || !newPreset.name.trim()) return
+  if (!selectedSkillForPresets.value || !newPreset.value.name.trim()) return
 
   try {
-    const args = newPreset.args.trim() ? JSON.parse(newPreset.args) : {}
+    const args = newPreset.value.args.trim() ? JSON.parse(newPreset.value.args) : {}
     addSkillPreset(selectedSkillForPresets.value.id, {
-      name: newPreset.name.trim(),
-      description: newPreset.description.trim(),
+      name: newPreset.value.name.trim(),
+      description: newPreset.value.description.trim(),
       args
     })
 
@@ -351,9 +351,9 @@ const createSkillPreset = () => {
     skillPresets.value = getSkillPresets(selectedSkillForPresets.value)
 
     // 重置表单
-    newPreset.name = ''
-    newPreset.description = ''
-    newPreset.args = ''
+    newPreset.value.name = ''
+    newPreset.value.description = ''
+    newPreset.value.args = ''
   } catch (e) {
     console.error('Invalid JSON for preset args:', e)
   }

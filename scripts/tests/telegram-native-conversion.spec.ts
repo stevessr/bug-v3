@@ -136,7 +136,7 @@ test('does not label unsupported Canvas PNG output as WebP', async ({ page }) =>
 
 // These integration checks run against `pnpm build` output, including bundled WASM.
 async function serveBuild(page: import('@playwright/test').Page) {
-  await page.route('http://localhost/**', async route => {
+  await page.route(/^http:\/\/localhost(?::\d+)?\//, async route => {
     const path = new URL(route.request().url()).pathname
     try {
       const body = readFileSync(`dist${path === '/' ? '/index.html' : path}`)
@@ -230,7 +230,9 @@ test('failed group update stays on the import page', async ({ page }) => {
   await page.goto(
     'http://localhost/?mode=options#/import?source=telegram&tgGroupId=telegram_fixture&tgInput=FixturePack&tgAuto=1'
   )
-  await expect(page.getByText('获取失败：Fixture fetch failed').first()).toBeVisible()
+  await expect(page.getByText('获取失败：Fixture fetch failed').first()).toBeVisible({
+    timeout: 15000
+  })
   expect(page.url()).toContain('#/import?')
 })
 

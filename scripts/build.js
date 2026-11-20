@@ -146,28 +146,32 @@ function resolveViteCli() {
   return viteCli
 }
 
-// 构建后把 dist/assets/ffmpeg-core.wasm（~31MB）压成 ffmpeg-core.wasm.gz（gzip -9 约 10MB）。
-// 运行时（src/utils/avif/localAvifService.ts）用 DecompressionStream 解压成 Blob URL 再交给
-// ffmpeg——全本地解压、离线可用，仅为了把扩展包体积从 ~42MB 降到 ~21MB。
+// 构建后把 dist/assets/{ffmpeg-core.wasm,avif_enc.wasm} 压成 *.wasm.gz（gzip -9）。
+// 运行时通过 DecompressionStream 解压——全本地解压、离线可用，大幅压缩包体积。
 // dev 构建不产出 dist；--watch 进程不退出（gzip 永不执行），运行时检测不到 gz 会
 // 自动回退到未压缩 wasm，行为一致。
-async function compressFfmpegWasm() {
-  const wasmPath = path.resolve(process.cwd(), 'dist', 'assets', 'ffmpeg-core.wasm')
-  if (!fs.existsSync(wasmPath)) {
-    console.log('ℹ️ dist/assets/ffmpeg-core.wasm 不存在，跳过 wasm 压缩')
-    return
-  }
-  const startedAt = Date.now()
-  const raw = fs.readFileSync(wasmPath)
-  const gzipped = zlib.gzipSync(raw, { level: 9 })
-  fs.writeFileSync(`${wasmPath}.gz`, gzipped)
-  fs.rmSync(wasmPath)
+async function compressWasmAssets() {
+  const assetsDir = path.resolve(process.cwd(), 'dist', 'assets')
+  const targets = ['ffmpeg-core.wasm', 'avif_enc.wasm']
   const toMb = bytes => `${(bytes / 1024 / 1024).toFixed(1)}MB`
-  console.log(
-    `🗜️ ffmpeg-core.wasm → ffmpeg-core.wasm.gz: ${toMb(raw.length)} → ${toMb(
-      gzipped.length
-    )} (${Date.now() - startedAt}ms)`
-  )
+
+  for (const fileName of targets) {
+    const wasmPath = path.join(assetsDir, fileName)
+    if (!fs.existsSync(wasmPath)) {
+      console.log(`ℹ️ dist/assets/${fileName} 不存在，跳过 wasm 压缩`)
+      continue
+    }
+    const startedAt = Date.now()
+    const raw = fs.readFileSync(wasmPath)
+    const gzipped = zlib.gzipSync(raw, { level: 9 })
+    fs.writeFileSync(`${wasmPath}.gz`, gzipped)
+    fs.rmSync(wasmPath)
+    console.log(
+      `🗜️ ${fileName} → ${fileName}.gz: ${toMb(raw.length)} → ${toMb(
+        gzipped.length
+      )} (${Date.now() - startedAt}ms)`
+    )
+  }
 }
 
 const viteArgs = buildType === 'dev' ? [] : ['build', ...(watchBuild ? ['--watch'] : [])]
@@ -188,9 +192,9 @@ child.on('error', error => {
 child.on('exit', async code => {
   if (code === 0 && buildType !== 'dev') {
     try {
-      await compressFfmpegWasm()
+      await compressWasmAssets()
     } catch (error) {
-      console.error('❌ Failed to compress ffmpeg-core.wasm:', error)
+      console.error('❌ Failed to compress WASM assets:', error)
       process.exit(1)
     }
     console.log('✅ Build completed!')

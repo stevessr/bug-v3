@@ -1,9 +1,10 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
-import { encode as encodeAvif } from '@jsquash/avif'
 import classWorkerURL from '@ffmpeg/ffmpeg/worker?worker&url'
 import coreURL from '@ffmpeg/core?url'
 import wasmURL from '@ffmpeg/core/wasm?url'
+
+import { encodeAvif } from './avifEncoder'
 // 包体积优化：构建脚本（scripts/build.js）把 ~31MB 的 ffmpeg-core.wasm 预压缩为
 // ffmpeg-core.wasm.gz（gzip -9 后约 10MB）。运行时用 DecompressionStream 解压成
 // Blob URL 再交给 ffmpeg——全本地解压、离线可用，行为不变。
@@ -12,13 +13,14 @@ const FFMPEG_WASM_GZ_PATH = 'assets/ffmpeg-core.wasm.gz'
 
 const resolveWasmUrl = async (): Promise<string> => {
   try {
-    // 扩展上下文（options 页）提供 chrome.runtime.getURL；
-    // 非扩展环境（dev server 直开 / 单测）回退 ?url 直出的未压缩 wasm
-    const getURL = typeof chrome !== 'undefined' ? chrome.runtime?.getURL : undefined
-    if (typeof getURL !== 'function') {
+    if (typeof DecompressionStream !== 'function') {
       return wasmURL
     }
-    const response = await fetch(getURL(FFMPEG_WASM_GZ_PATH))
+    // 扩展上下文（options 页）提供 chrome.runtime.getURL；
+    // 非扩展环境（如构建产物 HTTP 测试）尝试同源 .wasm.gz，不存在则回退未压缩 wasm
+    const getURL = typeof chrome !== 'undefined' ? chrome.runtime?.getURL : undefined
+    const gzUrl = typeof getURL === 'function' ? getURL(FFMPEG_WASM_GZ_PATH) : `${wasmURL}.gz`
+    const response = await fetch(gzUrl)
     if (!response.ok || !response.body) {
       return wasmURL
     }

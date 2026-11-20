@@ -21,8 +21,10 @@ const ANTD_IMPORT_TRANSFORM_MAP: Record<string, AntdImportTransformRule> = {
   Checkbox: { importKind: 'default', path: 'checkbox' },
   ConfigProvider: { importKind: 'default', path: 'config-provider' },
   Dropdown: { importKind: 'default', path: 'dropdown' },
+  Empty: { importKind: 'default', path: 'empty' },
   Image: { importKind: 'default', path: 'image' },
   Input: { importKind: 'default', path: 'input' },
+  InputNumber: { importKind: 'default', path: 'input-number' },
   Menu: { importKind: 'default', path: 'menu' },
   MenuItem: { importKind: 'named', path: 'menu', namedImport: 'MenuItem' },
   Modal: { importKind: 'default', path: 'modal' },
@@ -476,24 +478,29 @@ export default defineConfig(({ mode }) => {
                       priority: 100
                     },
                     {
+                      name: 'vendor-core',
+                      test: /[\\/]node_modules[\\/](?:vue|@vue|pinia|vue-router|@vueuse)[\\/]/,
+                      priority: 35
+                    },
+                    {
                       name: 'vendor-ui',
-                      test: /[\\/]node_modules[\\/](?:ant-design-vue|@ant-design)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:ant-design-vue[\\/]es[\\/](?:_util|config-provider|theme|locale|style|button|message|vc-util|_cssinjs)[\\/]|@ant-design[\\/]colors[\\/])/,
                       priority: 30
                     },
                     {
-                      name: 'vendor-core',
-                      test: /[\\/]node_modules[\\/](?:vue|pinia|vue-router|@vueuse)[\\/]/,
-                      priority: 25
+                      name: 'vendor-highlight',
+                      test: /[\\/]node_modules[\\/]highlight\.js[\\/]/,
+                      priority: 19
                     },
                     {
                       name: 'vendor-editor',
-                      test: /[\\/]node_modules[\\/](?:prosemirror-[^\\/]+|@bbob|marked|rehype|rehype-parse|rehype-stringify|unified|unist-util-visit|dompurify|highlight\.js)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:marked|rehype-parse|rehype-stringify|unified|dompurify)[\\/]/,
                       priority: 18,
                       maxSize: 850 * 1024
                     },
                     {
                       name: 'vendor-image',
-                      test: /[\\/]node_modules[\\/](?:@jsquash|libheif-js|@ffmpeg|fflate)[\\/]/,
+                      test: /[\\/]node_modules[\\/](?:@jsquash|@ffmpeg)[\\/]/,
                       priority: 15
                     },
                     {

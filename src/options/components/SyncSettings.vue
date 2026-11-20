@@ -36,14 +36,14 @@ const cloudflareConfig = reactive({
   authTokenReadonly: ''
 })
 
-const webdavConfig = reactive({
+const webdavConfig = ref({
   url: '',
   username: '',
   password: '',
   path: ''
 })
 
-const s3Config = reactive({
+const s3Config = ref({
   endpoint: '',
   region: '',
   bucket: '',
@@ -76,14 +76,14 @@ const isValidConfig = computed(() => {
     case 'cloudflare':
       return cloudflareConfig.url && cloudflareConfig.authToken
     case 'webdav':
-      return webdavConfig.url && webdavConfig.username && webdavConfig.password
+      return webdavConfig.value.url && webdavConfig.value.username && webdavConfig.value.password
     case 's3':
       return (
-        s3Config.endpoint &&
-        s3Config.region &&
-        s3Config.bucket &&
-        s3Config.accessKeyId &&
-        s3Config.secretAccessKey
+        s3Config.value.endpoint &&
+        s3Config.value.region &&
+        s3Config.value.bucket &&
+        s3Config.value.accessKeyId &&
+        s3Config.value.secretAccessKey
       )
     default:
       return false
@@ -116,17 +116,17 @@ const loadConfig = async () => {
       lastPushTime.value = (config as any).lastPushTime || null
       lastPullTime.value = (config as any).lastPullTime || null
     } else if (config.type === 'webdav') {
-      webdavConfig.url = config.url || ''
-      webdavConfig.username = config.username || ''
-      webdavConfig.password = config.password || ''
-      webdavConfig.path = config.path || ''
+      webdavConfig.value.url = config.url || ''
+      webdavConfig.value.username = config.username || ''
+      webdavConfig.value.password = config.password || ''
+      webdavConfig.value.path = config.path || ''
     } else if (config.type === 's3') {
-      s3Config.endpoint = config.endpoint || ''
-      s3Config.region = config.region || ''
-      s3Config.bucket = config.bucket || ''
-      s3Config.accessKeyId = config.accessKeyId || ''
-      s3Config.secretAccessKey = config.secretAccessKey || ''
-      s3Config.path = config.path || ''
+      s3Config.value.endpoint = config.endpoint || ''
+      s3Config.value.region = config.region || ''
+      s3Config.value.bucket = config.bucket || ''
+      s3Config.value.accessKeyId = config.accessKeyId || ''
+      s3Config.value.secretAccessKey = config.secretAccessKey || ''
+      s3Config.value.path = config.path || ''
     }
 
     configSaved.value = true
@@ -176,22 +176,22 @@ const saveConfig = async () => {
         config = {
           type: 'webdav',
           enabled: true,
-          url: webdavConfig.url,
-          username: webdavConfig.username,
-          password: webdavConfig.password,
-          path: webdavConfig.path || undefined
+          url: webdavConfig.value.url,
+          username: webdavConfig.value.username,
+          password: webdavConfig.value.password,
+          path: webdavConfig.value.path || undefined
         } as WebDAVConfig
         break
       case 's3':
         config = {
           type: 's3',
           enabled: true,
-          endpoint: s3Config.endpoint,
-          region: s3Config.region,
-          bucket: s3Config.bucket,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          path: s3Config.path || undefined
+          endpoint: s3Config.value.endpoint,
+          region: s3Config.value.region,
+          bucket: s3Config.value.bucket,
+          accessKeyId: s3Config.value.accessKeyId,
+          secretAccessKey: s3Config.value.secretAccessKey,
+          path: s3Config.value.path || undefined
         } as S3Config
         break
       default:
@@ -247,22 +247,22 @@ const testConnection = async () => {
         tempConfig = {
           type: 'webdav',
           enabled: true,
-          url: webdavConfig.url,
-          username: webdavConfig.username,
-          password: webdavConfig.password,
-          path: webdavConfig.path || undefined
+          url: webdavConfig.value.url,
+          username: webdavConfig.value.username,
+          password: webdavConfig.value.password,
+          path: webdavConfig.value.path || undefined
         } as WebDAVConfig
         break
       case 's3':
         tempConfig = {
           type: 's3',
           enabled: true,
-          endpoint: s3Config.endpoint,
-          region: s3Config.region,
-          bucket: s3Config.bucket,
-          accessKeyId: s3Config.accessKeyId,
-          secretAccessKey: s3Config.secretAccessKey,
-          path: s3Config.path || undefined
+          endpoint: s3Config.value.endpoint,
+          region: s3Config.value.region,
+          bucket: s3Config.value.bucket,
+          accessKeyId: s3Config.value.accessKeyId,
+          secretAccessKey: s3Config.value.secretAccessKey,
+          path: s3Config.value.path || undefined
         } as S3Config
         break
       default:
