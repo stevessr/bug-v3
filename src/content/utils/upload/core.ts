@@ -72,6 +72,10 @@ export interface UploadStatusUpdate {
   error?: any
   waitSeconds?: number
   waitUntil?: number
+  /** Which pipeline phase this update belongs to. 'convert' = pre-upload video transcoding. */
+  phase?: 'convert' | 'upload'
+  /** Present when phase === 'convert': live transcoding progress (0-100). */
+  convertProgress?: { percent: number; message?: string }
 }
 
 export type UploadStatusListener = (update: UploadStatusUpdate) => void
@@ -105,7 +109,16 @@ export class ImageUploader {
     // (format / size / frame rate) before entering the upload queue.
     if (isVideoFileLike(file)) {
       const { convertVideoForUpload } = await import('./videoConvert')
-      file = await convertVideoForUpload(file)
+      file = await convertVideoForUpload(file, progress => {
+        onStatusChange?.({
+          id: `convert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          file,
+          status: 'uploading',
+          retryCount: 0,
+          phase: 'convert',
+          convertProgress: { percent: progress.percent, message: progress.message }
+        })
+      })
     }
 
     return new Promise((resolve, reject) => {

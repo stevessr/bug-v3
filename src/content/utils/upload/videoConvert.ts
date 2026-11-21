@@ -4,6 +4,7 @@ import {
   loadVideoConvertSettings,
   type VideoConvertSettings
 } from '@/utils/video/videoConvertSettings'
+import type { VideoConvertProgress } from '@/utils/video/videoAnimationArgs'
 import {
   VIDEO_CONVERT_INIT_MESSAGE,
   type VideoConvertPortRequest,
@@ -109,7 +110,7 @@ const getSession = (): Promise<ConverterSession> => {
 const runConversion = async (
   file: File,
   settings: VideoConvertSettings,
-  onProgress?: (message: string) => void
+  onProgress?: (progress: VideoConvertProgress) => void
 ): Promise<File> => {
   const session = await getSession()
   const id = `vc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -124,7 +125,7 @@ const runConversion = async (
       const data = (event as MessageEvent<VideoConvertPortResponse>).data
       if (!data || data.type === 'ready' || !('id' in data) || data.id !== id) return
       if (data.type === 'progress') {
-        onProgress?.(data.progress.message)
+        onProgress?.(data.progress)
       } else if (data.type === 'result') {
         if (data.warning) notify(data.warning, 'info')
         done(() => resolve(data.file))
@@ -162,7 +163,10 @@ const runConversion = async (
  * Convert a video with the saved settings. Resolves to the original file untouched when
  * auto-conversion is turned off in the options page.
  */
-export async function convertVideoForUpload(file: File): Promise<File> {
+export async function convertVideoForUpload(
+  file: File,
+  onProgress?: (progress: VideoConvertProgress) => void
+): Promise<File> {
   const settings = await loadVideoConvertSettings()
   if (!settings.autoConvertOnUpload) return file
 
@@ -170,7 +174,7 @@ export async function convertVideoForUpload(file: File): Promise<File> {
   if (idleTimer) clearTimeout(idleTimer)
   notify(`正在将视频「${file.name}」转换为 ${settings.format.toUpperCase()}...`, 'info')
   try {
-    return await runConversion(file, settings)
+    return await runConversion(file, settings, onProgress)
   } finally {
     activeJobs--
     if (activeJobs === 0) scheduleIdleTeardown()

@@ -114,7 +114,7 @@ export async function uploadAndInsert(
   let delegatedCount = 0
   let insertionFailureCount = 0
   const failedItems: { file: File; error: any }[] = []
-  type ProgressStatus = 'waiting' | 'uploading' | 'success' | 'failed'
+  type ProgressStatus = 'waiting' | 'converting' | 'uploading' | 'success' | 'failed'
   const progressStatuses: ProgressStatus[] = filesArray.map(() => 'waiting')
   const rowMap = new Map<
     number,
@@ -122,9 +122,18 @@ export async function uploadAndInsert(
   >()
   const currentProgressPanel = progressPanel
 
-  const updateProgress = (index: number, file: File, status: ProgressStatus, errMsg?: string) => {
+  const updateProgress = (
+    index: number,
+    file: File,
+    status: ProgressStatus,
+    errMsg?: string,
+    convertDetail?: { percent?: number; message?: string }
+  ) => {
     progressStatuses[index] = status
     const waitingCount = progressStatuses.filter(itemStatus => itemStatus === 'waiting').length
+    const convertingCount = progressStatuses.filter(
+      itemStatus => itemStatus === 'converting'
+    ).length
     const uploadingCount = progressStatuses.filter(itemStatus => itemStatus === 'uploading').length
     const doneCount = progressStatuses.filter(
       itemStatus => itemStatus === 'success' || itemStatus === 'failed'
@@ -132,6 +141,7 @@ export async function uploadAndInsert(
 
     progressTitle.innerHTML = `
       <span>上传 ${uploadingCount}</span>
+      <span style="color:var(--tertiary);margin-left:10px">转码 ${convertingCount}</span>
       <span style="color:#d97706;margin-left:10px">等待 ${waitingCount}</span>
       <span style="color:var(--success);margin-left:12px">成功 ${successCount}</span>
       <span style="color:var(--danger);margin-left:8px">失败 ${failCount}</span>
@@ -146,15 +156,40 @@ export async function uploadAndInsert(
           padding: 6px 4px; border-bottom: 1px solid var(--primary-low);
         `
       })
-      const thumb = createE('img', {
-        style: `
-          width: 36px; height: 36px; border-radius: 4px;
-          object-fit: cover; flex-shrink: 0;
-          background: var(--primary-low);
-        `
-      }) as HTMLImageElement
-      thumb.src = URL.createObjectURL(file)
-      thumb.onload = () => URL.revokeObjectURL(thumb.src)
+      const isVideoFile =
+        file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|avi|mkv|gifv)$/i.test(file.name)
+      let thumb: HTMLElement
+      if (isVideoFile) {
+        // <img> cannot render video blobs — use a muted <video> preview instead.
+        const video = createE('video', {
+          style: `
+            width: 36px; height: 36px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
+            background: var(--primary-low);
+          `
+        }) as HTMLVideoElement
+        video.src = URL.createObjectURL(file)
+        video.muted = true
+        video.loop = true
+        video.preload = 'metadata'
+        video.addEventListener('loadedmetadata', () => URL.revokeObjectURL(video.src), {
+          once: true
+        })
+        video.addEventListener('mouseenter', () => void video.play().catch(() => undefined))
+        video.addEventListener('mouseleave', () => video.pause())
+        thumb = video
+      } else {
+        const img = createE('img', {
+          style: `
+            width: 36px; height: 36px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
+            background: var(--primary-low);
+          `
+        }) as HTMLImageElement
+        img.src = URL.createObjectURL(file)
+        img.onload = () => URL.revokeObjectURL(img.src)
+        thumb = img
+      }
       const iconSpan = createE('div', {
         style: `flex-shrink:0;width:16px;height:16px;display:flex;align-items:center;`
       })
@@ -166,6 +201,19 @@ export async function uploadAndInsert(
       row.appendChild(thumb)
       row.appendChild(iconSpan)
       row.appendChild(nameSpan)
+      let stagesSpan: HTMLElement | null = null
+      if (isVideoFile) {
+        // Multi-node pipeline strip: 等待 → 转码 → 上传 → 完成
+        const stages = ['等待', '转码', '上传', '完成']
+        stagesSpan = createE('div', {
+          style: `
+            flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+            font-size: 11px; color: var(--primary-medium);
+          `
+        })
+        stagesSpan.dataset.stages = stages.join('|')
+        row.appendChild(stagesSpan)
+      }
       progressList.appendChild(row)
       entry = { row, iconSpan, nameSpan }
       rowMap.set(index, entry)
@@ -178,9 +226,54 @@ export async function uploadAndInsert(
           : status === 'waiting'
             ? waitingIcon
             : spinnerSvg
-    entry.nameSpan.textContent = errMsg ? `${file.name} — ${errMsg}` : file.name
+    let displayMessage = errMsg ? `${file.name} — ${errMsg}` : file.name
+    if (status === 'converting') {
+      const percentText =
+        convertDetail?.percent != null ? ` ${Math.round(convertDetail.percent)}%` : ''
+      displayMessage = `${file.name} — 转码中${percentText}${convertDetail?.message ? `（${convertDetail.message}）` : ''}`
+    }
+    entry.nameSpan.textContent = displayMessage
     entry.nameSpan.style.color =
-      status === 'failed' ? 'var(--danger)' : status === 'waiting' ? '#d97706' : 'var(--primary)'
+      status === 'failed'
+        ? 'var(--danger)'
+        : status === 'waiting'
+          ? '#d97706'
+          : status === 'converting'
+            ? 'var(--tertiary)'
+            : 'var(--primary)'
+
+    // Render the per-row pipeline stage strip (video rows only).
+    const stagesSpan = entry.row.querySelector<HTMLElement>('[data-stages]')
+    if (stagesSpan) {
+      const stages = (stagesSpan.dataset.stages || '').split('|').filter(Boolean)
+      const activeIndex =
+        status === 'waiting'
+          ? 0
+          : status === 'converting'
+            ? 1
+            : status === 'uploading'
+              ? 2
+              : stages.length - 1
+      stagesSpan.innerHTML = stages
+        .map((label, i) => {
+          let color = 'var(--primary-medium)'
+          if (status === 'failed') {
+            if (i < activeIndex) color = 'var(--success)'
+            else if (i === activeIndex) color = 'var(--danger)'
+          } else if (i < activeIndex) {
+            color = 'var(--success)'
+          } else if (i === activeIndex) {
+            color = 'var(--tertiary)'
+          }
+          let text = label
+          if (status === 'converting' && i === 1 && convertDetail?.percent != null) {
+            text = `${label} ${Math.round(convertDetail.percent)}%`
+          }
+          const fontWeight = i === activeIndex ? '600' : '400'
+          return `<span style="color:${color};font-weight:${fontWeight};white-space:nowrap">${text}</span>${i < stages.length - 1 ? '<span style="color:var(--primary-medium)">·</span>' : ''}`
+        })
+        .join('')
+    }
     progressList.scrollTop = progressList.scrollHeight
   }
 
@@ -239,6 +332,10 @@ export async function uploadAndInsert(
   const uploadTasks = filesArray.map(async (file, index) => {
     try {
       const result = await uploader.uploadImage(file, routeContext, update => {
+        if (update.phase === 'convert') {
+          updateProgress(index, file, 'converting', undefined, update.convertProgress)
+          return
+        }
         if (update.status === 'waiting' || update.status === 'uploading') {
           updateProgress(index, file, update.status, statusMessage(update))
         }
