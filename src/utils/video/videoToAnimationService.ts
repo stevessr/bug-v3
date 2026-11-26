@@ -547,7 +547,7 @@ async function encodeAnimatedAvifViaFfmpeg(
   )
 
   jobSignal.throwIfAborted()
-  const { encodeAvif } = await import('@/utils/avif/avifEncoder')
+  const { encodeAvif, stripAlphaChannel } = await import('@/utils/avif/avifEncoder')
   const encodeQuality = clampQuality(options.quality)
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d', { alpha: true, willReadFrequently: true })
@@ -560,11 +560,10 @@ async function encodeAnimatedAvifViaFfmpeg(
   let frameWidth = 0
   let frameHeight = 0
 
-  for (let i = 0; i < extractedBlobs.length; i++) {
-    jobSignal.throwIfAborted()
-    const bitmap = await createImageBitmap(extractedBlobs[i])
+  const decodeFrameToPixels = async (blob: Blob, isFirst: boolean): Promise<ImageData> => {
+    const bitmap = await createImageBitmap(blob)
     try {
-      if (i === 0) {
+      if (isFirst) {
         frameWidth = Math.max(1, bitmap.width)
         frameHeight = Math.max(1, bitmap.height)
         canvas.width = frameWidth
@@ -577,11 +576,26 @@ async function encodeAnimatedAvifViaFfmpeg(
     }
 
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
-    for (let pixel = 3; pixel < pixels.data.length; pixel += 4) {
-      if (pixels.data[pixel] !== 255) hasTransparency = true
-      pixels.data[pixel] = 255
+    if (stripAlphaChannel(pixels)) {
+      hasTransparency = true
     }
-    const encoded = new Uint8Array(await encodeAvif(pixels, { quality: encodeQuality, speed: 8 }))
+    return pixels
+  }
+
+  let nextPixelsPromise: Promise<ImageData> | null =
+    extractedBlobs.length > 0 ? decodeFrameToPixels(extractedBlobs[0], true) : null
+
+  for (let i = 0; i < extractedBlobs.length; i++) {
+    jobSignal.throwIfAborted()
+    if (!nextPixelsPromise) break
+    const pixels = await nextPixelsPromise
+    // Overlap decoding the next PNG frame while the AVIF worker encodes the current frame.
+    nextPixelsPromise =
+      i + 1 < extractedBlobs.length ? decodeFrameToPixels(extractedBlobs[i + 1], false) : null
+
+    const encoded = new Uint8Array(
+      await encodeAvif(pixels, { quality: encodeQuality, speed: 8 }, jobSignal)
+    )
     encodedFrames.push({
       bytes: extractAvifSample(encoded),
       durationMs: Math.round(1000 / fps)

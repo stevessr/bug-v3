@@ -407,6 +407,15 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: ['vue', 'pinia', 'ant-design-vue', '@ant-design/icons-vue']
     },
+    worker: {
+      format: 'es',
+      plugins: () => [createAvifMtStubPlugin()],
+      rolldownOptions: {
+        output: {
+          assetFileNames: 'assets/[name].[ext]'
+        }
+      }
+    },
     build: {
       // Chrome/Edge already support modulepreload. Avoid installing Vite's
       // document-wide polyfill (and its MutationObserver) in every surface.

@@ -216,15 +216,44 @@ export async function convertWebmInBrowser(
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
     }
+    const hasDrawnPixels = () => {
+      const data = new Uint32Array(
+        context.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+      )
+      for (let p = 0; p < data.length; p++) {
+        if (data[p] !== 0) return true
+      }
+      return false
+    }
+    const drawFrame = async (targetTime: number, allowWarmup: boolean) => {
+      if (targetTime > 0 || !allowWarmup) {
+        await seekVideo(targetTime)
+      }
+      draw()
+      // On a cold Chromium media decoder, frame 0 can paint all-zero RGBA right after `loadeddata`
+      // before the texture/mailbox is latched; nudge the decoder and re-draw once before accepting blank.
+      if (!allowWarmup || hasDrawnPixels()) return
+      check()
+      const nudgeTime =
+        targetTime + 0.05 < videoDuration - 0.001
+          ? targetTime + 0.05
+          : Math.max(0, targetTime - 0.05)
+      if (Math.abs(nudgeTime - targetTime) > 0.002) {
+        await seekVideo(nudgeTime)
+        await seekVideo(targetTime)
+        draw()
+        if (hasDrawnPixels()) return
+      }
+      await new Promise(resolve => setTimeout(resolve, 20))
+      check()
+      draw()
+    }
     const encodeQuality =
       typeof options.quality === 'number' && Number.isFinite(options.quality)
         ? Math.min(100, Math.max(1, Math.round(options.quality)))
         : 62
     if (format === 'avif') {
-      if (clipStart > 0) {
-        await seekVideo(clipStart)
-      }
-      draw()
+      await drawFrame(clipStart, true)
       options.onProgress?.({ message: '正在本地编码 AVIF 静态首帧...' })
       const native = await encodeCanvas(canvas, 'image/avif')
       check()
@@ -252,23 +281,21 @@ export async function convertWebmInBrowser(
     }
     const frames: { bytes: Uint8Array; durationMs: number }[] = []
     let hasTransparency = false
-    const avifEncoder =
-      format === 'animated-avif' ? (await import('@/utils/avif/avifEncoder')).encodeAvif : null
+    const avifModule = format === 'animated-avif' ? await import('@/utils/avif/avifEncoder') : null
+    const avifEncoder = avifModule ? avifModule.encodeAvif : null
     for (let i = 0; i < count; i++) {
       check()
       const elapsed = i / fps
       const time = clipStart + elapsed
-      if (i > 0 || clipStart > 0) await seekVideo(time)
-      draw()
-      if (avifEncoder) {
+      await drawFrame(time, i === 0)
+      if (avifEncoder && avifModule) {
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
         // The single color track muxer currently doesn't support an auxiliary alpha track.
-        for (let pixel = 3; pixel < pixels.data.length; pixel += 4) {
-          if (pixels.data[pixel] !== 255) hasTransparency = true
-          pixels.data[pixel] = 255
+        if (avifModule.stripAlphaChannel(pixels)) {
+          hasTransparency = true
         }
         const encoded = new Uint8Array(
-          await avifEncoder(pixels, { quality: encodeQuality, speed: 8 })
+          await avifEncoder(pixels, { quality: encodeQuality, speed: 8 }, signal)
         )
         frames.push({
           bytes: extractAvifSample(encoded),

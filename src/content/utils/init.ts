@@ -18,7 +18,6 @@ let cachedSubmenuInjectorEnabled: boolean | null = null
 
 // 存储定时器 ID 以便清理
 let toolbarCheckIntervalId: number | null = null
-let floatingButtonIntervalId: number | null = null
 let injectionRetryTimeoutId: number | null = null
 let mutationCheckTimeoutId: number | null = null
 let storageDebounceTimeoutId: number | null = null
@@ -44,10 +43,6 @@ export function cleanupEmojiFeature(): void {
   if (toolbarCheckIntervalId) {
     window.clearInterval(toolbarCheckIntervalId)
     toolbarCheckIntervalId = null
-  }
-  if (floatingButtonIntervalId) {
-    window.clearInterval(floatingButtonIntervalId)
-    floatingButtonIntervalId = null
   }
   injectionRetryTimeoutId = clearTimeoutHandle(injectionRetryTimeoutId)
   mutationCheckTimeoutId = clearTimeoutHandle(mutationCheckTimeoutId)
@@ -110,36 +105,31 @@ function checkAndReinjectButtons() {
   })
 }
 
+const REPLY_BUTTON_SELECTOR = [
+  'button.btn.btn-icon-text.btn-primary.create.topic-footer-button[title*="回复"]',
+  'button.btn.no-text.btn-icon.btn-default.create.reply-to-post[title*="回复"]',
+  'button.btn.btn-icon-text.post-action-menu__reply.reply.create[title*="回复"]'
+].join(', ')
+
+const IGNORED_MUTATION_TAGS = new Set(['IMG', 'SVG', 'PATH', 'BR', 'HR', 'SPAN', 'P', 'A'])
+
 // Setup reply button listeners
 function setupReplyButtonListeners() {
-  // Selectors for different types of reply buttons
-  const replyButtonSelectors = [
-    // Topic footer reply button
-    'button.btn.btn-icon-text.btn-primary.create.topic-footer-button[title*="回复"]',
-    // Simple reply button (no text)
-    'button.btn.no-text.btn-icon.btn-default.create.reply-to-post[title*="回复"]',
-    // Post action menu reply button
-    'button.btn.btn-icon-text.post-action-menu__reply.reply.create[title*="回复"]'
-  ]
-
   if (replyClickHandler) {
     document.removeEventListener('click', replyClickHandler)
   }
 
   // Use one delegated listener instead of one listener per reply button.
   replyClickHandler = (event: Event) => {
-    const target = event.target as HTMLElement
+    const target = event.target as HTMLElement | null
+    if (!target) return
 
-    // Check if the clicked element matches any reply button selector
-    const isReplyButton = replyButtonSelectors.some(selector => {
-      try {
-        return target.matches(selector) || target.closest(selector)
-      } catch (_e) {
-        // Handle invalid selector gracefully
-        void _e
-        return false
-      }
-    })
+    let isReplyButton = false
+    try {
+      isReplyButton = Boolean(target.closest(REPLY_BUTTON_SELECTOR))
+    } catch {
+      isReplyButton = false
+    }
 
     if (isReplyButton) {
       console.log('[Emoji Extension] Reply button clicked, checking for injection needs...')
@@ -158,7 +148,7 @@ function setupReplyButtonListeners() {
   document.addEventListener('click', replyClickHandler)
 
   // Also listen for mutations in case buttons are added/removed dynamically
-  // 使用节流策略减少高负载页面的 CPU 占用
+  // 使用节流与叶节点预过滤减少高负载页面的 CPU 占用
   let pendingCheck = false
 
   // 清理之前的 observer（防止热更新时重复创建）
@@ -167,48 +157,47 @@ function setupReplyButtonListeners() {
   }
 
   mutationObserver = new MutationObserver(mutations => {
+    if (pendingCheck || cachedSubmenuInjectorEnabled === true || document.hidden) return
+
     let shouldCheck = false
 
     mutationLoop: for (const mutation of mutations) {
-      // Check if any added nodes contain reply buttons
       for (const node of mutation.addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as Element
+        if (node.nodeType !== Node.ELEMENT_NODE) continue
+        const element = node as Element
+        if (
+          IGNORED_MUTATION_TAGS.has(element.tagName) ||
+          element.hasAttribute('data-emoji-extension')
+        ) {
+          continue
+        }
 
-          // Check if the added element or its descendants contain reply buttons
-          const hasReplyButtons = replyButtonSelectors.some(selector => {
-            try {
-              return element.matches(selector) || element.querySelector(selector)
-            } catch (_e) {
-              void _e
-              return false
-            }
-          })
-
-          if (hasReplyButtons) {
+        try {
+          if (
+            element.matches(REPLY_BUTTON_SELECTOR) ||
+            element.querySelector(REPLY_BUTTON_SELECTOR) !== null
+          ) {
             shouldCheck = true
             break mutationLoop
           }
+        } catch {
+          // ignore selector errors
         }
       }
     }
 
     if (shouldCheck) {
       // 节流：500ms 内只执行一次检查
-      if (!pendingCheck) {
-        pendingCheck = true
-        console.log(
-          '[Emoji Extension] Reply buttons detected in DOM changes, checking injection...'
-        )
+      pendingCheck = true
+      console.log('[Emoji Extension] Reply buttons detected in DOM changes, checking injection...')
 
-        mutationCheckTimeoutId = clearTimeoutHandle(mutationCheckTimeoutId)
+      mutationCheckTimeoutId = clearTimeoutHandle(mutationCheckTimeoutId)
 
-        mutationCheckTimeoutId = window.setTimeout(() => {
-          checkAndReinjectButtons()
-          pendingCheck = false
-          mutationCheckTimeoutId = null
-        }, 500)
-      }
+      mutationCheckTimeoutId = window.setTimeout(() => {
+        checkAndReinjectButtons()
+        pendingCheck = false
+        mutationCheckTimeoutId = null
+      }, 500)
     }
   })
 
@@ -366,26 +355,15 @@ export async function initializeEmojiFeature(
     ;(window as any).chrome.storage.onChanged.addListener(storageChangeHandler)
   }
 
-  // periodic checks - 使用模块级变量存储定时器 ID 以便清理
-  // 清理之前可能存在的定时器（防止热更新时重复创建）
+  // periodic fallback check - 合并工具栏与浮动按钮兜底巡检，减少定时器唤醒频率
   if (toolbarCheckIntervalId) {
     window.clearInterval(toolbarCheckIntervalId)
   }
   toolbarCheckIntervalId = window.setInterval(() => {
-    // 如果启用了子菜单注入，则跳过工具栏按钮注入
     if (cachedSubmenuInjectorEnabled === true || document.hidden) return
     checkAndReinjectButtons()
-  }, 30000)
-
-  // Check if floating button should be shown periodically
-  if (floatingButtonIntervalId) {
-    window.clearInterval(floatingButtonIntervalId)
-  }
-  floatingButtonIntervalId = window.setInterval(() => {
-    // 如果启用了子菜单注入，则不要显示浮动按钮
-    if (cachedSubmenuInjectorEnabled === true || document.hidden) return
     checkAndShowFloatingButton()
-  }, 10000)
+  }, 30000)
 
   visibilityChangeHandler = () => {
     if (document.hidden || cachedSubmenuInjectorEnabled === true) return
