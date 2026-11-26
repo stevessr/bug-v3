@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useEmojiStore } from '../stores/emojiStore'
 import type { EmojiGroup, Emoji } from '../types/type'
 import { isImageUrl } from '../utils/isImageUrl'
-import { buildMarkdownImage } from '../utils/emojiMarkdown'
+import { buildMarkdownImage, normalizeUploadPackageFormat } from '../utils/emojiMarkdown'
 
 import {
   importConfigurationToStore,
@@ -302,6 +302,10 @@ export default function useOptions() {
 
   const updateForumUploadConcurrency = (value: number) => {
     emojiStore.updateSettings({ forumUploadConcurrency: value })
+  }
+
+  const updateUploadPackageFormat = (value: string) => {
+    emojiStore.updateSettings({ uploadPackageFormat: normalizeUploadPackageFormat(value) })
   }
 
   // Theme management is now provided by themeManager composable
@@ -884,6 +888,7 @@ export default function useOptions() {
     updateEnableLinuxDoAutoChallenge,
     updateDiscourseRouterRefreshInterval,
     updateForumUploadConcurrency,
+    updateUploadPackageFormat,
     updateEnableHoverPreview,
     updateUploadMenuItems,
     updateGeminiApiKey,

@@ -78,6 +78,7 @@ declare global {
   const fetchImageForPreview: typeof import('./utils/imageCache').fetchImageForPreview
   const fetchTenorMediaAsBlob: typeof import('./utils/tenor').fetchTenorMediaAsBlob
   const formatMessage: typeof import('./utils/i18n').formatMessage
+  const formatUploadPackageMarkdown: typeof import('./utils/emojiMarkdown').formatUploadPackageMarkdown
   const generateBatchNames: typeof import('./utils/geminiService').generateBatchNames
   const generateBatchNamesStreaming: typeof import('./utils/geminiService').generateBatchNamesStreaming
   const getActivePinia: typeof import('pinia').getActivePinia
@@ -157,6 +158,7 @@ declare global {
   const normalizeDiscourseUploadOrigin: typeof import('./utils/discourseInstance').normalizeDiscourseUploadOrigin
   const normalizeDiscourseUploadUrl: typeof import('./utils/discourseUpload').normalizeDiscourseUploadUrl
   const normalizeImageUrl: typeof import('./utils/isImageUrl').normalizeImageUrl
+  const normalizeUploadPackageFormat: typeof import('./utils/emojiMarkdown').normalizeUploadPackageFormat
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
   const onBeforeRouteLeave: typeof import('vue-router').onBeforeRouteLeave
@@ -421,6 +423,7 @@ declare module 'vue' {
     readonly fetchImageForPreview: UnwrapRef<typeof import('./utils/imageCache')['fetchImageForPreview']>
     readonly fetchTenorMediaAsBlob: UnwrapRef<typeof import('./utils/tenor')['fetchTenorMediaAsBlob']>
     readonly formatMessage: UnwrapRef<typeof import('./utils/i18n')['formatMessage']>
+    readonly formatUploadPackageMarkdown: UnwrapRef<typeof import('./utils/emojiMarkdown')['formatUploadPackageMarkdown']>
     readonly generateBatchNames: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNames']>
     readonly generateBatchNamesStreaming: UnwrapRef<typeof import('./utils/geminiService')['generateBatchNamesStreaming']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
@@ -500,6 +503,7 @@ declare module 'vue' {
     readonly normalizeDiscourseUploadOrigin: UnwrapRef<typeof import('./utils/discourseInstance')['normalizeDiscourseUploadOrigin']>
     readonly normalizeDiscourseUploadUrl: UnwrapRef<typeof import('./utils/discourseUpload')['normalizeDiscourseUploadUrl']>
     readonly normalizeImageUrl: UnwrapRef<typeof import('./utils/isImageUrl')['normalizeImageUrl']>
+    readonly normalizeUploadPackageFormat: UnwrapRef<typeof import('./utils/emojiMarkdown')['normalizeUploadPackageFormat']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>

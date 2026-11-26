@@ -70,6 +70,7 @@ const {
   updateEnableDiscourseRouterRefresh,
   updateDiscourseRouterRefreshInterval,
   updateForumUploadConcurrency,
+  updateUploadPackageFormat,
   updateEnableLinuxDoSeeking,
   updateLinuxDoSeekingUsers,
   updateEnableLinuxDoSeekingDanmaku,
@@ -182,6 +183,7 @@ onMounted(async () => {
               @update:useDiscourseNativeUpload="updateUseDiscourseNativeUpload"
               @update:useBackgroundNativeUpload="updateUseBackgroundNativeUpload"
               @update:forumUploadConcurrency="updateForumUploadConcurrency"
+              @update:uploadPackageFormat="updateUploadPackageFormat"
               @update:cloudMarketDomain="updateCloudMarketDomain"
               @update:enableDiscourseRouterRefresh="updateEnableDiscourseRouterRefresh"
               @update:enableLinuxDoAutoChallenge="updateEnableLinuxDoAutoChallenge"

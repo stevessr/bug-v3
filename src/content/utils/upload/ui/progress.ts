@@ -9,7 +9,12 @@ import {
 } from '../helpers'
 import { notify } from '../../ui/notify'
 
-import { buildMarkdownImage } from '@/utils/emojiMarkdown'
+import {
+  buildMarkdownImage,
+  formatUploadPackageMarkdown,
+  normalizeUploadPackageFormat
+} from '@/utils/emojiMarkdown'
+import { cachedState } from '@/content/data/state'
 import type { DiscourseUploadRouteContext } from '@/content/discourse/utils/nativeUpload'
 
 export async function uploadAndInsert(
@@ -283,23 +288,30 @@ export async function uploadAndInsert(
     | { status: 'failed'; error: any }
 
   const outcomes: UploadOutcome[] = filesArray.map(() => ({ status: 'pending' }))
+  const packageFormat = normalizeUploadPackageFormat(cachedState.settings?.uploadPackageFormat)
   let nextInsertionIndex = 0
+
+  const buildOutcomeMarkdown = (file: File, result: UploadResponse): string => {
+    const alt =
+      result.width && result.height ? `${file.name}|${result.width}x${result.height}` : file.name
+    return buildMarkdownImage(alt, result)
+  }
 
   // Uploads are enqueued together so files after the active one really are in
   // the waiting queue. Results are still inserted in the user's file order,
   // even if a future uploader completes them out of order.
+  // When a package wrapper is configured, wait for the whole batch so the
+  // wrapper wraps all succeeded items cleanly in one atomic insertion.
   const flushReadyInsertions = () => {
+    if (packageFormat !== 'none') return
+
     while (nextInsertionIndex < outcomes.length) {
       const outcome = outcomes[nextInsertionIndex]
       if (outcome.status === 'pending') return
 
       const file = filesArray[nextInsertionIndex]
       if (outcome.status === 'success' && !outcome.result.handledByDiscourseRoute) {
-        const alt =
-          outcome.result.width && outcome.result.height
-            ? `${file.name}|${outcome.result.width}x${outcome.result.height}`
-            : file.name
-        const markdown = buildMarkdownImage(alt, outcome.result)
+        const markdown = buildOutcomeMarkdown(file, outcome.result)
         const insertionTarget = resolveEditorInsertionTarget(frozenEditorTarget)
         if (insertionTarget) frozenEditorTarget = insertionTarget
         if (!insertIntoEditor(markdown, insertionTarget)) {
@@ -314,6 +326,37 @@ export async function uploadAndInsert(
       }
 
       nextInsertionIndex++
+    }
+  }
+
+  const flushPackagedInsertions = () => {
+    if (packageFormat === 'none') return
+
+    const packagedItems: string[] = []
+    const packagedIndices: number[] = []
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status !== 'success' || outcome.result.handledByDiscourseRoute) return
+      const itemMarkdown = buildOutcomeMarkdown(filesArray[index], outcome.result)
+      if (!itemMarkdown) return
+      packagedItems.push(itemMarkdown)
+      packagedIndices.push(index)
+    })
+
+    if (packagedItems.length === 0) return
+
+    const packagedMarkdown = formatUploadPackageMarkdown(packagedItems, packageFormat)
+    const insertionTarget = resolveEditorInsertionTarget(frozenEditorTarget)
+    if (insertionTarget) frozenEditorTarget = insertionTarget
+    if (!insertIntoEditor(packagedMarkdown, insertionTarget)) {
+      insertionFailureCount += packagedIndices.length
+      for (const index of packagedIndices) {
+        updateProgress(
+          index,
+          filesArray[index],
+          'success',
+          '上传成功，但未找到可用编辑器焦点，未自动填入'
+        )
+      }
     }
   }
 
@@ -361,6 +404,7 @@ export async function uploadAndInsert(
 
   await Promise.all(uploadTasks)
   flushReadyInsertions()
+  flushPackagedInsertions()
 
   // Keep the insertion point fixed while asynchronous results arrive. Once the
   // batch is complete, advance the visible caret to the final inserted tail.

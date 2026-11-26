@@ -1,6 +1,8 @@
 import { getForumFromUrl } from './cdnMapping'
 import { extractDiscourseUploadMetadata } from './discourseUpload'
 
+import type { UploadPackageFormat } from '@/types/type'
+
 export interface EmojiMarkdownSource {
   url?: string | null
   short_url?: string | null
@@ -52,4 +54,27 @@ export function buildMarkdownImage(
   const url = getPreferredEmojiMarkdownUrl(source)
   if (!url) return ''
   return `![${alt}](${url})`
+}
+
+export function normalizeUploadPackageFormat(value: unknown): UploadPackageFormat {
+  if (value === 'grid-carousel' || value === 'grid' || value === 'spoiler') {
+    return value
+  }
+  return 'none'
+}
+
+export function formatUploadPackageMarkdown(items: string[], format: unknown = 'none'): string {
+  const validItems = items.map(item => item.trim()).filter(Boolean)
+  if (validItems.length === 0) return ''
+
+  switch (normalizeUploadPackageFormat(format)) {
+    case 'grid-carousel':
+      return `[grid mode=carousel]\n${validItems.join('\n')}\n[/grid]`
+    case 'grid':
+      return `[grid]\n${validItems.join('\n')}\n[/grid]`
+    case 'spoiler':
+      return validItems.map(item => `[spoiler]${item}[/spoiler]`).join('\n')
+    default:
+      return validItems.join('\n')
+  }
 }

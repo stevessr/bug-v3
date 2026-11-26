@@ -2,7 +2,8 @@
 import { DownOutlined } from '@ant-design/icons-vue'
 import { ref, watch, computed, isRef, type Ref } from 'vue'
 
-import type { AppSettings } from '../../types/type'
+import type { AppSettings, UploadPackageFormat } from '../../types/type'
+import { normalizeUploadPackageFormat } from '../../utils/emojiMarkdown'
 
 import SettingSwitch from './SettingSwitch.vue'
 
@@ -23,6 +24,7 @@ const emit = defineEmits([
   'update:enableDiscourseRouterRefresh',
   'update:discourseRouterRefreshInterval',
   'update:forumUploadConcurrency',
+  'update:uploadPackageFormat',
   'update:enableLinuxDoLikeCounter',
   'update:enableLinuxDoAutoChallenge',
   'update:enableTenorSearch',
@@ -80,6 +82,30 @@ const handleOutputFormatSelect = (key: string) => {
 
 const handleOutputFormatSelectInfo = (info: { key: string | number }) => {
   handleOutputFormatSelect(String(info.key))
+}
+
+const UPLOAD_PACKAGE_FORMAT_LABELS: Record<UploadPackageFormat, string> = {
+  none: '无包装（默认）',
+  'grid-carousel': '轮播网格 [grid mode=carousel]',
+  grid: '网格 [grid]',
+  spoiler: '独立剧透 [spoiler]...[/spoiler]'
+}
+
+const getUploadPackageFormat = (): UploadPackageFormat =>
+  normalizeUploadPackageFormat(getSetting('uploadPackageFormat', 'none'))
+
+const localUploadPackageFormat = ref<UploadPackageFormat>(getUploadPackageFormat())
+watch(
+  () => getUploadPackageFormat(),
+  val => {
+    localUploadPackageFormat.value = val
+  }
+)
+
+const handleUploadPackageFormatSelect = (info: { key: string | number }) => {
+  const normalized = normalizeUploadPackageFormat(String(info.key))
+  localUploadPackageFormat.value = normalized
+  emit('update:uploadPackageFormat', normalized)
 }
 
 // 图片缓存策略
@@ -387,6 +413,29 @@ const handleTenorFilterSelect = (info: { key: string | number }) => {
             </a-button>
           </div>
         </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-4" data-testid="upload-package-format-row">
+        <div>
+          <label class="text-sm font-medium dark:text-white">上传打包格式</label>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            在论坛上传图片或动图插入编辑器时自动追加包装器（剧透模式会为每张图片独立包装）
+          </p>
+        </div>
+        <a-dropdown>
+          <template #overlay>
+            <a-menu @click="handleUploadPackageFormatSelect">
+              <a-menu-item key="none">无包装（默认）</a-menu-item>
+              <a-menu-item key="grid-carousel">[grid mode=carousel]...[/grid]</a-menu-item>
+              <a-menu-item key="grid">[grid]...[/grid]</a-menu-item>
+              <a-menu-item key="spoiler">[spoiler]...[/spoiler]（每张图片独立包装）</a-menu-item>
+            </a-menu>
+          </template>
+          <a-button data-testid="upload-package-format-trigger" title="选择上传打包格式">
+            {{ UPLOAD_PACKAGE_FORMAT_LABELS[localUploadPackageFormat] }}
+            <DownOutlined />
+          </a-button>
+        </a-dropdown>
       </div>
 
       <!-- LinuxDo 点赞计数器（仅在启用试验性特性时显示） -->

@@ -36,6 +36,7 @@ const DISCOURSE_CONTENT_SYNC_SETTING_KEYS: Array<keyof AppSettings> = [
   'useDiscourseNativeUpload',
   'useBackgroundNativeUpload',
   'forumUploadConcurrency',
+  'uploadPackageFormat',
   'enableLinuxDoCredit',
   'enableLinuxDoLikeCounter',
   'enableLinuxDoAutoChallenge',
