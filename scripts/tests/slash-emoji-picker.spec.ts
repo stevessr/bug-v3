@@ -182,6 +182,27 @@ test('filters both stages; Backspace returns to groups and Escape preserves the 
   await expect(page.locator(picker)).toHaveCount(0)
 })
 
+test('space interrupts the guided flow unless it triggers a group auto-select', async ({
+  page
+}) => {
+  await fixture(page)
+  const editor = page.locator('textarea.d-editor-input')
+  // 完整分组名 + 空格：自动选择/填充进入表情面板
+  await editor.pressSequentially('/狗狗')
+  await editor.pressSequentially(' ')
+  await expect(page.locator(`${picker} .slash-emojis`)).toHaveAttribute('aria-label', '狗狗 表情')
+  // 之后再次输入空格：中断自动引导并关闭菜单
+  await editor.pressSequentially(' ')
+  await expect(page.locator(picker)).toHaveCount(0)
+  await expect(editor).toHaveValue('/狗狗  ')
+  // 分组候选阶段输入空格但未匹配到任何分组：同样中断
+  await editor.fill('')
+  await editor.pressSequentially('/猫')
+  await expect(page.locator(picker)).toBeVisible()
+  await editor.pressSequentially(' ')
+  await expect(page.locator(picker)).toHaveCount(0)
+  await expect(editor).toHaveValue('/猫 ')
+})
 test('does not activate for ordinary fields, URLs or pasted slashes; cleanup is idempotent', async ({
   page
 }) => {

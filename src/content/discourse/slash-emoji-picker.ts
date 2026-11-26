@@ -558,6 +558,17 @@ export function initSlashEmojiPicker(): () => void {
       index = 0
     }
     const fullQuery = current.before.slice(start + 1, end)
+    // 空格代表词的结束：只有“完整分组名 + 空格”这一种情况用于自动选择/填充，
+    // 其后的任何空格（分组候选阶段未匹配到分组、或已进入表情面板后再按空格）
+    // 都应中断自动引导，而不是把空格当作过滤词继续留在菜单里。
+    if (activePane === 'groups') {
+      const hasAutoSelectTrigger = cachedState.emojiGroups.some((group: EmojiGroup) =>
+        fullQuery.toLocaleLowerCase().startsWith(group.name.toLocaleLowerCase() + ' ')
+      )
+      if (!hasAutoSelectTrigger && fullQuery.includes(' ')) return close()
+    } else if (current.before.slice(groupEnd, end).includes(' ')) {
+      return close()
+    }
     if (activePane === 'groups') {
       selectedGroup = null
       const group = cachedState.emojiGroups
