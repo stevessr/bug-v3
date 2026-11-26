@@ -299,13 +299,18 @@ function createUploadMenu(
   const autoList = (text: string, icon: string, url: string) =>
     list.appendChild(makeitem(text, icon, url))
 
-  // Merge backend-provided uploadMenuItems with centralized defaults so
-  // a single source of truth controls default items. If backend does not
+  // Read backend-provided uploadMenuItems and fall back to empty arrays when missing
   const backendUploadConfig = (cachedState.settings as any)?.uploadMenuItems || {}
   const merged = {
-    autoItems: Array.isArray(backendUploadConfig.autoItems) ? backendUploadConfig.autoItems : null,
-    iframes: Array.isArray(backendUploadConfig.iframes) ? backendUploadConfig.iframes : null,
-    sides: Array.isArray(backendUploadConfig.sides) ? backendUploadConfig.sides : null
+    autoItems: Array.isArray(backendUploadConfig.autoItems)
+      ? backendUploadConfig.autoItems
+      : ([] as Array<[string, string, string]>),
+    iframes: Array.isArray(backendUploadConfig.iframes)
+      ? backendUploadConfig.iframes
+      : ([] as Array<[string, string, string, string]>),
+    sides: Array.isArray(backendUploadConfig.sides)
+      ? backendUploadConfig.sides
+      : ([] as Array<[string, string, string, string]>)
   }
 
   merged.autoItems.forEach(([text, icon, url]: any) => autoList(text, icon, url))
