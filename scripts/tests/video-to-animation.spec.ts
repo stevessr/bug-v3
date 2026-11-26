@@ -14,7 +14,10 @@ function getVideoServiceUrl() {
   return `/${entry.file}`
 }
 
-async function serveBuild(page: import('@playwright/test').Page) {
+async function serveBuild(
+  page: import('@playwright/test').Page,
+  extraHeaders: Record<string, string> = {}
+) {
   await page.route(/^http:\/\/localhost(?::\d+)?\//, async route => {
     const path = new URL(route.request().url()).pathname
     try {
@@ -26,7 +29,7 @@ async function serveBuild(page: import('@playwright/test').Page) {
           : path.endsWith('.css')
             ? 'text/css'
             : 'text/html'
-      await route.fulfill({ body, contentType })
+      await route.fulfill({ body, contentType, headers: extraHeaders })
     } catch {
       await route.fulfill({ status: 404, body: '' })
     }
@@ -488,4 +491,38 @@ test('BufferPage video converter remembers its parameters across reloads', async
   await page.getByRole('tab', { name: '视频转动图' }).click()
   await expect(webpRadio).toHaveClass(/ant-radio-button-wrapper-checked/)
   await expect(page.getByTestId('auto-convert-switch')).not.toBeChecked()
+})
+
+test('MP4 to AVIF succeeds even when SharedArrayBuffer/threads() detection is enabled', async ({
+  page
+}) => {
+  test.setTimeout(90000)
+  const coiHeaders = {
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Embedder-Policy': 'require-corp',
+    'Cross-Origin-Resource-Policy': 'same-origin'
+  }
+  await serveBuild(page, coiHeaders)
+  await page.route('http://localhost/video-test-coi', route =>
+    route.fulfill({
+      body: '<html></html>',
+      contentType: 'text/html',
+      headers: coiHeaders
+    })
+  )
+  await page.goto('http://localhost/video-test-coi')
+
+  const isCrossOriginIsolated = await page.evaluate(() => ({
+    crossOriginIsolated: window.crossOriginIsolated,
+    hasSharedArrayBuffer: typeof SharedArrayBuffer === 'function'
+  }))
+  expect(isCrossOriginIsolated.crossOriginIsolated).toBe(true)
+  expect(isCrossOriginIsolated.hasSharedArrayBuffer).toBe(true)
+
+  const avif = await decodeAnimationInBrowser(page, getVideoServiceUrl(), [...mp4Fixture], 'avif')
+  expect(avif.type).toBe('image/avif')
+  expect(avif.fileName).toBe('sample-colors.avif')
+  expect(avif.frameCount).toBeGreaterThanOrEqual(2)
+  expect(avif.colors[0][0]).toBeGreaterThan(180)
+  expect(avif.colors[1][2]).toBeGreaterThan(180)
 })

@@ -192,42 +192,51 @@ function readRecentGitHistory() {
   }
 }
 
-// 拦截 @jsquash/avif 的多线程编码器入口（avif_enc_mt.js 及其 worker），
-// 替换为一个最小 stub 模块。原始文件包含 `new Worker(new URL('./avif_enc_mt.worker.mjs', import.meta.url))`
-// 与 `new URL('avif_enc_mt.wasm', import.meta.url)`，Vite 一旦扫描这两条
-// 引用就会强制把 3.4MB 多线程 WASM、对应 worker 以及 hash 副本拷贝进 dist。
-// 扩展 manifest 未启用 cross-origin isolation，threads() 在运行时必定 false，
-// 因此整个 MT 分支是死代码。
+// 将 @jsquash/avif 的多线程编码器入口（avif_enc_mt.js）重定向到单线程编码器（avif_enc.js），
+// 并把 worker 入口 stub 为空模块。原始 avif_enc_mt.js 包含
+// `new Worker(new URL('./avif_enc_mt.worker.mjs', import.meta.url))` 与
+// `new URL('avif_enc_mt.wasm', import.meta.url)`，Vite 一旦扫描这两条引用就会把额外的
+// 3.4MB 多线程 WASM、对应 worker 以及 hash 副本拷贝进 dist。
 //
-// 这里走 resolveId hook 而不是 resolve.alias，是因为 vite:worker-import-meta-url
-// 插件需要在原始 importer 的目录里查找 worker 路径，alias 改成绝对路径反而
-// 让相对路径解析失败。返回一个虚拟模块 id 让后续 load 钩子提供 stub 代码。
+// 注意：不能把 avif_enc_mt.js stub 成抛错函数。即使扩展 manifest 未启用 cross-origin
+// isolation，Chrome 扩展页或特定浏览器环境仍可能通过 wasm-feature-detect 的 threads()
+// 检测（例如支持 SharedArrayBuffer 的上下文），从而进入 `import('./codec/enc/avif_enc_mt.js')`
+// 分支。直接将该分支解析回单线程的 avif_enc.js，可确保所有环境都能正常编码 AVIF。
 function createAvifMtStubPlugin(): Plugin {
-  const VIRTUAL_ID = '\0virtual:avif-enc-mt-stub'
+  const VIRTUAL_WORKER_ID = '\0virtual:avif-enc-mt-worker-stub'
   // 既要匹配 jsquash 内部的相对 import `./codec/enc/avif_enc_mt.js`，
-  // 也要匹配 Vite 已解析过的绝对/规范化路径。简单匹配文件基名即可，
-  // 因为 avif_enc_mt 是 jsquash 独有的命名。
-  const AVIF_MT_BASENAME_RE = /(?:^|[\\/])avif_enc_mt(?:\.worker)?\.m?js(?:\?.*)?$/
+  // 也要匹配 Vite 已解析过的绝对/规范化路径。
+  const AVIF_MT_MAIN_RE = /(?:^|[\\/])avif_enc_mt\.m?js(?:\?.*)?$/
+  const AVIF_MT_WORKER_RE = /(?:^|[\\/])avif_enc_mt\.worker\.m?js(?:\?.*)?$/
   return {
     name: 'avif-enc-mt-stub',
     enforce: 'pre',
-    resolveId(source) {
-      // 廉价前置过滤：源字符串不含 `avif_enc_mt` 时立刻返回。
-      // resolveId 会对每个模块触发，避免对几千个无关 id 跑正则。
+    resolveId(source, importer, options) {
+      // 廉价前置过滤：源字符串不含 `avif_enc_mt` 时立刻同步返回 null。
+      // resolveId 会对每个模块触发，避免对几千个无关 id 分配 Promise 或跑正则。
       if (!source.includes('avif_enc_mt')) return null
-      if (AVIF_MT_BASENAME_RE.test(source)) {
-        return VIRTUAL_ID
+      if (AVIF_MT_MAIN_RE.test(source)) {
+        const singleThreadSource = source.replace(/avif_enc_mt(\.m?js(?:\?.*)?)$/, 'avif_enc$1')
+        return this.resolve(singleThreadSource, importer, {
+          ...options,
+          skipSelf: true
+        }).then(
+          resolved =>
+            resolved ||
+            this.resolve('@jsquash/avif/codec/enc/avif_enc.js', importer, {
+              ...options,
+              skipSelf: true
+            })
+        )
+      }
+      if (AVIF_MT_WORKER_RE.test(source)) {
+        return VIRTUAL_WORKER_ID
       }
       return null
     },
     load(id) {
-      if (id === VIRTUAL_ID) {
-        return [
-          '// jsquash AVIF multi-thread encoder is stubbed: extension is not COI.',
-          'export default function avifEncMtStub() {',
-          '  return Promise.reject(new Error("AVIF multi-thread encoder disabled (no COI)."))',
-          '}'
-        ].join('\n')
+      if (id === VIRTUAL_WORKER_ID) {
+        return '// jsquash AVIF multi-thread worker is stubbed; single-thread avif_enc.js is used.'
       }
       return null
     }
