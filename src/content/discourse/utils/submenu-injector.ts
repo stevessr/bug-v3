@@ -7,13 +7,8 @@
 import { createE, DQS, DOA } from '../../utils/dom/createEl'
 import { animateEnter, animateExit } from '../../utils/dom/animation'
 import { notify } from '../../utils/ui/notify'
-import { createAndShowIframeModal, createAndShowSideIframeModal } from '../../utils/dom/iframe'
-import { createQuickInsertMenu } from '../../utils/injector'
 
-import { autoReadAll, autoReadAllv2 } from './autoReadReplies'
-import { showImageUploadDialog } from './uploader'
 import { cachedState } from './ensure'
-import { createEmojiPicker } from './picker'
 
 // 菜单容器选择器
 const MENU_CONTAINER_SELECTORS = [
@@ -131,6 +126,7 @@ async function showEmojiPickerNearMenu(menuContainer: HTMLElement, isChat: boole
     return
   }
 
+  const { createEmojiPicker } = await import('./picker')
   const picker = await createEmojiPicker(false, isChat ? 'chat' : 'composer')
   currentSubmenuPicker = picker
   DOA(picker)
@@ -214,6 +210,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
     '上传本地图片',
     '📁',
     async () => {
+      const { showImageUploadDialog } = await import('./uploader')
       await showImageUploadDialog(isChat ? 'chat' : 'composer')
     },
     isChat
@@ -224,7 +221,8 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
   const challengeItem = createMenuItem(
     '过盾',
     '🛡️',
-    () => {
+    async () => {
+      const { createAndShowIframeModal } = await import('../../utils/dom/iframe')
       createAndShowIframeModal(
         'https://linux.do/challenge',
         href => {
@@ -255,6 +253,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       '📖',
       async () => {
         try {
+          const { autoReadAll } = await import('./autoReadReplies')
           await autoReadAll()
         } catch (error) {
           notify(
@@ -273,6 +272,7 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       '📖',
       async () => {
         try {
+          const { autoReadAllv2 } = await import('./autoReadReplies')
           await autoReadAllv2()
         } catch (error) {
           notify(
@@ -291,12 +291,13 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
   const quickInsertItem = createMenuItem(
     '快捷输入',
     '⎘',
-    (e: MouseEvent) => {
+    async (e: MouseEvent) => {
       e.stopPropagation()
 
       const targetBtn = e.currentTarget as HTMLElement
       const forceMobile = (cachedState.settings as any)?.forceMobileMode || false
       const isMobile = forceMobile || isChat
+      const { createQuickInsertMenu } = await import('../../utils/quickInsertMenu')
       const menu = createQuickInsertMenu()
 
       if (isMobile) {
@@ -393,9 +394,10 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       const sideItem = createMenuItem(
         text,
         icon,
-        () => {
+        async () => {
           const existing = DQS(`.${className}`) as HTMLElement | null
           if (existing) return
+          const { createAndShowSideIframeModal } = await import('../../utils/dom/iframe')
           createAndShowSideIframeModal(url, () => false, {
             title: text,
             className: className,
@@ -414,10 +416,11 @@ function injectButtonsToMenu(menuContainer: HTMLElement, isChat: boolean) {
       const iframeItem = createMenuItem(
         text,
         icon,
-        () => {
+        async () => {
           const existing = DQS(`.${className}`) as HTMLElement | null
           if (existing) return
           const shouldAutoClick = typeof url === 'string' && url.includes('linux.do/challenge')
+          const { createAndShowIframeModal } = await import('../../utils/dom/iframe')
           createAndShowIframeModal(
             url,
             href => {

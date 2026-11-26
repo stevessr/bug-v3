@@ -1,7 +1,8 @@
 import { cachedState } from '../data/state'
 
+import { createE, DOA, DEBI } from './dom'
+
 import type { AppSettings, CustomCssBlock } from '@/types/type'
-import { createE, DOA, DEBI } from '@/content/utils'
 
 const STYLE_ID = 'emoji-extension-custom-css'
 

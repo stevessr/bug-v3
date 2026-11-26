@@ -155,42 +155,48 @@ const initializeImageSources = async () => {
 
   const newSources = new Map<string, string>()
   const newLoadingStates = new Map<string, boolean>()
+  const emojisSnapshot = bufferEmojis.value.slice()
+  const IMAGE_SOURCE_INIT_CONCURRENCY = 8
 
   try {
-    // 优化：使用 Promise.all 并行处理，而不是串行 await
-    const results = await Promise.allSettled(
-      bufferEmojis.value.map(async emoji => {
-        // 检查是否已被取消
-        if (currentInitId !== imageSourcesInitId || isComponentUnmounted) {
-          return null
-        }
+    // 使用有限并发 worker 池，避免海量缓冲区表情同时抢占 IndexedDB / 网络请求
+    let nextIndex = 0
+    const results: Array<{ emojiId: string; url: string; isLoading: boolean } | null> = new Array(
+      emojisSnapshot.length
+    ).fill(null)
+
+    const runWorker = async () => {
+      while (true) {
+        if (currentInitId !== imageSourcesInitId || isComponentUnmounted) return
+        const idx = nextIndex++
+        if (idx >= emojisSnapshot.length) return
+        const emoji = emojisSnapshot[idx]
 
         try {
           if (shouldPreferCache(emojiStore.settings, emoji.displayUrl || emoji.url || '')) {
-            // 使用缓存优先的加载函数
             const result = await getEmojiImageUrlWithLoading(emoji, { preferCache: true })
-            return { emojiId: emoji.id, url: result.url, isLoading: result.isLoading }
+            results[idx] = { emojiId: emoji.id, url: result.url, isLoading: result.isLoading }
           } else {
-            // 直接 URL 模式
             const fallbackSrc = emoji.displayUrl || emoji.url
-            return { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
+            results[idx] = { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
           }
         } catch (error) {
           console.warn(`[BufferPage] Failed to get image source for ${emoji.name}:`, error)
-          // 回退到直接 URL
           const fallbackSrc = emoji.displayUrl || emoji.url
-          return { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
+          results[idx] = { emojiId: emoji.id, url: fallbackSrc, isLoading: false }
         }
-      })
-    )
+      }
+    }
+
+    const workerCount = Math.min(IMAGE_SOURCE_INIT_CONCURRENCY, emojisSnapshot.length)
+    await Promise.all(Array.from({ length: workerCount }, () => runWorker()))
 
     // 最后一次检查是否被取消
     if (currentInitId === imageSourcesInitId && !isComponentUnmounted) {
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          const { emojiId, url, isLoading } = result.value
-          newSources.set(emojiId, url)
-          newLoadingStates.set(emojiId, isLoading)
+      for (const item of results) {
+        if (item) {
+          newSources.set(item.emojiId, item.url)
+          newLoadingStates.set(item.emojiId, item.isLoading)
         }
       }
 
@@ -340,14 +346,17 @@ const {
 const showTelegramModal = ref(false)
 
 // 持久化相关函数 - 使用 composable 替代内联实现
-const { saveSelectedFiles, loadSelectedFiles, clearPersistedFiles } =
-  useFilePersistence(selectedFiles)
+const {
+  scheduleSaveSelectedFiles,
+  flushAndDisposePersistence,
+  loadSelectedFiles,
+  clearPersistedFiles
+} = useFilePersistence(selectedFiles)
 
-// 监听 selectedFiles 变化并自动保存
-// 优化：改为浅监听，只监听数组长度变化
+// 监听 selectedFiles 变化并自动防抖增量保存
 watch(
   () => selectedFiles.value.length,
-  () => saveSelectedFiles()
+  () => scheduleSaveSelectedFiles()
 )
 
 // Collaborative Upload Logic
@@ -914,6 +923,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   isComponentUnmounted = true
+  void flushAndDisposePersistence()
   selectedFiles.value.forEach(item => URL.revokeObjectURL(item.previewUrl))
   if (progressInterval) {
     clearInterval(progressInterval)

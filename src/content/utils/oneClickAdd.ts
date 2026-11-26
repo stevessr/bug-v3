@@ -21,7 +21,7 @@ const cssAnimation = `
 }
 `
 
-import { DEBI, DHA, createE } from '@/content/utils'
+import { DEBI, DHA, createE } from './dom'
 
 function injectCSSAnimation() {
   if (!DEBI('oneclick-add-styles')) {

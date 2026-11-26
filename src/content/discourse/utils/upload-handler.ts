@@ -1,8 +1,4 @@
-import { pageUploadHandler } from '../../messageHandlers/pageUploadHandler'
 import { DQS } from '../../utils/dom/createEl'
-
-import { getSettings } from '@/utils/simpleStorage'
-import { isLinuxDoDiscourseBase, uploadLinuxDoMultipart } from '@/utils/discourseUpload'
 
 let discourseUploadHandlerInitialized = false
 
@@ -47,7 +43,11 @@ export function setupDiscourseUploadHandler() {
 
         const base = message.discourseBase || window.location.origin
 
+        const [{ getSettings }, { isLinuxDoDiscourseBase, uploadLinuxDoMultipart }] =
+          await Promise.all([import('@/utils/simpleStorage'), import('@/utils/discourseUpload')])
+
         if ((await getSettings())?.useBackgroundNativeUpload === true) {
+          const { pageUploadHandler } = await import('../../messageHandlers/pageUploadHandler')
           pageUploadHandler(
             {
               type: 'PAGE_UPLOAD',

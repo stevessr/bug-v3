@@ -3,9 +3,13 @@ import { startReadTracker, stopReadTracker } from '../discourse/utils/readTracke
 
 // logger removed: replaced by direct console usage in migration
 import { findAllToolbars, injectButton } from './injector'
-import { requestSettingFromBackground } from './core'
+import { requestSettingFromBackground } from './core/requestSetting'
 import { initOneClickAdd } from './oneClickAdd'
-import { showFloatingButton, checkAndShowFloatingButton, cleanupFloatingButton } from './ui'
+import {
+  showFloatingButton,
+  checkAndShowFloatingButton,
+  cleanupFloatingButton
+} from './ui/floatingButton'
 import { applyCustomCssFromCache } from './injectCustomCss'
 import { startEditorFocusTracking, stopEditorFocusTracking } from './upload/helpers'
 

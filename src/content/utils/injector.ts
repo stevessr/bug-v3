@@ -1,24 +1,8 @@
-import { createEmojiPicker } from '../discourse/utils/picker'
 import type { PickerContext } from '../discourse/utils/editor'
 import { cachedState } from '../data/state'
-import { autoReadAll, autoReadAllv2 } from '../discourse/utils/autoReadReplies'
-import { showImageUploadDialog } from '../discourse/utils/uploader'
 
 import { notify } from './ui'
-import {
-  createE,
-  DQSA,
-  DQS,
-  DOA,
-  DAEL,
-  createAndShowIframeModal,
-  createAndShowSideIframeModal,
-  animateEnter,
-  animateExit,
-  ANIMATION_DURATION
-} from './dom'
-
-import { ICONS } from '@/content/data/callout'
+import { createE, DQSA, DQS, DOA, DAEL, animateEnter, animateExit, ANIMATION_DURATION } from './dom'
 
 // Different toolbar selectors for different contexts
 const TOOLBAR_SELECTORS = [
@@ -112,6 +96,7 @@ async function injectDesktopPicker(button: HTMLElement, context: PickerContext =
   // 防止动画期间重复创建
   if (isAnimating) return
 
+  const { createEmojiPicker } = await import('../discourse/utils/picker')
   currentPicker = await createEmojiPicker(false, context)
   const buttonRect = button.getBoundingClientRect()
   const pickerElement = currentPicker
@@ -166,6 +151,7 @@ async function injectMobilePicker(context: PickerContext = 'composer') {
   if (isAnimating) return
 
   // picker is created with animation already set up in mobile.ts
+  const { createEmojiPicker } = await import('../discourse/utils/picker')
   const picker = await createEmojiPicker(true, context)
 
   let modalContainer = DQS('.modal-container')
@@ -198,205 +184,6 @@ async function injectMobilePicker(context: PickerContext = 'composer') {
 
   // Track the picker element itself so toggling will unmount only the picker
   currentPicker = picker as HTMLElement
-}
-
-// Quick inserts available globally (store as plain keys without [!])
-export const QUICK_INSERTS: string[] = [
-  'info',
-  'tip',
-  'faq',
-  'question',
-  'note',
-  'abstract',
-  'todo',
-  'success',
-  'warning',
-  'failure',
-  'danger',
-  'bug',
-  'example',
-  'quote'
-]
-
-/**
- * Insert text into the active editor used by the emoji picker / site.
- * Tries several selectors used by the site to find the textarea/contenteditable.
- */
-export function insertIntoEditor(text: string) {
-  // Prefer the focused element if it's a text input or contenteditable
-  const active = document.activeElement as HTMLElement | null
-
-  const isTextarea = (el: Element | null) => !!el && el.tagName === 'TEXTAREA'
-
-  if (isTextarea(active)) {
-    const textarea = active as HTMLTextAreaElement
-    const start = textarea.selectionStart ?? 0
-    const end = textarea.selectionEnd ?? start
-    const value = textarea.value
-    textarea.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in textarea) {
-      try {
-        textarea.setSelectionRange(pos, pos)
-      } catch {
-        // ignore
-      }
-    }
-    textarea.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-
-  if (active && active.isContentEditable) {
-    const sel = window.getSelection()
-    if (!sel) return
-    const range = sel.getRangeAt(0)
-    range.deleteContents()
-    const node = document.createTextNode(text)
-    range.insertNode(node)
-    range.setStartAfter(node)
-    range.setEndAfter(node)
-    sel.removeAllRanges()
-    sel.addRange(range)
-    active.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-
-  // Try specific editor selectors used by site/picker
-  const selectors = [
-    '.d-editor-textarea-wrapper textarea',
-    '.d-editor-textarea textarea',
-    '.d-editor-textarea textarea',
-    'textarea'
-  ]
-
-  for (const sel of selectors) {
-    const el = DQS(sel) as HTMLTextAreaElement | HTMLInputElement | HTMLElement | null
-    if (!el) continue
-    if ((el as HTMLElement).isContentEditable) {
-      const editable = el as HTMLElement
-      const range = document.createRange()
-      range.selectNodeContents(editable)
-      range.collapse(false)
-      const textNode = document.createTextNode(text)
-      range.insertNode(textNode)
-      const seln = window.getSelection()
-      if (seln) {
-        seln.removeAllRanges()
-        const newRange = document.createRange()
-        newRange.setStartAfter(textNode)
-        newRange.setEndAfter(textNode)
-        seln.addRange(newRange)
-      }
-      editable.dispatchEvent(new Event('input', { bubbles: true }))
-      return
-    }
-
-    // treat as textarea/input
-    const input = el as HTMLTextAreaElement | HTMLInputElement
-    input.focus()
-    const start = (input as HTMLTextAreaElement).selectionStart ?? input.value.length
-    const end = (input as HTMLTextAreaElement).selectionEnd ?? start
-    const value = input.value
-    input.value = value.slice(0, start) + text + value.slice(end)
-    const pos = start + text.length
-    if ('setSelectionRange' in input) {
-      try {
-        ;(input as HTMLTextAreaElement).setSelectionRange(pos, pos)
-      } catch {
-        // ignore
-      }
-    }
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-    return
-  }
-}
-
-export function createQuickInsertMenu(): HTMLElement {
-  const forceMobileMode = cachedState.settings.forceMobileMode || false
-
-  const menu = createE('div', {
-    class: 'fk-d-menu toolbar-menu__options-content toolbar-popup-menu-options -animated -expanded',
-    style: 'z-index:1300;'
-  })
-  const inner = createE('div', { class: 'fk-d-menu__inner-content' })
-  const list = createE('ul', { class: 'dropdown-menu' })
-
-  QUICK_INSERTS.forEach(item => {
-    const displayLabel =
-      item.length > 0 ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
-
-    const li = createE('li', { class: 'dropdown-menu__item' })
-    const btn = createE('button', {
-      class: 'btn btn-icon-text',
-      type: 'button',
-      ti: displayLabel
-    }) as HTMLButtonElement
-    btn.addEventListener('click', () => {
-      // remove menu and insert into editor
-      if (menu.parentElement) menu.parentElement.removeChild(menu)
-      // Insert wrapped form: [!key]
-      insertIntoEditor(`>[!${item}]+\n`)
-    })
-
-    const emojiSpan = createE('span', { text: ICONS[item]?.icon || '✳️' })
-    emojiSpan.style.marginRight = '6px'
-    const labelWrap = createE('span', { class: 'd-button-label' })
-    const labelText = createE('span', { class: 'd-button-label__text', text: displayLabel })
-    if (ICONS[item]?.color) {
-      btn.style.cssText += 'background:' + ICONS[item]?.color
-    }
-
-    // Append text node first, then add svg in a separate span so the svg appears
-    // to the right of the text instead of being concatenated into the text node.
-    labelWrap.appendChild(labelText)
-    const svgHtml = ICONS[item]?.svg || ''
-    if (svgHtml) {
-      const svgSpan = createE('span', {
-        class: 'd-button-label__svg',
-        in: svgHtml,
-        style: 'margin-left:6px;display:inline-flex;align-items:center'
-      })
-      labelWrap.appendChild(svgSpan)
-    }
-    btn.appendChild(emojiSpan)
-    btn.appendChild(labelWrap)
-    li.appendChild(btn)
-    list.appendChild(li)
-  })
-
-  inner.appendChild(list)
-  menu.appendChild(inner)
-
-  if (forceMobileMode) {
-    // Wrap the menu inside a modal-like structure so it displays centered
-    const modal = createE('div', {
-      class:
-        'modal d-modal fk-d-menu-modal toolbar-menu__options-content toolbar-popup-menu-options',
-      attrs: {
-        'data-keyboard': 'false',
-        'aria-modal': 'true',
-        role: 'dialog'
-      }
-    })
-
-    const modalContainerInner = createE('div', { class: 'd-modal__container' })
-    const modalBody = createE('div', { class: 'd-modal__body' })
-    ;(modalBody as HTMLElement).tabIndex = -1
-
-    const grip = createE('div', { class: 'fk-d-menu-modal__grip' })
-    grip.setAttribute('aria-hidden', 'true')
-
-    modalBody.appendChild(grip)
-    // move the dropdown into the modal body
-    modalBody.appendChild(inner.querySelector('.dropdown-menu') as Node)
-
-    modalContainerInner.appendChild(modalBody)
-    modal.appendChild(modalContainerInner)
-
-    return modal
-  }
-
-  return menu
 }
 
 function createUploadMenu(
@@ -441,6 +228,7 @@ function createUploadMenu(
 
   const uploadLi = createListItem('上传本地图片', '📁', async () => {
     menu.remove()
+    const { showImageUploadDialog } = await import('../discourse/utils/uploader')
     await showImageUploadDialog(routeContext)
   })
   list.appendChild(uploadLi)
@@ -448,6 +236,7 @@ function createUploadMenu(
   const autoReadLi = createListItem('自动阅读所有回复', '📖', async () => {
     menu.remove()
     try {
+      const { autoReadAll } = await import('../discourse/utils/autoReadReplies')
       await autoReadAll()
     } catch (error) {
       notify(
@@ -461,6 +250,7 @@ function createUploadMenu(
   const autoReadLi2 = createListItem('全自动自动阅读所有帖子', '📖', async () => {
     menu.remove()
     try {
+      const { autoReadAllv2 } = await import('../discourse/utils/autoReadReplies')
       await autoReadAllv2()
     } catch (error) {
       notify(
@@ -472,8 +262,9 @@ function createUploadMenu(
   })
   list.appendChild(autoReadLi2)
 
-  const challengeLi = createListItem('过盾', '🛡️', () => {
+  const challengeLi = createListItem('过盾', '🛡️', async () => {
     menu.remove()
+    const { createAndShowIframeModal } = await import('./dom/iframe')
     createAndShowIframeModal(
       'https://linux.do/challenge',
       href => {
@@ -520,10 +311,11 @@ function createUploadMenu(
   merged.autoItems.forEach(([text, icon, url]: any) => autoList(text, icon, url))
 
   const createiframe = (text: string, icon: string, url: string, className: string) =>
-    createListItem(text, icon, () => {
+    createListItem(text, icon, async () => {
       const existing = DQS(`.${className}`) as HTMLElement | null
       if (existing) return
       const shouldAutoClick = url.includes('linux.do/challenge')
+      const { createAndShowIframeModal } = await import('./dom/iframe')
       createAndShowIframeModal(
         url,
         href => {
@@ -545,10 +337,11 @@ function createUploadMenu(
     })
 
   const createside = (text: string, icon: string, url: string, className: string) =>
-    createListItem(text, icon, () => {
+    createListItem(text, icon, async () => {
       // If a modal iframe already exists, don't create another
       const existing = DQS(`.${className}`) as HTMLElement | null
       if (existing) return
+      const { createAndShowSideIframeModal } = await import('./dom/iframe')
       createAndShowSideIframeModal(
         url,
         _herf => {
@@ -821,10 +614,11 @@ export function injectButton(toolbar: Element, skipIfSubmenuInjectorEnabled: boo
     in: '⎘'
   }) as HTMLButtonElement
 
-  quickInsertButton.addEventListener('click', event => {
+  quickInsertButton.addEventListener('click', async event => {
     event.stopPropagation()
     // toggle menu
     const isMobile = cachedState.settings.forceMobileMode
+    const { createQuickInsertMenu } = await import('./quickInsertMenu')
     const menu = createQuickInsertMenu()
 
     if (isMobile) {
